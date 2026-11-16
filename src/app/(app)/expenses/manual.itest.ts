@@ -98,11 +98,11 @@ beforeEach(resetDatabase);
 afterAll(closeDatabase);
 
 describe("the accounts that take a manual movement", () => {
-  it("are the ones kept by hand and the ones a source only reads, with their mode", async () => {
+  it("are the ones kept by hand and the ones of a source, with their mode (N3.1: read and write too)", async () => {
     const ctx = await newContext();
     const kept = await cash(ctx, 8_000n);
     const bank = await synced(ctx, BANK, "Zeta current");
-    await synced(ctx, TWO_WAY, "Budget app current");
+    const twoWay = await synced(ctx, TWO_WAY, "Budget app current");
     await synced(ctx, BANK, "Zeta portfolio", "investment");
     await createAccount(ctx, { name: "Pension", type: "pension" });
     const archived = await createAccount(ctx, { name: "Old cash", type: "cash" });
@@ -111,16 +111,23 @@ describe("the accounts that take a manual movement", () => {
     expect(await manualAccounts(ctx)).toEqual([
       { id: kept.id, name: "Cash", currency: "EUR", mode: "manual" },
       { id: bank.id, name: "Zeta current", currency: "EUR", mode: "read_only" },
+      {
+        id: twoWay.id,
+        name: "Budget app current",
+        currency: "EUR",
+        mode: "two_way",
+        // No connection in this test: the source is not updated now.
+        source: { name: expect.any(String), waiting: true },
+      },
     ]);
   });
 
-  it("refuses a movement on a read-and-write account until its release, and on a portfolio", async () => {
+  it("refuses a movement on a portfolio and on another person's account", async () => {
     const ctx = await newContext();
-    const twoWay = await synced(ctx, TWO_WAY, "Budget app current");
     const portfolio = await synced(ctx, BANK, "Zeta portfolio", "investment");
     const other = await cash(await newContext(), 100n);
 
-    for (const account of [twoWay, portfolio, other]) {
+    for (const account of [portfolio, other]) {
       await expect(createManual(ctx, movement(account.id))).rejects.toMatchObject({
         code: "account_unavailable",
       });

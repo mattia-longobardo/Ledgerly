@@ -560,11 +560,10 @@ export function accountMode(
 }
 
 /**
- * The modes a person may write a movement on by hand. `two_way` joins them with the release that
- * sends the movement to the source (N3.1, decision H36): until then such a movement would change a
- * balance the next reading takes back.
+ * The modes a person may write a movement on by hand: every one. On a `two_way` account the
+ * movement is sent to the source at the next update (N3.1, decision H36).
  */
-export const MANUAL_MOVEMENT_MODES: readonly AccountMode[] = ["manual", "read_only"];
+export const MANUAL_MOVEMENT_MODES: readonly AccountMode[] = ["manual", "two_way", "read_only"];
 
 /** A reading of an account's balance: one per day, with the moment it was taken. */
 export interface BalanceReading {

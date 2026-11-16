@@ -254,9 +254,30 @@ export function ManualTransactionDialog({
   const category = offered.find((one) => one.id === form.categoryId) ?? null;
   const suggested =
     category === null && !categoryChosen ? (offered.find((one) => one.id === suggestedId) ?? null) : null;
-  const groups = (["manual", "read_only"] as const)
-    .map((mode) => ({ mode, accounts: (accounts ?? []).filter((one) => one.mode === mode) }))
-    .filter((group) => group.accounts.length > 0);
+  // One group for each way an account is kept; the accounts of a source that takes the movements
+  // written here are grouped by that source, under its name (ux §9.3, §9.8).
+  const sourceNames = [
+    ...new Set(
+      (accounts ?? []).flatMap((one) => (one.mode === "two_way" && one.source ? [one.source.name] : [])),
+    ),
+  ];
+  const groups = [
+    {
+      key: "manual",
+      label: t("manual.accounts.manual"),
+      accounts: (accounts ?? []).filter((one) => one.mode === "manual"),
+    },
+    ...sourceNames.map((name) => ({
+      key: `source:${name}`,
+      label: t("manual.accounts.twoWay", { provider: name }),
+      accounts: (accounts ?? []).filter((one) => one.mode === "two_way" && one.source?.name === name),
+    })),
+    {
+      key: "bank",
+      label: t("manual.accounts.bank"),
+      accounts: (accounts ?? []).filter((one) => one.mode === "read_only"),
+    },
+  ].filter((group) => group.accounts.length > 0);
   const shownPreview = amount.trim() === "" ? null : preview;
 
   const title = row === null ? t("manual.add") : t("manual.editTitle");
@@ -385,10 +406,7 @@ export function ManualTransactionDialog({
             required
           >
             {groups.map((group) => (
-              <optgroup
-                key={group.mode}
-                label={group.mode === "manual" ? t("manual.accounts.manual") : t("manual.accounts.bank")}
-              >
+              <optgroup key={group.key} label={group.label}>
                 {group.accounts.map((one) => (
                   <option key={one.id} value={one.id}>
                     {one.name}
@@ -406,6 +424,13 @@ export function ManualTransactionDialog({
               className="rounded-ctl bg-warn-bg px-3 py-2 text-sm text-warn"
             >
               {t("manual.bankWarning")} {t("manual.bankBalance")}
+            </p>
+          )}
+          {account?.mode === "two_way" && account.source && (
+            <p data-testid="manual-send-note" className="rounded-ctl bg-hover px-3 py-2 text-sm text-muted">
+              {account.source.waiting
+                ? t("manual.twoWayPaused", { provider: account.source.name })
+                : t("manual.twoWayNote", { provider: account.source.name })}
             </p>
           )}
           {shownPreview && (

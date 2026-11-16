@@ -49,6 +49,8 @@ const COUNT_KEYS = [
   "updated",
   "skipped",
   "removed",
+  "sent",
+  "notSent",
   "categoriesAdded",
   "categoriesAdopted",
   "categoriesPushed",

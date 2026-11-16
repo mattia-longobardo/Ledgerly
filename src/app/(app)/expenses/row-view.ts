@@ -15,12 +15,15 @@ export function rowViewOf(
     ctx,
     colorOf,
     categories,
+    sendSources,
   }: {
     ctx: Pick<Ctx, "locale" | "numberFormat">;
     /** One colour per category, decided once for the screen (`categoryColors`). */
     colorOf: ReadonlyMap<string, string>;
     /** The person's categories as the screen offers them: where a suggestion's name is read. */
     categories: readonly { id: string; name: string; color: string }[];
+    /** The source each account sends its manual movements to, where a row on the screen waits. */
+    sendSources?: ReadonlyMap<string, string>;
   },
 ): RowView {
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
@@ -55,6 +58,10 @@ export function rowViewOf(
             accountId: row.accountId,
             payee: row.payee ?? "",
           }
+        : null,
+    send:
+      row.origin === "manual" && row.sendState !== null
+        ? { state: row.sendState, source: sendSources?.get(row.accountId) ?? row.accountName ?? NULL_DISPLAY }
         : null,
   };
 }

@@ -204,6 +204,84 @@ export async function mergeLimits(
   return summed;
 }
 
+/** The limits of some categories from `month` on, as they are: what `restoreLimits` puts back. */
+export interface LimitsSnapshot {
+  month: MonthKey;
+  categoryIds: string[];
+  rows: {
+    categoryId: string;
+    accountId: string | null;
+    fromMonth: string;
+    /** In cents, as text: the snapshot is kept as JSON, which has no exact integer of this size. */
+    amountCents: string | null;
+    stopped: boolean;
+  }[];
+}
+
+/**
+ * Reads the limits of some categories from `month` on, before a change that sums them
+ * (`mergeLimits`) and that a person may undo. Inside the caller's transaction.
+ */
+export async function limitsSnapshot(
+  ctx: Pick<Ctx, "userId">,
+  categoryIds: readonly string[],
+  month: MonthKey,
+  tx: Tx,
+): Promise<LimitsSnapshot> {
+  const rows = await tx
+    .select()
+    .from(budgetLimits)
+    .where(
+      and(
+        userScoped(ctx).owns(budgetLimits),
+        inArray(budgetLimits.categoryId, [...categoryIds]),
+        gte(budgetLimits.fromMonth, month),
+      ),
+    )
+    .orderBy(asc(budgetLimits.fromMonth), asc(budgetLimits.id));
+  return {
+    month,
+    categoryIds: [...categoryIds],
+    rows: rows.map((row) => ({
+      categoryId: row.categoryId as string,
+      accountId: row.accountId,
+      fromMonth: row.fromMonth,
+      amountCents: row.amountCents === null ? null : row.amountCents.toString(),
+      stopped: row.stopped,
+    })),
+  };
+}
+
+/** Puts the limits of a snapshot back: what was written from its month on goes, what was there returns. */
+export async function restoreLimits(
+  ctx: Pick<Ctx, "userId">,
+  snapshot: LimitsSnapshot,
+  tx: Tx,
+): Promise<void> {
+  if (snapshot.categoryIds.length === 0) return;
+  await tx
+    .delete(budgetLimits)
+    .where(
+      and(
+        userScoped(ctx).owns(budgetLimits),
+        inArray(budgetLimits.categoryId, snapshot.categoryIds),
+        gte(budgetLimits.fromMonth, snapshot.month),
+      ),
+    );
+  if (snapshot.rows.length === 0) return;
+  await tx.insert(budgetLimits).values(
+    snapshot.rows.map((row) =>
+      userScoped(ctx).stamp({
+        categoryId: row.categoryId,
+        accountId: row.accountId,
+        fromMonth: row.fromMonth,
+        amountCents: row.amountCents === null ? null : BigInt(row.amountCents),
+        stopped: row.stopped,
+      }),
+    ),
+  );
+}
+
 /** Whether each of some categories has a limit in force in `month`: what a merge says it will sum. */
 export async function categoriesWithLimit(
   ctx: Pick<Ctx, "userId">,

@@ -44,13 +44,13 @@ export const FLOWS: Flow[] = [
   },
   {
     id: "transactions",
-    specs: ["expenses", "manual-movement", "wide"],
+    specs: ["expenses", "manual-movement", "manual-send", "wide"],
     screens: "/expenses \\(a manual|as layout /expenses|transaction dialog|expenses on a phone|row menu",
   },
   {
     id: "categories",
-    specs: ["categories", "review"],
-    screens: "/settings/categories|/expenses/review|/expenses \\(automatic|as review",
+    specs: ["categories", "review", "source-categories"],
+    screens: "/settings/categories|/expenses/review|/expenses \\(automatic|as review|category chooser",
   },
   { id: "budgets", specs: ["budgets"], screens: "/budgets|budgets on a phone" },
   { id: "pockets", specs: ["pockets"], screens: "/pockets|pockets on a phone" },

@@ -24,6 +24,7 @@ import { users } from "../../platform/auth/schema";
 import {
   CATEGORY_ORIGINS,
   CATEGORY_TYPES,
+  SEND_STATES,
   TRANSACTION_ORIGINS,
   TRANSACTION_STATES,
   TRANSACTION_TYPES,
@@ -136,6 +137,82 @@ export const labels = pgTable(
 );
 
 /**
+ * A category of a source that gives its own (rewrite plan N3.1, 12-account-modes.md §12.3), and the
+ * category it counts under here. `addedCategoryId` is the category that was added for it, with its
+ * name; `categoryId` is where its movements count: the same one ("added"), or another category the
+ * person chose ("matched"). Several rows may name one category, a row names one.
+ *
+ * `seenAt` is null for a category that arrived from the source and the person has not looked at
+ * yet: the "New" mark. One person's, and it goes with them.
+ */
+export const sourceCategories = pgTable(
+  "source_categories",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    externalId: text("external_id").notNull(),
+    /** What the source calls the category, and the group it files it under. */
+    name: text("name").notNull(),
+    groupName: text("group_name"),
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+    addedCategoryId: uuid("added_category_id").references(() => categories.id, { onDelete: "set null" }),
+    seenAt: timestamp("seen_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    unique("source_categories_external_uq").on(table.userId, table.provider, table.externalId),
+    index("source_categories_category_idx").on(table.userId, table.categoryId),
+  ],
+);
+
+/** What "Undo" puts back after a change of a source category's match (`source-categories.ts`). */
+export interface SourceCategoryUndo {
+  categoryId: string | null;
+  /** Whether the category added for it was put away before the change. */
+  addedArchived: boolean;
+  /** The limits of the budgets as they were, when the change summed them: `null` when it did not. */
+  limits: {
+    month: string;
+    categoryIds: string[];
+    rows: {
+      categoryId: string;
+      accountId: string | null;
+      fromMonth: string;
+      amountCents: string | null;
+      stopped: boolean;
+    }[];
+  } | null;
+}
+
+/** The state before the last change of a source category's match, for "Undo": one row a change. */
+export const sourceCategoryUndos = pgTable(
+  "source_category_undos",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceCategoryId: uuid("source_category_id")
+      .notNull()
+      .references(() => sourceCategories.id, { onDelete: "cascade" }),
+    before: jsonb("before").$type<SourceCategoryUndo>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("source_category_undos_user_idx").on(table.userId, table.createdAt)],
+);
+
+/**
  * One movement (spec §6, §7.2). The provider owns `payee`, `amountCents` and `occurredAt`; the
  * user owns category, labels, note and visibility, and every field they touch is appended to
  * `locallyEdited` so the next sync leaves it alone.
@@ -194,6 +271,15 @@ export const transactions = pgTable(
     origin: text("origin", { enum: TRANSACTION_ORIGINS }).notNull().default("provider"),
     // The key the dialog sent a manual movement with: the same key sent twice is one row.
     idempotencyKey: text("idempotency_key"),
+    // A manual movement of a "read and write" account that its source has not taken yet (N3.1).
+    sendState: text("send_state", { enum: SEND_STATES }),
+    // The day the source was last asked to create the movement on: where the next update looks
+    // for it before it asks again, whatever the person changed since.
+    sendAskedOn: date("send_asked_on"),
+    // The category the source gave the movement: it stays whatever category that counts under here.
+    sourceCategoryId: uuid("source_category_id").references(() => sourceCategories.id, {
+      onDelete: "set null",
+    }),
     hiddenAt: timestamp("hidden_at", { withTimezone: true }),
     removedUpstreamAt: timestamp("removed_upstream_at", { withTimezone: true }),
     locallyEdited: text("locally_edited")
@@ -231,6 +317,17 @@ export const transactions = pgTable(
     uniqueIndex("transactions_user_idempotency_uq")
       .on(table.userId, table.idempotencyKey)
       .where(sql`${table.idempotencyKey} is not null`),
+    // The movements that wait for their source: a handful, read at every update.
+    index("transactions_send_idx")
+      .on(table.userId, table.accountId)
+      .where(sql`${table.sendState} is not null`),
+    index("transactions_source_category_idx")
+      .on(table.sourceCategoryId)
+      .where(sql`${table.sourceCategoryId} is not null`),
+    check(
+      "transactions_send_state_ck",
+      sql`${table.sendState} is null or (${table.sendState} in (${sql.raw(inList(SEND_STATES))}) and ${table.origin} = 'manual')`,
+    ),
     check("transactions_origin_ck", sql`${table.origin} in (${sql.raw(inList(TRANSACTION_ORIGINS))})`),
     check("transactions_type_ck", sql`${table.type} in (${sql.raw(inList(TRANSACTION_TYPES))})`),
     check("transactions_state_ck", sql`${table.state} in (${sql.raw(inList(TRANSACTION_STATES))})`),

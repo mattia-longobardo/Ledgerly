@@ -14,6 +14,8 @@ export interface ManualAccountView {
   name: string;
   currency: string;
   mode: "manual" | "two_way" | "read_only";
+  /** For a "read and write" account: the source's name, and whether it is not updated now. */
+  source?: { name: string; waiting: boolean } | null;
 }
 
 /** The fields of the dialog, as typed: the amount in the person's own number format. */
@@ -55,6 +57,11 @@ export interface ManualCommands {
   create(input: ManualForm, key: string): Promise<ManualSaveResult>;
   update(id: string, input: ManualForm): Promise<ManualSaveResult>;
   remove(id: string): Promise<CommandResult>;
+  /**
+   * "Retry sending" on a movement its source did not take (ux §9.8): the source is updated now.
+   * Left out where the page offers no sending.
+   */
+  retrySend?(id: string): Promise<{ ok: true; sent: boolean } | { ok: false }>;
   /** Hide, restore and delete of a selection, with the balance of a manual movement kept right. */
   visibility(ids: string[], change: "hide" | "restore" | "delete"): Promise<CommandResult>;
 }

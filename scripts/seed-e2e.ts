@@ -34,6 +34,9 @@ import { setLimit } from "../src/modules/budgets/service";
 import { categorisableAccountIds, upsertFromProvider } from "../src/modules/transactions/service";
 import { createCategory, listCategories } from "../src/modules/transactions/taxonomy";
 import { createManual } from "../src/app/(app)/expenses/manual";
+import { setSourceCategory } from "../src/app/(app)/settings/categories/source";
+import { markNotSent } from "../src/modules/transactions/sending";
+import { keepSourceCategory, listSourceCategories } from "../src/modules/transactions/source-categories";
 import { createManualTransaction } from "../src/modules/transactions/manual";
 import { createDefaultGroups } from "../src/modules/transactions/categorize/review";
 import { categorise } from "../src/modules/transactions/categorize/service";
@@ -1413,6 +1416,63 @@ async function seedManual(): Promise<void> {
 }
 
 /**
+ * Release N3.1 (ux/n3-categories-manual.md §6.4, §9.8): an account of a source that takes the
+ * movements written here and gives its own categories. Four categories of the source — one matched
+ * to another, one that has just arrived — and two manual movements on their way: one that waits,
+ * one the source did not take. There is no connection behind the account: nothing here is ever
+ * sent, and "Retry sending" finds no source to update.
+ */
+async function seedSources(): Promise<void> {
+  const ctx = await contextOf(USERS.sources.email);
+  const on = today(ctx.timeZone);
+  await createAccount(ctx, {
+    name: "Contanti",
+    type: "cash",
+    currency: "EUR",
+    openingBalance: { on: addDays(on, -5), cents: 8_000n },
+  });
+  const current = await syncedAccount(ctx, "e2e-sources-1", "Conto corrente app");
+  await upsertFromProvider(ctx, current, [
+    walletMovement("e2e-sources-tx-1", addDays(on, -20), -8750n, "Esselunga Superstore", "Spesa"),
+    walletMovement("e2e-sources-tx-2", addDays(on, -16), -4310n, "Mercato rionale", "Spesa"),
+    walletMovement("e2e-sources-tx-3", addDays(on, -12), -1200n, "Tabaccheria Centrale", "Tabacchi"),
+    walletMovement("e2e-sources-tx-4", addDays(on, -9), -600n, "Tabaccheria Centrale", "Tabacchi"),
+    walletMovement("e2e-sources-tx-5", addDays(on, -8), -2300n, "Enoteca Rossi", "Alcolici e tabacchi"),
+    walletMovement("e2e-sources-tx-6", addDays(on, -4), -3500n, "Zoo Market", "Animali"),
+  ]);
+  await saveProviderBalance(ctx, current, { on: addDays(on, -1), cents: 50_000n });
+  const categories = await listCategories(ctx);
+  const sourceCategories = await listSourceCategories(ctx);
+  const named = (name: string) => sourceCategories.find((row) => row.name === name);
+  // Every category has been looked at but the last to arrive, which keeps its "New" mark.
+  for (const row of sourceCategories) if (row.name !== "Animali") await keepSourceCategory(ctx, row.id);
+  const vices = categories.find((category) => category.name === "Alcolici e tabacchi");
+  const tobacco = named("Tabacchi");
+  if (!vices || !tobacco) throw new Error("The categories of the source were not adopted");
+  await setSourceCategory(ctx, { id: tobacco.id, categoryId: vices.id });
+  const groceries = categories.find((category) => category.name === "Spesa");
+  await createManual(ctx, {
+    kind: "expense",
+    amountCents: 450n,
+    on,
+    accountId: current,
+    categoryId: groceries?.id ?? null,
+    payee: "Bar Centrale",
+    note: "",
+  });
+  const refused = await createManual(ctx, {
+    kind: "expense",
+    amountCents: 200n,
+    on: addDays(on, -1),
+    accountId: current,
+    categoryId: null,
+    payee: "Edicola",
+    note: "",
+  });
+  await markNotSent(ctx, refused.transaction.id);
+}
+
+/**
  * Release N3, second part (ux/n3-categories-manual.md): movements in every state of a category, on
  * an account kept by hand — the cascade reads it as it reads a bank's, and the seed needs no bank.
  * The default groups let the static tables answer: a brand with one meaning is automatic, a brand
@@ -1867,6 +1927,7 @@ await seedTimeOff();
 await seedLayout();
 await seedConnections();
 await seedManual();
+await seedSources();
 await seedReview();
 await seedReviewNew();
 await seedCurrency();

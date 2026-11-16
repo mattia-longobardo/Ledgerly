@@ -266,6 +266,8 @@
         "updated": "{count} aggiornati",
         "skipped": "{count} invariati",
         "removed": "{count} spariti",
+        "sent": "{count} inviati alla sorgente",
+        "notSent": "{count} non inviati",
         "categoriesAdded": "{count} categorie acquisite",
         "categoriesAdopted": "{count} categorie rinominate qui",
         "categoriesPushed": "{count} categorie rinominate su Wallet",
@@ -495,6 +497,34 @@
         "later": "Non ora",
         "created": "{count, plural, one {# gruppo creato} other {# gruppi creati}}",
         "failed": "Non è stato possibile creare i gruppi. Riprova."
+      },
+      "source": {
+        "title": "Categorie di {provider}",
+        "description": "{provider} dà già una categoria ai suoi movimenti. Scegli a quale categoria di Ledgerly corrisponde ognuna. Ledgerly non cambia la categoria di questi movimenti.",
+        "columns": {
+          "theirs": "Su {provider}",
+          "ours": "In Ledgerly"
+        },
+        "filters": {
+          "label": "Quali categorie mostrare",
+          "all": "Tutte",
+          "new": "Nuove ({count})"
+        },
+        "row": "{name} · {count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
+        "new": "Nuova",
+        "keep": "Va bene così",
+        "addOption": "Aggiungi come categoria nuova",
+        "added": "Aggiunta come «{name}»",
+        "pickerLabel": "Categoria di Ledgerly per «{name}»",
+        "fromProvider": "Da {provider}: {names}",
+        "empty": "Ancora nessuna categoria da {provider}. Compaiono dopo il primo aggiornamento.",
+        "noNew": "Nessuna categoria nuova.",
+        "undo": "Annulla",
+        "toasts": {
+          "linked": "{name} ora corrisponde a {category}: {count, plural, one {# movimento} other {# movimenti}}",
+          "added": "{name} aggiunta come categoria: {count, plural, one {# movimento} other {# movimenti}}"
+        },
+        "failed": "Non è stato possibile salvare. Riprova."
       }
     },
     "labels": {
@@ -1533,7 +1563,8 @@
       "account": "Conto",
       "accounts": {
         "manual": "Conti tenuti a mano",
-        "bank": "Conti collegati a una banca"
+        "bank": "Conti collegati a una banca",
+        "twoWay": "Conti collegati a {provider}"
       },
       "payee": "Beneficiario (facoltativo)",
       "category": "Categoria",
@@ -1568,10 +1599,17 @@
         "failed": "Non è stato possibile salvare. Riprova."
       },
       "row": {
-        "edit": "Modifica movimento"
+        "edit": "Modifica movimento",
+        "retrySend": "Riprova l'invio"
       },
       "palette": "Aggiungi movimento",
-      "categoryHint": "Suggerimento di Ledgerly. Cambialo se non va bene."
+      "categoryHint": "Suggerimento di Ledgerly. Cambialo se non va bene.",
+      "twoWayNote": "Ledgerly manda questo movimento a {provider} al prossimo aggiornamento.",
+      "twoWayPaused": "{provider} non è aggiornato ora. Ledgerly manda questo movimento quando il collegamento riparte.",
+      "badges": {
+        "toSend": "Da inviare",
+        "notSent": "Non inviato a {provider}"
+      }
     },
     "auto": {
       "mark": "Automatica",

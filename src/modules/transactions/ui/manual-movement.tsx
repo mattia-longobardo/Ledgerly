@@ -27,6 +27,8 @@ interface ManualMovementApi {
   openCreate(): void;
   openEdit(row: RowView): void;
   openDelete(row: RowView): void;
+  /** "Retry sending", where the page offers it: `null` otherwise. */
+  retrySend: ((row: RowView) => void) | null;
   visibility(ids: readonly string[], change: "hide" | "restore" | "delete"): Promise<CommandResult>;
 }
 
@@ -93,9 +95,25 @@ export function ManualMovement({
       openCreate: () => open(null),
       openEdit: (row) => open(row),
       openDelete: (row) => setDeleting(row),
+      retrySend: commands.retrySend
+        ? (row) => {
+            const retry = commands.retrySend;
+            if (!retry) return;
+            startTransition(async () => {
+              try {
+                // A movement that went leaves its badges; one that did not keeps "Not sent": the
+                // row says it, and the state of the connection is in Settings (ux §9.8).
+                const result = await retry(row.id);
+                if (!result.ok) notify(t("errors.failed"), "error");
+              } catch {
+                notify(t("errors.failed"), "error");
+              }
+            });
+          }
+        : null,
       visibility: (ids, change) => commands.visibility([...ids], change),
     }),
-    [open, commands],
+    [open, commands, t],
   );
 
   function inView(on: string, accountId: string): boolean {

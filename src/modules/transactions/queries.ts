@@ -87,6 +87,8 @@ export interface TransactionRow {
   locallyEdited: string[];
   /** Who wrote it: a provider's reading, or the person by hand. */
   origin: TransactionRecord["origin"];
+  /** A manual movement that waits for its source, or that the source did not take (N3.1). */
+  sendState: TransactionRecord["sendState"];
   /**
    * How the category stands (rewrite plan N3; ux/n3-categories-manual.md §1.2): chosen by a person
    * or a source, given automatically, only suggested, or absent. With the reason of an automatic
@@ -1009,6 +1011,7 @@ export async function listTransactions(
       removedUpstreamAt: transaction.removedUpstreamAt,
       locallyEdited: transaction.locallyEdited,
       origin: transaction.origin,
+      sendState: transaction.sendState,
       categoryState,
       categoryIsOwn: transaction.categoryKey !== null,
       categoryReason:

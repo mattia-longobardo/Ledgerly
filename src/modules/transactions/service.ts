@@ -51,7 +51,14 @@ import {
 } from "./rules";
 import { type Transaction, getTransaction, transactionsByIds, transactionsInWindow } from "./queries";
 import { categories, labels, transactionLabels, transactions } from "./schema";
+import { pendingSendByKey, settleSent } from "./sending";
+import { ensureSourceCategory, knownSourceCategory } from "./source-categories";
 import { type ProviderGroupRef, TaxonomyError, adoptOrCreateCategory, adoptOrCreateLabel } from "./taxonomy";
+
+// What the pass of a source needs of the files beside this one: a platform file reaches a module
+// through the entries it already has (`baselines/modularity.json`).
+export { MAX_SENDS_PER_PASS, markNotSent, type PendingSend, pendingSends, settleSent } from "./sending";
+export { recordSourceCategories, sourceCategoryFor } from "./source-categories";
 
 /**
  * Every failure a caller is expected to handle. `provider_owned` is the refusal of §7.2: payee,
@@ -272,7 +279,7 @@ export async function categorisableAccountIds(ctx: Pick<Ctx, "userId">): Promise
  * `taxonomy.ts` writes through `getDb()`, so all of this has to happen before the writes begin.
  */
 class ProviderIds {
-  private readonly categoryCache = new Map<string, string | null>();
+  private readonly categoryCache = new Map<string, ResolvedCategory>();
   private readonly labelCache = new Map<string, string | null>();
 
   constructor(
@@ -285,7 +292,7 @@ class ProviderIds {
    * then a new category. With an id but no name there is nothing to adopt or create, so the link
    * is the only answer and an unlinked id leaves the movement uncategorised.
    */
-  async category(incoming: IncomingTransaction): Promise<string | null> {
+  async category(incoming: IncomingTransaction): Promise<ResolvedCategory> {
     const externalId = incoming.categoryExternalId;
     const name = incoming.categoryName?.trim() ?? "";
     const groupName = incoming.categoryGroupName?.trim() ?? "";
@@ -301,11 +308,15 @@ class ProviderIds {
     return resolved;
   }
 
+  /**
+   * The category this app holds for the source's own, then where that one counts (N3.1): the
+   * person may have matched it to another category, and its movements count there.
+   */
   private async resolveCategory(
     externalId: string | null,
     name: string,
     group: ProviderGroupRef | undefined,
-  ): Promise<string | null> {
+  ): Promise<ResolvedCategory> {
     if (name !== "") {
       try {
         const category = await adoptOrCreateCategory(
@@ -314,24 +325,33 @@ class ProviderIds {
           externalId === null ? undefined : { provider: this.provider, externalId },
           group,
         );
-        return category.id;
+        if (externalId === null) return { categoryId: category.id, sourceCategoryId: null };
+        const source = await ensureSourceCategory(
+          this.ctx,
+          this.provider,
+          { externalId, name, groupName: group?.name ?? null },
+          category.id,
+        );
+        return { categoryId: source?.categoryId ?? category.id, sourceCategoryId: source?.id ?? null };
       } catch (error) {
         // A name the column cannot hold (over `NAME_MAX`) leaves the movement uncategorised
         // rather than failing the whole sync: the amount and the date are worth more than the
         // label, and the person can file it by hand.
-        if (error instanceof TaxonomyError && error.code === "invalid") return null;
+        if (error instanceof TaxonomyError && error.code === "invalid") return NO_CATEGORY;
         throw error;
       }
     }
-    if (externalId === null) return null;
+    if (externalId === null) return NO_CATEGORY;
     const linked = await resolveExternal(this.ctx, this.provider, "category", [externalId]);
     const entityId = linked.get(externalId);
-    if (entityId === undefined) return null;
+    if (entityId === undefined) return NO_CATEGORY;
     const [row] = await getDb()
       .select({ id: categories.id })
       .from(categories)
       .where(and(eq(categories.id, entityId), userScoped(this.ctx).owns(categories)));
-    return row?.id ?? null;
+    if (!row) return NO_CATEGORY;
+    const source = await knownSourceCategory(this.ctx, this.provider, externalId);
+    return { categoryId: source?.categoryId ?? row.id, sourceCategoryId: source?.id ?? null };
   }
 
   /** Labels are matched by name alone (§9.1). Sorted, so an unchanged set compares equal. */
@@ -361,6 +381,14 @@ class ProviderIds {
     }
   }
 }
+
+/** The category a movement of a source counts under, and the row of the source's own category. */
+interface ResolvedCategory {
+  categoryId: string | null;
+  sourceCategoryId: string | null;
+}
+
+const NO_CATEGORY: ResolvedCategory = { categoryId: null, sourceCategoryId: null };
 
 /** The last movement wins when a provider's pages repeat an external id inside one answer. */
 function deduped(incoming: readonly IncomingTransaction[]): IncomingTransaction[] {
@@ -419,9 +447,31 @@ export async function upsertFromProvider(
   for (const movement of movements) {
     resolutions.set(movement.externalId, {
       accountId: account.id,
-      categoryId: await ids.category(movement),
+      ...(await ids.category(movement)),
       labelIds: await ids.labels(movement.labels),
     });
+  }
+
+  // A movement written here and sent to the source comes back carrying its key (N3.1): the row
+  // that waits takes the source's id, so what follows changes that row and writes no second one.
+  for (const movement of movements) {
+    if (!movement.sentKey || linked.has(movement.externalId)) continue;
+    const waiting = await pendingSendByKey(ctx, account.id, movement.sentKey);
+    if (!waiting) continue;
+    const taken = await settleSent(
+      ctx,
+      waiting.id,
+      {
+        provider,
+        externalId: movement.externalId,
+        sourceCategoryId: resolutions.get(movement.externalId)?.sourceCategoryId ?? null,
+        payeeSent: movement.payee !== null,
+      },
+      now,
+    );
+    if (!taken) continue;
+    linked.set(movement.externalId, waiting.id);
+    stored.set(waiting.id, await requireTransaction(ctx, waiting.id));
   }
 
   // The merge itself: new movements are written as they are met, changes are collected and
@@ -429,6 +479,9 @@ export async function upsertFromProvider(
   const legs: TransferLeg[] = [];
   const seenIds: string[] = [];
   const patches: { id: string; patch: TransactionPatch }[] = [];
+  // The source's own category of a row, kept beside the merge: it follows the source whoever chose
+  // the category the movement counts under.
+  const sourceCategories: { id: string; sourceCategoryId: string | null }[] = [];
 
   for (const movement of movements) {
     const resolution = resolutions.get(movement.externalId) as ProviderResolution;
@@ -461,6 +514,10 @@ export async function upsertFromProvider(
       transferGroupId: current.transferGroupId,
     });
 
+    const sourceCategoryId = resolution.sourceCategoryId ?? null;
+    if (current.sourceCategoryId !== sourceCategoryId) {
+      sourceCategories.push({ id: current.id, sourceCategoryId });
+    }
     const plan = planProviderMerge(current, movement, resolution);
     // A movement the provider is sending again is not gone, whatever a window said before.
     const back = current.removedUpstreamAt !== null;
@@ -516,6 +573,7 @@ export async function upsertFromProvider(
 
   if (
     patches.length === 0 &&
+    sourceCategories.length === 0 &&
     assignments.length === 0 &&
     removals.removed.length === 0 &&
     removals.restored.length === 0 &&
@@ -526,6 +584,12 @@ export async function upsertFromProvider(
 
   await getDb().transaction(async (tx) => {
     for (const { id, patch } of patches) await applyPatch(tx, ctx, id, patch);
+    for (const { id, sourceCategoryId } of sourceCategories) {
+      await tx
+        .update(transactions)
+        .set({ sourceCategoryId })
+        .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
+    }
     if (restore.length > 0) {
       await tx
         .update(transactions)
@@ -651,6 +715,7 @@ async function createFromProvider(
           ...columns,
           ...raw,
           categoryOrigin: columns.categoryId === null ? null : ("provider" as const),
+          sourceCategoryId: resolution.sourceCategoryId ?? null,
         }),
       )
       .returning({ id: transactions.id, transferGroupId: transactions.transferGroupId });

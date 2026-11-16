@@ -26,7 +26,15 @@ import {
 } from "@/modules/accounts/service";
 import { transactionsInWindow } from "@/modules/transactions/queries";
 import type { IncomingTransaction, TransactionState, TransactionType } from "@/modules/transactions/rules";
-import { purgeRemovedUpstream, upsertFromProvider } from "@/modules/transactions/service";
+import {
+  markNotSent,
+  pendingSends,
+  purgeRemovedUpstream,
+  recordSourceCategories,
+  settleSent,
+  sourceCategoryFor,
+  upsertFromProvider,
+} from "@/modules/transactions/service";
 import { alignCategoryTypesToMovements } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { civilDateIn, startOfDayIn, today } from "@/platform/dates";
@@ -56,6 +64,7 @@ import {
 import { type WalletCategoryWriter, createWalletCategoryWriter, syncWalletCategories } from "./categories";
 import { BACKFILL_MONTHS, backfillDepth, MAX_BACKFILL_MONTHS } from "./depth";
 import { type DateWindow, WALLET_TRANSFER_CATEGORY, firstLinkWindows, recentWindow } from "./mapping";
+import { type SendOutcome, sendManualMovements, splitSendMarker } from "./send";
 
 /** The counts of one pass, per kind, as `sync_runs.counts` stores them. */
 export interface WalletSyncResult {
@@ -96,6 +105,9 @@ const SKIPPED = "skipped";
 const REMOVED = "removed";
 /** Categories moved to the type their own movements say they are. */
 const RETYPED = "categoriesRetyped";
+/** Manual movements written to Wallet by this pass, and the ones it could not write (N3.1). */
+const SENT = "sent";
+const NOT_SENT = "notSent";
 
 /**
  * Why a run was skipped, as `sync_runs.error` keeps it: one short line, the same vocabulary §9.1
@@ -326,6 +338,9 @@ export function toIncomingTransaction(
   // says. Wallet leaves such a movement out of its statistics, and so does the app.
   const inTransferCategory =
     (movement.categorySystemId ?? listed?.systemId ?? null) === WALLET_TRANSFER_CATEGORY;
+  // A record this app wrote carries its marker in the note (`send.ts`): the note is the person's
+  // own again, and the key says which waiting movement the record is.
+  const marked = splitSendMarker(movement.note);
   return {
     externalId: movement.externalId,
     counterpartExternalId: movement.transferCounterExternalId,
@@ -335,7 +350,8 @@ export function toIncomingTransaction(
     type: inTransferCategory ? "transfer" : walletTransactionType(movement),
     state: walletTransactionState(movement.providerState),
     payee: movement.payee,
-    note: movement.note,
+    note: marked.note,
+    sentKey: marked.key,
     categoryExternalId,
     categoryName: fromRecord ? movement.categoryName : (listed?.name ?? null),
     categoryGroupExternalId: fromRecord
@@ -565,6 +581,19 @@ async function syncTransactions(
     writer: categoryWriter,
   });
   Object.assign(counts, categorySync.counts);
+  // The list as Wallet has it now, beside the categories it counts under here (N3.1): a new one
+  // is added on its own and marked "New", and no reading waits for a choice.
+  await recordSourceCategories(
+    ctx,
+    WALLET_PROVIDER,
+    [...categories.values()]
+      .filter((category) => !category.archived)
+      .map((category) => ({
+        externalId: category.externalId,
+        name: category.name.trim(),
+        groupName: category.groupName?.trim() || null,
+      })),
+  );
   const doubts: string[] = [];
   for (const window of windows) {
     const rows = await client.transactions(window);
@@ -656,6 +685,34 @@ async function syncTransactions(
 }
 
 /**
+ * The first step of a pass (rewrite plan N3.1; 12-account-modes.md §12.8, point 10): the manual
+ * movements that wait are written to Wallet before anything is read, so the balances and the
+ * movements read next already hold them. A failure of the connection is handed back, not thrown:
+ * the readings are still attempted, and the pass of the movements fails with it.
+ */
+async function sendPending(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  client: WalletClient,
+): Promise<SendOutcome> {
+  const accounts = await linkedAccounts(ctx);
+  const externalIdOf = new Map([...accounts].map(([externalId, accountId]) => [accountId, externalId]));
+  const waiting = await pendingSends(ctx, [...externalIdOf.keys()]);
+  if (waiting.length === 0) return { counts: { sent: 0, notSent: 0 }, failure: undefined };
+  return sendManualMovements(
+    client,
+    waiting.map((movement) => ({
+      ...movement,
+      accountExternalId: externalIdOf.get(movement.accountId) as string,
+    })),
+    {
+      categoryFor: (categoryId) => sourceCategoryFor(ctx, WALLET_PROVIDER, categoryId),
+      markNotSent: (id, askedOn) => markNotSent(ctx, id, askedOn),
+      settle: (id, sent) => settleSent(ctx, id, { provider: WALLET_PROVIDER, ...sent }),
+    },
+  );
+}
+
+/**
  * One whole pass over a connection: accounts and balances, then movements (spec §10.2's order),
  * each with its own `sync_runs` row. This is what "Sync now" calls and what the hourly job calls,
  * so a manual sync leaves exactly the same trace as a scheduled one.
@@ -723,6 +780,17 @@ async function walletPass(
         : createWalletCategoryWriter(token, options.clientOptions);
   let refused = false;
   let failure: unknown;
+  // Before any reading. A connection with no schedule is paused: it sends nothing, and the
+  // movements go when it is resumed (ux/n3-categories-manual.md §9.8).
+  const paused = connection.schedule.rules.length === 0;
+  let sending: SendOutcome = { counts: { sent: 0, notSent: 0 }, failure: undefined };
+  if (!paused) {
+    try {
+      sending = await sendPending(ctx, client);
+    } catch (error) {
+      sending = { ...sending, failure: error };
+    }
+  }
   // What the accounts pass proved present, and therefore whose window the movements pass may
   // judge. It stays `undefined` if that pass failed or was skipped: nothing was proven.
   let covered: ReadonlySet<string> | undefined;
@@ -741,9 +809,17 @@ async function walletPass(
         counts = pass.counts;
       } else {
         counts = await syncTransactions(ctx, connectionId, client, now, covered, categoryWriter);
+        if (sending.counts.sent > 0) counts[SENT] = sending.counts.sent;
+        if (sending.counts.notSent > 0) counts[NOT_SENT] = sending.counts.notSent;
       }
       result[kind] = counts;
-      await finishRun(ctx, run.id, { counts }, now);
+      // A connection that failed while sending fails the pass of the movements, with what it read.
+      const sendFailure = kind === "transactions" ? sending.failure : undefined;
+      if (sendFailure === undefined) await finishRun(ctx, run.id, { counts }, now);
+      else {
+        await finishRun(ctx, run.id, { counts, error: describeError(sendFailure), cause: sendFailure }, now);
+        failure ??= sendFailure;
+      }
       // The movements are in: the month ends of the synced accounts are rebuilt from them (spec
       // §7.1, F2.5). After the reads, with nothing held open; a failure here fails the pass like
       // any other, because a chart standing on stale rebuilt ends is a wrong answer.

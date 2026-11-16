@@ -177,3 +177,36 @@ decisione di prodotto. Una sola è una correzione: la regola del saldo (punto 1)
 Effetto della correzione 1 sul rollback di N3: l'immagine precedente legge le righe con fonte `movement` come un
 saldo qualunque, ma non le aggiorna. File di recupero: `n3-rollback.sql`, che le cancella; i movimenti a mano restano.
 
+## 12.9 Scelte dello sviluppo di N3.1 (16/11/2026)
+
+Precisano §12.2, §12.3 e §12.8. Nessuna cambia il perimetro di N3.1. Codice: `src/modules/transactions/sending.ts`,
+`source-categories.ts`, `source-rules.ts`; `src/platform/integrations/wallet/send.ts`.
+
+| Punto | Scelta | Motivo |
+|---|---|---|
+| Stato dell'invio | `transactions.send_state`: `to_send`, `not_sent`, null; `send_asked_on`: il giorno dell'ultima richiesta alla sorgente. Solo un movimento con origine `manual` può averlo. Un movimento a mano scritto prima di N3.1 ha null e non parte mai | Nessun invio retroattivo senza una decisione scritta |
+| Ordine | L'invio è il primo passo dell'aggiornamento, prima della lettura dei conti e dei movimenti (§12.8, punto 10) | Il saldo e i movimenti letti nello stesso aggiornamento comprendono già il movimento inviato |
+| Un movimento, un record | 1) Il record porta nella nota il segno `ledgerly-movement:<chiave>`; la chiave è quella di idempotenza del dialogo, oppure l'id della riga. 2) Il movimento passa a `not_sent` **prima** della richiesta: una richiesta con la risposta persa non si ripete alla cieca. 3) Un movimento `not_sent` si cerca sulla sorgente per segno prima di una richiesta nuova. 4) La lettura riconosce il segno e prende il movimento in attesa al posto di creare una riga | Rischio R-30. Un doppio invio con la stessa chiave crea un solo record |
+| Dopo l'invio | Stessa riga: origine `provider`, stato null, legame in `provider_links`. La nota torna senza il segno. Il segno non compare in nessuna schermata | «Invio poi lettura = una riga» |
+| Beneficiario | La creazione sulla sorgente non ha il campo: il beneficiario parte con una modifica del record appena creato. Se la sorgente non lo prende, resta quello scritto in Ledgerly | Nessun campo dell'API usato senza prova |
+| Esito di un invio | Rifiuto di un movimento (risposta 4xx, non 401, 403, 429): `not_sent`, l'aggiornamento resta riuscito. Errore del collegamento (rete, accesso rifiutato, limite, 5xx): `not_sent`, il passo dei movimenti fallisce, gli altri movimenti restano in attesa (§12.8, punto 7) | Regole di N2 |
+| In pausa | Un collegamento senza pianificazione non invia, neanche con «Aggiorna ora». «Riprova l'invio» avvia un aggiornamento della sorgente | §9.8 della specifica |
+| Limite | Al massimo 20 invii per aggiornamento; i successivi partono con l'aggiornamento dopo | Limite di richieste della sorgente |
+| Categoria verso la sorgente | Tra le categorie della sorgente che corrispondono a quella scelta: quella con lo stesso nome, altrimenti la più usata. Nessuna: il movimento parte senza categoria e in Ledgerly tiene la categoria scelta, come scelta della persona | Specifica §18, punto 20 |
+| Corrispondenza | Tabella `source_categories`: categoria della sorgente, categoria «aggiunta» per lei (`added_category_id`), categoria in cui conta (`category_id`). «Aggiunta» quando le due sono uguali, «associata» quando sono diverse | Più categorie della sorgente su una categoria di Ledgerly: `provider_links` ne permette una sola |
+| «Non si ricategorizzano» | Ogni movimento della sorgente porta la categoria della sorgente (`source_category_id`), che nessuna azione di Ledgerly cambia. `category_id` è la categoria in cui conta: segue la corrispondenza, in una transazione, e torna con «Annulla». Un movimento con una categoria scelta a mano resta dove la persona lo ha messo. La cascata non legge questi movimenti | Le letture di Expenses, Budgets, API, MCP ed export restano com'erano: nessuna query in più (G9) |
+| Associazione | La categoria «aggiunta» si archivia se non le resta nessun movimento, nessuna sottocategoria e nessun'altra categoria della sorgente. I limiti dei suoi budget si sommano a quelli della categoria scelta, da questo mese (H35, punto 7). «Annulla» riporta corrispondenza, movimenti, categoria e limiti: vale per l'ultimo cambio | Specifica §6.4 |
+| Categoria scelta eliminata | Alla lettura successiva la categoria della sorgente torna «aggiunta» e la sua categoria torna attiva | Un movimento non resta senza categoria |
+| «Da {sorgente}: {nomi}» | Compare sotto una categoria solo se i nomi dicono qualcosa in più: più categorie della sorgente, oppure una con un nome diverso | Con lo stato di partenza ogni categoria avrebbe la riga con il suo stesso nome |
+| Plugin | La capacità `createRecord` di un plugin dà la modalità «lettura e scrittura», ma l'invio con `POST /push` nasce con R5c. Oggi nessun plugin dichiara la capacità | §12.5, riga R5c |
+
+Limiti noti:
+
+1. **Saldo dopo un invio non riuscito.** La regola del saldo di N3 non cambia: una lettura della sorgente fatta dopo il
+   movimento riporta il saldo a quello della sorgente, anche se il movimento è «Non inviato». Il movimento resta e
+   riparte a ogni aggiornamento; il saldo lo comprende di nuovo dopo l'invio.
+2. **Modifica dopo una risposta persa.** Il movimento ricorda il giorno dell'ultima richiesta (`send_asked_on`): se la
+   richiesta è arrivata alla sorgente senza risposta, l'aggiornamento successivo trova il record in quel giorno anche
+   dopo una modifica della data, e non ne crea un secondo. Da lì vale il record della sorgente: una modifica fatta in
+   Ledgerly dopo quella richiesta non arriva alla sorgente.
+3. **Rollback.** [`n3-1-rollback.sql`](n3-1-rollback.sql): serve solo dopo un'associazione.

@@ -512,6 +512,20 @@ const PAGES: Screen[] = [
   // hand, so the row with its badge is measured, in the table and in the phone's list.
   { name: "/expenses (a manual movement)", session: "manual", open: go("/expenses?preset=last3Months") },
 
+  // Release N3.1 (ux §6.4, §9.8): the `sources` user has an account of a source that takes the
+  // movements written here — a row that waits and one that was not taken — and the categories of
+  // that source, one matched and one new.
+  {
+    name: "/expenses (a manual movement to send)",
+    session: "sources",
+    open: go("/expenses?preset=last3Months"),
+  },
+  {
+    name: "/settings/categories (categories of a source)",
+    session: "sources",
+    open: go("/settings/categories"),
+  },
+
   // Release N3, second part (ux/n3-categories-manual.md §12, §13): the `review` user has movements
   // in every state of a category; `reviewNew` has movements and no category.
   { name: "/expenses (automatic categories)", session: "review", open: go("/expenses?preset=last3Months") },
@@ -782,6 +796,45 @@ const OVERLAYS: Screen[] = [
       await form.getByLabel(/^(Account|Conto)$/).selectOption({ label: "Zeta Bank conto" });
       await form.getByLabel(/^(Amount|Importo)$/).fill("12,34");
       await expect(page.getByTestId("manual-balance-line")).toBeVisible();
+    },
+  },
+  {
+    // Release N3.1: the same dialog on an account whose source takes the movement — its group
+    // under the source's name and the note that says when the movement goes.
+    name: "the add transaction dialog on an account of a source",
+    session: "sources",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses");
+      await settled(page);
+      await page
+        .getByRole("button", { name: /^(Add transaction|Aggiungi movimento|Add|Aggiungi)$/ })
+        .first()
+        .click();
+      await settledDialog(page);
+      const form = page.getByTestId("manual-dialog");
+      await expect(form.getByLabel(/^(Account|Conto)$/)).toBeEnabled();
+      await form.getByLabel(/^(Account|Conto)$/).selectOption({ label: "Conto corrente app" });
+      await form.getByLabel(/^(Amount|Importo)$/).fill("12,34");
+      await expect(page.getByTestId("manual-send-note")).toBeVisible();
+    },
+  },
+  {
+    // Release N3.1: the chooser of a source's category, open on its list.
+    name: "the category chooser of a source's category",
+    session: "sources",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/categories");
+      await settled(page);
+      await page
+        .getByTestId("source-category-row")
+        .locator("visible=true")
+        .first()
+        .getByRole("button")
+        .last()
+        .click();
+      await settledDialog(page);
     },
   },
   {

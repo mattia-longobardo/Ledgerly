@@ -141,7 +141,8 @@ i due punti arrivano con la cascata.
 
 Rilascio nato dalla decisione H36 (Mattia, 15/11/2026). Concetto: [`12-account-modes.md`](12-account-modes.md) §12.1-§12.3.
 Interfaccia: [`ux/n3-categories-manual.md`](ux/n3-categories-manual.md) §6.4 e §9.8. Le stime con il segno **[DEV]**
-sono una prima lettura: le conferma lo sviluppatore.
+sono una prima lettura: le conferma lo sviluppatore. **Confermate il 16/11/2026:** criterio #8 sì, dimensione M. Scelte dello
+sviluppo: [`12-account-modes.md`](12-account-modes.md) §12.9; recupero: [`n3-1-rollback.sql`](n3-1-rollback.sql).
 
 | | |
 |---|---|
