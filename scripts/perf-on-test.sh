@@ -2,10 +2,16 @@
 # scripts/perf-on-test.sh — `npm run perf`: runs scripts/perf-probe.ts against `ledgerly_test`, never
 # `ledgerly`, in several processes, and holds the best of them to the baseline
 # (scripts/perf-compare.ts says why several). `npm run perf -- --write` records a new baseline.
+#
+# `npm run perf -- --queries` is the part of G9 that runs at every release (docs/testing.md): one
+# process, and only the number of queries of each view and route is held to the baseline. The count
+# is exact, so one sample says it; the times need the five processes and a quiet host.
 set -eu
 cd "$(dirname "$0")/.."
 # How many processes one measure is the best of.
 PROCESSES=5
+queries_only=
+case " $* " in *" --queries "*) PROCESSES=1; queries_only=1 ;; esac
 value() { sed -n "s/^$1=//p" .env.homelab | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
 database_url=$(value DATABASE_URL)
 DATABASE_URL="${database_url%/*}/ledgerly_test"
@@ -44,6 +50,8 @@ compare() { node --import tsx scripts/perf-compare.ts "$@" "$samples"/*.json; }
 
 round 0
 if compare "$@"; then exit 0; fi
+# A number of queries does not depend on the host: a second round would say the same.
+[ -z "$queries_only" ] || exit 1
 # The host is shared: a busy minute slows every process of a round alike. A second round, once, tells
 # a busy minute from a slower step — the measure is still the best median, now of twice the samples.
 echo "

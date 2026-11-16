@@ -12,7 +12,12 @@
 #   3. the release's folder and its dump (`scripts/release-dump.sh`; `--no-dump`: the folder only);
 #   4. the numbers snapshot "before" (`npm run numbers`), with its checksum verified;
 #   5. the build and the start, waiting for the health check;
-#   6. the health of the site, the numbers "after" at the same instant, and their comparison.
+#   6. the health of the site, the numbers "after" at the same instant, and their comparison;
+#   7. the `@smoke` tests on the site (docs/testing.md).
+#
+# The tests of the release run before this script, once, on the final SHA: `npm run test:select`
+# prints them from the release diff, with the E2E on the local preview. The site gets `@smoke` here
+# and, from the caller, the `@site` tests that the selection names: nothing else runs twice.
 #
 # Every step before 5 has to succeed, and the snapshot "before" has to be on disk, not empty and
 # equal to its checksum: otherwise the script stops there, with the application untouched. A
@@ -27,8 +32,9 @@
 # that differ end the script with status 2: the release is deployed, and each name is either a
 # difference the release declares or a reason to roll back.
 #
-# A failure after the build has started does not roll back by itself: the script prints the
-# rollback command and exits 1. The tag `vX.Y.Z` and the E2E stay with the caller.
+# A failure after the build has started — a red `@smoke` test included — does not roll back by
+# itself: the script prints the rollback command and exits 1. The tag `vX.Y.Z` and the `@site`
+# tests stay with the caller.
 #
 # `LEDGERLY_DEPLOY_LOCK`, `LEDGERLY_DUMPS_DIR` and `LEDGERLY_HEALTH_URL` exist for the test
 # (`src/release-script.test.ts`), which runs this file against commands that only take notes.
@@ -75,6 +81,10 @@ flock -n 9 || stop "another deploy holds $lock"
 git fetch --quiet --tags origin || stop "git fetch failed"
 sha=$(git rev-parse HEAD)
 [ "$sha" = "$(git rev-parse origin/main)" ] || stop "HEAD is not origin/main"
+# The browser of the smoke tests, now: found missing after the build, it would leave a release
+# deployed and not verified (AGENTS.md, "Deploy": `PLAYWRIGHT_BROWSERS_PATH`).
+node --input-type=module -e 'import { chromium } from "@playwright/test"; await (await chromium.launch()).close()' \
+  > /dev/null 2>&1 || stop "the browser of the E2E tests does not start: prepare it, then start again"
 
 # ——— 2. The image to go back to ———————————————————————————————————————————————————————————————
 for service in $services; do
@@ -139,6 +149,10 @@ chmod 600 "$folder/numbers-after.log"
 echo "numbers:"
 different=0
 npm run --silent numbers -- --diff "$folder/numbers-before.json" "$folder/numbers-after.json" || different=1
+
+# ——— 7. The smoke tests on the site ———————————————————————————————————————————————————————————
+echo "smoke:"
+npx playwright test --grep @smoke || failed "the @smoke tests are red on the site"
 
 echo "release $release deployed: $sha"
 echo "$folder"

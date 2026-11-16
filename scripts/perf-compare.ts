@@ -4,7 +4,10 @@
 // not be more than 10% worse. `npm run perf -- --write` records a new baseline — after a measured
 // improvement, or with a decision that accepts a cost; never to make a slower step pass.
 //
-//   node --import tsx scripts/perf-compare.ts [--write] <sample.json> [<sample.json> …]
+//   node --import tsx scripts/perf-compare.ts [--write | --queries] <sample.json> [<sample.json> …]
+//
+// `--queries` holds the number of queries only: it is what one process can say, and it is the part
+// of the gate that runs at every release (docs/testing.md).
 //
 // Each sample is one process. The measure of a view is its best median over the samples, because
 // what moved the figures was the process and not the run: the same code over the same data gave one
@@ -24,6 +27,8 @@ type Group = Record<string, Measure>;
 type Sample = { heavyUser: unknown; views: Group; routes: Group };
 
 const write = process.argv.includes("--write");
+const queriesOnly = process.argv.includes("--queries");
+if (write && queriesOnly) throw new Error("--queries measures no time: it cannot write a baseline");
 const files = process.argv.slice(2).filter((one) => !one.startsWith("--"));
 if (files.length === 0) throw new Error("usage: perf-compare.ts [--write] <sample.json> …");
 const samples = files.map((file) => JSON.parse(readFileSync(file, "utf8")) as Sample);
@@ -60,7 +65,10 @@ for (const group of ["views", "routes"] as const) {
   for (const [name, now] of Object.entries(measured[group])) {
     const before = baseline?.[group][name];
     const slower =
-      before && now.medianMs > before.medianMs * WORSE && now.medianMs - before.medianMs > NOISE_MS;
+      !queriesOnly &&
+      before &&
+      now.medianMs > before.medianMs * WORSE &&
+      now.medianMs - before.medianMs > NOISE_MS;
     const more = before && now.queries > before.queries;
     if (slower) worse.push(`${name}: mediana ${before.medianMs} → ${now.medianMs} ms`);
     if (more) worse.push(`${name}: query ${before.queries} → ${now.queries}`);
@@ -87,7 +95,9 @@ if (write) {
 } else {
   console.log(
     baseline
-      ? "G9: nessuna misura peggiore della partenza"
+      ? queriesOnly
+        ? "G9 (solo query): nessuna vista o rotta con più query della partenza"
+        : "G9: nessuna misura peggiore della partenza"
       : "nessun file di partenza: `npm run perf -- --write`",
   );
 }

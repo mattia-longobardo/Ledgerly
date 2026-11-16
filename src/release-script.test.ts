@@ -24,6 +24,9 @@ esac`,
   docker: `echo "docker $*" >> "$FAKE_LOG"`,
   curl: `echo "curl" >> "$FAKE_LOG"; echo '{"status":"ok","db":"up"}'`,
   sleep: `:`,
+  // The browser check before the build, and `npx playwright test --grep @smoke` after it.
+  node: `[ "$FAKE_BROWSER" = "missing" ] && exit 1; exit 0`,
+  npx: `echo "npx $*" >> "$FAKE_LOG"; [ "$FAKE_SMOKE" != "red" ]`,
   // npm [--prefix <dir>] run --silent numbers -- <folder> <label> … | … -- --diff <a> <b>
   npm: `echo "npm $*" >> "$FAKE_LOG"
 [ "$1" = "--prefix" ] && shift 2
@@ -41,7 +44,12 @@ printf '{"users":{}}' > "$folder/numbers-$label.json"
 echo "numbers-$label.json: 1 users, as of ${INSTANT}, sha256 0"`,
 };
 
-function release(before: string, options: string[] = [], diff = "uguale") {
+function release(
+  before: string,
+  options: string[] = [],
+  diff = "uguale",
+  extra: Record<string, string> = {},
+) {
   const result = spawnSync("sh", [SCRIPT, "t1", "--no-dump", ...options], {
     encoding: "utf8",
     env: {
@@ -53,6 +61,7 @@ function release(before: string, options: string[] = [], diff = "uguale") {
       LEDGERLY_DEPLOY_LOCK: join(work, "lock"),
       LEDGERLY_DUMPS_DIR: join(work, "dumps"),
       LEDGERLY_HEALTH_URL: "http://127.0.0.1:9/health",
+      ...extra,
     },
   });
   const calls = existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : [];
@@ -145,6 +154,28 @@ describe("scripts/release.sh", () => {
     expect(run.status).toBe(0);
     expect(run.calls.find((call) => call.includes(" before"))).toContain(`--prefix ${work} `);
     expect(run.calls.find((call) => call.includes(" after "))).not.toContain(`--prefix ${work} `);
+  });
+
+  it("stops before the build when the browser of the smoke tests does not start", () => {
+    const run = release("ok", [], "uguale", { FAKE_BROWSER: "missing" });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("STOPPED before the build");
+    expect(built(run.calls)).toBe(false);
+  });
+
+  it("runs the smoke tests on the site after the numbers, and nothing else of the suite", () => {
+    const run = release("ok");
+    const smoke = run.calls.indexOf("npx playwright test --grep @smoke");
+    expect(smoke).toBeGreaterThan(run.calls.findIndex((call) => call.includes(" after ")));
+    expect(run.calls.filter((call) => call.startsWith("npx"))).toHaveLength(1);
+  });
+
+  it("fails, with the way back, when a smoke test is red", () => {
+    const run = release("ok", [], "uguale", { FAKE_SMOKE: "red" });
+    expect(run.status).toBe(1);
+    expect(run.stderr).toContain("FAILED after the build started: the @smoke tests are red on the site");
+    expect(run.stderr).toContain("Rollback: docker tag ledgerly:pre-t1 ledgerly:latest");
+    expect(run.stdout).not.toContain("deployed");
   });
 
   it("ends with status 2, deployed, when the numbers differ", () => {
