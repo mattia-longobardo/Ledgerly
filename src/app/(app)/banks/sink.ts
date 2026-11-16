@@ -15,7 +15,8 @@ import {
   saveProviderBalance,
 } from "@/modules/accounts/service";
 import type { IncomingTransaction } from "@/modules/transactions/rules";
-import { upsertFromProvider } from "@/modules/transactions/service";
+import { categorise } from "@/modules/transactions/categorize/service";
+import { categorisableAccountIds, upsertFromProvider } from "@/modules/transactions/service";
 import { wallClockIn } from "@/platform/dates";
 import { parseCents } from "@/platform/money";
 import { type BankSink, type ReadingMovement, SinkRefusal } from "@/platform/plugins/ports";
@@ -45,7 +46,7 @@ function toIncoming(movement: ReadingMovement, timeZone: string): IncomingTransa
     state: "cleared",
     payee: movement.payee,
     note: movement.note,
-    // A bank gives no category: the automatic categories are a later release (N3).
+    // A bank gives no category: the cascade gives one after the reading (`afterReading`).
     categoryExternalId: null,
     categoryName: null,
     categoryGroupExternalId: null,
@@ -106,5 +107,9 @@ export const bankSink: BankSink = {
 
   async afterReading(ctx, accountIds) {
     await rebuildDerivedBalances(ctx, accountIds);
+    // A bank gives no category: the cascade reads what the reading brought (rewrite plan N3). It
+    // reads only the accounts whose source gives none, so a movement that came with its own
+    // category is never touched.
+    await categorise(ctx, await categorisableAccountIds(ctx));
   },
 };

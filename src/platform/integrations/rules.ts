@@ -89,6 +89,18 @@ export function coreCreatesRecords(provider: string): boolean {
   return (CREATES_RECORDS as readonly string[]).includes(provider);
 }
 
+/**
+ * The providers of the core that give a category with each movement: their movements keep it and
+ * the automatic categories never read them (rewrite plan, 04-now.md §4.4, decision H34). A plugin
+ * says the same with `providesCategories` in its manifest. A provider that is not known here — one
+ * that reads no movement — is taken as giving its own, so nothing of it is ever recategorised.
+ */
+const GIVES_NO_CATEGORIES: readonly Provider[] = [];
+
+export function coreProvidesCategories(provider: string): boolean {
+  return !(GIVES_NO_CATEGORIES as readonly string[]).includes(provider);
+}
+
 /** What the pass of a plugin syncs, in order: the accounts' balances, then the movements. */
 export const PLUGIN_KINDS = ["accounts", "transactions"] as const satisfies readonly SyncKind[];
 

@@ -69,7 +69,9 @@ const CITIES = ["MILANO", "ROMA", "TORINO", "BOLOGNA"];
 const WRONG_LABELS = 0.02;
 const ALL_CATEGORIES: string[] = [
   ...new Set(
-    SHOPS.flatMap((shop) => shop.categories.filter((one): one is string => typeof one === "string")),
+    SHOPS.flatMap((shop): string[] =>
+      shop.categories.length === 1 ? [shop.categories[0]] : [shop.categories[0], shop.categories[1]],
+    ),
   ),
 ];
 

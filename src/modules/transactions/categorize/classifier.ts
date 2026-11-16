@@ -121,17 +121,23 @@ export function learnableClasses(examples: readonly Pick<Example, "categoryId">[
     .sort();
 }
 
+/** How many examples a training works through before it lets anything else run. */
+const STEP = 400;
+
 /**
- * Trains a model, or answers `null` when the labels are too few to learn from (fewer than
- * `MIN_EXAMPLES` in categories that have at least `MIN_PER_CLASS` each, or one category only).
+ * A training as steps: it yields every `STEP` examples and returns the model, or `null` when the
+ * labels are too few to learn from (fewer than `MIN_EXAMPLES` in categories that have at least
+ * `MIN_PER_CLASS` each, or one category only). Steps, because a training is seconds of arithmetic
+ * and the server that runs it has other people to answer in the meantime.
  */
-export function train(examples: readonly Example[]): Model | null {
+function* trainSteps(examples: readonly Example[]): Generator<void, Model | null> {
   const classes = learnableClasses(examples);
   const classOf = new Map(classes.map((categoryId, index) => [categoryId, index]));
   const usable = examples.filter((example) => classOf.has(example.categoryId));
   if (classes.length < 2 || usable.length < MIN_EXAMPLES) return null;
 
   const counts = usable.map(featureCounts);
+  yield;
   const idf = idfOf(counts);
   const vectors = counts.map((one) => vectorOf(one, idf));
   const labels = usable.map((example) => classOf.get(example.categoryId) as number);
@@ -142,6 +148,7 @@ export function train(examples: readonly Example[]): Model | null {
     bias: new Float32Array(classes.length),
   };
 
+  let done = 0;
   for (let epoch = 0; epoch < EPOCHS; epoch += 1) {
     const rate = LEARNING_RATE / (1 + epoch * 0.3);
     for (const at of shuffled(vectors.length, epoch + 1)) {
@@ -158,9 +165,37 @@ export function train(examples: readonly Example[]): Model | null {
         }
         model.bias[klass] -= rate * error;
       }
+      done += 1;
+      if (done % STEP === 0) yield;
     }
   }
   return model;
+}
+
+/** Runs a training to its end in one go: for a test, or a history small enough not to matter. */
+function finish<T>(steps: Generator<void, T>): T {
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
+  }
+}
+
+/** Runs a training to its end, letting the server answer between two steps. */
+async function finishInTurns<T>(steps: Generator<void, T>): Promise<T> {
+  for (;;) {
+    const step = steps.next();
+    if (step.done) return step.value;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+}
+
+export function train(examples: readonly Example[]): Model | null {
+  return finish(trainSteps(examples));
+}
+
+/** {@link train}, in turns: what the server calls. */
+export function trainInTurns(examples: readonly Example[]): Promise<Model | null> {
+  return finishInTurns(trainSteps(examples));
 }
 
 /** What the model says about one movement: its best category, and how sure it is (0 to 1). */
@@ -191,14 +226,14 @@ const FOLDS = 5;
  * fold is predicted by a model trained on the others. What the thresholds are worked out from: a
  * model graded on the examples it learnt would always look right.
  */
-export function outOfSample(examples: readonly Example[]): Trial[] {
+function* outOfSampleSteps(examples: readonly Example[]): Generator<void, Trial[]> {
   const trials: Trial[] = [];
   const order = shuffled(examples.length, 7);
   for (let fold = 0; fold < FOLDS; fold += 1) {
     const held: Example[] = [];
     const rest: Example[] = [];
     order.forEach((at, position) => (position % FOLDS === fold ? held : rest).push(examples[at]));
-    const model = train(rest);
+    const model = yield* trainSteps(rest);
     if (model === null) continue;
     for (const example of held) {
       const prediction = predict(model, example);
@@ -207,8 +242,18 @@ export function outOfSample(examples: readonly Example[]): Trial[] {
         correct: prediction.categoryId === example.categoryId,
       });
     }
+    yield;
   }
   return trials;
+}
+
+export function outOfSample(examples: readonly Example[]): Trial[] {
+  return finish(outOfSampleSteps(examples));
+}
+
+/** {@link outOfSample}, in turns: what the server calls. */
+export function outOfSampleInTurns(examples: readonly Example[]): Promise<Trial[]> {
+  return finishInTurns(outOfSampleSteps(examples));
 }
 
 /* Storage */
