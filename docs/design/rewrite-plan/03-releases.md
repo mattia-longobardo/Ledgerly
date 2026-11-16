@@ -164,6 +164,9 @@ Revisione del 16/11/2026: applica le decisioni H39-H47 di Mattia ([`01-decisions
 Interfaccia: [`ux/n4-account-switch.md`](ux/n4-account-switch.md), in particolare §2.4 (IBAN) e §9.3 (giroconti).
 Regole tecniche: [`04-now.md`](04-now.md) §4.6. I punti con il segno **[DEV]** sono una prima lettura del designer:
 li conferma lo sviluppatore prima dello sviluppo.
+**Confermati il 17/11/2026:** [`04-now.md`](04-now.md) §4.6.1. Dimensione L, in due PR: N4a (campo IBAN e guardia) e N4b
+(passaggio). Nessun campo nuovo nel contratto dei plugin; controllo «un IBAN, un conto» nel servizio; tabelle nuove per il
+passaggio; `n4-rollback.sql`.
 
 | | |
 |---|---|

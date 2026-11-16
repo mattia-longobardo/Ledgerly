@@ -243,7 +243,31 @@ solo dal riferimento della controparte dato dalla sorgente (`pairTransfers`) o d
 
 **«Annulla passaggio» (H41, H42).** Nessun limite di tempo: è possibile finché la sorgente di partenza è collegata.
 I movimenti arrivati dalla banca dopo il passaggio non contano più in saldo, entrate, uscite e budget, e non si
-vedono; nessuna riga è cancellata. **[DEV]** Con quale stato (specifica §18, punto 11).
+vedono; nessuna riga è cancellata. Stato: §4.6.1, punto 11.
+
+### 4.6.1 Scelte dello sviluppo (17/11/2026)
+
+Conferme dei punti **[DEV]** di N4 ([`03-releases.md`](03-releases.md) «N4», specifica §18). Nessuna è una decisione
+di prodotto: le decisioni restano H38-H47.
+
+| # | Punto | Scelta | Motivo |
+|---|---|---|---|
+| 1 | Dimensione | L. Due PR in sequenza, ognuna con il suo OK: **N4a** campo IBAN, guardia «un IBAN, un conto», copia da «Riferimento»; **N4b** passaggio, giroconti, «Annulla passaggio» | N4a si verifica da sola e riduce il diff di N4b |
+| 2 | Forma della regola «un IBAN, un conto» | Controllo nel servizio, sotto un blocco per utente (`pg_advisory_xact_lock`), non un indice unico parziale | Due conti di oggi possono avere già lo stesso IBAN (copia di H46, primo aggiornamento della sorgente): un indice farebbe fallire la migrazione o la lettura. Conti già doppi restano (caso 7) |
+| 3 | Dove sta l'IBAN | Colonne di `accounts`: `iban` (nullable) e `iban_from_source` (boolean). Nessuna cifratura, come `reference` | La fotografia dei numeri (§6.4) prende i campi del conto per nome, non la riga intera: l'IBAN non entra nel file. Test in `numbers-snapshot` |
+| 4 | IBAN dal plugin | Nessun campo nuovo nel contratto v1. Il core legge `identifier` con il controllo di paese, lunghezza e cifre di controllo; un numero che non è un IBAN resta solo `identifier` | Il plugin della banca mette già l'IBAN in `identifier`; il contratto non cambia e il plugin non si ricostruisce. R5c usa lo stesso campo |
+| 5 | IBAN dalla sorgente di partenza | L'API della sorgente (2.1.1) dà un campo facoltativo «numero del conto o IBAN», testo libero. Il core lo legge con lo stesso controllo; un valore non valido si ignora | Il campo c'è solo se la persona lo ha scritto nella sorgente o la sorgente legge la banca: non «in ogni caso» (R-36, caso 6) |
+| 6 | Scrittura della sorgente su un conto già collegato | L'IBAN si salva anche se un altro conto lo ha già. La regola blocca la creazione di un conto e la scrittura a mano | È la proposta della specifica §18, punto 16.3: nessun dato perso, vale il caso 7 |
+| 7 | `normalizeIban` | Si sposta in `src/platform/iban.ts`, usato da `accounts`, `transactions` e dal runtime dei plugin. Nessun doppione | Tre utenti dello stesso controllo |
+| 8 | Avviso dell'aggiornamento automatico (N2) | Nei conteggi della lettura (`sync_runs.counts.ibanExists`), nessuna colonna nuova. La riga del collegamento lo legge dall'ultima lettura | L'avviso vale finché la condizione resta: ogni lettura lo scrive di nuovo. Non è un fallimento e non conta nei «3 fallimenti» |
+| 9 | Regola dei giroconti | Finestra 5 giorni (`IBAN_TRANSFER_MAX_DAYS`). Gruppo: uscite di un conto ed entrate dell'altro, stesso importo e valuta, collegate da una distanza di al più 5 giorni (componente del grafo). Conteggi diversi: nessuna coppia, e il rapporto conta i casi. Conteggi uguali: coppie in ordine di data; se una coppia supera 5 giorni, nessuna coppia nel gruppo | Stessa regola dell'abbinamento per gruppi (M1): nessuna scelta quando i dati non la permettono (R-34) |
+| 10 | Movimenti della regola | Entrate e uscite non già giroconti, non nascoste, non tolte dalla sorgente. Un movimento con la categoria scelta a mano entra; il rapporto lo segna. I movimenti futuri: dopo ogni lettura della banca la stessa regola, sui movimenti dopo il passaggio; le coppie si registrano con il passaggio | §9.3 della specifica; «Annulla passaggio» riporta anche le coppie nuove |
+| 11 | Dati del passaggio e righe della banca dopo «Annulla» | Tabelle nuove, additive: `account_switches` (modulo `accounts`: conto, sorgente di partenza e di arrivo, taglio, data, modo di prima degli interessi, data dell'annullamento) e `switch_transfer_pairs` (modulo `transactions`: movimento, tipo, categoria e origine della categoria di prima). Dopo «Annulla» le righe entrate dalla banca hanno `removed_upstream_at`: non contano, non si vedono, la persona non le riporta | Lo stato esiste già e ogni lettura lo rispetta; nessuna riga cancellata (H41) |
+| 12 | Movimenti della banca fino al taglio (§18, punto 5) | La lettura di un conto passato non scrive un movimento con data fino al taglio che non è già collegato | Altrimenti «Solo in banca» e «Da controllare» diventano doppioni |
+| 13 | Conti della banca non importati (§18, punto 4) | Dall'elenco salvato con il consenso. Un conto nuovo della banca arriva con «Rinnova accesso» | Nessuna chiamata nuova al plugin |
+| 14 | Prova senza scritture (§18, punto 3) | La prova legge la banca con la chiamata `sync` del plugin, sul conto non importato, senza la porta di scrittura e senza riga di cronologia. L'aggiornamento della sorgente di partenza prima della prova è un aggiornamento normale | Il test «prova senza scritture» confronta le tabelle prima e dopo la sola prova, dopo l'aggiornamento |
+| 15 | Saldi del controllo (§18, punto 7) | Banca: `pickBalance` sulla risposta della prova; il tipo usato va nel rapporto. Locale: l'ultimo saldo letto dalla sorgente di partenza, senza i movimenti a mano | `12-account-modes.md` §12.5 |
+| 16 | Rollback dell'immagine | `n4-rollback.sql`: per ogni passaggio non annullato riporta coppie, sorgente del conto e link, come «Annulla passaggio». Si usa solo prima di tornare a `pre-n4b` | L'immagine precedente non conosce le tabelle del passaggio |
 
 ## 4.7 Time Off (N5)
 
