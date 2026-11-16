@@ -6,6 +6,11 @@
 // here starts a reading: the credentials of that user are not credentials.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { hydrated } from "./helpers";
+
+// The tests of this file change the data of one user, each from what the one before left: they run
+// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+test.describe.configure({ mode: "default" });
 
 const INTEGRATIONS = "/settings/integrations";
 const ADVANCED = "/settings/integrations/advanced";
@@ -225,6 +230,9 @@ test.describe("the rows of the connections", () => {
     });
 
     await test.step("the report is plain lines from a closed list of fields", async () => {
+      // "Filter" loads the page again: the button is drawn before it answers, and a click in
+      // between copies nothing (seen with four workers, 70 ms after the page came).
+      await hydrated(log.getByRole("button", { name: "Copy report" }));
       await log.getByRole("button", { name: "Copy report" }).click();
       await expect(log.getByRole("button", { name: "Copied" })).toBeVisible();
       const report = await page.evaluate(() => navigator.clipboard.readText());

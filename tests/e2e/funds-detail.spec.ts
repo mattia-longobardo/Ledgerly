@@ -3,9 +3,10 @@
 // funds of the `fundsDetail` seed.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { THIS_YEAR } from "./helpers";
 
 const HOME = "/funds";
-const Y = new Date().getFullYear();
+const Y = THIS_YEAR;
 
 test.describe("a fund's page", () => {
   test.use({ storageState: sessionState("fundsDetail") });

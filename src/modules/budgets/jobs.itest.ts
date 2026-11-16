@@ -1,6 +1,6 @@
 // What the hourly budget alerts send (spec §7.3): the highest threshold a budget has reached this
 // month, once, and nothing for a budget whose alerts are off.
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { upsertFromProvider } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { monthKey, today } from "@/platform/dates";
@@ -11,6 +11,13 @@ import { anAccount, movement, newContext } from "../../../test/fixtures";
 import { BUDGET_ALERT_KIND, budgetAlertsJob } from "./jobs";
 import { budgetDetail } from "./queries";
 import { saveAlerts, setLimit } from "./service";
+
+// One instant for the whole file, for the clock of JavaScript alone: "today" read at two moments is
+// two days when midnight falls between them, and a test that crosses it fails for no fault.
+vi.useFakeTimers({ toFake: ["Date"], now: new Date() });
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 let ctx: Ctx;
 let accountId: string;

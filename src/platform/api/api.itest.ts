@@ -267,7 +267,9 @@ describe("GET /transactions", () => {
 
 describe("GET /summary", () => {
   it("answers with the owner's own figures", async () => {
-    await saveBalanceEntry(alice, aliceAccount, { on: "2026-09-20", cents: 5_000_00n });
+    // A balance of a month ago, whatever today is: a date written by hand is in the past only for a while.
+    const on = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+    await saveBalanceEntry(alice, aliceAccount, { on, cents: 5_000_00n });
     const body = await (await call("/summary", aliceToken)).json();
     expect(body.accounts).toBe(1);
     expect(body.netWorth).toBe("5000.00");
@@ -276,7 +278,9 @@ describe("GET /summary", () => {
   });
 
   it("tells B about B, whatever A owns", async () => {
-    await saveBalanceEntry(alice, aliceAccount, { on: "2026-09-20", cents: 5_000_00n });
+    // A balance of a month ago, whatever today is: a date written by hand is in the past only for a while.
+    const on = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+    await saveBalanceEntry(alice, aliceAccount, { on, cents: 5_000_00n });
     const body = await (await call("/summary", bobToken)).json();
     expect(body.accounts).toBe(0);
     expect(body.netWorth).toBeNull();

@@ -2,9 +2,10 @@
 // invented years of the `fundsHome` seed.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { THIS_YEAR } from "./helpers";
 
 const PATH = "/funds";
-const Y = new Date().getFullYear();
+const Y = THIS_YEAR;
 
 test.use({ storageState: sessionState("fundsHome") });
 

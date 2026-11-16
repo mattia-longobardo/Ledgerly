@@ -4,6 +4,11 @@
 // its own and no pass may be attempted (plan F7 §3.5).
 import { type Page, expect, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { THIS_YEAR } from "./helpers";
+
+// The tests of this file change the data of one user, each from what the one before left: they run
+// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+test.describe.configure({ mode: "default" });
 
 // Its own user: 26 days of vacation and 4 days of ROL, one vacation day two weeks back, one three
 // weeks ahead, and half a day of ROL (scripts/seed-e2e.ts). No payslips at all, which is what makes
@@ -11,7 +16,7 @@ import { sessionState } from "./env";
 // it is the payslip's own A.P. column or it is not there.
 test.use({ storageState: sessionState("timeoff") });
 
-const YEAR = new Date().getFullYear();
+const YEAR = THIS_YEAR;
 
 /**
  * The Monday of the first whole working week of March, as `YYYY-MM-DD`, and the days after it. No
@@ -27,6 +32,13 @@ function marchWeek(): string[] {
   });
 }
 const [MON, TUE, WED, THU, FRI] = marchWeek();
+
+/** A Saturday of the year the page shows, whatever the year: the first one of June. */
+function firstSaturdayOfJune(): string {
+  const day = new Date(Date.UTC(YEAR, 5, 1));
+  while (day.getUTCDay() !== 6) day.setUTCDate(day.getUTCDate() + 1);
+  return day.toISOString().slice(0, 10);
+}
 
 const cell = (page: Page, date: string) => page.locator(`[data-date="${date}"]`);
 /** The rows of the table that are about one of the week's days: "10 Mar 2026". */
@@ -278,9 +290,9 @@ test("time off counts the year, says where each number comes from, and refuses a
   });
 
   await test.step("a weekend is not even a button: it cannot be booked", async () => {
-    // 13 June 2026 is a Saturday.
-    await expect(page.locator('button[data-date="2026-06-13"]')).toHaveCount(0);
-    await expect(page.locator('[data-date="2026-06-13"]')).toHaveCount(1);
+    const saturday = firstSaturdayOfJune();
+    await expect(page.locator(`button[data-date="${saturday}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-date="${saturday}"]`)).toHaveCount(1);
   });
 
   await test.step("the allowance takes the contract's total, and never asks what last year left over", async () => {

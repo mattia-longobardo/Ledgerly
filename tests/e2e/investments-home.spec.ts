@@ -4,6 +4,7 @@
 // chart address lands on the new one; the period picker and the series toggle work from the keyboard.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { LAST_YEAR } from "./helpers";
 
 test.use({ storageState: sessionState("layout") });
 
@@ -31,13 +32,15 @@ test("the period drives the hero, the parts, the chart and the rows, which add u
   const ytdSummary = await page.locator("figcaption").first().textContent();
   const ytdKpi = await page.getByText("Realized", { exact: true }).locator("..").textContent();
 
-  // January, before any of the seeded data: every number of the page moves with the period, and
+  // January of last year, before any of the seeded data: every number of the page moves with the period, and
   // a P&L that cannot be measured says so — never a zero.
-  await page.goto("/investments?from=2026-01-01&to=2026-01-31");
+  await page.goto(`/investments?from=${LAST_YEAR}-01-01&to=${LAST_YEAR}-01-31`);
   // The days the picker wrote win over the presets: none of them is the current one.
   await expect(year.locator('a[aria-current="true"]')).toHaveCount(0);
-  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText("January 2026");
-  await expect(page.getByRole("heading", { name: /· 1 Jan 2026 – 31 Jan 2026/ })).toBeVisible();
+  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(`January ${LAST_YEAR}`);
+  await expect(
+    page.getByRole("heading", { name: new RegExp(`· 1 Jan ${LAST_YEAR} – 31 Jan ${LAST_YEAR}`) }),
+  ).toBeVisible();
   const january = await hero(page).getAttribute("data-cents");
   expect(january).not.toBe(ytd);
   if (january === "") {
@@ -66,9 +69,7 @@ test("the stepper stops at the year running, and walks the year to date by calen
   await expect(stepper.getByRole("button", { name: "Next period" })).toBeDisabled();
   await stepper.getByRole("link", { name: "Previous period" }).click();
   await expect(page).toHaveURL(/[?&]off=1$/);
-  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(
-    String(new Date().getFullYear() - 1),
-  );
+  await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(LAST_YEAR));
   await stepper.getByRole("link", { name: "Latest" }).click();
   await expect(page).toHaveURL(/\/investments$/);
   await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(/ · year to date$/);
@@ -83,13 +84,13 @@ test("the stepper stops at the year running, and walks the year to date by calen
 test("the charts' old address lands on the new one, and its links stay", async ({ page }) => {
   await page.goto("/investments?period=all");
   await expect(page).toHaveURL(/\/investments\?preset=all$/);
-  await page.goto(`/investments?period=${new Date().getFullYear() - 1}&view=value`);
+  await page.goto(`/investments?period=${LAST_YEAR}&view=value`);
   await expect(page).toHaveURL(/view=value&off=1$/);
   await page.goto("/investments?range=all&grain=day");
   await expect(page).toHaveURL(/\/investments\?preset=all$/);
-  await page.goto("/investments?from=2026-03&to=2026-05&view=value");
-  await expect(page).toHaveURL(/from=2026-03-01/);
-  await expect(page).toHaveURL(/to=2026-05-31/);
+  await page.goto(`/investments?from=${LAST_YEAR}-03&to=${LAST_YEAR}-05&view=value`);
+  await expect(page).toHaveURL(new RegExp(`from=${LAST_YEAR}-03-01`));
+  await expect(page).toHaveURL(new RegExp(`to=${LAST_YEAR}-05-31`));
   await expect(page).toHaveURL(/view=value/);
   await expect(page).not.toHaveURL(/grain=/);
 });
@@ -118,7 +119,7 @@ test("the Return view shows the P&L of each interval as a part of the return, on
 });
 
 test("the period picker opens and closes from the keyboard", async ({ page }) => {
-  await page.goto("/investments?from=2026-01-01&to=2026-06-30");
+  await page.goto(`/investments?from=${LAST_YEAR}-01-01&to=${LAST_YEAR}-06-30`);
   const summary = page.locator('summary[title="Date range"]');
   await summary.focus();
   await page.keyboard.press("Enter");
@@ -160,7 +161,7 @@ test("a service is highlighted in the chart from the keyboard, apart from the li
   await expect(page.getByRole("heading", { name: "Directa", level: 1 })).toBeVisible();
 });
 
-test("PERS-145: the home's hero is the sum of the service pages, in 2026 and 2025, with no estimate and no Other", async ({
+test("PERS-145: the home's hero is the sum of the service pages, in the year running and the one before, with no estimate and no Other", async ({
   page,
 }) => {
   for (const back of ["", "?off=1"]) {

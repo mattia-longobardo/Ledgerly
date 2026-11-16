@@ -3,9 +3,14 @@
 // invented funds of the `fundsDetail` seed.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { THIS_YEAR } from "./helpers";
+
+// The tests of this file change the data of one user, each from what the one before left: they run
+// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+test.describe.configure({ mode: "default" });
 
 const HOME = "/funds";
-const Y = new Date().getFullYear();
+const Y = THIS_YEAR;
 
 test.describe("the tabs", () => {
   test.use({ storageState: sessionState("fundsDetail") });

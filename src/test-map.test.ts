@@ -157,7 +157,8 @@ describe("the screens of a flow", () => {
   for (const suite of listed.suites) walk(suite, []);
 
   it("every filter finds a screen", () => {
-    expect(titles.length).toBeGreaterThan(400);
+    // The listing worked: 363 screens today, after Funds left the four widths for one screen of a kind.
+    expect(titles.length).toBeGreaterThan(300);
     for (const flow of FLOWS) {
       if (flow.screens === undefined) continue;
       expect(

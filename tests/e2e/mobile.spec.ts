@@ -1,7 +1,9 @@
 // tests/e2e/mobile.spec.ts
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState, USERS } from "./env";
-import { signInWithPassword } from "./helpers";
+import { LAST_YEAR, previewClient, signInWithPassword, THIS_YEAR, TODAY } from "./helpers";
+
+test.use({ extraHTTPHeaders: previewClient(3) });
 
 test("phones get bottom tabs and a More sheet instead of the sidebar @site", async ({ page }) => {
   await signInWithPassword(page, USERS.owner.email, USERS.owner.password);
@@ -198,7 +200,7 @@ test.describe("the form of a fund on a phone", () => {
     };
 
     await form.getByLabel("Name").fill("Fondo Telefono");
-    await form.getByLabel("Member since").fill(`${new Date().getFullYear() - 1}-03-01`);
+    await form.getByLabel("Member since").fill(`${LAST_YEAR}-03-01`);
     await stacked("fund", "Continue", "Cancel");
     await card("fund").getByRole("button", { name: "Continue" }).click();
 
@@ -282,7 +284,10 @@ test.describe("a fund's page on a phone", () => {
  * the table has six columns — the width worth checking is this one, not the desktop's.
  */
 test.describe("time off on a phone", () => {
-  test.use({ storageState: sessionState("timeoff") });
+  // Its own user, with the year of `timeoff`: the journey of the desktop counts that user's days
+  // while this file runs. One test here books a day, so the three run in order.
+  test.use({ storageState: sessionState("timeoffPhone") });
+  test.describe.configure({ mode: "default" });
 
   test("shows the cards, the calendar and the table without scrolling sideways", async ({ page }) => {
     await page.goto("/timeoff");
@@ -331,7 +336,7 @@ test.describe("time off on a phone", () => {
     page,
   }) => {
     await page.goto("/timeoff");
-    const month = page.locator(`[data-month="${new Date().getMonth() + 1}"]`);
+    const month = page.locator(`[data-month="${Number(TODAY.slice(5, 7))}"]`);
     await expect(month).toBeInViewport();
     // And clear of the top bar: the month's name is what was scrolled to.
     const top = (await month.boundingBox())?.y ?? -1;
@@ -339,7 +344,7 @@ test.describe("time off on a phone", () => {
     expect(top).toBeGreaterThanOrEqual(header);
 
     // Another year has no "this month": it opens at the top, as before.
-    await page.goto(`/timeoff?year=${new Date().getFullYear() - 1}`);
+    await page.goto(`/timeoff?year=${LAST_YEAR}`);
     await expect(page.getByRole("heading", { name: "Work & Time off", level: 1 })).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
   });
@@ -359,7 +364,7 @@ test.describe("time off on a phone", () => {
       .evaluateAll((cells) =>
         cells.map((cell) => cell.getBoundingClientRect()).map((box) => [box.width, box.height]),
       );
-    expect(sizes).toHaveLength(new Date(new Date().getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365);
+    expect(sizes).toHaveLength(new Date(THIS_YEAR, 1, 29).getMonth() === 1 ? 366 : 365);
     for (const [width, height] of sizes) {
       expect(Math.round(width)).toBeGreaterThanOrEqual(40);
       expect(Math.round(height)).toBeGreaterThanOrEqual(40);

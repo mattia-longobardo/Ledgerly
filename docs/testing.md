@@ -151,35 +151,60 @@ The preview is the image of the final SHA against `ledgerly_test`, on `127.0.0.1
 the browser first (`AGENTS.md`, "Deploy": `PLAYWRIGHT_BROWSERS_PATH`).
 
 ```bash
-docker build -t ledgerly:preview .
+sh scripts/preview-on-test.sh build                      # ledgerly:preview, with its commit on it
 sh scripts/preview-on-test.sh up ledgerly:preview        # then wait for /api/health
 docker network connect ledgerly_plugins ledgerly-preview # the plugin's manifest
 sh scripts/preview-on-test.sh seed
 export E2E_BASE_URL=http://localhost:3999
 # … the E2E commands that `npm run test:select` printed …
 sh scripts/preview-on-test.sh remove
-sh scripts/preview-on-test.sh down && docker image rm ledgerly:preview
+sh scripts/preview-on-test.sh down                       # the image stays: the release starts it
 ```
 
 A checkout with no `.env.homelab` names the file with `LEDGERLY_ENV_FILE`. A test that fails
 midway can leave data on its user: run `seed` again before the next try.
+
+- **Four workers.** `playwright.preview.config.ts` runs 4 workers, and the tests of a file side
+  by side (`fullyParallel`): the whole suite takes about 7 minutes. A file whose tests are one
+  story on one user says so with `test.describe.configure({ mode: "serial" })`; every other test
+  has to pass in any order. The site keeps one worker (`playwright.config.ts`).
+- **Every test passes here.** The preview is its own origin (`BETTER_AUTH_URL` is its address, in
+  the container and in the seed), so a password sign-in, OAuth and the return of a plugin work.
+  The seed adds one invented exchange rate when the table has none, never on the site. Each spec
+  file that signs in with a password is a client of its own (`previewClient`,
+  `tests/e2e/helpers.ts`): the limit of 5 sign-ins a minute counts for a file, not for the run.
+  There is no red test to expect.
+- **No date written by hand.** A spec takes today and the year from `TODAY`, `THIS_YEAR` and
+  `LAST_YEAR` (`tests/e2e/helpers.ts`), in the time zone of the test users.
+- **The image is built one time.** `preview-on-test.sh build` writes the commit on the image when
+  the tree is clean. `scripts/release.sh` starts that image for the same commit and builds
+  nothing; with no such image it builds the application as before. Remove `ledgerly:preview`
+  after the release (`git-policy` §10).
 
 ### `@smoke` and `@site`
 
 - **`@smoke`**: 16 tests of the main flows — the redirect of an anonymous visitor, the password
   sign-in, the manifest, `/api/v1` with no token, the command palette, and one screen of each area
   at the desktop width. They run for every release: on the preview before the deploy
-  (`npx playwright test -c playwright.preview.config.ts -g @smoke`, 15 tests, under one minute) and
+  (`npx playwright test -c playwright.preview.config.ts -g @smoke`, under one minute) and
   on the site after it (`npx playwright test -g @smoke`; `scripts/release.sh` does this as its
   last step, and a red test there is a failed deploy).
-- **`@site`**: the 11 tests that the preview cannot run — a password sign-in (the origin of the
-  preview is not trusted), OAuth, the exchange rates, the return from a plugin.
-  `playwright.preview.config.ts` leaves them out. After the deploy, run them only for the specs
-  that the selection names, with the commands it prints: `npx playwright test <specs> -g @site`.
-  The site allows 5 password sign-ins a minute to one client, and these tests spend 6: the
-  selection prints two commands with `sleep 60` between them when one would pass the limit.
+- **`@site`**: the 11 tests about what differs between the preview and the site — a password
+  sign-in through the proxy, OAuth, the real exchange rates, the return from a plugin. They run
+  on the preview with every other test. After the deploy, run them on the site too, only for the
+  specs that the selection names, with the commands it prints:
+  `npx playwright test <specs> -g @site`. The site allows 5 password sign-ins a minute to one
+  client, and these tests spend 6: the selection prints two commands with `sleep 60` between them
+  when one would pass the limit.
 
 A new test gets `@smoke` only when it replaces one of the list: the set stays under one minute.
+
+### What `a11y.spec.ts` measures
+
+Every screen at 1440 and 400 px. Funds is also measured at 768 and 375 px, on one screen of each
+kind: the home, a fund's page, the form. The rules about colour (`color-contrast`,
+`link-in-text-block`) run in both themes; the other rules of WCAG 2.1 A/AA run in the light theme,
+because a theme changes colours only.
 
 ## Performance (gate G9)
 

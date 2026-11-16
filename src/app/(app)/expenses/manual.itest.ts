@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { accountsToRebuild, balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
 import {
   accountDailyBalances,
@@ -41,6 +41,13 @@ function contextFor(userId: string): Ctx {
 async function newContext(): Promise<Ctx> {
   return contextFor((await createTestUser()).id);
 }
+
+// One instant for the whole file, for the clock of JavaScript alone: "today" read at two moments is
+// two days when midnight falls between them, and a test that crosses it fails for no fault.
+vi.useFakeTimers({ toFake: ["Date"], now: new Date() });
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 const TODAY = today("Europe/Rome");
 const day = (back: number) => addDays(TODAY, -back);

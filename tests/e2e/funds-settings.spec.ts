@@ -4,6 +4,10 @@
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
 
+// The tests of this file change the data of one user, each from what the one before left: they run
+// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+test.describe.configure({ mode: "default" });
+
 const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
 const Y = Number(TODAY.slice(0, 4));
 
@@ -114,11 +118,15 @@ test.describe("the settings of a fund", () => {
       await expect(rows).toHaveCount(1);
       await expect(fees).not.toContainText("Per versamento");
       await page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Undo" }).click();
+      await expect(toast(page, "Fee removed")).toHaveCount(0);
       await expect(rows).toHaveCount(2);
       await expect(fees).toContainText("1,50 € per contribution");
       // And for good: the row stays away after a reload.
       await fees.getByRole("button", { name: "Remove Per versamento" }).filter({ visible: true }).click();
       await expect(rows).toHaveCount(1);
+      // The row leaves the list before the server answers; the toast comes after its answer. A
+      // reload sent before it reads the fee still there, and says the removal did not hold.
+      await expect(toast(page, "Fee removed")).toBeVisible();
       await page.reload();
       await expect(rows).toHaveCount(1);
       await expect(fees).toContainText("Gestione");

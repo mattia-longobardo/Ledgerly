@@ -33,6 +33,22 @@ async function walletRun(counts: Record<string, number>, error?: string) {
   await finishRun(ctx, run.id, { counts, error });
 }
 
+/**
+ * Takes a job's lock and keeps it until `release`. It answers when the lock is held: a short wait
+ * that hopes so loses the race on a busy machine.
+ */
+async function holdJob(key: string): Promise<{ held: Promise<unknown>; release: () => void }> {
+  let release: () => void = () => {};
+  let taken: () => void = () => {};
+  const isTaken = new Promise<void>((resolve) => (taken = resolve));
+  const held = withJobLock(key, () => {
+    taken();
+    return new Promise<void>((resolve) => (release = resolve));
+  });
+  await isTaken;
+  return { held, release: () => release() };
+}
+
 const NEW_MOVEMENT = { created: 1, updated: 0, skipped: 0, removed: 0 };
 const NOTHING_NEW = { created: 0, updated: 0, skipped: 12, removed: 0 };
 
@@ -182,9 +198,7 @@ describe("runAfterSync", () => {
   it("waits for a job in use, then runs it if it is still behind", async () => {
     const { job, run } = check("in-use");
     await walletRun(NEW_MOVEMENT);
-    let release: () => void = () => {};
-    const held = withJobLock("job:in-use", () => new Promise<void>((resolve) => (release = resolve)));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    const { held, release } = await holdJob("job:in-use");
     const outcomes = await runAfterSync("minute", {
       jobs: [job],
       sleep: async () => {
@@ -199,9 +213,7 @@ describe("runAfterSync", () => {
   it("records a skip when the job stays in use, and the next sync runs it", async () => {
     const { job, run } = check("stuck");
     await walletRun(NEW_MOVEMENT);
-    let release: () => void = () => {};
-    const held = withJobLock("job:stuck", () => new Promise<void>((resolve) => (release = resolve)));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    const { held, release } = await holdJob("job:stuck");
     const outcomes = await runAfterSync("minute", { jobs: [job], busyWaitMs: 0 });
     expect(outcomes).toEqual([{ job: "stuck", status: "skipped" }]);
     expect(run).not.toHaveBeenCalled();

@@ -18,6 +18,10 @@ const rowOf = (page: Page, payee: string) => page.getByRole("row").filter({ hasT
 const group = (page: Page, text: string) =>
   page.getByTestId("review-group").filter({ has: page.getByRole("heading", { name: text, level: 3 }) });
 
+// The journeys of the `review` user change the same movements, and each counts what the one before
+// left: in order, on one worker.
+test.describe.configure({ mode: "serial" });
+
 test.describe("the automatic categories", () => {
   test.use({ storageState: sessionState("review") });
 

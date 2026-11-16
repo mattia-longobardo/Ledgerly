@@ -1,5 +1,6 @@
 // tests/e2e/a11y.spec.ts — what a screen has to be before it is called done (owner, 2026-09-20,
-// widened in F9): at 1440 and at 400 px, in both themes, no WCAG 2.1 A/AA violation, nothing
+// widened in F9): at 1440 and at 400 px, no WCAG 2.1 A/AA violation (the rules about colour in both
+// themes, the others in the light one, since a theme changes colours only), nothing
 // reaching past the viewport, no scrollbar nobody asked for, no control too small to hit, and no
 // text spilling out of its container. axe-core is injected from `node_modules`, so nothing is
 // fetched from a CDN and the check runs against the deployed site like every other spec here.
@@ -11,6 +12,7 @@
 import { createRequire } from "node:module";
 import { expect, type Page, test } from "@playwright/test";
 import { type SESSIONS, sessionState } from "./env";
+import { THIS_YEAR } from "./helpers";
 
 const require = createRequire(import.meta.url);
 const AXE = require.resolve("axe-core/axe.min.js");
@@ -22,9 +24,11 @@ const WIDTHS = [
 
 type Size = (typeof WIDTHS)[number]["name"];
 
-const THIS_YEAR = new Date().getFullYear();
-
-/** What the Funds pages are also measured at (funds-ux §6): the phone of the design, and a tablet. */
+/**
+ * What Funds is also measured at (funds-ux §6): the phone of the design, and a tablet. One screen
+ * of each kind — the home, a fund's page, the form — and not every state of them: the states of a
+ * kind share one layout, and each of them is still measured at the two usual widths.
+ */
 const EVERY_WIDTH = [
   ...WIDTHS,
   { width: 768, height: 1024, name: "tablet" },
@@ -42,7 +46,7 @@ interface Screen {
   roots?: string[];
   /** A screen that only exists at one width: the mobile bar has no desktop, and vice versa. */
   only?: Size;
-  /** Measured at the design's four widths and not the usual two. */
+  /** Measured at the design's four widths and not the usual two: one screen of each kind of Funds. */
   everyWidth?: boolean;
   /** One screen of each area: at the desktop width it is a `@smoke` test (docs/testing.md). */
   smoke?: boolean;
@@ -58,12 +62,10 @@ async function settled(page: Page): Promise<void> {
     })
     .catch(() => undefined);
   // A skeleton is a `<main>` too, and it does not fade in: measured, it says nothing about the page.
-  await page
-    .locator(
-      '[data-testid="funds-home-loading"], [data-testid="fund-detail-loading"], [data-testid="fund-wizard-loading"]',
-    )
-    .first()
-    .waitFor({ state: "detached", timeout: 15_000 });
+  // Any skeleton, by the one component that draws them (src/ui/skeleton.tsx), and not by the name of
+  // each: the page that replaces a skeleton fades in after it, and axe read the contrast of "To
+  // review" half faded in, one run in eight, while only the skeletons of Funds were waited for.
+  await page.locator("main .animate-shimmer").first().waitFor({ state: "detached", timeout: 15_000 });
   await page
     .waitForFunction(() => getComputedStyle(document.querySelector("main")!).opacity === "1", null, {
       timeout: 15_000,
@@ -294,7 +296,7 @@ const PAGES: Screen[] = [
     name: `/funds/new?step=${step}`,
     session: "layout",
     open: (page) => fundForm(page, step),
-    everyWidth: true,
+    everyWidth: step === "fund",
   })),
   // The seeded `layout` has years of its own: one measured and one with money and no value.
   ...(
@@ -307,7 +309,6 @@ const PAGES: Screen[] = [
     name: `/funds, as \`layout\`, ${what}`,
     session: "layout",
     open: go(`/funds${query}`),
-    everyWidth: true,
   })),
   ...(
     [
@@ -326,7 +327,6 @@ const PAGES: Screen[] = [
     name: `/funds, ${what}`,
     session: "fundsHome",
     open: go(`/funds${query}`),
-    everyWidth: true,
   })),
   ...(["PAC Piano", "Pensione Beta"] as const).flatMap((fund) =>
     (
@@ -353,7 +353,6 @@ const PAGES: Screen[] = [
         await page.goto(`${new URL(page.url()).pathname}${query}`);
         await settled(page);
       },
-      everyWidth: true,
     })),
   ),
   ...(
@@ -371,7 +370,6 @@ const PAGES: Screen[] = [
       await page.goto(`${new URL(page.url()).pathname}${query}`);
       await settled(page);
     },
-    everyWidth: true,
   })),
   // The four tabs of `layout`'s own funds (release N6). "Cometa" is fed by the payslip, with an active
   // source, its payslips and what two documents left before N6 — the statements already read are on
@@ -393,7 +391,7 @@ const PAGES: Screen[] = [
       name: `/funds/[id], ${what}, ${tab}`,
       session: "layout",
       open: (page) => layoutFund(page, fund, query),
-      everyWidth: true,
+      everyWidth: what === "Cometa, fed by the payslip" && tab === "Overview",
     })),
   ),
   // The fund of `fundsSetup` with no source, no contribution and no value: every empty state at once.
@@ -412,7 +410,6 @@ const PAGES: Screen[] = [
       await page.goto(`${new URL(page.url()).pathname}${query}`);
       await settled(page);
     },
-    everyWidth: true,
   })),
   { name: "/investments", session: "layout", smoke: true, open: go("/investments") },
   {
@@ -760,7 +757,7 @@ const OVERLAYS: Screen[] = [
     name: "the period picker of Investments",
     session: "layout",
     open: async (page) => {
-      await page.goto("/investments?from=2026-01-01&to=2026-06-30");
+      await page.goto(`/investments?from=${THIS_YEAR - 1}-01-01&to=${THIS_YEAR - 1}-06-30`);
       await settled(page);
       await page.locator('summary[title="Date range"]').click();
       await page.waitForTimeout(300);
@@ -1049,6 +1046,9 @@ const OVERLAYS: Screen[] = [
 
 // ——— The five rules ————————————————————————————————————————————————————————————————————————
 
+/** The WCAG 2.1 A/AA rules of axe whose answer depends on a colour, and so on the theme. */
+const COLOUR_RULES = ["color-contrast", "link-in-text-block"];
+
 interface AxeViolation {
   id: string;
   impact: string;
@@ -1060,10 +1060,14 @@ interface AxeViolation {
  * `roots` scopes the run: a whole page answers for its sidebar and topbar too, while an overlay
  * answers for itself — reporting the page behind it would blame the dialog for the page's faults.
  */
-async function violationsOf(page: Page, roots?: readonly string[]): Promise<AxeViolation[]> {
+async function violationsOf(
+  page: Page,
+  roots: readonly string[] | undefined,
+  rules: "every rule" | "colours",
+): Promise<AxeViolation[]> {
   if (!(await page.evaluate(() => "axe" in window))) await page.addScriptTag({ path: AXE });
   return page.evaluate(
-    async (include) => {
+    async ({ include, runOnly }) => {
       const result = await (
         window as unknown as {
           axe: {
@@ -1076,7 +1080,7 @@ async function violationsOf(page: Page, roots?: readonly string[]): Promise<AxeV
           };
         }
       ).axe.run((include === null ? document : { include: include.map((one) => [one]) }) as Document, {
-        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+        runOnly,
       });
       return result.violations.map((violation) => ({
         id: violation.id,
@@ -1085,7 +1089,13 @@ async function violationsOf(page: Page, roots?: readonly string[]): Promise<AxeV
         html: violation.nodes[0]?.html.replace(/\s+/g, " ").slice(0, 100) ?? "",
       }));
     },
-    roots === undefined ? null : [...roots],
+    {
+      include: roots === undefined ? null : [...roots],
+      runOnly:
+        rules === "colours"
+          ? { type: "rule", values: COLOUR_RULES }
+          : { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+    },
   );
 }
 
@@ -1197,7 +1207,7 @@ async function layoutFaults(page: Page, roots: readonly string[]): Promise<strin
   );
 }
 
-/** The app reads the theme off `<html data-theme>`; both are checked, because contrast is a colour. */
+/** The app reads the theme off `<html data-theme>`; the contrast is checked in both, because it is a colour. */
 async function setTheme(page: Page, theme: "light" | "dark"): Promise<void> {
   await page.evaluate((value) => {
     document.documentElement.dataset.theme = value;
@@ -1230,10 +1240,12 @@ function audit(screens: readonly Screen[]): void {
             const roots = screen.roots ?? ["main"];
             const layout = await layoutFaults(page, roots);
             const scope = screen.roots === undefined ? undefined : roots;
-            const light = await violationsOf(page, scope);
+            const light = await violationsOf(page, scope, "every rule");
+            // The second theme changes colours and nothing else: the structure, the names and the
+            // roles were read in the first one, so the dark pass reads the rules about colour alone.
             await setTheme(page, "dark");
             await finished(page);
-            const dark = await violationsOf(page, scope);
+            const dark = await violationsOf(page, scope, "colours");
             expect({ layout, light, dark }, `${screen.name} at ${width}px`).toEqual({
               layout: [],
               light: [],

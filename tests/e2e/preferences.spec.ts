@@ -1,7 +1,9 @@
 // tests/e2e/preferences.spec.ts
 import { expect, type Page, test } from "@playwright/test";
 import { USERS } from "./env";
-import { signInWithPassword } from "./helpers";
+import { previewClient, signInWithPassword } from "./helpers";
+
+test.use({ extraHTTPHeaders: previewClient(2) });
 
 /** The next Server Action POST (the theme toggle saves in a transition). */
 function nextActionResponse(page: Page) {

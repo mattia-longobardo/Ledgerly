@@ -7,6 +7,7 @@
 // menu with nothing in it traps nothing.
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { hydrated, LAST_YEAR, THIS_YEAR } from "./helpers";
 
 test.use({ storageState: sessionState("layout") });
 
@@ -38,6 +39,25 @@ async function focusIsVisible(page: Page): Promise<boolean> {
   });
 }
 
+/** The focus goes on a control that already answers. */
+async function focusOn(target: Locator): Promise<void> {
+  await hydrated(target);
+  await target.focus();
+}
+
+/** The dialog on screen has taken the focus: it is open, and its trap is at work. */
+async function dialogHasFocus(page: Page): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          () => document.querySelector('[role="dialog"]')?.contains(document.activeElement) ?? false,
+        ),
+      { message: "the dialog did not take the focus" },
+    )
+    .toBe(true);
+}
+
 /** Presses Tab until `stop` says so, at most `limit` times; returns how many it took. */
 async function tabUntil(page: Page, limit: number, stop: () => Promise<boolean>): Promise<number> {
   for (let index = 1; index <= limit; index += 1) {
@@ -49,11 +69,14 @@ async function tabUntil(page: Page, limit: number, stop: () => Promise<boolean>)
 
 test("the command palette opens, filters, moves and goes, all from the keyboard @smoke", async ({ page }) => {
   await page.goto("/");
-  await page.waitForTimeout(500);
 
-  await page.keyboard.press("Control+k");
+  // The shortcut is a listener of the shell: pressed before the shell answers, it is lost. Pressed
+  // again until the palette is there — never a second time once it is, which would close it.
   const palette = page.getByRole("dialog");
-  await expect(palette).toBeVisible();
+  await expect(async () => {
+    await page.keyboard.press("Control+k");
+    await expect(palette).toBeVisible({ timeout: 2_000 });
+  }).toPass();
   // It takes the focus on its own: a palette you have to Tab into is not a shortcut.
   await expect(palette.getByRole("combobox")).toBeFocused();
 
@@ -74,16 +97,15 @@ test("the command palette opens, filters, moves and goes, all from the keyboard 
 
 test("a dialog takes the focus, keeps it, and gives it back", async ({ page }) => {
   await page.goto("/pockets");
-  await page.waitForTimeout(500);
 
   const opener = page.getByRole("button", { name: "New pocket" }).first();
-  await opener.focus();
+  await focusOn(opener);
   expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
   await page.keyboard.press("Enter");
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await page.waitForTimeout(300);
+  await dialogHasFocus(page);
 
   // Tab goes round inside: after enough presses the focus is still in the dialog, never on a
   // control of the page behind it. Base UI wraps the popup in `data-base-ui-focus-guard`
@@ -111,10 +133,9 @@ test("a dialog takes the focus, keeps it, and gives it back", async ({ page }) =
 
 test("a row menu opens on Enter, walks with the arrows and closes on Escape", async ({ page }) => {
   await page.goto("/expenses");
-  await page.waitForTimeout(800);
 
   const trigger = page.getByRole("button", { name: /Actions|Row actions|More/ }).first();
-  await trigger.focus();
+  await focusOn(trigger);
   await page.keyboard.press("Enter");
 
   const menu = page.getByRole("menu").first();
@@ -132,19 +153,17 @@ test("a row menu opens on Enter, walks with the arrows and closes on Escape", as
 
 test("the update value dialog of a manual service traps the focus and gives it back", async ({ page }) => {
   await page.goto("/investments");
-  await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "Directa", exact: true }).filter({ visible: true }).first();
   // A manual service has one command (PERS-342): "Update value", the balance of its account.
   await page.goto((await service.getAttribute("href"))!.replace(/\?.*$/, ""));
-  await page.waitForTimeout(500);
 
   const opener = page.getByRole("button", { name: "Update value" }).first();
-  await opener.focus();
+  await focusOn(opener);
   expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await page.waitForTimeout(300);
+  await dialogHasFocus(page);
   for (let index = 0; index < 20; index += 1) {
     await page.keyboard.press("Tab");
     const held = await page.evaluate(() => {
@@ -162,18 +181,16 @@ test("the update value dialog of a manual service traps the focus and gives it b
 
 test("the replace key dialog of a connected service traps the focus and gives it back", async ({ page }) => {
   await page.goto("/investments");
-  await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
   await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/connection`);
-  await page.waitForTimeout(500);
 
   const opener = page.getByRole("button", { name: "Replace key" }).first();
-  await opener.focus();
+  await focusOn(opener);
   expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await page.waitForTimeout(300);
+  await dialogHasFocus(page);
   for (let index = 0; index < 12; index += 1) {
     await page.keyboard.press("Tab");
     const held = await page.evaluate(() => {
@@ -191,14 +208,12 @@ test("the replace key dialog of a connected service traps the focus and gives it
 
 test("a service's tabs are walked from the keyboard, each one a page, the period kept", async ({ page }) => {
   await page.goto("/investments?preset=all");
-  await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
   await page.goto((await service.getAttribute("href"))!);
-  await page.waitForTimeout(500);
 
   const tabs = page.getByRole("navigation", { name: "Sections of the service" });
   const names = ["Overview", "Positions", "Activity", "Connection"];
-  await tabs.getByRole("link", { name: "Overview" }).focus();
+  await focusOn(tabs.getByRole("link", { name: "Overview" }));
   expect(await focusIsVisible(page), "the tab draws no ring").toBe(true);
   for (const name of names.slice(1)) {
     await page.keyboard.press("Tab");
@@ -214,13 +229,11 @@ test("Positions: the open, closed and all-closed views are links walked from the
   page,
 }) => {
   await page.goto("/investments?preset=all");
-  await page.waitForTimeout(500);
   const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
   await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/positions?preset=all`);
-  await page.waitForTimeout(500);
 
   const status = page.getByRole("group", { name: "Which positions" });
-  await status.getByRole("link", { name: /^Open/ }).focus();
+  await focusOn(status.getByRole("link", { name: /^Open/ }));
   expect(await focusIsVisible(page), "the Open link draws no ring").toBe(true);
   await page.keyboard.press("Tab");
   await expect(status.getByRole("link", { name: /^Closed in/ })).toBeFocused();
@@ -232,7 +245,7 @@ test("Positions: the open, closed and all-closed views are links walked from the
   await expect(status.getByRole("link", { name: /^All closed/ })).toHaveAttribute("aria-current", "true");
   // A row's asset opens its Activity: a link of its own, apart from the row.
   const asset = page.getByTestId("closed-row").first().getByRole("link").first();
-  await asset.focus();
+  await focusOn(asset);
   expect(await focusIsVisible(page), "the asset link draws no ring").toBe(true);
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/activity\?preset=all&asset=/);
@@ -240,27 +253,28 @@ test("Positions: the open, closed and all-closed views are links walked from the
 
 test("a sortable table sorts from the keyboard, and the column says which way", async ({ page }) => {
   await page.goto("/expenses");
-  await page.waitForTimeout(800);
 
   const header: Locator = page.getByRole("columnheader").filter({ hasText: "Amount" }).first();
   const button = header.getByRole("button").first();
-  await button.focus();
+  await focusOn(button);
   expect(await focusIsVisible(page), "the sort control draws no ring").toBe(true);
 
   const before = await header.getAttribute("aria-sort");
   await page.keyboard.press("Enter");
-  await page.waitForTimeout(600);
-  const after = await page
-    .getByRole("columnheader")
-    .filter({ hasText: "Amount" })
-    .first()
-    .getAttribute("aria-sort");
-  expect(after, "Enter on the header changed no sort").not.toBe(before);
+  await expect
+    .poll(
+      () => page.getByRole("columnheader").filter({ hasText: "Amount" }).first().getAttribute("aria-sort"),
+      {
+        message: "Enter on the header changed no sort",
+      },
+    )
+    .not.toBe(before);
 });
 
 test("the sidebar, the page and its controls are reachable in order from the top", async ({ page }) => {
   await page.goto("/accounts");
-  await page.waitForTimeout(800);
+  // The list of the accounts is on the page, and answers, before the walk starts from the top.
+  await hydrated(page.getByRole("link", { name: "ING Conto Arancio" }).filter({ visible: true }).first());
   await page.evaluate(() => document.body.focus());
 
   // A "skip to content" is not in this design; what matters is that Tab from the top reaches the
@@ -277,18 +291,18 @@ test("the sidebar, the page and its controls are reachable in order from the top
 test("Time off: a range is picked, confirmed, removed and undone without a mouse (rewrite plan N5)", async ({
   page,
 }) => {
-  const year = new Date().getFullYear();
+  const year = THIS_YEAR;
   await page.goto("/timeoff");
-  await page.waitForTimeout(500);
   const focusedDate = () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.dataset.date);
   const bar = page.getByTestId("selection-bar");
   // One Remove button per booked row: counting them is counting the rows, whatever the seed holds.
   const removes = page.getByRole("table").getByRole("button", { name: "Remove" });
+  await expect(removes.first()).toBeVisible();
   const seeded = await removes.count();
   expect(seeded).toBeGreaterThan(0);
 
   // Into March from one of its days, then to the month's last day that can be booked.
-  await page.locator(`[data-month="3"] button[data-date]`).first().focus();
+  await focusOn(page.locator(`[data-month="3"] button[data-date]`).first());
   await page.keyboard.press("End");
   await expect.poll(focusedDate).toMatch(new RegExp(`^${year}-03-`));
   const first = (await focusedDate()) as string;
@@ -347,7 +361,7 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
 
   await test.step("the two days go again, so the next spec finds the year as the seed left it", async () => {
     for (const [index, date] of [first, last].entries()) {
-      await page.locator(`[data-date="${date}"]`).focus();
+      await focusOn(page.locator(`[data-date="${date}"]`));
       await page.keyboard.press("Delete");
       await expect(removes).toHaveCount(seeded + 1 - index);
     }
@@ -361,10 +375,9 @@ test.describe("the Funds home", () => {
     page,
   }) => {
     await page.goto("/funds");
-    await page.waitForTimeout(500);
 
     const period = page.getByRole("group", { name: "Date range" });
-    await period.getByRole("link", { name: "Year to date" }).focus();
+    await focusOn(period.getByRole("link", { name: "Year to date" }));
     expect(await focusIsVisible(page), "the Year link draws no ring").toBe(true);
     await page.keyboard.press("Tab");
     await expect(period.getByRole("link", { name: "All" })).toBeFocused();
@@ -374,26 +387,24 @@ test.describe("the Funds home", () => {
     const value = page
       .getByRole("group", { name: "What the chart shows" })
       .getByRole("link", { name: "Value" });
-    await value.focus();
+    await focusOn(value);
     expect(await focusIsVisible(page), "the Value link draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/preset=all&view=value|view=value&preset=all/);
 
     // The stepper keeps the chart's view from one year to the next.
     await page.goto("/funds?view=value");
-    await page.waitForTimeout(500);
     const stepper = page.getByRole("group", { name: "Date range" });
-    await stepper.getByRole("link", { name: "Previous period" }).focus();
+    await focusOn(stepper.getByRole("link", { name: "Previous period" }));
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/off=\d+/);
     await expect(page).toHaveURL(/view=value/);
 
     // A row's series toggle, its name and its action are three stops, each with its ring.
     await page.goto("/funds");
-    await page.waitForTimeout(500);
     const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Beta" });
     const toggle = row.getByRole("button", { name: /Highlight PAC Beta/ });
-    await toggle.focus();
+    await focusOn(toggle);
     expect(await focusIsVisible(page), "the series toggle draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
@@ -402,7 +413,7 @@ test.describe("the Funds home", () => {
     expect(await focusIsVisible(page), "the fund's name draws no ring").toBe(true);
 
     const record = row.getByRole("button", { name: "Update value" });
-    await record.focus();
+    await focusOn(record);
     expect(await focusIsVisible(page), "the action draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog");
@@ -414,13 +425,12 @@ test.describe("the Funds home", () => {
 
   test("a year of Year by year opens from the keyboard", async ({ page }) => {
     await page.goto("/funds?preset=all");
-    await page.waitForTimeout(500);
-    const year = new Date().getFullYear() - 3;
+    const year = THIS_YEAR - 3;
     const link = page
       .getByTestId("year-row")
       .getByRole("link", { name: `Open ${year}` })
       .first();
-    await link.focus();
+    await focusOn(link);
     expect(await focusIsVisible(page), "the year's link draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/off=3$/);
@@ -432,36 +442,34 @@ test.describe("a fund's new page", () => {
 
   test("the fund, its tabs, its period and its projection are walked from the keyboard", async ({ page }) => {
     await page.goto("/funds");
-    await page.waitForTimeout(500);
     const name = page
       .getByTestId("fund-home-row")
       .filter({ hasText: "Pensione Beta" })
       .getByRole("link", { name: "Pensione Beta" });
-    await name.focus();
+    await focusOn(name);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/funds\/[0-9a-f-]+$/);
-    await page.waitForTimeout(500);
 
     const period = page.getByRole("group", { name: "Date range" });
     const all = period.getByRole("link", { name: "All" });
-    await all.focus();
+    await focusOn(all);
     expect(await focusIsVisible(page), "the All link draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/preset=all$/);
 
     const tabs = page.getByRole("navigation", { name: "Fund" });
     const contributions = tabs.getByRole("link", { name: "Contributions" });
-    await contributions.focus();
+    await focusOn(contributions);
     expect(await focusIsVisible(page), "the tab draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/tab=contributions/);
     await expect(page).toHaveURL(/preset=all/);
 
-    await tabs.getByRole("link", { name: "Overview" }).focus();
+    await focusOn(tabs.getByRole("link", { name: "Overview" }));
     await page.keyboard.press("Enter");
     await expect(page.getByTestId("fund-projection")).toBeVisible();
     const summary = page.getByTestId("fund-projection").locator("summary");
-    await summary.focus();
+    await focusOn(summary);
     expect(await focusIsVisible(page), "the projection draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page.getByTestId("fund-projection")).toHaveAttribute("open", "");
@@ -469,13 +477,11 @@ test.describe("a fund's new page", () => {
 
   test("the valuation dialog gives the focus back", async ({ page }) => {
     await page.goto("/funds");
-    await page.waitForTimeout(500);
     const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Piano" });
     const href = await row.getByRole("link", { name: "PAC Piano" }).getAttribute("href");
     await page.goto(href!);
-    await page.waitForTimeout(500);
     const record = page.getByRole("button", { name: "Update value" }).first();
-    await record.focus();
+    await focusOn(record);
     await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -492,49 +498,46 @@ test.describe("a fund's new page", () => {
   ] as const) {
     test(`${fund}: ${tab}, its period and its controls are walked from the keyboard`, async ({ page }) => {
       await page.goto("/funds");
-      await page.waitForTimeout(500);
       const href = await page
         .getByTestId("fund-home-row")
         .filter({ hasText: fund })
         .getByRole("link", { name: fund })
         .getAttribute("href");
       await page.goto(href!);
-      await page.waitForTimeout(500);
 
       const link = page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: tab });
-      await link.focus();
+      await focusOn(link);
       expect(await focusIsVisible(page), "the tab draws no ring").toBe(true);
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(new RegExp(`tab=${period}`));
 
       const all = page.getByRole("group", { name: "Date range" }).getByRole("link", { name: "All" });
-      await all.focus();
+      await focusOn(all);
       expect(await focusIsVisible(page), "the All link draws no ring").toBe(true);
       await page.keyboard.press("Enter");
       await expect(page).toHaveURL(new RegExp(`tab=${period}.*preset=all|preset=all.*tab=${period}`));
-      await page.waitForTimeout(500);
+      // The rows of the whole history are the page's once "All" is the period it says it shows.
+      await expect(all).toHaveAttribute("aria-current", "true");
 
       const control = page
         .locator("main")
         .getByRole("button", { name: /^(Edit|Delete)( the contribution of .+)?$/ })
         .first();
-      await control.focus();
+      await focusOn(control);
       expect(await focusIsVisible(page), "the row's control draws no ring").toBe(true);
     });
   }
 
   test("the edit dialog of a value gives the focus back", async ({ page }) => {
     await page.goto("/funds");
-    await page.waitForTimeout(500);
     const href = await page
       .getByTestId("fund-home-row")
       .filter({ hasText: "PAC Piano" })
       .getByRole("link", { name: "PAC Piano" })
       .getAttribute("href");
     await page.goto(`${href}?tab=valuations&preset=all`);
-    await page.waitForTimeout(500);
     const edit = page.getByTestId("valuation-line").first().getByRole("button", { name: "Edit" });
-    await edit.focus();
+    await focusOn(edit);
     await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -550,14 +553,12 @@ test.describe("a fund's dialogs and the form that creates one", () => {
   /** A tab of one of `layout`'s funds, by the fund's name. */
   async function openFund(page: Page, name: string, query: string): Promise<void> {
     await page.goto("/funds?preset=all");
-    await page.waitForTimeout(500);
     const href = await page
       .getByTestId("fund-home-row")
       .filter({ hasText: name })
       .getByRole("link", { name })
       .getAttribute("href");
     await page.goto(`${href!.split("?")[0]}${query}`);
-    await page.waitForTimeout(500);
   }
 
   /** Still in the dialog, or on one of the stops Base UI's trap crosses on its way round. */
@@ -576,8 +577,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
   async function trapsAndGivesBack(page: Page, opener: Locator, title: RegExp): Promise<void> {
     const dialog = page.getByRole("dialog", { name: title });
     await expect(dialog).toBeVisible();
-    await page.waitForTimeout(300);
-    expect(await held(page), `the dialog did not take the focus: ${await focused(page)}`).toBe(true);
+    await dialogHasFocus(page);
     let ringsSeen = 0;
     for (let index = 0; index < 25; index += 1) {
       await page.keyboard.press("Tab");
@@ -599,21 +599,21 @@ test.describe("a fund's dialogs and the form that creates one", () => {
     const opener = page
       .getByTestId("fund-contributions")
       .getByRole("button", { name: "Record contribution" });
-    await opener.focus();
+    await focusOn(opener);
     expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog", { name: /^Record contribution/ });
     await expect(dialog).toBeVisible();
     // The kind is chosen with the keyboard too: Enter on a segment presses it, and the fields follow.
     const other = dialog.getByRole("button", { name: "Other operation" });
-    await other.focus();
+    await focusOn(other);
     expect(await focusIsVisible(page), "the kind draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(other).toHaveAttribute("aria-pressed", "true");
     await expect(dialog.getByLabel("Operation")).toBeVisible();
     // Space ticks "I do not know the fee", which switches the fee field off.
     const unknown = dialog.getByRole("checkbox", { name: "I do not know the fee" });
-    await unknown.focus();
+    await focusOn(unknown);
     await page.keyboard.press("Space");
     await expect(unknown).toBeChecked();
     await expect(dialog.getByLabel("Fee", { exact: true })).toBeDisabled();
@@ -623,7 +623,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
   test("the value dialog traps the focus, closes on Escape and gives the focus back", async ({ page }) => {
     await openFund(page, "Fideuram Master Selection", "");
     const opener = page.getByRole("banner").getByRole("button", { name: "Update value" });
-    await opener.focus();
+    await focusOn(opener);
     expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await trapsAndGivesBack(page, opener, /^Update value/);
@@ -634,12 +634,12 @@ test.describe("a fund's dialogs and the form that creates one", () => {
   }) => {
     await openFund(page, "Cometa", "?tab=settings");
     const edit = page.getByRole("button", { name: "Edit Payslip" });
-    await edit.focus();
+    await focusOn(edit);
     expect(await focusIsVisible(page), "Edit draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     // The switch of the due date is a stop of the dialog, with its ring, and Space turns it.
     const due = page.getByRole("dialog").getByRole("switch", { name: "The transfer has a due date" });
-    await due.focus();
+    await focusOn(due);
     expect(await focusIsVisible(page), "the switch draws no ring").toBe(true);
     const was = await due.getAttribute("aria-checked");
     await page.keyboard.press("Space");
@@ -650,7 +650,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
     // From the menu: the arrows walk it, Enter opens the dialog, and Escape gives the focus to the
     // button the menu hangs from.
     const add = page.getByTestId("fund-sources").getByRole("button", { name: "Add source" });
-    await add.focus();
+    await focusOn(add);
     await page.keyboard.press("Enter");
     await expect(page.getByRole("menu", { name: "Add source" })).toBeVisible();
     await page.keyboard.press("ArrowDown");
@@ -660,7 +660,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
 
     // A source's own menu closes on Escape and gives the focus back.
     const actions = page.getByRole("button", { name: "Actions for Payslip" });
-    await actions.focus();
+    await focusOn(actions);
     expect(await focusIsVisible(page), "the source's menu draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page.getByRole("menu")).toBeVisible();
@@ -672,7 +672,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
   test("the fee dialog traps the focus, from Add and from Edit, and gives it back", async ({ page }) => {
     await openFund(page, "Fideuram Master Selection", "?tab=settings");
     const add = page.getByTestId("fund-fees").getByRole("button", { name: "Add fee" });
-    await add.focus();
+    await focusOn(add);
     expect(await focusIsVisible(page), "Add fee draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await trapsAndGivesBack(page, add, /^Add fee$/);
@@ -681,7 +681,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
       .getByTestId("fund-fees")
       .getByRole("button", { name: "Edit Management" })
       .filter({ visible: true });
-    await edit.focus();
+    await focusOn(edit);
     expect(await focusIsVisible(page), "a fee's Edit draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await trapsAndGivesBack(page, edit, /^Edit fee$/);
@@ -691,23 +691,22 @@ test.describe("a fund's dialogs and the form that creates one", () => {
     page,
   }) => {
     await page.goto("/funds/new");
-    await page.waitForTimeout(500);
     const form = page.getByTestId("fund-wizard");
     const step = (name: string) => page.getByTestId(`wizard-step-${name}`);
 
     // Step 1: its fields, "Advanced" and the two commands, in the order of the page.
     const name = form.getByLabel("Name");
-    await name.focus();
+    await focusOn(name);
     expect(await focusIsVisible(page), "the name draws no ring").toBe(true);
     await page.keyboard.type("Fondo Tastiera");
     const advanced = step("fund").locator("summary");
-    await advanced.focus();
+    await focusOn(advanced);
     expect(await focusIsVisible(page), "Advanced draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(form.getByLabel("Code")).toBeVisible();
-    await form.getByLabel("Member since").focus();
+    await focusOn(form.getByLabel("Member since"));
     // The year is typed a digit at a time: a date half written is no date yet, and breaks nothing.
-    await page.keyboard.type(`0301${new Date().getFullYear() - 1}`);
+    await page.keyboard.type(`0301${LAST_YEAR}`);
     await expect(step("fund")).toBeVisible();
     await page.keyboard.press("Enter");
 
@@ -715,10 +714,10 @@ test.describe("a fund's dialogs and the form that creates one", () => {
     await expect(page).toHaveURL(/step=sources$/);
     await expect(page.getByRole("heading", { name: "How you pay in", level: 2 })).toBeFocused();
     const done = page.getByRole("list", { name: "Steps" }).getByRole("link", { name: /The fund/ });
-    await done.focus();
+    await focusOn(done);
     expect(await focusIsVisible(page), "the step done draws no ring").toBe(true);
     const debit = page.getByTestId("source-switch-bank_debit");
-    await debit.focus();
+    await focusOn(debit);
     expect(await focusIsVisible(page), "the switch draws no ring").toBe(true);
     await page.keyboard.press("Space");
     await expect(debit).toHaveAttribute("aria-checked", "true");
@@ -733,7 +732,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
     await page.keyboard.press("Escape");
     await expect(step("sources")).toBeVisible();
     await page.keyboard.type("100");
-    await step("sources").getByLabel("Payee contains").focus();
+    await focusOn(step("sources").getByLabel("Payee contains"));
     await page.keyboard.type("Esempio");
     await page.keyboard.press("Enter");
 
@@ -741,11 +740,11 @@ test.describe("a fund's dialogs and the form that creates one", () => {
     await expect(page).toHaveURL(/step=fees$/);
     await expect(page.getByRole("heading", { name: "Fees", level: 2 })).toBeFocused();
     const add = step("fees").getByRole("button", { name: "Add fee" });
-    await add.focus();
+    await focusOn(add);
     await page.keyboard.press("Enter");
     await trapsAndGivesBack(page, add, /^Add fee$/);
     const skip = step("fees").getByRole("button", { name: "Skip for now" });
-    await skip.focus();
+    await focusOn(skip);
     expect(await focusIsVisible(page), "the step's command draws no ring").toBe(true);
     await page.keyboard.press("Enter");
 
@@ -753,7 +752,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
     await expect(page).toHaveURL(/step=review$/);
     await expect(page.getByRole("heading", { name: "Summary", level: 2 })).toBeFocused();
     const back = step("review").getByRole("button", { name: "Back" });
-    await back.focus();
+    await focusOn(back);
     expect(await focusIsVisible(page), "Back draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/step=fees$/);

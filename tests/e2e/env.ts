@@ -68,6 +68,13 @@ export const USERS = {
     name: "Funds Setup",
   },
   timeoff: { email: "timeoff@example.test", password: "timeoff-password-123", name: "Timeoff" },
+  // The same year of time off, for the phone's journey (tests/e2e/mobile.spec.ts): it books a day
+  // while the desktop's journey counts the days of `timeoff`.
+  timeoffPhone: {
+    email: "timeoff-phone@example.test",
+    password: "timeoff-phone-password-123",
+    name: "Timeoff Phone",
+  },
   // F8: the admin journey. Its own user rather than a promoted `owner`, so every spec that signs
   // in as an ordinary one keeps meaning what it says.
   admin: { email: "admin@example.test", password: "admin-password-123", name: "Admin" },
@@ -115,6 +122,13 @@ export const USERS = {
 /** The users the seed leaves without TOTP. */
 export const WITHOUT_TOTP: ReadonlySet<keyof typeof USERS> = new Set(["enroll", "pending"]);
 
+/**
+ * Where the requests of a spec file come from on a local preview (`previewClient`, helpers.ts):
+ * the block reserved for documentation (TEST-NET-3), which no real client has. The seed forgets
+ * the sign-ins counted for these addresses, so a second run does not start on the first one's count.
+ */
+export const PREVIEW_CLIENT_PREFIX = "203.0.113.";
+
 /** The only addresses the seed may create or delete. */
 export const TEST_EMAIL_DOMAIN = "@example.test";
 
@@ -141,6 +155,7 @@ export const SESSIONS = {
   fundsNew: { user: "fundsNew", file: "funds-new-session.json" },
   fundsSetup: { user: "fundsSetup", file: "funds-setup-session.json" },
   timeoff: { user: "timeoff", file: "timeoff-session.json" },
+  timeoffPhone: { user: "timeoffPhone", file: "timeoff-phone-session.json" },
   // The seed promotes this one, so Admin › Users and Admin › Server have a journey (F8).
   admin: { user: "admin", file: "admin-session.json" },
   tokens: { user: "tokens", file: "tokens-session.json" },

@@ -10,6 +10,10 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
 
+// The tests of this file change the data of one user, each from what the one before left: they run
+// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+test.describe.configure({ mode: "default" });
+
 test.use({ storageState: sessionState("sources") });
 
 const section = (page: Page) => page.getByTestId("source-categories");

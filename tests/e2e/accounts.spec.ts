@@ -1,11 +1,20 @@
 // tests/e2e/accounts.spec.ts — the F1 journey at 1440 px (spec §11).
 import { expect, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { LAST_YEAR } from "./helpers";
 
 // Starts already signed in, from the session the seed prepared: the run's rate-limited sign-ins
 // belong to the auth specs (tests/e2e/env.ts). This user is this spec's own, so the accounts it
 // creates belong to no other test.
 test.use({ storageState: sessionState("accounts") });
+
+// The four journeys are one story on one user: each starts from what the one before left.
+test.describe.configure({ mode: "serial" });
+
+// The balances of the story: January and February of last year, in the past whatever today is.
+const JANUARY_START = `${LAST_YEAR}-01-01`;
+const JANUARY_END = `${LAST_YEAR}-01-31`;
+const FEBRUARY_END = `${LAST_YEAR}-02-28`;
 
 test("an account is created, kept up to date, summarised and snapshotted", async ({ page }) => {
   await test.step("a new user is told there is nothing to show yet", async () => {
@@ -19,7 +28,7 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await page.getByLabel("Name").fill("ING Conto Arancio");
     await page.getByLabel("Type").selectOption("checking");
     await page.getByLabel("Opening balance").fill("1.500,00");
-    await page.getByLabel("Balance date").fill("2026-01-31");
+    await page.getByLabel("Balance date").fill(JANUARY_END);
     await page.getByRole("button", { name: "Create account" }).click();
 
     await expect(page).toHaveURL(/\/accounts\/[0-9a-f-]{36}$/);
@@ -31,7 +40,7 @@ test("an account is created, kept up to date, summarised and snapshotted", async
 
   await test.step("a later balance is added and listed with its change", async () => {
     await page.goto(`${account}?tab=entries`);
-    await page.getByLabel("Date").fill("2026-02-28");
+    await page.getByLabel("Date").fill(FEBRUARY_END);
     await page.getByLabel("Balance", { exact: true }).fill("1.750,50");
     await page.getByLabel("Note").fill("Statement Feb");
     await page.getByRole("button", { name: "Save balance" }).click();
@@ -84,10 +93,10 @@ test("an account is created, kept up to date, summarised and snapshotted", async
   await test.step("a past range moves the chart and leaves the header on today (F2.5)", async () => {
     await page.goto(account);
     await page.getByTitle("Date range").click();
-    await page.getByLabel("From", { exact: true }).fill("2026-01-01");
-    await page.getByLabel("To", { exact: true }).fill("2026-01-31");
+    await page.getByLabel("From", { exact: true }).fill(JANUARY_START);
+    await page.getByLabel("To", { exact: true }).fill(JANUARY_END);
     await page.getByRole("button", { name: "Apply" }).click();
-    await expect(page).toHaveURL(/from=2026-01-01&to=2026-01-31/);
+    await expect(page).toHaveURL(new RegExp(`from=${JANUARY_START}&to=${JANUARY_END}`));
     await expect(page.getByRole("heading", { name: "Balance · 1 month" })).toBeVisible();
     // January ended at 1.500,00 €; the header is about today, and today is 1.750,50 €.
     await expect(page.getByText("1.750,50 €").first()).toBeVisible();
@@ -135,10 +144,10 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     // the hero on today.
     await expect(page.getByRole("link", { name: "Last 3 months" }).first()).toBeVisible();
     await page.getByTitle("Date range").click();
-    await page.getByLabel("From", { exact: true }).fill("2026-01-01");
-    await page.getByLabel("To", { exact: true }).fill("2026-02-28");
+    await page.getByLabel("From", { exact: true }).fill(JANUARY_START);
+    await page.getByLabel("To", { exact: true }).fill(FEBRUARY_END);
     await page.getByRole("button", { name: "Apply" }).click();
-    await expect(page).toHaveURL(/from=2026-01-01&to=2026-02-28/);
+    await expect(page).toHaveURL(new RegExp(`from=${JANUARY_START}&to=${FEBRUARY_END}`));
     await expect(page.locator("p.text-hero")).toHaveText("1.750,50 €");
     // The stacked chart names each account under it, with its share of the total.
     const legend = page.getByRole("list", { name: "Accounts in the chart" });
@@ -148,7 +157,7 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     // Day by day too, keeping the range.
     await page.getByRole("group", { name: "Chart detail" }).getByRole("link", { name: "Day" }).click();
     await expect(page).toHaveURL(/grain=day/);
-    await expect(page).toHaveURL(/from=2026-01-01/);
+    await expect(page).toHaveURL(new RegExp(`from=${JANUARY_START}`));
     await expect(legend).toContainText("ING main");
   });
 

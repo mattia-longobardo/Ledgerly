@@ -8,6 +8,10 @@
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
 
+// The tests of this file change the data of one user, each from what the one before left: they run
+// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+test.describe.configure({ mode: "default" });
+
 test.use({ storageState: sessionState("manual") });
 
 /** The last three months: the seeded movement is two days old, in the month before on a 1st or a 2nd. */

@@ -6,9 +6,9 @@ import { expect, type Page, test } from "@playwright/test";
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../fixtures/payroll/samples";
 import { twinPdf } from "../fixtures/payroll/twin";
 import { sessionState } from "./env";
+import { LAST_YEAR } from "./helpers";
 
 /** The twins are dated 2031, and a fund's pages read nothing after today: last year, every day of it past. */
-const LAST_YEAR = new Date().getFullYear() - 1;
 const lastYear = <T>(twin: T): T =>
   JSON.parse(JSON.stringify(twin).replaceAll("2031", String(LAST_YEAR))) as T;
 

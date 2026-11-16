@@ -23,6 +23,8 @@ async function tabTo(page: Page, target: ReturnType<Page["locator"]>, limit = 40
 test.describe("the form", () => {
   // Its own user: an account and no fund (scripts/seed-e2e.ts), so the payslip is free.
   test.use({ storageState: sessionState("fundsNew") });
+  // One draft of the form for a person, and the third journey wants the fund of the second: in order.
+  test.describe.configure({ mode: "serial" });
 
   test("the four steps are walked with the keyboard only, and the fund is created", async ({ page }) => {
     await page.goto("/funds/new");

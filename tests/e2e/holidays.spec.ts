@@ -5,10 +5,15 @@
 // else passes, look at the service before looking at the code.
 import { expect, test } from "@playwright/test";
 import { sessionState } from "./env";
+import { THIS_YEAR } from "./helpers";
+
+// The tests of this file change the data of one user, each from what the one before left: they run
+// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+test.describe.configure({ mode: "default" });
 
 test.use({ storageState: sessionState("timeoff") });
 
-const YEAR = new Date().getFullYear();
+const YEAR = THIS_YEAR;
 
 test("a calendar is picked by country and place, and its days arrive from the source", async ({ page }) => {
   await test.step("with no calendar, the screen says what is used instead", async () => {

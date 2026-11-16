@@ -12,6 +12,22 @@ import { runTier } from "./tick";
 
 const job = (name: string, run: JobDefinition["run"]): JobDefinition => ({ name, tier: "hourly", run });
 
+/**
+ * Takes a job's lock and keeps it until `release`. It answers when the lock is held: a short wait
+ * that hopes so loses the race on a busy machine.
+ */
+async function holdJob(key: string): Promise<{ held: Promise<unknown>; release: () => void }> {
+  let release: () => void = () => {};
+  let taken: () => void = () => {};
+  const isTaken = new Promise<void>((resolve) => (taken = resolve));
+  const held = withJobLock(key, () => {
+    taken();
+    return new Promise<void>((resolve) => (release = resolve));
+  });
+  await isTaken;
+  return { held, release: () => release() };
+}
+
 describe("jobs", () => {
   beforeEach(resetDatabase);
   afterAll(closeDatabase);
@@ -55,9 +71,7 @@ describe("jobs", () => {
   });
 
   it("skips a job that is already running elsewhere", async () => {
-    let release: () => void = () => {};
-    const held = withJobLock("job:slow", () => new Promise<void>((resolve) => (release = resolve)));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    const { held, release } = await holdJob("job:slow");
     const outcomes = await runTier("hourly", [job("slow", async () => ({}))]);
     release();
     await held;

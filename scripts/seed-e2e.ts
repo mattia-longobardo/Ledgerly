@@ -44,10 +44,11 @@ import { DEFAULT_GROUPS } from "../src/modules/transactions/categorize/tables";
 import type { IncomingTransaction } from "../src/modules/transactions/rules";
 import { createAuth } from "../src/platform/auth/auth";
 import { oauthClients } from "../src/platform/auth/oauth/schema";
-import { users } from "../src/platform/auth/schema";
+import { rateLimits, users } from "../src/platform/auth/schema";
 import { getPreferences, updatePreferences } from "../src/modules/users/service";
 import type { Ctx } from "../src/platform/context";
 import { addDays, addMonths, monthKey, today } from "../src/platform/dates";
+import { saveRates, storedRange } from "../src/platform/fx/service";
 import { getDb } from "../src/platform/db/client";
 import { userScoped } from "../src/platform/db/scope";
 import { isBookable } from "../src/platform/holidays/rules";
@@ -71,6 +72,7 @@ import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../src/app/(app)/banks/plugin";
 import {
   BASE_URL,
   E2E_MCP_CLIENT_NAME,
+  PREVIEW_CLIENT_PREFIX,
   SESSIONS,
   STATE_DIR,
   TEST_EMAIL_DOMAIN,
@@ -114,6 +116,10 @@ async function removeTestUsers(): Promise<void> {
   await getDb()
     .delete(oauthClients)
     .where(and(eq(oauthClients.name, E2E_MCP_CLIENT_NAME), isNull(oauthClients.userId)));
+  // The sign-ins counted for the clients of a preview's spec files: nobody else has these addresses.
+  await getDb()
+    .delete(rateLimits)
+    .where(like(rateLimits.key, `${PREVIEW_CLIENT_PREFIX}%`));
   rmSync(STATE_DIR, { recursive: true, force: true });
 }
 
@@ -127,6 +133,12 @@ const auth = createAuth({ withNextCookies: false });
 for (const user of Object.values(USERS)) {
   await auth.api.createUser({ body: user });
 }
+// On an empty database (a local preview) the first user created is made an admin: the test users
+// are ordinary ones there too, as they are on the site.
+await getDb()
+  .update(users)
+  .set({ role: "user" })
+  .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`));
 await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.admin.email));
 mkdirSync(STATE_DIR, { recursive: true });
 
@@ -807,8 +819,8 @@ async function seedFundsSetup(): Promise<void> {
  * The dates are worked out from today so the seed does not go stale, and only working days are
  * booked: the service refuses anything else.
  */
-async function seedTimeOff(): Promise<void> {
-  const ctx = await contextOf(USERS.timeoff.email);
+async function seedTimeOff(email: string): Promise<void> {
+  const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
   const year = Number(on.slice(0, 4));
   // Days for both kinds since N9, and no carry-over to state: that one comes from the payslip.
@@ -846,9 +858,22 @@ function workingDay(from: string, delta: number): string {
  * write lays out a screen that does not exist.
  */
 /**
+ * The exchange rates of a local preview. The site has the ECB's own, read by its job; the test
+ * database has none, and a value in USD would have no figure in EUR. One invented fixing, years
+ * back, is the rate of every day after it. Never on the site, and never next to a real rate: a row
+ * of `fx_rates` is kept for ever.
+ */
+async function seedPreviewRates(): Promise<void> {
+  if (!process.env.E2E_BASE_URL) return;
+  if ((await storedRange()).latest !== null) return;
+  await saveRates([{ on: "2020-01-02", currency: "USD", eurPerUnit: "0.9000000000" }]);
+}
+
+/**
  * The display-currency journey (docs/design/investments.md §1.8): one account in EUR and one in
- * USD. The USD one is converted at the site's own ECB rates (`fx_rates`), so the spec checks the
- * currency of the totals, never a converted figure.
+ * USD. The USD one is converted at the stored rates (`fx_rates`: the ECB's on the site, one
+ * invented fixing on a preview), so the spec checks the currency of the totals, never a converted
+ * figure.
  */
 async function seedCurrency(): Promise<void> {
   const ctx = await contextOf(USERS.currency.email);
@@ -1911,6 +1936,7 @@ async function seedLayout(): Promise<void> {
   await saveLeaveDay(ctx, { from: workingDay(on, 21), kind: "vacation", fraction: 1 });
 }
 
+await seedPreviewRates();
 await seedExpenses();
 await seedBudgets();
 await seedPockets();
@@ -1923,7 +1949,8 @@ await seedFundsCopy();
 await seedFundsNew();
 await seedFundsSetup();
 await seedInvestments();
-await seedTimeOff();
+await seedTimeOff(USERS.timeoff.email);
+await seedTimeOff(USERS.timeoffPhone.email);
 await seedLayout();
 await seedConnections();
 await seedManual();

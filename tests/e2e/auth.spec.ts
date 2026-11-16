@@ -1,7 +1,9 @@
 // tests/e2e/auth.spec.ts
 import { expect, test } from "@playwright/test";
 import { USERS } from "./env";
-import { pageAlert, signInWithPassword } from "./helpers";
+import { pageAlert, previewClient, signInWithPassword } from "./helpers";
+
+test.use({ extraHTTPHeaders: previewClient(1) });
 
 test("anonymous visitors are sent to sign-in @smoke", async ({ page }) => {
   await page.goto("/settings/profile");

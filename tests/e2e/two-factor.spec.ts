@@ -4,8 +4,10 @@
 // rate-limited password sign-ins are spent here once.
 import { expect, test } from "@playwright/test";
 import { USERS, sessionState } from "./env";
-import { pageAlert } from "./helpers";
+import { pageAlert, previewClient } from "./helpers";
 import { totpCode, totpSecretFor } from "./totp";
+
+test.use({ extraHTTPHeaders: previewClient(4) });
 
 test.describe("a password account without TOTP", () => {
   test.use({ storageState: sessionState("enroll") });
