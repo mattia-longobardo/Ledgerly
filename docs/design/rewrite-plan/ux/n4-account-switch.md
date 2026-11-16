@@ -9,7 +9,7 @@ Questa specifica descrive solo l'interfaccia. Il piano ha priorità: se un punto
 La regola che decide quali movimenti sono gli stessi, i suoi numeri e la tolleranza del saldo sono del dominio: qui non sono descritti e non cambiano.
 
 Revisione del 16/11/2026: applica le risposte di Mattia alle 6 domande della prima versione (§17). Q1 è una regola nuova: Ledgerly
-impedisce di aggiungere un conto che è già in Ledgerly (§2.4). Q2 è l'opzione B: i giroconti si riconoscono su tutto lo storico (§9.3).
+impedisce di aggiungere un conto che è già in Ledgerly, con l'IBAN, e ogni conto può avere un IBAN (§2.4, precisata da Mattia il 16/11/2026). Q2 è l'opzione B: i giroconti si riconoscono su tutto lo storico (§9.3).
 Q3-Q6 sono il default. Nessuna domanda è aperta. I dati negli esempi sono inventati.
 
 ## 0. Riepilogo
@@ -17,7 +17,8 @@ Q3-Q6 sono il default. Nessuna domanda è aperta. I dati negli esempi sono inven
 | Voce del «Contenuto» di N4 | Dove | Sezione |
 |---|---|---|
 | Scelta «È lo stesso conto di…» nella procedura della banca | `/banks/connect`, passo «Conti» ed esito | §2.1 |
-| Nessun conto aggiunto due volte (decisione Q1) | `/banks/connect`, passo «Conti» | §2.4 |
+| Nessun conto aggiunto due volte: controllo sull'IBAN (decisione Q1) | `/banks/connect`, passo «Conti»; «Nuovo conto» | §2.4 |
+| Campo «IBAN» sul conto (decisione Q1) | `/accounts/new`; `/accounts/[id]`, scheda Impostazioni | §2.4.1 |
 | Ingresso da un conto che esiste già | `/accounts/[id]`, scheda Impostazioni, «Origine dei dati» | §2.2 |
 | Un conto per volta | Pagina `/accounts/[id]/switch` | §3 |
 | Movimenti a mano non inviati (H38) | Passo «Prova», blocco in alto | §5 |
@@ -140,7 +141,7 @@ In Ledgerly
 | Conti nel gruppo | Conti dell'utente che ricevono saldo e movimenti da una sorgente diversa da quella di questo collegamento; non archiviati; non di investimento; stessa valuta del conto della banca. La regola non contiene nomi di fornitore |
 | Testo dell'opzione | «{account} · {source}» |
 | Gruppo vuoto | Non compare |
-| Default | «Crea un conto nuovo», tranne quando Ledgerly trova un conto che può essere lo stesso: vale §2.4 |
+| Default | «Crea un conto nuovo», tranne quando un conto di Ledgerly ha lo stesso IBAN: vale §2.4 |
 | Nota sotto il `Select` | `text-sm text-muted`: «Questo conto non viene importato ora. Dopo questo passo Ledgerly confronta {source} e la banca e ti mostra il risultato. Niente cambia finché non scegli «Applica».» |
 | Stesso conto scelto due volte | Errore esistente `accounts.duplicate` |
 | Più conti con questa scelta | Permesso. Ogni conto ha la sua prova e la sua applicazione, una per volta (§3.3) |
@@ -216,42 +217,73 @@ Un solo ingresso dal conto. Nessuna voce in Accounts (elenco), in Overview o nel
 
 ### 2.4 Nessun conto aggiunto due volte (decisione Q1)
 
-Decisione di Mattia del 16/11/2026: il caso «lo stesso conto vero è due volte in Ledgerly» non deve accadere. Ledgerly impedisce di
-aggiungere un conto che è già in Ledgerly. Per questo N4 non ha una funzione che unisce due conti.
+Decisione di Mattia del 16/11/2026: il caso «lo stesso conto vero è due volte in Ledgerly» non deve accadere. La sorgente di partenza e
+la banca danno l'IBAN del conto. Se un conto con quell'IBAN esiste già, Ledgerly non lo aggiunge e dà un avviso. Ogni conto può avere
+un IBAN, anche scritto a mano. Per questo N4 non ha una funzione che unisce due conti.
 
-Fatto tecnico: un conto di Ledgerly non ha un IBAN. Ledgerly non ha un dato certo per dire che un conto della banca e un conto di
-un'altra sorgente sono lo stesso conto. La guardia usa il segnale più forte che esiste: stessa valuta e stesso saldo. **[DEV]** (§18, punto 16)
+Sostituita: la guardia «stessa valuta e stesso saldo» della revisione precedente, con l'uscita «È un altro conto».
 
-| # | Regola | Dove |
-|---|---|---|
-| 1 | Lo stesso conto della banca non si importa due volte. Un conto della banca già collegato non torna tra i conti da scegliere | N1 §6.7 (esiste già) |
-| 2 | **Conto probabilmente uguale.** Il conto della banca ha la stessa valuta e lo stesso saldo di un conto che arriva da un'altra sorgente: per quel conto «Crea un conto nuovo» **non è disponibile**. Il `Select` parte da «{account} · {source}» nel gruppo «È lo stesso conto di…». Restano «Usa un conto esistente» e «Non importare» | Passo «Conti» di `/banks/connect` |
-| 3 | **Conto forse uguale.** Nessun saldo uguale, ma esiste almeno un conto di un'altra sorgente nella stessa valuta: «Crea un conto nuovo» resta, con un avviso sotto il `Select` | Lo stesso passo |
-| 4 | **Conto già doppio** (creato prima di N4). Nel passo «Conto» del passaggio il conto della banca non è selezionabile. Il testo dice come uscire dal caso | §4 |
+#### 2.4.1 Campo «IBAN» sul conto
 
-Regola 2, sotto il `Select` (avviso `warn` di §1.3):
+| Tema | Regola |
+|---|---|
+| Dove | «Nuovo conto» (`/accounts/new`) e scheda Impostazioni del conto, sezione «Generale», dopo «Riferimento». `Field` + `Input`, facoltativo |
+| Chi lo riempie | La sorgente, a ogni aggiornamento, se dà l'IBAN. La persona, a mano, su ogni conto dove la sorgente non lo dà e sui conti a mano |
+| Conto con IBAN dato dalla sorgente | Campo in sola lettura (`readOnly`), con la nota «L'IBAN arriva da {provider}.» |
+| Conti senza IBAN | Il campo resta vuoto: contanti, salvadanai, conti che la banca condivide senza IBAN. I conti di investimento non hanno il campo |
+| Scrittura | Spazi e minuscole sono accettati. Ledgerly salva senza spazi e in maiuscolo. `autoComplete="off"`, `spellCheck={false}`, `inputMode="text"`, carattere `tabular-nums` |
+| Vista | In gruppi di 4: «IT60 X054 2811 1010 0000 0123 456». Negli elenchi e nella procedura della banca resta mascherato, come N1 §6.4 |
+| Controllo | Paese, lunghezza e cifre di controllo. Errore sotto il campo: «Questo IBAN non è valido. Controlla le cifre.» |
+| Unico per utente | Due conti non archiviati dello stesso utente non hanno lo stesso IBAN. Errore sotto il campo: «Questo IBAN è già del conto «{other}».» Il salvataggio non parte |
+| Conto archiviato con lo stesso IBAN | L'errore diventa: «Questo IBAN è del conto archiviato «{other}». Ripristina quel conto oppure togli l'IBAN da lì.» |
+| Dato personale | L'IBAN è della persona. Non entra in URL, toast, registro e «Copia rapporto» (N2 §8.4) |
+| Primo rilascio | I conti di oggi ricevono l'IBAN al primo aggiornamento della loro sorgente. Nessun passo della persona |
+
+#### 2.4.2 Controllo quando si aggiunge un conto
+
+| # | Caso | Cosa fa Ledgerly | Dove |
+|---|---|---|---|
+| 1 | Il conto della banca è già collegato a un conto di Ledgerly | Non torna tra i conti da scegliere | N1 §6.7 (esiste già) |
+| 2 | Il conto della banca ha l'IBAN di un conto che arriva da **un'altra sorgente** | «Crea un conto nuovo» **non è disponibile**. Il `Select` parte da «{account} · {source}» nel gruppo «È lo stesso conto di…». Resta «Non importare». Avviso sotto il `Select` | Passo «Conti» di `/banks/connect` |
+| 3 | Il conto della banca ha l'IBAN di un **conto a mano** | «Crea un conto nuovo» non è disponibile. Il `Select` parte da «Usa «{account}»» (N1 §6.4). Resta «Non importare». Avviso sotto il `Select` | Lo stesso passo |
+| 4 | La persona crea un conto a mano, o scrive un IBAN su un conto, e l'IBAN esiste già | Errore sul campo «IBAN» (§2.4.1). Il conto non si crea e non si salva | `/accounts/new`, scheda Impostazioni |
+| 5 | Un aggiornamento di una sorgente porta un conto nuovo con un IBAN che esiste già | Il conto non si crea da solo. La riga del collegamento mostra un avviso con l'azione «Scegli i conti» (N2 §3.2), dove vale il caso 2 o 3 | `Settings › Integrations` |
+| 6 | Il conto della banca **non ha un IBAN**, oppure nessun conto di Ledgerly ha quell'IBAN | Nessun blocco. Se esistono conti di un'altra sorgente nella stessa valuta e senza IBAN, avviso leggero con «Crea un conto nuovo» scelto | Passo «Conti» |
+| 7 | Conto già doppio, creato prima di N4 (due conti, stesso IBAN dopo il primo aggiornamento) | Nel passo «Conto» del passaggio il conto della banca non è selezionabile. Il testo dice come uscire dal caso | §4 |
+
+Casi 2 e 3, sotto il `Select` (avviso `warn` di §1.3, `role="status"`):
 
 ```text
 ┌ Conto corrente · IT60 •••• 4821 · EUR ─────────────────┐
 │ In Ledgerly                                            │
 │ [Conto corrente · Wallet                           ▾]  │
-│ ⚠ Ledgerly ha già un conto con lo stesso saldo:        │
-│   «Conto corrente» su Wallet. Per non avere due volte  │
-│   lo stesso conto, non puoi crearne uno nuovo.         │
-│   È un altro conto                                     │
+│ ⚠ Questo conto è già in Ledgerly: «Conto corrente»,    │
+│   da Wallet, ha lo stesso IBAN. Ledgerly non lo        │
+│   aggiunge una seconda volta.                          │
 └────────────────────────────────────────────────────────┘
 ```
 
-- L'opzione «Crea un conto nuovo» resta in elenco con `disabled`: l'utente vede che esiste e perché non si può scegliere.
-- `LinkButton` «È un altro conto»: serve per due conti diversi con lo stesso saldo (esempio: due conti a 0,00 €). Dopo il clic «Crea un conto nuovo» torna disponibile per quel conto e l'avviso diventa `text-sm text-muted`: «Hai detto che è un altro conto.» Il clic vale solo per questa apertura della pagina.
-- Più conti con lo stesso saldo: l'avviso nomina il primo per nome e il `Select` parte da quello.
-- L'avviso ha `role="status"`: non blocca la lettura degli altri conti.
+- L'opzione «Crea un conto nuovo» resta in elenco con `disabled`: la persona vede che esiste e l'avviso dice perché non si può scegliere.
+- Nessuna uscita «è un altro conto»: l'IBAN è un dato certo. Chi ha un IBAN sbagliato su un conto lo corregge nelle impostazioni di quel conto.
+- Caso 3, testo: «Questo conto è già in Ledgerly: «{account}» ha lo stesso IBAN. Ledgerly non lo aggiunge una seconda volta.»
+- Il controllo vale sul server all'importazione, non solo nel `Select`: una richiesta che crea un conto con un IBAN già presente è rifiutata, con il codice nuovo `iban_exists` e il testo dell'avviso.
 
-Regola 3, sotto il `Select`, solo con «Crea un conto nuovo» scelto (`text-sm text-muted`): «Controlla che questo conto non sia già in Ledgerly
-da {source}. Se è lo stesso, scegli «È lo stesso conto di…».»
+Caso 5, testo dell'avviso sulla riga del collegamento: «{name} ha un conto nuovo con l'IBAN di «{account}». Ledgerly non lo ha aggiunto.»
 
-Regola 4, testo nel passo «Conto» (§4): «Già in Ledgerly come «{other}». Per passare questo conto, elimina prima «{other}» dalle sue impostazioni.»
+Caso 6, sotto il `Select` (`text-sm text-muted`): «La banca non dà l'IBAN di questo conto. Controlla che non sia già in Ledgerly da {source}.
+Se è lo stesso, scegli «È lo stesso conto di…».»
+
+Caso 7, testo nel passo «Conto» (§4): «Già in Ledgerly come «{other}». Per passare questo conto, elimina prima «{other}» dalle sue impostazioni.»
 Dopo l'eliminazione il conto della banca torna tra i conti da scegliere. **[DEV]** (§18, punto 16)
+
+#### 2.4.3 Effetto sul passo «Conto» del passaggio (§4)
+
+| Caso | Vista |
+|---|---|
+| «{account}» ha un IBAN e un conto della banca ha lo stesso IBAN | Quel conto è già scelto e ha il `Badge` `pos` «Stesso IBAN». Gli altri conti con un IBAN non sono selezionabili |
+| «{account}» ha un IBAN e un conto della banca ha un IBAN diverso | Non selezionabile, con il testo «IBAN diverso.» |
+| «{account}» o il conto della banca non ha un IBAN | Selezionabile, come in §4 |
+| Dopo «Applica» | Il conto tiene il suo IBAN. Se era vuoto, riceve quello della banca |
 
 ## 3. Pagina del passaggio
 
@@ -307,7 +339,8 @@ la pagina si ricarica senza perdere il punto.
 | Testo della riga | Nome dato dalla banca · IBAN mascherato (N1 §6.4) · valuta |
 | Default | Nessuna selezione. Se c'è un solo conto, è già scelto |
 | Pulsante | `primary` «Avvia la prova», disattivato senza selezione, con il testo «Scegli un conto.» sotto |
-| Conto della banca già in Ledgerly | In elenco, `aria-disabled`, con il testo di §2.4, regola 4 (decisione Q1) |
+| Conto della banca già in Ledgerly | In elenco, `aria-disabled`, con il testo di §2.4.2, caso 7 (decisione Q1) |
+| IBAN | Regole di §2.4.3: «Stesso IBAN» già scelto; «IBAN diverso.» non selezionabile |
 | Banca con accesso scaduto o «Serve un'azione» | Titolo della banca + «L'accesso a {bank} è scaduto.» + `LinkButton` «Rinnova accesso». I suoi conti non sono selezionabili |
 | Banca «In pausa» (fornitore non attivo) | Non raggiungibile: la pagina è 404 (§2.3) |
 
@@ -889,10 +922,9 @@ Chiavi proposte. I nomi di banche e fornitori sono sempre parametri.
 | `accounts.sameAs` | {account} · {source} | {account} · {source} |
 | `accounts.sameAsNote` | Questo conto non viene importato ora. Dopo questo passo Ledgerly confronta {source} e la banca e ti mostra il risultato. Niente cambia finché non scegli «Applica». | This account is not imported now. After this step Ledgerly compares {source} and the bank and shows you the result. Nothing changes until you choose “Apply”. |
 | `accounts.continue` | Continua | Continue |
-| `accounts.sameGuard` | Ledgerly ha già un conto con lo stesso saldo: «{account}» su {source}. Per non avere due volte lo stesso conto, non puoi crearne uno nuovo. | Ledgerly already has an account with the same balance: “{account}” on {source}. To avoid the same account twice, you cannot create a new one. |
-| `accounts.notSame` | È un altro conto | It is a different account |
-| `accounts.notSameDone` | Hai detto che è un altro conto. | You said it is a different account. |
-| `accounts.sameWarning` | Controlla che questo conto non sia già in Ledgerly da {source}. Se è lo stesso, scegli «È lo stesso conto di…». | Check that this account is not in Ledgerly already from {source}. If it is the same, choose “It is the same account as…”. |
+| `accounts.sameIban` | Questo conto è già in Ledgerly: «{account}», da {source}, ha lo stesso IBAN. Ledgerly non lo aggiunge una seconda volta. | This account is already in Ledgerly: “{account}”, from {source}, has the same IBAN. Ledgerly does not add it a second time. |
+| `accounts.sameIbanManual` | Questo conto è già in Ledgerly: «{account}» ha lo stesso IBAN. Ledgerly non lo aggiunge una seconda volta. | This account is already in Ledgerly: “{account}” has the same IBAN. Ledgerly does not add it a second time. |
+| `accounts.noIban` | La banca non dà l'IBAN di questo conto. Controlla che non sia già in Ledgerly da {source}. Se è lo stesso, scegli «È lo stesso conto di…». | The bank does not give the IBAN of this account. Check that it is not in Ledgerly already from {source}. If it is the same, choose “It is the same account as…”. |
 | `done.toSwitch` | Da completare: è lo stesso conto di «{account}» su {source}. | To complete: it is the same account as “{account}” on {source}. |
 | `done.switchAction` | Controlla e passa | Check and switch |
 
@@ -926,6 +958,8 @@ Chiavi proposte. I nomi di banche e fornitori sono sempre parametri.
 | `account.start` | Avvia la prova | Start the trial |
 | `account.choose` | Scegli un conto. | Choose an account. |
 | `account.alreadyHere` | Già in Ledgerly come «{other}». Per passare questo conto, elimina prima «{other}» dalle sue impostazioni. | Already in Ledgerly as “{other}”. To switch this account, first delete “{other}” from its settings. |
+| `account.sameIban` | Stesso IBAN | Same IBAN |
+| `account.otherIban` | IBAN diverso. | Different IBAN. |
 | `account.expired` | L'accesso a {bank} è scaduto. | The access to {bank} has expired. |
 | `account.renew` | Rinnova accesso | Renew access |
 | `account.empty.noBank.title` | Nessuna banca collegata | No bank connected |
@@ -1075,6 +1109,19 @@ Chiavi proposte. I nomi di banche e fornitori sono sempre parametri.
 
 ### 14.4 Altre chiavi toccate
 
+IBAN del conto (`accounts.settings.general`, usate anche da «Nuovo conto») e avviso sulla riga del collegamento:
+
+| Chiave | Italiano | English |
+|---|---|---|
+| `accounts.settings.general.iban` | IBAN (facoltativo) | IBAN (optional) |
+| `accounts.settings.general.ibanFromSource` | L'IBAN arriva da {provider}. | The IBAN comes from {provider}. |
+| `accounts.settings.errors.ibanInvalid` | Questo IBAN non è valido. Controlla le cifre. | This IBAN is not valid. Check the digits. |
+| `accounts.settings.errors.ibanExists` | Questo IBAN è già del conto «{other}». | This IBAN already belongs to the account “{other}”. |
+| `accounts.settings.errors.ibanArchived` | Questo IBAN è del conto archiviato «{other}». Ripristina quel conto oppure togli l'IBAN da lì. | This IBAN belongs to the archived account “{other}”. Restore that account or remove the IBAN from it. |
+| `settings.connections.notices.ibanExists` | {name} ha un conto nuovo con l'IBAN di «{account}». Ledgerly non lo ha aggiunto. | {name} has a new account with the IBAN of “{account}”. Ledgerly did not add it. |
+
+Altre:
+
 | Chiave | Italiano | English | Nota |
 |---|---|---|---|
 | `interests.form.switched` | Questo conto arriva dalla banca: le liquidazioni non si pubblicano. L'accredito arriva dalla banca. | This account comes from the bank: settlements are not published. The credit comes from the bank. | Nuova |
@@ -1123,7 +1170,8 @@ Scelte di interazione, non di prodotto. Si cambiano senza toccare il piano.
 | 13 | Dopo il passaggio la regola di interessi passa a «Solo analisi»; dopo l'annullamento torna al modo di prima, senza pubblicare da sola le liquidazioni chiuse nel frattempo | Il piano dice solo «la pubblicazione finisce». Pubblicare dopo creerebbe un doppione dell'accredito già arrivato dalla banca |
 | 14 | Gli esempi usano «Banca Esempio» e importi inventati | Nessun valore personale nel repo |
 | 15 | La card «Giroconti» è solo da leggere: nessuna esclusione di una coppia | La regola è del dominio. Se sui dati reali la prova mostra coppie sbagliate, l'esclusione si aggiunge come punto nuovo |
-| 16 | La guardia di §2.4 ha l'uscita «È un altro conto» | Due conti diversi possono avere lo stesso saldo. Senza un'uscita la guardia bloccherebbe un conto vero |
+| 16 | La guardia di §2.4 non ha un'uscita «è un altro conto» | L'IBAN è un dato certo. Un IBAN sbagliato si corregge sul conto |
+| 18 | Il campo «IBAN» è in sola lettura quando lo dà la sorgente | Un valore scritto a mano sarebbe sostituito all'aggiornamento seguente |
 | 17 | La card «Giroconti» mostra il totale per anno | Dice quali numeri passati cambiano, senza leggere ogni riga |
 
 ## 17. Decisioni prese
@@ -1133,7 +1181,7 @@ Q2 cambia numeri esistenti (entrate e uscite dei mesi passati): la decisione scr
 
 | # | Domanda | Esempio | A (default) | B | Effetto | Decisione |
 |---|---|---|---|---|---|---|
-| Q1 | Il conto della banca è già in Ledgerly come conto separato: si può unire al conto di {source}? | Alla prima connessione hai importato «Banca Esempio Conto corrente» come conto nuovo. Ora in Ledgerly hai due conti per lo stesso conto vero: quello di Wallet e quello della banca | No, non in N4. Il passo «Conto» mostra il conto come non selezionabile: «Già in Ledgerly come…». Il passaggio vale solo per un conto della banca non ancora importato | Sì: il passaggio unisce i due conti. Il conto creato dalla banca sparisce e i suoi movimenti passano nel conto di Wallet, dopo la stessa prova | A: nessuna unione di conti da scrivere; chi ha già importato il conto resta con due conti (il tuo conto corrente non è importato: il caso non ti tocca). B: copre ogni caso; aggiunge l'unione di due conti con saldi, budget e regole, e un annullamento più difficile. N4 passa da M a L **[DEV]**. Tocca §2.3, §4 | **Regola nuova.** Il caso non deve accadere: Ledgerly impedisce di aggiungere un conto già aggiunto. Nessuna unione di conti in N4 (§2.4) |
+| Q1 | Il conto della banca è già in Ledgerly come conto separato: si può unire al conto di {source}? | Alla prima connessione hai importato «Banca Esempio Conto corrente» come conto nuovo. Ora in Ledgerly hai due conti per lo stesso conto vero: quello di Wallet e quello della banca | No, non in N4. Il passo «Conto» mostra il conto come non selezionabile: «Già in Ledgerly come…». Il passaggio vale solo per un conto della banca non ancora importato | Sì: il passaggio unisce i due conti. Il conto creato dalla banca sparisce e i suoi movimenti passano nel conto di Wallet, dopo la stessa prova | A: nessuna unione di conti da scrivere; chi ha già importato il conto resta con due conti (il tuo conto corrente non è importato: il caso non ti tocca). B: copre ogni caso; aggiunge l'unione di due conti con saldi, budget e regole, e un annullamento più difficile. N4 passa da M a L **[DEV]**. Tocca §2.3, §4 | **Regola nuova.** Il caso non deve accadere. La sorgente di partenza e la banca danno l'IBAN: se un conto con quell'IBAN esiste già, Ledgerly non lo aggiunge e dà un avviso. Ogni conto può avere un IBAN, anche scritto a mano. Nessuna unione di conti in N4 (§2.4) |
 | Q2 | Da quale data i movimenti tra il conto passato e gli altri conti della stessa banca diventano giroconti? | Il 5 marzo hai spostato 500 € dal conto corrente al conto di risparmio. Oggi Ledgerly conta 500 € di uscite e 500 € di entrate. Lo stesso per uno spostamento del 10 novembre | Dal periodo del confronto in poi: il giroconto del 10 novembre e tutti i prossimi. Il 5 marzo resta un'uscita e un'entrata | Su tutto lo storico: anche il 5 marzo diventa un giroconto. La prova elenca ogni coppia prima di «Applica» | A: i numeri dei mesi passati non cambiano; la regola usa solo movimenti che la banca conosce. B: entrate e uscite dei mesi passati scendono; serve una regola nuova per importo e data sui movimenti vecchi, non scritta nel piano, con il rischio di coppie sbagliate. In tutti e due i casi cambiano numeri esistenti: serve la tua decisione scritta. Tocca §9.3 | **B** (§9.3) |
 | Q3 | «Annulla passaggio»: cosa succede ai movimenti arrivati dalla banca dopo il passaggio? | Passi il conto il 16 novembre. Il 20 la banca porta 6 movimenti nuovi. Il 21 annulli | I 6 movimenti non contano più e non si vedono (restano in archivio, nessuna riga cancellata). Wallet li porta di nuovo se li ha. I numeri sono quelli di Wallet | I 6 movimenti restano sul conto come movimenti a mano | A: i numeri tornano quelli della sorgente (criterio 5); un movimento che Wallet non ha sparisce dai conti. B: niente sparisce; se Wallet ha gli stessi movimenti, risultano doppi e li devi eliminare a mano. Tocca §10.2, §10.3 | **A** |
 | Q4 | «Annulla passaggio» ha un limite di tempo? | Passi il conto a novembre. A marzo vuoi tornare a Wallet | No: resta disponibile finché Wallet è collegato | Sì: 30 giorni. Dopo, il pulsante sparisce | A: sempre reversibile; dopo mesi l'annullamento tocca molti movimenti arrivati dalla banca (Q3). B: effetti piccoli e chiari; dopo 30 giorni non si torna indietro dall'interfaccia. Tocca §9.1, §10.4 | **A** |
@@ -1159,5 +1207,5 @@ Non sono decisioni di prodotto: sono dati e regole tecniche che l'interfaccia ri
 13. **Descrittore del fornitore.** `{source}` e `{provider}` arrivano dal registro (`platform/integrations/registry.ts`) e dal manifest. Nessun file nuovo contiene un nome di fornitore (lista nota di M12).
 14. **N1.** `accounts-step.tsx`: gruppo nuovo nel `Select`, decisione nuova `{ kind: "sameAs", accountId }` trattata come `skip` nell'importazione, e riga nuova nell'esito. La specifica di N1 non cambia: §6.4 e §11 di N1 rimandano a questo documento.
 15. **Movimento.** Vale la nota di N1 §13, punto 6, su `prefers-reduced-motion`.
-16. **Guardia sui conti doppi (decisione Q1).** Un conto non ha un IBAN: la regola 2 di §2.4 usa «stessa valuta e stesso saldo». **[DEV]** Da confermare: quale saldo della banca si confronta nel passo «Conti» (il tipo di §7.1) e con quale saldo locale; se il confronto è possibile dentro il tempo del passo; se un IBAN sul conto (campo nuovo, migrazione) è preferibile in un rilascio seguente. Da confermare anche che l'eliminazione di un conto creato dalla banca libera il conto della banca (regola 4).
-17. **Piano.** Le decisioni Q1 e Q2 non sono ancora in `01-decisions.md`, `03-releases.md` «N4» e `04-now.md` §4.6. Q2 aggiunge una regola del dominio e cambia numeri esistenti: la fotografia dei numeri dopo il primo passaggio reale non è uguale a prima, per decisione. Questo documento non cambia quei file.
+16. **IBAN e conti doppi (decisione Q1).** Serve un campo IBAN sul conto, con una regola «unico per utente tra i conti non archiviati»: è una migrazione di schema. `03-releases.md` «N4» dice «Migrazioni: nessuna di schema»: la riga va aggiornata (punto 17). **[DEV]** Da confermare: 1) la sorgente di partenza dà l'IBAN del conto in ogni caso (decisione di Mattia: sì); 2) la banca non dà l'IBAN per ogni conto: nella prova di N1 solo 1 conto su 3 lo aveva, quindi il caso 6 di §2.4.2 è frequente per i conti di risparmio; 3) cosa fa la migrazione se due conti di oggi ricevono lo stesso IBAN al primo aggiornamento (proposta: l'IBAN si salva su tutti e due, la regola «unico» vale per le scritture nuove, e vale il caso 7); 4) l'eliminazione di un conto creato dalla banca libera il conto della banca; 5) IBAN fuori da registro, export dei rapporti e log, cifrato o no come gli altri dati del conto.
+17. **Piano.** Le decisioni Q1 e Q2 non sono ancora in `01-decisions.md`, `03-releases.md` «N4» e `04-now.md` §4.6. Q1 aggiunge a N4 il campo IBAN (migrazione di schema, `06-data.md` §6.1) e la regola «unico per utente». Q2 aggiunge una regola del dominio e cambia numeri esistenti: la fotografia dei numeri dopo il primo passaggio reale non è uguale a prima, per decisione. Questo documento non cambia quei file.
