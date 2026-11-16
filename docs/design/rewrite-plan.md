@@ -57,6 +57,7 @@ dice quali punti di `investments.md`, `investments-ux.md` e `funds-ux.md` sono s
 | 10 | [`10-modularity.md`](rewrite-plan/10-modularity.md) | Obiettivo e priorità, pacchetti e moduli di arrivo (responsabilità, interfaccia, dipendenze), mappa delle dipendenze, accoppiamenti da sciogliere, regole con controllo automatico, duplicazione, pulizia, prestazioni, prova di comportamento invariato, punti di estensione comuni E1-E8 |
 | 11 | [`11-standardization.md`](rewrite-plan/11-standardization.md) | Standardizzazione (approvata da Mattia il 14/11/2026): regola, fondo pensione standard, piano di acquisto (PAC), Investments a 2 gruppi, elenco delle funzioni su misura con meccanismo standard e rilascio, anticipi alla fase A |
 | 12 | [`12-account-modes.md`](rewrite-plan/12-account-modes.md) | Decisioni del 15/11/2026: tre modalità di conto, movimento a mano e saldo, categorie delle sorgenti; effetti sugli altri rilasci; perimetro di N3 e domande D1-D3, decise (H36-H38) |
+| 13 | [`13-plugins-addons.md`](rewrite-plan/13-plugins-addons.md) | Decisione del 16/11/2026 (H48-H50): plugin gestiti dall'admin, applicazione Enable Banking unica, sezione Addons; fatti, opzioni di rilascio, domande PA1-PA16 aperte, effetti sugli altri rilasci |
 
 ## Premesse
 
@@ -163,6 +164,10 @@ flowchart LR
 | Z | Review finale unica: codice e sicurezza | Nulla | — | — | La chiede Mattia | — |
 
 N6, R5g e il secondo passo di R5d sono della revisione sulla standardizzazione: approvata da Mattia il 14/11/2026.
+**Nota del 16/11/2026 (H48-H50).** Le righe N1, R5a e R5c dicono «per utente» e «moduli attivabili». Mattia ha deciso, per
+un rilascio futuro: plugin gestiti e aggiunti dall'admin, applicazione Enable Banking unica dell'istanza, sezione
+Addons. Il rilascio è da decidere: [`13-plugins-addons.md`](rewrite-plan/13-plugins-addons.md) §13.5.
+
 I numeri `#n` sono i criteri di `git-policy` §6. Dettaglio di ogni rilascio: [`03-releases.md`](rewrite-plan/03-releases.md).
 
 ## OK richiesti a Mattia
