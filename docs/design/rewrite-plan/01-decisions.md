@@ -3,7 +3,7 @@
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
 Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**, del **15/11/2026**
-(H31-H38) e del **16/11/2026** (H39-H52). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
+(H31-H38) e del **16/11/2026** (H39-H53). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
 che le applicano sono una revisione **approvata da Mattia il 14/11/2026**
 ([`11-standardization.md`](11-standardization.md), decisione H21). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
@@ -148,6 +148,16 @@ Modello, domande decise ed effetti sugli altri rilasci: [`13-plugins-addons.md`]
 | H50 | **Sezione Addons.** Un addon è un modulo del core che il singolo utente può disattivare: un modulo intero (Investments, Work) oppure una sotto-categoria (Payroll, Subscriptions, Budgets, Pockets, Time Off). I moduli necessari al funzionamento di base dell'applicazione non si disattivano. Dettagli: H52 | Precisa D2 «moduli attivabili» e R5a «Moduli attivabili per utente»: nome, elenco di partenza e regola dei moduli di base. D3: Settings ha in più il tab «Addons» | R5a |
 | H51 | **I plugin li gestiscono gli utenti, come nel piano prima di H48.** Ogni utente attiva e gestisce i suoi plugin; l'admin non fa niente nell'interfaccia (H25, H27). Enable Banking: ogni utente registra la sua applicazione e inserisce le sue credenziali (C1c). Motivo: l'applicazione gratuita è «Restricted»; con un'applicazione unica l'admin dovrebbe collegare a mano, nel suo pannello di Enable Banking, i conti di ogni altro utente | H48 e H49. Le domande PA2-PA8 non servono più | N1 (già in produzione), R5a, R5c: nessun cambio |
 | H52 | **Addons, con i default (PA1, PA9-PA16).** PA1: la sezione Addons entra in R5a; nessun rilascio nuovo. PA9: moduli di base, non disattivabili: Overview, Accounts, Expenses con le categorie, Settings, collegamenti e sorgenti, avvisi, esportazione. Addon: Investments (con i fondi pensione), Work (Payroll, Time Off), Budgets, Subscriptions, Pockets, Interests. PA10: un addon disattivato è spento ovunque: menu, pagine, riquadri di Overview, job, avvisi e mail, API e MCP (errore dichiarato «modulo non attivo»); i dati restano e tornano alla riattivazione. PA11: patrimonio e totali non cambiano; i conti del modulo continuano a contare, con l'ultimo valore letto. PA12: la disattivazione di un addon non spegne e non blocca un altro addon; la funzione che ne dipende resta senza la parte che manca, e Ledgerly elenca cosa si ferma prima della conferma. PA13: per gli utenti di oggi tutti gli addon sono attivi; un utente nuovo sceglie nel primo avvio. PA14: l'admin non limita gli addon. PA15: il nome nelle schermate è «Addons», in italiano e in inglese. PA16: tab proprio, Settings › Addons | Le opzioni B delle domande PA1 e PA9-PA16: rilascio nuovo N7; Interests di base; spento solo nell'interfaccia; conti fuori dai totali; blocco delle dipendenze; tutti attivi per l'utente nuovo; limiti dell'admin; nome «Moduli»; sezione nel tab «Profilo» | R5a; R1, R2, R5b, R5e per gli effetti |
+### Test dei rilasci: solo le parti modificate (decisione del 16/11/2026)
+
+Mattia ha letto il rapporto sui test (misure, duplicati, legacy, parallelismo, 21 azioni) e ha risposto: «ok pacchetto
+più tutte quelle aggiuntive». Il pacchetto consigliato e le azioni aggiuntive sono approvati; le due azioni che il
+rapporto sconsiglia (seed dei soli utenti necessari, unit senza isolamento) no. La regola operativa è nella skill
+`test-policy` (§6) e in [`../../testing.md`](../../testing.md); i gate sono in [`03-releases.md`](03-releases.md) §3.1.
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H53 | **A ogni rilascio si provano solo le parti modificate.** 1) La mappa `file cambiati → modulo → comando → usato da` e la lista «codice critico o condiviso» sono nel repo (`docs/testing.md`, `scripts/test-map.ts`): un file critico o fuori mappa fa partire la suite completa. 2) Gli E2E girano una volta, sull'anteprima locale, prima del deploy; sul sito dopo il deploy girano solo `@smoke` e i test che l'anteprima non può eseguire. 3) I gate si eseguono una volta, sullo SHA finale; sui commit intermedi: statici, unit e test dei file toccati. 4) Prestazioni: il conteggio delle query sempre, i tempi una serie e solo se il diff tocca query, schema, `platform/api` o `platform/db`. 5) La suite completa gira ogni notte e a fine fase (G10), non a ogni rilascio. 6) La copertura non scende: un test si toglie solo se il rapporto lo indica come duplicato o legacy, con il motivo scritto | I gate G2, G3, G6 e G9 nella versione del 14/11 («`npm run test:integration`» intero, «`npm run e2e` … dopo il deploy», «`npm run perf` esteso» a ogni rilascio); la lettura «G1-G9 = suite completa» delle righe «Test e gate» | Tutti, da N3.1 |
 
 ## 1.1 Premesse
 

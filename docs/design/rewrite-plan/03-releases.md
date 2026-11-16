@@ -27,13 +27,22 @@ priorità o vincolo il gate protegge ([`10-modularity.md`](10-modularity.md) §1
 |---|---|---|
 | G4 Modularità | Priorità 1 | `src/architecture.test.ts` esteso: confini tra pacchetti e tra moduli, nessun import profondo, nessun ciclo, nessun accesso alle tabelle di un altro modulo, interfaccia pubblica esplicita, struttura dei file (M1-M10, Q1-Q4). Misura dei duplicati (M11). Rilascio di ingresso di ogni regola: [`10-modularity.md`](10-modularity.md) §10.6 |
 | G1 Statico | Priorità 2 | `npm run format:check`, `npm run lint` (da R0 con dimensione, complessità e nomi: Q5-Q8, Q10), `npm run typecheck` (da R0 con il controllo del codice senza uso: Q9) |
-| G9 Prestazioni | Priorità 3 | Da N0: `npm run perf` esteso contro i valori di partenza; numero di query per vista e per rotta ([`10-modularity.md`](10-modularity.md) §10.9). Nessuna misura peggiora di oltre il 10% |
-| G2 Unit | Vincolo | `npm test`; `assertions-diff`: nessuna asserzione esistente adattata |
-| G3 Integration | Vincolo | `npm run test:integration` sul database di test del filone |
+| G9 Prestazioni | Priorità 3 | Numero di query per vista e per rotta: sempre, un processo (`npm run perf -- --queries`). Tempi (`npm run perf`, una serie, sullo SHA finale): solo se il diff tocca un `queries.ts`, uno `schema.ts`, `drizzle/`, `src/platform/api`, `src/platform/db` o `src/platform/fx` ([`10-modularity.md`](10-modularity.md) §10.9). Nessuna misura peggiora di oltre il 10% |
+| G2 Unit | Vincolo | `npm test`, sempre completo; `assertions-diff`: nessuna asserzione esistente adattata |
+| G3 Integration | Vincolo | I test dei moduli toccati e dei moduli che li usano, secondo la mappa (`docs/testing.md`), sul database di test del filone. Completa se il diff tocca lo schema, una migrazione, `src/platform/db` o il codice condiviso della mappa |
 | G5 Stessi numeri | Vincolo | Test di parità Overview = conti singoli = API = MCP; fotografia «prima» = fotografia «dopo»; risposte di riferimento di API e MCP uguali |
-| G6 E2E | Vincolo | `npm run e2e` sulle specifiche toccate, dopo il deploy; comprende `a11y.spec.ts`, `keyboard.spec.ts`, `security.spec.ts` |
+| G6 E2E | Vincolo | Una volta, sull'anteprima locale, prima del deploy: gli spec dei flussi toccati, `a11y.spec.ts`, `keyboard.spec.ts` e `mobile.spec.ts` filtrati sulle schermate dei moduli toccati, e `@smoke`. Tutte le schermate se il diff tocca l'interfaccia comune. Dopo il deploy, sul sito: `@smoke` e i test che l'anteprima non può eseguire (`@site`) |
 | G7 Verifica dell'orchestratore | Tutti | L'orchestratore legge gli esiti dei gate e la lista di controllo del rilascio, non il codice ([`08-agents.md`](08-agents.md) §8.5) |
 | G8 Health | Rilascio | `GET /api/health` con versione attiva e database; un flusso reale del rilascio |
+| G10 Suite completa | Rete di sicurezza | Tutti i test di G1-G6 e G9, completi: ogni notte, su anteprima e database di test, e a fine fase prima di chiuderla. Una notturna rossa blocca il deploy successivo finché non è corretta o spiegata |
+
+**Solo le parti modificate** (decisione H53). I test di un rilascio si scelgono dal suo diff con la mappa
+`file cambiati → modulo → comando → usato da` del repo (`docs/testing.md`; `npm run test:select` la applica). La suite
+completa prima di un deploy parte solo per un motivo nel diff: un file della lista «codice critico o condiviso», un
+file fuori mappa, o un impatto non chiaro. I gate si eseguono una volta, sullo SHA finale del rilascio; sui commit
+intermedi: G1, G2 e i test dei file toccati. Un modulo già verde sullo stesso SHA non si ripete. La riga «Test e gate»
+di un rilascio che dice «G1-G9» si legge con queste regole: non chiede la suite completa. «E2E completi» (R3, R4)
+resta: quei rilasci toccano tutte le schermate.
 
 Da N0, G4 e G9 valgono per ogni rilascio, anche dove la riga «Test e gate» non li cita. Nei rilasci prima di R0 il
 loro controllo è «non peggiora»: nessuna violazione nuova rispetto alle liste note.
