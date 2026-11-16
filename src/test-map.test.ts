@@ -12,7 +12,7 @@ import {
   modulesOf,
   select,
 } from "../scripts/test-map";
-import { commands, criticalTable, flowTable, mapTable } from "../scripts/test-select";
+import { commands, criticalTable, flowTable, mapTable, siteCommands } from "../scripts/test-select";
 
 // The map of docs/testing.md against the tree (`test-policy` §4): a file that is in no row, a test
 // that no command starts and a module that is missing from a "Used by" are found here, not at a
@@ -71,7 +71,7 @@ describe("the map covers the repository", () => {
         (file) => /^tests\/e2e\/.+\.spec\.ts$/.test(file) && readFileSync(file, "utf8").includes("@site"),
       )
       .map((file) => file.slice("tests/e2e/".length, -".spec.ts".length));
-    expect(tagged.sort()).toEqual([...SITE_ONLY].sort());
+    expect(tagged.sort()).toEqual(Object.keys(SITE_ONLY).sort());
   });
 });
 
@@ -223,6 +223,19 @@ describe("the selection", () => {
     const withModule = select(["tests/e2e/a11y.spec.ts", "src/modules/pockets/service.ts"]);
     expect(withModule.flows).not.toContain("screens");
     expect(withModule.screens).toEqual(["pockets"]);
+  });
+
+  it("the tests for the site stay under the limit of password sign-ins", () => {
+    // Two failed on the site when one command spent six sign-ins in forty seconds.
+    expect(siteCommands(Object.keys(SITE_ONLY))).toEqual([
+      "npx playwright test auth two-factor -g @site",
+      "sleep 60",
+      "npx playwright test preferences mobile security mcp currency investments-service plugins -g @site",
+    ]);
+    expect(siteCommands(["plugins", "auth", "expenses"])).toEqual([
+      "npx playwright test auth plugins -g @site",
+    ]);
+    expect(siteCommands(["expenses"])).toEqual([]);
   });
 
   it("docs alone start nothing but the checks that always run", () => {

@@ -175,7 +175,9 @@ midway can leave data on its user: run `seed` again before the next try.
 - **`@site`**: the 11 tests that the preview cannot run — a password sign-in (the origin of the
   preview is not trusted), OAuth, the exchange rates, the return from a plugin.
   `playwright.preview.config.ts` leaves them out. After the deploy, run them only for the specs
-  that the selection names: `npx playwright test <specs> -g @site`.
+  that the selection names, with the commands it prints: `npx playwright test <specs> -g @site`.
+  The site allows 5 password sign-ins a minute to one client, and these tests spend 6: the
+  selection prints two commands with `sleep 60` between them when one would pass the limit.
 
 A new test gets `@smoke` only when it replaces one of the list: the set stays under one minute.
 

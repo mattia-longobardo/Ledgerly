@@ -635,18 +635,24 @@ export const criticalOf = (file: string) =>
 export const modulesOf = (file: string) =>
   MODULES.filter((module) => module.files.some((pattern) => matches(pattern, file)));
 
-/** The specs with a test the local preview cannot run (`@site`): they run on the site, after the deploy. */
-export const SITE_ONLY = [
-  "auth",
-  "two-factor",
-  "preferences",
-  "mobile",
-  "security",
-  "mcp",
-  "currency",
-  "investments-service",
-  "plugins",
-];
+/**
+ * The specs with a test the local preview cannot run (`@site`): they run on the site, after the
+ * deploy. The number is the password sign-ins those tests spend: the site allows 5 a minute to one
+ * client, and the `@smoke` tests spend one.
+ */
+export const SITE_ONLY: Record<string, number> = {
+  auth: 2,
+  "two-factor": 2,
+  preferences: 1,
+  mobile: 1,
+  security: 0,
+  mcp: 0,
+  currency: 0,
+  "investments-service": 0,
+  plugins: 0,
+};
+/** The password sign-ins one command may spend on the site. */
+export const SIGN_INS = 4;
 
 export interface Selection {
   /** Why the full suite runs; empty when the map answers. */

@@ -12,6 +12,7 @@ import {
   MODULES,
   NESTED_MESSAGES,
   type Selection,
+  SIGN_INS,
   SITE_ONLY,
   select,
 } from "./test-map";
@@ -23,12 +24,35 @@ export const ALWAYS = "npm run format:check && npm run lint && npm run typecheck
 const quote = (text: string) => `'${text.replaceAll("'", "'\\''")}'`;
 const flow = (id: string) => FLOWS.find((one) => one.id === id)!;
 
+/**
+ * The `@site` tests of some specs, as commands that stay under the site's limit of password
+ * sign-ins, with a minute between two of them.
+ */
+export function siteCommands(specs: readonly string[]): string[] {
+  const groups: string[][] = [[]];
+  let spent = 0;
+  for (const spec of Object.keys(SITE_ONLY).filter((one) => specs.includes(one))) {
+    if (spent + SITE_ONLY[spec] > SIGN_INS) {
+      groups.push([]);
+      spent = 0;
+    }
+    groups.at(-1)!.push(spec);
+    spent += SITE_ONLY[spec];
+  }
+  return groups
+    .filter((group) => group.length > 0)
+    .flatMap((group, at) => [
+      ...(at > 0 ? ["sleep 60"] : []),
+      `npx playwright test ${group.join(" ")} -g @site`,
+    ]);
+}
+
 /** The commands of a selection, in the order they run. */
 export function commands(selection: Selection): { before: string[]; after: string[] } {
   if (selection.full.length > 0) {
     return {
       before: [ALWAYS, INTEGRATION, "npm run perf", PREVIEW],
-      after: ["npx playwright test -g @smoke", "npx playwright test -g @site"],
+      after: ["npx playwright test -g @smoke", ...siteCommands(Object.keys(SITE_ONLY))],
     };
   }
   const before = [ALWAYS];
@@ -44,10 +68,7 @@ export function commands(selection: Selection): { before: string[]; after: strin
     before.push(`${PREVIEW} ${CROSS_CUTTING.join(" ")} -g ${quote(screens.join("|"))}`);
   }
   before.push(`${PREVIEW} -g @smoke`);
-  const site = specs.filter((spec) => SITE_ONLY.includes(spec));
-  const after = ["npx playwright test -g @smoke"];
-  if (site.length > 0) after.push(`npx playwright test ${site.join(" ")} -g @site`);
-  return { before, after };
+  return { before, after: ["npx playwright test -g @smoke", ...siteCommands(specs)] };
 }
 
 // ——— The tables of docs/testing.md ————————————————————————————————————————————————————————————
