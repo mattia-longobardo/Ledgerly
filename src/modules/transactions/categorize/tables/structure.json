@@ -1,0 +1,15 @@
+{
+  "salary": ["sala", "salary", "salaries", "stipendio", "stipendi", "payroll", "emolumenti"],
+  "fee": [
+    "chrg",
+    "fees",
+    "fee",
+    "charges",
+    "commission",
+    "commissions",
+    "commissioni",
+    "commissione",
+    "bollo",
+    "canone"
+  ]
+}

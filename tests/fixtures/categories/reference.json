@@ -1,0 +1,201 @@
+{
+  "about": "Text → features → expected category: invented movements, read by src/modules/transactions/categorize/reference.test.ts. A change of the normalisation or of the cascade that moves one of these is a change of what a person sees.",
+  "categories": {
+    "cat-groceries": "expense",
+    "cat-restaurants": "expense",
+    "cat-transport": "expense",
+    "cat-fees": "expense",
+    "cat-income": "income"
+  },
+  "groups": {
+    "groceries": "cat-groceries",
+    "restaurants": "cat-restaurants",
+    "transport": "cat-transport",
+    "taxes_fees": "cat-fees",
+    "income": "cat-income"
+  },
+  "memory": { "mercato alfa milano": "cat-groceries", "bar epsilon": "cat-restaurants" },
+  "cases": [
+    {
+      "name": "the digits of a card and of a date are not part of the key",
+      "movement": {
+        "payee": "MERCATO ALFA 0042 MILANO",
+        "counterparty": null,
+        "rawText": "POS 12/11 CARTA *9911",
+        "note": null,
+        "amountCents": "-5420",
+        "kind": "expense",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": null
+      },
+      "key": "mercato alfa milano",
+      "features": ["g: me", "g:merca", "w:mercato", "w:alfa", "w:pos", "w:carta", "sign:out", "amt:3"],
+      "expected": {
+        "kind": "automatic",
+        "categoryId": "cat-groceries",
+        "origin": "memory",
+        "reason": "memory"
+      }
+    },
+    {
+      "name": "accents and case do not make two texts",
+      "movement": {
+        "payee": "Bàr Epsilòn",
+        "counterparty": null,
+        "rawText": null,
+        "note": null,
+        "amountCents": "-450",
+        "kind": "expense",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": null
+      },
+      "key": "bar epsilon",
+      "features": ["w:bar", "w:epsilon", "amt:0"],
+      "expected": {
+        "kind": "automatic",
+        "categoryId": "cat-restaurants",
+        "origin": "memory",
+        "reason": "memory"
+      }
+    },
+    {
+      "name": "the bank's code says a salary: structure comes before everything",
+      "movement": {
+        "payee": "Datore Vav Srl",
+        "counterparty": "Datore Vav Srl",
+        "rawText": "EMOLUMENTI NOVEMBRE",
+        "note": null,
+        "amountCents": "210000",
+        "kind": "income",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": "PMNT · SALA · Salary payment"
+      },
+      "key": "datore vav srl",
+      "features": ["sign:in", "amt:6", "w:emolumenti"],
+      "expected": { "kind": "automatic", "categoryId": "cat-income", "origin": "table", "reason": "salary" }
+    },
+    {
+      "name": "the bank's code says a fee",
+      "movement": {
+        "payee": null,
+        "counterparty": null,
+        "rawText": "CANONE MENSILE CONTO",
+        "note": null,
+        "amountCents": "-200",
+        "kind": "expense",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": "ACMT · CHRG"
+      },
+      "key": "canone mensile conto",
+      "features": ["w:canone", "w:mensile"],
+      "expected": { "kind": "automatic", "categoryId": "cat-fees", "origin": "table", "reason": "fee" }
+    },
+    {
+      "name": "a merchant type with one meaning is automatic",
+      "movement": {
+        "payee": "Negozio Sconosciuto",
+        "counterparty": null,
+        "rawText": null,
+        "note": null,
+        "amountCents": "-3100",
+        "kind": "expense",
+        "merchantCategoryCode": "5411",
+        "bankTransactionCode": null
+      },
+      "key": "negozio sconosciuto",
+      "features": ["w:negozio"],
+      "expected": {
+        "kind": "automatic",
+        "categoryId": "cat-groceries",
+        "origin": "table",
+        "reason": "merchant_type"
+      }
+    },
+    {
+      "name": "a brand with one meaning is automatic, and says which brand",
+      "movement": {
+        "payee": "TRENITALIA SPA 5521",
+        "counterparty": null,
+        "rawText": null,
+        "note": null,
+        "amountCents": "-2950",
+        "kind": "expense",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": null
+      },
+      "key": "trenitalia spa",
+      "features": ["w:trenitalia"],
+      "expected": {
+        "kind": "automatic",
+        "categoryId": "cat-transport",
+        "origin": "table",
+        "reason": "brand",
+        "params": { "brand": "Trenitalia" }
+      }
+    },
+    {
+      "name": "a brand that sells everything is a suggestion at most, and only where the person has the group",
+      "movement": {
+        "payee": "AMZN Mktp IT",
+        "counterparty": null,
+        "rawText": null,
+        "note": null,
+        "amountCents": "-1999",
+        "kind": "expense",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": null
+      },
+      "key": "amzn mktp it",
+      "features": ["w:amzn"],
+      "expected": { "kind": "none" }
+    },
+    {
+      "name": "a text nothing knows stays to categorise",
+      "movement": {
+        "payee": "Xyz Qwerty",
+        "counterparty": null,
+        "rawText": null,
+        "note": null,
+        "amountCents": "-1000",
+        "kind": "expense",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": null
+      },
+      "key": "xyz qwerty",
+      "features": ["w:xyz", "w:qwerty"],
+      "expected": { "kind": "none" }
+    },
+    {
+      "name": "an income is never filed under a spending category, whatever the memory says",
+      "movement": {
+        "payee": "Bar Epsilon",
+        "counterparty": null,
+        "rawText": null,
+        "note": null,
+        "amountCents": "450",
+        "kind": "income",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": null
+      },
+      "key": "bar epsilon",
+      "features": ["sign:in"],
+      "expected": { "kind": "none" }
+    },
+    {
+      "name": "a movement with no text has no key and is similar to nothing",
+      "movement": {
+        "payee": null,
+        "counterparty": null,
+        "rawText": " ",
+        "note": null,
+        "amountCents": "-1000",
+        "kind": "expense",
+        "merchantCategoryCode": null,
+        "bankTransactionCode": null
+      },
+      "key": "",
+      "features": ["sign:out", "amt:1"],
+      "expected": { "kind": "none" }
+    }
+  ]
+}

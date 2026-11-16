@@ -1,0 +1,92 @@
+[
+  {
+    "key": "home",
+    "type": "expense",
+    "en": "Home",
+    "it": "Casa",
+    "examples": { "en": "Rent, mortgage, bills, maintenance", "it": "Affitto, mutuo, bollette, manutenzione" }
+  },
+  {
+    "key": "groceries",
+    "type": "expense",
+    "en": "Groceries",
+    "it": "Spesa alimentare",
+    "examples": { "en": "Supermarket, food shops", "it": "Supermercato, alimentari" }
+  },
+  {
+    "key": "restaurants",
+    "type": "expense",
+    "en": "Restaurants and bars",
+    "it": "Ristoranti e bar",
+    "examples": { "en": "Lunches, dinners, coffee, deliveries", "it": "Pranzi, cene, caffè, consegne" }
+  },
+  {
+    "key": "transport",
+    "type": "expense",
+    "en": "Transport",
+    "it": "Trasporti",
+    "examples": {
+      "en": "Fuel, trains, public transport, tolls",
+      "it": "Carburante, treni, mezzi pubblici, pedaggi"
+    }
+  },
+  {
+    "key": "health",
+    "type": "expense",
+    "en": "Health",
+    "it": "Salute",
+    "examples": {
+      "en": "Pharmacy, medical visits, health insurance",
+      "it": "Farmacia, visite, assicurazione sanitaria"
+    }
+  },
+  {
+    "key": "shopping",
+    "type": "expense",
+    "en": "Shopping",
+    "it": "Shopping",
+    "examples": { "en": "Clothing, electronics, home goods", "it": "Abbigliamento, elettronica, casa" }
+  },
+  {
+    "key": "leisure",
+    "type": "expense",
+    "en": "Leisure",
+    "it": "Tempo libero",
+    "examples": { "en": "Sport, cinema, books, hobbies", "it": "Sport, cinema, libri, hobby" }
+  },
+  {
+    "key": "travel",
+    "type": "expense",
+    "en": "Travel",
+    "it": "Viaggi",
+    "examples": { "en": "Flights, hotels, holidays", "it": "Voli, alberghi, vacanze" }
+  },
+  {
+    "key": "subscriptions",
+    "type": "expense",
+    "en": "Subscriptions and services",
+    "it": "Abbonamenti e servizi",
+    "examples": { "en": "Phone, internet, streaming", "it": "Telefono, internet, streaming" }
+  },
+  {
+    "key": "taxes_fees",
+    "type": "expense",
+    "en": "Taxes and fees",
+    "it": "Tasse e commissioni",
+    "examples": { "en": "Taxes, stamp duties, bank fees", "it": "Imposte, bolli, commissioni della banca" }
+  },
+  {
+    "key": "other",
+    "type": "expense",
+    "en": "Other",
+    "it": "Altro",
+    "examples": { "en": "Everything else", "it": "Tutto il resto" }
+  },
+  {
+    "key": "income",
+    "type": "income",
+    "en": "Income",
+    "it": "Entrate",
+    "examples": { "en": "Salary, refunds, other income", "it": "Stipendio, rimborsi, altre entrate" }
+  }
+]
