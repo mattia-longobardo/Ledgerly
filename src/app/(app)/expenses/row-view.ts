@@ -4,7 +4,7 @@
 // with a row is added by the page that knows that source.
 import type { TransactionRow } from "@/modules/transactions/queries";
 import { displayPayee, isHidden } from "@/modules/transactions/rules";
-import { amountToneOf, badgesOf, categoryColor } from "@/modules/transactions/ui/display";
+import { amountToneOf, badgesOf } from "@/modules/transactions/ui/display";
 import type { RowView } from "@/modules/transactions/ui/view";
 import type { Ctx } from "@/platform/context";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
@@ -14,13 +14,17 @@ export function rowViewOf(
   {
     ctx,
     colorOf,
+    categories,
   }: {
     ctx: Pick<Ctx, "locale" | "numberFormat">;
     /** One colour per category, decided once for the screen (`categoryColors`). */
     colorOf: ReadonlyMap<string, string>;
+    /** The person's categories as the screen offers them: where a suggestion's name is read. */
+    categories: readonly { id: string; name: string; color: string }[];
   },
 ): RowView {
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
+  const suggested = categories.find((category) => category.id === row.suggestedCategoryId) ?? null;
   return {
     id: row.id,
     date: formatDate(row.on, "long", ctx.locale),
@@ -31,14 +35,7 @@ export function rowViewOf(
     categoryColor: row.categoryId === null ? null : (colorOf.get(row.categoryId) ?? row.categoryColor),
     categoryState: row.categoryState,
     categoryReason: row.categoryReason,
-    suggestion:
-      row.suggestion === null
-        ? null
-        : {
-            id: row.suggestion.id,
-            name: row.suggestion.name,
-            color: colorOf.get(row.suggestion.id) ?? categoryColor(row.suggestion.color, 0),
-          },
+    suggestion: suggested ? { id: suggested.id, name: suggested.name, color: suggested.color } : null,
     amount: money(row.amountCents),
     amountTone: amountToneOf(row),
     badges: badgesOf(row),

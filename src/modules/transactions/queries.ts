@@ -99,8 +99,12 @@ export interface TransactionRow {
    * one a source could disagree with.
    */
   categoryIsOwn: boolean;
-  /** The category suggested, which does not count until a person confirms it. */
-  suggestion: { id: string; name: string; color: string | null } | null;
+  /**
+   * The category suggested, which does not count until a person confirms it. The id only: its
+   * name and its colour are the caller's to read from the categories it already has — a second
+   * join here would be paid by every list, with or without a suggestion in it.
+   */
+  suggestedCategoryId: string | null;
   hidden: boolean;
   edited: boolean;
 }
@@ -927,21 +931,14 @@ export async function listTransactions(
 ): Promise<TransactionRow[]> {
   // The accounts come first: the table shows their names, and the account sort orders by them.
   const accounts = await listAccounts(ctx, { includeArchived: true });
-  const suggested = alias(categories, "suggested");
   const rows = await getDb()
     .select({
       transaction: transactions,
       categoryName: categories.name,
       categoryColor: categories.color,
-      suggestedName: suggested.name,
-      suggestedColor: suggested.color,
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
-    .leftJoin(
-      suggested,
-      and(eq(suggested.id, transactions.suggestedCategoryId), eq(suggested.userId, ctx.userId)),
-    )
     .where(conditions(ctx, filters))
     .orderBy(...ordering(filters, accounts))
     .limit(boundedLimit(filters.limit))
@@ -953,7 +950,7 @@ export async function listTransactions(
   );
   const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
 
-  return rows.map(({ transaction, categoryName, categoryColor, suggestedName, suggestedColor }) => {
+  return rows.map(({ transaction, categoryName, categoryColor }) => {
     const categoryState = categoryStateOf(transaction);
     return {
       id: transaction.id,
@@ -983,10 +980,7 @@ export async function listTransactions(
         transaction.categoryReason !== null
           ? { code: transaction.categoryReason, params: transaction.categoryReasonParams ?? {} }
           : null,
-      suggestion:
-        categoryState === "suggestion" && transaction.suggestedCategoryId !== null && suggestedName !== null
-          ? { id: transaction.suggestedCategoryId, name: suggestedName, color: suggestedColor }
-          : null,
+      suggestedCategoryId: categoryState === "suggestion" ? transaction.suggestedCategoryId : null,
       hidden: isHidden(transaction),
       edited: transaction.locallyEdited.length > 0,
     };

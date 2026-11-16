@@ -4,14 +4,14 @@
     "minLines": 6
   },
   "total": {
-    "lines": 88024,
-    "duplicatedLines": 16812,
+    "lines": 88011,
+    "duplicatedLines": 16808,
     "percent": 19.1,
     "blocks": 1184
   },
   "units": {
     "app": {
-      "lines": 19200,
+      "lines": 19197,
       "duplicatedLines": 4036,
       "percent": 21.02,
       "blocks": 303
@@ -89,9 +89,9 @@
       "blocks": 21
     },
     "modules/transactions": {
-      "lines": 8943,
-      "duplicatedLines": 1402,
-      "percent": 15.68,
+      "lines": 8933,
+      "duplicatedLines": 1398,
+      "percent": 15.65,
       "blocks": 112
     },
     "modules/users": {
@@ -531,7 +531,7 @@
     "modules/transactions/categorize/service.ts": 47,
     "modules/transactions/jobs.ts": 56,
     "modules/transactions/manual.ts": 6,
-    "modules/transactions/queries.ts": 259,
+    "modules/transactions/queries.ts": 255,
     "modules/transactions/rules.ts": 6,
     "modules/transactions/schema.ts": 249,
     "modules/transactions/service.ts": 103,

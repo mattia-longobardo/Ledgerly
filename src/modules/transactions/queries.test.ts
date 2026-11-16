@@ -82,7 +82,7 @@ function row(on: CivilDate, amountCents: Cents, id = on + amountCents): Transact
     categoryState: "none",
     categoryIsOwn: false,
     categoryReason: null,
-    suggestion: null,
+    suggestedCategoryId: null,
     hidden: false,
     edited: false,
   };

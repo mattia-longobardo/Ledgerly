@@ -347,7 +347,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
                   label: null,
                   count: singleRows.length,
                   total: "",
-                  rows: singleRows.map((row) => rowViewOf(row, { ctx, colorOf })),
+                  rows: singleRows.map((row) => rowViewOf(row, { ctx, colorOf, categories: options })),
                 },
               ]}
               categories={options}

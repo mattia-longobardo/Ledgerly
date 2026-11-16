@@ -157,7 +157,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
   ]);
 
   const toRow = (row: QueryRow): RowView => ({
-    ...rowViewOf(row, { ctx, colorOf }),
+    ...rowViewOf(row, { ctx, colorOf, categories: options }),
     wallet: walletIds.has(row.id)
       ? {
           type: row.type,
