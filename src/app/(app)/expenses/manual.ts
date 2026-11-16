@@ -33,7 +33,10 @@ import {
 } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
 import { type CivilDate, today } from "@/platform/dates";
+import type { UiLocale } from "@/platform/format";
+import { labelOf } from "@/platform/integrations/registry";
 import { coreCreatesRecords, isPluginProvider, pluginProvider } from "@/platform/integrations/rules";
+import { listConnections } from "@/platform/integrations/service";
 import type { Cents } from "@/platform/money";
 import { hasCapability } from "@/platform/plugins/contract/manifest";
 import { listInstancePlugins } from "@/platform/plugins/queries";
@@ -77,24 +80,125 @@ export interface ManualAccount {
   name: string;
   currency: string;
   mode: AccountMode;
+  /**
+   * For a "read and write" account: the name of the source the movement is sent to, and whether
+   * its connection is not updated now (paused, or waiting for the person): the movement then goes
+   * when the connection resumes.
+   */
+  source?: { name: string; waiting: boolean };
+}
+
+/**
+ * The sources that take the movements written here, by provider: the name a person reads, and
+ * whether the connection is not updated now. Read only for the providers named.
+ */
+async function sourcesOf(
+  ctx: Pick<Ctx, "userId">,
+  locale: UiLocale,
+  providers: readonly string[],
+): Promise<Map<string, { name: string; waiting: boolean }>> {
+  const wanted = [...new Set(providers)];
+  if (wanted.length === 0) return new Map();
+  const connections = await listConnections(ctx);
+  const sources = new Map<string, { name: string; waiting: boolean }>();
+  for (const provider of wanted) {
+    const connection = connections.find((one) => one.provider === provider);
+    const label = await labelOf({ provider, instanceKey: connection?.instanceKey ?? "" }, locale);
+    sources.set(provider, {
+      name: label.provider,
+      waiting:
+        connection === undefined || connection.state === "revoked" || connection.schedule.rules.length === 0,
+    });
+  }
+  return sources;
 }
 
 /** The accounts a person may write a movement on by hand, in the order of Accounts. */
-export async function manualAccounts(ctx: Pick<Ctx, "userId">): Promise<ManualAccount[]> {
+export async function manualAccounts(ctx: Pick<Ctx, "userId" | "locale">): Promise<ManualAccount[]> {
   const accounts = await listAccounts(ctx);
   const modes = await modesOf(accounts);
+  const sources = await sourcesOf(
+    ctx,
+    ctx.locale,
+    accounts.flatMap((account) =>
+      modes.get(account) === "two_way" && account.provider !== null ? [account.provider] : [],
+    ),
+  );
   return accounts.flatMap((account) => {
     const mode = modes.get(account) ?? null;
     return mode !== null && MANUAL_MOVEMENT_MODES.includes(mode)
-      ? [{ id: account.id, name: account.name, currency: account.currency, mode }]
+      ? [
+          {
+            id: account.id,
+            name: account.name,
+            currency: account.currency,
+            mode,
+            ...(mode === "two_way" && sources.has(account.provider ?? "")
+              ? { source: sources.get(account.provider ?? "") }
+              : {}),
+          },
+        ]
       : [];
   });
 }
 
+/**
+ * The name of the source each of these accounts sends its manual movements to, for the rows that
+ * wait: "Not sent to {source}". Asked only when a row on the screen waits.
+ */
+export async function sendSourceNames(
+  ctx: Pick<Ctx, "userId" | "locale">,
+  accountIds: readonly string[],
+): Promise<Map<string, string>> {
+  const wanted = new Set(accountIds);
+  if (wanted.size === 0) return new Map();
+  const accounts = (await listAccounts(ctx, { includeArchived: true })).filter(
+    (account) => wanted.has(account.id) && account.provider !== null,
+  );
+  const sources = await sourcesOf(
+    ctx,
+    ctx.locale,
+    accounts.map((account) => account.provider as string),
+  );
+  return new Map(
+    accounts.flatMap((account) => {
+      const source = sources.get(account.provider as string);
+      return source ? [[account.id, source.name] as const] : [];
+    }),
+  );
+}
+
+/**
+ * "Retry sending": an update of the source of the movement's account, now — the same pass a
+ * scheduled update makes, so the movement is sent and the balance read after it. `start` is how
+ * the application starts a pass of a provider. Says whether the movement went.
+ */
+export async function retrySend(
+  ctx: ManualCtx,
+  id: string,
+  start: (provider: string) => Promise<unknown>,
+): Promise<{ sent: boolean }> {
+  if (!z.uuid().safeParse(id).success) throw new TransactionError("invalid");
+  const waiting = (await transactionsByIds(ctx, [id])).get(id);
+  if (!waiting) throw new TransactionError("not_found");
+  if (waiting.origin !== "manual" || waiting.sendState === null) return { sent: waiting.origin !== "manual" };
+  const account = await getAccount(ctx, waiting.accountId);
+  if (!account || account.provider === null) throw new TransactionError("account_unavailable");
+  await start(account.provider);
+  const after = (await transactionsByIds(ctx, [id])).get(id);
+  return { sent: after !== undefined && after.origin !== "manual" };
+}
+
 const accountIdOf = z.object({ accountId: z.uuid() });
 
-/** Refuses an account that is not the person's, is archived, or takes no manual movement. */
-async function requireManualAccount(ctx: Pick<Ctx, "userId">, input: unknown): Promise<string> {
+/**
+ * Refuses an account that is not the person's, is archived, or takes no manual movement. Says
+ * whether the account's source takes the movement: then it waits for the next update.
+ */
+async function requireManualAccount(
+  ctx: Pick<Ctx, "userId">,
+  input: unknown,
+): Promise<{ id: string; toSend: boolean }> {
   const named = accountIdOf.safeParse(input);
   if (!named.success) throw new TransactionError("invalid");
   const account = await getAccount(ctx, named.data.accountId);
@@ -103,26 +207,31 @@ async function requireManualAccount(ctx: Pick<Ctx, "userId">, input: unknown): P
   if (mode === null || !MANUAL_MOVEMENT_MODES.includes(mode)) {
     throw new TransactionError("account_unavailable");
   }
-  return account.id;
+  return { id: account.id, toSend: mode === "two_way" };
 }
 
-/** Writes a manual movement and the balance after it. The same key sent twice writes once. */
+/**
+ * Writes a manual movement and the balance after it. The same key sent twice writes once. On a
+ * "read and write" account the movement waits for the next update of its source (N3.1).
+ */
 export async function createManual(
   ctx: ManualCtx,
   input: unknown,
   idempotencyKey?: string,
 ): Promise<{ transaction: Transaction; created: boolean }> {
-  const accountId = await requireManualAccount(ctx, input);
-  const result = await createManualTransaction(ctx, input, idempotencyKey);
-  if (result.created) await rebuildDerivedBalances(ctx, [accountId], { manualChanged: true });
+  const account = await requireManualAccount(ctx, input);
+  const result = await createManualTransaction(ctx, input, idempotencyKey, { toSend: account.toSend });
+  if (result.created) await rebuildDerivedBalances(ctx, [account.id], { manualChanged: true });
   return result;
 }
 
 /** Changes a manual movement and corrects the balance of the account, and of the one it left. */
 export async function updateManual(ctx: ManualCtx, id: string, input: unknown): Promise<Transaction> {
-  const accountId = await requireManualAccount(ctx, input);
-  const { transaction, previousAccountId } = await updateManualTransaction(ctx, id, input);
-  await rebuildDerivedBalances(ctx, [...new Set([accountId, previousAccountId])], { manualChanged: true });
+  const account = await requireManualAccount(ctx, input);
+  const { transaction, previousAccountId } = await updateManualTransaction(ctx, id, input, {
+    toSend: account.toSend,
+  });
+  await rebuildDerivedBalances(ctx, [...new Set([account.id, previousAccountId])], { manualChanged: true });
   return transaction;
 }
 

@@ -13,6 +13,7 @@ import { requireSession } from "@/platform/auth/session";
 import { type CivilDate, isCivilDate, today } from "@/platform/dates";
 import { formatDate, formatMoney } from "@/platform/format";
 import type { Cents } from "@/platform/money";
+import { coreConnectionAction } from "../settings/integrations/actions";
 import {
   changeVisibility,
   createManual,
@@ -20,6 +21,7 @@ import {
   type ManualAccount,
   manualAccounts,
   previewManual,
+  retrySend,
   updateManual,
 } from "./manual";
 
@@ -131,6 +133,22 @@ export async function deleteManualAction(id: string): Promise<ManualCount> {
     return { ok: true, count: 1 };
   } catch (error) {
     return { ok: false, error: refusal(error).error };
+  }
+}
+
+/**
+ * "Retry sending" on a movement its source did not take: the source is updated now. The answer
+ * says only whether the movement went; why it did not is the connection's state, in Settings.
+ */
+export async function retrySendAction(id: string): Promise<{ ok: true; sent: boolean } | { ok: false }> {
+  const ctx = await requireSession();
+  try {
+    const { sent } = await retrySend(ctx, id, (provider) => coreConnectionAction(provider, "update"));
+    revalidate();
+    return { ok: true, sent };
+  } catch (error) {
+    if (error instanceof TransactionError) return { ok: false };
+    throw error;
   }
 }
 

@@ -31,6 +31,8 @@ export interface CategoryNode {
   chosenColor: string | null;
   archived: boolean;
   usage: number;
+  /** The categories of a source that count under it, where their names say more than its own. */
+  source?: { name: string; names: readonly string[] } | null;
 }
 
 export interface CategoryGroup {
@@ -93,6 +95,16 @@ export function CategoryTree({ groups }: { groups: CategoryGroup[] }) {
     }));
   const open = groups.filter(({ group }) => !group.archived).map(({ group }) => group);
   const parent = draft?.parentId ? open.find((group) => group.id === draft.parentId) : undefined;
+
+  /** "From {source}: …" under a category that a source's categories count under (ux §6.4). */
+  function sourceNote(node: CategoryNode) {
+    if (!node.source || node.source.names.length === 0) return null;
+    return (
+      <span className="truncate text-sm text-muted">
+        {t("source.fromProvider", { provider: node.source.name, names: node.source.names.join(", ") })}
+      </span>
+    );
+  }
 
   /** A `TaxonomyError` code, spelled out one branch at a time so the catalogue keys stay literal. */
   function messageFor(code: string): string {
@@ -208,7 +220,10 @@ export function CategoryTree({ groups }: { groups: CategoryGroup[] }) {
             <li key={group.id} className="border-b border-border last:border-0">
               <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
                 <ColorDot color={group.color} />
-                <span className="min-w-0 flex-1 truncate font-semibold">{group.name}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-semibold">{group.name}</span>
+                  {sourceNote(group)}
+                </span>
                 {group.archived && <Badge tone="neutral">{t("archived")}</Badge>}
                 <span className="text-sm text-muted">{t(`types.${group.type}`)}</span>
                 <span className="text-sm text-muted">{t("usage", { count: group.usage })}</span>
@@ -221,7 +236,10 @@ export function CategoryTree({ groups }: { groups: CategoryGroup[] }) {
                     className="flex flex-wrap items-center gap-2 border-t border-border py-2 pr-4 pl-10"
                   >
                     <ColorDot color={child.color} />
-                    <span className="min-w-0 flex-1 truncate">{child.name}</span>
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate">{child.name}</span>
+                      {sourceNote(child)}
+                    </span>
                     {child.archived && <Badge tone="neutral">{t("archived")}</Badge>}
                     <span className="text-sm text-muted">{t("usage", { count: child.usage })}</span>
                     {actionsFor(child, false)}

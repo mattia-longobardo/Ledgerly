@@ -56,6 +56,11 @@ export interface RowView {
    * the manual movement's dialog and can be deleted without being hidden first.
    */
   manual?: ManualFieldsView | null;
+  /**
+   * Present on a manual movement that waits for its source, or that the source did not take
+   * (ux §9.8): the state, and the source's name for "Not sent to {source}".
+   */
+  send?: { state: "to_send" | "not_sent"; source: string } | null;
 }
 
 /** What the panel prefills for a Wallet movement. */

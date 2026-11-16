@@ -36,6 +36,7 @@ import type {
   RowView,
 } from "@/modules/transactions/ui/view";
 import { requireSession } from "@/platform/auth/session";
+import { sendSourceNames } from "./manual";
 import { rowViewOf } from "./row-view";
 import { addDays, monthKey, monthsBetween, today } from "@/platform/dates";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
@@ -52,6 +53,7 @@ import {
   deleteManualAction,
   manualFormAction,
   previewManualAction,
+  retrySendAction,
   suggestManualAction,
   updateManualAction,
 } from "./manual-actions";
@@ -67,6 +69,7 @@ const MANUAL_COMMANDS: ManualCommands = {
   create: createManualAction,
   update: updateManualAction,
   remove: deleteManualAction,
+  retrySend: retrySendAction,
   visibility: changeVisibilityAction,
 };
 
@@ -156,8 +159,20 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     ...new Set([...view.rows, ...view.months.flatMap((month) => month.rows)].map((row) => row.id)),
   ]);
 
+  // Asked only when a movement on the screen waits for its source: the name its badge says.
+  const waiting = [...view.rows, ...view.months.flatMap((month) => month.rows)].filter(
+    (row) => row.sendState !== null,
+  );
+  const sendSources =
+    waiting.length === 0
+      ? undefined
+      : await sendSourceNames(
+          ctx,
+          waiting.map((row) => row.accountId),
+        );
+
   const toRow = (row: QueryRow): RowView => ({
-    ...rowViewOf(row, { ctx, colorOf, categories: options }),
+    ...rowViewOf(row, { ctx, colorOf, categories: options, sendSources }),
     wallet: walletIds.has(row.id)
       ? {
           type: row.type,

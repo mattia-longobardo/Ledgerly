@@ -42,8 +42,8 @@ describe("the mode of an account (12-account-modes.md §12.1)", () => {
     }
   });
 
-  it("takes a manual movement by hand and read only, not read and write until N3.1", () => {
-    expect(MANUAL_MOVEMENT_MODES).toEqual(["manual", "read_only"]);
+  it("takes a manual movement in every mode: read and write too, from N3.1", () => {
+    expect(MANUAL_MOVEMENT_MODES).toEqual(["manual", "two_way", "read_only"]);
   });
 });
 

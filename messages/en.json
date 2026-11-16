@@ -266,6 +266,8 @@
         "updated": "{count} updated",
         "skipped": "{count} unchanged",
         "removed": "{count} gone",
+        "sent": "{count} sent to the source",
+        "notSent": "{count} not sent",
         "categoriesAdded": "{count} categories taken on",
         "categoriesAdopted": "{count} categories renamed here",
         "categoriesPushed": "{count} categories renamed in Wallet",
@@ -495,6 +497,34 @@
         "later": "Not now",
         "created": "{count, plural, one {# group created} other {# groups created}}",
         "failed": "Couldn't create the groups. Try again."
+      },
+      "source": {
+        "title": "{provider} categories",
+        "description": "{provider} already gives a category to its transactions. Choose which Ledgerly category each one matches. Ledgerly does not change the category of these transactions.",
+        "columns": {
+          "theirs": "On {provider}",
+          "ours": "In Ledgerly"
+        },
+        "filters": {
+          "label": "Which categories to show",
+          "all": "All",
+          "new": "New ({count})"
+        },
+        "row": "{name} · {count, plural, =0 {no transactions} one {# transaction} other {# transactions}}",
+        "new": "New",
+        "keep": "Keep as it is",
+        "addOption": "Add as a new category",
+        "added": "Added as “{name}”",
+        "pickerLabel": "Ledgerly category for “{name}”",
+        "fromProvider": "From {provider}: {names}",
+        "empty": "No categories from {provider} yet. They appear after the first update.",
+        "noNew": "No new categories.",
+        "undo": "Undo",
+        "toasts": {
+          "linked": "{name} now matches {category}: {count, plural, one {# transaction} other {# transactions}}",
+          "added": "{name} added as a category: {count, plural, one {# transaction} other {# transactions}}"
+        },
+        "failed": "Couldn't save. Try again."
       }
     },
     "labels": {
@@ -1533,7 +1563,8 @@
       "account": "Account",
       "accounts": {
         "manual": "Accounts kept by hand",
-        "bank": "Accounts connected to a bank"
+        "bank": "Accounts connected to a bank",
+        "twoWay": "Accounts connected to {provider}"
       },
       "payee": "Payee (optional)",
       "category": "Category",
@@ -1568,10 +1599,17 @@
         "failed": "Couldn't save. Try again."
       },
       "row": {
-        "edit": "Edit transaction"
+        "edit": "Edit transaction",
+        "retrySend": "Retry sending"
       },
       "palette": "Add transaction",
-      "categoryHint": "Ledgerly's suggestion. Change it if it is not right."
+      "categoryHint": "Ledgerly's suggestion. Change it if it is not right.",
+      "twoWayNote": "Ledgerly sends this transaction to {provider} at the next update.",
+      "twoWayPaused": "{provider} is not updated now. Ledgerly sends this transaction when the connection resumes.",
+      "badges": {
+        "toSend": "To send",
+        "notSent": "Not sent to {provider}"
+      }
     },
     "auto": {
       "mark": "Automatic",

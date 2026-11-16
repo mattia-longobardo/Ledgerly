@@ -386,6 +386,13 @@
       "when": 1794824350166,
       "tag": "0054_auto_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794848901625,
+      "tag": "0055_manual_send",
+      "breakpoints": true
     }
   ]
 }

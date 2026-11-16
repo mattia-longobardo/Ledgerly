@@ -17,6 +17,14 @@ export const CATEGORY_TYPES = ["income", "expense", "transfer"] as const;
  */
 export const TRANSACTION_ORIGINS = ["provider", "manual"] as const;
 
+/**
+ * Where a manual movement of a "read and write" account stands with its source (rewrite plan N3.1,
+ * 12-account-modes.md §12.2): waiting for the next update, or refused by the last one. `null` on
+ * every other movement: one that was sent is the source's own from then on.
+ */
+export const SEND_STATES = ["to_send", "not_sent"] as const;
+export type SendState = (typeof SEND_STATES)[number];
+
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 export type TransactionState = (typeof TRANSACTION_STATES)[number];
 export type TransactionOrigin = (typeof TRANSACTION_ORIGINS)[number];
@@ -139,6 +147,11 @@ export interface IncomingTransaction {
   categoryGroupName: string | null;
   labels: readonly string[];
   /**
+   * The key a movement written here was sent to the source with, when the source gives it back
+   * carrying one: the reading takes the waiting movement for it instead of writing a second row.
+   */
+  sentKey?: string | null;
+  /**
    * What a bank wrote about the movement, untouched, when the provider reads a bank: the free
    * text, the other party and the two codes. Written once, with the movement.
    */
@@ -154,6 +167,8 @@ export interface IncomingTransaction {
 export interface ProviderResolution {
   accountId: string;
   categoryId: string | null;
+  /** The row of the source's own category, for a source that gives one; it never decides the merge. */
+  sourceCategoryId?: string | null;
   labelIds: readonly string[];
 }
 

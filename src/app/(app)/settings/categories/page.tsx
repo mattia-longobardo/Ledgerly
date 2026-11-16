@@ -16,6 +16,20 @@ import { DefaultGroupsButton } from "./default-groups";
 import { type LabelRow, LabelsCard } from "./labels-card";
 import { mergeProposalsView } from "./merge";
 import { type MergeSide, MergeProposals } from "./merge-proposals";
+import { sourceCategorySections, sourceNotes } from "./source";
+import {
+  keepSourceCategoryAction,
+  setSourceCategoryAction,
+  undoSourceCategoryAction,
+} from "./source-actions";
+import { SourceCategories, type SourceCategoryCommands } from "./source-categories";
+
+/** The writes of "Categories of {source}", handed to the component: actions of the application. */
+const SOURCE_COMMANDS: SourceCategoryCommands = {
+  set: setSourceCategoryAction,
+  undo: undoSourceCategoryAction,
+  keep: keepSourceCategoryAction,
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
@@ -31,11 +45,13 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function SettingsCategoriesPage() {
   const ctx = await requireSession();
-  const [t, categories, labels, proposals] = await Promise.all([
+  const [t, categories, labels, proposals, sources, notes] = await Promise.all([
     getTranslations("settings"),
     listCategoriesWithUsage(ctx, { includeArchived: true }),
     listLabelsWithUsage(ctx),
     mergeProposalsView(ctx),
+    sourceCategorySections(ctx),
+    sourceNotes(ctx),
   ]);
 
   const byId = new Map(categories.map(({ category }) => [category.id, category]));
@@ -48,6 +64,9 @@ export default async function SettingsCategoriesPage() {
     chosenColor: category.color,
     archived: category.archivedAt !== null,
     usage,
+    source: notes.has(category.id)
+      ? { name: notes.get(category.id)?.source ?? "", names: notes.get(category.id)?.names ?? [] }
+      : null,
   });
 
   // `listCategoriesWithUsage` already hands them back in tree order, each group followed by its
@@ -84,6 +103,39 @@ export default async function SettingsCategoriesPage() {
   };
   const noCategories = !categories.some(({ category }) => category.archivedAt === null);
 
+  // What a source's category may be matched to: the categories in use, in tree order, by kind.
+  const matchable = categories
+    .filter(({ category }) => category.archivedAt === null)
+    .map(({ category }) => ({
+      id: category.id,
+      name: category.name,
+      color: colorOfCategory(category, byId),
+      depth: (category.parentId === null ? 0 : 1) as 0 | 1,
+      type: category.type,
+    }));
+  const sourceSections = sources.map((section) => ({
+    provider: section.provider,
+    name: section.name,
+    rows: section.rows.map((row) => {
+      const counted = row.categoryId === null ? undefined : byId.get(row.categoryId);
+      // The kind of a source's category is the kind of the category it counts under.
+      const type = counted?.type ?? "expense";
+      return {
+        id: row.id,
+        name: row.name,
+        nested: row.groupName !== null && row.groupName !== row.name,
+        count: row.count,
+        isNew: row.isNew,
+        choice: row.choice,
+        category:
+          row.choice === "matched" && counted
+            ? { id: counted.id, name: counted.name, color: colorOfCategory(counted, byId) }
+            : null,
+        options: matchable.filter((option) => option.type === type),
+      };
+    }),
+  }));
+
   return (
     <SettingsGrid>
       {proposals.length > 0 && (
@@ -119,6 +171,16 @@ export default async function SettingsCategoriesPage() {
           </div>
         )}
       </SettingsSection>
+      {sourceSections.map((section) => (
+        <SettingsSection
+          key={section.provider}
+          title={t("categories.source.title", { provider: section.name })}
+          description={t("categories.source.description", { provider: section.name })}
+          padded={false}
+        >
+          <SourceCategories source={section.name} rows={section.rows} commands={SOURCE_COMMANDS} />
+        </SettingsSection>
+      ))}
       <SettingsSection title={t("labels.title")} description={t("labels.description")} padded={false}>
         <LabelsCard rows={labelRows} />
       </SettingsSection>

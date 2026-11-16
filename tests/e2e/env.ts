@@ -94,6 +94,7 @@ export const USERS = {
   // Release N3, second part: the automatic categories (ux/n3-categories-manual.md). `review` has
   // the default groups and movements in every state — automatic, suggested, with no category;
   // `reviewNew` has movements and no category at all, for the first step of the guided review.
+  sources: { email: "sources@example.test", password: "sources-password-123", name: "Sources" },
   review: { email: "review@example.test", password: "review-password-123", name: "Review" },
   reviewNew: { email: "review-new@example.test", password: "review-new-password-123", name: "Review New" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
@@ -149,6 +150,8 @@ export const SESSIONS = {
   connections: { user: "connections", file: "connections-session.json" },
   // Release N3: the manual movement (tests/e2e/manual-movement.spec.ts).
   manual: { user: "manual", file: "manual-session.json" },
+  // Release N3.1: a movement on its way to a source, and the categories of a source.
+  sources: { user: "sources", file: "sources-session.json" },
   // Release N3: "To review" and the automatic categories (tests/e2e/review.spec.ts).
   review: { user: "review", file: "review-session.json" },
   reviewNew: { user: "reviewNew", file: "review-new-session.json" },

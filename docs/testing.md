@@ -78,8 +78,8 @@ is in the row of its module and in the row `data`): all its rows count.
 | `scripts/release.sh`, `scripts/release-dump.sh`, `scripts/numbers-*`, `scripts/snapshot-format.ts`, `scripts/on-homelab.sh`, `scripts/preview-on-test.sh`, `scripts/create-*`, `scripts/plugin-probe.ts`, `scripts/fund-documents*`, `scripts/investments-cutoff.ts`, `scripts/modularity.ts`, `scripts/duplication.ts`, `scripts/assertions-diff.ts`, `scripts/source-graph.ts`, `scripts/test-map.ts`, `scripts/test-select.ts`, `src/architecture.test.ts`, `src/tooling.test.ts`, `src/release-script.test.ts`, `src/test-map.test.ts`, `baselines/modularity.json`, `baselines/duplication.json`, `baselines/assertions-exceptions.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`, `.gitignore` | `tooling` | — | — |
 | `docs/**`, `*.md`, `LICENSE`, `.env.example`, `tests/shots/**`, `playwright.shots.config.ts` | `docs` | — | — |
 | `tests/e2e/accounts.spec.ts`, `tests/e2e/currency.spec.ts` | `spec-accounts` | — | `e2e:accounts` |
-| `tests/e2e/expenses.spec.ts`, `tests/e2e/manual-movement.spec.ts`, `tests/e2e/wide.spec.ts` | `spec-transactions` | — | `e2e:transactions` |
-| `tests/e2e/categories.spec.ts`, `tests/e2e/review.spec.ts` | `spec-categories` | — | `e2e:categories` |
+| `tests/e2e/expenses.spec.ts`, `tests/e2e/manual-movement.spec.ts`, `tests/e2e/manual-send.spec.ts`, `tests/e2e/wide.spec.ts` | `spec-transactions` | — | `e2e:transactions` |
+| `tests/e2e/categories.spec.ts`, `tests/e2e/review.spec.ts`, `tests/e2e/source-categories.spec.ts` | `spec-categories` | — | `e2e:categories` |
 | `tests/e2e/budgets.spec.ts` | `spec-budgets` | — | `e2e:budgets` |
 | `tests/e2e/pockets.spec.ts` | `spec-pockets` | — | `e2e:pockets` |
 | `tests/e2e/subscriptions.spec.ts` | `spec-subscriptions` | — | `e2e:subscriptions` |
@@ -104,8 +104,8 @@ preview; without it the same command runs against the deployed site.
 | Flow | Command | Its screens in the cross-cutting specs |
 |---|---|---|
 | `accounts` | `npx playwright test -c playwright.preview.config.ts accounts currency` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/accounts\|new account dialog\|as layout / at\|sortable table'` |
-| `transactions` | `npx playwright test -c playwright.preview.config.ts expenses manual-movement wide` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/expenses \(a manual\|as layout /expenses\|transaction dialog\|expenses on a phone\|row menu'` |
-| `categories` | `npx playwright test -c playwright.preview.config.ts categories review` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/settings/categories\|/expenses/review\|/expenses \(automatic\|as review'` |
+| `transactions` | `npx playwright test -c playwright.preview.config.ts expenses manual-movement manual-send wide` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/expenses \(a manual\|as layout /expenses\|transaction dialog\|expenses on a phone\|row menu'` |
+| `categories` | `npx playwright test -c playwright.preview.config.ts categories review source-categories` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/settings/categories\|/expenses/review\|/expenses \(automatic\|as review\|category chooser'` |
 | `budgets` | `npx playwright test -c playwright.preview.config.ts budgets` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/budgets\|budgets on a phone'` |
 | `pockets` | `npx playwright test -c playwright.preview.config.ts pockets` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/pockets\|pockets on a phone'` |
 | `subscriptions` | `npx playwright test -c playwright.preview.config.ts subscriptions` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/subscriptions\|subscriptions on a phone'` |

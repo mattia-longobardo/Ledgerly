@@ -42,6 +42,12 @@ async function byKey(ctx: ManualCtx, idempotencyKey: string): Promise<Transactio
   return row ? getTransaction(ctx, row.id) : null;
 }
 
+/** What the caller knows about the account and this module does not. */
+export interface ManualOptions {
+  /** The account's source takes the movements written here: this one waits for the next update. */
+  toSend?: boolean;
+}
+
 /**
  * Writes a manual movement. With an `idempotencyKey` the same request sent twice — a double
  * click, a retry after a lost answer — is one row: the second call answers with the row the first
@@ -51,6 +57,7 @@ export async function createManualTransaction(
   ctx: ManualCtx,
   input: unknown,
   idempotencyKey?: string,
+  options: ManualOptions = {},
 ): Promise<{ transaction: Transaction; created: boolean }> {
   if (idempotencyKey !== undefined) {
     const sent = await byKey(ctx, idempotencyKey);
@@ -64,6 +71,7 @@ export async function createManualTransaction(
         ...columns,
         origin: "manual" as const,
         idempotencyKey: idempotencyKey ?? null,
+        sendState: options.toSend ? ("to_send" as const) : null,
       }),
     )
     // Two requests with one key that passed the read above together: the second writes nothing.
@@ -84,18 +92,23 @@ async function requireManual(ctx: ManualCtx, id: string): Promise<Transaction> {
 
 /**
  * Changes a manual movement: every field is the person's, so nothing is marked as edited here.
+ * A movement that waits for its source goes with the fields it has when the update comes.
  * `previousAccountId` is the account it was on, whose balance changes too when the account does.
  */
 export async function updateManualTransaction(
   ctx: ManualCtx,
   id: string,
   input: unknown,
+  options: ManualOptions = {},
 ): Promise<{ transaction: Transaction; previousAccountId: string }> {
   const current = await requireManual(ctx, id);
   const columns = await parsed(ctx, input);
+  // A movement the source may already hold ("not sent") stays so: the next update looks for it
+  // there before it asks again. On an account with no source to send to, it waits for nothing.
+  const sendState = options.toSend ? (current.sendState ?? ("to_send" as const)) : null;
   await getDb()
     .update(transactions)
-    .set(columns)
+    .set({ ...columns, sendState, ...(sendState === null ? { sendAskedOn: null } : {}) })
     .where(
       and(
         eq(transactions.id, current.id),

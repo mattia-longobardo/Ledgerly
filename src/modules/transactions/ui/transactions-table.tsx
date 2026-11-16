@@ -309,6 +309,9 @@ export function TransactionsTable({
           items={[
             { label: t("row.editCategory"), onSelect: () => setEditing(`${variant}:${row.id}`) },
             { label: t("manual.row.edit"), onSelect: () => manual.openEdit(row) },
+            ...(row.send?.state === "not_sent" && manual.retrySend
+              ? [{ label: t("manual.row.retrySend"), onSelect: () => manual.retrySend?.(row) }]
+              : []),
             {
               label: row.hidden ? t("selection.restore") : t("selection.hide"),
               onSelect: () => onVisibility([row.id], row.hidden),
@@ -338,11 +341,21 @@ export function TransactionsTable({
   }
 
   function badges(row: RowView) {
-    return row.badges.map((badge) => (
-      <Badge key={badge} tone={BADGE_TONE[badge]}>
-        {t(`badges.${badge}`)}
-      </Badge>
-    ));
+    return (
+      <>
+        {row.badges.map((badge) => (
+          <Badge key={badge} tone={BADGE_TONE[badge]}>
+            {t(`badges.${badge}`)}
+          </Badge>
+        ))}
+        {row.send &&
+          (row.send.state === "to_send" ? (
+            <Badge tone="neutral">{t("manual.badges.toSend")}</Badge>
+          ) : (
+            <Badge tone="warn">{t("manual.badges.notSent", { provider: row.send.source })}</Badge>
+          ))}
+      </>
+    );
   }
 
   function payeeLabel(row: RowView): string {
