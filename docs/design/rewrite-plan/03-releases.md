@@ -150,19 +150,68 @@ sono una prima lettura: le conferma lo sviluppatore.
 
 ### N4 · Passaggio di un conto da Wallet a Enable Banking
 
+Revisione del 16/11/2026: applica le decisioni H39-H44 di Mattia ([`01-decisions.md`](01-decisions.md) §1.0).
+Interfaccia: [`ux/n4-account-switch.md`](ux/n4-account-switch.md), in particolare §2.4 (IBAN) e §9.3 (giroconti).
+Regole tecniche: [`04-now.md`](04-now.md) §4.6. I punti con il segno **[DEV]** sono una prima lettura del designer:
+li conferma lo sviluppatore prima dello sviluppo.
+
 | | |
 |---|---|
-| Obiettivo | Cambiare la sorgente di un conto senza doppi conteggi e senza perdita di storico |
-| Contenuto | Scelta «È lo stesso conto di…» nella procedura della banca. Regola M1 corretta: abbinamento per gruppi (conto + importo, confronto dei conteggi), poi testo, poi data. Prova a secco obbligatoria con rapporto. Controllo del saldo bloccante, con il tipo di saldo scelto per banca. Un conto per volta. Il pass Wallet salta i conti passati. La pubblicazione degli interessi su Wallet finisce per i conti passati. Annullamento del passaggio |
-| Per l'utente | L'utente sceglie se e quando passare un conto. Vede prima il rapporto |
-| Git | Branch + PR · `feat(accounts)` · criterio #1 (modifica ai dati: `provider` del conto e link esterni) |
-| Migrazioni | Nessuna di schema. Dati, su richiesta dell'utente: `accounts.provider`, righe di `provider_links` |
-| Rollback | Per conto, dall'interfaccia: «Annulla passaggio» riporta `provider` a `wallet` e toglie i link Enable Banking; nessuna riga di movimento cancellata. Rilascio: immagine `pre-n4`; dump `n4.dump` prima del primo passaggio reale |
-| Test e gate | G1-G9. Unit: abbinamento per gruppi sui tre scenari dello spike (stessa data; 0-3 giorni con 3% di differenze; 0-5 giorni con 5%). Integration: prova a secco senza scritture; blocco con saldo diverso; annullamento |
-| Criteri di accettazione | 1) La prova a secco non scrive nulla. 2) Nessun movimento della banca si lega a una riga esistente quando i conteggi del gruppo sono diversi: va nel rapporto. 3) Una differenza di saldo blocca l'applicazione. 4) Dopo il passaggio: saldo della banca = saldo locale alla stessa data. 5) Dopo «Annulla passaggio» la fotografia dei numeri è uguale a prima |
+| Obiettivo | Cambiare la sorgente di un conto senza doppi conteggi e senza perdita di storico. Impedire che lo stesso conto vero sia due volte in Ledgerly |
+| Contenuto | **Passaggio.** Scelta «È lo stesso conto di…» nella procedura della banca. Regola M1 corretta: abbinamento per gruppi (conto + importo, confronto dei conteggi), poi testo, poi data. Prova a secco obbligatoria con rapporto; la sezione «Da controllare» è solo da leggere (H44). Controllo del saldo bloccante; il tipo di saldo lo sceglie Ledgerly, uno per banca (H43). Un conto per volta. Il pass Wallet salta i conti passati. La pubblicazione degli interessi su Wallet finisce per i conti passati. «Annulla passaggio», senza limite di tempo, finché la sorgente di partenza è collegata (H42); dopo l'annullamento i movimenti arrivati dalla banca non contano e non si vedono, e nessuna riga è cancellata (H41). **IBAN sul conto (H39), regola generale per ogni conto con movimenti e per ogni sorgente.** Campo IBAN facoltativo sul conto: lo riempie la sorgente quando lo dà, oppure lo scrive la persona. Un IBAN, un conto: unico per utente tra i conti non archiviati. La procedura di collegamento, gli aggiornamenti automatici e la creazione a mano non creano un conto con un IBAN già presente: mostrano un avviso con il nome del conto che ha quell'IBAN. Nessuna unione di due conti. **Giroconti su tutto lo storico (H40).** Regola nuova del dominio, per importo e data, tra il conto passato e gli altri conti della stessa banca. La prova elenca ogni coppia e il totale per anno prima di «Applica». «Annulla passaggio» riporta ogni coppia com'era, con la categoria di prima |
+| Per l'utente | L'utente sceglie se e quando passare un conto. Vede prima il rapporto, con i giroconti e l'effetto sui mesi passati. Un conto che è già in Ledgerly non entra una seconda volta: Ledgerly dice quale conto ha lo stesso IBAN |
+| Git | Branch + PR · `feat(accounts)` · criterio #1 (schema: campo IBAN; dati: `provider` del conto, link esterni, coppie di giroconti) |
+| Migrazioni | **Di schema, additiva (H39):** campo IBAN del conto, nullable, con la regola «unico per utente tra i conti non archiviati». **[DEV]** Forma della regola: indice unico parziale, oppure controllo nel servizio se due conti di oggi hanno lo stesso IBAN. **[DEV]** Dati del passaggio fatto e delle coppie di giroconti (specifica §18, punti 10 e 11): colonne o tabella nuove, additive. Dati al rilascio: riempimento dell'IBAN dove è già conosciuto (punto aperto P2). Dati su richiesta dell'utente: `accounts.provider`, righe di `provider_links`, coppie di giroconti. Dettaglio: [`06-data.md`](06-data.md) §6.1 |
+| Rollback | Per conto, dall'interfaccia: «Annulla passaggio» riporta `provider` a `wallet`, toglie i link Enable Banking e riporta ogni coppia di giroconti a un'entrata e un'uscita; nessuna riga di movimento cancellata. Rilascio: immagine `pre-n4`, che ignora il campo IBAN e non applica la regola «un IBAN, un conto»; dump `n4.dump` prima del deploy (migrazione di schema) e un dump nuovo prima del primo passaggio reale. **[DEV]** Con l'immagine `pre-n4` le coppie di un passaggio già applicato restano giroconti: prima del rollback dell'immagine si annulla ogni passaggio, oppure un file `n4-rollback.sql` riporta le coppie |
+| Test e gate | G1-G9. Unit: abbinamento per gruppi sui tre scenari dello spike (stessa data; 0-3 giorni con 3% di differenze; 0-5 giorni con 5%). Unit: controllo e forma dell'IBAN; regola «un IBAN, un conto» senza nomi di fornitore; regola dei giroconti su tutto lo storico, con i casi ambigui (due spostamenti uguali nello stesso giorno: nessuna coppia) e valute diverse. Integration: prova a secco senza scritture, con l'elenco delle coppie; blocco con saldo diverso; annullamento, con ogni coppia e ogni categoria riportata; un conto con un IBAN già presente è rifiutato dalla procedura, da un aggiornamento automatico e dalla creazione a mano (codice `iban_exists`); l'IBAN non compare in registro, log, URL e «Copia rapporto». Fotografia dei numeri: uguale al rilascio; dopo un passaggio di prova diversa solo per le coppie elencate; uguale dopo l'annullamento |
+| Criteri di accettazione | 1) La prova a secco non scrive nulla. 2) Nessun movimento della banca si lega a una riga esistente quando i conteggi del gruppo sono diversi: va nel rapporto, e la persona non lo collega a mano (H44). 3) Una differenza di saldo blocca l'applicazione; nessuna scelta di un altro tipo di saldo (H43). 4) Dopo il passaggio: saldo della banca = saldo locale alla stessa data. 5) Dopo «Annulla passaggio» la fotografia dei numeri è uguale a prima del passaggio, comprese le coppie di giroconti e le loro categorie; fanno eccezione solo i movimenti che la sorgente di partenza ha letto nel frattempo (H40, H41). 6) Nessuna strada crea un conto con un IBAN già presente in un conto non archiviato dello stesso utente: procedura, aggiornamento automatico, creazione e modifica a mano. L'avviso dice quale conto ha quell'IBAN (H39). 7) La prova elenca ogni coppia di giroconti e il totale per anno. Dopo «Applica» entrate e uscite scendono dell'importo scritto nel rapporto, non di più; patrimonio e saldi di ogni conto non cambiano (H40). 8) Al rilascio, prima di ogni passaggio, la fotografia dei numeri è invariata. 9) L'IBAN non compare in URL, toast, log, registro e «Copia rapporto». 10) Nessun nome di fornitore nella regola dell'IBAN e nella regola dei giroconti (lista nota di M12 non peggiora) |
 | OK di Mattia | Sì, sul SHA. Ogni passaggio reale di un conto è una scelta di Mattia nell'interfaccia |
 | Dipende da | N3. Ordine previsto: dopo N3.1; può andare prima per scelta di Mattia (H36). Con N3.1 già rilasciato vale H38: prima l'invio dei movimenti a mano, poi il passaggio |
-| Dimensione | M |
+| Dimensione | L **[DEV]** (era M). In più rispetto alla riga del 13/11/2026: campo IBAN con migrazione, controllo in tre strade di creazione, regola nuova dei giroconti con elenco e annullamento |
+
+**Eccezioni dichiarate a «comportamento invariato» di N4.** La regola della fase A dice: nessun numero esistente
+cambia senza una decisione scritta.
+
+| # | Cosa cambia | Quando | Decisione | Limiti |
+|---|---|---|---|---|
+| X1 | Entrate e uscite dei mesi passati scendono: ogni coppia riconosciuta era un'uscita e un'entrata, e diventa un giroconto. Scendono anche la spesa per categoria e i budget di quei mesi, per i movimenti che avevano una categoria. Budget e grafici dei mesi passati cambiano senza un avviso nelle loro pagine | Solo dopo «Applica» di un passaggio reale, scelto dall'utente. Mai al deploy | H40 | Solo i movimenti tra il conto passato e gli altri conti della stessa banca. Patrimonio e saldi non cambiano. Il rapporto dice numero delle coppie e importo per anno prima di «Applica». «Annulla passaggio» riporta ogni coppia |
+
+Non sono eccezioni: il campo IBAN non cambia nessun numero; al rilascio la fotografia dei numeri è invariata
+(criterio 8). Rischio «coppie sbagliate»: [`09-risks.md`](09-risks.md) R-34.
+
+**Effetti di H39 e H40 sugli altri rilasci.** Questa tabella elenca gli effetti. Non riscrive i rilasci.
+
+| Rilascio o parte | Effetto | Da confermare |
+|---|---|---|
+| **N1** (in produzione) | La procedura della banca cambia in N4: con un IBAN già presente «Crea un conto nuovo» non è disponibile e il server rifiuta l'importazione (`iban_exists`). Il contratto dei plugin dà oggi un campo solo, «IBAN o un altro numero» (`identifier`) | **[DEV]** Il core riconosce l'IBAN da `identifier` con il controllo delle cifre, oppure il contratto v1 riceve un campo `iban`, additivo |
+| **N2** (in produzione) | Un aggiornamento che trova un conto nuovo con un IBAN già presente non lo crea: la riga del collegamento mostra un avviso con l'azione «Scegli i conti». Non è uno stato nuovo del collegamento e non conta nei «3 fallimenti». L'IBAN resta fuori dal registro e da «Copia rapporto» | **[DEV]** Dove si salva l'avviso |
+| **N3** | Nessun effetto sul movimento a mano e sulle categorie. «Nuovo conto» e le impostazioni del conto ricevono il campo IBAN in N4 | — |
+| **N3.1** | Nessun effetto sul contenuto. Ledgerly non scrive mai l'IBAN sulla sorgente: `POST /push` porta movimenti, non dati del conto. Un IBAN scritto a mano resta solo in Ledgerly. Se N3.1 arriva dopo N4, la regola vale già; se arriva prima, non cambia | — |
+| **N5, N5.1, N6** | Nessun effetto. I conti di investimento e i fondi non hanno il campo (punto aperto P3) | — |
+| **Giroconti per IBAN di oggi** | La regola di oggi legge l'IBAN dal campo «IBAN o riferimento» del conto e abbina due movimenti che sono già giroconti. Da N4 legge il campo IBAN. Con più conti con un IBAN, più giroconti già riconosciuti si abbinano: entrate e uscite non cambiano, perché la regola non trasforma un'entrata o un'uscita | **[DEV]** Conferma con la fotografia dei numeri al rilascio (criterio 8) |
+| **R1** | Il controllo «IBAN già presente» è un passo del job di sync: il job non crea il conto e scrive l'avviso | — |
+| **R2** | 1) Rotte di creazione e di modifica del conto: campo IBAN in scrittura, con controllo e codice di errore `iban_exists`, additivi. 2) `GET /accounts`, MCP ed export: l'IBAN in lettura si decide in N4 (punto aperto P1). 3) Punto di estensione E7 (abbinatore di movimenti): la strategia «IBAN» legge il campo nuovo; la regola dei giroconti su tutto lo storico è la strategia «importo e data» dello stesso abbinatore, non una regola doppia | **[DEV]** La regola di N4 nasce già come funzione pura, con la forma di E7 |
+| **R3** | Il campo e gli avvisi passano a `packages/ui`. Nessun client controlla l'IBAN da solo: l'errore arriva dall'API | — |
+| **R5a** | Il primo avvio guidato e «Nuovo conto» hanno il campo IBAN. Il glossario unico ha «IBAN» e «giroconto» | — |
+| **R5c** | Ogni plugin che dà conti dà l'IBAN nello stesso campo del contratto, quando la sorgente lo ha. La regola «un IBAN, un conto» resta nel core: un plugin non la applica e non la conosce. Import CSV (ST-8): un import che crea un conto rispetta la regola | **[DEV]** Il plugin Wallet dà l'IBAN del conto in ogni caso (decisione di Mattia: sì) |
+| **Export** | Oggi la sezione `accounts` dell'export non ha «IBAN o riferimento». Con il default di P1 resta senza IBAN | Punto aperto P1 |
+| **MCP** | Oggi `list_accounts` non dà «IBAN o riferimento». MCP resta in sola lettura (F5b): nessuno strumento scrive l'IBAN. Con il default di P1 nessuno strumento lo legge | Punto aperto P1 |
+| **Dump e fotografia dei numeri** | Il dump del database contiene l'IBAN, come gli altri dati personali: stessi permessi di oggi. Il file della fotografia dei numeri non deve contenere l'IBAN | **[DEV]** Lo script `numbers-snapshot` non legge il campo |
+| **C1, C2 (Android)** | Con il default di P1 l'IBAN non è nell'API: non entra nella cache del telefono | Punto aperto P1 |
+
+**Nota di sicurezza (da riportare alla review finale Z).** L'IBAN è un dato personale. In N4 va deciso dove
+compare: API, MCP, export e log. Regole già fissate dalla specifica (§2.4.1): mai in URL, toast, registro e «Copia
+rapporto»; mascherato negli elenchi e nella procedura della banca. **[DEV]** Cifrato o no nel database, come gli
+altri dati del conto. Il resto è il punto aperto P1.
+
+**Punti aperti per Mattia.** Non sono decisi: nessuno sviluppo parte su questi punti prima della risposta. Il default
+è una proposta.
+
+| # | Domanda | Esempio | A (default) | B | Effetto |
+|---|---|---|---|---|---|
+| P1 | L'IBAN di un conto esce da Ledgerly con API, MCP ed export? | Un assistente collegato con MCP chiede l'elenco dei conti. Tu scarichi l'export | No: l'IBAN si vede solo nelle pagine di Ledgerly. API, MCP ed export non lo contengono. I log non lo contengono in nessun caso | Sì, in parte: API e MCP danno l'IBAN mascherato («IT60 •••• 4821»); l'export, che è tuo, lo dà intero | A: nessun dato personale nuovo fuori da Ledgerly; un client non può mostrare l'IBAN. B: un client riconosce il conto; un dato personale in più in API, MCP e file. Tocca R2, export, MCP, C1 |
+| P2 | Oggi il conto ha un campo solo, «IBAN o riferimento». Cosa succede a quel campo? | «Conto corrente» ha «IBAN o riferimento» = `IT60…456`. «Contanti» ha «portafoglio» | Due campi. Al rilascio Ledgerly copia nel campo «IBAN» i valori che sono un IBAN valido. Il campo vecchio resta, con il nome «Riferimento» | Un campo solo, come oggi. La regola «un IBAN, un conto» vale quando il valore è un IBAN valido | A: l'IBAN ha controllo e avviso propri; i conti di oggi sono protetti dal primo giorno; una migrazione di dati in più. Se due conti di oggi hanno lo stesso IBAN, vale il caso 7 della specifica (§2.4.2). B: nessun campo nuovo; un campo con due significati, e la sorgente non può riempirlo senza cancellare un riferimento scritto a mano. Tocca «Migrazioni» |
+| P3 | I conti di investimento e i fondi pensione hanno il campo IBAN? | Il conto del fondo pensione, o il conto di un servizio di investimento | No: il campo è dei conti con movimenti (a mano, lettura e scrittura, sola lettura). È la scelta della specifica (§2.4.1) | Sì: ogni conto, di ogni tipo | A: il controllo vale dove un conto doppio può nascere da una banca. B: «ogni conto» alla lettera; un campo senza uso sui conti che non arrivano da una banca |
 
 ### N5 · Time Off
 

@@ -30,7 +30,10 @@ I nomi sono indicativi: il numero e il nome definitivi nascono con `npm run db:g
 | N3.1 | Corrispondenza «categoria della sorgente → categoria di Ledgerly», per utente e per sorgente, `on delete cascade`; categoria della sorgente sul movimento, nullable | Additiva | Sì |
 | N3.1 | Dati: una riga di corrispondenza «aggiunta» per ogni categoria della sorgente di oggi; categoria della sorgente sui movimenti esistenti. Nessun numero cambia | Dati | Sì. Dump prima |
 | N3 | Dati: `category_origin = 'provider'` per i movimenti con categoria; `'user'` dove `locally_edited` contiene la categoria | Dati | Sì. Dump prima |
-| N4 | Nessuna di schema. Dati su richiesta dell'utente: `accounts.provider`, righe di `provider_links` | Dati | Sì; annullabile dall'interfaccia |
+| N4 | Campo IBAN del conto, nullable (decisione H39). Vale per ogni conto con movimenti e per ogni sorgente. Regola «unico per utente tra i conti non archiviati»: **[DEV]** indice unico parziale, oppure controllo nel servizio se due conti di oggi hanno lo stesso IBAN. **[DEV]** Colonna di `accounts` o tabella a parte: il file della fotografia dei numeri (§6.4) non deve contenere l'IBAN | Additiva | Sì: l'immagine precedente ignora il campo e non applica la regola |
+| N4 | Dati del passaggio fatto (data, sorgente di partenza, ultimo giorno letto, modo di prima della regola di interessi) e coppie di giroconti scritte dal passaggio, con tipo e categoria di prima (decisione H40). **[DEV]** Colonne o tabella nuove; stato dei movimenti della banca dopo un annullamento (H41) | Additiva | Sì |
+| N4 | Dati al rilascio: riempimento dell'IBAN dai valori di «IBAN o riferimento» (`accounts.reference`) che sono un IBAN valido. Solo con l'opzione A del punto aperto P2 ([`03-releases.md`](03-releases.md) «N4»). Nessun numero cambia | Dati | Sì. Dump prima |
+| N4 | Dati su richiesta dell'utente: `accounts.provider`, righe di `provider_links`, coppie di giroconti su tutto lo storico (H40). Cambiano numeri esistenti: eccezione X1 di [`03-releases.md`](03-releases.md) «N4» | Dati | Sì; annullabile dall'interfaccia. Con l'immagine precedente le coppie già scritte restano giroconti: **[DEV]** annullamento prima del rollback, oppure `n4-rollback.sql` |
 | N5 | Nessuna | — | — |
 | N6 | Tabelle `fund_contribution_sources` (fondo, `kind`, componenti, periodo, scadenze, tolleranza, conto, testo del beneficiario, importo, giorno, frequenza, validità) e `fund_fees` (fondo, `label`, `basis`, importo o percentuale, `period`, `source_id`, `component`, validità, nota) | Additiva | Sì |
 | N6 | `fund_operations.source_id` (nullable), `fund_operations.fees_unknown` (default `false`) | Additiva | Sì |
@@ -161,6 +164,7 @@ flowchart LR
 - Legge, per un utente, un elenco fisso di numeri attraverso i servizi di lettura: patrimonio e riquadri per 24 mesi, saldo di ogni conto a fine mese, entrate, uscite e `net` per mese, spesa per categoria, budget, abbonamenti, pocket, interessi maturati, valore, versato, guadagno e rendimento di ogni servizio e di ogni fondo per anno, residui di ferie, netto delle buste paga.
 - Scrive un file JSON ordinato e il suo `sha256`.
 - Uso: prima e dopo ogni passo di refactor e ogni deploy. Un numero diverso ferma il rilascio.
+- Eccezione dichiarata: dopo «Applica» di un passaggio reale di N4 la fotografia è diversa da prima, per le sole coppie di giroconti elencate nel rapporto (decisione H40; [`03-releases.md`](03-releases.md) «N4», X1). Dopo «Annulla passaggio» torna uguale.
 - Sugli utenti di prova il file sta nel repo come riferimento dei test.
 - In produzione gira in una transazione di sola lettura. Il file resta nella cartella del rilascio in `Ledgerly-dumps/` con permessi `600`. Nei commenti va solo l'esito: «uguale» oppure il numero di differenze e i loro nomi, mai i valori.
 

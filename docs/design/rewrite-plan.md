@@ -12,6 +12,9 @@ Portafoglio manuale; nessuna funzione su misura per un fornitore, una banca, un 
 Revisione del 15/11/2026 (decisioni H31-H35): tre modalità di conto («a mano», «lettura e scrittura», «sola lettura»);
 un movimento a mano cambia il saldo; le categorie di una sorgente che le dà già si associano o si aggiungono. Il
 invio alla sorgente e l'associazione delle categorie sono un rilascio nuovo, N3.1 (H36).
+Revisione del 16/11/2026 (decisioni H39-H44, su N4): ogni conto può avere un IBAN e un conto già aggiunto non si
+aggiunge una seconda volta; i giroconti di un conto passato si riconoscono su tutto lo storico, eccezione dichiarata a
+«stessi numeri».
 
 ## Obiettivo e priorità del refactor
 
@@ -136,7 +139,7 @@ flowchart LR
 | N2 | Stato semplice per collegamento, registro per utente, più banche | Una riga chiara per collegamento | branch + PR | Sì | Sì (#1) | S |
 | N3 | Categorie automatiche, «Da categorizzare», movimento manuale sui conti «a mano» e «sola lettura», con effetto sul saldo (H32, H33) | Categorie senza Wallet, spese a mano | branch + PR | Sì, additive | Sì (#1) | L |
 | N3.1 | Invio dei movimenti a mano alla sorgente di un conto «lettura e scrittura»; associazione delle categorie di una sorgente che le dà già (H34, H36) | Una spesa scritta in Ledgerly arriva su Wallet; le categorie di Wallet si associano | branch + PR | Sì, additive + dati | Sì (#1; #8 da valutare) | M |
-| N4 | Passaggio di un conto da Wallet a Enable Banking | Un conto cambia sorgente senza doppioni | branch + PR | Dati | Sì (#1) | M |
+| N4 | Passaggio di un conto da Wallet a Enable Banking; campo IBAN sul conto e nessun conto aggiunto due volte (H39); giroconti con gli altri conti della stessa banca su tutto lo storico (H40) | Un conto cambia sorgente senza doppioni; lo stesso conto non entra due volte | branch + PR | Sì, additive + dati | Sì (#1) | L **[DEV]** |
 | N5 | Time Off: primo e ultimo giorno + pannello | Nessun gesto nascosto | `main` | No | No | M |
 | N5.1 | Time Off: maturazione mensile dalle buste paga e residuo previsto a una data (richiesta del 14/11/2026, [`timeoff-accrual.md`](timeoff-accrual.md)) | Quanto matura al mese, quanto resta a fine anno e alla data dell'assenza | `main` | No | No | M |
 | N6 | Fondo pensione standard: un modello, sorgenti di contributo, commissioni generiche, migrazione dei 2 fondi; via il «Deducibile» e i documenti dei fondi; cancellazione dei file di Cometa già salvati (decisione ST-25) | «Aggiungi fondo» senza tipo; un fondo nuovo si configura | branch + PR | Sì, additive + dati; cancellazione di righe e file con dump e copia | Sì (#1, #2) | L |

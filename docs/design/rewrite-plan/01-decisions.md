@@ -2,8 +2,8 @@
 
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
-Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026** e del **15/11/2026**
-(H31-H38). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
+Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**, del **15/11/2026**
+(H31-H38) e del **16/11/2026** (H39-H44). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
 che le applicano sono una revisione **approvata da Mattia il 14/11/2026**
 ([`11-standardization.md`](11-standardization.md), decisione H21). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
@@ -109,6 +109,22 @@ Due risposte sono regole nuove (H32-H34). H36-H38 sono le risposte alle tre doma
 | H37 | **D2, con il default: ST-14 resta.** Da R5c Ledgerly non pubblica più gli interessi su Wallet, per nessun conto. L'accredito arriva dalla banca o si scrive a mano. Il plugin Wallet non dichiara `ledgerPosting` | Il motivo di ST-14 «Wallet in sola lettura» (non vale più con H32): la decisione resta, con questa conferma. L'alternativa «resta come capacità del plugin» | R5c |
 | H38 | **D3, con il default.** Il passaggio di un conto da «lettura e scrittura» a un'altra sorgente (N4) aggiorna prima la sorgente di partenza e invia i movimenti a mano non ancora inviati. Se un movimento resta non inviato, la prova a secco lo elenca e il passaggio si ferma finché la persona lo invia o lo elimina | L'alternativa «il passaggio parte e il movimento resta a mano sul conto» | N4 |
 
+### Passaggio di un conto e IBAN sul conto (decisione del 16/11/2026)
+
+Risposte di Mattia alle 6 domande della specifica UX di N4 ([`ux/n4-account-switch.md`](ux/n4-account-switch.md) §17).
+H39 è una regola nuova: vale per ogni conto e per ogni sorgente, non solo per il passaggio. H40 cambia numeri
+esistenti: è un'eccezione dichiarata a «comportamento invariato», e questa riga è la decisione scritta. Righe del
+piano, eccezioni, effetti sugli altri rilasci e punti aperti: [`03-releases.md`](03-releases.md) «N4».
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H39 | **Q1, regola nuova: un conto già aggiunto non si aggiunge una seconda volta. Ogni conto può avere un IBAN.** Parole di Mattia: «sia da Wallet che da Enable puoi estrarre un IBAN. Se esiste già non metterlo, dai un avviso; aggiungi anche la possibilità di aggiungere un IBAN ai conti». Regola: 1) il conto ha un campo IBAN, facoltativo: lo riempie la sorgente quando lo dà, oppure lo scrive la persona; 2) un IBAN, un conto: due conti non archiviati dello stesso utente non hanno lo stesso IBAN; 3) la procedura di collegamento di una sorgente e gli aggiornamenti automatici non creano un conto con un IBAN già presente: mostrano un avviso con il nome del conto che ha quell'IBAN; 4) un conto a mano, o un IBAN scritto a mano, con un IBAN già presente è rifiutato. La regola non contiene nomi di fornitore (H16). Nessuna unione di due conti in N4 | Le opzioni A («il conto resta non selezionabile, due conti restano») e B («il passaggio unisce i due conti») della domanda Q1. La guardia «stessa valuta e stesso saldo» della prima revisione della specifica. N4 «Migrazioni: nessuna di schema» e la stessa riga di `06-data.md` §6.1. Per N1: «Crea un conto nuovo» sempre disponibile per un conto della banca (`ux/n1-plugin-bank.md` §6.4). Per ogni sorgente: l'aggiornamento che crea da solo ogni conto nuovo | N4 |
+| H40 | **Q2, opzione B: giroconti su tutto lo storico.** I movimenti tra il conto passato e gli altri conti della stessa banca si riconoscono come giroconti su tutto lo storico, non solo dal periodo del confronto. La prova elenca ogni coppia prima di «Applica». «Annulla passaggio» riporta ogni coppia com'era: un'entrata e un'uscita, con la categoria di prima. Dopo un passaggio reale entrate e uscite dei mesi passati scendono; patrimonio e saldi non cambiano | L'opzione A («dal periodo del confronto in poi»). Per i conti di un passaggio: la regola di oggi, che riconosce un giroconto solo dal riferimento della controparte dato dalla sorgente o dall'IBAN nel testo del movimento. Per N4: H3 e la regola della fase A «nessun numero esistente cambia senza una decisione scritta» hanno questa eccezione. Precisa il criterio 5 di N4 | N4 |
+| H41 | **Q3, con il default (A).** Dopo «Annulla passaggio» i movimenti arrivati dalla banca dopo il passaggio non contano e non si vedono. Nessuna riga viene cancellata. La sorgente di partenza li porta di nuovo, se li ha | L'opzione B («restano sul conto come movimenti a mano») | N4 |
+| H42 | **Q4, con il default (A).** «Annulla passaggio» non ha un limite di tempo: resta disponibile finché la sorgente di partenza è collegata | L'opzione B («30 giorni») | N4 |
+| H43 | **Q5, con il default (A).** Il tipo di saldo della banca per il controllo lo sceglie Ledgerly: un tipo per banca, deciso dal dominio. La pagina dice quale tipo usa. La persona non lo cambia | L'opzione B («Confronta con un altro saldo»). Precisa `04-now.md` §4.6 «il tipo di saldo si sceglie per banca»: lo sceglie Ledgerly | N4 |
+| H44 | **Q6, con il default (A).** La sezione «Da controllare» del rapporto è solo da leggere: la persona non collega i movimenti a mano | L'opzione B («scegli le coppie a mano»). Conferma il criterio 2 di N4 | N4 |
+
 ## 1.1 Premesse
 
 | ID | Decisione | Sostituisce | Rilascio |
@@ -137,7 +153,7 @@ Due risposte sono regole nuove (H32-H34). H36-H38 sono le risposte alle tre doma
 | C1d | La prima sync parte subito dopo il consenso (storico oltre 90 giorni). Letture automatiche entro il limite della banca. «Sincronizza ora» manda gli header `Psu-*` | — | N1 |
 | S4 | La prova su una banca vera è il primo passo dello sviluppo del plugin | — | N1 |
 | C2 | Passaggio di un conto da Wallet a Enable Banking: scelta dell'utente, regola M1 | — | N4 |
-| S1 | M1 corretta dallo spike: abbinamento per gruppi (conto + importo), controllo del saldo bloccante, prova a secco | — | N4 |
+| S1 | M1 corretta dallo spike: abbinamento per gruppi (conto + importo), controllo del saldo bloccante, prova a secco. **(H39-H44)** Nessun conto con un IBAN già presente; giroconti con gli altri conti della stessa banca su tutto lo storico; tipo di saldo scelto da Ledgerly; «Da controllare» solo da leggere; annullamento senza limite di tempo | — | N4 |
 | C4 | Plugin: container separato senza stato, interrogato dal core. Catalogo ufficiale. **(H25, H27, H28)** Nessun passo dell'admin nell'interfaccia: i plugin del catalogo fanno parte dell'installazione standard e ogni utente attiva i suoi. Nessun plugin fuori catalogo | — | N1, R5c |
 | C4b (rev.) | **(H32)** La sorgente Wallet è «lettura e scrittura»: il plugin Wallet legge i movimenti e riceve quelli scritti a mano in Ledgerly. Trek tiene la scrittura delle ferie. Versione del 13/11/2026, sostituita: «Wallet in sola lettura». La pubblicazione degli interessi su Wallet finisce con R5c (ST-14, confermata da H37) | — | R5c |
 | K1 | Categorizzazione: cascata (regole → memoria esatta → classificatore lineare per utente → tabelle MCC e marchi → «Da categorizzare») | — | N3 |

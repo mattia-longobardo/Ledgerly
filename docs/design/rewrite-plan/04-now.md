@@ -181,17 +181,55 @@ flowchart TB
   W --> R[Lettura dalla banca da 10 giorni prima del taglio]
   R --> G[Abbinamento per gruppi: conto + importo, confronto dei conteggi]
   G --> T[Dentro il gruppo: testo, poi data]
-  T --> D[Prova a secco: abbinati, nuovi, solo Wallet, gruppi con conteggio diverso, differenza di saldo]
+  T --> P[Giroconti: coppie con gli altri conti della stessa banca, su tutto lo storico]
+  P --> D[Prova a secco: abbinati, nuovi, solo Wallet, gruppi con conteggio diverso, coppie di giroconti, differenza di saldo]
   D --> Q{Saldo banca = saldo locale?}
   Q -->|no| X[Blocco: nessuna scrittura]
-  Q -->|sì, e l'utente conferma| A[Applica: provider del conto, link esterni, movimenti nuovi dopo il taglio]
-  A --> V[Controllo dopo il passaggio; «Annulla passaggio» disponibile]
+  Q -->|sì, e l'utente conferma| A[Applica: provider del conto, link esterni, movimenti nuovi dopo il taglio, coppie di giroconti]
+  A --> V[Controllo dopo il passaggio; «Annulla passaggio» disponibile, senza limite di tempo]
 ```
 
 - Un conto per volta. Wallet resta collegato per gli altri conti; il pass Wallet salta i conti passati.
 - Lo storico resta quello di Wallet. Nessuna riga di movimento cancellata.
-- Il tipo di saldo si sceglie per banca (`CLBD`, `XPCD`, `OPBD`): non esiste un tipo comune.
+- Il tipo di saldo è uno per banca (`CLBD`, `XPCD`, `OPBD`): non esiste un tipo comune. Lo sceglie Ledgerly, nel dominio; la persona non lo cambia (H43).
 - La prova a secco copia la categoria di Wallet sul testo della banca per i movimenti abbinati: sono esempi di addestramento nel formato giusto.
+- I gruppi con conteggio diverso («Da controllare») sono solo da leggere: nessun collegamento a mano (H44).
+
+Decisioni del 16/11/2026 (H39-H44). Righe del rilascio, eccezioni e punti aperti: [`03-releases.md`](03-releases.md) «N4».
+Interfaccia: [`ux/n4-account-switch.md`](ux/n4-account-switch.md). I punti **[DEV]** li conferma lo sviluppatore.
+
+**IBAN sul conto (H39).** Regola generale: vale per ogni conto con movimenti e per ogni sorgente, senza nomi di fornitore.
+
+| Tema | Regola |
+|---|---|
+| Campo | IBAN del conto, facoltativo. Salvato senza spazi e in maiuscolo. Controllo: paese, lunghezza, cifre di controllo. La funzione esiste: `normalizeIban` (`src/modules/transactions/rules.ts`); **[DEV]** si sposta dove la usano i due moduli, senza un doppione |
+| Chi lo scrive | La sorgente, a ogni aggiornamento, quando lo dà: il campo è in sola lettura per la persona. La persona, quando la sorgente non lo dà e sui conti a mano. Ledgerly non scrive mai l'IBAN sulla sorgente |
+| Un IBAN, un conto | Due conti non archiviati dello stesso utente non hanno lo stesso IBAN. Il controllo è una funzione pura del dominio `accounts`: riceve l'IBAN e i conti dell'utente, risponde con il conto che ha già quell'IBAN |
+| Tre strade di creazione | 1) Procedura di collegamento di una sorgente. 2) Aggiornamento automatico che trova un conto nuovo. 3) Creazione o modifica a mano. Tutte chiamano lo stesso controllo, sul server. Esito con un IBAN già presente: nessun conto creato, codice `iban_exists`, avviso con il nome del conto |
+| Conto senza IBAN | Nessun blocco. La banca non dà l'IBAN per ogni conto: nella prova di N1, 1 conto su 3 lo aveva |
+| Conti già doppi | Due conti di oggi con lo stesso IBAN restano. Il controllo vale per le scritture nuove **[DEV]**. Il passaggio non li unisce: specifica §2.4.2, caso 7 |
+| Dato personale | Mai in URL, toast, log, registro e «Copia rapporto». API, MCP ed export: punto aperto P1 di [`03-releases.md`](03-releases.md) «N4» |
+| Primo riempimento | La sorgente riempie il campo al primo aggiornamento dopo il rilascio. Il campo «IBAN o riferimento» di oggi (`accounts.reference`): punto aperto P2 |
+
+**Giroconti su tutto lo storico (H40).** Regola nuova del dominio `transactions`. Oggi un giroconto si riconosce
+solo dal riferimento della controparte dato dalla sorgente (`pairTransfers`) o dall'IBAN nel testo
+(`planIbanTransfers`). La banca non dà il riferimento e i movimenti vecchi non hanno il testo della banca.
+
+| Tema | Regola |
+|---|---|
+| Tra quali conti | Il conto passato e gli altri conti dello stesso collegamento della banca che sono in Ledgerly. Nessun altro conto |
+| Periodo | Tutto lo storico dei conti. Vale anche per i movimenti futuri |
+| Coppia | Un'uscita su un conto e un'entrata sull'altro, stesso importo, stessa valuta, date vicine. **[DEV]** Finestra dei giorni: proposta 5, come `IBAN_TRANSFER_MAX_DAYS` |
+| Casi ambigui | Come per l'abbinamento per gruppi: se nel gruppo (coppia di conti + importo + finestra) i conteggi dei due lati sono diversi, nessuna coppia. **[DEV]** Da confermare sui dati reali della prova |
+| Movimenti esclusi | Un movimento che è già in una coppia di giroconto. **[DEV]** Un movimento con una categoria scelta a mano dalla persona: la specifica lo trasforma come gli altri (§9.3); la prova lo elenca |
+| Prova a secco | Restituisce ogni coppia (data, conto di partenza, conto di arrivo, importo) e il totale per anno. Non scrive nulla |
+| «Applica» | Scrive le coppie nella stessa transazione del passaggio. Salva per ogni movimento il tipo e la categoria di prima |
+| «Annulla passaggio» | Riporta ogni coppia scritta dal passaggio: un'entrata e un'uscita, con il tipo e la categoria di prima. Non tocca i giroconti che esistevano prima |
+| Forma | Funzione pura, con la forma del punto di estensione E7 ([`10-modularity.md`](10-modularity.md) §10.11): strategia «importo e data» dell'abbinatore di movimenti. Nessun nome di fornitore |
+
+**«Annulla passaggio» (H41, H42).** Nessun limite di tempo: è possibile finché la sorgente di partenza è collegata.
+I movimenti arrivati dalla banca dopo il passaggio non contano più in saldo, entrate, uscite e budget, e non si
+vedono; nessuna riga è cancellata. **[DEV]** Con quale stato (specifica §18, punto 11).
 
 ## 4.7 Time Off (N5)
 
