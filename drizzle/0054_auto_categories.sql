@@ -64,6 +64,7 @@ ALTER TABLE "category_models" ADD CONSTRAINT "category_models_user_id_users_id_f
 ALTER TABLE "category_undos" ADD CONSTRAINT "category_undos_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "category_undos_user_idx" ON "category_undos" USING btree ("user_id","created_at");--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_suggested_category_id_categories_id_fk" FOREIGN KEY ("suggested_category_id") REFERENCES "public"."categories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "transactions_waiting_idx" ON "transactions" USING btree ("user_id","occurred_at") WHERE "transactions"."category_id" is null and "transactions"."category_key" is not null;--> statement-breakpoint
 CREATE INDEX "transactions_user_category_key_idx" ON "transactions" USING btree ("user_id","category_key") WHERE "transactions"."category_key" is not null;--> statement-breakpoint
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_category_origin_ck" CHECK ("transactions"."category_origin" is null or "transactions"."category_origin" in ('user', 'provider', 'memory', 'model', 'table'));--> statement-breakpoint
 -- Data (06-data.md §6.1): who chose the categories that are there. A category a person set here is

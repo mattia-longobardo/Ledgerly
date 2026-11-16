@@ -216,6 +216,11 @@ export const transactions = pgTable(
     index("transactions_manual_idx")
       .on(table.accountId, table.occurredAt)
       .where(sql`${table.origin} = 'manual'`),
+    // The movements that wait for a category, for the count the notice of Expenses reads: a few
+    // rows found without walking the range.
+    index("transactions_waiting_idx")
+      .on(table.userId, table.occurredAt)
+      .where(sql`${table.categoryId} is null and ${table.categoryKey} is not null`),
     index("transactions_user_category_key_idx")
       .on(table.userId, table.categoryKey)
       .where(sql`${table.categoryKey} is not null`),

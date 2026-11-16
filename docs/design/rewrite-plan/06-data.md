@@ -81,7 +81,8 @@ recupero: [`n3-rollback.sql`](n3-rollback.sql).
 
 Migrazioni di N3 nel repo, seconda parte (categorie automatiche): `0054_auto_categories`. Additiva. Su `transactions`:
 `category_origin`, `category_confidence`, `category_model_version`, `suggested_category_id`, `category_reason`,
-`category_reason_params`, `category_key` con il suo indice. Tabelle: `category_memory`, `category_models`. Dati:
+`category_reason_params`, `category_key` con il suo indice, e l'indice parziale `transactions_waiting_idx` sui
+movimenti in attesa di una categoria (l'avviso di Expenses li conta senza una query in più, gate G9). Tabelle: `category_memory`, `category_models`. Dati:
 `category_origin = 'user'` dove la categoria è stata scelta in Ledgerly, `'provider'` per le altre con una categoria;
 nessuna categoria cambia. Quattro cose non erano nell'elenco del piano e servono all'interfaccia:
 

@@ -330,15 +330,15 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
             locale={ctx.locale}
           />
 
-          {view.facets.review.count > 0 && (
+          {view.review.count > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-ctl bg-hover px-3 py-2 text-sm">
               <p>
                 {t("review.notice.expenses", {
-                  count: view.facets.review.count,
-                  amount: money(view.facets.review.cents),
+                  count: view.review.count,
+                  amount: money(view.review.cents),
                 })}
-                {view.facets.review.suggested > 0 &&
-                  ` ${t("review.notice.suggested", { count: view.facets.review.suggested })}`}
+                {view.review.suggested > 0 &&
+                  ` ${t("review.notice.suggested", { count: view.review.suggested })}`}
               </p>
               <ButtonLink
                 size="sm"

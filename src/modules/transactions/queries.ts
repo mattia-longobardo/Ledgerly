@@ -182,11 +182,6 @@ export interface CategoryTotal {
  * others hold, so a chip never claims zero for something that is only hidden by itself.
  */
 export interface Facets {
-  /**
-   * The movements of the range that wait for a category (rewrite plan N3): how many, how many of
-   * them carry a suggestion, and their sum. What the notice over the table says.
-   */
-  review: { count: number; suggested: number; cents: Cents };
   accounts: { accountId: string; count: number }[];
   categories: { categoryId: string | null; count: number }[];
   types: { type: TransactionType; count: number }[];
@@ -233,6 +228,8 @@ export interface ExpensesView {
   truncated: boolean;
   /** Whether the user has any movement at all: tells "empty range" from "nothing synced yet". */
   hasAny: boolean;
+  /** The movements of the range that wait for a category: what the notice over the table says. */
+  review: WaitingForCategory;
   accounts: Account[];
   /**
    * The chips of the filter bar, in tree order (F2.5): archived categories stay out of a picker
@@ -899,6 +896,45 @@ export async function listRecurringPatterns(ctx: Pick<Ctx, "userId">): Promise<R
     .orderBy(asc(recurringPatterns.nextExpectedOn), asc(recurringPatterns.id));
 }
 
+/** The movements of a range that wait for a category: how many, how many with a suggestion, their sum. */
+export interface WaitingForCategory {
+  count: number;
+  suggested: number;
+  cents: Cents;
+}
+
+/**
+ * How many movements the user has at all, and the ones of the range that wait for a category
+ * (rewrite plan N3) — one statement: the second is a sub-query of the first, answered by the
+ * partial index on the waiting movements, so the notice of Expenses costs the screen no read of
+ * its own. The range and the accounts narrow it; the other filters are about the list.
+ */
+export async function countAllAndWaiting(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  filters: TransactionFilters = {},
+): Promise<{ total: number; review: WaitingForCategory }> {
+  const waiting = getDb()
+    .select({
+      packed: sql`json_build_array(count(*), count(*) filter (where ${transactions.suggestedCategoryId} is not null), coalesce(sum(${transactions.amountCents}), 0)::text)`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        conditions(ctx, { from: filters.from, to: filters.to, accountIds: filters.accountIds }),
+        WAITING_FOR_CATEGORY,
+      ),
+    );
+  const [row] = await getDb()
+    .select({ total: count(), waiting: sql<[number, number, string]>`(${waiting})` })
+    .from(transactions)
+    .where(userScoped(ctx).owns(transactions));
+  const [waitingCount, suggested, sum] = row?.waiting ?? [0, 0, "0"];
+  return {
+    total: Number(row?.total ?? 0),
+    review: { count: Number(waitingCount), suggested: Number(suggested), cents: BigInt(sum) },
+  };
+}
+
 /** How many movements the user has at all: the "Nothing synced yet" answer (spec §7.2). */
 export async function countAllTransactions(ctx: Pick<Ctx, "userId">): Promise<number> {
   const [row] = await getDb()
@@ -1188,18 +1224,7 @@ export async function facetCounts(
       .groupBy(transactions.accountId)
       .orderBy(asc(transactions.accountId)),
     getDb()
-      .select({
-        categoryId: transactions.categoryId,
-        total: count(),
-        // The movements that wait in "To review", read with the counts this query already makes:
-        // the cascade has read them (`category_key`), they have no category, they are not a
-        // giroconto. On every group but the one with no category the three are zero.
-        waiting: sql<number>`count(*) filter (where ${WAITING_FOR_CATEGORY})::int`,
-        suggested: sql<number>`count(*) filter (where ${WAITING_FOR_CATEGORY} and ${transactions.suggestedCategoryId} is not null)::int`,
-        waitingCents: sql<
-          string | null
-        >`sum(${transactions.amountCents}) filter (where ${WAITING_FOR_CATEGORY})`,
-      })
+      .select({ categoryId: transactions.categoryId, total: count() })
       .from(transactions)
       .where(conditions(ctx, { ...filters, categoryIds: undefined }))
       .groupBy(transactions.categoryId)
@@ -1218,11 +1243,6 @@ export async function facetCounts(
       count: Number(row.total),
     })),
     types: typeRows.map((row) => ({ type: row.type, count: Number(row.total) })),
-    review: {
-      count: categoryRows.reduce((sum, row) => sum + row.waiting, 0),
-      suggested: categoryRows.reduce((sum, row) => sum + row.suggested, 0),
-      cents: categoryRows.reduce((sum, row) => sum + cents(row.waitingCents), 0n),
-    },
   };
 }
 
@@ -1322,7 +1342,7 @@ export async function expensesView(
     monthlyTotals(ctx, filters),
     categoryTotals(ctx, filters),
     facetCounts(ctx, filters),
-    countAllTransactions(ctx),
+    countAllAndWaiting(ctx, filters),
     listAccounts(ctx, { includeArchived: true }),
     listCategories(ctx),
     listLabels(ctx),
@@ -1336,7 +1356,8 @@ export async function expensesView(
     summary,
     listCount,
     truncated: rows.length < listCount,
-    hasAny: hasAny > 0,
+    hasAny: hasAny.total > 0,
+    review: hasAny.review,
     accounts,
     categories: categoryList,
     labels: labelList,

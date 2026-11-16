@@ -6,7 +6,7 @@ import { getDb } from "@/platform/db/client";
 import { eq } from "drizzle-orm";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";
-import { categoryTotals, getTransaction, listTransactions } from "../queries";
+import { categoryTotals, expensesView, getTransaction, listTransactions } from "../queries";
 import type { IncomingTransaction } from "../rules";
 import { categoryMemory, categoryModels, transactions } from "../schema";
 import { categorisableAccountIds, setCategory, upsertFromProvider } from "../service";
@@ -316,6 +316,9 @@ describe("the default groups and the tables", () => {
     const [amazon] = await byPayee(ctx, "AMZN Mktp IT");
     expect(amazon.categoryId).toBeNull();
     expect(amazon.suggestedCategoryId).not.toBeNull();
+    // The notice of Expenses reads the same movement: one waits, with a suggestion.
+    expect((await expensesView(ctx, {})).review).toEqual({ count: 1, suggested: 1, cents: -1_000n });
+    expect((await expensesView(ctx, { from: "2020-01-01", to: "2020-01-31" })).review.count).toBe(0);
     // A suggestion waits in "To review" and counts in no category.
     const review = await reviewOf(ctx);
     expect(review.singles.map((row) => row.id)).toEqual([amazon.id]);
