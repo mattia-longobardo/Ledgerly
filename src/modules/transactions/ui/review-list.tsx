@@ -162,7 +162,8 @@ function ReviewGroupCard({
             </li>
           ))}
         </ul>
-        {group.rows.length > EXAMPLES && (
+        {/* Always there, for a group of two as well: the list it opens is where a row is left out. */}
+        {group.rows.length > 1 && (
           <Button
             size="xs"
             variant="ghost"

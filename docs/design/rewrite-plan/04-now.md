@@ -156,6 +156,19 @@ flowchart LR
 | Vincolo | Normalizzazione, addestramento e inferenza nello stesso modulo. Test portabili «testo → caratteristiche → categoria» |
 | Misura | Precisione obiettivo 95% (misurata nello spike: 97,0% con memoria severa e categorie doppie unite). La copertura si misura a regime, senza soglia di accettazione (46,5% sul totale, 75% nell'ultimo trimestre) |
 
+**Scelte dello sviluppo (16/11/2026).** Precisano la tabella sopra; il codice è in `src/modules/transactions/categorize/`.
+
+| Punto | Scelta | Motivo |
+|---|---|---|
+| Soglia | Si scende dalla previsione più sicura a fasce di almeno 20: la soglia si ferma alla prima fascia che da sola è sotto l'obiettivo meno 5 punti, anche se la media di tutto quello che sta sopra è ancora al 95% | Con la sola media, cento previsioni sicure portavano oltre la soglia venti dubbie: sulla prova in ordine di tempo la precisione era 93,7%. Con le fasce è 96,3% |
+| Suggerimento | Soglia bassa con lo stesso metodo, per una precisione del 66%. Sotto: niente | Un suggerimento è un aiuto, non conta |
+| Caratteristiche | Piegate in 16.384 posizioni con un hash fisso | Memoria del modello limitata qualunque sia il testo: 20.000 etichette restano sotto 300 MB |
+| Addestramento | A passi, cedendo il turno al server ogni 400 esempi | Sono secondi di calcolo nello stesso processo che risponde alle pagine |
+| Quando | Dopo ogni lettura di una banca, dopo una conferma o una scelta, dopo la creazione dei gruppi. Solo se un'etichetta è nuova o cambiata. Nessun riaddestramento notturno | La lista dei job è fissata da un test; tre letture al giorno bastano |
+| Cosa legge | Solo i movimenti senza categoria e senza origine. Un'automatica già data non si ricalcola | Un budget non cambia perché il modello è stato riaddestrato |
+| Plugin sconosciuto | Un conto di un plugin di cui il core non ha mai letto il manifest non viene letto | Senza manifest non si sa se la sorgente dà le sue categorie |
+| Correzioni | Un'automatica sostituita lascia il segno `corrected`: è il numeratore del «10% degli ultimi 30 giorni» | — |
+
 ## 4.5 Movimento manuale (N3)
 
 Regole del 15/11/2026 (H32, H33, H35). Concetto e dettaglio: [`12-account-modes.md`](12-account-modes.md) §12.1 e §12.2.

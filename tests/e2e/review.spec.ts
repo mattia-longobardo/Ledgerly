@@ -6,7 +6,8 @@
 //
 // The `review` user is seeded with the default groups and seven movements with no category, read
 // by the cascade (scripts/seed-e2e.ts): one automatic (a brand with one meaning), three with a
-// suggestion (a brand that sells everything), two of an invented shop, one alone. `reviewNew` has
+// suggestion (a brand that sells everything), two of an invented shop, one alone. A group carries
+// the text of its most recent movement. `reviewNew` has
 // movements and no category. The steps follow one another: each starts from what the last left.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "./env";
@@ -74,9 +75,11 @@ test.describe("the automatic categories", () => {
       await dialog.getByRole("button", { name: "Apply to 2" }).click();
       await expect(dialog).toHaveCount(0);
       await expect(page.getByText("2 transactions updated")).toBeVisible();
-      await expect(page.getByTestId("suggestion-chip")).toHaveCount(0);
+      // The table and the phone's list are both in the page: the table is the one counted.
+      const chips = page.getByRole("table").getByTestId("suggestion-chip");
+      await expect(chips).toHaveCount(0);
       await page.getByRole("button", { name: "Undo" }).click();
-      await expect(page.getByTestId("suggestion-chip")).toHaveCount(2);
+      await expect(chips).toHaveCount(2);
       await expect(rowOf(page, "AMZN Mktp IT 11").getByRole("button", { name: "Edit category" })).toHaveText(
         "Home",
       );
@@ -93,27 +96,27 @@ test.describe("the automatic categories", () => {
       await expect(page.getByRole("heading", { name: "With a suggestion", level: 2 })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Without a suggestion", level: 2 })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Single transactions", level: 2 })).toBeVisible();
-      await expect(group(page, "AMZN Mktp IT 22")).toContainText("2 transactions");
-      await expect(group(page, "Bottega Verdi 1")).toContainText("2 transactions · −17,50 €");
+      await expect(group(page, "AMZN Mktp IT 33")).toContainText("2 transactions");
+      await expect(group(page, "Bottega Verdi 2")).toContainText("2 transactions · −17,50 €");
     });
 
     await test.step("Confirm leaves a line in the group's place, and Undo brings the group back", async () => {
-      await group(page, "AMZN Mktp IT 22").getByTestId("review-group-confirm").click();
+      await group(page, "AMZN Mktp IT 33").getByTestId("review-group-confirm").click();
       const done = page.getByTestId("review-done-row");
-      await expect(done).toContainText("AMZN Mktp IT 22 · 2 transactions in “Shopping”");
-      await expect(group(page, "AMZN Mktp IT 22")).toHaveCount(0);
+      await expect(done).toContainText("AMZN Mktp IT 33 · 2 transactions in “Shopping”");
+      await expect(group(page, "AMZN Mktp IT 33")).toHaveCount(0);
       await done.getByRole("button", { name: "Undo" }).click();
       await expect(page.getByTestId("review-done-row")).toHaveCount(0);
-      await expect(group(page, "AMZN Mktp IT 22")).toHaveCount(1);
+      await expect(group(page, "AMZN Mktp IT 33")).toHaveCount(1);
     });
 
     await test.step("a group with no suggestion takes the category chosen for all of it", async () => {
-      await group(page, "Bottega Verdi 1")
+      await group(page, "Bottega Verdi 2")
         .getByRole("button", { name: /Choose a category for 2 transactions/ })
         .click();
       await page.getByRole("option", { name: "Groceries", exact: true }).click();
       await expect(page.getByTestId("review-done-row")).toContainText(
-        "Bottega Verdi 1 · 2 transactions in “Groceries”",
+        "Bottega Verdi 2 · 2 transactions in “Groceries”",
       );
     });
 

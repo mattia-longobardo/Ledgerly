@@ -68,6 +68,27 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
   it. A day before the last balance you wrote changes nothing: that balance already holds it. On
   an account a bank reads, the bank's balance applies again after its next reading, and the
   transaction stays in Expenses and in the budgets. The dialog warns that it can appear twice.
+- **Automatic categories.** A bank gives no category to its transactions, so Ledgerly looks for
+  one, on the accounts a bank reads and on the accounts you keep by hand. It goes in order: what
+  the bank itself says (a salary, a fee), then a text you put in the same category the last three
+  times, then a classifier that learns from your own categories, then tables of merchant types and
+  known brands. A category given this way counts at once in Expenses and Budgets and carries a
+  mark: the mark opens the reason, and "Confirm" makes the category yours. Ledgerly never writes
+  over a category you chose, and never touches the transactions of a source that gives its own
+  categories.
+- **Suggestions.** When Ledgerly is less sure it only suggests: a dashed chip that starts with
+  "Suggestion". A suggestion counts in no category until you confirm it; until then the
+  transaction is "To categorise".
+- **To review.** Expenses › To review lists the transactions with no category, grouped by their
+  text. One action confirms or sets the category of a whole group, and "Undo" puts it back. After
+  you choose a category for one transaction, Ledgerly asks whether the similar ones follow. Expenses
+  and Budgets say how many transactions wait.
+- **What Ledgerly learns from.** Only categories you chose or confirmed, and the ones a source
+  gave. A category Ledgerly gave by itself is never an example. The classifier and what it
+  remembers are yours alone and are in no export, in the API or in MCP.
+- **Default groups and duplicates.** With no category yet you can start from twelve default groups.
+  Settings › Categories proposes to merge two categories that look the same; the merge moves the
+  transactions and adds the two budget limits together.
 - **Hide** removes a movement from the totals. You can undo it. A movement that Wallet stops
   returning is treated the same way.
 - **Transfers** are paired only by the reference that Wallet gives them, never by amount and date.

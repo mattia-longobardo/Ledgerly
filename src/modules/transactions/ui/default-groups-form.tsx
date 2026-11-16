@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
 import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/input";
 
 /** A default group as the form offers it: its name and its examples in the person's language. */
 export interface DefaultGroupView {
@@ -61,35 +62,31 @@ export function DefaultGroupsForm({
         <legend className="pb-1 font-semibold">{t("title")}</legend>
         <p className="pb-1 text-sm text-muted">{t("description")}</p>
         {groups.map((group) => (
-          <div key={group.key} className="flex items-start gap-2">
-            <input
-              id={`${ids}-${group.key}`}
-              type="checkbox"
-              className="focus-ring mt-1 size-3.5 accent-primary"
-              checked={chosen.includes(group.key)}
-              disabled={saving}
-              aria-describedby={`${ids}-${group.key}-examples`}
-              onChange={() =>
-                setChosen((current) =>
-                  current.includes(group.key)
-                    ? current.filter((key) => key !== group.key)
-                    : [...current, group.key],
-                )
-              }
-            />
-            <label htmlFor={`${ids}-${group.key}`} className="flex min-h-6 min-w-0 flex-col text-sm">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span
-                  aria-hidden
-                  className="size-2 shrink-0 rounded-[2px]"
-                  style={{ background: group.color }}
-                />
-                {group.name}
-              </span>
-              <span id={`${ids}-${group.key}-examples`} className="text-muted">
-                {group.examples}
-              </span>
-            </label>
+          <div key={group.key} className="flex flex-col">
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="size-2 shrink-0 rounded-[2px]"
+                style={{ background: group.color }}
+              />
+              <Checkbox
+                label={group.name}
+                className="font-medium"
+                checked={chosen.includes(group.key)}
+                disabled={saving}
+                aria-describedby={`${ids}-${group.key}-examples`}
+                onChange={() =>
+                  setChosen((current) =>
+                    current.includes(group.key)
+                      ? current.filter((key) => key !== group.key)
+                      : [...current, group.key],
+                  )
+                }
+              />
+            </span>
+            <span id={`${ids}-${group.key}-examples`} className="pl-3.5 text-sm text-muted">
+              {group.examples}
+            </span>
           </div>
         ))}
       </fieldset>

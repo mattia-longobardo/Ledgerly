@@ -79,6 +79,21 @@ serve al gate G9: un saldo scritto su un conto senza movimenti a mano non fa una
 `category_memory`, `category_models` e il riempimento di `category_origin` arrivano con la seconda parte. File di
 recupero: [`n3-rollback.sql`](n3-rollback.sql).
 
+Migrazioni di N3 nel repo, seconda parte (categorie automatiche): `0054_auto_categories`. Additiva. Su `transactions`:
+`category_origin`, `category_confidence`, `category_model_version`, `suggested_category_id`, `category_reason`,
+`category_reason_params`, `category_key` con il suo indice. Tabelle: `category_memory`, `category_models`. Dati:
+`category_origin = 'user'` dove la categoria è stata scelta in Ledgerly, `'provider'` per le altre con una categoria;
+nessuna categoria cambia. Quattro cose non erano nell'elenco del piano e servono all'interfaccia:
+
+| Dato | Perché |
+|---|---|
+| `transactions.category_key` | La chiave del testo, scritta quando la cascata legge il movimento: trova i «movimenti simili» e i gruppi di «Da rivedere» senza ricalcolare ogni testo a ogni lettura |
+| `category_group_marks` | La categoria che una persona ha creato da un gruppo predefinito: le tabelle statiche puntano lì (specifica §18 punto 10) |
+| `category_merge_dismissals` | Le coppie «Non sono uguali»: la proposta non torna |
+| `category_undos` | Lo stato di prima di un'azione su più movimenti, per «Annulla», tenuto sul server per 7 giorni |
+
+`category_models.preparing` dice se un passaggio della cascata è in corso (specifica §18 punto 9).
+
 **Correzione al primo tempo (15/11/2026).** La `v0.19.0` salvava i collegamenti di Wallet, Trek e investimenti con
 `ON CONFLICT (user_id, provider)`: solo i collegamenti dei plugin usavano la chiave nuova. Con quell'immagine, dopo
 la rimozione della chiave vecchia, il salvataggio di una credenziale sarebbe fallito. La `v0.19.1` (`df0d650`) usa la
