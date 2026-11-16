@@ -255,6 +255,47 @@ describe("categorise", () => {
     });
   });
 
+  it("follows a correction with the memory at once, and trains nothing until asked to", async () => {
+    const ctx = await newContext();
+    const { bank } = await withMemory(ctx);
+    await upsertFromProvider(
+      ctx,
+      bank,
+      [1, 2, 3, 4].map((day) => incoming("Bar Epsilon", 10 + day)),
+      { provider: BANK },
+    );
+    await categorise(ctx, [bank]);
+    const bars = await createCategory(ctx, { name: "Bars" });
+    const rows = (await byPayee(ctx, "Bar Epsilon")).filter((row) => row.accountId === bank);
+    // The person files three of the four: the last three times, the same category.
+    await setCategory(
+      ctx,
+      rows.slice(0, 3).map((row) => row.id),
+      bars.id,
+    );
+
+    const after = await categorise(ctx, [bank], { train: false });
+
+    expect(after).toMatchObject({ trained: false, automatic: 1 });
+    expect(await getTransaction(ctx, rows[3].id)).toMatchObject({
+      categoryId: bars.id,
+      categoryOrigin: "memory",
+    });
+  });
+
+  it("starts no second pass while one is running for the person", async () => {
+    const ctx = await newContext();
+    const { bank } = await withMemory(ctx);
+    await upsertFromProvider(ctx, bank, [incoming("Mercato Alfa", 10)], { provider: BANK });
+    await getDb().insert(categoryModels).values({ userId: ctx.userId, preparing: true });
+
+    expect(await categorise(ctx, [bank])).toMatchObject({ automatic: 0, open: 0, examples: 0 });
+    // A flag left behind long ago is not a pass.
+    const later = new Date(Date.now() + 11 * 60_000);
+    expect(await categorise(ctx, [bank], { now: later })).toMatchObject({ automatic: 1 });
+    expect(await isPreparing(ctx)).toBe(false);
+  });
+
   it("suggests for a movement not written yet from what is known, and writes nothing", async () => {
     const ctx = await newContext();
     const { bank } = await withMemory(ctx);

@@ -7,6 +7,7 @@ import {
 import { type CascadeMovement, decide, groupCategories, type Knowledge } from "./cascade";
 import {
   type Example,
+  HOLD_OUT_FROM,
   learnableClasses,
   loadModel,
   MIN_EXAMPLES,
@@ -303,6 +304,20 @@ describe("the cascade on a history in order of time (criterion 3 of N3)", () => 
       const decision = decide({ ...row, merchantCategoryCode: null, bankTransactionCode: null }, without);
       if (decision.kind !== "none") expect(decision.categoryId).not.toBe("groceries");
     }
+  });
+});
+
+describe("the predictions out of sample", () => {
+  it("makes every example a trial while they are few, and holds a fifth out when they are many", () => {
+    const few = history().slice(0, 300);
+    expect(outOfSample(few)).toHaveLength(few.length);
+    const many = [...history(1), ...history(2)];
+    expect(many.length).toBeGreaterThanOrEqual(HOLD_OUT_FROM);
+    const trials = outOfSample(many);
+    expect(trials.length).toBeGreaterThan(many.length * 0.15);
+    expect(trials.length).toBeLessThan(many.length * 0.25);
+    // A fifth of a large history is still enough to find where the model can be trusted.
+    expect(thresholdsFor(trials).automatic).not.toBeNull();
   });
 });
 

@@ -39,12 +39,13 @@ function revalidate(): void {
 }
 
 /**
- * A person confirmed or chose: those are new labels. The cascade learns from them and reads the
- * movements still waiting, after the answer has gone — nobody waits for a training.
+ * A person confirmed or chose: those are new labels. The memory follows them and the cascade
+ * reads the movements still waiting, after the answer has gone. The model is trained again at
+ * the next reading of a source — or here, with `train`, when the default groups were just made.
  */
-function learnAfter(ctx: Session): void {
+function learnAfter(ctx: Session, train = false): void {
   after(async () => {
-    await categorise(ctx, await categorisableAccountIds(ctx));
+    await categorise(ctx, await categorisableAccountIds(ctx), { train });
   });
 }
 
@@ -157,7 +158,7 @@ export async function createDefaultGroupsAction(keys: string[]): Promise<PlainRe
     );
     revalidate();
     revalidatePath("/settings/categories");
-    learnAfter(ctx);
+    learnAfter(ctx, true);
     return { ok: true, count };
   } catch (error) {
     return failed(error);

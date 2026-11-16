@@ -38,6 +38,8 @@ const CORRECTIONS_WINDOW_DAYS = 30;
 /** Fewer automatic categories than this in the window say nothing about how often they are wrong. */
 const MIN_CORRECTIONS_BASE = 20;
 const WRITE_CHUNK = 500;
+/** How long a pass may run before its flag is taken for one left behind. */
+const STALE_PASS_MS = 10 * 60_000;
 
 /** A confirmed label is one a person or a source gave; a row with no origin predates the origins. */
 const CONFIRMED = or(
@@ -165,6 +167,7 @@ export async function storedKnowledge(ctx: Who): Promise<Knowledge> {
 async function learn(
   ctx: Who,
   now: Date,
+  train: boolean,
 ): Promise<{ knowledge: Knowledge; trained: boolean; examples: number }> {
   const [labels, own, stored] = await Promise.all([confirmedLabels(ctx), categoriesOf(ctx), modelRow(ctx)]);
   const confirmations: Confirmation[] = labels.map((label) => ({
@@ -183,12 +186,14 @@ async function learn(
     automatic: stored?.automaticThreshold ?? null,
     suggestion: stored?.suggestionThreshold ?? null,
   };
+  // Not asked to train: the stored model is the one, whatever the labels say now.
   const unchanged =
-    stored !== null &&
-    stored.trainedAt !== null &&
-    stored.examples === labels.length &&
-    (stored.labelledThrough?.getTime() ?? null) === (labelledThrough?.getTime() ?? null) &&
-    (model !== null || stored.model === null);
+    !train ||
+    (stored !== null &&
+      stored.trainedAt !== null &&
+      stored.examples === labels.length &&
+      (stored.labelledThrough?.getTime() ?? null) === (labelledThrough?.getTime() ?? null) &&
+      (model !== null || stored.model === null));
   if (!unchanged) {
     model = await trainInTurns(labels);
     thresholds =
@@ -264,20 +269,27 @@ export interface CategoriseOutcome {
 
 /**
  * One pass of the cascade over the movements of `accountIds` that have no category: learn, then
- * decide each one. A movement with a category — a person's, a source's or an automatic one given
+ * decide each one. With `train: false` the memory is rewritten from the labels and the model is the
+ * stored one: what a pass after a person's correction does — the memory follows at once, the
+ * model is trained again at the next reading of a source, not once for every click. A movement with a category — a person's, a source's or an automatic one given
  * before — is never read again, and neither is one a person set back to "no category": Ledgerly
  * never writes over a choice.
  */
 export async function categorise(
   ctx: Who,
   accountIds: readonly string[],
-  now: Date = new Date(),
+  options: { now?: Date; train?: boolean } = {},
 ): Promise<CategoriseOutcome> {
+  const now = options.now ?? new Date();
   const outcome: CategoriseOutcome = { trained: false, examples: 0, automatic: 0, suggested: 0, open: 0 };
   if (accountIds.length === 0) return outcome;
+  // One pass at a time for a person: a second one started while the first runs would do the same
+  // arithmetic again. A flag left behind by a process that stopped is ignored after a while.
+  const running = await modelRow(ctx);
+  if (running?.preparing && now.getTime() - running.updatedAt.getTime() < STALE_PASS_MS) return outcome;
   await setPreparing(ctx, true);
   try {
-    const { knowledge, trained, examples } = await learn(ctx, now);
+    const { knowledge, trained, examples } = await learn(ctx, now, options.train ?? true);
     outcome.trained = trained;
     outcome.examples = examples;
     const version = (await modelRow(ctx))?.version ?? 0;

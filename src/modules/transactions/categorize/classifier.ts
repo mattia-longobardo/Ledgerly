@@ -220,16 +220,24 @@ export interface Trial {
 }
 
 const FOLDS = 5;
+/** From this many examples on, one part held out says enough: five trainings would say no more. */
+export const HOLD_OUT_FROM = 1_000;
 
 /**
- * Predictions out of sample (04-now.md §4.4, "Soglia"): the examples are split in folds, and each
- * fold is predicted by a model trained on the others. What the thresholds are worked out from: a
- * model graded on the examples it learnt would always look right.
+ * Predictions out of sample (04-now.md §4.4, "Soglia"): made by a model on examples it did not
+ * see. What the thresholds are worked out from: a model graded on the examples it learnt would
+ * always look right.
+ *
+ * With few examples they are split in folds, and each fold is predicted by a model trained on the
+ * others, so every example is a trial. From `HOLD_OUT_FROM` on, one fold is held out and predicted
+ * by a model trained on the rest: a fifth of a large history is trials enough, at a fifth of the
+ * arithmetic — a training runs in the process that answers the pages.
  */
 function* outOfSampleSteps(examples: readonly Example[]): Generator<void, Trial[]> {
   const trials: Trial[] = [];
   const order = shuffled(examples.length, 7);
-  for (let fold = 0; fold < FOLDS; fold += 1) {
+  const folds = examples.length >= HOLD_OUT_FROM ? 1 : FOLDS;
+  for (let fold = 0; fold < folds; fold += 1) {
     const held: Example[] = [];
     const rest: Example[] = [];
     order.forEach((at, position) => (position % FOLDS === fold ? held : rest).push(examples[at]));

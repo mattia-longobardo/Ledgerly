@@ -164,7 +164,8 @@ flowchart LR
 | Suggerimento | Soglia bassa con lo stesso metodo, per una precisione del 66%. Sotto: niente | Un suggerimento è un aiuto, non conta |
 | Caratteristiche | Piegate in 16.384 posizioni con un hash fisso | Memoria del modello limitata qualunque sia il testo: 20.000 etichette restano sotto 300 MB |
 | Addestramento | A passi, cedendo il turno al server ogni 400 esempi | Sono secondi di calcolo nello stesso processo che risponde alle pagine |
-| Quando | Dopo ogni lettura di una banca, dopo una conferma o una scelta, dopo la creazione dei gruppi. Solo se un'etichetta è nuova o cambiata. Nessun riaddestramento notturno | La lista dei job è fissata da un test; tre letture al giorno bastano |
+| Quando | Il modello si riaddestra dopo ogni lettura di una banca e dopo la creazione dei gruppi, solo se un'etichetta è nuova o cambiata. Dopo una conferma o una scelta si riscrive solo la memoria e si rilegge con il modello salvato. Un passaggio per volta per persona. Nessun riaddestramento notturno | Con 6.000 etichette e 80 categorie un addestramento è circa 15 secondi di calcolo: non uno per ogni clic. La lista dei job è fissata da un test; tre letture al giorno bastano |
+| Previsioni fuori campione | Sotto 1.000 etichette: 5 parti, ogni esempio è una prova. Da 1.000 in su: una parte su cinque tenuta fuori | Cinque addestramenti su una storia grande costano cinque volte e non dicono di più |
 | Cosa legge | Solo i movimenti senza categoria e senza origine. Un'automatica già data non si ricalcola | Un budget non cambia perché il modello è stato riaddestrato |
 | Plugin sconosciuto | Un conto di un plugin di cui il core non ha mai letto il manifest non viene letto | Senza manifest non si sa se la sorgente dà le sue categorie |
 | Correzioni | Un'automatica sostituita lascia il segno `corrected`: è il numeratore del «10% degli ultimi 30 giorni» | — |
