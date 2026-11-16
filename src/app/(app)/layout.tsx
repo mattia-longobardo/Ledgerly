@@ -1,4 +1,3 @@
-import type { Route } from "next";
 import { cookies, headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { searchPayeesAction } from "@/modules/transactions/actions";
@@ -17,6 +16,7 @@ import { Sidebar } from "@/ui/shell/sidebar";
 import { Toaster } from "@/ui/toast";
 import { WeekStartProvider } from "@/ui/week-start";
 import { navFor } from "./navigation";
+import { paletteCommands } from "./palette-commands";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
@@ -33,47 +33,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     mobile,
     label: t(`nav.${labelKey}`),
   }));
-  // What the palette finds beyond the sidebar: every settings page, by name (PERS-158).
-  const settingsLink = (id: string, href: string, label: string): NavLink => ({
-    id,
-    href: href as Route,
-    icon: "settings",
-    group: "footer",
-    mobile: false,
-    label,
-  });
-  const settingsLinks: NavLink[] = [
-    ...(["profile", "security", "integrations", "categories", "data"] as const).map((tab) =>
-      settingsLink(
-        `settings-${tab}`,
-        `/settings/${tab}`,
-        `${t("settings.title")} › ${t(`settings.tabs.${tab}`)}`,
-      ),
-    ),
-    ...(ctx.role === "admin"
-      ? (["users", "server"] as const).map((tab) =>
-          settingsLink(
-            `settings-${tab}`,
-            `/settings/${tab}`,
-            `${t("settings.title")} › ${t(`settings.tabs.${tab}`)}`,
-          ),
-        )
-      : []),
-    // "To review", which has no place in the menu until the menu changes (R5a).
-    { ...settingsLink("to-review", "/expenses/review", t("expenses.review.palette")), icon: "expenses" },
-    // The manual movement, as a command: the Expenses page opens its dialog (N3).
-    { ...settingsLink("add-transaction", "/expenses?add=1", t("expenses.manual.palette")), icon: "expenses" },
-    settingsLink(
-      "timeoff-settings",
-      "/timeoff/settings",
-      `${t("timeoff.title")} › ${t("timeoff.tabs.settings")}`,
-    ),
-    settingsLink(
-      "payroll-settings",
-      "/payroll/settings",
-      `${t("payroll.title")} › ${t("payroll.tabs.settings")}`,
-    ),
-  ];
   const labels = {
     product: t("common.product"),
     primary: t("nav.primary"),
@@ -118,7 +77,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <MobileNav links={links} user={user} />
         <CommandPalette
           links={links}
-          searchLinks={settingsLinks}
+          searchLinks={paletteCommands(ctx.role, t)}
           searchPayees={searchPayeesAction}
           searchRecords={searchRecordsAction}
         />

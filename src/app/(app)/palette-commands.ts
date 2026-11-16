@@ -1,0 +1,39 @@
+// src/app/(app)/palette-commands.ts — what the ⌘K palette finds beyond the sidebar: every settings
+// page by name (PERS-158), and the commands of the modules. One list, like `navigation.ts`, and not
+// lines of the common layout: a release that adds a command changes this file, which starts the
+// tests of the shell, where a change to the layout starts the tests of every screen
+// (docs/testing.md).
+import type { Route } from "next";
+import type { getTranslations } from "next-intl/server";
+import type { Role } from "@/platform/context";
+import type { NavLink } from "@/ui/shell/nav-types";
+
+/** The translator of the whole catalogue, as the layout has it: `getTranslations()` with no namespace. */
+type Translator = Awaited<ReturnType<typeof getTranslations<never>>>;
+
+const command = (id: string, href: string, label: string, icon: NavLink["icon"] = "settings"): NavLink => ({
+  id,
+  href: href as Route,
+  icon,
+  group: "footer",
+  mobile: false,
+  label,
+});
+
+/** The palette's own entries for a role, in the order the palette lists them. */
+export function paletteCommands(role: Role, t: Translator): NavLink[] {
+  const settings = (
+    tab: "profile" | "security" | "integrations" | "categories" | "data" | "users" | "server",
+  ) =>
+    command(`settings-${tab}`, `/settings/${tab}`, `${t("settings.title")} › ${t(`settings.tabs.${tab}`)}`);
+  return [
+    ...(["profile", "security", "integrations", "categories", "data"] as const).map(settings),
+    ...(role === "admin" ? (["users", "server"] as const).map(settings) : []),
+    // "To review", which has no place in the menu until the menu changes (R5a).
+    command("to-review", "/expenses/review", t("expenses.review.palette"), "expenses"),
+    // The manual movement, as a command: the Expenses page opens its dialog (N3).
+    command("add-transaction", "/expenses?add=1", t("expenses.manual.palette"), "expenses"),
+    command("timeoff-settings", "/timeoff/settings", `${t("timeoff.title")} › ${t("timeoff.tabs.settings")}`),
+    command("payroll-settings", "/payroll/settings", `${t("payroll.title")} › ${t("payroll.tabs.settings")}`),
+  ];
+}

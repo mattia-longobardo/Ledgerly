@@ -428,6 +428,7 @@ export const MODULES: Module[] = [
       // Each release adds its own entries here: the shell's screens show them.
       "src/app/(app)/navigation*",
       "src/app/(app)/palette-actions.ts",
+      "src/app/(app)/palette-commands*",
     ],
     flows: ["shell"],
   },
@@ -636,8 +637,8 @@ export const modulesOf = (file: string) =>
   MODULES.filter((module) => module.files.some((pattern) => matches(pattern, file)));
 
 /**
- * The specs with a test the local preview cannot run (`@site`): they run on the site, after the
- * deploy. The number is the password sign-ins those tests spend: the site allows 5 a minute to one
+ * The specs with a test about what differs between the preview and the site (`@site`): they run on
+ * the preview with the others, and on the site again, after the deploy. The number is the password sign-ins those tests spend: the site allows 5 a minute to one
  * client, and the `@smoke` tests spend one.
  */
 export const SITE_ONLY: Record<string, number> = {
