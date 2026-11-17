@@ -84,16 +84,17 @@ test.describe("time off on a phone", () => {
     });
 
     // Every day of the year is at least 40 × 40 px: a button or not, it is drawn the same size.
-    const sizes = await page
-      .locator("[data-date]")
-      .evaluateAll((cells) =>
-        cells.map((cell) => cell.getBoundingClientRect()).map((box) => [box.width, box.height]),
-      );
-    expect(sizes).toHaveLength(new Date(THIS_YEAR, 1, 29).getMonth() === 1 ? 366 : 365);
-    for (const [width, height] of sizes) {
-      expect(Math.round(width)).toBeGreaterThanOrEqual(40);
-      expect(Math.round(height)).toBeGreaterThanOrEqual(40);
-    }
+    // Measured once the grid is laid out: right after the navigation a cell can still measure 0.
+    const sizes = () =>
+      page
+        .locator("[data-date]")
+        .evaluateAll((cells) =>
+          cells.map((cell) => cell.getBoundingClientRect()).map((box) => [box.width, box.height]),
+        );
+    await expect
+      .poll(async () => Math.min(...(await sizes()).flat().map(Math.round)))
+      .toBeGreaterThanOrEqual(40);
+    expect(await sizes()).toHaveLength(new Date(THIS_YEAR, 1, 29).getMonth() === 1 ? 366 : 365);
 
     // Two free days of the month the page opened on, or of the one after it.
     const free = page.locator(`[data-month="3"] [data-testid="free-cell"]`);
@@ -169,12 +170,17 @@ test.describe("time off on a phone", () => {
     await expect(panel).toBeHidden();
     await expect(day).toHaveAttribute("aria-label", /Vacation, ROL/);
 
-    // As the test found the year: both halves go, one tap each.
-    for (const left of ["leave-cell", "free-cell"]) {
-      await day.tap();
-      await page.getByRole("dialog", { name: "Edit leave" }).getByRole("button", { name: "Remove" }).tap();
-      await expect(day).toHaveAttribute("data-testid", left);
+    // As the test found the year: both halves go, one row of the table at a time. The table follows
+    // the server, so each removal is over before the next one starts.
+    const rows = page
+      .getByRole("row")
+      .filter({ hasText: `${Number(date.slice(8))} Mar ${date.slice(0, 4)}` });
+    await expect(rows).toHaveCount(2);
+    for (const left of [1, 0]) {
+      await rows.first().getByRole("button", { name: "Remove" }).tap();
+      await expect(rows).toHaveCount(left);
     }
+    await expect(day).toHaveAttribute("data-testid", "free-cell");
   });
 
   test("removes several booked days with taps, the list inside the screen (17/11/2026)", async ({ page }) => {

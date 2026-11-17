@@ -108,7 +108,9 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
     await page.keyboard.press("F6");
     await tabUntil(page, 4, async () => (await focused(page)) === 'button "Undo"');
     await page.keyboard.press("Enter");
-    await expect(page.getByText("Undone")).toBeVisible();
+    // The last one: the "Undone" of the step before can still be on screen, its clock stopped while
+    // the focus was in the toast.
+    await expect(page.getByText("Undone").last()).toBeVisible();
     await expect(removes).toHaveCount(seeded + 2);
   });
 
