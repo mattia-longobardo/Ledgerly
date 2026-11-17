@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useRef, useState, useTransition } from "react";
+import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
@@ -61,11 +61,14 @@ export function AccountSettingsForm({
   account,
   index,
   today,
+  sourceExtra,
 }: {
   account: SettingsValues;
   /** The account's place in the list, the one `colorFor` colours it by. */
   index: number;
   today: string;
+  /** The block of the switch to the bank (ux/n4-account-switch.md §2.2 and §9.1), drawn by the page. */
+  sourceExtra?: ReactNode;
 }) {
   const t = useTranslations("accounts.settings");
   const types = useTranslations("accounts.types");
@@ -274,6 +277,7 @@ export function AccountSettingsForm({
           <p className="text-sm text-muted sm:col-span-2">
             {synced ? t("source.syncedNote", { provider: account.provider ?? "" }) : t("source.manualNote")}
           </p>
+          {sourceExtra && <div className="flex flex-col gap-2 sm:col-span-2">{sourceExtra}</div>}
           <Field label={t("source.reminder")} htmlFor="reminder">
             <Select id="reminder" name="reminder" defaultValue={account.reminder}>
               {REMINDERS.map((value) => (

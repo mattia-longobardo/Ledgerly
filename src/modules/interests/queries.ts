@@ -263,6 +263,21 @@ export async function ruleDetail(
 }
 
 /** The rules on an account, for Account detail's "Interest rule" row (design). */
+/** How many rules of an account publish their settlements on its source (rewrite plan N4, §9.4). */
+export async function publishingRulesOn(ctx: Pick<Ctx, "userId">, accountId: string): Promise<number> {
+  const rows = await getDb()
+    .select({ id: interestRules.id })
+    .from(interestRules)
+    .where(
+      and(
+        userScoped(ctx).owns(interestRules),
+        eq(interestRules.accountId, accountId),
+        eq(interestRules.mode, "post_to_provider"),
+      ),
+    );
+  return rows.length;
+}
+
 export async function rulesOnAccount(
   ctx: Pick<Ctx, "userId">,
   accountId: string,

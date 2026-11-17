@@ -1,7 +1,12 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
-import { balancesOn } from "@/modules/accounts/queries";
+import { balancesOn, listAccounts } from "@/modules/accounts/queries";
+import { openSwitchOf } from "@/modules/accounts/switching";
+import { labelOf } from "@/platform/integrations/registry";
+import { switchable } from "../../accounts/[id]/switch/switch";
+
+type Ctx = Awaited<ReturnType<typeof requireSession>>;
 import { categoryCounts } from "@/modules/transactions/categorize/review";
 import { listCategories } from "@/modules/transactions/taxonomy";
 import { accountsOfProvider } from "@/modules/accounts/service";
@@ -139,6 +144,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
             account.linked ? [{ legend: legendOf(account), account: account.linked.name }] : [],
           )}
           existing={await bankSink.openAccounts(ctx)}
+          sameAs={await sameAsChoices(ctx)}
           types={BANK_ACCOUNT_TYPES.map((value) => ({ value, label: accountTypes(value) }))}
           cancellable={!exposed.chosen}
         />,
@@ -203,6 +209,25 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
             );
           })}
         </ul>
+        {(await toSwitchFrom(ctx, one(params.same), exposed.accounts)).map((row) => (
+          <div key={row.bankAccountId} className="flex flex-col gap-1 border-t border-border pt-2">
+            <div className="font-medium break-words">{row.legend}</div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm text-muted">
+                {t("accounts.switchTitle", { account: row.account })}
+              </span>
+              <ButtonLink
+                href={
+                  `/accounts/${row.accountId}/switch?step=check&t=${connection.id}:${row.bankAccountId}` as Route
+                }
+                variant="primary"
+                size="sm"
+              >
+                {t("accounts.switchAction")}
+              </ButtonLink>
+            </div>
+          </div>
+        ))}
         {wait !== null ? (
           <p className="rounded-ctl bg-warn-bg px-3 py-2 text-sm text-warn">
             {t("done.rateLimited", { time: formatInstant(wait, ctx) })}
@@ -314,4 +339,45 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
       returned={isReturnError(error) ? { error, bank: one(params.bank)?.slice(0, 200) ?? null } : null}
     />,
   );
+}
+
+/** The person's accounts that come from another source and may be moved to the bank (ux/n4-account-switch.md §2.1). */
+async function sameAsChoices(ctx: Ctx) {
+  const all = await listAccounts(ctx);
+  const choices = [];
+  for (const account of all.filter(switchable)) {
+    if ((await openSwitchOf(ctx, account.id)) !== null) continue;
+    const source = (await labelOf({ provider: account.provider as string, instanceKey: "" }, ctx.locale))
+      .name;
+    choices.push({ id: account.id, name: account.name, currency: account.currency, source });
+  }
+  return choices;
+}
+
+/** The accounts chosen as "the same account as…", from the address of the outcome: nothing was saved. */
+async function toSwitchFrom(
+  ctx: Ctx,
+  list: string | null,
+  exposed: readonly {
+    providerAccountId: string;
+    name: string | null;
+    identifier: string | null;
+    currency: string;
+    linked: unknown;
+  }[],
+) {
+  if (list === null) return [];
+  const mine = new Map((await listAccounts(ctx)).filter(switchable).map((account) => [account.id, account]));
+  return list.split(",").flatMap((pair) => {
+    const at = pair.lastIndexOf(".");
+    const bankAccountId = pair.slice(0, at);
+    const accountId = pair.slice(at + 1);
+    const bankAccount = exposed.find((one) => one.providerAccountId === bankAccountId && one.linked === null);
+    const account = mine.get(accountId);
+    if (!bankAccount || !account) return [];
+    const legend = [bankAccount.name, maskIdentifier(bankAccount.identifier)]
+      .filter((part) => part !== null)
+      .join(" · ");
+    return [{ bankAccountId, accountId, account: account.name, legend }];
+  });
 }

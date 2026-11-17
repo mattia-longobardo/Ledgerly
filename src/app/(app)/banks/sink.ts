@@ -19,7 +19,14 @@ import {
 import type { IncomingTransaction } from "@/modules/transactions/rules";
 import { categorise } from "@/modules/transactions/categorize/service";
 import { categorisableAccountIds, upsertFromProvider } from "@/modules/transactions/service";
-import { wallClockIn } from "@/platform/dates";
+import { addSwitchCounts, openSwitches, openSwitchOf } from "@/modules/accounts/switching";
+import { planTransfers } from "@/modules/transactions/switch-rules";
+import { transferCandidates, writeTransferPairs } from "@/modules/transactions/switching";
+import type { Ctx } from "@/platform/context";
+import { type CivilDate, civilDateIn, wallClockIn } from "@/platform/dates";
+import { getDb } from "@/platform/db/client";
+import { isPluginProvider, pluginProvider } from "@/platform/integrations/rules";
+import { exposedAccounts } from "@/platform/plugins/sync";
 import { parseCents } from "@/platform/money";
 import { type BankSink, type ReadingMovement, SinkRefusal } from "@/platform/plugins/ports";
 
@@ -109,10 +116,16 @@ export const bankSink: BankSink = {
   },
 
   async writeMovements(ctx, target, movements, now) {
+    // An account moved here from another source keeps that source's history up to the cut: the
+    // bank's movements of those days are not written, or "only in the bank" and "to check" would
+    // become doubles (rewrite plan N4, 04-now.md §4.6.1 point 12).
+    const open = await openSwitchOf(ctx, target.accountId);
+    const cut = open !== null && open.toProvider === target.provider ? (open.cutDate as CivilDate) : null;
+    const kept = cut === null ? movements : movements.filter((movement) => movement.day > cut);
     const outcome = await upsertFromProvider(
       ctx,
       target.accountId,
-      movements.map((movement) => toIncoming(movement, ctx.timeZone)),
+      kept.map((movement) => toIncoming(movement, ctx.timeZone)),
       { provider: target.provider, now },
     );
     return { created: outcome.created, updated: outcome.updated, skipped: outcome.skipped };
@@ -124,5 +137,34 @@ export const bankSink: BankSink = {
     // reads only the accounts whose source gives none, so a movement that came with its own
     // category is never touched.
     await categorise(ctx, await categorisableAccountIds(ctx));
+    await laterTransfers(ctx, accountIds);
   },
 };
+
+/**
+ * After every reading of a bank: the transfers between a switched account and the other accounts of
+ * its bank that arrived after the switch (H40, "also for the movements to come"). They belong to
+ * the switch: "Undo switch" puts them back too.
+ */
+async function laterTransfers(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  accountIds: readonly string[],
+): Promise<void> {
+  for (const open of await openSwitches(ctx)) {
+    if (!accountIds.includes(open.accountId) || !isPluginProvider(open.toProvider)) continue;
+    const pluginId = open.toProvider.slice(pluginProvider("").length);
+    const exposed = await exposedAccounts(ctx, { pluginId, connectionId: open.connectionId }, bankSink).catch(
+      () => null,
+    );
+    if (exposed === null) continue;
+    const others = exposed.accounts.flatMap((one) =>
+      one.linked && one.linked.id !== open.accountId ? [one.linked.id] : [],
+    );
+    const since = civilDateIn(open.appliedAt, ctx.timeZone);
+    const candidates = await transferCandidates(ctx, [open.accountId, ...others], since);
+    const plan = planTransfers(open.accountId, others, candidates);
+    if (plan.pairs.length === 0) continue;
+    const count = await getDb().transaction((tx) => writeTransferPairs(tx, ctx, open.id, plan.pairs));
+    await addSwitchCounts(ctx, open.id, { transfers: count });
+  }
+}

@@ -2184,7 +2184,180 @@
       }
     },
     "showArchived": "Show archived",
-    "missingRate": "No exchange rate from {currencies} to {currency}: those accounts are left out of the totals."
+    "missingRate": "No exchange rate from {currencies} to {currency}: those accounts are left out of the totals.",
+    "switch": {
+      "title": "Move “{account}” to the bank",
+      "steps": {
+        "label": "Steps of the switch",
+        "account": "Account",
+        "check": "Check",
+        "done": "Done",
+        "completed": "done"
+      },
+      "account": {
+        "question": "Which account of the bank is “{account}”?",
+        "explain": "Ledgerly shows the accounts of your banks that are not in Ledgerly yet, in {currency}.",
+        "unnamed": "Unnamed account",
+        "sameIban": "Same IBAN",
+        "otherIban": "Different IBAN.",
+        "expired": "The access to {bank} has expired: renew it in Settings › Integrations.",
+        "start": "Start the check",
+        "noBank": "No bank connected",
+        "noBankText": "To move this account, connect the bank first.",
+        "connect": "Connect a bank",
+        "noFree": "No account to choose",
+        "noFreeText": "Your banks share no account in {currency} that is not already in Ledgerly. If the account is missing, renew the access to the bank and share it.",
+        "integrations": "Go to integrations"
+      },
+      "check": {
+        "waiting": "Check in progress…",
+        "waitingNote": "It can take up to a minute. Nothing is changed.",
+        "title": "Check of the switch of “{account}”",
+        "route": "{source} → {bank}",
+        "period": "Movements compared from {from} to {to}.",
+        "nothingChanged": "Nothing was changed.",
+        "leaveNote": "If you leave, the account stays on {source}. Nothing changed."
+      },
+      "balance": {
+        "equal": "The balances are equal",
+        "different": "The balances differ: the switch cannot be applied",
+        "noBank": "The bank gave no balance to compare",
+        "noLocal": "{source} has not read the balance of this account yet",
+        "local": "In Ledgerly (from {source}), {date}",
+        "bank": "In {bank}, {kind}, {date}",
+        "difference": "Difference",
+        "blocked": "With two different balances Ledgerly cannot say the accounts are the same account with the same movements. What you can do:",
+        "steps": {
+          "look": "Look at “To check”, “Only on…” and “Only in the bank” below: the difference is usually there.",
+          "fix": "Correct on {source} the movement that is missing or doubled.",
+          "wait": "If a movement is from today, wait for the bank to book it.",
+          "again": "Run the check again."
+        },
+        "kinds": {
+          "closing": "closing booked balance",
+          "expected": "expected balance",
+          "opening": "opening booked balance",
+          "other": "balance"
+        }
+      },
+      "movements": {
+        "title": "Movements",
+        "matched": "Found in both",
+        "matchedNote": "Ledgerly sees them as the same. They stay one row, with the category they have now.",
+        "toCheck": "To check",
+        "toCheckNote": "For these amounts the number of movements differs between {source} and the bank. Ledgerly does not know which are the same: it links none of them.",
+        "onlyLocal": "Only on {source}",
+        "onlyLocalNote": "{source} has these movements, the bank does not. They stay in Ledgerly as they are.",
+        "onlyBank": "Only in the bank",
+        "onlyBankNote": "The bank has these movements in the period of the comparison, {source} does not. They do not come into Ledgerly: the history up to {date} stays the one of {source}.",
+        "fresh": "New from the bank",
+        "freshNote": "Movements after {date}, the last day {source} read. They come into Ledgerly with “Apply”.",
+        "onSource": "On {source}",
+        "inBank": "In the bank",
+        "amounts": "{count, plural, one {# amount} other {# amounts}}",
+        "out": "{amount} out",
+        "in": "{amount} in"
+      },
+      "more": "Show {count} more",
+      "shown": "{shown} of {total}",
+      "transfers": {
+        "title": "Transfers",
+        "lead": "{count, plural, one {# move} other {# moves}} between “{account}” and the other accounts of {bank} become transfers. Today they count as income and spending. Income and spending go down by {amount} in total. The net worth does not change.",
+        "byYear": "Transfers by year",
+        "year": "Year",
+        "count": "Transfers",
+        "less": "Less income and spending",
+        "list": "List of the transfers",
+        "byPerson": "category chosen by hand",
+        "ambiguous": "{count, plural, one {# group of equal moves stays as it is} other {# groups of equal moves stay as they are}}: Ledgerly does not know which are the pairs."
+      },
+      "changes": {
+        "title": "What changes with “Apply”",
+        "fromBank": "Balance and movements of “{account}” come from {bank}.",
+        "history": "The history stays the one of {source}. No movement is removed.",
+        "fresh": "{count, plural, one {# new movement comes} other {# new movements come}} from the bank.",
+        "transfers": "{count, plural, one {# movement becomes a transfer} other {# movements become transfers}}.",
+        "sourceStops": "{source} no longer updates this account. The other accounts stay.",
+        "manual": "Write manual movements with the notice of the accounts of a bank.",
+        "interests": "The interest settlements are no longer published on {source}.",
+        "undo": "You can go back with “Undo switch”."
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "again": "Run the check again",
+        "apply": "Apply",
+        "leave": "Keep the account on {source}"
+      },
+      "confirm": {
+        "title": "Move “{account}” to {bank}?",
+        "body": "From now on balance and movements come from the bank. The history stays the one of {source}. You can go back with “Undo switch” in the settings of the account.",
+        "interests": "The interest settlements of this account are no longer published on {source}.",
+        "transfers": "Income and spending of the past months go down by {amount} in total.",
+        "back": "Back to the report",
+        "apply": "Apply switch"
+      },
+      "applying": {
+        "title": "Switch in progress…",
+        "stay": "Do not close this page."
+      },
+      "errors": {
+        "source_unavailable": "{source} could not be updated. The switch starts only with {source} up to date.",
+        "bank_unavailable": "The bank does not answer now. Try again shortly.",
+        "consent_expired": "The access to the bank has expired. Renew it in Settings › Integrations.",
+        "rate_limited": "The bank reached its limit of readings. Try again later.",
+        "account_gone": "The bank no longer shares this account. Choose another account.",
+        "stale": "The data changed after the check. Run the check again.",
+        "busy": "Another switch is in progress. Wait for it to end and try again.",
+        "failed": "The switch did not succeed. The account stayed on {source}."
+      },
+      "done": {
+        "title": "“{account}” now comes from the bank",
+        "matched": "{count, plural, one {# movement linked} other {# movements linked}} to the bank.",
+        "fresh": "{count, plural, one {# new movement} other {# new movements}} from the bank.",
+        "transfers": "{count, plural, one {# transfer recognised} other {# transfers recognised}}.",
+        "sourceStops": "{source} no longer updates this account. Ledgerly reads the bank 3 times a day.",
+        "howToUndo": "To go back: account settings › “Undo switch”.",
+        "theBank": "the bank",
+        "goToAccount": "Go to the account"
+      },
+      "undo": {
+        "action": "Undo switch",
+        "title": "Undo the switch of “{account}”?",
+        "body": "The account comes from {source} again, as before {date}.",
+        "backTitle": "Back as it was",
+        "back": {
+          "source": "Balance and movements come from {source} again.",
+          "rows": "The movements linked to the bank become movements of {source} again. None is removed.",
+          "transfers": "{count, plural, one {# transfer goes} other {# transfers go}} back to an income and a spending.",
+          "interests": "The interest settlements are published on {source} again. Those closed in between are not published by themselves."
+        },
+        "knowTitle": "Good to know",
+        "know": {
+          "bankRows": "The movements that came from the bank after {date} no longer count. {source} brings them again, if it has them.",
+          "bankStays": "{bank} stays connected. The other accounts do not change."
+        },
+        "keep": "Keep the account on {bank}",
+        "working": "Undoing…",
+        "failed": "The undo did not succeed. The account stayed on {bank}: nothing changed.",
+        "done": "Switch undone",
+        "unavailable": "{source} is no longer connected. Connect it again in Settings › Integrations to undo the switch."
+      },
+      "settings": {
+        "offer": "Is this account in one of your banks too? You can make it come from the bank. First you see a check: nothing changes until you choose “Apply”.",
+        "offerAction": "Move to the bank",
+        "connectFirst": "To make this account come from the bank, connect the bank first.",
+        "connect": "Connect a bank",
+        "switched": "Moved from {source} to the bank on {date}. The history up to {cut} is the one of {source}."
+      },
+      "unsent": {
+        "title": "Before the switch: {count, plural, one {# manual movement is not} other {# manual movements are not}} on {source}",
+        "explain": "Ledgerly tried to send them now. Until they are on {source}, the switch does not start: the history and the balance would not be complete.",
+        "noPayee": "No payee",
+        "notSent": "Not sent to {source}",
+        "toSend": "To send",
+        "then": "Send each movement again from Expenses, or delete it. Then run the check again."
+      }
+    }
   },
   "budgets": {
     "title": "Budgets",
@@ -5337,7 +5510,13 @@
         "failed": "Couldn't import the accounts. Try again.",
         "ibanExists": "This account is already in Ledgerly: “{account}” has the same IBAN. Ledgerly does not add it a second time.",
         "ibanExistsSource": "This account is already in Ledgerly: “{account}”, from another source, has the same IBAN. Ledgerly does not add it a second time.",
-        "failedIban": "An account has the IBAN of an account already in Ledgerly: Ledgerly does not add it a second time. Choose “Use” or “Do not import” for that account."
+        "failedIban": "An account has the IBAN of an account already in Ledgerly: Ledgerly does not add it a second time. Choose “Use” or “Do not import” for that account.",
+        "sameGroup": "It is the same account as…",
+        "same": "{account} · {source}",
+        "sameNote": "This account is not imported now. After this step Ledgerly compares {source} and the bank and shows you the result. Nothing changes until you choose “Apply”.",
+        "continue": "Continue",
+        "switchTitle": "To complete: it is the same account as “{account}”.",
+        "switchAction": "Check and move"
       },
       "cancel": {
         "title": "Cancel the connection?",
