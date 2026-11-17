@@ -85,6 +85,19 @@ export const FLOWS: Flow[] = [
   { id: "screens", specs: [] },
 ];
 
+/** The flows whose seed (scripts/seed-e2e/<flow>.ts) seeds their users alone. */
+const SEEDED_ALONE = [
+  "accounts",
+  "categories",
+  "budgets",
+  "pockets",
+  "subscriptions",
+  "interests",
+  "funds",
+  "timeoff",
+  "connections",
+];
+
 const page = (name: string) => `src/app/(app)/${name}/**`;
 
 export const MODULES: Module[] = [
@@ -413,7 +426,25 @@ export const MODULES: Module[] = [
   { id: "perf", files: ["scripts/perf-*", "baselines/performance.json"], usedBy: ["perf"] },
   // The seed gives every flow its users and its data. Each release adds a user for its own flow:
   // the journeys of every flow run, and the screens of the changed modules only.
-  { id: "e2e-data", files: ["scripts/seed-e2e.ts", "tests/e2e/_shared/env.ts"], usedBy: ["e2e:*"] },
+  {
+    id: "e2e-data",
+    files: ["scripts/seed-e2e.ts", "scripts/seed-e2e/common.ts", "tests/e2e/_shared/env.ts"],
+    usedBy: ["e2e:*"],
+  },
+  // The `layout` user, whom every flow's screens are measured on.
+  { id: "seed-layout", files: ["scripts/seed-e2e/layout.ts"], flows: ["screens"], usedBy: ["e2e:*"] },
+  // The seed of a flow (scripts/seed-e2e/<flow>.ts) runs the folder of the flow, and the folders of
+  // the flows whose users it seeds too.
+  {
+    id: "seed-investments",
+    files: ["scripts/seed-e2e/investments.ts"],
+    flows: ["investments", "connections"],
+  },
+  {
+    id: "seed-transactions",
+    files: ["scripts/seed-e2e/transactions.ts"],
+    flows: ["transactions", "categories"],
+  },
   // The engines of the checks every flow has: every flow's piece of them runs.
   {
     id: "screen-checks",
@@ -459,7 +490,10 @@ export const MODULES: Module[] = [
   // A changed file of a flow's folder starts the whole folder: its journeys and its screens.
   ...FLOWS.filter((flow) => flow.id !== "screens").map((flow) => ({
     id: `spec-${flow.id}`,
-    files: [`tests/e2e/${flow.id}/**`],
+    files: [
+      `tests/e2e/${flow.id}/**`,
+      ...(SEEDED_ALONE.includes(flow.id) ? [`scripts/seed-e2e/${flow.id}.ts`] : []),
+    ],
     flows: [flow.id],
   })),
 ];

@@ -74,22 +74,25 @@ is in the row of its module and in the row `data`): all its rows count.
 | `src/ui/**`, `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/settings/layout.tsx`, `src/app/(app)/settings/page.tsx`, `src/app/(app)/settings/settings-tabs.tsx`, `src/app/globals.css`, `src/app/error.tsx`, `src/app/global-error.tsx`, `src/app/not-found.tsx`, `src/app/boundaries.test.tsx`, `src/platform/theme*` | `interface` | — | `e2e:screens`, `e2e:transactions`, `e2e:shell` |
 | `src/app/(legal)/**`, `src/app/manifest.webmanifest/**`, `src/app/*.png`, `src/app/icon.svg`, `src/app/favicon.ico`, `scripts/icons.mjs`, `src/app/(app)/navigation*`, `src/app/(app)/palette-actions.ts`, `src/app/(app)/palette-commands*` | `shell` | flow `shell` | — |
 | `scripts/perf-*`, `baselines/performance.json` | `perf` | — | `npm run perf` |
-| `scripts/seed-e2e.ts`, `tests/e2e/_shared/env.ts` | `e2e-data` | — | `e2e:*` |
+| `scripts/seed-e2e.ts`, `scripts/seed-e2e/common.ts`, `tests/e2e/_shared/env.ts` | `e2e-data` | — | `e2e:*` |
+| `scripts/seed-e2e/layout.ts` | `seed-layout` | flow `screens` | `e2e:*` |
+| `scripts/seed-e2e/investments.ts` | `seed-investments` | flow `investments`<br>flow `connections` | — |
+| `scripts/seed-e2e/transactions.ts` | `seed-transactions` | flow `transactions`<br>flow `categories` | — |
 | `tests/e2e/_shared/a11y.ts`, `tests/e2e/_shared/keyboard.ts` | `screen-checks` | flow `screens` | — |
 | `scripts/release.sh`, `scripts/release-dump.sh`, `scripts/numbers-*`, `scripts/snapshot-format.ts`, `scripts/on-homelab.sh`, `scripts/preview-on-test.sh`, `scripts/create-*`, `scripts/plugin-probe.ts`, `scripts/modularity.ts`, `scripts/duplication.ts`, `scripts/assertions-diff.ts`, `scripts/source-graph.ts`, `scripts/test-map.ts`, `scripts/test-select.ts`, `src/architecture.test.ts`, `src/tooling.test.ts`, `src/release-script.test.ts`, `src/test-map.test.ts`, `baselines/modularity.json`, `baselines/duplication.json`, `baselines/assertions-exceptions.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`, `.gitignore` | `tooling` | — | — |
 | `docs/**`, `*.md`, `LICENSE`, `.env.example`, `tests/shots/**`, `playwright.shots.config.ts` | `docs` | — | — |
-| `tests/e2e/accounts/**` | `spec-accounts` | flow `accounts` | — |
+| `tests/e2e/accounts/**`, `scripts/seed-e2e/accounts.ts` | `spec-accounts` | flow `accounts` | — |
 | `tests/e2e/transactions/**` | `spec-transactions` | flow `transactions` | — |
-| `tests/e2e/categories/**` | `spec-categories` | flow `categories` | — |
-| `tests/e2e/budgets/**` | `spec-budgets` | flow `budgets` | — |
-| `tests/e2e/pockets/**` | `spec-pockets` | flow `pockets` | — |
-| `tests/e2e/subscriptions/**` | `spec-subscriptions` | flow `subscriptions` | — |
-| `tests/e2e/interests/**` | `spec-interests` | flow `interests` | — |
-| `tests/e2e/funds/**` | `spec-funds` | flow `funds` | — |
+| `tests/e2e/categories/**`, `scripts/seed-e2e/categories.ts` | `spec-categories` | flow `categories` | — |
+| `tests/e2e/budgets/**`, `scripts/seed-e2e/budgets.ts` | `spec-budgets` | flow `budgets` | — |
+| `tests/e2e/pockets/**`, `scripts/seed-e2e/pockets.ts` | `spec-pockets` | flow `pockets` | — |
+| `tests/e2e/subscriptions/**`, `scripts/seed-e2e/subscriptions.ts` | `spec-subscriptions` | flow `subscriptions` | — |
+| `tests/e2e/interests/**`, `scripts/seed-e2e/interests.ts` | `spec-interests` | flow `interests` | — |
+| `tests/e2e/funds/**`, `scripts/seed-e2e/funds.ts` | `spec-funds` | flow `funds` | — |
 | `tests/e2e/investments/**` | `spec-investments` | flow `investments` | — |
 | `tests/e2e/payroll/**` | `spec-payroll` | flow `payroll` | — |
-| `tests/e2e/timeoff/**` | `spec-timeoff` | flow `timeoff` | — |
-| `tests/e2e/connections/**` | `spec-connections` | flow `connections` | — |
+| `tests/e2e/timeoff/**`, `scripts/seed-e2e/timeoff.ts` | `spec-timeoff` | flow `timeoff` | — |
+| `tests/e2e/connections/**`, `scripts/seed-e2e/connections.ts` | `spec-connections` | flow `connections` | — |
 | `tests/e2e/auth/**` | `spec-auth` | flow `auth` | — |
 | `tests/e2e/admin/**` | `spec-admin` | flow `admin` | — |
 | `tests/e2e/api/**` | `spec-api` | flow `api` | — |
@@ -146,8 +149,13 @@ A changed file of this list starts the full suite.
   to the `a11y.spec.ts` of its flow, not to another flow's.
 - `tests/e2e/_shared/a11y.ts` and `keyboard.ts` (row `screen-checks`), and the common interface
   (row `interface`): every flow's `a11y`, `keyboard` and `mobile` run.
-- `scripts/seed-e2e.ts` and `tests/e2e/_shared/env.ts` (row `e2e-data`): each release adds the
-  users of its flow there. The journeys of every flow run; the screens of the changed modules only.
+- The seed is one file per flow, `scripts/seed-e2e/<flow>.ts`: a changed one runs the folder of
+  its flow (and of the flows it seeds users for). `layout.ts` seeds the user every screen is
+  measured on: every flow runs. `scripts/seed-e2e.ts`, `scripts/seed-e2e/common.ts` and
+  `tests/e2e/_shared/env.ts` (row `e2e-data`) run the journeys of every flow.
+- A journey that changes its user's data has a user of its own, a copy made by the same seed
+  function (`reviewJourney`, `manualJourney`, …): the screen check keeps the original, and no two
+  specs change the same user.
 
 ## The E2E tests, one time, on the local preview
 
