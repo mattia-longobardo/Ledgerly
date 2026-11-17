@@ -147,18 +147,18 @@ describe("display", () => {
   });
 
   it("derives initials and sign tones", () => {
-    expect(initials("Mattia Longobardo")).toBe("ML");
+    expect(initials("Anna Bianchi")).toBe("AB");
     expect(initials("  giulia ")).toBe("G");
     expect(toneOfSign(-3n)).toBe("neg");
     expect(toneOfSign(0)).toBe("muted");
     expect(toneOfSign(null)).toBe("muted");
-    render(<Avatar name="Mattia Longobardo" />);
-    expect(screen.getByText("ML")).toBeInTheDocument();
+    render(<Avatar name="Anna Bianchi" />);
+    expect(screen.getByText("AB")).toBeInTheDocument();
   });
 
   it("gives the avatar an accessible name by default, and hides it when decorative", () => {
-    const { unmount } = render(<Avatar name="Mattia Longobardo" />);
-    expect(screen.getByRole("img", { name: "Mattia Longobardo" })).toHaveTextContent("ML");
+    const { unmount } = render(<Avatar name="Anna Bianchi" />);
+    expect(screen.getByRole("img", { name: "Anna Bianchi" })).toHaveTextContent("AB");
     unmount();
 
     render(<Avatar name="Giulia Rossi" decorative />);

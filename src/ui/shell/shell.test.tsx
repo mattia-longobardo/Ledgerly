@@ -61,7 +61,7 @@ const LABELS = {
 function renderShell(sidebar: SidebarState = "expanded") {
   return render(
     <ShellProvider initialSidebar={sidebar} labels={LABELS} saveTheme={async () => undefined}>
-      <Sidebar links={LINKS} user={{ name: "Mattia Longobardo", via: "via Authentik" }} />
+      <Sidebar links={LINKS} user={{ name: "Anna Bianchi", via: "via Authentik" }} />
       <CommandPalette links={LINKS} />
     </ShellProvider>,
   );
@@ -103,10 +103,7 @@ describe("shell", () => {
 
   it("opens Profile from the user in the sidebar footer", () => {
     renderShell();
-    expect(screen.getByRole("link", { name: /Mattia Longobardo/ })).toHaveAttribute(
-      "href",
-      "/settings/profile",
-    );
+    expect(screen.getByRole("link", { name: /Anna Bianchi/ })).toHaveAttribute("href", "/settings/profile");
   });
 
   it("shows the parent crumb and the page on desktop, and the section as the phone title", () => {

@@ -148,7 +148,7 @@ describe("personActionRefusal", () => {
 
 describe("initialsOf", () => {
   it("takes the first and last word of a name", () => {
-    expect(initialsOf("Mattia Longobardo", "m@example.test")).toBe("ML");
+    expect(initialsOf("Anna Bianchi", "m@example.test")).toBe("AB");
   });
 
   it("takes two letters of a single word", () => {

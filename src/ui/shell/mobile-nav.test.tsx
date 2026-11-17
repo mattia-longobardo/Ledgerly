@@ -56,7 +56,7 @@ const LABELS = {
 async function openMore() {
   render(
     <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
-      <MobileNav links={LINKS} user={{ name: "Mattia Longobardo", via: "via Authentik" }} />
+      <MobileNav links={LINKS} user={{ name: "Anna Bianchi", via: "via Authentik" }} />
     </ShellProvider>,
   );
   const more = screen.getByRole("button", { name: LABELS.more });
@@ -86,7 +86,7 @@ describe("MobileNav", () => {
   it("shows who is signed in and signs out from the sheet", async () => {
     signOut.mockResolvedValueOnce(undefined);
     const sheet = await openMore();
-    expect(within(sheet).getByText("Mattia Longobardo")).toBeInTheDocument();
+    expect(within(sheet).getByText("Anna Bianchi")).toBeInTheDocument();
     expect(within(sheet).getByText("via Authentik")).toBeInTheDocument();
     await userEvent.click(within(sheet).getByRole("button", { name: "Sign out" }));
     expect(signOut).toHaveBeenCalledOnce();
