@@ -13,6 +13,7 @@ import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, civilDateIn } from "@/platform/dates";
 import { pluginProvider } from "@/platform/integrations/rules";
 import {
+  changeSourceSkippedIds,
   type Connection,
   finishRun,
   markConnection,
@@ -155,6 +156,10 @@ export async function chooseAccounts(
     },
     now,
   );
+  await changeSourceSkippedIds(ctx, connection.provider, {
+    add: skipped,
+    remove: choices.map((choice) => choice.providerAccountId),
+  });
   await saveSchedule(ctx, connection.id, BANK_SCHEDULE, now);
   // An account tied after the first reading (chosen later, or deleted and chosen again) has no
   // history here: the next reading reads it alone, from the start, before the usual ones (PERS-419).

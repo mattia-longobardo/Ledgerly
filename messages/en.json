@@ -248,10 +248,11 @@
       },
       "actions": {},
       "disconnect": {
-        "title": "Disconnect Wallet?",
-        "description": "The token is deleted. Synced accounts and transactions stay, and stop being updated.",
+        "title": "Disconnect {name}?",
+        "description": "Access to {name} is closed. {count, plural, =0 {} one {The account stays in Ledgerly as “Disconnected”, with its balance and transactions, and stops updating. } other {The # accounts stay in Ledgerly as “Disconnected”, with their balances and transactions, and stop updating. }}The account choice and the schedule stay: if you connect again, each account goes back to its place.",
         "confirm": "Disconnect",
-        "cancel": "Keep connected"
+        "cancel": "Keep connected",
+        "excluded": "{count, plural, one {# excluded account stays excluded.} other {# excluded accounts stay excluded.}}"
       },
       "kinds": {
         "accounts": "Accounts and balances",
@@ -298,7 +299,7 @@
         "connectDescription": "A machine client (no browser login) with the vacay:read and vacay:write scopes: Trek → Settings → Integrations → MCP → OAuth 2.1 Clients → New Client.",
         "baseUrl": "Trek address",
         "baseUrlHint": "The site's address, without /mcp — that is added for you.",
-        "disconnectDescription": "The days already booked stay here. Any removal still waiting to reach Trek is completed straight away, because afterwards there is nobody left to ask.",
+        "disconnectDescription": "The days already booked stay here. Any removal still waiting to reach Trek is completed straight away, because afterwards there is nobody left to ask. The schedule stays: if you connect again, Trek updates as before.",
         "clientId": "Client ID",
         "clientIdHint": "From the machine client you created in Trek.",
         "clientSecret": "Client secret",
@@ -1161,9 +1162,10 @@
       },
       "disconnect": {
         "title": "Disconnect {bank}?",
-        "description": "Access to the bank is closed. The accounts stay in Ledgerly as “Disconnected”, with their balances and transactions, and are no longer updated. If you connect the same bank again, each account goes back to its place by itself.",
+        "description": "Access to {bank} is closed. {count, plural, =0 {} one {The account stays in Ledgerly as “Disconnected”, with its balance and transactions, and stops updating. } other {The # accounts stay in Ledgerly as “Disconnected”, with their balances and transactions, and stop updating. }}The account choice stays: if you connect the same bank again, each account goes back to its place by itself.",
         "cancel": "Stay connected",
-        "confirm": "Disconnect"
+        "confirm": "Disconnect",
+        "excluded": "{count, plural, one {# excluded account stays excluded.} other {# excluded accounts stay excluded.}}"
       },
       "toasts": {
         "saved": "Credentials saved",

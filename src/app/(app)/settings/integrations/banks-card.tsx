@@ -30,6 +30,8 @@ export interface BanksCardProps {
   banks: ConnectionRowProps[];
   /** Opens "Replace key" at once: where the procedure sends a person whose key was refused. */
   openReplace: boolean;
+  /** What "Disconnect" leaves, by row: the accounts of the bank here, and the ones left out. */
+  leave: Record<string, { accounts: number; excluded: number }>;
 }
 
 const FORM_ID = "bank-credentials-form";
@@ -46,7 +48,14 @@ const CONNECT: Route = "/banks/connect";
  * submitted form and the form unmounts with its dialog, so a secret is never in React state, never
  * in a prop, and in the DOM only while the dialog is open.
  */
-export function BanksCard({ pluginId, credentials, returnAddress, banks, openReplace }: BanksCardProps) {
+export function BanksCard({
+  pluginId,
+  credentials,
+  returnAddress,
+  banks,
+  openReplace,
+  leave,
+}: BanksCardProps) {
   const t = useTranslations("settings.banks");
   const common = useTranslations("common");
   const [dialog, setDialog] = useState<"new" | "replace" | "remove" | null>(
@@ -344,7 +353,17 @@ export function BanksCard({ pluginId, credentials, returnAddress, banks, openRep
         open={leaving !== null}
         onOpenChange={(isOpen) => !isOpen && setDisconnecting(null)}
         title={t("disconnect.title", { bank: leaving?.name ?? "" })}
-        description={t("disconnect.description")}
+        description={[
+          t("disconnect.description", {
+            bank: leaving?.name ?? "",
+            count: leaving ? (leave[leaving.id]?.accounts ?? 0) : 0,
+          }),
+          leaving && (leave[leaving.id]?.excluded ?? 0) > 0
+            ? t("disconnect.excluded", { count: leave[leaving.id]?.excluded ?? 0 })
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         width={420}
         footer={
           <>

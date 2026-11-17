@@ -5,7 +5,7 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
-import { type ProviderLink, WALLET_PROVIDER } from "./rules";
+import { type ProviderLink, TREK_PROVIDER, WALLET_PROVIDER } from "./rules";
 import { integrationConnections, providerLinks } from "./schema";
 import {
   type Connection,
@@ -21,6 +21,7 @@ import {
   recordRun,
   resolveExternal,
   saveConnection,
+  saveSchedule,
   saveSyncJob,
   skipRun,
   unlinkEntities,
@@ -150,6 +151,39 @@ describe("deleteConnection", () => {
 
   it("reports a connection that is not there", async () => {
     await expect(deleteConnection(ctx, randomUUID())).rejects.toThrow(IntegrationError);
+  });
+
+  it("keeps the schedule and the depth of the history for when the same source is connected again (H55)", async () => {
+    const schedule = {
+      rules: [{ kind: "times" as const, times: ["07:10"], days: { kind: "every" as const } }],
+    };
+    const wallet = await walletConnection();
+    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, wallet.id, schedule, NOW);
+    await saveSyncJob(ctx, wallet.id, "transactions", {
+      cursor: { backfillMonths: "36", backfillFrom: "x" },
+    });
+    const trek = await saveConnection(ctx, { provider: TREK_PROVIDER, credentials: { token: "one" } });
+    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, trek.id, schedule, NOW);
+
+    await deleteConnection(ctx, wallet.id);
+    await deleteConnection(ctx, trek.id);
+    expect(await listConnections(ctx)).toEqual([]);
+
+    const walletAgain = await walletConnection();
+    const trekAgain = await saveConnection(ctx, { provider: TREK_PROVIDER, credentials: { token: "two" } });
+    expect(walletAgain.schedule).toEqual(schedule);
+    expect(trekAgain.schedule).toEqual(schedule);
+    // The setting comes back; where the last reading stood does not.
+    expect((await readSyncJob(ctx, walletAgain.id, "transactions"))?.cursor).toEqual({
+      backfillMonths: "36",
+    });
+    // Taken back once: the next connection after a new one starts from its own settings.
+    await saveSchedule({ ...ctx, timeZone: "Europe/Rome" }, trekAgain.id, { rules: [] }, NOW);
+    expect(
+      (await saveConnection(ctx, { provider: TREK_PROVIDER, credentials: { token: "three" } })).schedule,
+    ).toEqual({
+      rules: [],
+    });
   });
 });
 

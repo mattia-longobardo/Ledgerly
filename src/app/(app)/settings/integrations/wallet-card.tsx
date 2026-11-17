@@ -24,6 +24,8 @@ import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./conne
 export interface WalletCardProps {
   row: ConnectionRowProps;
   connected: boolean;
+  /** What "Disconnect" leaves: the accounts of Wallet here, and the ones left out. */
+  leave: { accounts: number; excluded: number };
 }
 
 /** What this card does itself, with a dialog of its own; the rest is the row's. */
@@ -41,7 +43,7 @@ const FORM_ID = "wallet-token-form";
  * unmounts on close — so the secret is never in React state, never in a prop and never in the DOM
  * a moment longer than the dialog is open.
  */
-export function WalletCard({ row, connected }: WalletCardProps) {
+export function WalletCard({ row, connected, leave }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -225,8 +227,13 @@ export function WalletCard({ row, connected }: WalletCardProps) {
       <Modal
         open={disconnecting}
         onOpenChange={(open) => !open && setDisconnecting(false)}
-        title={t("disconnect.title")}
-        description={t("disconnect.description")}
+        title={t("disconnect.title", { name: row.name })}
+        description={[
+          t("disconnect.description", { name: row.name, count: leave.accounts }),
+          leave.excluded > 0 ? t("disconnect.excluded", { count: leave.excluded }) : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         width={420}
         footer={
           <>

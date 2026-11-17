@@ -188,7 +188,7 @@ export function TrekCard({ row, connected, pending: waiting }: TrekCardProps) {
       <Modal
         open={disconnecting}
         onOpenChange={(open) => !open && setDisconnecting(false)}
-        title={t("disconnect.title")}
+        title={t("disconnect.title", { name: row.name })}
         description={t("trek.disconnectDescription")}
         width={420}
         footer={
