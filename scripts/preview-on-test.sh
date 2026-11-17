@@ -9,22 +9,35 @@
 # LEDGERLY_ENV_FILE names the environment file, for a checkout that has no `.env.homelab` of its own.
 # The preview listens on 127.0.0.1:3999 only. Its database URL is worked out from the application's
 # own and handed over through the environment, never on a command line.
+# The full suite (scripts/full-suite.sh) starts a second preview beside the one of a release, with
+# LEDGERLY_TEST_DATABASE (one of `ledgerly_<1-4>_test`), LEDGERLY_PREVIEW_PORT, LEDGERLY_PREVIEW_NAME
+# and LEDGERLY_PREVIEW_S3_PREFIX. Without them: `ledgerly_test`, 3999, `ledgerly-preview`, `tests/preview/`.
 set -eu
 cd "$(dirname "$0")/.."
 
 env_file="${LEDGERLY_ENV_FILE:-.env.homelab}"
 database_url=$(sed -n "s/^DATABASE_URL=//p" "$env_file" | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/")
-DATABASE_URL="${database_url%/*}/ledgerly_test"
-S3_KEY_PREFIX="tests/preview/"
-E2E_BASE_URL="http://localhost:3999"
+database="${LEDGERLY_TEST_DATABASE:-ledgerly_test}"
+port="${LEDGERLY_PREVIEW_PORT:-3999}"
+name="${LEDGERLY_PREVIEW_NAME:-ledgerly-preview}"
+DATABASE_URL="${database_url%/*}/$database"
+S3_KEY_PREFIX="${LEDGERLY_PREVIEW_S3_PREFIX:-tests/preview/}"
+E2E_BASE_URL="http://localhost:$port"
 # The preview is its own origin: a password sign-in, OAuth and the address a plugin returns to are
 # checked against this URL, and the seed signs its sessions for it (docs/testing.md).
 BETTER_AUTH_URL="$E2E_BASE_URL"
 export DATABASE_URL S3_KEY_PREFIX E2E_BASE_URL BETTER_AUTH_URL
 
 case "$DATABASE_URL" in
-  */ledgerly_test) ;;
-  *) echo "refusing to run: the database is not ledgerly_test" >&2; exit 1 ;;
+  */ledgerly_test | */ledgerly_[1-4]_test) ;;
+  *) echo "refusing to run: the database is not ledgerly_test or ledgerly_<1-4>_test" >&2; exit 1 ;;
+esac
+case "$port" in
+  *[!0-9]* | "") echo "LEDGERLY_PREVIEW_PORT must be a number" >&2; exit 1 ;;
+esac
+case "$S3_KEY_PREFIX" in
+  tests/*/) ;;
+  *) echo "LEDGERLY_PREVIEW_S3_PREFIX must be tests/<name>/" >&2; exit 1 ;;
 esac
 
 # `docker run --env-file` keeps the quotes around a quoted value, which Compose drops: the file is
@@ -50,15 +63,15 @@ case "${1:-}" in
     fi
     ;;
   up)
-    environment | docker run -d --name ledgerly-preview --network db_internal --user 1000:1000 \
+    environment | docker run -d --name "$name" --network db_internal --user 1000:1000 \
       --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL \
-      -p 127.0.0.1:3999:3000 "$2"
+      -p "127.0.0.1:$port:3000" "$2"
     ;;
   seed)
     script scripts/migrate.ts
     script scripts/seed-e2e.ts seed
     ;;
   remove) script scripts/seed-e2e.ts remove ;;
-  down) docker rm -f ledgerly-preview ;;
+  down) docker rm -f "$name" ;;
   *) echo "usage: preview-on-test.sh build [<image>] | up <image> | seed | remove | down" >&2; exit 1 ;;
 esac

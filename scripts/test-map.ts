@@ -462,6 +462,7 @@ export const MODULES: Module[] = [
       "scripts/snapshot-format.ts",
       "scripts/on-homelab.sh",
       "scripts/preview-on-test.sh",
+      "scripts/full-suite.sh",
       "scripts/create-*",
       "scripts/plugin-probe.ts",
       "scripts/modularity.ts",

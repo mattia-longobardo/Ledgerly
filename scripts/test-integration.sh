@@ -24,7 +24,9 @@ case "$SHARDS" in
   *) echo "LEDGERLY_TEST_SHARDS must be 1-4" >&2; exit 1 ;;
 esac
 
-value() { sed -n "s/^$1=//p" .env.homelab | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
+# LEDGERLY_ENV_FILE names the environment file of a checkout with no `.env.homelab` of its own.
+env_file="${LEDGERLY_ENV_FILE:-.env.homelab}"
+value() { sed -n "s/^$1=//p" "$env_file" | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
 
 database_url=$(value DATABASE_URL)
 TEST_S3_ENDPOINT=$(value S3_ENDPOINT)

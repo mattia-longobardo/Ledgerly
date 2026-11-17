@@ -12,10 +12,17 @@ cd "$(dirname "$0")/.."
 PROCESSES=5
 queries_only=
 case " $* " in *" --queries "*) PROCESSES=1; queries_only=1 ;; esac
-value() { sed -n "s/^$1=//p" .env.homelab | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
+# LEDGERLY_ENV_FILE names the environment file of a checkout with no `.env.homelab`; the full suite
+# (scripts/full-suite.sh) measures on LEDGERLY_TEST_DATABASE, one of `ledgerly_<1-4>_test`, under
+# the lock of the integration tests.
+env_file="${LEDGERLY_ENV_FILE:-.env.homelab}"
+value() { sed -n "s/^$1=//p" "$env_file" | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
 database_url=$(value DATABASE_URL)
-DATABASE_URL="${database_url%/*}/ledgerly_test"
-case "$DATABASE_URL" in */ledgerly_test) ;; *) echo "refusing: not ledgerly_test" >&2; exit 1 ;; esac
+DATABASE_URL="${database_url%/*}/${LEDGERLY_TEST_DATABASE:-ledgerly_test}"
+case "$DATABASE_URL" in
+  */ledgerly_test | */ledgerly_[1-4]_test) ;;
+  *) echo "refusing: not ledgerly_test or ledgerly_<1-4>_test" >&2; exit 1 ;;
+esac
 export DATABASE_URL
 
 # The samples, one file per process: under `test-results/`, which the repository ignores.
@@ -27,7 +34,7 @@ mkdir -p "$samples"
 # passed on stdin with one pair of quotes removed (as in `scripts/on-homelab.sh`). `-e DATABASE_URL`
 # comes after it and wins: the test database, never the one in the file.
 script() {
-  sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" .env.homelab |
+  sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" "$env_file" |
     docker run --rm -i --network db_internal \
     --user "$(id -u):$(id -g)" -e HOME=/tmp \
     --env-file /dev/stdin -e DATABASE_URL \

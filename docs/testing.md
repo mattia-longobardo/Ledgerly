@@ -23,7 +23,7 @@ The command reads the diff with the map below and prints the commands to run, in
 | Every commit of a piece of work | `npm run format:check && npm run lint && npm run typecheck && npm test`, and the tests of the files of the commit | Local |
 | One time, on the final SHA, before the deploy | The selection of the release diff: integration tests of the modules, `npm run perf -- --queries`, `npm run perf` only if the selection says so, the E2E flows and their screens, `@smoke` | Local; E2E on the local preview |
 | After the deploy | `@smoke` (run by `scripts/release.sh`), then the `@site` tests of the selected specs | The deployed site |
-| Each night and at the end of a phase (gate G10) | The full suite | Local preview and test database |
+| Each night and at the end of a phase (gate G10) | The full suite: `sh scripts/full-suite.sh` | Its own preview and `ledgerly_<1-4>_test` |
 
 - **Always complete:** the static checks and `npm test` (about 90 s together). The unit tests are
   not selected: all of them run in 24 s.
@@ -79,7 +79,7 @@ is in the row of its module and in the row `data`): all its rows count.
 | `scripts/seed-e2e/investments.ts` | `seed-investments` | flow `investments`<br>flow `connections` | — |
 | `scripts/seed-e2e/transactions.ts` | `seed-transactions` | flow `transactions`<br>flow `categories` | — |
 | `tests/e2e/_shared/a11y.ts`, `tests/e2e/_shared/keyboard.ts` | `screen-checks` | flow `screens` | — |
-| `scripts/release.sh`, `scripts/release-dump.sh`, `scripts/numbers-*`, `scripts/snapshot-format.ts`, `scripts/on-homelab.sh`, `scripts/preview-on-test.sh`, `scripts/create-*`, `scripts/plugin-probe.ts`, `scripts/modularity.ts`, `scripts/duplication.ts`, `scripts/assertions-diff.ts`, `scripts/source-graph.ts`, `scripts/test-map.ts`, `scripts/test-select.ts`, `src/architecture.test.ts`, `src/tooling.test.ts`, `src/release-script.test.ts`, `src/test-map.test.ts`, `baselines/modularity.json`, `baselines/duplication.json`, `baselines/assertions-exceptions.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`, `.gitignore` | `tooling` | — | — |
+| `scripts/release.sh`, `scripts/release-dump.sh`, `scripts/numbers-*`, `scripts/snapshot-format.ts`, `scripts/on-homelab.sh`, `scripts/preview-on-test.sh`, `scripts/full-suite.sh`, `scripts/create-*`, `scripts/plugin-probe.ts`, `scripts/modularity.ts`, `scripts/duplication.ts`, `scripts/assertions-diff.ts`, `scripts/source-graph.ts`, `scripts/test-map.ts`, `scripts/test-select.ts`, `src/architecture.test.ts`, `src/tooling.test.ts`, `src/release-script.test.ts`, `src/test-map.test.ts`, `baselines/modularity.json`, `baselines/duplication.json`, `baselines/assertions-exceptions.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`, `.gitignore` | `tooling` | — | — |
 | `docs/**`, `*.md`, `LICENSE`, `.env.example`, `tests/shots/**`, `playwright.shots.config.ts` | `docs` | — | — |
 | `tests/e2e/accounts/**`, `scripts/seed-e2e/accounts.ts` | `spec-accounts` | flow `accounts` | — |
 | `tests/e2e/transactions/**` | `spec-transactions` | flow `transactions` | — |
@@ -217,6 +217,34 @@ Every screen at 1440 and 400 px. Funds is also measured at 768 and 375 px, on on
 kind: the home, a fund's page, the form. The rules about colour (`color-contrast`,
 `link-in-text-block`) run in both themes; the other rules of WCAG 2.1 A/AA run in the light theme,
 because a theme changes colours only.
+
+## The full suite (gate G10)
+
+```bash
+sh scripts/full-suite.sh      # about 12 minutes; exit 1 when a gate is red
+```
+
+It runs every gate, complete, on the commit of its checkout: G1 (format, lint, typecheck), G2 (`npm test`
+and `assertions-diff` on the refactor commits since the highest tag), G4 (the share of duplicated lines of `scripts/duplication.ts` is not above the one of
+`baselines/duplication.json`; the rules of
+modularity are in `npm test`), G3 and G5 (the integration tests in 4 shards, `baselines.itest.ts`
+included), G6 (every E2E spec, 4 workers) and G9 (`npm run perf`). The numbers snapshot of G5 reads
+production: it is not here. The summary, with the result, the time and the load of each gate, and the
+end of the output of a red gate, is printed and written to `test-results/full-suite/summary.md`.
+
+- **Never production, never `ledgerly_test`.** The integration tests run on `ledgerly_<1-4>_test`
+  with their lock. The preview and `npm run perf` then run on `ledgerly_1_test` under the same lock:
+  an integration run of a release waits for them, and the suite waits for one that is running. The
+  next integration run resets the database.
+- **Beside a release.** The preview is `ledgerly-full-suite` on `127.0.0.1:3998`, image
+  `ledgerly:full-suite`, S3 prefix `tests/full-suite/`: the release's `ledgerly-preview`, port 3999
+  and image `ledgerly:preview` stay untouched. The script removes its preview, its users and its
+  image at the end, also when it fails.
+- **Its own checkout.** The seed writes `tests/e2e/.state/` in the checkout: run the suite in a
+  checkout of its own, with `node_modules` (`npm ci`, or `cp -al` of a checkout with the same
+  lockfile), `LEDGERLY_ENV_FILE` for the environment file and `PLAYWRIGHT_BROWSERS_PATH` for the
+  browser (default `test-results/pw`).
+- **A red night blocks the next deploy** until it is corrected or explained (plan, G10).
 
 ## Performance (gate G9)
 
