@@ -362,7 +362,7 @@ describe("the reading of a real bank (anonymous fixture)", () => {
     expect(connection.lastOkAt).toEqual(NOW);
     expect(connection.nextSyncAt).not.toBeNull();
     expect(connection.schedule.rules).toHaveLength(1);
-    expect(await connectionSummary(ctx, connectionId)).toEqual({ accounts: 3, chosen: true });
+    expect(await connectionSummary(ctx, connectionId)).toMatchObject({ accounts: 3, chosen: true });
   });
 
   it("read a second time creates nothing: every movement is recognised by the bank's reference", async () => {
@@ -442,7 +442,7 @@ describe("the choice of the accounts", () => {
     }
     expect((await listAccounts(ctx)).every((account) => account.origin === "manual")).toBe(true);
     expect((await getAccount(other, theirs.id))?.origin).toBe("manual");
-    expect(await connectionSummary(ctx, connectionId)).toEqual({ accounts: 1, chosen: false });
+    expect(await connectionSummary(ctx, connectionId)).toMatchObject({ accounts: 1, chosen: false });
 
     await setPluginActive(other, { pluginId: PLUGIN, active: true }, NOW);
     expect(
@@ -685,7 +685,7 @@ describe("renewing and disconnecting", () => {
     expect(renewed.calls.find((call) => call.path === PLUGIN_PATHS.authRevoke)?.body).toMatchObject({
       session: { id: "session-1" },
     });
-    expect(await connectionSummary(ctx, target.connectionId)).toEqual({ accounts: 1, chosen: true });
+    expect(await connectionSummary(ctx, target.connectionId)).toMatchObject({ accounts: 1, chosen: true });
 
     renewed.gives(answer([movement({ accountExternalId: "u-new" })]));
     const again = await read(ctx, target, renewed, later(1));
@@ -723,7 +723,7 @@ describe("renewing and disconnecting", () => {
     const connectionId = await access(ctx, again);
     const back = { pluginId: PLUGIN, connectionId };
     expect(await tieBack(ctx, back, bankSink, NOW)).toBe(true);
-    expect(await connectionSummary(ctx, connectionId)).toEqual({ accounts: 2, chosen: true });
+    expect(await connectionSummary(ctx, connectionId)).toMatchObject({ accounts: 2, chosen: true });
     const exposed = await exposedAccounts(ctx, back, bankSink);
     expect(exposed.accounts.map((one) => [one.providerAccountId, one.linked?.id ?? null])).toEqual([
       ["hash-1", accountId],
@@ -758,7 +758,60 @@ describe("renewing and disconnecting", () => {
     expect(
       await tieBack(first.ctx, { pluginId: PLUGIN, connectionId: first.connectionId }, bankSink, NOW),
     ).toBe(false);
-    expect(await connectionSummary(first.ctx, first.connectionId)).toEqual({ accounts: 1, chosen: false });
+    expect(await connectionSummary(first.ctx, first.connectionId)).toMatchObject({
+      accounts: 1,
+      chosen: false,
+    });
+  });
+});
+
+describe("a bank disconnected and connected again (H55)", () => {
+  it("keeps the accounts left out and the deleted ones out, and ties the others back", async () => {
+    const SECOND: PluginAccount = { ...ACCOUNT, externalId: "u-2", stableId: "hash-2", identifier: null };
+    const THIRD: PluginAccount = { ...ACCOUNT, externalId: "u-3", stableId: "hash-3", identifier: null };
+    const plugin = fakePlugin({ accounts: [ACCOUNT, SECOND, THIRD] });
+    const { ctx, connectionId } = await connected(plugin);
+    const target = { pluginId: PLUGIN, connectionId };
+    await chooseAccounts(
+      ctx,
+      {
+        ...target,
+        decisions: [
+          asNew("hash-1", "A"),
+          asNew("hash-2", "B"),
+          { providerAccountId: "hash-3", target: { kind: "skip" } },
+        ],
+      },
+      bankSink,
+      NOW,
+    );
+    const b = (await listAccounts(ctx)).find((one) => one.name === "B")!;
+    await deleteAccount(ctx, b.id);
+    await disconnectBank(ctx, target, plugin.deps);
+
+    const again = fakePlugin({
+      accounts: [
+        { ...ACCOUNT, externalId: "u-11" },
+        { ...SECOND, externalId: "u-12" },
+        { ...THIRD, externalId: "u-13" },
+      ],
+      session: "session-2",
+    });
+    const back = { pluginId: PLUGIN, connectionId: await access(ctx, again) };
+    expect(await tieBack(ctx, back, bankSink, NOW)).toBe(true);
+    const exposed = await exposedAccounts(ctx, back, bankSink);
+    expect([...exposed.skipped].sort()).toEqual(["hash-2", "hash-3"]);
+    // Nothing left to ask: every account is tied back or stays out.
+    expect(
+      exposed.accounts.filter(
+        (one) => one.linked === null && !exposed.skipped.includes(one.providerAccountId),
+      ),
+    ).toEqual([]);
+    expect((await listAccounts(ctx, { includeArchived: true })).map((one) => one.name)).toEqual(["A"]);
+
+    // Chosen again, an account leaves the memory: the next time it is tied back like the others.
+    await chooseAccounts(ctx, { ...back, decisions: [asNew("hash-3", "C")] }, bankSink, later(1));
+    expect((await exposedAccounts(ctx, back, bankSink)).skipped).toEqual(["hash-2"]);
   });
 });
 

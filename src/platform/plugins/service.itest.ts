@@ -535,7 +535,7 @@ describe("an access to a bank", () => {
       nextSyncAt: null,
       schedule: { rules: [] },
     });
-    expect(await connectionSummary(ctx, connection.id)).toEqual({ accounts: 1, chosen: false });
+    expect(await connectionSummary(ctx, connection.id)).toMatchObject({ accounts: 1, chosen: false });
     expect(plugin.of(PLUGIN_PATHS.authComplete)[0].body).toMatchObject({ code: "code-1" });
     expect(plugin.of(PLUGIN_PATHS.sync)).toEqual([]);
     expect(await listRuns(ctx, { connectionId: connection.id })).toEqual([]);

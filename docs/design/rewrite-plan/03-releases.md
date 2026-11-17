@@ -315,6 +315,16 @@ eliminato non torna, con la sorgente collegata, scollegata o riattivata; 3) foto
 «Disattiva», per ogni sorgente; 4) disattiva → riattiva: nessun doppione di conti e di movimenti; 5) un errore nella
 conversione non cambia niente; 6) pagina del plugin a 400 e 1440 px, nei due temi.
 
+Note di realizzazione di N7.1:
+
+- Scelta [DEV] della specifica (riga N7.1 del rilascio): tabella delle impostazioni per `(utente, sorgente, istanza)` (`source_settings`), non
+  una riga di collegamento «scollegata»: le query dei collegamenti non cambiano. «Scollega» salva pianificazione e
+  profondità dello storico; il collegamento nuovo della stessa sorgente le riprende e cancella la riga.
+- Conti esclusi ed eliminati: `source_skipped_accounts`, per sorgente e non per collegamento. Wallet la legge al posto di
+  `sync_jobs.cursor.skipped`; per una banca la scelta dei conti la tiene allineata e il ritorno dalla banca la unisce
+  ai conti esclusi del collegamento. eToro e Binance: la pianificazione resta come per le altre sorgenti.
+- Il link «Vuoi smettere di usare {provider}? Disattivalo» del dialogo (specifica §4.2) arriva con N7.2, con la pagina.
+
 Effetti: **N1, N2** (in produzione): «Disattiva» e lo stato «In pausa» di un plugin disattivato cambiano con N7.3.
 **R5a**: il tab Plugin riusa la pagina di N7.2; «Categorie di {sorgente}» resta nella pagina del plugin. **R5c**: Wallet
 e Trek arrivano con pagina e «Disattiva» già pronti; resta la regola «attivi per chi ha già un collegamento».

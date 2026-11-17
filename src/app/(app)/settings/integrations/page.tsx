@@ -11,6 +11,7 @@ import {
   listConnections,
   readSyncJob,
   recentRuns,
+  sourceSkippedIds,
   SYNC_RUN_RETENTION_DAYS,
 } from "@/platform/integrations/service";
 import { credentialsStatus, listUserPlugins } from "@/platform/plugins/queries";
@@ -99,8 +100,18 @@ export default async function SettingsIntegrationsPage({
     ...OWN_DIALOGS,
     chooseAccountsHref: "own",
   });
+  // What "Disconnect" of Wallet leaves: its accounts here and the ones left out (H55, point 4).
+  const walletLeave = wallet.connected
+    ? {
+        accounts: (await listAccounts(ctx)).filter((account) => account.provider === WALLET_PROVIDER).length,
+        excluded: (await sourceSkippedIds(ctx, WALLET_PROVIDER)).size,
+      }
+    : { accounts: 0, excluded: 0 };
   const trek = await single(TREK_PROVIDER, t("providers.trek.name"), t("providers.trek.role"));
   const waiting = trek.connected ? await pendingCount(ctx) : 0;
+
+  /** What "Disconnect" of a bank leaves, by connection: filled by `pluginRows`. */
+  const leave: Record<string, { accounts: number; excluded: number }> = {};
 
   /** The rows of the connections of one plugin: one per bank, by name. */
   async function pluginRows(pluginId: string, active: boolean, keyRefused: boolean) {
@@ -124,6 +135,10 @@ export default async function SettingsIntegrationsPage({
                 disconnect: true,
               }
             : { update: false };
+          leave[connection.id] = {
+            accounts: summary.chosen ? Math.max(summary.accounts - summary.skipped, 0) : 0,
+            excluded: summary.skipped,
+          };
           return rows.row({
             connection,
             label: await labelOf(connection, ctx.locale),
@@ -189,7 +204,7 @@ export default async function SettingsIntegrationsPage({
   return (
     <SettingsGrid>
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
-        <WalletCard row={wallet.row} connected={wallet.connected} />
+        <WalletCard row={wallet.row} connected={wallet.connected} leave={walletLeave} />
         <div className="border-t border-border" />
         <TrekCard row={trek.row} connected={trek.connected} pending={waiting} />
         {userPlugins.map((plugin) => (
@@ -228,6 +243,7 @@ export default async function SettingsIntegrationsPage({
             returnAddress={returnAddress(bankPlugin.id)}
             banks={banks.rows}
             openReplace={banks.openReplace}
+            leave={leave}
           />
         </SettingsSection>
       )}

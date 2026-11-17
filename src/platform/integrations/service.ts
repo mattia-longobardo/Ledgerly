@@ -1,6 +1,5 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
-import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -23,6 +22,7 @@ import {
   pluginConnectionBagSchema,
   type ProviderLink,
   providerLinkSchema,
+  SYNC_KINDS,
   type SyncKind,
   syncErrorText,
 } from "./rules";
@@ -37,7 +37,14 @@ import {
 } from "./schedule";
 import { classifyFailure, failureStreak, isSyncErrorCode, ORPHAN_AFTER_MS } from "./status";
 import { users } from "@/platform/auth/schema";
-import { integrationConnections, providerLinks, syncJobs, syncRuns } from "./schema";
+import {
+  integrationConnections,
+  providerLinks,
+  sourceSettings,
+  sourceSkippedAccounts,
+  syncJobs,
+  syncRuns,
+} from "./schema";
 
 export type { ProviderLink, SyncKind } from "./rules";
 // Re-exported so a caller that wants to write a link inside its own transaction has the type to
@@ -170,31 +177,57 @@ export async function saveConnection(
   const parsed = credentialsSchema.safeParse(input.credentials);
   if (!parsed.success) throw new IntegrationError("invalid_credentials");
   const credentials = sealJson(keyRing(), parsed.data);
-  const [row] = await getDb()
-    .insert(integrationConnections)
-    // A new connection is due at once: the next tick of the dispatcher makes its first pass (D7).
-    .values(
-      userScoped(ctx).stamp({ provider, credentials, state: "active" as const, nextSyncAt: new Date() }),
-    )
-    .onConflictDoUpdate({
-      // A provider of the core has one connection: its instance key is always the empty one. The
-      // key on (user, provider) alone went with N2 (06-data.md §6.1).
-      target: [
-        integrationConnections.userId,
-        integrationConnections.provider,
-        integrationConnections.instanceKey,
-      ],
-      set: {
-        credentials,
-        state: "active" as const,
-        lastError: null,
-        errorCode: null,
-        consecutiveFailures: 0,
-        updatedAt: new Date(),
-      },
-    })
-    .returning(CONNECTION_COLUMNS);
-  return toConnection(row);
+  return getDb().transaction(async (tx) => {
+    // What "Disconnect" kept of the last connection of this source comes back with the new one.
+    const [kept] = await tx
+      .delete(sourceSettings)
+      .where(
+        and(
+          userScoped(ctx).owns(sourceSettings),
+          eq(sourceSettings.provider, provider),
+          eq(sourceSettings.instanceKey, ""),
+        ),
+      )
+      .returning({ schedule: sourceSettings.schedule, cursors: sourceSettings.cursors });
+    const [row] = await tx
+      .insert(integrationConnections)
+      // A new connection is due at once: the next tick of the dispatcher makes its first pass (D7).
+      .values(
+        userScoped(ctx).stamp({
+          provider,
+          credentials,
+          state: "active" as const,
+          nextSyncAt: new Date(),
+          ...(kept ? { schedule: parseSyncSchedule(kept.schedule) } : {}),
+        }),
+      )
+      .onConflictDoUpdate({
+        // A provider of the core has one connection: its instance key is always the empty one. The
+        // key on (user, provider) alone went with N2 (06-data.md §6.1).
+        target: [
+          integrationConnections.userId,
+          integrationConnections.provider,
+          integrationConnections.instanceKey,
+        ],
+        set: {
+          credentials,
+          state: "active" as const,
+          lastError: null,
+          errorCode: null,
+          consecutiveFailures: 0,
+          updatedAt: new Date(),
+        },
+      })
+      .returning(CONNECTION_COLUMNS);
+    for (const [kind, cursor] of Object.entries(kept?.cursors ?? {})) {
+      if (!(SYNC_KINDS as readonly string[]).includes(kind)) continue;
+      await tx
+        .insert(syncJobs)
+        .values(userScoped(ctx).stamp({ connectionId: row.id, kind: kind as SyncKind, cursor }))
+        .onConflictDoNothing();
+    }
+    return toConnection(row);
+  });
 }
 
 /**
@@ -418,19 +451,70 @@ export async function anyConnectionDue(now: Date = new Date()): Promise<boolean>
 }
 
 /**
+ * The keys of a cursor that are the person's settings rather than where a reading stands: they
+ * outlive "Disconnect" (H55, point 4). How deep the history goes (`BACKFILL_MONTHS` of
+ * `wallet/depth.ts`, a string here so the core imports no source) is the only one.
+ */
+const SETTING_KEYS: Partial<Record<SyncKind, readonly string[]>> = { transactions: ["backfillMonths"] };
+
+/**
  * Disconnects a provider: the credentials and the connection's own history (`sync_jobs`,
  * `sync_runs`, by cascade) go, and `provider_links` stays.
  *
  * Keeping the links is what makes reconnecting safe: the provider's ids still point at the rows
  * they created, so the next sync recognises them instead of importing everything a second time.
  * A link is removed by the module that owns its entity, through {@link unlinkEntities}.
+ *
+ * The settings stay too (H55, point 4): the schedule and the setting keys of the cursors of a
+ * provider of the core wait in `source_settings`, and {@link saveConnection} takes them back. The
+ * accounts left out are a memory of the core already (`source_skipped_accounts`).
  */
 export async function deleteConnection(ctx: Pick<Ctx, "userId">, connectionId: string): Promise<void> {
-  const deleted = await getDb()
-    .delete(integrationConnections)
-    .where(and(eq(integrationConnections.id, connectionId), userScoped(ctx).owns(integrationConnections)))
-    .returning({ id: integrationConnections.id });
-  if (deleted.length === 0) throw new IntegrationError("not_found");
+  await getDb().transaction(async (tx) => {
+    const owned = and(
+      eq(integrationConnections.id, connectionId),
+      userScoped(ctx).owns(integrationConnections),
+    );
+    const [connection] = await tx
+      .select({
+        provider: integrationConnections.provider,
+        instanceKey: integrationConnections.instanceKey,
+        schedule: integrationConnections.schedule,
+      })
+      .from(integrationConnections)
+      .where(owned)
+      .for("update");
+    if (!connection) throw new IntegrationError("not_found");
+    if (isKnownProvider(connection.provider)) {
+      const jobs = await tx
+        .select({ kind: syncJobs.kind, cursor: syncJobs.cursor })
+        .from(syncJobs)
+        .where(and(eq(syncJobs.connectionId, connectionId), userScoped(ctx).owns(syncJobs)))
+        .orderBy(asc(syncJobs.kind));
+      const cursors: Record<string, Record<string, string>> = {};
+      for (const job of jobs) {
+        const kept = Object.entries(job.cursor ?? {}).filter(([key]) =>
+          SETTING_KEYS[job.kind]?.includes(key),
+        );
+        if (kept.length > 0) cursors[job.kind] = Object.fromEntries(kept);
+      }
+      const settings = { schedule: connection.schedule, cursors };
+      await tx
+        .insert(sourceSettings)
+        .values(
+          userScoped(ctx).stamp({
+            provider: connection.provider,
+            instanceKey: connection.instanceKey,
+            ...settings,
+          }),
+        )
+        .onConflictDoUpdate({
+          target: [sourceSettings.userId, sourceSettings.provider, sourceSettings.instanceKey],
+          set: settings,
+        });
+    }
+    await tx.delete(integrationConnections).where(owned);
+  });
 }
 
 /**
@@ -842,66 +926,82 @@ export async function saveSyncJob(
   return row;
 }
 
-/* The accounts of a source the person did not choose (PERS-419) */
-
-/** The key of the `accounts` cursor that holds the source's ids of the accounts left out. */
-const SKIPPED_ACCOUNTS = "skipped";
+/* The accounts of a source the person did not choose (PERS-419, H55 point 5) */
 
 /**
- * The source's ids of the accounts a provider of the core with one connection does not bring here:
- * the accounts the person left out, or deleted. A reading neither creates nor updates them. Kept in
- * the cursor of the `accounts` kind, so a new key replaces nothing and the list goes with the
- * connection; empty when the person never left one out.
+ * The source's ids of the accounts a source does not bring here: the accounts the person left out,
+ * or deleted. A reading neither creates nor updates them. A memory of the core, per source and not
+ * per connection: it stays when the source is disconnected. Empty when the person never left one out.
  */
-export async function skippedAccounts(ctx: Pick<Ctx, "userId">, connectionId: string): Promise<Set<string>> {
-  const job = await readSyncJob(ctx, connectionId, "accounts");
-  const parsed = z.array(z.string()).safeParse(safeJson(job?.cursor?.[SKIPPED_ACCOUNTS]));
-  return new Set(parsed.success ? parsed.data : []);
+export async function sourceSkippedIds(ctx: Pick<Ctx, "userId">, provider: string): Promise<Set<string>> {
+  const rows = await getDb()
+    .select({ externalId: sourceSkippedAccounts.externalId })
+    .from(sourceSkippedAccounts)
+    .where(and(userScoped(ctx).owns(sourceSkippedAccounts), eq(sourceSkippedAccounts.provider, provider)))
+    .orderBy(asc(sourceSkippedAccounts.externalId));
+  return new Set(rows.map((row) => row.externalId));
 }
 
-function safeJson(text: string | undefined): unknown {
-  if (text === undefined) return [];
-  try {
-    return JSON.parse(text);
-  } catch {
-    return [];
+/** Adds accounts to the ones a source does not bring here, and takes others out of it. */
+export async function changeSourceSkippedIds(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  change: { add?: Iterable<string>; remove?: Iterable<string> },
+): Promise<void> {
+  const add = [...new Set(change.add ?? [])];
+  const remove = [...new Set(change.remove ?? [])].filter((id) => !add.includes(id));
+  if (remove.length > 0) {
+    await getDb()
+      .delete(sourceSkippedAccounts)
+      .where(
+        and(
+          userScoped(ctx).owns(sourceSkippedAccounts),
+          eq(sourceSkippedAccounts.provider, provider),
+          inArray(sourceSkippedAccounts.externalId, remove),
+        ),
+      );
+  }
+  if (add.length > 0) {
+    await getDb()
+      .insert(sourceSkippedAccounts)
+      .values(add.map((externalId) => userScoped(ctx).stamp({ provider, externalId })))
+      .onConflictDoNothing();
   }
 }
 
-/** Writes the accounts left out of a connection, keeping every other key of the cursor. */
+/** The accounts a connection's source does not bring here ({@link sourceSkippedIds}). */
+export async function skippedAccounts(ctx: Pick<Ctx, "userId">, connectionId: string): Promise<Set<string>> {
+  const connection = await requireConnection(ctx, connectionId);
+  return sourceSkippedIds(ctx, connection.provider);
+}
+
+/** Writes the accounts a connection's source does not bring here: exactly `ids`, no other. */
 export async function saveSkippedAccounts(
   ctx: Pick<Ctx, "userId">,
   connectionId: string,
   ids: Iterable<string>,
 ): Promise<void> {
-  const job = await readSyncJob(ctx, connectionId, "accounts");
-  const kept = Object.entries(job?.cursor ?? {}).filter(([key]) => key !== SKIPPED_ACCOUNTS);
-  const list = [...new Set(ids)].sort();
-  await saveSyncJob(ctx, connectionId, "accounts", {
-    cursor: {
-      ...Object.fromEntries(kept),
-      ...(list.length > 0 ? { [SKIPPED_ACCOUNTS]: JSON.stringify(list) } : {}),
-    },
+  const connection = await requireConnection(ctx, connectionId);
+  const wanted = new Set(ids);
+  const before = await sourceSkippedIds(ctx, connection.provider);
+  await changeSourceSkippedIds(ctx, connection.provider, {
+    add: wanted,
+    remove: [...before].filter((id) => !wanted.has(id)),
   });
 }
 
 /**
- * A deleted account leaves the accounts its source brings here, so the next reading does not make
- * it again. Only a provider of the core has such a list: an account of a plugin is no longer tied
- * once deleted, and a bank reads tied accounts only. Returns whether a list was written; false
- * when the provider has no connection of the person (nothing would bring the account back).
+ * A deleted account leaves the accounts its source brings here, so no later reading makes it
+ * again: with the source connected, disconnected or connected again (H55, point 5). Returns false
+ * for a source Ledgerly does not know.
  */
 export async function skipSourceAccount(
   ctx: Pick<Ctx, "userId">,
   provider: string,
   providerAccountId: string,
 ): Promise<boolean> {
-  if (!isKnownProvider(provider)) return false;
-  const connection = (await listConnections(ctx)).find((one) => one.provider === provider);
-  if (!connection) return false;
-  const skipped = await skippedAccounts(ctx, connection.id);
-  skipped.add(providerAccountId);
-  await saveSkippedAccounts(ctx, connection.id, skipped);
+  if (!isKnownProvider(provider) && !isPluginProvider(provider)) return false;
+  await changeSourceSkippedIds(ctx, provider, { add: [providerAccountId] });
   return true;
 }
 

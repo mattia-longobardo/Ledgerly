@@ -87,7 +87,11 @@ const ABSENT: ConnectionRowProps = {
 function renderCard(connected = true) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-      <WalletCard row={connected ? LIVE : ABSENT} connected={connected} />
+      <WalletCard
+        row={connected ? LIVE : ABSENT}
+        connected={connected}
+        leave={{ accounts: 2, excluded: 1 }}
+      />
     </NextIntlClientProvider>,
   );
 }
@@ -164,8 +168,11 @@ describe("WalletCard", () => {
     renderCard();
     await fromMenu(C.actions.disconnect);
 
-    const dialog = screen.getByRole("dialog", { name: T.disconnect.title });
-    expect(dialog).toHaveTextContent(T.disconnect.description);
+    // What stays and what stops (H55, point 4): the accounts, the ones left out, the settings.
+    const dialog = screen.getByRole("dialog", { name: `Disconnect ${NAME}?` });
+    expect(dialog).toHaveTextContent(`Access to ${NAME} is closed. The 2 accounts stay in Ledgerly`);
+    expect(dialog).toHaveTextContent("The account choice and the schedule stay");
+    expect(dialog).toHaveTextContent("1 excluded account stays excluded.");
     await userEvent.click(screen.getByRole("button", { name: T.disconnect.cancel }));
     expect(disconnect).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

@@ -18,12 +18,14 @@ import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
 import { pluginProvider } from "@/platform/integrations/rules";
 import {
+  changeSourceSkippedIds,
   clearErrorCode,
   type Connection,
   deleteConnection,
   IntegrationError,
   readCredentials,
   savePluginConnection,
+  sourceSkippedIds,
 } from "@/platform/integrations/service";
 import { callPlugin, type Fetch, PluginCallError } from "./client";
 import {
@@ -585,6 +587,11 @@ export async function completeAccess(
   const key = instanceKeyOf(access.institution);
   const previous = (await listPluginConnections(ctx, input.pluginId)).find((one) => one.instanceKey === key);
   const before = previous ? readBag(await readCredentials(ctx, previous.id)) : null;
+  // The accounts of this bank left out or deleted here before, also when it was disconnected.
+  const exposed = new Set(access.accounts.map(providerAccountIdOf));
+  const remembered = [...(await sourceSkippedIds(ctx, pluginProvider(input.pluginId)))].filter((id) =>
+    exposed.has(id),
+  );
   let connection: Connection;
   try {
     connection = await savePluginConnection(
@@ -594,7 +601,7 @@ export async function completeAccess(
         instanceKey: key,
         credentials: connectionBag(access.session.id, access.accounts, {
           chosen: before?.chosen ?? false,
-          skipped: before?.skipped ?? [],
+          skipped: [...new Set([...(before?.skipped ?? []), ...remembered])],
         }),
         expiresAt: access.session.expiresAt === null ? null : new Date(access.session.expiresAt),
       },
@@ -618,6 +625,8 @@ export interface ConnectionSummary {
   accounts: number;
   /** Whether the person has chosen what each account is here. */
   chosen: boolean;
+  /** The accounts the person left out. */
+  skipped: number;
 }
 
 export async function connectionSummary(
@@ -625,7 +634,7 @@ export async function connectionSummary(
   connectionId: string,
 ): Promise<ConnectionSummary> {
   const bag = readBag(await readCredentials(ctx, connectionId));
-  return { accounts: bag.accounts.length, chosen: bag.chosen };
+  return { accounts: bag.accounts.length, chosen: bag.chosen, skipped: bag.skipped.length };
 }
 
 /**
@@ -664,8 +673,10 @@ export async function disconnectBank(
   );
   if (!connection) throw new PluginActionError("not_found");
   const credentials = await readUserCredentials(ctx, input.pluginId);
-  const { sessionId } = readBag(await readCredentials(ctx, connection.id));
+  const { sessionId, skipped } = readBag(await readCredentials(ctx, connection.id));
   if (credentials !== null && sessionId !== "") await revokeQuietly(plugin, credentials, sessionId, deps);
+  // The accounts left out stay left out when the same bank is connected again (H55, point 4).
+  await changeSourceSkippedIds(ctx, connection.provider, { add: skipped });
   await deleteConnection(ctx, connection.id);
 }
 

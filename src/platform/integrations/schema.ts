@@ -155,6 +155,57 @@ export const syncJobs = pgTable(
   ],
 );
 
+/**
+ * The accounts of a source that do not come here: the ones the person left out, and the ones they
+ * deleted here (rewrite plan H55, point 5). A memory of the core, apart from any connection: it
+ * outlives "Disconnect", so connecting the same source again brings none of them back. The
+ * source's ids only, never a name.
+ */
+export const sourceSkippedAccounts = pgTable(
+  "source_skipped_accounts",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    externalId: text("external_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("source_skipped_accounts_uq").on(table.userId, table.provider, table.externalId),
+    check(
+      "source_skipped_accounts_external_id_ck",
+      sql`length(btrim(${table.externalId})) between 1 and 200`,
+    ),
+  ],
+);
+
+/**
+ * What a disconnected connection leaves for when the same source is connected again (H55, point
+ * 4): its schedule and the settings its cursors hold (how deep the history goes). Written by
+ * "Disconnect", taken back and removed by the next connection of the same source and instance.
+ */
+export const sourceSettings = pgTable(
+  "source_settings",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    instanceKey: text("instance_key").notNull().default(""),
+    schedule: jsonb("schedule").$type<SyncSchedule>().notNull(),
+    cursors: jsonb("cursors").$type<Record<string, Record<string, string>>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [unique("source_settings_uq").on(table.userId, table.provider, table.instanceKey)],
+);
+
 /** One row per sync attempt, for the history Settings › Integrations shows (spec §10.3). */
 export const syncRuns = pgTable(
   "sync_runs",

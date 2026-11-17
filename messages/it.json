@@ -248,10 +248,11 @@
       },
       "actions": {},
       "disconnect": {
-        "title": "Scollegare Wallet?",
-        "description": "Il token viene eliminato. Conti e movimenti sincronizzati restano, e non vengono più aggiornati.",
+        "title": "Scollegare {name}?",
+        "description": "L'accesso a {name} si chiude. {count, plural, =0 {} one {Il conto resta in Ledgerly come “Scollegato”, con saldi e movimenti, e non si aggiorna più. } other {I # conti restano in Ledgerly come “Scollegati”, con saldi e movimenti, e non si aggiornano più. }}La scelta dei conti e la pianificazione restano: se ricolleghi, ogni conto torna al suo posto.",
         "confirm": "Scollega",
-        "cancel": "Resta collegato"
+        "cancel": "Resta collegato",
+        "excluded": "{count, plural, one {# conto escluso resta escluso.} other {# conti esclusi restano esclusi.}}"
       },
       "kinds": {
         "accounts": "Conti e saldi",
@@ -298,7 +299,7 @@
         "connectDescription": "Un machine client (senza login nel browser) con gli scope vacay:read e vacay:write: Trek → Impostazioni → Integrazioni → MCP → Client OAuth 2.1 → Nuovo client.",
         "baseUrl": "Indirizzo di Trek",
         "baseUrlHint": "L'indirizzo del sito, senza /mcp: viene aggiunto da solo.",
-        "disconnectDescription": "Le giornate già prenotate restano qui. Le rimozioni ancora in sospeso vengono chiuse subito, perché dopo non ci sarebbe più nessuno a cui chiederle.",
+        "disconnectDescription": "Le giornate già prenotate restano qui. Le rimozioni ancora in sospeso vengono chiuse subito, perché dopo non ci sarebbe più nessuno a cui chiederle. La pianificazione resta: se ricolleghi, Trek si aggiorna come prima.",
         "clientId": "ID del client",
         "clientIdHint": "Quello del machine client creato su Trek.",
         "clientSecret": "Segreto del client",
@@ -1161,9 +1162,10 @@
       },
       "disconnect": {
         "title": "Scollegare {bank}?",
-        "description": "L'accesso alla banca viene chiuso. I conti restano in Ledgerly come «Scollegati», con saldi e movimenti, e non si aggiornano più. Se ricolleghi la stessa banca, ogni conto torna da solo al suo posto.",
+        "description": "L'accesso a {bank} si chiude. {count, plural, =0 {} one {Il conto resta in Ledgerly come “Scollegato”, con saldi e movimenti, e non si aggiorna più. } other {I # conti restano in Ledgerly come “Scollegati”, con saldi e movimenti, e non si aggiornano più. }}La scelta dei conti resta: se ricolleghi la stessa banca, ogni conto torna da solo al suo posto.",
         "cancel": "Resta collegata",
-        "confirm": "Scollega"
+        "confirm": "Scollega",
+        "excluded": "{count, plural, one {# conto escluso resta escluso.} other {# conti esclusi restano esclusi.}}"
       },
       "toasts": {
         "saved": "Credenziali salvate",

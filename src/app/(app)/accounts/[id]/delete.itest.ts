@@ -17,14 +17,17 @@ import type { Ctx } from "@/platform/context";
 import { addDays } from "@/platform/dates";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
 import {
+  deleteConnection,
   readSyncJob,
   resolveExternal,
   saveConnection,
+  saveSchedule,
   skippedAccounts,
 } from "@/platform/integrations/service";
 import type { WalletClientOptions } from "@/platform/integrations/wallet/client";
 import {
   chooseWalletAccounts,
+  requestWalletBackfill,
   syncWalletNow,
   walletAccountChoices,
 } from "@/platform/integrations/wallet/sync";
@@ -313,6 +316,35 @@ describe("an account of Wallet", () => {
     expect(after!.id).not.toBe(before!.id);
     const back = await listTransactions(ctx, { accountIds: [after!.id], includeHidden: true });
     expect(back.map((one) => one.amountCents)).toEqual(movements.map((one) => one.amountCents));
+  });
+
+  it("disconnected and connected again: the accounts left out or deleted stay out, the schedule stays (H55)", async () => {
+    const options = { now: NOW, clientOptions: walletStub() };
+    const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
+    await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { clientOptions: walletStub() });
+    const schedule = {
+      rules: [{ kind: "times" as const, times: ["06:30"], days: { kind: "every" as const } }],
+    };
+    await saveSchedule(ctx, connection.id, schedule, NOW);
+    await syncWalletNow(ctx, connection.id, options);
+    await requestWalletBackfill(ctx, connection.id, 24);
+    const general = (await listAccounts(ctx)).find((one) => one.providerAccountId === "wa-general")!;
+
+    await deleteConnection(ctx, connection.id);
+    // Deleted while Wallet is disconnected: remembered all the same.
+    await deleteAccount(ctx, general.id);
+
+    const again = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t2" } });
+    expect(again.schedule).toEqual(schedule);
+    expect(await skippedAccounts(ctx, again.id)).toEqual(new Set(["wa-cash", "wa-general"]));
+    expect((await readSyncJob(ctx, again.id, "transactions"))?.cursor?.backfillMonths).toBe("24");
+    await syncWalletNow(ctx, again.id, { ...options, now: new Date(NOW.getTime() + 3_600_000) });
+    expect(await listAccounts(ctx, { includeArchived: true })).toEqual([]);
+    const choices = await walletAccountChoices(ctx, again.id, { clientOptions: walletStub() });
+    expect(choices.map((one) => [one.externalId, one.chosen])).toEqual([
+      ["wa-cash", false],
+      ["wa-general", false],
+    ]);
   });
 
   it("left out before the first reading, is never added; the others are", async () => {
