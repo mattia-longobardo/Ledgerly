@@ -4,9 +4,9 @@ Specifica di prodotto e di interfaccia. Richiesta di Mattia del 17/11/2026 (tre 
 Indice del piano: [`rewrite-plan.md`](rewrite-plan.md). Specifiche collegate: [`ux/n3-categories-manual.md`](rewrite-plan/ux/n3-categories-manual.md)
 (N3, N3.1), [`ux/n4-account-switch.md`](rewrite-plan/ux/n4-account-switch.md) §9.3 (giroconti), [`12-account-modes.md`](rewrite-plan/12-account-modes.md).
 
-Il piano ha priorità. Dove questa specifica lo cambia, il punto è una **decisione proposta** (`CR1`-`CR9`, §0.3), con
-il segno **[PROPOSTA]** finché Mattia non la conferma. Le scelte di prodotto aperte sono in §11 (`QC1`-`QC2`, `QC4`-`QC8`): il
-documento è scritto con l'opzione A (default) di ognuna. Le stime con **[DEV]** le conferma lo sviluppatore.
+Il piano ha priorità. Dove questa specifica lo cambia, il punto è una decisione (`CR1`-`CR9`, §0.3). **Confermate da
+Mattia il 18/11/2026** («ok i default»): le decisioni CR1-CR9, l'eccezione sui numeri (§3.7) e l'opzione A delle
+domande QC1-QC2 e QC4-QC8 (§11). Nessuna domanda è aperta. Le stime con **[DEV]** le conferma lo sviluppatore.
 
 Revisione del 18/11/2026: i dati veri di Mattia sono cancellati; in produzione ci sono solo dati artificiali (PERS-424).
 Senza storico vero, «Allinea» e la domanda QC3 non servono più: al rilascio di N3.3 una migrazione ricalcola il tipo
@@ -42,7 +42,7 @@ La struttura a tre livelli esiste quasi tutta. Manca il modo di vederla e la reg
 Conseguenza: «macro» = tipo della categoria. Il lavoro vero è (a) una vista che mostra macro → gruppo → categoria,
 (b) la regola «la macro della categoria decide come conta il movimento» (§3), (c) le regole dell'utente (§4).
 
-### 0.3 Decisioni proposte [PROPOSTA]
+### 0.3 Decisioni (confermate il 18/11/2026)
 
 | # | Decisione | Cambia |
 |---|---|---|
@@ -145,7 +145,7 @@ solo quando il movimento arriva dalla banca. Un giroconto tra un conto collegato
 ricarica di una carta prepagata, versamento sul conto deposito di un'altra banca) arriva come `expense` e conta in
 uscite e budget.
 
-### 3.2 Regola nuova (CR3) [PROPOSTA]
+### 3.2 Regola nuova (CR3)
 
 Il tipo del movimento si calcola così, in quest'ordine:
 
@@ -231,7 +231,7 @@ regola elenca a parte i movimenti collegati a un abbonamento, a un pocket o a un
   `type`) e `groupId`. Facoltativa: si può rimandare a R2.
 - G5 «stessi numeri»: la parità Overview = conti = API = MCP resta vera, perché tutte leggono lo stesso `type`.
 
-### 3.7 Eccezione dichiarata (da approvare)
+### 3.7 Eccezione dichiarata (approvata il 18/11/2026)
 
 - **Rilascio di N3.3:** la fotografia «dopo» può essere diversa dalla fotografia «prima» per le sole righe di §3.5 e
   per i soli movimenti contati prima del rilascio (§3.4). In produzione sono dati artificiali: nessun numero vero di
@@ -674,7 +674,7 @@ Chiavi nuove in `messages/{it,en}.json`. ICU per i plurali.
 | `openRule` | Apri la regola | Open rule |
 | `error` | Non è stato possibile salvare la regola. Riprova. | The rule could not be saved. Try again. |
 
-## 10. Proposta di rilasci [PROPOSTA]
+## 10. Rilasci
 
 Tre rilasci in fase A, dopo le correzioni di N4 aperte e prima della chiusura della fase. Ordine obbligato: la pagina
 non cambia numeri; la macro serve alle regole (azione «Trasferimenti»). Ognuno ha le regole comuni di `03-releases.md` §3.1.
@@ -702,11 +702,11 @@ non cambia numeri; la macro serve alle regole (azione «Trasferimenti»). Ognuno
 - **R5c** (Wallet plugin): la sezione «Categorie di Wallet» va nella pagina del plugin; il selettore di §2.4 resta.
 - **R5g**: nessun effetto.
 
-## 11. Domande per Mattia
+## 11. Decisioni prese (Mattia, 18/11/2026)
 
-Il documento è scritto con l'opzione A di ognuna. QC3 (allineamento dello storico) è chiusa: senza dati veri non serve (§3.4).
+Mattia ha scelto l'opzione A di ogni domanda («ok i default»). QC3 (allineamento dello storico) è chiusa senza scelta: senza dati veri non serve (§3.4). La colonna «B» resta come motivo dell'opzione scartata.
 
-| # | Domanda | Esempio | A (default) | B | Effetto |
+| # | Domanda | Esempio | A (scelta) | B (scartata) | Effetto |
 |---|---|---|---|---|---|
 | QC1 | Trasferimenti ha categorie? | Sposti 300 € dal conto corrente al conto deposito di un'altra banca, e 50 € sulla carta prepagata | Sì, categorie senza gruppi: «Risparmio», «Carta prepagata», più la riga fissa «Tra i tuoi conti». Vedi quanto è andato dove | Nessuna categoria: Trasferimenti è un solo insieme; un movimento si segna «giroconto» senza scegliere dove | A: più dettaglio, una scelta in più per movimento. B: più semplice; serve un pulsante «È un giroconto» e la regola ha l'azione «Solo giroconto» e basta |
 | QC2 | Tra Entrate e Uscite decide il segno o la categoria? | Ricevi 40 € di rimborso da Amazon per un acquisto in «Shopping» | Il segno: il rimborso è un'entrata (esempio: Entrate › Rimborsi). Un accredito non può avere una categoria di Uscite | La categoria: il rimborso va in «Shopping» e abbassa le uscite di Shopping e il suo budget | A: numeri semplici, ma lo speso di Shopping resta 40 € più alto. B: budget più veri; cambia anche il tipo dei movimenti di Wallet e altre righe della fotografia (lista più lunga in §3.5) |
