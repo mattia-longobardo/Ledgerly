@@ -25,6 +25,8 @@ import { freeBankAccounts, switchable } from "./switch";
 
 export const metadata: Metadata = { title: "Switch account" };
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function one(value: string | string[] | undefined): string | null {
   return typeof value === "string" && value !== "" ? value : null;
 }
@@ -41,7 +43,8 @@ export default async function SwitchAccountPage({
   const ctx = await requireSession();
   const { id } = await params;
   const query = await searchParams;
-  const account = await getAccount(ctx, id);
+  // An id that is not one is an account that does not exist.
+  const account = UUID.test(id) ? await getAccount(ctx, id) : null;
   if (!account) notFound();
   const plugin = await findInstancePlugin(BANK_PLUGIN_ID);
   if (!plugin || !(await isPluginActive(ctx, BANK_PLUGIN_ID))) notFound();

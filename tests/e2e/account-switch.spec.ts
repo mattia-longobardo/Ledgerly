@@ -12,6 +12,7 @@ test("an account of a source offers the move to the bank, and the step Account s
 }) => {
   await page.goto("/accounts");
   await page.getByRole("link", { name: "Conto da passare" }).first().click();
+  await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
   const account = new URL(page.url()).pathname;
   await page.goto(`${account}?tab=settings`);
   const move = page.getByRole("link", { name: "Move to the bank" });
@@ -19,7 +20,9 @@ test("an account of a source offers the move to the bank, and the step Account s
   await hydrated(move);
   await move.click();
   await expect(page).toHaveURL(`${account}/switch`);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Conto da passare");
+  await expect(
+    page.getByRole("group", { name: "Which account of the bank is “Conto da passare”?" }),
+  ).toBeVisible();
   const choice = page.getByRole("radio", { name: /Conto corrente · IT60 •+ ?3456 · EUR/ });
   await expect(choice).toBeChecked();
   await expect(page.getByText("Same IBAN")).toBeVisible();
@@ -33,6 +36,7 @@ test("an account of a source offers the move to the bank, and the step Account s
 test("another person does not reach the page of the switch", async ({ page, browser }) => {
   await page.goto("/accounts");
   await page.getByRole("link", { name: "Conto da passare" }).first().click();
+  await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
   const path = `${new URL(page.url()).pathname}/switch`;
   const context = await browser.newContext({ storageState: sessionState("pockets") });
   const other = await context.newPage();

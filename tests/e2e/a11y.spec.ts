@@ -531,6 +531,7 @@ const PAGES: Screen[] = [
     open: async (page) => {
       await page.goto("/accounts");
       await page.getByRole("link", { name: "Conto da passare" }).first().click();
+      await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
       await page.goto(`${new URL(page.url()).pathname}?tab=settings`);
       await settled(page);
     },
@@ -541,6 +542,7 @@ const PAGES: Screen[] = [
     open: async (page) => {
       await page.goto("/accounts");
       await page.getByRole("link", { name: "Conto da passare" }).first().click();
+      await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
       await page.goto(`${new URL(page.url()).pathname}/switch`);
       await settled(page);
     },
