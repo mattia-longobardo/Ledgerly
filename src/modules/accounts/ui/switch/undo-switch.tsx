@@ -17,6 +17,7 @@ export function UndoSwitch({
   since,
   transfers,
   publishes,
+  joined = null,
   available,
   undo,
 }: {
@@ -27,6 +28,8 @@ export function UndoSwitch({
   since: string;
   transfers: number;
   publishes: boolean;
+  /** The bank's account that the switch joined to this one, which takes its bank back. */
+  joined?: string | null;
   /** False when the source of before is no longer connected (§10.4). */
   available: boolean;
   undo(): Promise<{ ok: boolean }>;
@@ -84,6 +87,7 @@ export function UndoSwitch({
             <li>{t("back.rows", { source })}</li>
             {transfers > 0 && <li>{t("back.transfers", { count: transfers })}</li>}
             {publishes && <li>{t("back.interests", { source })}</li>}
+            {joined !== null && <li>{t("back.joined", { account: joined })}</li>}
           </ul>
           <p className="font-medium">{t("knowTitle")}</p>
           <ul className="list-disc pl-5">

@@ -336,16 +336,32 @@ la pagina si ricarica senza perdere il punto.
 | Tema | Regola |
 |---|---|
 | Controllo | Gruppo di radio (`<fieldset>` con `<legend>` = titolo). Una `<fieldset>` interna per banca, in ordine alfabetico |
-| Conti elencati | Conti che la banca condivide, non ancora importati, con la stessa valuta di «{account}» |
+| Conti elencati | Conti che la banca condivide, con la stessa valuta di «{account}»: quelli non ancora importati e quelli già importati come conto a sé (§4.1, H54) |
 | Testo della riga | Nome dato dalla banca · IBAN mascherato (N1 §6.4) · valuta |
 | Default | Nessuna selezione. Se c'è un solo conto, è già scelto |
 | Pulsante | `primary` «Avvia la prova», disattivato senza selezione, con il testo «Scegli un conto.» sotto |
-| Conto della banca già in Ledgerly | In elenco, `aria-disabled`, con il testo di §2.4.2, caso 7 (decisione Q1) |
+| Conto della banca già in Ledgerly | Selezionabile, con il `Badge` `neutral` «Già in Ledgerly: «{nome}»» (§4.1, H54). Non in elenco: un conto che un passaggio ha già portato alla banca, un conto archiviato |
 | IBAN | Regole di §2.4.3: «Stesso IBAN» già scelto; «IBAN diverso.» non selezionabile |
 | Banca con accesso scaduto o «Serve un'azione» | Titolo della banca + «L'accesso a {bank} è scaduto.» + `LinkButton` «Rinnova accesso». I suoi conti non sono selezionabili |
 | Banca «In pausa» (fornitore non attivo) | Non raggiungibile: la pagina è 404 (§2.3) |
 
 Stati vuoti del passo (§11): nessuna banca collegata; nessun conto libero nella valuta del conto.
+
+### 4.1 Conto della banca già in Ledgerly (H54, 17/11/2026)
+
+Il caso: prima di H39 la procedura della banca (N1-N2) ha importato il conto della banca come conto a sé, e lo stesso
+conto vero è due volte in Ledgerly: «{account}» (sorgente di prima, con lo storico) e «{nome}» (banca). Il passaggio
+unisce i due conti.
+
+| Tema | Regola |
+|---|---|
+| Prova a secco | Come §6, più la scheda «Unione» sopra «Movimenti»: ««{nome}» è già in Ledgerly: il passaggio unisce i due conti», quanti movimenti ha, quanti sono trovati in «{account}» |
+| Abbinamento | Ogni movimento di «{nome}» cerca un movimento di «{account}» con lo stesso importo, entro 5 giorni, poi per testo e data. «{account}» può avere più movimenti di un importo; con più movimenti in «{nome}», nessuno di quell'importo è abbinato |
+| Blocco | Nessun «Applica» se un movimento di «{nome}» non trova la coppia (sezione «Solo in «{nome}»», aperta) o se «{nome}» ha movimenti scritti a mano. Anche il saldo deve essere uguale (§7) |
+| Categorie e note | La categoria scelta dalla persona e la nota scritta dalla persona su un movimento di «{nome}» passano al movimento abbinato che non ne ha una della persona. Il rapporto dice quante |
+| «Applica» | «{account}» arriva dalla banca. «{nome}» diventa un conto tenuto a mano e archiviato: esce dal patrimonio e dalle liste. I suoi movimenti restano, non contano più e danno il link della banca al movimento abbinato. Nessuna riga cancellata |
+| «Annulla passaggio» | Oltre a §10.3: i link tornano ai movimenti di «{nome}», che contano di nuovo; categorie e note tornano come erano, se la persona non le ha cambiate dopo; «{nome}» torna un conto della banca, attivo |
+| Numeri | Eccezione X2 di `03-releases.md` «N4»: il patrimonio scende del saldo di «{nome}», entrate e uscite perdono i suoi movimenti doppi |
 
 ## 5. Movimenti a mano non inviati (H38)
 
@@ -780,7 +796,7 @@ Non sta nel menu della riga del collegamento: il passaggio è di un conto, non d
 | Movimenti entrati dalla banca dopo il passaggio | Non contano più in saldo, entrate, uscite e budget; nessuna riga cancellata (decisione Q3) |
 | Giroconti riconosciuti dal passaggio | Tornano un'entrata e un'uscita |
 | Regola di interessi | Torna al modo di prima |
-| Riga della banca | Un conto in meno nel dettaglio. Il conto della banca torna «non importato» e si può scegliere di nuovo |
+| Riga della banca | Un conto in meno nel dettaglio. Il conto della banca torna «non importato» e si può scegliere di nuovo. Con un'unione (§4.1) torna il conto già importato, attivo, con i suoi movimenti |
 | Riga di {source} | Riprende il conto dall'aggiornamento seguente. L'annullamento avvia subito un aggiornamento |
 | Numeri | Uguali a prima del passaggio (criterio 5), a parte i movimenti che {source} ha letto nel frattempo |
 | Blocco in «Origine dei dati» | Torna quello di §2.2 |

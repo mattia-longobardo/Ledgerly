@@ -283,6 +283,14 @@ export const accountSwitches = pgTable(
     ibanTaken: boolean("iban_taken").notNull().default(false),
     interestModes: jsonb("interest_modes").$type<{ ruleId: string; mode: string }[]>().notNull().default([]),
     counts: jsonb("counts").$type<Record<string, number>>().notNull().default({}),
+    /**
+     * The account of the bank that was already here and that the switch joined to this one (H39 as
+     * changed for already imported accounts): it is archived, kept by hand, and "Undo switch" gives
+     * it back its bank. `null` for a switch to an account of the bank that was not here.
+     */
+    mergedAccountId: uuid("merged_account_id").references(() => accounts.id, { onDelete: "set null" }),
+    /** The state the joined account had before (`active` or `unavailable`), for "Undo switch". */
+    mergedState: text("merged_state"),
     appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
     undoneAt: timestamp("undone_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

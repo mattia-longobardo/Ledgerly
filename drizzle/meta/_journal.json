@@ -407,6 +407,13 @@
       "when": 1794908022918,
       "tag": "0057_account_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1794913316148,
+      "tag": "0058_account_merge",
+      "breakpoints": true
     }
   ]
 }

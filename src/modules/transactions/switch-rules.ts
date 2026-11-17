@@ -174,6 +174,59 @@ export function comparisonFrom(cutDate: CivilDate): CivilDate {
   return addDays(cutDate, -SWITCH_OVERLAP_DAYS);
 }
 
+/** A movement of the account of the bank already here, and the movement of the switched account it doubles. */
+export interface DoubleMatch {
+  doubleId: string;
+  keptId: string;
+}
+
+export interface DoubleComparison {
+  matched: DoubleMatch[];
+  /** Movements of the account already here that the switched account has not got: no "Apply". */
+  unmatched: string[];
+}
+
+/**
+ * Ties every movement of the bank's account already here (`doubles`) to the movement of the switched
+ * account that it repeats (`kept`), for a switch that joins the two accounts (H39 for already imported
+ * accounts). The switched account has a longer history, so it may have more movements of an amount:
+ * a group is tied when it has at least as many movements kept as doubles, each double taking the free
+ * movement kept in the window with the best text, then the nearest day. A group with more doubles, or
+ * with a double that finds none, is not tied at all: its doubles are `unmatched`.
+ */
+export function matchDoubles(
+  doubles: readonly SwitchMovement[],
+  kept: readonly SwitchMovement[],
+  maxDays = SWITCH_MATCH_MAX_DAYS,
+): DoubleComparison {
+  const groups = new Map<string, { doubles: SwitchMovement[]; kept: SwitchMovement[] }>();
+  const groupOf = (amount: Cents) => {
+    const key = amount.toString();
+    let group = groups.get(key);
+    if (!group) groups.set(key, (group = { doubles: [], kept: [] }));
+    return group;
+  };
+  for (const one of doubles) groupOf(one.amountCents).doubles.push(one);
+  for (const one of kept) groupOf(one.amountCents).kept.push(one);
+
+  const outcome: DoubleComparison = { matched: [], unmatched: [] };
+  for (const group of groups.values()) {
+    if (group.doubles.length === 0) continue;
+    group.doubles.sort(byDayThenId);
+    group.kept.sort(byDayThenId);
+    const pairs =
+      group.doubles.length <= group.kept.length ? tieGroup(group.doubles, group.kept, maxDays) : null;
+    if (pairs === null) {
+      outcome.unmatched.push(...group.doubles.map((one) => one.id));
+      continue;
+    }
+    outcome.matched.push(...pairs.map((pair) => ({ doubleId: pair.localId, keptId: pair.bankId })));
+  }
+  outcome.matched.sort((a, b) => (a.doubleId < b.doubleId ? -1 : a.doubleId > b.doubleId ? 1 : 0));
+  outcome.unmatched.sort();
+  return outcome;
+}
+
 /* Transfers between the accounts of one bank, on the whole history (decision H40) */
 
 /** A movement as the transfer rule reads it. */
@@ -300,4 +353,34 @@ export function planTransfers(
 
 function byDayThenIdOf(a: TransferCandidate, b: TransferCandidate): number {
   return a.day < b.day ? -1 : a.day > b.day ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
+
+/** What a movement holds of the person's choices, as a join reads it. */
+export interface MovementChoices {
+  categoryId: string | null;
+  categoryOrigin: string | null;
+  note: string | null;
+  locallyEdited: readonly string[];
+}
+
+/**
+ * What a double gives the movement it repeats when a switch joins the two accounts: the category the
+ * person chose on it, when the movement kept has none chosen by the person; the note the person wrote
+ * on it, when the movement kept has no note. A category of the source or of the automatic cascade is
+ * not the person's choice, so the person's choice on the double wins over it.
+ */
+export function takesFromDouble(
+  double: MovementChoices,
+  kept: MovementChoices,
+): { category: boolean; note: boolean } {
+  const category =
+    double.categoryOrigin === "user" &&
+    double.categoryId !== null &&
+    kept.categoryOrigin !== "user" &&
+    kept.categoryId !== double.categoryId;
+  const note =
+    double.locallyEdited.includes("note") &&
+    (double.note ?? "").trim() !== "" &&
+    (kept.note ?? "").trim() === "";
+  return { category, note };
 }

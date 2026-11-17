@@ -2196,7 +2196,7 @@
       },
       "account": {
         "question": "Quale conto della banca è «{account}»?",
-        "explain": "Ledgerly mostra i conti delle tue banche che non sono ancora in Ledgerly, in {currency}.",
+        "explain": "Ledgerly mostra i conti delle tue banche in {currency}: quelli non ancora in Ledgerly e quelli che la banca ha già portato come conto a parte, che il passaggio unisce a questo.",
         "unnamed": "Conto senza nome",
         "sameIban": "Stesso IBAN",
         "otherIban": "IBAN diverso.",
@@ -2207,7 +2207,8 @@
         "connect": "Collega una banca",
         "noFree": "Nessun conto da scegliere",
         "noFreeText": "Le tue banche non condividono un conto in {currency} che non sia già in Ledgerly. Se il conto manca, rinnova l'accesso alla banca e condividilo.",
-        "integrations": "Vai alle integrazioni"
+        "integrations": "Vai alle integrazioni",
+        "alreadyHere": "Già in Ledgerly: «{account}»"
       },
       "check": {
         "waiting": "Prova in corso…",
@@ -2258,6 +2259,16 @@
         "out": "{amount} in uscita",
         "in": "{amount} in entrata"
       },
+      "join": {
+        "title": "«{account}» è già in Ledgerly: il passaggio unisce i due conti",
+        "blocked": "«{account}» è già in Ledgerly: l'unione non si può applicare",
+        "lead": "La banca ha già portato questo conto come «{account}», con {count, plural, one {# movimento} other {# movimenti}}. Il passaggio unisce i due conti: ogni movimento di «{account}» deve esserci anche qui.",
+        "matched": "{count, plural, one {# movimento trovato} other {# movimenti trovati}} anche qui, su {total}.",
+        "manual": "«{account}» ha {count, plural, one {# movimento scritto} other {# movimenti scritti}} a mano: l'unione non li prende. Spostali su questo conto o toglili, poi rifai la prova.",
+        "unmatched": "Solo in «{account}»",
+        "unmatchedNote": "Questi movimenti non sono su {source} per questo conto: con loro l'unione non si può applicare. Aggiungili su {source} o controlla che siano doppi, poi rifai la prova.",
+        "carry": "{categories, plural, one {# categoria scelta} other {# categorie scelte}} da te e {notes, plural, one {# nota} other {# note}} su «{account}» passano ai movimenti di qui che non ne hanno una tua."
+      },
       "more": "Mostra altri {count}",
       "shown": "{shown} di {total}",
       "transfers": {
@@ -2280,7 +2291,8 @@
         "sourceStops": "{source} non aggiorna più questo conto. Gli altri conti restano.",
         "manual": "Scrivi i movimenti a mano con l'avviso dei conti di una banca.",
         "interests": "Le liquidazioni degli interessi non si pubblicano più su {source}.",
-        "undo": "Puoi tornare indietro con «Annulla passaggio»."
+        "undo": "Puoi tornare indietro con «Annulla passaggio».",
+        "joined": "«{account}» diventa un conto tenuto a mano e archiviato: esce dal patrimonio e i suoi {count, plural, one {# movimento non conta} other {# movimenti non contano}} più, perché sono gli stessi di qui. Nessuna riga viene cancellata."
       },
       "actions": {
         "cancel": "Annulla",
@@ -2318,7 +2330,8 @@
         "sourceStops": "{source} non aggiorna più questo conto. Ledgerly legge la banca 3 volte al giorno.",
         "howToUndo": "Per tornare indietro: Impostazioni del conto › «Annulla passaggio».",
         "theBank": "la banca",
-        "goToAccount": "Vai al conto"
+        "goToAccount": "Vai al conto",
+        "joined": "{count, plural, one {# movimento del conto già in Ledgerly unito} other {# movimenti del conto già in Ledgerly uniti}} a questo. Quel conto ora è archiviato."
       },
       "undo": {
         "action": "Annulla passaggio",
@@ -2329,7 +2342,8 @@
           "source": "Saldo e movimenti arrivano di nuovo da {source}.",
           "rows": "I movimenti collegati alla banca tornano movimenti di {source}. Nessuno viene tolto.",
           "transfers": "{count, plural, one {# giroconto torna} other {# giroconti tornano}} un'entrata e un'uscita.",
-          "interests": "Le liquidazioni degli interessi tornano a pubblicarsi su {source}. Quelle chiuse nel frattempo non si pubblicano da sole."
+          "interests": "Le liquidazioni degli interessi tornano a pubblicarsi su {source}. Quelle chiuse nel frattempo non si pubblicano da sole.",
+          "joined": "«{account}» torna un conto della banca, con i suoi movimenti."
         },
         "knowTitle": "Cosa sapere",
         "know": {

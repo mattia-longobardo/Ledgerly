@@ -76,6 +76,12 @@ export interface SwitchRecord {
   identifier: string | null;
   interestModes: { ruleId: string; mode: string }[];
   counts: Record<string, number>;
+  /**
+   * The account of the bank already here that the switch joins (H39 for already imported accounts):
+   * it gives its bank to the account and stays as an account kept by hand, archived. `null` when the
+   * account of the bank is not here.
+   */
+  mergedAccountId: string | null;
 }
 
 /**
@@ -92,6 +98,7 @@ export async function recordSwitch(tx: Tx, ctx: Who, input: SwitchRecord, now: D
   if (!account || account.provider === null || account.providerAccountId === null) {
     throw new Error("the account has no source to switch from");
   }
+  const merged = input.mergedAccountId === null ? null : await releaseJoined(tx, ctx, input, now);
   const iban = normalizeIban(input.identifier);
   const ibanTaken = account.iban === null && iban !== null && hasIbanField(account.type);
   await tx
@@ -118,11 +125,52 @@ export async function recordSwitch(tx: Tx, ctx: Who, input: SwitchRecord, now: D
         ibanTaken,
         interestModes: input.interestModes,
         counts: input.counts,
+        mergedAccountId: merged?.id ?? null,
+        mergedState: merged?.state ?? null,
         appliedAt: now,
       }),
     )
     .returning({ id: accountSwitches.id });
   return row.id;
+}
+
+/**
+ * The account of the bank already here gives its bank away before the switched account takes it (a
+ * bank's id belongs to one account: `accounts_provider_uq`): it becomes an account kept by hand and is
+ * archived, so it leaves the lists and the net worth and keeps every row. Returns what it was.
+ */
+async function releaseJoined(
+  tx: Tx,
+  ctx: Who,
+  input: SwitchRecord,
+  now: Date,
+): Promise<{ id: string; state: string }> {
+  const [joined] = await tx
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.id, input.mergedAccountId as string), userScoped(ctx).owns(accounts)))
+    .for("update");
+  if (
+    !joined ||
+    joined.id === input.accountId ||
+    joined.state === "archived" ||
+    joined.provider !== input.toProvider ||
+    joined.providerAccountId !== input.toProviderAccountId
+  ) {
+    throw new Error("the account to join is not the bank's account");
+  }
+  await tx
+    .update(accounts)
+    .set({
+      origin: "manual",
+      provider: null,
+      providerAccountId: null,
+      state: "archived",
+      archivedAt: now,
+      updatedAt: now,
+    })
+    .where(and(eq(accounts.id, joined.id), userScoped(ctx).owns(accounts)));
+  return { id: joined.id, state: joined.state };
 }
 
 /**
@@ -152,6 +200,23 @@ export async function closeSwitch(tx: Tx, ctx: Who, switchId: string, now: Date)
       ...(row.ibanTaken ? { iban: null, ibanFromSource: false } : {}),
     })
     .where(and(eq(accounts.id, row.accountId), userScoped(ctx).owns(accounts)));
+  // The account the switch joined takes its bank back, as it was, unless the person gave it another
+  // source meanwhile (or deleted it: the column is then `null`).
+  if (row.mergedAccountId !== null) {
+    await tx
+      .update(accounts)
+      .set({
+        origin: "synced",
+        provider: row.toProvider,
+        providerAccountId: row.toProviderAccountId,
+        state: row.mergedState === "unavailable" ? "unavailable" : "active",
+        archivedAt: null,
+        updatedAt: now,
+      })
+      .where(
+        and(eq(accounts.id, row.mergedAccountId), isNull(accounts.provider), userScoped(ctx).owns(accounts)),
+      );
+  }
   return row;
 }
 

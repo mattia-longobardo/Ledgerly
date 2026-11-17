@@ -52,6 +52,16 @@ export interface SwitchReportView {
     ambiguous: number;
   };
   publishes: boolean;
+  /** The bank's account is already here as another account: the switch joins the two. */
+  join: {
+    account: string;
+    total: number;
+    matched: number;
+    unmatched: SwitchRow[];
+    manual: number;
+    categories: number;
+    notes: number;
+  } | null;
 }
 
 type Refusal = { ok: false; error: string; retryAt: string | null };
@@ -223,7 +233,10 @@ export function SwitchCheck({
     );
   }
 
-  const blocked = !report.balance.equal;
+  const join = report.join;
+  const joinBlocked = join !== null && (join.unmatched.length > 0 || join.manual > 0);
+  const balanceBlocked = !report.balance.equal;
+  const blocked = balanceBlocked || joinBlocked;
   const difference =
     report.balance.local !== null && report.balance.bank !== null
       ? BigInt(report.balance.bank) - BigInt(report.balance.local)
@@ -241,12 +254,12 @@ export function SwitchCheck({
       </div>
 
       <Card className="flex flex-col gap-2" aria-labelledby="switch-balance">
-        <h2 id="switch-balance" className="font-semibold" role={blocked ? "alert" : undefined}>
+        <h2 id="switch-balance" className="font-semibold" role={balanceBlocked ? "alert" : undefined}>
           {report.balance.local === null
             ? t("balance.noLocal", { source })
             : report.balance.bank === null
               ? t("balance.noBank")
-              : blocked
+              : balanceBlocked
                 ? t("balance.different")
                 : t("balance.equal")}
         </h2>
@@ -274,7 +287,7 @@ export function SwitchCheck({
             </>
           )}
         </dl>
-        {blocked && (
+        {balanceBlocked && (
           <div className="flex flex-col gap-1.5 rounded-ctl bg-neg-bg px-3 py-2 text-sm text-neg">
             <p>{t("balance.blocked")}</p>
             <ol className="list-decimal pl-5">
@@ -286,6 +299,40 @@ export function SwitchCheck({
           </div>
         )}
       </Card>
+
+      {join !== null && (
+        <Card className="flex flex-col gap-2" aria-labelledby="switch-join">
+          <h2 id="switch-join" className="font-semibold" role={joinBlocked ? "alert" : undefined}>
+            {joinBlocked
+              ? t("join.blocked", { account: join.account })
+              : t("join.title", { account: join.account })}
+          </h2>
+          <p className="text-sm">{t("join.lead", { account: join.account, count: join.total })}</p>
+          <p className="text-sm">{t("join.matched", { count: join.matched, total: join.total })}</p>
+          {join.manual > 0 && (
+            <p className="rounded-ctl bg-neg-bg px-3 py-2 text-sm text-neg">
+              {t("join.manual", { account: join.account, count: join.manual })}
+            </p>
+          )}
+          {join.unmatched.length > 0 && (
+            <Section
+              title={t("join.unmatched", { account: join.account })}
+              count={join.unmatched.length}
+              rows={join.unmatched}
+              money={money}
+              day={day}
+              open
+              warn
+              note={t("join.unmatchedNote", { account: join.account, source })}
+            />
+          )}
+          {!joinBlocked && (join.categories > 0 || join.notes > 0) && (
+            <p className="text-sm text-muted">
+              {t("join.carry", { categories: join.categories, notes: join.notes, account: join.account })}
+            </p>
+          )}
+        </Card>
+      )}
 
       <Card className="flex flex-col gap-1" aria-labelledby="switch-movements">
         <h2 id="switch-movements" className="font-semibold">
@@ -321,8 +368,8 @@ export function SwitchCheck({
           rows={report.onlyLocal}
           money={money}
           day={day}
-          open={blocked}
-          warn={blocked}
+          open={balanceBlocked}
+          warn={balanceBlocked}
           note={t("movements.onlyLocalNote", { source })}
         />
         <Section
@@ -331,8 +378,8 @@ export function SwitchCheck({
           rows={report.onlyBank}
           money={money}
           day={day}
-          open={blocked}
-          warn={blocked}
+          open={balanceBlocked}
+          warn={balanceBlocked}
           note={t("movements.onlyBankNote", { source, date: day(report.cutDate) })}
         />
         <Section
@@ -408,6 +455,7 @@ export function SwitchCheck({
           <ul className="list-disc pl-5 text-sm">
             <li>{t("changes.fromBank", { account, bank: report.bank })}</li>
             <li>{t("changes.history", { source })}</li>
+            {join !== null && <li>{t("changes.joined", { account: join.account, count: join.total })}</li>}
             {report.fresh.length > 0 && <li>{t("changes.fresh", { count: report.fresh.length })}</li>}
             {report.transfers.pairs.length > 0 && (
               <li>{t("changes.transfers", { count: report.transfers.pairs.length * 2 })}</li>
