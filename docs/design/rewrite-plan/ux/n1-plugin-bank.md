@@ -538,7 +538,7 @@ solo clic: ogni conto ha già una scelta valida.
 
 Ogni conto della banca è un `<fieldset>` con `<legend>` = nome del conto · IBAN mascherato · valuta.
 
-Nome del conto (correzione A, 17/11/2026), lo stesso qui, in «Passa alla banca» (N4) e come nome precompilato: il `product` della banca; se manca, o se più conti dello stesso accesso hanno lo stesso nome (il titolare), «{bank} {tipo}», con un numero dal secondo conto dello stesso tipo («Revolut Risparmi 2»). Il campo `name` di Enable Banking è il titolare e non si usa. Il nome di un conto già in Ledgerly non cambia mai.
+Nome del conto (correzione A, 17/11/2026, PERS-418), lo stesso qui, in «Passa alla banca» (N4) e come nome precompilato: il `product` della banca; se manca, il campo `details` quando è una sola riga di al massimo 60 caratteri (Revolut ci mette il nome del pocket, «Holidays»; un testo più lungo descrive il conto e non si usa); se mancano entrambi, o se più conti dello stesso accesso hanno lo stesso nome (il titolare), «{bank} {tipo}», con un numero dal secondo conto dello stesso tipo («Revolut Risparmi 2»). Il campo `name` di Enable Banking è il titolare e non si usa. Il nome di un conto già in Ledgerly non cambia mai.
 L'IBAN mostra il paese, le prime due cifre e le ultime quattro: «IT60 •••• 4821». Bordo `border border-border rounded-card p-3`.
 
 | Campo | Controllo | Regole |

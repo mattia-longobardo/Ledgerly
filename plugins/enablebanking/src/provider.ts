@@ -44,6 +44,7 @@ export const sessionSchema = z.object({
       account_id: z.object({ iban: z.string().nullish() }).nullish(),
       name: z.string().nullish(),
       product: z.string().nullish(),
+      details: z.string().nullish(),
       currency: z.string(),
       cash_account_type: z.string().nullish(),
       identification_hash: z.string().nullish(),

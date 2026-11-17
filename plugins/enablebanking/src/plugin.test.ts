@@ -16,6 +16,7 @@ import { checkPlugin } from "../../../src/platform/plugins/contract/kit";
 import { manifestSchema } from "../../../src/platform/plugins/contract/manifest";
 import { PluginFailure } from "./failure";
 import {
+  accountNameOf,
   authComplete,
   authRevoke,
   authStart,
@@ -309,6 +310,53 @@ describe("auth", () => {
     expect(answer.accounts[2].stableId).not.toBe(answer.accounts[1].stableId);
     expect(stableIdOf(long)).toBe(answer.accounts[1].stableId);
     expect(stableIdOf("short-hash")).toBe("short-hash");
+  });
+
+  it("names a pocket by its `details` when the bank gives no product, as Revolut does", async () => {
+    const pocket = (uid: string, details: string | null) => ({
+      uid,
+      account_id: { other: { identification: `id-${uid}`, scheme_name: "BBAN" } },
+      name: "Anna Bianchi",
+      product: null,
+      details,
+      usage: "PRIV",
+      currency: "EUR",
+      cash_account_type: "SVGS",
+      identification_hash: `hash-${uid}`,
+    });
+    const { fetchFn } = fakeProvider({
+      "POST /sessions": {
+        body: {
+          session_id: "s-1",
+          aspsp: { name: "Zeta Bank", country: "IT" },
+          access: {},
+          accounts: [
+            {
+              ...pocket("u-1", null),
+              account_id: { iban: "IT60X0542811101000000123456" },
+              cash_account_type: "CACC",
+            },
+            pocket("u-2", "Holidays"),
+            pocket("u-3", " Subscriptions "),
+            pocket("u-4", "d".repeat(61)),
+            pocket("u-5", "Conto con carta\ndi debito"),
+            { ...pocket("u-6", "Holidays"), product: "Conto Deposito" },
+          ],
+        },
+      },
+    });
+    const answer = authCompleteResponseSchema.parse(
+      await authComplete({ credentials: CREDENTIALS, code: "c-1" }, { fetchFn }),
+    );
+    expect(answer.accounts.map((account) => account.name)).toEqual([
+      null,
+      "Holidays",
+      "Subscriptions",
+      null,
+      null,
+      "Conto Deposito",
+    ]);
+    expect(accountNameOf({ details: "d".repeat(60) })).toHaveLength(60);
   });
 
   it("closes an access, and counts one that has already ended as closed", async () => {

@@ -139,21 +139,39 @@ function instantOrNull(value: string | null | undefined): string | null {
   return Number.isNaN(time) ? null : new Date(time).toISOString();
 }
 
+/** The longest `details` taken as a name: a longer text describes the account, it does not name it. */
+const DETAILS_NAME_MAX = 60;
+
+/**
+ * The bank's own name of an account, in this order:
+ * 1. `product`, the bank's name of the product («Conto Arancio»);
+ * 2. `details`, when it is one short line: Revolut leaves `product` empty and puts there the name
+ *    the person gave a pocket («Holidays»). A longer text describes the account and is not used.
+ * The API's `name` is the holder's, the same on every account of a person, and is never used.
+ * `null` when no field gives one: the core then names the account «{bank} {kind}».
+ */
+export function accountNameOf(account: { product?: string | null; details?: string | null }): string | null {
+  const product = textOrNull(account.product, 200);
+  if (product !== null) return product;
+  const details = textOrNull(account.details, DETAILS_NAME_MAX + 1);
+  return details !== null && details.length <= DETAILS_NAME_MAX && !/[\r\n]/.test(details) ? details : null;
+}
+
 export async function authComplete(body: unknown, deps: Deps = {}): Promise<AuthCompleteResponse> {
   const request = parse(authCompleteRequestSchema, body);
   const session = await providerOf(request.credentials, deps).createSession(request.code);
   return {
     session: { id: session.session_id, expiresAt: instantOrNull(session.access?.valid_until) },
     institution: { name: session.aspsp.name, country: session.aspsp.country },
-    // An account with no `uid` cannot be read in this access: it is not offered. Its name is the
-    // bank's product: the API's `name` is the holder's, the same on every account of a person.
+    // An account with no `uid` cannot be read in this access: it is not offered. Its name: see
+    // `accountNameOf`.
     accounts: session.accounts.flatMap((account) =>
       account.uid
         ? [
             {
               externalId: account.uid,
               stableId: stableIdOf(account.identification_hash),
-              name: textOrNull(account.product, 200),
+              name: accountNameOf(account),
               identifier: textOrNull(account.account_id?.iban, 64),
               currency: account.currency,
               kind: textOrNull(account.cash_account_type, 40),
