@@ -10,7 +10,7 @@ import { LAST_YEAR, THIS_YEAR, TODAY } from "../_shared/helpers";
  */
 test.describe("time off on a phone", () => {
   // Its own user, with the year of `timeoff`: the journey of the desktop counts that user's days
-  // while this file runs. One test here books a day, so the three run in order.
+  // while this file runs. The tests run side by side: the two that book use months of their own.
   test.use({ storageState: sessionState("timeoffPhone") });
   test.describe.configure({ mode: "default" });
 
@@ -185,7 +185,8 @@ test.describe("time off on a phone", () => {
 
   test("removes several booked days with taps, the list inside the screen (17/11/2026)", async ({ page }) => {
     await page.goto("/timeoff");
-    const free = page.locator(`[data-month="3"] [data-testid="free-cell"]`);
+    // Not March: the test above books there, side by side with this one.
+    const free = page.locator(`[data-month="5"] [data-testid="free-cell"]`);
     await free.nth(0).scrollIntoViewIfNeeded();
     const firstDay = (await free.nth(0).getAttribute("data-date")) as string;
     const lastDay = (await free.nth(1).getAttribute("data-date")) as string;
