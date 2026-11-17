@@ -19,6 +19,22 @@ const ADVANCED = "/settings/integrations/advanced";
 const TECHNICAL = /\b(plugin|sync|synchroni[sz]ation|token|session|job|run|API|HTTP|429|cron|log)\b/i;
 const CODES = /auth\b|consent_expired|rate_limited|provider_down|invalid_data/;
 
+// The seed dates the good readings from its own clock (scripts/seed-e2e.ts): 2 hours before it for
+// the banks up to date, 26 hours before it for the late one. Before 02:00 in Rome both instants fall
+// one day earlier, and the page says them with a day, not with hours: the sentences expected here
+// follow the same clock, so the file passes at any time of day.
+const HOUR_IN_ROME = Number(
+  new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Rome", hour: "2-digit", hourCycle: "h23" }).format(
+    new Date(),
+  ),
+);
+const AFTER_TWO = HOUR_IN_ROME >= 2;
+const UPDATED_TWO_HOURS_AGO = AFTER_TWO ? "Updated 2 hours ago" : "Updated yesterday at ";
+const UP_TO_DATE = AFTER_TWO ? /^Updated 2 hours ago$/ : /^Updated yesterday at \d\d:\d\d$/;
+const LATE = AFTER_TWO
+  ? /^Last update yesterday at \d\d:\d\d\. Next attempt /
+  : /^Last update on .+ at \d\d:\d\d\. Next attempt /;
+
 const row = (page: Page, name: string) =>
   page.getByTestId("connection-row").filter({ has: page.getByText(name, { exact: true }) });
 
@@ -42,11 +58,11 @@ test.describe("the rows of the connections", () => {
 
         await test.step("every state is a word beside the name, with its sentence", async () => {
           const expected: [string, string, string, RegExp][] = [
-            ["Alfa Bank", "ok", "Up to date", /^Updated 2 hours ago$/],
-            ["Beta Bank", "late", "Delayed", /^Last update yesterday at \d\d:\d\d\. Next attempt /],
+            ["Alfa Bank", "ok", "Up to date", UP_TO_DATE],
+            ["Beta Bank", "late", "Delayed", LATE],
             ["Gamma Bank", "action", "Action needed", /^Access to Gamma Bank has expired\.$/],
             ["Delta Bank", "running", "In progress", /^Update in progress…$/],
-            ["Epsilon Bank", "ok", "Up to date", /^Updated 2 hours ago$/],
+            ["Epsilon Bank", "ok", "Up to date", UP_TO_DATE],
             [
               "Zeta Bank",
               "action",
@@ -260,7 +276,7 @@ test.describe("the rows of the connections", () => {
     const status = page.getByTestId("connection-status");
     await expect(status).toHaveAttribute("data-status", "ok");
     await expect(status).toContainText("Up to date");
-    await expect(status).toContainText("Updated 2 hours ago");
+    await expect(status).toContainText(UPDATED_TWO_HOURS_AGO);
   });
 
   test("a plugin turned off keeps its connections in sight, paused, with the way to turn it on", async ({
