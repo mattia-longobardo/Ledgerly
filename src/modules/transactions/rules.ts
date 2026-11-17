@@ -424,21 +424,8 @@ function compact(text: string): string {
   return text.replace(/[\s-]/g, "").toUpperCase();
 }
 
-/**
- * An account's "IBAN or reference" as an IBAN, or `null` when it is not one: the shape and the
- * ISO 13616 mod-97 check both have to hold, so a free-text reference never matches a note.
- */
-export function normalizeIban(reference: string | null): string | null {
-  if (reference === null) return null;
-  const iban = compact(reference);
-  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(iban)) return null;
-  const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, (letter) =>
-    String(letter.charCodeAt(0) - 55),
-  );
-  let remainder = 0;
-  for (const digit of digits) remainder = (remainder * 10 + Number(digit)) % 97;
-  return remainder === 1 ? iban : null;
-}
+/** The check of an IBAN is the platform's (rewrite plan N4): re-exported for this module's callers. */
+export { normalizeIban } from "@/platform/iban";
 
 /** One of the user's accounts that has an IBAN. */
 export interface OwnIban {

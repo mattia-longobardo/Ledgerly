@@ -85,6 +85,8 @@ export interface Connection {
   schedule: SyncSchedule;
   /** The next pass the dispatcher owes (D7); null for a `manual` schedule. */
   nextSyncAt: Date | null;
+  /** The accounts whose IBAN a new account of the source carries, at the last reading (N4). Ids only. */
+  ibanConflicts: string[] | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -102,6 +104,7 @@ const CONNECTION_COLUMNS = {
   consecutiveFailures: integrationConnections.consecutiveFailures,
   schedule: integrationConnections.schedule,
   nextSyncAt: integrationConnections.nextSyncAt,
+  ibanConflicts: integrationConnections.ibanConflicts,
   createdAt: integrationConnections.createdAt,
   updatedAt: integrationConnections.updatedAt,
 };
@@ -817,6 +820,22 @@ export async function saveSyncJob(
  * `revoked` when the token itself was refused (spec §9.1: a 401 or 403 fails immediately). Kept
  * apart from {@link finishRun}, which cannot tell a refused token from a bad afternoon.
  */
+/**
+ * The accounts here whose IBAN a new account of the source carries, as the last reading found them
+ * (rewrite plan N4, case 5): the row of the connection shows a notice while the list is not empty.
+ * Every reading writes it again, so the notice goes when the reason goes. Ids only.
+ */
+export async function saveIbanConflicts(
+  ctx: Pick<Ctx, "userId">,
+  connectionId: string,
+  accountIds: readonly string[],
+): Promise<void> {
+  await getDb()
+    .update(integrationConnections)
+    .set({ ibanConflicts: accountIds.length === 0 ? null : [...accountIds] })
+    .where(and(eq(integrationConnections.id, connectionId), userScoped(ctx).owns(integrationConnections)));
+}
+
 export async function markConnection(
   ctx: Pick<Ctx, "userId">,
   connectionId: string,

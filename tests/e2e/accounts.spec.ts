@@ -124,6 +124,12 @@ test("an account is created, kept up to date, summarised and snapshotted", async
     await page.getByLabel("Warn below").fill("2.000,00");
     // The banner opens the tab, above the connections, not between them and the form.
     await expect(page.getByTestId("unsaved-banner")).toBeVisible();
+    // Measured from the top of the page: the form is taller than the window from N4 (the IBAN field),
+    // and a sticky banner over a heading already scrolled away says nothing about the order.
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+      for (const element of document.querySelectorAll("*")) if (element.scrollTop > 0) element.scrollTop = 0;
+    });
     const banner = await page.getByTestId("unsaved-banner").boundingBox();
     const connections = await page.getByRole("heading", { name: "Connections" }).boundingBox();
     expect(banner!.y).toBeLessThan(connections!.y);

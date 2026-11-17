@@ -115,7 +115,7 @@ export const MODULES: Module[] = [
   // ——— Domain modules, each with its pages ———
   {
     id: "accounts",
-    files: ["src/modules/accounts/**", page("accounts"), "src/app/(app)/page.tsx"],
+    files: ["src/modules/accounts/**", page("accounts"), "src/app/(app)/page.tsx", "src/platform/iban*"],
     integration: ["src/modules/accounts"],
     flows: ["accounts"],
     usedBy: [
@@ -129,6 +129,8 @@ export const MODULES: Module[] = [
       "api",
       "jobs",
       "export",
+      "connections",
+      "e2e:connections",
       "e2e:transactions",
       "e2e:investments",
       "e2e:funds",

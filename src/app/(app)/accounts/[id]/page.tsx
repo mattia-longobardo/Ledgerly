@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { accountsView, listBalanceEntries } from "@/modules/accounts/queries";
+import { hasIbanField } from "@/modules/accounts/rules";
 import {
   asNumbers,
   axisLabels,
@@ -39,6 +40,7 @@ import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@/modules/accounts/queries";
 import { managedSinceOf, serviceAccountIds, syncedServicesOf } from "@/modules/investments/managed";
 import { today } from "@/platform/dates";
+import { groupIban } from "@/platform/iban";
 import { centsToDecimal } from "@/platform/money";
 import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
 import { Badge } from "@/ui/badge";
@@ -254,6 +256,10 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
               state: account.state,
               color: account.color,
               reference: account.reference,
+              // The IBAN is shown in full only here, on the person's own page (H45).
+              iban: account.iban === null ? null : groupIban(account.iban),
+              ibanFromSource: account.ibanFromSource,
+              ibanField: hasIbanField(account.type),
               purpose: account.purpose,
               openedOn: account.openedOn,
               notes: account.notes,

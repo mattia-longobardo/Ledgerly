@@ -19,6 +19,7 @@ import { convertCents } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
 import { PROVIDERS, syncsTransactions } from "@/platform/integrations/rules";
 import { unlinkEntities } from "@/platform/integrations/service";
+import { normalizeIban } from "@/platform/iban";
 import { type Cents, sumCents } from "@/platform/money";
 import { managedSinceOf, serviceAccountIds } from "@/modules/investments/managed";
 import {
@@ -37,6 +38,8 @@ import {
   canDelete,
   CONNECTION_CHANNELS,
   dailySeries,
+  hasIbanField,
+  ibanConflict,
   DEFAULT_STALE_AFTER_HOURS,
   deriveMonthEnds,
   isFutureDate,
@@ -67,13 +70,62 @@ export type AccountErrorCode =
   | "managed_locked"
   | "duplicate_name"
   | "duplicate_connection"
+  | "iban_invalid"
+  | "iban_exists"
+  | "iban_archived"
   | "invalid";
 
 export class AccountError extends Error {
-  constructor(readonly code: AccountErrorCode) {
+  /** `iban_exists` and `iban_archived`: the name of the account that has the IBAN. Never the IBAN. */
+  constructor(
+    readonly code: AccountErrorCode,
+    readonly other: string | null = null,
+  ) {
     super(code);
     this.name = "AccountError";
   }
+}
+
+/**
+ * One writer of IBANs at a time for a person (04-now.md §4.6.1, point 2): the check "one IBAN, one
+ * account" and the write that follows it run inside the same transaction, after this lock.
+ */
+async function lockIbans(tx: Tx, ctx: Pick<Ctx, "userId">): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`accounts-iban:${ctx.userId}`}))`);
+}
+
+/** The person's accounts as the rule "one IBAN, one account" reads them, inside the lock. */
+async function ibanHolders(tx: Tx, ctx: Pick<Ctx, "userId">) {
+  return tx
+    .select({ id: accounts.id, name: accounts.name, iban: accounts.iban, state: accounts.state })
+    .from(accounts)
+    .where(and(userScoped(ctx).owns(accounts), sql`${accounts.iban} is not null`))
+    .orderBy(asc(accounts.sortOrder), asc(accounts.id));
+}
+
+/**
+ * The IBAN a person writes on an account (§2.4.1 of the N4 specification): `null` for a type
+ * without the field (H47) or an empty field; the value the source gave when the account has one
+ * (read-only); otherwise the typed value, checked, and refused when another account has it.
+ */
+async function personIban(
+  tx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  typed: string | null,
+  type: AccountType,
+  current: { id: string; iban: string | null; ibanFromSource: boolean } | null,
+): Promise<{ iban: string | null; ibanFromSource: boolean }> {
+  if (!hasIbanField(type)) return { iban: null, ibanFromSource: false };
+  if (current?.ibanFromSource && current.iban !== null) return { iban: current.iban, ibanFromSource: true };
+  if (typed === null) return { iban: null, ibanFromSource: false };
+  const iban = normalizeIban(typed);
+  if (iban === null) throw new AccountError("iban_invalid");
+  await lockIbans(tx, ctx);
+  const conflict = ibanConflict(iban, await ibanHolders(tx, ctx), current?.id ?? null);
+  if (conflict !== null) {
+    throw new AccountError(conflict.kind === "exists" ? "iban_exists" : "iban_archived", conflict.name);
+  }
+  return { iban, ibanFromSource: false };
 }
 
 async function hasBalanceEntries(ctx: Pick<Ctx, "userId">, accountId: string): Promise<boolean> {
@@ -124,6 +176,7 @@ export async function createAccount(ctx: Ctx, input: unknown, outer?: Tx): Promi
   const run = <T>(work: (tx: Tx) => Promise<T>): Promise<T> =>
     outer ? work(outer) : getDb().transaction(work);
   return run(async (tx) => {
+    const iban = await personIban(tx, ctx, parsed.iban, parsed.type, null);
     const [account] = await tx
       .insert(accounts)
       .values(
@@ -134,6 +187,7 @@ export async function createAccount(ctx: Ctx, input: unknown, outer?: Tx): Promi
           groupId: parsed.groupId,
           color: parsed.color,
           reference: parsed.reference,
+          ...iban,
           purpose: parsed.purpose,
           openedOn: parsed.openedOn,
           notes: parsed.notes,
@@ -182,33 +236,37 @@ export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown
   ) {
     throw new AccountError("managed_locked");
   }
-  const [row] = await getDb()
-    .update(accounts)
-    .set({
-      name: settings.name,
-      type: settings.type,
-      currency: settings.currency,
-      groupId: settings.groupId,
-      color: settings.color,
-      reference: settings.reference,
-      purpose: settings.purpose,
-      openedOn: settings.openedOn,
-      notes: settings.notes,
-      inNetWorth: settings.inNetWorth,
-      inSnapshot: settings.inSnapshot,
-      countsAsLiquid: settings.countsAsLiquid,
-      lowBalanceCents: settings.lowBalanceCents,
-      staleAfterHours: settings.staleAfterHours,
-      reminder: settings.reminder,
-      betweenEntries: settings.betweenEntries,
-      // A provider rename is followed only until the name is changed here (spec §7.1).
-      renamedLocally: current.renamedLocally || settings.name !== current.name,
-      retypedLocally:
-        current.retypedLocally || (current.origin === "synced" && settings.type !== current.type),
-    })
-    .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)))
-    .returning();
-  return row;
+  return getDb().transaction(async (tx) => {
+    const iban = await personIban(tx, ctx, settings.iban, settings.type, current);
+    const [row] = await tx
+      .update(accounts)
+      .set({
+        name: settings.name,
+        type: settings.type,
+        currency: settings.currency,
+        groupId: settings.groupId,
+        color: settings.color,
+        reference: settings.reference,
+        ...iban,
+        purpose: settings.purpose,
+        openedOn: settings.openedOn,
+        notes: settings.notes,
+        inNetWorth: settings.inNetWorth,
+        inSnapshot: settings.inSnapshot,
+        countsAsLiquid: settings.countsAsLiquid,
+        lowBalanceCents: settings.lowBalanceCents,
+        staleAfterHours: settings.staleAfterHours,
+        reminder: settings.reminder,
+        betweenEntries: settings.betweenEntries,
+        // A provider rename is followed only until the name is changed here (spec §7.1).
+        renamedLocally: current.renamedLocally || settings.name !== current.name,
+        retypedLocally:
+          current.retypedLocally || (current.origin === "synced" && settings.type !== current.type),
+      })
+      .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)))
+      .returning();
+    return row;
+  });
 }
 
 export async function archiveAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
@@ -879,6 +937,8 @@ export interface ProviderAccountChoice {
   providerAccountId: string;
   currency: string;
   target: { kind: "new"; name: string; type: AccountType } | { kind: "existing"; accountId: string };
+  /** The account's IBAN as the source gives it, in any form: checked here; `null` when none. */
+  iban?: string | null;
 }
 
 const choiceNameSchema = z.string().trim().min(1).max(80);
@@ -938,12 +998,15 @@ export async function linkProviderAccounts(
   let sortOrder = await nextSortOrder(ctx);
 
   await getDb().transaction(async (tx) => {
+    await lockIbans(tx, ctx);
+    const holders = await ibanHolders(tx, ctx);
     for (const choice of choices) {
       const known = already.get(choice.providerAccountId);
       if (known !== undefined) {
         linked.set(choice.providerAccountId, known);
         continue;
       }
+      const iban = normalizeIban(choice.iban);
       const tie = {
         origin: "synced" as const,
         provider,
@@ -953,9 +1016,11 @@ export async function linkProviderAccounts(
       if (choice.target.kind === "existing") {
         const account = open.get(choice.target.accountId);
         if (!account || account.currency !== choice.currency) throw new AccountError("invalid");
+        // The source writes the IBAN it gives on the account it is tied to (§2.4.3).
+        const fromSource = iban !== null && hasIbanField(account.type) ? { iban, ibanFromSource: true } : {};
         await tx
           .update(accounts)
-          .set(tie)
+          .set({ ...tie, ...fromSource })
           .where(and(eq(accounts.id, account.id), userScoped(ctx).owns(accounts)));
         linked.set(choice.providerAccountId, account.id);
         continue;
@@ -963,11 +1028,17 @@ export async function linkProviderAccounts(
       const name = choiceNameSchema.safeParse(choice.target.name);
       if (!name.success) throw new AccountError("invalid");
       const type = choice.target.type;
+      // One IBAN, one account (H39): a new account never takes an IBAN an open account has.
+      const conflict = iban === null ? null : ibanConflict(iban, holders);
+      if (conflict !== null && conflict.kind === "exists")
+        throw new AccountError("iban_exists", conflict.name);
+      const withIban = iban !== null && hasIbanField(type) ? { iban, ibanFromSource: true } : {};
       const [row] = await tx
         .insert(accounts)
         .values(
           userScoped(ctx).stamp({
             ...tie,
+            ...withIban,
             name: name.data,
             type,
             currency: choice.currency,
@@ -979,6 +1050,9 @@ export async function linkProviderAccounts(
         )
         .returning({ id: accounts.id });
       linked.set(choice.providerAccountId, row.id);
+      if (withIban.iban !== undefined) {
+        holders.push({ id: row.id, name: name.data, iban: withIban.iban, state: "active" });
+      }
     }
   });
   return linked;
@@ -1032,22 +1106,41 @@ export async function applyProviderAccounts(
   provider: string,
   remote: readonly RemoteAccount[],
   now: Date = new Date(),
-): Promise<void> {
+): Promise<{ ibanConflicts: string[] }> {
   const local = await getDb()
     .select()
     .from(accounts)
     .where(userScoped(ctx).owns(accounts))
     .orderBy(asc(accounts.sortOrder), asc(accounts.id));
   const steps = reconcileProviderAccounts(local, remote, provider);
-  if (steps.length === 0) return;
+  // The accounts here whose IBAN a new account of the source carries: that account is not created
+  // (H39, case 5 of §2.4.2), and the row of the connection says so.
+  const ibanConflicts = [
+    ...new Set(steps.flatMap((step) => (step.action === "ibanExists" ? [step.accountId] : []))),
+  ];
+  if (steps.length === ibanConflicts.length && steps.every((step) => step.action === "ibanExists")) {
+    return { ibanConflicts };
+  }
   let sortOrder = await nextSortOrder(ctx);
+  const sourceIban = (remote: RemoteAccount) =>
+    remote.iban != null && hasIbanField(remote.type) ? { iban: remote.iban, ibanFromSource: true } : {};
 
   await getDb().transaction(async (tx) => {
+    await lockIbans(tx, ctx);
     for (const step of steps) {
       switch (step.action) {
+        case "ibanExists":
+          break;
+        case "iban":
+          await tx
+            .update(accounts)
+            .set({ iban: step.iban, ibanFromSource: true })
+            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
+          break;
         case "create":
           await tx.insert(accounts).values(
             userScoped(ctx).stamp({
+              ...sourceIban(step.remote),
               name: step.remote.name,
               type: step.remote.type,
               currency: step.remote.currency,
@@ -1065,6 +1158,7 @@ export async function applyProviderAccounts(
           await tx
             .update(accounts)
             .set({
+              ...sourceIban(step.remote),
               origin: "synced",
               provider: step.remote.provider,
               providerAccountId: step.remote.providerAccountId,
@@ -1100,6 +1194,79 @@ export async function applyProviderAccounts(
           break;
       }
     }
+  });
+  return { ibanConflicts };
+}
+
+/**
+ * For each number a source gives, the open account here that has it as its IBAN (H39): the
+ * procedure of a source warns before it would add an account twice. Numbers that are not an IBAN
+ * and IBANs nobody has are left out. The map is keyed by the number as given; the owner carries
+ * no IBAN.
+ */
+export async function ibanOwnersOf(
+  ctx: Pick<Ctx, "userId">,
+  numbers: readonly (string | null)[],
+): Promise<Map<string, { id: string; name: string; manual: boolean }>> {
+  const owners = new Map<string, { id: string; name: string; manual: boolean }>();
+  const wanted = numbers.flatMap((number) => {
+    const iban = normalizeIban(number);
+    return number !== null && iban !== null ? [{ number, iban }] : [];
+  });
+  if (wanted.length === 0) return owners;
+  const holders = await getDb()
+    .select({
+      id: accounts.id,
+      name: accounts.name,
+      iban: accounts.iban,
+      state: accounts.state,
+      origin: accounts.origin,
+    })
+    .from(accounts)
+    .where(and(userScoped(ctx).owns(accounts), sql`${accounts.iban} is not null`))
+    .orderBy(asc(accounts.sortOrder), asc(accounts.id));
+  for (const { number, iban } of wanted) {
+    const conflict = ibanConflict(iban, holders);
+    if (conflict === null || conflict.kind !== "exists") continue;
+    const holder = holders.find((one) => one.id === conflict.accountId)!;
+    owners.set(number, { id: holder.id, name: holder.name, manual: holder.origin === "manual" });
+  }
+  return owners;
+}
+
+/**
+ * The IBANs a source gives for the accounts tied to it, written at each reading (H39: "the source
+ * fills the field when it gives it"). A value that is not an IBAN, or one already there, changes
+ * nothing; an account of a type without the field is left alone (H47). Another account with the
+ * same IBAN does not stop the write (04-now.md §4.6.1, point 6).
+ */
+export async function saveSourceIbans(
+  ctx: Pick<Ctx, "userId">,
+  given: readonly { accountId: string; iban: string | null }[],
+): Promise<number> {
+  const wanted = new Map<string, string>();
+  for (const one of given) {
+    const iban = normalizeIban(one.iban);
+    if (iban !== null) wanted.set(one.accountId, iban);
+  }
+  if (wanted.size === 0) return 0;
+  return getDb().transaction(async (tx) => {
+    await lockIbans(tx, ctx);
+    const rows = await tx
+      .select({ id: accounts.id, type: accounts.type, iban: accounts.iban, from: accounts.ibanFromSource })
+      .from(accounts)
+      .where(and(userScoped(ctx).owns(accounts), inArray(accounts.id, [...wanted.keys()])));
+    let written = 0;
+    for (const row of rows) {
+      const iban = wanted.get(row.id) as string;
+      if (!hasIbanField(row.type) || (row.iban === iban && row.from)) continue;
+      await tx
+        .update(accounts)
+        .set({ iban, ibanFromSource: true })
+        .where(and(eq(accounts.id, row.id), userScoped(ctx).owns(accounts)));
+      written += 1;
+    }
+    return written;
   });
 }
 

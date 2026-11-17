@@ -648,7 +648,8 @@ export async function upsertFromProvider(
 export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number> {
   const own: OwnIban[] = [];
   for (const account of await listAccounts(ctx, { includeArchived: true })) {
-    const iban = normalizeIban(account.reference);
+    // The IBAN field of the account (rewrite plan N4, H46): no longer "IBAN or reference".
+    const iban = normalizeIban(account.iban);
     if (iban !== null) own.push({ accountId: account.id, iban });
   }
   const rows = await getDb()

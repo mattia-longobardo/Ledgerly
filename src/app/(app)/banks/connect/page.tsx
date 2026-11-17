@@ -109,6 +109,11 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
       // Nothing left to choose: the connection is complete (§6.4, "already completed").
       if (exposed.chosen && toChoose.length === 0) redirect(`${HERE}?step=done&c=${connection.id}` as Route);
       const used = new Map<string, number>();
+      // An account of the bank whose IBAN an account here has is not added twice (H39, §2.4.2).
+      const owners = await bankSink.ibanOwners(
+        ctx,
+        toChoose.map((account) => account.identifier),
+      );
       return frame(
         "accounts",
         <AccountsStep
@@ -127,6 +132,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
               currency: account.currency,
               defaultName: `${bank} ${label}${count > 1 ? ` ${count}` : ""}`.slice(0, 80),
               defaultType: type,
+              ibanOwner: account.identifier === null ? null : (owners.get(account.identifier) ?? null),
             };
           })}
           linked={exposed.accounts.flatMap((account) =>

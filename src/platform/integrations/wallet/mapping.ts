@@ -9,6 +9,7 @@
 
 import { z } from "zod";
 import { type AccountType } from "@/modules/accounts/rules";
+import { normalizeIban } from "@/platform/iban";
 import {
   addDays,
   addMonths,
@@ -36,6 +37,8 @@ export const walletAccountSchema = z.object({
   currencyCode: z.string(),
   archived: z.boolean().default(false),
   accountType: z.string().nullish(),
+  /** "Bank account number or IBAN as stored", free text, absent when none (API 2.1.1). */
+  bankAccountNumber: z.string().nullish(),
   isInvestmentAccount: z.boolean().nullish(),
   updatedAt: z.string().nullish(),
   balance: z.object({ currentBalance: wireAmount }),
@@ -198,6 +201,8 @@ export interface WalletAccount {
   currency: string;
   archived: boolean;
   updatedAt: Date | null;
+  /** The account's IBAN, checked; `null` when Wallet gives none or a number that is not one. */
+  iban?: string | null;
 }
 
 /**
@@ -419,7 +424,7 @@ export function walletLabelNames(labels: readonly unknown[]): string[] {
 }
 
 export function mapWalletAccount(raw: WalletAccountPayload): WalletAccount {
-  return {
+  const account: WalletAccount = {
     externalId: raw.id,
     name: raw.name.trim(),
     type: walletAccountType(raw),
@@ -427,6 +432,9 @@ export function mapWalletAccount(raw: WalletAccountPayload): WalletAccount {
     archived: raw.archived,
     updatedAt: instant(raw.updatedAt),
   };
+  // Only an IBAN that passes the check: another kind of number is not kept (04-now.md §4.6.1).
+  const iban = normalizeIban(raw.bankAccountNumber);
+  return iban === null ? account : { ...account, iban };
 }
 
 export function mapWalletBalance(raw: WalletAccountPayload): WalletBalance {

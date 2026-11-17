@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
-import { createAccount } from "@/modules/accounts/service";
+import { createAccount, updateAccountSettings } from "@/modules/accounts/service";
+import { getPool } from "@/platform/db/client";
 import { transactionIdsOfAccount, transactionsByIds } from "@/modules/transactions/queries";
 import { categorisableAccountIds } from "@/modules/transactions/service";
 import type { Ctx } from "@/platform/context";
@@ -446,6 +447,47 @@ describe("the choice of the accounts", () => {
       await codeOf(chooseAccounts(other, { ...target, decisions: [asNew("hash-1")] }, bankSink, NOW)),
     ).toBe("not_found");
     expect(await codeOf(exposedAccounts(other, target, bankSink))).toBe("not_found");
+  });
+
+  it("does not add the bank's account twice: an IBAN already here refuses a new account (rewrite plan N4, H39)", async () => {
+    const plugin = fakePlugin();
+    const { ctx, connectionId } = await connected(plugin);
+    const target = { pluginId: PLUGIN, connectionId };
+    const mine = await createAccount(ctx, { name: "Conto", type: "checking" });
+    await updateAccountSettings(ctx, mine.id, {
+      ...mine,
+      reference: "",
+      iban: ACCOUNT.identifier,
+      purpose: "",
+      notes: "",
+      lowBalanceCents: null,
+    });
+    const owners = await bankSink.ibanOwners(ctx, [ACCOUNT.identifier]);
+    expect(owners.get(ACCOUNT.identifier!)).toEqual({ id: mine.id, name: "Conto", manual: true });
+
+    expect(
+      await codeOf(chooseAccounts(ctx, { ...target, decisions: [asNew("hash-1")] }, bankSink, NOW)),
+    ).toBe("iban_exists");
+    expect(await listAccounts(ctx)).toHaveLength(1);
+
+    const existing: AccountDecision = {
+      providerAccountId: "hash-1",
+      currency: "EUR",
+      target: { kind: "existing", accountId: mine.id },
+    };
+    await chooseAccounts(ctx, { ...target, decisions: [existing] }, bankSink, NOW);
+    expect(await getAccount(ctx, mine.id)).toMatchObject({ iban: ACCOUNT.identifier, ibanFromSource: true });
+  });
+
+  it("gives an account tied before the IBAN at the next reading", async () => {
+    const plugin = fakePlugin();
+    const { ctx, target, accountId } = await chosen(plugin);
+    await getPool().query("update accounts set iban = null, iban_from_source = false");
+    await read(ctx, target, plugin);
+    expect(await getAccount(ctx, accountId)).toMatchObject({
+      iban: ACCOUNT.identifier,
+      ibanFromSource: true,
+    });
   });
 
   it("does not read before it is made", async () => {

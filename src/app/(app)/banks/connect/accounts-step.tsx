@@ -21,6 +21,11 @@ export interface AccountToChoose {
   currency: string;
   defaultName: string;
   defaultType: string;
+  /**
+   * The open account here with the same IBAN (H39): "Create a new account" is not offered. Kept by
+   * hand, it is the default target; tied to another source, the account is not imported.
+   */
+  ibanOwner?: { id: string; name: string; manual: boolean } | null;
 }
 
 export interface AccountsStepProps {
@@ -39,6 +44,14 @@ export interface AccountsStepProps {
 const SETTINGS: Route = "/settings/integrations";
 const NEW = "new";
 const SKIP = "skip";
+
+/** Where an account starts (§2.4.2 of the N4 specification): never on a new account with an IBAN already here. */
+function startOf(account: AccountToChoose, existing: AccountsStepProps["existing"]): string {
+  const owner = account.ibanOwner;
+  if (!owner) return NEW;
+  const usable = existing.some((one) => one.id === owner.id && one.currency === account.currency);
+  return owner.manual && usable ? owner.id : SKIP;
+}
 
 interface Choice {
   target: string;
@@ -68,11 +81,12 @@ export function AccountsStep({
     Object.fromEntries(
       accounts.map((account) => [
         account.providerAccountId,
-        { target: NEW, name: account.defaultName, type: account.defaultType },
+        { target: startOf(account, existing), name: account.defaultName, type: account.defaultType },
       ]),
     ),
   );
   const [failed, setFailed] = useState(false);
+  const [ibanRefused, setIbanRefused] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [reading, startReading] = useTransition();
   const [leaving, startLeaving] = useTransition();
@@ -102,6 +116,7 @@ export function AccountsStep({
       return;
     }
     setFailed(false);
+    setIbanRefused(false);
     startReading(async () => {
       let ok = false;
       try {
@@ -120,6 +135,7 @@ export function AccountsStep({
         });
         const result = await importBankAccountsAction(connectionId, decisions);
         ok = result.ok;
+        if (!result.ok && result.error === "iban_exists") setIbanRefused(true);
       } catch {
         ok = false;
       }
@@ -168,7 +184,7 @@ export function AccountsStep({
 
         {failed && (
           <p role="alert" className="rounded-ctl bg-neg-bg px-3 py-2 text-sm text-neg">
-            {t("accounts.failed")}
+            {ibanRefused ? t("accounts.failedIban") : t("accounts.failed")}
           </p>
         )}
 
@@ -189,6 +205,7 @@ export function AccountsStep({
           const problem = problems.get(id);
           const chosen = existing.find((one) => one.id === choice.target);
           const offered = existing.filter((one) => one.currency === account.currency);
+          const owner = account.ibanOwner ?? null;
           return (
             <fieldset key={id} className="flex flex-col gap-3 rounded-card border border-border p-3">
               <legend className="px-1 font-medium break-words">{account.legend}</legend>
@@ -202,7 +219,9 @@ export function AccountsStep({
                   value={choice.target}
                   onChange={(event) => set(id, { target: event.currentTarget.value })}
                 >
-                  <option value={NEW}>{t("accounts.new")}</option>
+                  <option value={NEW} disabled={owner !== null}>
+                    {t("accounts.new")}
+                  </option>
                   {offered.length > 0 && (
                     <optgroup label={t("accounts.existingGroup")}>
                       {offered.map((one) => (
@@ -215,6 +234,13 @@ export function AccountsStep({
                   <option value={SKIP}>{t("accounts.skip")}</option>
                 </Select>
               </Field>
+              {owner !== null && (
+                <p role="status" className="rounded-ctl bg-warn-bg px-3 py-2 text-sm text-warn">
+                  {t(owner.manual ? "accounts.ibanExists" : "accounts.ibanExistsSource", {
+                    account: owner.name,
+                  })}
+                </p>
+              )}
               {choice.target === NEW && (
                 <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
                   <Field

@@ -205,6 +205,33 @@ describe("MCP tools", () => {
     for (const tool of tools) expect(tool.annotations).toMatchObject({ readOnlyHint: true });
   });
 
+  it("never gives the IBAN of an account, neither whole nor masked (rewrite plan N4, H45)", async () => {
+    const person = await ssoPerson();
+    requestHeaders = person.headers;
+    const ctx = contextFor(person.userId);
+    const iban = "IT60X0542811101000000123456";
+    const { createAccount } = await import("@/modules/accounts/service");
+    await createAccount(ctx, {
+      name: "Savings box",
+      type: "savings",
+      currency: "EUR",
+      color: null,
+      reference: "",
+      iban,
+      purpose: "",
+      openedOn: null,
+      notes: "",
+      openingBalance: null,
+    });
+    const token = await tokenFor(["read"]);
+    for (const tool of ["list_accounts", "get_summary"]) {
+      const { text } = await callTool(token, tool);
+      expect(text, tool).not.toContain(iban);
+      expect(text, tool).not.toContain("3456");
+      expect(text.toLowerCase(), tool).not.toContain("iban");
+    }
+  });
+
   it("reads the token owner's data and never another person's", async () => {
     const person = await ssoPerson();
     requestHeaders = person.headers;

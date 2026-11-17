@@ -16,6 +16,7 @@ import {
 import { credentialsStatus, listUserPlugins } from "@/platform/plugins/queries";
 import { connectionSummary, keepManifestsFresh, returnAddress } from "@/platform/plugins/service";
 import { pluginProvider } from "@/platform/integrations/rules";
+import { listAccounts } from "@/modules/accounts/queries";
 import { providerOf } from "@/modules/investments/catalog";
 import { listInvestmentAccounts } from "@/modules/investments/service";
 import { pendingCount } from "@/modules/timeoff/service";
@@ -64,6 +65,18 @@ export default async function SettingsIntegrationsPage({
     listInvestmentAccounts(ctx),
   ]);
   const rows = await connectionRows(ctx, now);
+  // The names of the accounts a source could not add an account beside (rewrite plan N4, case 5).
+  // Read only when a connection has one: no query more for the page otherwise (G9).
+  const accountNames = new Map(
+    connections.some((connection) => (connection.ibanConflicts ?? []).length > 0)
+      ? (await listAccounts(ctx, { includeArchived: true })).map((account) => [account.id, account.name])
+      : [],
+  );
+  const ibanConflicts = (connection: Connection) =>
+    (connection.ibanConflicts ?? []).flatMap((id) => {
+      const name = accountNames.get(id);
+      return name === undefined ? [] : [name];
+    });
   const runsOf = (connection: Connection) => runs.filter((run) => run.connectionId === connection.id);
 
   /** The row of a provider with one connection, or "Not connected" while it has none. */
@@ -78,6 +91,7 @@ export default async function SettingsIntegrationsPage({
         detail: role,
         runs: runsOf(connection),
         capabilities: OWN_DIALOGS,
+        ibanConflicts: ibanConflicts(connection),
       }),
     };
   }

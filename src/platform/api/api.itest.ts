@@ -197,6 +197,30 @@ describe("GET /accounts", () => {
   });
 });
 
+describe("the IBAN of an account (rewrite plan N4, H45)", () => {
+  it("is in no answer of the accounts, neither whole nor masked", async () => {
+    // An example IBAN of the standard, written by hand on the account.
+    const iban = "IT60X0542811101000000123456";
+    await createAccount(alice, {
+      name: "Savings box",
+      type: "savings",
+      currency: "EUR",
+      color: null,
+      reference: "",
+      iban,
+      purpose: "",
+      openedOn: null,
+      notes: "",
+      openingBalance: null,
+    });
+    const text = await (await call("/accounts", aliceToken)).text();
+    expect(text).toContain("Savings box");
+    expect(text).not.toContain(iban);
+    expect(text).not.toContain("3456");
+    expect(text.toLowerCase()).not.toContain("iban");
+  });
+});
+
 describe("GET /accounts/:id/balances", () => {
   it("returns the account's own readings", async () => {
     await saveBalanceEntry(alice, aliceAccount, { on: "2026-09-20", cents: 1_000_00n });
