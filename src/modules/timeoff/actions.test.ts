@@ -73,6 +73,20 @@ describe("the leave actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith("/timeoff", "layout");
   });
 
+  it("hand the second half's kind of a split day to the service, and refuse one nobody defined", async () => {
+    await saveLeaveRangeAction({ ...fields("vacation"), fraction: "0.5", otherKind: "rol" });
+    expect(saveLeaveRange).toHaveBeenCalledWith(
+      CTX,
+      expect.objectContaining({ kind: "vacation", otherKind: "rol" }),
+    );
+    vi.mocked(saveLeaveRange).mockClear();
+    expect(await saveLeaveRangeAction({ ...fields("vacation"), fraction: "0.5", otherKind: "nap" })).toEqual({
+      ok: false,
+      error: "invalid",
+    });
+    expect(saveLeaveRange).not.toHaveBeenCalled();
+  });
+
   it("refuse a kind nobody defined before the service is asked", async () => {
     expect(await saveLeaveRangeAction(fields("holiday"))).toEqual({ ok: false, error: "invalid" });
     expect(saveLeaveRange).not.toHaveBeenCalled();

@@ -112,6 +112,27 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
     await expect(removes).toHaveCount(seeded + 2);
   });
 
+  await test.step("a booked day becomes half vacation and half ROL from the keyboard, in one step", async () => {
+    await focusOn(page.locator(`[data-date="${first}"]`));
+    await page.keyboard.press("Enter");
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    await expect(edit).toBeVisible();
+    await tabUntil(page, 12, async () => (await focused(page)) === 'button "Whole day"');
+    expect(await focused(page)).toBe('button "Whole day"');
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    expect(await focused(page)).toBe('button "Half + half"');
+    expect(await focusIsVisible(page)).toBe(true);
+    await page.keyboard.press("Enter");
+    await expect(edit.getByLabel("Other half")).toHaveValue("rol");
+    await tabUntil(page, 20, async () => (await focused(page)) === 'button "Confirm"');
+    expect(await focused(page)).toBe('button "Confirm"');
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Edit leave" })).toHaveCount(0);
+    await expect(page.locator(`[data-date="${first}"]`)).toHaveAttribute("aria-label", /Vacation, ROL/);
+    await expect(removes).toHaveCount(seeded + 3);
+  });
+
   await test.step("the two days go again, so the next spec finds the year as the seed left it", async () => {
     for (const [index, date] of [first, last].entries()) {
       await focusOn(page.locator(`[data-date="${date}"]`));

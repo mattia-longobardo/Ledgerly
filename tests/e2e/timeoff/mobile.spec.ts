@@ -144,6 +144,39 @@ test.describe("time off on a phone", () => {
     expect(writes).toBe(0);
   });
 
+  test("books half vacation and half ROL on a free day with taps, in one step (17/11/2026)", async ({
+    page,
+  }) => {
+    await page.goto("/timeoff");
+    const free = page.locator(`[data-month="3"] [data-testid="free-cell"]`);
+    await free.nth(0).scrollIntoViewIfNeeded();
+    const date = (await free.nth(0).getAttribute("data-date")) as string;
+    const day = page.locator(`[data-date="${date}"]`);
+    await day.tap();
+    await day.tap();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    const split = panel.getByRole("button", { name: "Half + half" });
+    expect(Math.round((await split.boundingBox())!.height)).toBeGreaterThanOrEqual(32);
+    await split.tap();
+    await expect(panel.getByLabel("Other half")).toHaveValue("rol");
+    const box = await panel.boundingBox();
+    const viewport = page.viewportSize()!;
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+    const confirm = panel.getByRole("button", { name: "Confirm" });
+    await expect(confirm).toBeInViewport({ ratio: 1 });
+    await confirm.tap();
+    await expect(panel).toBeHidden();
+    await expect(day).toHaveAttribute("aria-label", /Vacation, ROL/);
+
+    // As the test found the year: both halves go, one tap each.
+    for (const left of ["leave-cell", "free-cell"]) {
+      await day.tap();
+      await page.getByRole("dialog", { name: "Edit leave" }).getByRole("button", { name: "Remove" }).tap();
+      await expect(day).toHaveAttribute("data-testid", left);
+    }
+  });
+
   test("removes several booked days with taps, the list inside the screen (17/11/2026)", async ({ page }) => {
     await page.goto("/timeoff");
     const free = page.locator(`[data-month="3"] [data-testid="free-cell"]`);

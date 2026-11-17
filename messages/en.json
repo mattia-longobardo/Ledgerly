@@ -5250,9 +5250,11 @@
       "duration": "Duration",
       "wholeDay": "Whole day",
       "halfDay": "Half day",
+      "splitDay": "Half + half",
       "note": "Note",
       "noteHint": "Morning or afternoon, for instance — this stays here and never goes to Trek.",
-      "localOnly": "Stays here: it is not sent to Trek and does not use up the vacation allowance."
+      "localOnly": "Stays here: it is not sent to Trek and does not use up the vacation allowance.",
+      "otherKind": "Other half"
     },
     "allowance": {
       "description": "What the contract grants this year. Leave a field empty to state nothing; what last year left over comes from your payslip.",
@@ -5345,6 +5347,7 @@
       "duration": "Duration",
       "durationWhole": "{total} ({count, plural, one {# working day} other {# working days}})",
       "durationHalf": "{total} ({count, plural, one {# half day} other {# half days}})",
+      "durationSplit": "{total} ({count, plural, one {# day} other {# days}}: {first} + {second})",
       "excluded": "Days left out",
       "excludedHoliday": "{day} (holiday)",
       "more": "+ {count} more",

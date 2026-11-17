@@ -117,8 +117,27 @@ export function LeavePanel({
   const [from, setFrom] = useState(firstDay);
   const [to, setTo] = useState(entry.mode === "range" ? entry.to : firstDay);
   const [kind, setKind] = useState<LeaveDayKind>(row?.kind ?? selectable[0]?.id ?? data.types[0].id);
-  const [fraction, setFraction] = useState<"1" | "0.5">(row?.fraction === 0.5 ? "0.5" : "1");
+  /** "split" is half of `kind` and half of `otherKind` on every day, in one step (decision of 17/11/2026). */
+  const [fraction, setFraction] = useState<"1" | "0.5" | "split">(row?.fraction === 0.5 ? "0.5" : "1");
   const [note, setNote] = useState(row?.note ?? "");
+  /** The second half's kind: the other row of the day when there is one, else what the rules propose. */
+  const [otherKind, setOtherKind] = useState<LeaveDayKind>(
+    rows.find((one) => one.id !== row?.id)?.kind ?? proposedOther(row?.kind ?? kind),
+  );
+  const split = fraction === "split";
+
+  /** The kind beside `first`: the rules' proposal when it can be booked, or the first one that can. */
+  function proposedOther(first: LeaveDayKind): LeaveDayKind {
+    const proposed = otherHalfOf(first);
+    if (selectable.some((type) => type.id === proposed)) return proposed;
+    return selectable.find((type) => type.id !== first)?.id ?? proposed;
+  }
+
+  function changeKind(next: LeaveDayKind) {
+    setKind(next);
+    // The two halves are of two kinds: picking the second half's kind for the first moves it on.
+    if (next === otherKind) setOtherKind(proposedOther(next));
+  }
 
   const typeOf = (one: LeaveDayKind) => data.types.find((type) => type.id === one);
   const nameOf = (one: LeaveDayKind) => typeOf(one)?.name ?? one;
@@ -171,11 +190,18 @@ export function LeavePanel({
     () =>
       validDates && !tooLong
         ? previewLeaveRange(
-            { from, to, kind, fraction: Number(fraction), editedKind: row?.kind ?? null },
+            {
+              from,
+              to,
+              kind,
+              fraction: split ? 0.5 : Number(fraction),
+              otherKind: split ? otherKind : null,
+              editedKind: row?.kind ?? null,
+            },
             { days: data.days, holidays: data.holidays, residuals: data.residuals, year: data.year },
           )
         : null,
-    [validDates, tooLong, from, to, kind, fraction, row?.kind, data],
+    [validDates, tooLong, from, to, kind, fraction, split, otherKind, row?.kind, data],
   );
   const nothing = preview !== null && preview.written.length === 0;
 
@@ -196,7 +222,15 @@ export function LeavePanel({
   function submit(event: FormEvent) {
     event.preventDefault();
     if (saving || preview === null || nothing) return;
-    onConfirm({ from, to, kind, fraction, note, editedKind: row?.kind ?? null });
+    onConfirm({
+      from,
+      to,
+      kind,
+      fraction: split ? "0.5" : fraction,
+      note,
+      editedKind: row?.kind ?? null,
+      ...(split ? { otherKind } : {}),
+    });
   }
 
   const title = removing
@@ -386,7 +420,7 @@ export function LeavePanel({
             <Select
               id={`${id}-kind`}
               value={kind}
-              onChange={(event) => setKind(event.target.value as LeaveDayKind)}
+              onChange={(event) => changeKind(event.target.value as LeaveDayKind)}
               disabled={saving}
             >
               {data.types
@@ -408,6 +442,7 @@ export function LeavePanel({
               options={[
                 { value: "1", label: t("dialog.wholeDay"), disabled: saving },
                 { value: "0.5", label: t("dialog.halfDay"), disabled: saving },
+                { value: "split", label: t("dialog.splitDay"), disabled: saving },
               ]}
             />
             {row !== undefined && rows.length === 1 && row.fraction === 0.5 && (
@@ -416,6 +451,25 @@ export function LeavePanel({
               </LinkButton>
             )}
           </Choice>
+
+          {split && (
+            <Field label={t("dialog.otherKind")} htmlFor={`${id}-other`}>
+              <Select
+                id={`${id}-other`}
+                value={otherKind}
+                onChange={(event) => setOtherKind(event.target.value as LeaveDayKind)}
+                disabled={saving}
+              >
+                {data.types
+                  .filter((type) => type.id !== kind && (type.selectable || type.id === otherKind))
+                  .map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+              </Select>
+            </Field>
+          )}
 
           <Field
             label={t("dialog.note")}
@@ -442,15 +496,22 @@ export function LeavePanel({
                 data-testid="summary"
               >
                 <Line label={t("panel.duration")}>
-                  {fraction === "0.5"
-                    ? t("panel.durationHalf", {
+                  {split
+                    ? t("panel.durationSplit", {
                         total: days(preview.totalDays * data.minutesPerDay),
                         count: preview.written.length,
+                        first: t("panel.half", { kind: nameOf(kind) }),
+                        second: t("panel.half", { kind: nameOf(otherKind) }),
                       })
-                    : t("panel.durationWhole", {
-                        total: days(preview.totalDays * data.minutesPerDay),
-                        count: preview.written.length,
-                      })}
+                    : fraction === "0.5"
+                      ? t("panel.durationHalf", {
+                          total: days(preview.totalDays * data.minutesPerDay),
+                          count: preview.written.length,
+                        })
+                      : t("panel.durationWhole", {
+                          total: days(preview.totalDays * data.minutesPerDay),
+                          count: preview.written.length,
+                        })}
                 </Line>
 
                 {preview.excluded.length > 0 && (

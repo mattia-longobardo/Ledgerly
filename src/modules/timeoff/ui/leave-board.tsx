@@ -151,6 +151,7 @@ export function LeaveBoard({
             kind: fields.kind as LeaveDayKind,
             fraction: Number(fields.fraction),
             editedKind: (fields.editedKind ?? null) as LeaveDayKind | null,
+            otherKind: (fields.otherKind ?? null) as LeaveDayKind | null,
           },
           { days: state.views, holidays: holidaySet, year },
         );

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { getPreferences } from "@/modules/users/service";
 import { holidaysFor } from "@/platform/holidays/service";
 import type { Ctx } from "@/platform/context";
@@ -23,6 +23,7 @@ import {
   leaveRemovalRangeSchema,
   leaveUndoSchema,
   previewLeaveRange,
+  rangeParts,
   stillBooked,
 } from "./rules";
 import { leaveDays, timeoffAllowances } from "./schema";
@@ -522,6 +523,7 @@ export async function saveLeaveRange(
   const parsed = leaveRangeInputSchema.safeParse(input);
   if (!parsed.success) throw new TimeOffError("invalid_input");
   const { from, to, kind, fraction } = parsed.data;
+  const otherKind = parsed.data.otherKind ?? null;
   const note = parsed.data.note ?? null;
 
   const span = datesBetween(from, to);
@@ -534,26 +536,43 @@ export async function saveLeaveRange(
   return getDb().transaction(async (tx) => {
     const existing = await rowsOn(tx, ctx, and(gte(leaveDays.on, from), lte(leaveDays.on, to)));
     const preview = previewLeaveRange(
-      { from, to, kind, fraction, editedKind: parsed.data.editedKind ?? null },
+      { from, to, kind, fraction, otherKind, editedKind: parsed.data.editedKind ?? null },
       // The panel works from the rows still booked; the server answers from the same ones.
       { days: existing.filter(stillBooked).map(asView), holidays },
     );
     if (preview.written.length === 0) throw new TimeOffError("not_bookable", preview.excluded);
 
-    let toldTrek = goesToTrek(kind);
+    const parts = rangeParts({ kind, fraction, otherKind });
+    let toldTrek = parts.some((part) => goesToTrek(part.kind));
     for (const gone of preview.removed) {
       const row = existing.find((one) => one.on === gone.on && one.kind === gone.kind);
       if (row !== undefined && (await takeAway(tx, ctx, row)) === "pending") toldTrek = true;
     }
 
-    const pending = goesToTrek(kind) ? ("upsert" as const) : ("none" as const);
-    const values = { kind, fraction: fraction.toFixed(1), note, pending };
     const days = await tx
       .insert(leaveDays)
-      .values(preview.written.map((on) => userScoped(ctx).stamp({ on, ...values })))
+      .values(
+        preview.written.flatMap((on) =>
+          parts.map((part) =>
+            userScoped(ctx).stamp({
+              on,
+              kind: part.kind,
+              fraction: part.fraction.toFixed(1),
+              note,
+              pending: goesToTrek(part.kind) ? ("upsert" as const) : ("none" as const),
+            }),
+          ),
+        ),
+      )
       .onConflictDoUpdate({
         target: [leaveDays.userId, leaveDays.on, leaveDays.kind],
-        set: { fraction: values.fraction, note, pending, updatedAt: new Date() },
+        // Each row keeps its own values: `excluded` is the row that was about to be inserted.
+        set: {
+          fraction: sql`excluded.fraction`,
+          note,
+          pending: sql`excluded.pending`,
+          updatedAt: new Date(),
+        },
       })
       .returning();
 

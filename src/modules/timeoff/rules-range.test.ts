@@ -211,6 +211,84 @@ describe("editing one row", () => {
   });
 });
 
+describe("half of one kind and half of another, in one step (decision of 17/11/2026)", () => {
+  it("writes the two halves on a free day, and the residual of both kinds moves", () => {
+    const preview = previewLeaveRange(
+      { from: "2026-11-17", to: "2026-11-17", kind: "vacation", fraction: 0.5, otherKind: "rol" },
+      context([], { vacation: 10, rol: 4 }),
+    );
+    expect(preview.written).toEqual(["2026-11-17"]);
+    expect(preview.replaced).toEqual([]);
+    expect(preview.after).toEqual([day("2026-11-17", "vacation", 0.5), day("2026-11-17", "rol", 0.5)]);
+    expect(preview.totalDays).toBe(1);
+    expect(preview.balances).toEqual([
+      { kind: "vacation", beforeMinutes: d(10), afterMinutes: d(9.5) },
+      { kind: "rol", beforeMinutes: d(4), afterMinutes: d(3.5) },
+    ]);
+  });
+
+  it("splits a whole day of vacation it edits: the row shrinks, nothing is reported as replaced", () => {
+    const preview = previewLeaveRange(
+      {
+        from: "2026-11-17",
+        to: "2026-11-17",
+        kind: "vacation",
+        fraction: 0.5,
+        otherKind: "rol",
+        editedKind: "vacation",
+      },
+      context([day("2026-11-17", "vacation")], { vacation: 10, rol: 4 }),
+    );
+    expect(preview.replaced).toEqual([]);
+    expect(preview.removed).toEqual([]);
+    expect(preview.after).toEqual([day("2026-11-17", "vacation", 0.5), day("2026-11-17", "rol", 0.5)]);
+  });
+
+  it("adds the other half beside a half of the first kind, and resizes nothing", () => {
+    const preview = previewLeaveRange(
+      { from: "2026-11-17", to: "2026-11-17", kind: "vacation", fraction: 0.5, otherKind: "rol" },
+      context([day("2026-11-17", "vacation", 0.5)]),
+    );
+    expect(preview.replaced).toEqual([]);
+    expect(preview.after).toEqual([day("2026-11-17", "vacation", 0.5), day("2026-11-17", "rol", 0.5)]);
+  });
+
+  it("takes away a third kind, and resizes a whole day of one of the two kinds, on every day of a range", () => {
+    const preview = previewLeaveRange(
+      { from: "2026-06-16", to: "2026-06-17", kind: "vacation", fraction: 0.5, otherKind: "rol" },
+      context([day("2026-06-16", "comp"), day("2026-06-17", "rol")]),
+    );
+    expect(preview.replaced).toEqual([
+      { on: "2026-06-16", kind: "comp", fraction: 1, change: "removed" },
+      { on: "2026-06-17", kind: "rol", fraction: 1, change: "resized" },
+    ]);
+    expect(preview.removed).toEqual([day("2026-06-16", "comp")]);
+    expect(preview.totalDays).toBe(2);
+    expect(preview.after).toEqual([
+      day("2026-06-16", "vacation", 0.5),
+      day("2026-06-16", "rol", 0.5),
+      day("2026-06-17", "vacation", 0.5),
+      day("2026-06-17", "rol", 0.5),
+    ]);
+  });
+
+  it("keeps the edited row when it becomes the second half, instead of taking it away", () => {
+    const preview = previewLeaveRange(
+      {
+        from: "2026-11-17",
+        to: "2026-11-17",
+        kind: "rol",
+        fraction: 0.5,
+        otherKind: "vacation",
+        editedKind: "vacation",
+      },
+      context([day("2026-11-17", "vacation")]),
+    );
+    expect(preview.removed).toEqual([]);
+    expect(preview.after).toEqual([day("2026-11-17", "vacation", 0.5), day("2026-11-17", "rol", 0.5)]);
+  });
+});
+
 describe("the residual before and after", () => {
   it("is the same residual() the card uses, over the days as they will be", () => {
     const booked = [day("2026-03-10", "vacation"), day("2026-03-11", "vacation")];

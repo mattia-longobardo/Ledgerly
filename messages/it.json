@@ -5250,9 +5250,11 @@
       "duration": "Durata",
       "wholeDay": "Giornata intera",
       "halfDay": "Mezza giornata",
+      "splitDay": "Mezza + mezza",
       "note": "Nota",
       "noteHint": "Per esempio mattina o pomeriggio: resta qui e non arriva mai a Trek.",
-      "localOnly": "Resta qui: non viene inviata a Trek e non consuma la dotazione ferie."
+      "localOnly": "Resta qui: non viene inviata a Trek e non consuma la dotazione ferie.",
+      "otherKind": "Altra metà"
     },
     "allowance": {
       "description": "Quello che il contratto concede quest'anno. Lascia vuoto un campo per non dichiarare nulla; il residuo dell'anno scorso arriva dal cedolino.",
@@ -5345,6 +5347,7 @@
       "duration": "Durata",
       "durationWhole": "{total} ({count, plural, one {# giorno lavorativo} other {# giorni lavorativi}})",
       "durationHalf": "{total} ({count, plural, one {# mezza giornata} other {# mezze giornate}})",
+      "durationSplit": "{total} ({count, plural, one {# giorno} other {# giorni}}: {first} + {second})",
       "excluded": "Giorni esclusi",
       "excludedHoliday": "{day} (festivo)",
       "more": "+ altri {count}",

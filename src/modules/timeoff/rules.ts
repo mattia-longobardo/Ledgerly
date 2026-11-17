@@ -442,8 +442,17 @@ export const leaveRangeInputSchema = z
     fraction: z.number().refine((value) => (DAY_FRACTIONS as readonly number[]).includes(value)),
     note: z.string().trim().max(MAX_NOTE).nullish().default(null),
     editedKind: z.enum(LEAVE_DAY_KINDS).nullish().default(null),
+    /** The kind of the second half of every day: half `kind` and half this (decision of 17/11/2026). */
+    otherKind: z.enum(LEAVE_DAY_KINDS).nullish().default(null),
   })
   .refine((input) => input.to >= input.from, { path: ["to"], message: "range ends before it begins" })
+  .refine(
+    (input) =>
+      input.otherKind === null ||
+      input.otherKind === undefined ||
+      (input.fraction === 0.5 && input.otherKind !== input.kind),
+    { path: ["otherKind"], message: "a split day is two halves of two kinds" },
+  )
   // An edit is of the one day its row stands for.
   .refine((input) => input.editedKind === null || input.editedKind === undefined || input.to === input.from, {
     path: ["to"],
@@ -541,6 +550,22 @@ export interface LeaveRangeInput {
    * day nor reported as something the range takes away.
    */
   editedKind?: LeaveDayKind | null;
+  /**
+   * Set when every day is split: half a day of `kind` and half a day of this one, written together
+   * (decision of 17/11/2026). `fraction` is then 0.5.
+   */
+  otherKind?: LeaveDayKind | null;
+}
+
+/** What one day of a range holds once written: one row, or the two halves of a split day. */
+export function rangeParts(input: Pick<LeaveRangeInput, "kind" | "fraction" | "otherKind">): LeaveDayView[] {
+  const other = input.otherKind ?? null;
+  return other === null || other === input.kind
+    ? [{ on: "", kind: input.kind, fraction: input.fraction }]
+    : [
+        { on: "", kind: input.kind, fraction: 0.5 },
+        { on: "", kind: other, fraction: 0.5 },
+      ];
 }
 
 export interface LeaveRangeContext {
@@ -593,12 +618,18 @@ export interface LeaveRangePreview {
  *  2. when the new row and the rows of other kinds come to more than a day, the others go;
  *  3. when they do not — a new half beside a half of another kind — the two stay together.
  *
+ * A split day (`otherKind`) writes two halves at once, each by rule 1; any third kind goes by rule 2.
+ *
  * Nothing here is a new rule about residuals: "after" is {@link residual} again, over the days as
  * they will be. A residual below zero is an ordinary answer and not an error — the page is also
  * where leave is planned.
  */
 export function previewLeaveRange(input: LeaveRangeInput, context: LeaveRangeContext): LeaveRangePreview {
-  const { from, to, kind, fraction } = input;
+  const { from, to } = input;
+  const kind = input.kind;
+  const parts = rangeParts(input);
+  const partKinds = new Set(parts.map((part) => part.kind));
+  const perDay = parts.reduce((sum, part) => sum + part.fraction, 0);
   const editedKind = input.editedKind ?? null;
   const year = context.year ?? null;
   const inYear = (date: CivilDate) => year === null || Number(date.slice(0, 4)) === year;
@@ -619,15 +650,17 @@ export function previewLeaveRange(input: LeaveRangeInput, context: LeaveRangeCon
   for (const date of written) {
     const rows = byDate.get(date) ?? [];
     const edited = date === from && editedKind !== null ? editedKind : null;
-    if (edited !== null && edited !== kind) {
+    if (edited !== null && !partKinds.has(edited)) {
       removed.push(...rows.filter((row) => row.kind === edited));
     }
-    const same = rows.find((row) => row.kind === kind);
-    if (same !== undefined && same.fraction !== fraction && edited !== kind) {
-      replaced.push({ ...same, change: "resized" });
+    for (const part of parts) {
+      const same = rows.find((row) => row.kind === part.kind);
+      if (same !== undefined && same.fraction !== part.fraction && edited !== part.kind) {
+        replaced.push({ ...same, change: "resized" });
+      }
     }
-    const others = rows.filter((row) => row.kind !== kind && row.kind !== edited);
-    if (fraction + others.reduce((sum, row) => sum + row.fraction, 0) > 1) {
+    const others = rows.filter((row) => !partKinds.has(row.kind) && row.kind !== edited);
+    if (perDay + others.reduce((sum, row) => sum + row.fraction, 0) > 1) {
       for (const row of others) {
         replaced.push({ ...row, change: "removed" });
         removed.push(row);
@@ -636,13 +669,13 @@ export function previewLeaveRange(input: LeaveRangeInput, context: LeaveRangeCon
   }
 
   const gone = new Set(removed.map((row) => `${row.on} ${row.kind}`));
-  const rewritten = new Set(written.map((date) => `${date} ${kind}`));
+  const rewritten = new Set(written.flatMap((date) => parts.map((part) => `${date} ${part.kind}`)));
   const after: LeaveDayView[] = [
     ...context.days.filter((day) => {
       const key = `${day.on} ${day.kind}`;
       return !gone.has(key) && !rewritten.has(key);
     }),
-    ...written.filter(inYear).map((on) => ({ on, kind, fraction })),
+    ...written.filter(inYear).flatMap((on) => parts.map((part) => ({ ...part, on }))),
   ].sort((a, b) => (a.on === b.on ? byDeclaredOrder(a.kind, b.kind) : a.on < b.on ? -1 : 1));
 
   const balances: BalanceChange[] = [];
@@ -666,7 +699,7 @@ export function previewLeaveRange(input: LeaveRangeInput, context: LeaveRangeCon
       a.on === b.on ? byDeclaredOrder(a.kind, b.kind) : a.on < b.on ? -1 : 1,
     ),
     removed,
-    totalDays: written.length * fraction,
+    totalDays: written.length * perDay,
     otherYearDays: written.filter((date) => !inYear(date)).length,
     balances,
     after,

@@ -104,6 +104,8 @@ export interface LeaveFormInput {
   note: string;
   /** Set when the panel edits a row: the kind that row has now. */
   editedKind?: string | null;
+  /** Set for "½ + ½": the kind of the second half of every day (decision of 17/11/2026). */
+  otherKind?: string | null;
 }
 
 export type LeaveActionResult =
@@ -126,6 +128,8 @@ export async function saveLeaveRangeAction(input: LeaveFormInput): Promise<Leave
       fraction: optionalNumber(input.fraction) ?? 1,
       note: input.note.trim() || null,
       editedKind: input.editedKind == null ? null : KINDS.parse(input.editedKind),
+      // "½ + ½" only: every other call reaches the service as it did before.
+      ...(input.otherKind == null ? {} : { otherKind: KINDS.parse(input.otherKind) }),
     });
     revalidate();
     // The service knows whether the next pass has work: one list says what reaches Trek.

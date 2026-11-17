@@ -325,6 +325,37 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(page.getByTestId("leave-cell")).toHaveCount(3);
   });
 
+  await test.step("a whole day of vacation becomes half vacation and half ROL in one step (17/11/2026)", async () => {
+    await cell(page, FRI).click();
+    await cell(page, FRI).click();
+    const book = page.getByRole("dialog", { name: "New leave" });
+    await book.getByRole("button", { name: "Confirm" }).click();
+    await expect(book).toBeHidden();
+    await expect(rowsOf(page, FRI)).toHaveCount(1);
+    const writes = countWrites(page);
+
+    await cell(page, FRI).click();
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    await edit.getByRole("button", { name: "Half + half" }).click();
+    await expect(edit.getByLabel("Other half")).toHaveValue("rol");
+    await expect(edit.getByTestId("summary")).toContainText("1 d (1 day: Vacation ½ + ROL ½)");
+    await expect(edit.getByTestId("summary")).toContainText("3.5 d → 3 d");
+    await edit.getByRole("button", { name: "Confirm" }).click();
+    await expect(edit).toBeHidden();
+
+    await expect(cell(page, FRI)).toHaveAttribute("aria-label", /Vacation, ROL/);
+    await expect(cell(page, FRI)).not.toHaveAttribute("data-partial", "true");
+    await expect(rowsOf(page, FRI)).toHaveCount(2);
+    await expect(page.getByTestId("rol-card")).toContainText("3");
+    expect(writes(), "one Confirm, one write").toBe(1);
+
+    // As the step found the year.
+    for (const left of [1, 0]) {
+      await rowsOf(page, FRI).first().getByRole("button", { name: "Remove" }).click();
+      await expect(rowsOf(page, FRI)).toHaveCount(left);
+    }
+  });
+
   await test.step("a day still to come is drawn hollow, not as one already counted (N8)", async () => {
     // This user has no payslips, so every booked day is planned — and planned must not look like
     // a day the payroll has already counted.

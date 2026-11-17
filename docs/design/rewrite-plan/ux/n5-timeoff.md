@@ -250,7 +250,8 @@ Spazio tra i campi: `gap-4` (come `LeaveDialog`). «Dal» e «Al»: `grid grid-c
 | Dal | `Input type="date"` in `Field` | Qualsiasi data | Primo giorno scelto; da «Aggiungi assenza»: oggi |
 | Al | `Input type="date"` in `Field`, `min` = «Dal» | ≥ «Dal» | Ultimo giorno scelto; da «Aggiungi assenza»: uguale a «Dal» |
 | Tipo | `Select` in `Field` | I tipi di `LEAVE_DAY_KINDS` senza `sick` (decisione H20), nell'ordine attuale | `vacation` |
-| Durata | `Segmented` in `Field` | «Giornata intera» (1), «Mezza giornata» (0,5) | Giornata intera |
+| Durata | `Segmented` in `Field` | «Giornata intera» (1), «Mezza giornata» (0,5), «Mezza + mezza» (½ + ½) | Giornata intera |
+| Altra metà | `Select` in `Field`, solo con «Mezza + mezza» | I tipi selezionabili tranne «Tipo» | L'altra riga del giorno, se c'è; altrimenti ROL se «Tipo» è ferie, ferie negli altri casi |
 | Nota | `Textarea` in `Field`, `rows={2}`, `maxLength={200}` | Testo libero | Vuota |
 
 - «Al» non è più facoltativo e non ha più il suggerimento «Lascia vuoto». Un giorno solo = «Dal» uguale a «Al».
@@ -258,6 +259,12 @@ Spazio tra i campi: `gap-4` (come `LeaveDialog`). «Dal» e «Al»: `grid grid-c
 - Finché «Dal» e «Al» sono lo stesso giorno, «Al» segue «Dal»: un giorno solo resta un giorno solo. Dopo una
   modifica di «Al» i due campi sono indipendenti.
 - «Durata» vale per ogni giorno dell'intervallo: mezza giornata su 5 giorni = 2,5 gg.
+- **«Mezza + mezza»** (decisione del 17/11/2026): ogni giorno dell'intervallo ha mezza giornata di «Tipo» e mezza di
+  «Altra metà», scritte con una sola «Conferma». Vale per un giorno libero, per un giorno prenotato in modifica (§7.1:
+  un giorno di ferie intere diventa «Ferie ½ + ROL ½») e per un intervallo. La regola di §5.5 vale per ogni metà: la
+  riga dello stesso tipo cambia misura, un terzo tipo viene sostituito. Il riepilogo dice «1 gg (1 giorno: Ferie ½ +
+  ROL ½)» e il residuo di entrambi i tipi. Se «Tipo» prende il valore di «Altra metà», «Altra metà» passa al tipo
+  proposto. Trek riceve il giorno come oggi: le due metà fanno una giornata intera.
 - Suggerimento sotto «Nota»: `dialog.noteHint` per ferie, ROL, recupero; `dialog.localOnly` per altro
   (regola di oggi, `noteHint()` in `leave-actions.tsx`).
 - `Segmented` è alto 24 px: rispetta il minimo di 24 px. Sotto 768 px i suoi pulsanti passano a `h-8` (32 px) con
@@ -366,6 +373,9 @@ Se il giorno ha una sola riga di mezza giornata, sotto «Durata» c'è `LinkButt
 pannello passa a «Nuova assenza» sullo stesso giorno, durata mezza giornata, tipo ROL se la riga è ferie, altrimenti
 ferie. L'utente può cambiare il tipo. È il controllo visibile che sostituisce la pressione lunga con il tasto destro
 (`splitDayAction`).
+
+Resta disponibile dopo il 17/11/2026. Per un giorno libero o con una giornata intera, la strada in un passo è
+«Durata: Mezza + mezza» (§5.3): prima servivano due conferme e il collegamento compariva solo dopo la prima.
 
 ### 7.4 «Rimuovi»
 
@@ -618,6 +628,9 @@ dell'azione: un'assenza può durare più giorni.
 | `panel.duration` | Durata | Duration |
 | `panel.durationWhole` | {total} ({count, plural, one {# giorno lavorativo} other {# giorni lavorativi}}) | {total} ({count, plural, one {# working day} other {# working days}}) |
 | `panel.durationHalf` | {total} ({count, plural, one {# mezza giornata} other {# mezze giornate}}) | {total} ({count, plural, one {# half day} other {# half days}}) |
+| `panel.durationSplit` (17/11/2026) | {total} ({count, plural, one {# giorno} other {# giorni}}: {first} + {second}) | {total} ({count, plural, one {# day} other {# days}}: {first} + {second}) |
+| `dialog.splitDay` (17/11/2026) | Mezza + mezza | Half + half |
+| `dialog.otherKind` (17/11/2026) | Altra metà | Other half |
 | `panel.excluded` | Giorni esclusi | Days left out |
 | `panel.excludedHoliday` | {day} (festivo) | {day} (holiday) |
 | `panel.more` | + altri {count} | + {count} more |
@@ -704,6 +717,7 @@ Decisioni di prodotto che il piano non scrive. Mattia le ha prese il 14/11/2026.
 | Q5 | Su telefono il calendario si apre sul mese corrente? | Sì: sotto 768 px, per l'anno corrente, la pagina scorre da sola al mese corrente all'apertura (diversa dal default proposto) | §2.4 |
 | Q6 | Il pannello è una finestra centrata (`Modal`) anche su desktop? | Sì | §5.1 |
 | Q7 | La parola per l'azione: «assenza» in italiano? | Sì | §12 |
+| Q8 | Mezza giornata di ferie e mezza di ROL sullo stesso giorno: in un passo? | Sì, **decisione del 17/11/2026**: «Durata: Mezza + mezza» con il campo «Altra metà», una sola «Conferma», anche su più giorni e su un giorno prenotato. «Aggiungi l'altra metà» resta | §5.3, §7.3 |
 
 Scelte dello sviluppo, dentro le decisioni sopra:
 

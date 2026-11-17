@@ -346,6 +346,43 @@ describe("a booked day", () => {
     });
   });
 
+  it("splits a whole day into half of each kind in one step (decision of 17/11/2026)", async () => {
+    const whole = row("2026-11-17", "vacation");
+    const panel = renderPanel({ mode: "edit", date: "2026-11-17", rows: [whole] }, [whole]);
+    await userEvent.click(panel.getByRole("button", { name: "Half + half" }));
+    expect(panel.getByLabelText("Other half")).toHaveValue("rol");
+    expect(line("Duration")).toHaveTextContent("1 d (1 day: Holiday leave ½ + Hours bank ½)");
+    expect(line("Holiday leave balance")).toHaveTextContent("25 d → 25.5 d");
+    expect(line("Hours bank balance")).toHaveTextContent("4 d → 3.5 d");
+    expect(within(summary()).queryByText("Replaces")).not.toBeInTheDocument();
+
+    await userEvent.click(panel.getByRole("button", { name: "Confirm" }));
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith({
+      from: "2026-11-17",
+      to: "2026-11-17",
+      kind: "vacation",
+      fraction: "0.5",
+      note: "",
+      editedKind: "vacation",
+      otherKind: "rol",
+    });
+  });
+
+  it("never offers the first half's kind for the second, and moves it on when the first takes it", async () => {
+    const panel = renderPanel({ mode: "range", from: "2026-06-15", to: "2026-06-16" });
+    await userEvent.click(panel.getByRole("button", { name: "Half + half" }));
+    const other = panel.getByLabelText("Other half");
+    expect(within(other).queryByRole("option", { name: "Holiday leave" })).not.toBeInTheDocument();
+    await userEvent.selectOptions(panel.getByLabelText("Type"), "rol");
+    expect(other).toHaveValue("vacation");
+    expect(line("Duration")).toHaveTextContent("2 d (2 days: Hours bank ½ + Holiday leave ½)");
+
+    await userEvent.click(panel.getByRole("button", { name: "Confirm" }));
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ kind: "rol", fraction: "0.5", otherKind: "vacation" }),
+    );
+  });
+
   it("does not offer the other half of a whole day, nor of a day that already has two", () => {
     const whole = row("2026-06-17", "vacation");
     renderPanel({ mode: "edit", date: "2026-06-17", rows: [whole] }, [whole]);
