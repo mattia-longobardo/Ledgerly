@@ -12,7 +12,7 @@ import { getOptionalSession } from "@/platform/auth/session";
 import { readEnv } from "@/platform/env";
 import { PLUGIN_ID } from "@/platform/plugins/contract/manifest";
 import { completeAccess, type ReturnOutcome } from "@/platform/plugins/service";
-import { exposedAccounts, readBank } from "@/platform/plugins/sync";
+import { exposedAccounts, readBank, tieBack } from "@/platform/plugins/sync";
 import { presenceOf } from "@/app/(app)/banks/presence";
 import { bankSink } from "@/app/(app)/banks/sink";
 
@@ -35,7 +35,7 @@ function back(outcome: ReturnOutcome, step: "accounts" | "done" = "accounts"): N
   if (outcome.ok) {
     target.searchParams.set("step", step);
     target.searchParams.set("c", outcome.connectionId);
-    if (step === "done") target.searchParams.set("renewed", "1");
+    if (step === "done" && outcome.renewed) target.searchParams.set("renewed", "1");
   } else {
     target.searchParams.set("step", "bank");
     target.searchParams.set("error", outcome.error);
@@ -65,10 +65,12 @@ export async function GET(
       presence,
     });
     // A first access goes to the choice of the accounts, at once: the bank gives its full history
-    // only in the first minutes. A renewed one reads the bank now and shows the outcome — unless
-    // the bank exposes an account the person has not been asked about yet (§6.7).
-    if (!outcome.ok || !outcome.renewed) return back(outcome);
+    // only in the first minutes. A renewed one, or a bank connected again whose accounts are still
+    // tied here, reads the bank now and shows the outcome — unless the bank exposes an account the
+    // person has not been asked about yet (§6.7).
+    if (!outcome.ok) return back(outcome);
     const target = { pluginId: plugin, connectionId: outcome.connectionId };
+    if (!outcome.renewed && !(await tieBack(session.ctx, target, bankSink))) return back(outcome);
     const exposed = await exposedAccounts(session.ctx, target, bankSink);
     const unasked = exposed.accounts.some(
       (account) => account.linked === null && !exposed.skipped.includes(account.providerAccountId),

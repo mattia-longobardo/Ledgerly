@@ -12,7 +12,6 @@ import {
   linkProviderAccounts,
   rebuildDerivedBalances,
   ibanOwnersOf,
-  releaseProviderAccounts,
   saveProviderBalance,
   saveSourceIbans,
 } from "@/modules/accounts/service";
@@ -26,6 +25,7 @@ import type { Ctx } from "@/platform/context";
 import { type CivilDate, civilDateIn, wallClockIn } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { isPluginProvider, pluginProvider } from "@/platform/integrations/rules";
+import { connectionSharing } from "@/platform/plugins/service";
 import { exposedAccounts } from "@/platform/plugins/sync";
 import { parseCents } from "@/platform/money";
 import { type BankSink, type ReadingMovement, SinkRefusal } from "@/platform/plugins/ports";
@@ -107,10 +107,6 @@ export const bankSink: BankSink = {
     return new Map([...linked].map(([key, account]) => [key, { id: account.id, name: account.name }]));
   },
 
-  async releaseAccounts(ctx, provider, providerAccountIds) {
-    await releaseProviderAccounts(ctx, provider, providerAccountIds);
-  },
-
   async writeBalance(ctx, accountId, reading, now) {
     await saveProviderBalance(ctx, accountId, { on: reading.on, cents: parseCents(reading.amount) }, now);
   },
@@ -153,9 +149,15 @@ async function laterTransfers(
   for (const open of await openSwitches(ctx)) {
     if (!accountIds.includes(open.accountId) || !isPluginProvider(open.toProvider)) continue;
     const pluginId = open.toProvider.slice(pluginProvider("").length);
-    const exposed = await exposedAccounts(ctx, { pluginId, connectionId: open.connectionId }, bankSink).catch(
-      () => null,
-    );
+    // The bank's connection of today, not the one of the switch: a bank disconnected and connected
+    // again has a new connection, and the switch stays open across it.
+    const sharing = await connectionSharing(ctx, pluginId, open.toProviderAccountId);
+    if (sharing === null) continue;
+    const exposed = await exposedAccounts(
+      ctx,
+      { pluginId, connectionId: sharing.connection.id },
+      bankSink,
+    ).catch(() => null);
     if (exposed === null) continue;
     const others = exposed.accounts.flatMap((one) =>
       one.linked && one.linked.id !== open.accountId ? [one.linked.id] : [],

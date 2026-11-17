@@ -151,7 +151,7 @@ export async function retryBankReadingAction(connectionId: string): Promise<{ ok
 export async function cancelBankConnectionAction(connectionId: string): Promise<{ ok: true } | Refusal> {
   const session = await signedIn();
   try {
-    await disconnectBank(session.ctx, { pluginId: BANK_PLUGIN_ID, connectionId }, bankSink);
+    await disconnectBank(session.ctx, { pluginId: BANK_PLUGIN_ID, connectionId });
   } catch (error) {
     return refusal(error);
   }

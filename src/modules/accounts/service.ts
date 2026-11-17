@@ -1072,33 +1072,6 @@ export async function accountsOfProvider(
 }
 
 /**
- * Gives the accounts of a provider back to the person: they become accounts kept by hand, with
- * every balance and movement they have (rewrite plan N1, "Disconnect"). Nothing is deleted.
- */
-export async function releaseProviderAccounts(
-  ctx: Pick<Ctx, "userId">,
-  provider: string,
-  /** Only these accounts of the provider (one bank among several); left out, every one. */
-  providerAccountIds?: readonly string[],
-): Promise<number> {
-  if (providerAccountIds !== undefined && providerAccountIds.length === 0) return 0;
-  const released = await getDb()
-    .update(accounts)
-    .set({ origin: "manual", provider: null, providerAccountId: null })
-    .where(
-      and(
-        userScoped(ctx).owns(accounts),
-        eq(accounts.provider, provider),
-        providerAccountIds === undefined
-          ? undefined
-          : inArray(accounts.providerAccountId, [...providerAccountIds]),
-      ),
-    )
-    .returning({ id: accounts.id });
-  return released.length;
-}
-
-/**
  * Applies a provider's account list (spec §7.1). F2's sync engine fetches the accounts outside any
  * transaction and hands them here; the rules that decide what happens live in `rules.ts`.
  */

@@ -150,7 +150,8 @@ export default async function SwitchAccountPage({
   }
 
   // Step "Account" (§4): the accounts of the person's banks not yet in Ledgerly, in its currency.
-  const banks = await freeBankAccounts(ctx, account.id, account.currency);
+  const accountTypes = await getTranslations("accounts.types");
+  const banks = await freeBankAccounts(ctx, account.id, account.currency, (type) => accountTypes(type));
   const own = account.iban;
   const choices = banks.flatMap((bank) => bank.accounts);
   if (banks.length === 0 || choices.length === 0) {

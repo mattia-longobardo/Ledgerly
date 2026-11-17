@@ -80,8 +80,6 @@ export interface BankSink {
   ): Promise<Map<string, string>>;
   /** The accounts tied to a provider, by provider id. */
   linkedAccounts(ctx: Who, provider: string): Promise<Map<string, { id: string; name: string }>>;
-  /** Gives these accounts of the provider back to the person, as accounts kept by hand. */
-  releaseAccounts(ctx: Who, provider: string, providerAccountIds: readonly string[]): Promise<void>;
   writeBalance(
     ctx: Who,
     accountId: string,

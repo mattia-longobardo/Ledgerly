@@ -143,12 +143,6 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const synced = since(service?.lastSyncedAt ?? account.lastSyncedAt, now);
   // A plugin's provider is shown by its own name, not by its id.
   const providerLabel = await providerName(ctx, account.provider);
-  const source =
-    service !== null
-      ? t("origins.syncedWith", { provider: service.provider })
-      : account.origin === "manual"
-        ? t("origins.manual")
-        : t("origins.syncedWith", { provider: providerLabel ?? "" });
   // The connection the account comes from, in the short form of its row (ux n2 §3.3).
   const connection = await accountConnectionRow(
     ctx,
@@ -156,6 +150,17 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
     service !== null ? `/investments/${id}/connection` : null,
     now,
   );
+  // Still tied to its source, with no connection to it: the source was disconnected, and a new
+  // connection to it ties the account again (ux n1 §5.4).
+  const disconnected = service === null && account.origin === "synced" && connection === null;
+  const source =
+    service !== null
+      ? t("origins.syncedWith", { provider: service.provider })
+      : account.origin === "manual"
+        ? t("origins.manual")
+        : t(disconnected ? "origins.disconnectedFrom" : "origins.syncedWith", {
+            provider: providerLabel ?? "",
+          });
   const color = colorFor(account, index);
   // A service of Investments takes no manual balance (docs/design/investments.md §1.3).
   // A service of Investments links there; only one Investments writes locks the balances (§1.3).
@@ -169,7 +174,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           <span aria-hidden className="size-2 rounded-full" style={{ background: color }} />
           <span>{t(`types.${account.type}`)}</span>
           <span aria-hidden>·</span>
-          <span>{source}</span>
+          {disconnected ? <Badge tone="warn">{source}</Badge> : <span>{source}</span>}
           {(account.origin === "synced" || service !== null) && (
             <>
               <span aria-hidden>·</span>

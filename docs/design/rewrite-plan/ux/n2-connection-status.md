@@ -358,7 +358,7 @@ N2 toglie la chiave unica vecchia: un utente collega più banche. Un collegament
 | Frase «una sola banca» | Sparisce (N1 §5.5). La guardia «una banca già collegata» di N1 §6.1 cade |
 | Banca già collegata | Nel passo 1 della procedura la banca è in elenco, non selezionabile (`aria-disabled`), con il testo «Già collegata. Per aggiungere un conto usa «Rinnova accesso».» |
 | Chiave non valida (`auth`) | Ogni banca mostra `action` con «Sostituisci chiave». L'avviso sopra le righe di N1 §4.4 sparisce: la riga dice già tutto. «Collega una banca» è disattivato |
-| Scollega | Come N1 §5.4, per una banca sola. Le altre non cambiano |
+| Scollega | Come N1 §5.4, per una banca sola. Le altre non cambiano. I conti restano legati, «Scollegati», e tornano da soli quando la stessa banca si ricollega |
 | «Rimuovi credenziali» | Disattivata finché esiste almeno una banca (N1 §4.3) |
 | Vuoto | «Nessuna banca collegata.» + «Collega una banca» (N1 §3.2, vista B) |
 | Molte banche | Nessun limite e nessuna paginazione: la card cresce |

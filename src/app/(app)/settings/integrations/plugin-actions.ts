@@ -80,7 +80,7 @@ export async function disconnectBankAction(
   connectionId: string,
 ): Promise<PluginActionResult> {
   const ctx = await requireSession();
-  return attempt(() => disconnectBank(ctx, { pluginId, connectionId }, bankSink));
+  return attempt(() => disconnectBank(ctx, { pluginId, connectionId }));
 }
 
 /** What "Sync now" answers: how many movements are new, or why nothing was read and until when. */

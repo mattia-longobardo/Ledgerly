@@ -140,9 +140,6 @@ function fakePlugin(overrides: Record<string, Answer> = {}) {
   return { calls, of, deps: { fetchFn } };
 }
 
-/** The accounts of the bank are another test's subject (`src/app/(app)/banks/sink.itest.ts`). */
-const NO_ACCOUNTS = { releaseAccounts: async () => {} };
-
 const failure = (code: string, status: number): Answer => ({ status, body: { error: { code } } });
 
 function contextFor(userId: string): Ctx {
@@ -479,12 +476,7 @@ describe("the credentials of a person", () => {
     );
     expect(await rejection(removeUserCredentials(ctx, PLUGIN))).toBe("connected");
     const [connection] = await listPluginConnections(ctx, PLUGIN);
-    await disconnectBank(
-      ctx,
-      { pluginId: PLUGIN, connectionId: connection.id },
-      NO_ACCOUNTS,
-      fakePlugin().deps,
-    );
+    await disconnectBank(ctx, { pluginId: PLUGIN, connectionId: connection.id }, fakePlugin().deps);
     await removeUserCredentials(ctx, PLUGIN);
     expect(await getDb().select().from(pluginUserCredentials)).toEqual([]);
   });
@@ -800,16 +792,9 @@ describe("an access to a bank", () => {
       new Date("2027-06-01T00:00:00.000Z"),
     );
 
-    // Disconnecting one bank gives back that bank's accounts, and leaves the other connected.
-    const released: [string, readonly string[]][] = [];
+    // Disconnecting one bank leaves the other connected (its accounts: `banks/sink.itest.ts`).
     const alfa = connections.find((one) => one.instanceKey === "IT:Alfa Bank") as Connection;
-    await disconnectBank(
-      ctx,
-      { pluginId: PLUGIN, connectionId: alfa.id },
-      { releaseAccounts: async (_ctx, provider, ids) => void released.push([provider, ids]) },
-      fakePlugin().deps,
-    );
-    expect(released).toEqual([["plugin:enablebanking", ["stable-alfa"]]]);
+    await disconnectBank(ctx, { pluginId: PLUGIN, connectionId: alfa.id }, fakePlugin().deps);
     expect((await listPluginConnections(ctx, PLUGIN)).map((one) => one.instanceKey)).toEqual([
       "IT:Zeta Bank",
     ]);
@@ -853,18 +838,13 @@ describe("an access to a bank", () => {
     const other = await readyContext();
     expect(
       await rejection(
-        disconnectBank(
-          other,
-          { pluginId: PLUGIN, connectionId: connection.id },
-          NO_ACCOUNTS,
-          fakePlugin().deps,
-        ),
+        disconnectBank(other, { pluginId: PLUGIN, connectionId: connection.id }, fakePlugin().deps),
       ),
     ).toBe("not_found");
 
     // A provider that does not answer does not keep the person connected.
     const plugin = fakePlugin({ [PLUGIN_PATHS.authRevoke]: failure("provider_down", 502) });
-    await disconnectBank(ctx, { pluginId: PLUGIN, connectionId: connection.id }, NO_ACCOUNTS, plugin.deps);
+    await disconnectBank(ctx, { pluginId: PLUGIN, connectionId: connection.id }, plugin.deps);
     expect(plugin.of(PLUGIN_PATHS.authRevoke)[0].body).toMatchObject({ session: { id: "session-1" } });
     expect(await listPluginConnections(ctx, PLUGIN)).toEqual([]);
     expect((await credentialsStatus(ctx, PLUGIN)).saved).toBe(true);

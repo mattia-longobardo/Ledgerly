@@ -812,6 +812,7 @@ Esito: toast «Passaggio annullato». Il focus resta nella scheda Impostazioni, 
 | Un'applicazione o un annullamento in corso | Errore `busy` (§11) |
 | Annullamento non riuscito | `role="alert"` nel dialogo: «L'annullamento non è riuscito. Il conto è rimasto su {bank}: niente è cambiato.» |
 | Conto archiviato | L'annullamento resta possibile dalla scheda Impostazioni |
+| La banca del passaggio è scollegata e poi ricollegata | Il passaggio resta aperto: il conto resta legato alla banca (N1 §5.4) e torna con il nuovo collegamento. «Annulla passaggio» dipende solo da «{source}», come sopra. I trasferimenti che arrivano dopo si leggono dal collegamento attuale della banca |
 
 ## 11. Stati: tabella unica
 

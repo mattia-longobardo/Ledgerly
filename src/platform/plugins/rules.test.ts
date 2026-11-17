@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { PluginAccount, SyncResponse } from "./contract/calls";
 import {
+  bankAccountNames,
+  bankAccountType,
   hashState,
   instanceKeyOf,
   institutionOf,
@@ -246,5 +248,57 @@ describe("the measures of a first reading", () => {
     for (const secret of ["Conto", "IT60", "12.30", "PAGAMENTO", "Negozio", "ref-1", "u-1"]) {
       expect(text).not.toContain(secret);
     }
+  });
+});
+
+describe("the name of a bank's account", () => {
+  const label = (type: string) =>
+    ({ checking: "Conto", savings: "Risparmio", credit: "Carta", cash: "Contanti" })[type] ?? type;
+  const account = (providerAccountId: string, name: string | null, kind: string | null) => ({
+    providerAccountId,
+    name,
+    kind,
+  });
+
+  it("is the bank's name of the product", () => {
+    const names = bankAccountNames([account("a", "Conto Arancio", "CACC")], "Zeta Bank", label);
+    expect(names.get("a")).toBe("Conto Arancio");
+  });
+
+  it("is «bank kind» when the bank gives no name, with a number from the second of a kind", () => {
+    const names = bankAccountNames(
+      [account("a", null, "CACC"), account("b", " ", "SVGS"), account("c", null, "SVGS")],
+      "Zeta Bank",
+      label,
+    );
+    expect([...names.values()]).toEqual(["Zeta Bank Conto", "Zeta Bank Risparmio", "Zeta Bank Risparmio 2"]);
+  });
+
+  it("does not take a name that several accounts share: it is the holder's, not the account's", () => {
+    const names = bankAccountNames(
+      [
+        account("a", "Anna Bianchi", "CACC"),
+        account("b", "Anna Bianchi", "SVGS"),
+        account("c", "Pocket", "SVGS"),
+      ],
+      "Zeta Bank",
+      label,
+    );
+    expect([...names.values()]).toEqual(["Zeta Bank Conto", "Zeta Bank Risparmio", "Pocket"]);
+  });
+
+  it("is never longer than an account's name may be", () => {
+    const names = bankAccountNames([account("a", "n".repeat(200), null)], "Zeta Bank", label);
+    expect(names.get("a")).toHaveLength(80);
+  });
+
+  it("turns the bank's kind into the kind of account here", () => {
+    expect(["SVGS", "CARD", "CASH", "CACC", null].map(bankAccountType)).toEqual([
+      "savings",
+      "credit",
+      "cash",
+      "checking",
+      "checking",
+    ]);
   });
 });

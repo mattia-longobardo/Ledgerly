@@ -74,6 +74,52 @@ export function providerAccountIdOf(account: Pick<PluginAccount, "externalId" | 
   return account.stableId ?? account.externalId;
 }
 
+/** The kinds of account here a bank's account can become by default. */
+export type BankAccountType = "checking" | "savings" | "credit" | "cash";
+
+/** The bank's word for a kind of account (ISO 20022 cash account type), as the kind it becomes here. */
+export function bankAccountType(kind: string | null): BankAccountType {
+  if (kind === "SVGS") return "savings";
+  if (kind === "CARD") return "credit";
+  if (kind === "CASH") return "cash";
+  return "checking";
+}
+
+const BANK_ACCOUNT_NAME_MAX = 80;
+
+/**
+ * The name of each account of one access, the same on every screen that offers it: the bank's
+ * name of the product, or «{bank} {kind}» when the bank gives none, or gives one that several
+ * accounts share (the holder's name, which tells no account from another). Two accounts of the
+ * same kind get a number, in the bank's order, so no two names start equal.
+ */
+export function bankAccountNames(
+  accounts: readonly { providerAccountId: string; name: string | null; kind: string | null }[],
+  bank: string,
+  kindLabel: (type: BankAccountType) => string,
+): Map<string, string> {
+  const uses = new Map<string, number>();
+  for (const account of accounts) {
+    const name = account.name?.trim() ?? "";
+    if (name !== "") uses.set(name, (uses.get(name) ?? 0) + 1);
+  }
+  const counted = new Map<BankAccountType, number>();
+  const names = new Map<string, string>();
+  for (const account of accounts) {
+    const own = account.name?.trim() ?? "";
+    if (own !== "" && uses.get(own) === 1) {
+      names.set(account.providerAccountId, own.slice(0, BANK_ACCOUNT_NAME_MAX));
+      continue;
+    }
+    const type = bankAccountType(account.kind);
+    const count = (counted.get(type) ?? 0) + 1;
+    counted.set(type, count);
+    const name = `${bank} ${kindLabel(type)}${count > 1 ? ` ${count}` : ""}`;
+    names.set(account.providerAccountId, name.slice(0, BANK_ACCOUNT_NAME_MAX));
+  }
+  return names;
+}
+
 function digest(text: string, length: number): string {
   return createHash("sha256").update(text).digest("hex").slice(0, length);
 }

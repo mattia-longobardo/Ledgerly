@@ -22,7 +22,13 @@ import {
   isPluginActive,
   listPluginConnections,
 } from "@/platform/plugins/queries";
-import { institutionOf, isReturnError, maskIdentifier } from "@/platform/plugins/rules";
+import {
+  bankAccountNames,
+  bankAccountType,
+  institutionOf,
+  isReturnError,
+  maskIdentifier,
+} from "@/platform/plugins/rules";
 import { exposedAccounts } from "@/platform/plugins/sync";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
@@ -44,14 +50,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 function one(value: string | string[] | undefined): string | null {
   return typeof value === "string" && value !== "" ? value : null;
-}
-
-/** The provider's word for a kind of account, as the kind of account it becomes here. */
-function typeOf(kind: string | null): string {
-  if (kind === "SVGS") return "savings";
-  if (kind === "CARD") return "credit";
-  if (kind === "CASH") return "cash";
-  return "checking";
 }
 
 /** The kinds of account a bank's account can become: the ones a bank holds. */
@@ -101,8 +99,12 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
     const bank = institutionOf(connection.instanceKey).name;
     const target = { pluginId: BANK_PLUGIN_ID, connectionId: connection.id };
     const exposed = await exposedAccounts(ctx, target, bankSink);
+    // The same name here, in "Switch to the bank" and as the name of a new account.
+    const names = bankAccountNames(exposed.accounts, bank, (type) => accountTypes(type));
+    const nameOf = (account: (typeof exposed.accounts)[number]) =>
+      names.get(account.providerAccountId) ?? t("accounts.unnamed");
     const legendOf = (account: (typeof exposed.accounts)[number]) =>
-      [account.name ?? t("accounts.unnamed"), maskIdentifier(account.identifier), account.currency]
+      [nameOf(account), maskIdentifier(account.identifier), account.currency]
         .filter((part) => part !== null)
         .join(" · ");
     const toChoose = exposed.accounts.filter(
@@ -113,7 +115,6 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
     if (step === "accounts") {
       // Nothing left to choose: the connection is complete (§6.4, "already completed").
       if (exposed.chosen && toChoose.length === 0) redirect(`${HERE}?step=done&c=${connection.id}` as Route);
-      const used = new Map<string, number>();
       // An account of the bank whose IBAN an account here has is not added twice (H39, §2.4.2).
       const owners = await bankSink.ibanOwners(
         ctx,
@@ -124,22 +125,14 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
         <AccountsStep
           connectionId={connection.id}
           bank={bank}
-          accounts={toChoose.map((account) => {
-            // The bank's name of an account is often the holder's: the kind says more. Two
-            // accounts of the same kind get a number, so no two names start equal.
-            const type = typeOf(account.kind);
-            const count = (used.get(type) ?? 0) + 1;
-            used.set(type, count);
-            const label = accountTypes(type as (typeof BANK_ACCOUNT_TYPES)[number]);
-            return {
-              providerAccountId: account.providerAccountId,
-              legend: legendOf(account),
-              currency: account.currency,
-              defaultName: `${bank} ${label}${count > 1 ? ` ${count}` : ""}`.slice(0, 80),
-              defaultType: type,
-              ibanOwner: account.identifier === null ? null : (owners.get(account.identifier) ?? null),
-            };
-          })}
+          accounts={toChoose.map((account) => ({
+            providerAccountId: account.providerAccountId,
+            legend: legendOf(account),
+            currency: account.currency,
+            defaultName: nameOf(account),
+            defaultType: bankAccountType(account.kind),
+            ibanOwner: account.identifier === null ? null : (owners.get(account.identifier) ?? null),
+          }))}
           linked={exposed.accounts.flatMap((account) =>
             account.linked ? [{ legend: legendOf(account), account: account.linked.name }] : [],
           )}
@@ -209,7 +202,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
             );
           })}
         </ul>
-        {(await toSwitchFrom(ctx, one(params.same), exposed.accounts)).map((row) => (
+        {(await toSwitchFrom(ctx, one(params.same), exposed.accounts, names)).map((row) => (
           <div key={row.bankAccountId} className="flex flex-col gap-1 border-t border-border pt-2">
             <div className="font-medium break-words">{row.legend}</div>
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -360,11 +353,11 @@ async function toSwitchFrom(
   list: string | null,
   exposed: readonly {
     providerAccountId: string;
-    name: string | null;
     identifier: string | null;
     currency: string;
     linked: unknown;
   }[],
+  names: ReadonlyMap<string, string>,
 ) {
   if (list === null) return [];
   const mine = new Map((await listAccounts(ctx)).filter(switchable).map((account) => [account.id, account]));
@@ -375,7 +368,7 @@ async function toSwitchFrom(
     const bankAccount = exposed.find((one) => one.providerAccountId === bankAccountId && one.linked === null);
     const account = mine.get(accountId);
     if (!bankAccount || !account) return [];
-    const legend = [bankAccount.name, maskIdentifier(bankAccount.identifier)]
+    const legend = [names.get(bankAccountId) ?? null, maskIdentifier(bankAccount.identifier)]
       .filter((part) => part !== null)
       .join(" · ");
     return [{ bankAccountId, accountId, account: account.name, legend }];
