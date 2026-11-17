@@ -329,7 +329,8 @@ test.describe("the rows of the connections", () => {
       .getByRole("link", { name: /Epsilon Bank current account/ })
       .first()
       .click();
-    await expect(page.getByText("Disconnected from Enable Banking", { exact: true })).toBeVisible();
+    // In the header and in the account's source of data.
+    await expect(page.getByText("Disconnected from Enable Banking", { exact: true })).toHaveCount(2);
     await expect(page.getByText("Manual", { exact: true })).toHaveCount(0);
     await expect(page.getByTestId("connection-status")).toHaveCount(0);
   });
