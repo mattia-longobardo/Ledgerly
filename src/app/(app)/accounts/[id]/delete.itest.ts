@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts } from "@/modules/accounts/queries";
-import { applyProviderAccounts, createAccount } from "@/modules/accounts/service";
+import { applyProviderAccounts, archiveAccount, createAccount } from "@/modules/accounts/service";
 import { setLimit } from "@/modules/budgets/service";
 import { createRule } from "@/modules/interests/service";
 import { createPocket } from "@/modules/pockets/service";
@@ -107,6 +107,32 @@ async function everythingOn(account: string) {
   });
   return { groceries, fund };
 }
+
+describe("an archived account (PERS-421)", () => {
+  it("is deleted at once when nothing rests on it", async () => {
+    const old = await checking("Old");
+    await archiveAccount(ctx, old);
+    expect(await accountDependents(ctx, old)).toEqual([]);
+    await deleteAccount(ctx, old);
+    expect(await getAccount(ctx, old)).toBeNull();
+  });
+
+  it("is deleted, as an open one, only once what rests on it is moved", async () => {
+    const old = await checking("Old");
+    const next = await checking("Next");
+    await everythingOn(old);
+    await archiveAccount(ctx, old);
+    const listed = await accountDependents(ctx, old);
+    expect(listed).toHaveLength(6);
+    expect(await codeOf(deleteAccount(ctx, old))).toBe("in_use");
+    expect((await getAccount(ctx, old))?.state).toBe("archived");
+
+    for (const one of listed) await moveDependent(ctx, old, { kind: one.kind, id: one.id, to: next });
+    await deleteAccount(ctx, old);
+    expect(await getAccount(ctx, old)).toBeNull();
+    expect(await accountDependents(ctx, next)).toHaveLength(6);
+  });
+});
 
 describe("what rests on an account", () => {
   it("is listed, kind by kind, and each thing is moved to another account by its owner's rules", async () => {

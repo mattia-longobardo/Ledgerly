@@ -314,20 +314,21 @@ export function AccountSettingsForm({
           <p className="text-sm text-muted">
             {account.state === "archived" ? t("danger.archived") : t("danger.explain")}
           </p>
-          {account.state === "archived" ? (
-            <Button size="sm" onClick={onRestore} disabled={pending}>
-              {t("danger.restore")}
-            </Button>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {/* Two intentions, two buttons: archiving keeps everything and can be undone, and
-                  deleting deletes. Neither does the other's job in secret. */}
+          <div className="flex flex-wrap gap-2">
+            {/* Two intentions, two buttons: archiving keeps everything and can be undone, and
+                deleting deletes. Neither does the other's job in secret. An archived account is
+                restored or deleted (PERS-421). */}
+            {account.state === "archived" ? (
+              <Button size="sm" onClick={onRestore} disabled={pending}>
+                {t("danger.restore")}
+              </Button>
+            ) : (
               <Button size="sm" onClick={onArchive} disabled={pending}>
                 {t("danger.archive")}
               </Button>
-              {deleteControl}
-            </div>
-          )}
+            )}
+            {deleteControl}
+          </div>
         </div>
       </SettingsSection>
     </form>

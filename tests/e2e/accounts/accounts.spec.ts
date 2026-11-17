@@ -215,6 +215,33 @@ test("deleting an account asks first, then deletes it and says so", async ({ pag
   expect((await page.goto(url))?.status()).toBe(404);
 });
 
+/** An archived account is restored or deleted, with the same dialog as an open one (PERS-421). */
+test("an archived account can be deleted from its Danger zone", async ({ page }) => {
+  await page.goto("/accounts/new");
+  await page.getByLabel("Name").fill("Conto archiviato F9");
+  await page
+    .getByRole("button", { name: /Save|Create|Add/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/accounts\/[0-9a-f-]{36}/);
+  const url = page.url().split("?")[0];
+
+  await page.goto(`${url}?tab=settings`);
+  await page.getByRole("button", { name: "Archive account" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Conto archiviato F9");
+  await page.goto(`${url}?tab=settings`);
+  await expect(page.getByRole("button", { name: "Restore account" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Delete account" }).first().click();
+  await page
+    .getByRole("dialog", { name: "Delete Conto archiviato F9?" })
+    .getByRole("button", { name: "Delete for good" })
+    .click();
+  await expect(page).toHaveURL(/\/accounts$/);
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("deleted");
+  expect((await page.goto(url))?.status()).toBe(404);
+});
+
 /**
  * Connections (owner, 2026-09-21): the table the owner kept outside the app, brought inside. The
  * journey is the one that matters — add one, see it where you consult it, rename it, move it to
