@@ -3,6 +3,7 @@ import { addDays, type CivilDate } from "@/platform/dates";
 import {
   compareSources,
   comparisonFrom,
+  matchDoubles,
   planTransfers,
   type SwitchMovement,
   type TransferCandidate,
@@ -304,5 +305,50 @@ describe("planTransfers (decision H40, 04-now.md §4.6.1 point 9)", () => {
     );
     // Sorted by day: o1-i1 is 5 days, o2-i2 is 4 days back; all joined, both pairs inside.
     expect(far.pairs).toHaveLength(2);
+  });
+});
+
+describe("matchDoubles", () => {
+  const m = (id: string, day: string, cents: bigint, text = ""): SwitchMovement => ({
+    id,
+    day: day as SwitchMovement["day"],
+    amountCents: cents,
+    text,
+  });
+
+  it("ties every double to a movement kept, and lets the kept account have more", () => {
+    const doubles = [m("d1", "2026-11-03", -500n, "POS BAR"), m("d2", "2026-11-05", 1000n)];
+    const kept = [
+      m("k1", "2026-11-02", -500n, "Bar"),
+      m("k2", "2026-10-01", -500n, "Bar"),
+      m("k3", "2026-11-05", 1000n),
+      m("k4", "2026-11-06", -250n),
+    ];
+    expect(matchDoubles(doubles, kept)).toEqual({
+      matched: [
+        { doubleId: "d1", keptId: "k1" },
+        { doubleId: "d2", keptId: "k3" },
+      ],
+      unmatched: [],
+    });
+  });
+
+  it("ties no double of a group with more doubles than movements kept", () => {
+    const doubles = [m("d1", "2026-11-03", -500n), m("d2", "2026-11-04", -500n)];
+    const kept = [m("k1", "2026-11-03", -500n)];
+    expect(matchDoubles(doubles, kept)).toEqual({ matched: [], unmatched: ["d1", "d2"] });
+  });
+
+  it("ties no double of a group when one finds nothing inside the window", () => {
+    const doubles = [m("d1", "2026-11-03", -500n), m("d2", "2026-11-20", -500n)];
+    const kept = [m("k1", "2026-11-03", -500n), m("k2", "2026-10-01", -500n)];
+    expect(matchDoubles(doubles, kept).unmatched).toEqual(["d1", "d2"]);
+  });
+
+  it("never ties two doubles to the same movement kept", () => {
+    const doubles = [m("d1", "2026-11-03", -500n), m("d2", "2026-11-03", -500n)];
+    const kept = [m("k1", "2026-11-03", -500n), m("k2", "2026-11-04", -500n)];
+    const kepts = matchDoubles(doubles, kept).matched.map((pair) => pair.keptId);
+    expect(new Set(kepts).size).toBe(2);
   });
 });

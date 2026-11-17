@@ -3,6 +3,7 @@
 // the test database. The source is a provider of test whose update is a function; the bank is a
 // plugin whose answers are the contract's. Invented names and amounts only.
 import { generateKeyPairSync } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts } from "@/modules/accounts/queries";
 import { applyProviderAccounts, saveProviderBalance } from "@/modules/accounts/service";
@@ -32,6 +33,7 @@ import {
   applySwitch,
   BANK_PROVIDER,
   checkSwitch,
+  freeBankAccounts,
   type SwitchDeps,
   SwitchFailure,
   undoSwitch,
@@ -311,6 +313,7 @@ async function everything(): Promise<string> {
     "integration_connections",
     "account_switches",
     "switch_transfer_pairs",
+    "switch_merged_movements",
     "interest_rules",
   ]) {
     const { rows } = await getPool().query(`select * from ${table} order by id`);
@@ -487,5 +490,205 @@ describe("apply and undo (criteria 4, 5, 7)", () => {
     expect(report.unsent).toHaveLength(1);
     expect(report.matched).toEqual([]);
     expect(report.balance.equal).toBe(false);
+  });
+});
+
+/**
+ * The bank's current account already imported as an account of its own, before the rule "one IBAN,
+ * one account" (H39 for already imported accounts): the switch joins it to the source's account.
+ * Without `extra`, every movement of the bank's account is one of the source's.
+ */
+async function worldWithDouble(extra = false) {
+  const w = await world();
+  if (!extra) w.bank.current = w.bank.current.filter((one) => (one.bookingDate ?? "") <= CUT);
+  await chooseAccounts(
+    w.ctx,
+    {
+      pluginId: BANK_PLUGIN_ID,
+      connectionId: w.target.connectionId,
+      decisions: [
+        {
+          providerAccountId: "acc-cur",
+          currency: "EUR",
+          target: { kind: "new", name: "Conto banca", type: "checking" },
+        },
+      ],
+    },
+    bankSink,
+    NOW,
+  );
+  await readBank(
+    w.ctx,
+    { pluginId: BANK_PLUGIN_ID, connectionId: w.target.connectionId, presence: null },
+    bankSink,
+    NOW,
+    w.deps,
+  );
+  const doubleId = (await listAccounts(w.ctx)).find((one) => one.name === "Conto banca")!.id;
+  // The person chose a category and wrote a note on the bank's copy of the newsagent.
+  const { rows } = await getPool().query<{ id: string }>(
+    "insert into categories (user_id, name, type) values ($1, 'Giornali', 'expense') returning id",
+    [w.ctx.userId],
+  );
+  await getPool().query(
+    `update transactions set category_id = $1, category_origin = 'user', note = 'settimanale',
+       locally_edited = '{categoryId,note}'
+     where account_id = $2 and amount_cents = -700`,
+    [rows[0].id, doubleId],
+  );
+  return { ...w, doubleId, categoryId: rows[0].id };
+}
+
+async function countsOf(accountId: string) {
+  const { rows } = await getPool().query<{ counting: number; links: number }>(
+    `select count(*) filter (where removed_upstream_at is null)::int as counting,
+       (select count(*)::int from provider_links l where l.provider = $2 and l.entity_type = 'transaction'
+          and l.entity_id in (select id from transactions where account_id = $1)) as links
+     from transactions where account_id = $1`,
+    [accountId, BANK_PROVIDER],
+  );
+  return rows[0];
+}
+
+describe("a bank's account already here (H39 for already imported accounts)", () => {
+  it("is offered, and the dry run ties each of its movements and writes nothing", async () => {
+    const w = await worldWithDouble();
+    const banks = await freeBankAccounts(w.ctx, w.accountId, "EUR");
+    const offered = banks.flatMap((bank) => bank.accounts);
+    expect(offered.find((one) => one.providerAccountId === "acc-cur")?.here).toEqual({
+      id: w.doubleId,
+      name: "Conto banca",
+    });
+    // An account of the bank is never offered to be joined to itself.
+    expect(
+      (await freeBankAccounts(w.ctx, w.doubleId, "EUR")).flatMap((bank) => bank.accounts),
+    ).not.toContainEqual(expect.objectContaining({ providerAccountId: "acc-cur" }));
+
+    const before = await everything();
+    const report = await checkSwitch(w.ctx, w.accountId, w.target, null, NOW, w.deps);
+    expect(await everything()).toBe(before);
+    expect(report.join).toEqual({
+      account: "Conto banca",
+      total: 4,
+      matched: 4,
+      unmatched: [],
+      manual: 0,
+      categories: 1,
+      notes: 1,
+    });
+    // The account joined is this one: no transfer with it.
+    expect(report.transfers.pairs.map((pair) => pair.to)).toEqual(["Risparmi"]);
+  });
+
+  it("blocks when a movement of it is not here: no apply, nothing written", async () => {
+    const w = await worldWithDouble(true);
+    const report = await checkSwitch(w.ctx, w.accountId, w.target, null, NOW, w.deps);
+    expect(report.join?.unmatched.map((one) => one.day)).toEqual(["2026-11-17"]);
+    const before = await everything();
+    await expect(
+      applySwitch(w.ctx, w.accountId, { ...w.target, fingerprint: report.fingerprint }, null, NOW, w.deps),
+    ).rejects.toEqual(new SwitchFailure("stale"));
+    expect(await everything()).toBe(before);
+  });
+
+  it("joins it, keeps every row, and the undo puts both accounts and every number back", async () => {
+    const w = await worldWithDouble();
+    const numbersBefore = await incomeAndSpending(w.ctx);
+    const doubleBefore = await countsOf(w.doubleId);
+    expect(doubleBefore).toEqual({ counting: 4, links: 4 });
+    const report = await checkSwitch(w.ctx, w.accountId, w.target, null, NOW, w.deps);
+    await applySwitch(
+      w.ctx,
+      w.accountId,
+      { ...w.target, fingerprint: report.fingerprint },
+      null,
+      NOW,
+      w.deps,
+    );
+
+    expect(await getAccount(w.ctx, w.accountId)).toMatchObject({
+      provider: BANK_PROVIDER,
+      providerAccountId: "acc-cur",
+    });
+    expect(await getAccount(w.ctx, w.doubleId)).toMatchObject({
+      origin: "manual",
+      provider: null,
+      providerAccountId: null,
+      state: "archived",
+    });
+    // The doubles stay, no longer counting; their bank links are on the movements kept.
+    expect(await countsOf(w.doubleId)).toEqual({ counting: 0, links: 0 });
+    expect((await countsOf(w.accountId)).links).toBe(4);
+    const { rows: kept } = await getPool().query(
+      "select category_id, category_origin, note from transactions where account_id = $1 and amount_cents = -700",
+      [w.accountId],
+    );
+    expect(kept).toEqual([{ category_id: w.categoryId, category_origin: "user", note: "settimanale" }]);
+
+    // The next reading of the bank writes nothing anywhere.
+    const rowsBefore = await getPool().query("select count(*)::int as n from transactions");
+    await readBank(
+      w.ctx,
+      { pluginId: BANK_PLUGIN_ID, connectionId: w.target.connectionId, presence: null },
+      bankSink,
+      new Date(NOW.getTime() + 7 * 3_600_000),
+      w.deps,
+    );
+    const rowsAfter = await getPool().query("select count(*)::int as n from transactions");
+    expect(rowsAfter.rows[0].n).toBe(rowsBefore.rows[0].n);
+
+    await undoSwitch(w.ctx, w.accountId, NOW, w.deps);
+    expect(await getAccount(w.ctx, w.accountId)).toMatchObject({
+      provider: SOURCE,
+      providerAccountId: "src-1",
+    });
+    expect(await getAccount(w.ctx, w.doubleId)).toMatchObject({
+      origin: "synced",
+      provider: BANK_PROVIDER,
+      providerAccountId: "acc-cur",
+      state: "active",
+      archivedAt: null,
+    });
+    expect(await countsOf(w.doubleId)).toEqual(doubleBefore);
+    const { rows: back } = await getPool().query(
+      "select category_id, category_origin, note from transactions where account_id = $1 and amount_cents = -700",
+      [w.accountId],
+    );
+    expect(back).toEqual([{ category_id: null, category_origin: null, note: null }]);
+    expect(await incomeAndSpending(w.ctx)).toBe(numbersBefore);
+  });
+
+  it("has a recovery file that puts back what the undo puts back", async () => {
+    const w = await worldWithDouble();
+    const numbersBefore = await incomeAndSpending(w.ctx);
+    const doubleBefore = await countsOf(w.doubleId);
+    const report = await checkSwitch(w.ctx, w.accountId, w.target, null, NOW, w.deps);
+    await applySwitch(
+      w.ctx,
+      w.accountId,
+      { ...w.target, fingerprint: report.fingerprint },
+      null,
+      NOW,
+      w.deps,
+    );
+
+    await getPool().query(readFileSync("docs/design/rewrite-plan/n4-merge-rollback.sql", "utf8"));
+    expect(await openSwitchOf(w.ctx, w.accountId)).toBeNull();
+    expect(await getAccount(w.ctx, w.accountId)).toMatchObject({
+      provider: SOURCE,
+      providerAccountId: "src-1",
+    });
+    expect(await getAccount(w.ctx, w.doubleId)).toMatchObject({
+      provider: BANK_PROVIDER,
+      providerAccountId: "acc-cur",
+      state: "active",
+    });
+    expect(await countsOf(w.doubleId)).toEqual(doubleBefore);
+    const { rows: back } = await getPool().query(
+      "select category_id, category_origin, note, locally_edited from transactions where account_id = $1 and amount_cents = -700",
+      [w.accountId],
+    );
+    expect(back).toEqual([{ category_id: null, category_origin: null, note: null, locally_edited: [] }]);
+    expect(await incomeAndSpending(w.ctx)).toBe(numbersBefore);
   });
 });

@@ -167,6 +167,9 @@ li conferma lo sviluppatore prima dello sviluppo.
 **Confermati il 17/11/2026:** [`04-now.md`](04-now.md) §4.6.1. Dimensione L, in due PR: N4a (campo IBAN e guardia) e N4b
 (passaggio). Nessun campo nuovo nel contratto dei plugin; controllo «un IBAN, un conto» nel servizio; tabelle nuove per il
 passaggio; `n4-rollback.sql`.
+**Correzione del 17/11/2026 (H54):** il passaggio accetta anche un conto della banca già importato come conto a sé, e lo
+unisce al conto che passa. Migrazione additiva `0058_account_merge` (colonne `merged_account_id` e `merged_state` di
+`account_switches`, tabella `switch_merged_movements`); rollback `n4-merge-rollback.sql`; eccezione X2 qui sotto.
 
 | | |
 |---|---|
@@ -188,6 +191,7 @@ cambia senza una decisione scritta.
 | # | Cosa cambia | Quando | Decisione | Limiti |
 |---|---|---|---|---|
 | X1 | Entrate e uscite dei mesi passati scendono: ogni coppia riconosciuta era un'uscita e un'entrata, e diventa un giroconto. Scendono anche la spesa per categoria e i budget di quei mesi, per i movimenti che avevano una categoria. Budget e grafici dei mesi passati cambiano senza un avviso nelle loro pagine | Solo dopo «Applica» di un passaggio reale, scelto dall'utente. Mai al deploy | H40 | Solo i movimenti tra il conto passato e gli altri conti della stessa banca. Patrimonio e saldi non cambiano. Il rapporto dice numero delle coppie e importo per anno prima di «Applica». «Annulla passaggio» riporta ogni coppia |
+| X2 | Il patrimonio scende del saldo del conto già importato, e entrate, uscite, spesa per categoria e budget perdono i suoi movimenti: erano doppi dei movimenti del conto che passa (H54) | Solo quando la persona applica un passaggio che unisce un conto già importato. Righe reali previste (17/11/2026): «ING Checking», «Revolut Savings», «Revolut Savings 2» | H54 | «Annulla passaggio» riporta ogni numero. Nessuna riga cancellata |
 
 Non sono eccezioni: il campo IBAN non cambia nessun numero; al rilascio la fotografia dei numeri è invariata
 (criterio 8). Rischio «coppie sbagliate»: [`09-risks.md`](09-risks.md) R-34.

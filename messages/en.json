@@ -2196,7 +2196,7 @@
       },
       "account": {
         "question": "Which account of the bank is “{account}”?",
-        "explain": "Ledgerly shows the accounts of your banks that are not in Ledgerly yet, in {currency}.",
+        "explain": "Ledgerly shows the accounts of your banks in {currency}: the ones not in Ledgerly yet, and the ones the bank already brought as an account of their own, which the switch joins to this one.",
         "unnamed": "Unnamed account",
         "sameIban": "Same IBAN",
         "otherIban": "Different IBAN.",
@@ -2207,7 +2207,8 @@
         "connect": "Connect a bank",
         "noFree": "No account to choose",
         "noFreeText": "Your banks share no account in {currency} that is not already in Ledgerly. If the account is missing, renew the access to the bank and share it.",
-        "integrations": "Go to integrations"
+        "integrations": "Go to integrations",
+        "alreadyHere": "Already in Ledgerly: “{account}”"
       },
       "check": {
         "waiting": "Check in progress…",
@@ -2258,6 +2259,16 @@
         "out": "{amount} out",
         "in": "{amount} in"
       },
+      "join": {
+        "title": "“{account}” is already in Ledgerly: the switch joins the two accounts",
+        "blocked": "“{account}” is already in Ledgerly: the join cannot be applied",
+        "lead": "The bank already brought this account as “{account}”, with {count, plural, one {# movement} other {# movements}}. The switch joins the two accounts: every movement of “{account}” has to be here too.",
+        "matched": "{count, plural, one {# movement found} other {# movements found}} here too, of {total}.",
+        "manual": "“{account}” has {count, plural, one {# movement written} other {# movements written}} by hand: the join does not take them. Move them to this account or remove them, then check again.",
+        "unmatched": "Only in “{account}”",
+        "unmatchedNote": "These movements are not on {source} for this account: with them the join cannot be applied. Add them on {source} or check that they are doubles, then check again.",
+        "carry": "{categories, plural, one {# category} other {# categories}} and {notes, plural, one {# note} other {# notes}} you chose on “{account}” go to the movements here that have none of yours."
+      },
       "more": "Show {count} more",
       "shown": "{shown} of {total}",
       "transfers": {
@@ -2280,7 +2291,8 @@
         "sourceStops": "{source} no longer updates this account. The other accounts stay.",
         "manual": "Write manual movements with the notice of the accounts of a bank.",
         "interests": "The interest settlements are no longer published on {source}.",
-        "undo": "You can go back with “Undo switch”."
+        "undo": "You can go back with “Undo switch”.",
+        "joined": "“{account}” becomes an account kept by hand and archived: it leaves the net worth and its {count, plural, one {# movement no longer counts} other {# movements no longer count}}, because they are the same as here. No row is deleted."
       },
       "actions": {
         "cancel": "Cancel",
@@ -2318,7 +2330,8 @@
         "sourceStops": "{source} no longer updates this account. Ledgerly reads the bank 3 times a day.",
         "howToUndo": "To go back: account settings › “Undo switch”.",
         "theBank": "the bank",
-        "goToAccount": "Go to the account"
+        "goToAccount": "Go to the account",
+        "joined": "{count, plural, one {# movement} other {# movements}} of the account already in Ledgerly joined to this one. That account is now archived."
       },
       "undo": {
         "action": "Undo switch",
@@ -2329,7 +2342,8 @@
           "source": "Balance and movements come from {source} again.",
           "rows": "The movements linked to the bank become movements of {source} again. None is removed.",
           "transfers": "{count, plural, one {# transfer goes} other {# transfers go}} back to an income and a spending.",
-          "interests": "The interest settlements are published on {source} again. Those closed in between are not published by themselves."
+          "interests": "The interest settlements are published on {source} again. Those closed in between are not published by themselves.",
+          "joined": "“{account}” becomes an account of the bank again, with its movements."
         },
         "knowTitle": "Good to know",
         "know": {

@@ -15,15 +15,22 @@ import { pendingSends } from "@/modules/transactions/sending";
 import {
   compareSources,
   comparisonFrom,
+  type DoubleMatch,
+  matchDoubles,
   planTransfers,
+  SWITCH_MATCH_MAX_DAYS,
   type SwitchMovement,
   type TransferPair,
 } from "@/modules/transactions/switch-rules";
 import {
+  choicesToCarry,
+  doubleMovements,
+  joinDoubles,
   linkFoundInBoth,
   movementsToCompare,
   retireBankRows,
   transferCandidates,
+  undoJoinedDoubles,
   undoTransferPairs,
   writeTransferPairs,
 } from "@/modules/transactions/switching";
@@ -112,6 +119,21 @@ export interface SwitchReport {
   };
   /** The account has an interest rule that publishes on the source of before (§9.4). */
   publishes: boolean;
+  /**
+   * The bank's account is already here as another account (H39 for already imported accounts): the
+   * switch joins the two. "Apply" exists only when every movement of it is found in this account.
+   */
+  join: {
+    account: string;
+    total: number;
+    matched: number;
+    /** Movements of the account already here that this account has not got. */
+    unmatched: ReportMovement[];
+    /** Movements written by hand on the account already here: a join takes none. */
+    manual: number;
+    categories: number;
+    notes: number;
+  } | null;
 }
 
 /** The accounts the person may move to the bank (§2.1): from a source that is not the bank, with movements. */
@@ -130,6 +152,26 @@ export function switchable(account: {
   );
 }
 
+/**
+ * The account here that an account of the bank already feeds may be joined to another one (H39 for
+ * already imported accounts) when the bank brought it as an account of its own: not the account
+ * itself, not one that a switch moved to the bank, not archived, in the same currency.
+ */
+async function joinable(
+  ctx: Ctx,
+  accountId: string,
+  linked: { id: string } | null,
+  currency: string,
+): Promise<{ id: string; name: string } | null> {
+  if (linked === null || linked.id === accountId) return null;
+  const here = await getAccount(ctx, linked.id);
+  if (!here || here.provider !== BANK_PROVIDER || here.state === "archived" || here.currency !== currency) {
+    return null;
+  }
+  if ((await openSwitchOf(ctx, here.id)) !== null) return null;
+  return { id: here.id, name: here.name };
+}
+
 async function requireSwitchable(ctx: Ctx, accountId: string) {
   const account = await getAccount(ctx, accountId);
   if (!account) throw new SwitchFailure("not_found");
@@ -138,8 +180,11 @@ async function requireSwitchable(ctx: Ctx, accountId: string) {
   return account;
 }
 
-/** The accounts of the person's banks that are not in Ledgerly, in a currency (step "Account", §4). */
-export async function freeBankAccounts(ctx: Ctx, currency: string) {
+/**
+ * The accounts of the person's banks in a currency (step "Account", §4): the ones not in Ledgerly,
+ * and the ones the bank brought here as an account of their own, which the switch joins (`here`).
+ */
+export async function freeBankAccounts(ctx: Ctx, accountId: string, currency: string) {
   const banks = [];
   for (const connection of await listPluginConnections(ctx, BANK_PLUGIN_ID)) {
     const exposed = await exposedAccounts(
@@ -147,18 +192,24 @@ export async function freeBankAccounts(ctx: Ctx, currency: string) {
       { pluginId: BANK_PLUGIN_ID, connectionId: connection.id },
       bankSink,
     );
+    const accounts = [];
+    for (const account of exposed.accounts) {
+      if (account.currency !== currency) continue;
+      const here = await joinable(ctx, accountId, account.linked, currency);
+      if (account.linked !== null && here === null) continue;
+      accounts.push({
+        providerAccountId: account.providerAccountId,
+        name: account.name,
+        identifier: account.identifier,
+        currency: account.currency,
+        here,
+      });
+    }
     banks.push({
       connectionId: connection.id,
       bank: institutionOf(connection.instanceKey).name,
       expired: connection.state === "revoked",
-      accounts: exposed.accounts
-        .filter((account) => account.linked === null && account.currency === currency)
-        .map((account) => ({
-          providerAccountId: account.providerAccountId,
-          name: account.name,
-          identifier: account.identifier,
-          currency: account.currency,
-        })),
+      accounts,
     });
   }
   return banks.sort((a, b) => a.bank.localeCompare(b.bank));
@@ -211,6 +262,7 @@ interface Plan {
   pairs: TransferPair[];
   cutDate: CivilDate;
   identifier: string | null;
+  join: { accountId: string; pairs: DoubleMatch[] } | null;
 }
 
 async function compare(
@@ -247,6 +299,7 @@ async function compare(
     fresh: [],
     transfers: { pairs: [], byYear: [], totalCents: "0", ambiguous: 0 },
     publishes: false,
+    join: null,
   };
 
   // H38: a manual movement that did not reach the source stops the switch before any reading.
@@ -267,6 +320,7 @@ async function compare(
       pairs: [],
       cutDate,
       identifier: null,
+      join: null,
     };
   }
 
@@ -276,8 +330,10 @@ async function compare(
     bankSink,
   );
   const chosen = exposed.accounts.find((one) => one.providerAccountId === target.bankAccountId);
-  if (!chosen || chosen.linked !== null) throw new SwitchFailure("account_gone");
+  if (!chosen) throw new SwitchFailure("account_gone");
   if (chosen.currency !== account.currency) throw new SwitchFailure("not_allowed");
+  const joined = await joinable(ctx, accountId, chosen.linked, account.currency);
+  if (chosen.linked !== null && joined === null) throw new SwitchFailure("account_gone");
 
   const read = await previewBankAccount(
     ctx,
@@ -317,8 +373,39 @@ async function compare(
   }
   const bankAt = preview.balance === null ? null : parseCents(preview.balance.amount);
 
-  // Transfers with the other accounts of the same bank, on the whole history (H40).
-  const others = exposed.accounts.flatMap((one) => (one.linked ? [one.linked.id] : []));
+  // The account of the bank already here: each of its movements has to be one of this account's.
+  let join: (SwitchReport["join"] & {}) | null = null;
+  let joinPairs: DoubleMatch[] = [];
+  if (joined !== null) {
+    const doubles = await doubleMovements(ctx, joined.id);
+    const days = doubles.movements.map((one) => one.day).sort();
+    const kept =
+      days.length === 0
+        ? []
+        : await movementsToCompare(
+            ctx,
+            accountId,
+            addDays(days[0], -SWITCH_MATCH_MAX_DAYS),
+            addDays(days[days.length - 1], SWITCH_MATCH_MAX_DAYS),
+          );
+    const matching = matchDoubles(doubles.movements, kept);
+    const byDouble = new Map(doubles.movements.map((one) => [one.id, one]));
+    joinPairs = matching.matched;
+    join = {
+      account: joined.name,
+      total: doubles.movements.length + doubles.manual,
+      matched: matching.matched.length,
+      unmatched: matching.unmatched.map((id) => asReport(byDouble.get(id)!)),
+      manual: doubles.manual,
+      ...(await choicesToCarry(ctx, matching.matched)),
+    };
+  }
+
+  // Transfers with the other accounts of the same bank, on the whole history (H40). The account
+  // joined is not another account: it is this one.
+  const others = exposed.accounts.flatMap((one) =>
+    one.linked && one.linked.id !== joined?.id ? [one.linked.id] : [],
+  );
   const candidates = await transferCandidates(ctx, [accountId, ...others]);
   const plan = planTransfers(accountId, others, candidates);
   const names = new Map<string, string>([
@@ -370,6 +457,7 @@ async function compare(
       ambiguous: plan.ambiguous,
     },
     publishes,
+    join,
   };
   report.fingerprint = fingerprintOf(report);
   return {
@@ -378,7 +466,13 @@ async function compare(
     pairs: plan.pairs,
     cutDate,
     identifier: preview.identifier,
+    join: joined === null ? null : { accountId: joined.id, pairs: joinPairs },
   };
+}
+
+/** A join takes an account whose every movement is found here, and none written by hand. */
+export function joinReady(join: SwitchReport["join"]): boolean {
+  return join === null || (join.unmatched.length === 0 && join.manual === 0);
 }
 
 /** The print of a report (§6.6): "Apply" sends it back, and a different one is `stale`. */
@@ -418,6 +512,7 @@ export async function applySwitch(
     const plan = await compare(ctx, accountId, target, presence, now, deps);
     if (plan.report.fingerprint !== target.fingerprint) throw new SwitchFailure("stale");
     if (plan.report.unsent.length > 0 || !plan.report.balance.equal) throw new SwitchFailure("stale");
+    if (!joinReady(plan.report.join)) throw new SwitchFailure("stale");
     let transfers = 0;
     await getDb().transaction(async (tx) => {
       const interestModes = await stopPublishing(tx, ctx, accountId);
@@ -432,13 +527,36 @@ export async function applySwitch(
           cutDate: plan.cutDate,
           identifier: plan.identifier,
           interestModes,
-          counts: { matched: plan.matches.length, fresh: plan.report.fresh.length },
+          counts: {
+            matched: plan.matches.length,
+            fresh: plan.report.fresh.length,
+            ...(plan.join === null ? {} : { joined: plan.join.pairs.length }),
+          },
+          mergedAccountId: plan.join?.accountId ?? null,
         },
         now,
       );
-      await linkFoundInBoth(tx, ctx, BANK_PROVIDER, plan.matches, now);
+      // The joined account's movements give their bank links first: the comparison of the period
+      // then links only what they did not bring.
+      const moved =
+        plan.join === null
+          ? null
+          : await joinDoubles(
+              tx,
+              ctx,
+              { switchId, bankProvider: BANK_PROVIDER, pairs: plan.join.pairs },
+              now,
+            );
+      const matches =
+        moved === null
+          ? plan.matches
+          : plan.matches.filter(
+              (one) => !moved.externalIds.has(one.externalId) && !moved.keptIds.has(one.transactionId),
+            );
+      await linkFoundInBoth(tx, ctx, BANK_PROVIDER, matches, now);
       transfers = await writeTransferPairs(tx, ctx, switchId, plan.pairs);
     });
+    if (plan.join !== null) await rebuildDerivedBalances(ctx, [plan.join.accountId]);
     // The new movements come with the bank's own reading: a movement up to the cut is not written
     // (`bankSink`), so "only in the bank" and "to check" never become doubles.
     await readBank(
@@ -472,6 +590,8 @@ export async function undoSwitch(
     await getDb().transaction(async (tx) => {
       const closed = await closeSwitch(tx, ctx, open.id, now);
       await undoTransferPairs(tx, ctx, closed.id, now);
+      // Before the bank's rows retire: the joined account's links go back to its own movements.
+      await undoJoinedDoubles(tx, ctx, { switchId: closed.id, bankProvider: closed.toProvider }, now);
       await retireBankRows(
         tx,
         ctx,
@@ -480,7 +600,10 @@ export async function undoSwitch(
       );
       await restorePublishing(tx, ctx, closed.interestModes);
     });
-    await rebuildDerivedBalances(ctx, [accountId]);
+    await rebuildDerivedBalances(
+      ctx,
+      open.mergedAccountId === null ? [accountId] : [accountId, open.mergedAccountId],
+    );
     try {
       await updateSource(ctx, open.fromProvider, now, deps);
     } catch {

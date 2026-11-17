@@ -95,6 +95,7 @@ export default async function SwitchAccountPage({
           <li>{t("done.matched", { count: counts.matched ?? 0 })}</li>
           <li>{t("done.fresh", { count: counts.fresh ?? 0 })}</li>
           {(counts.transfers ?? 0) > 0 && <li>{t("done.transfers", { count: counts.transfers ?? 0 })}</li>}
+          {(counts.joined ?? 0) > 0 && <li>{t("done.joined", { count: counts.joined ?? 0 })}</li>}
         </ul>
         <p className="text-sm text-muted">{t("done.sourceStops", { source })}</p>
         <p className="text-sm text-muted">{t("done.howToUndo")}</p>
@@ -106,6 +107,11 @@ export default async function SwitchAccountPage({
             since={since}
             transfers={counts.transfers ?? 0}
             publishes={(open.interestModes ?? []).length > 0}
+            joined={
+              open.mergedAccountId === null
+                ? null
+                : ((await getAccount(ctx, open.mergedAccountId))?.name ?? null)
+            }
             available={sourceThere}
             undo={undoSwitchAction.bind(null, account.id)}
           />
@@ -144,7 +150,7 @@ export default async function SwitchAccountPage({
   }
 
   // Step "Account" (§4): the accounts of the person's banks not yet in Ledgerly, in its currency.
-  const banks = await freeBankAccounts(ctx, account.currency);
+  const banks = await freeBankAccounts(ctx, account.id, account.currency);
   const own = account.iban;
   const choices = banks.flatMap((bank) => bank.accounts);
   if (banks.length === 0 || choices.length === 0) {
@@ -216,6 +222,9 @@ export default async function SwitchAccountPage({
                         .join(" · ")}
                     </span>
                     {sameIban(choice.identifier) && <Badge tone="pos">{t("account.sameIban")}</Badge>}
+                    {choice.here !== null && (
+                      <Badge tone="neutral">{t("account.alreadyHere", { account: choice.here.name })}</Badge>
+                    )}
                     {otherIban(choice.identifier) && (
                       <span id={reason} className="text-muted">
                         {t("account.otherIban")}

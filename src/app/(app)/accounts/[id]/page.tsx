@@ -617,6 +617,11 @@ async function switchBlock(ctx: Ctx, account: Account): Promise<React.ReactNode>
           since={day(open.appliedAt)}
           transfers={(open.counts as Record<string, number>).transfers ?? 0}
           publishes={(open.interestModes ?? []).length > 0}
+          joined={
+            open.mergedAccountId === null
+              ? null
+              : ((await getAccount(ctx, open.mergedAccountId))?.name ?? null)
+          }
           available={(await listConnections(ctx)).some((one) => one.provider === open.fromProvider)}
           undo={undoSwitchAction.bind(null, account.id)}
         />

@@ -557,3 +557,52 @@ export const switchTransferPairs = pgTable(
       .where(sql`${table.undoneAt} is null`),
   ],
 );
+
+/** What a movement kept by a switch was before the joined account's movement gave it its choices. */
+export interface MergedMovementBefore {
+  categoryId: string | null;
+  categoryOrigin: (typeof transactions.$inferSelect)["categoryOrigin"];
+  categoryConfidence: number | null;
+  categoryModelVersion: number | null;
+  suggestedCategoryId: string | null;
+  categoryReason: string | null;
+  categoryReasonParams: Record<string, string> | null;
+  note: string | null;
+  locallyEdited: string[];
+}
+
+/**
+ * The movements of an account of the bank that was already here, each with the movement of the
+ * switched account it doubles (rewrite plan N4, H39 for already imported accounts): the bank's link
+ * moved to the movement kept, the double stopped counting, and the person's category and note went
+ * to the movement kept when it had none. "Undo switch" reads this to put each one back.
+ */
+export const switchMergedMovements = pgTable(
+  "switch_merged_movements",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    switchId: uuid("switch_id")
+      .notNull()
+      .references(() => accountSwitches.id, { onDelete: "cascade" }),
+    /** The movement of the joined account: it no longer counts while the switch is open. */
+    doubleId: uuid("double_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    /** The movement of the switched account that stays. */
+    keptId: uuid("kept_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    /** The bank's id of the movement, moved from the double to the movement kept. */
+    externalId: text("external_id"),
+    /** The movement kept before it took the double's choices; `null` when nothing was taken. */
+    keptBefore: jsonb("kept_before").$type<MergedMovementBefore>(),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("switch_merged_movements_switch_idx").on(table.switchId)],
+);
