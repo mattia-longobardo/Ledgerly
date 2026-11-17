@@ -201,6 +201,22 @@ describe("a booked day", () => {
     expect(confirm).not.toHaveBeenCalled();
   });
 
+  it("is not in the panel when the day is tapped again before the page is read again", async () => {
+    // The removal stays on its way: the page has not been read again yet.
+    remove.mockReturnValueOnce(new Promise(() => {}));
+    renderBoard([booked("2026-06-16", "vacation", 0.5), booked("2026-06-16", "rol", 0.5)]);
+    await userEvent.click(cell("2026-06-16"));
+    const first = within(await screen.findByRole("dialog", { name: "Edit leave" }));
+    expect(first.getByLabelText("Type")).toHaveValue("vacation");
+    await userEvent.click(first.getByRole("button", { name: "Remove" }));
+    expect(remove).toHaveBeenCalledExactlyOnceWith({ id: "2026-06-16-vacation" });
+
+    await userEvent.click(cell("2026-06-16"));
+    const panel = within(await screen.findByRole("dialog", { name: "Edit leave" }));
+    expect(panel.queryByRole("group", { name: "Which leave" })).not.toBeInTheDocument();
+    expect(panel.getByLabelText("Type")).toHaveValue("rol");
+  });
+
   it("says why a removal was refused, in a toast, and reads the page again", async () => {
     remove.mockResolvedValueOnce({ ok: false, error: "not_found" });
     renderBoard([booked("2026-06-16")]);

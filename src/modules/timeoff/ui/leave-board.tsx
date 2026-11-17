@@ -353,13 +353,18 @@ export function LeaveBoard({
         open({ mode: "add", from }, null);
       },
       openEdit: (date, rowId) => {
-        // The table may still name a row waiting for Trek; the calendar never does.
-        const rows = days.filter((day) => day.on === date && (stillBooked(day) || day.id === rowId));
+        // The rows the calendar shows, removals on their way left out (N5 §7.4); the table may still
+        // name a row waiting for Trek, the calendar never does.
+        const shownRow = (day: BookedLeave) =>
+          shown.views.some((one) => one.on === day.on && one.kind === day.kind);
+        const rows = days.filter(
+          (day) => day.on === date && (stillBooked(day) ? shownRow(day) : day.id === rowId),
+        );
         if (rows.length > 0) open({ mode: "edit", date, rows, active: rowId }, null);
       },
       remove,
     }),
-    [months, waiting, range, today, busy, startAt, year, days, open, remove],
+    [months, waiting, range, today, busy, startAt, year, days, shown.views, open, remove],
   );
 
   return (
@@ -369,7 +374,7 @@ export function LeaveBoard({
         <LeavePanel
           key={opened}
           entry={entry}
-          data={{ year, minutesPerDay, days: views, holidays: holidaySet, residuals, forecasts, types }}
+          data={{ year, minutesPerDay, days: shown.views, holidays: holidaySet, residuals, forecasts, types }}
           saving={busy}
           error={error}
           finalFocus={opener}
