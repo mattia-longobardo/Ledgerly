@@ -1150,7 +1150,7 @@
       },
       "disconnect": {
         "title": "Scollegare {bank}?",
-        "description": "L'accesso alla banca viene chiuso. Conti e movimenti restano in Ledgerly e non vengono più aggiornati.",
+        "description": "L'accesso alla banca viene chiuso. I conti restano in Ledgerly come «Scollegati», con saldi e movimenti, e non si aggiornano più. Se ricolleghi la stessa banca, ogni conto torna da solo al suo posto.",
         "cancel": "Resta collegata",
         "confirm": "Scollega"
       },
@@ -1918,7 +1918,8 @@
     },
     "origins": {
       "manual": "Manuale",
-      "syncedWith": "Sincronizzato con {provider}"
+      "syncedWith": "Sincronizzato con {provider}",
+      "disconnectedFrom": "Scollegato da {provider}"
     },
     "synced": {
       "never": "Mai",

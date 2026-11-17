@@ -365,7 +365,9 @@ Stati di N1 (pallino + parola; il modello a 5 valori è di N2, §11):
 ### 5.4 «Rinnova accesso» e «Scollega»
 
 - **Rinnova accesso:** apre `/banks/connect?renew=<id>`. La procedura salta la scelta della banca (§6.7).
-- **Scollega:** `Modal` 420. Titolo «Scollegare {bank}?». Testo: «L'accesso alla banca viene chiuso. Conti e movimenti restano in Ledgerly e non vengono più aggiornati.» Pulsanti: «Resta collegata», «Scollega» (`danger`). Toast «{bank} scollegata». I conti diventano conti tenuti a mano.
+- **Scollega:** `Modal` 420. Titolo «Scollegare {bank}?». Testo: «L'accesso alla banca viene chiuso. I conti restano in Ledgerly come «Scollegati», con saldi e movimenti, e non si aggiornano più. Se ricolleghi la stessa banca, ogni conto torna da solo al suo posto.» Pulsanti: «Resta collegata», «Scollega» (`danger`). Toast «{bank} scollegata».
+- **Dopo «Scollega»** (correzione A, 17/11/2026): i conti restano legati all'id stabile del conto della banca (`identification_hash`). Non diventano conti tenuti a mano. L'intestazione del conto mostra il `Badge` `warn` «Scollegato da {provider}» al posto di «Sincronizzato con {provider}». Nessuna lettura li aggiorna.
+- **Ricollegare la stessa banca:** al ritorno dalla banca ogni conto con un id già noto torna da solo sul suo conto di Ledgerly; il collegamento è completo e la banca si legge subito (esito di §6.6, titolo «{bank} è collegata»). «Scegli i conti» compare solo se la banca espone un conto mai visto, e chiede solo quello (come §6.7). Un conto archiviato nel frattempo torna legato ma resta archiviato: esce dall'archivio solo con «Ripristina».
 
 ### 5.5 Una sola banca in N1
 
@@ -534,13 +536,15 @@ solo clic: ogni conto ha già una scelta valida.
 └────────────────────────────────────────────────────────┘
 ```
 
-Ogni conto della banca è un `<fieldset>` con `<legend>` = nome dato dalla banca · IBAN mascherato · valuta.
+Ogni conto della banca è un `<fieldset>` con `<legend>` = nome del conto · IBAN mascherato · valuta.
+
+Nome del conto (correzione A, 17/11/2026), lo stesso qui, in «Passa alla banca» (N4) e come nome precompilato: il `product` della banca; se manca, o se più conti dello stesso accesso hanno lo stesso nome (il titolare), «{bank} {tipo}», con un numero dal secondo conto dello stesso tipo («Revolut Risparmi 2»). Il campo `name` di Enable Banking è il titolare e non si usa. Il nome di un conto già in Ledgerly non cambia mai.
 L'IBAN mostra il paese, le prime due cifre e le ultime quattro: «IT60 •••• 4821». Bordo `border border-border rounded-card p-3`.
 
 | Campo | Controllo | Regole |
 |---|---|---|
 | In Ledgerly | `Select` | Opzioni: «Crea un conto nuovo» (default); `<optgroup label="Usa un conto esistente">` con i conti ammessi; «Non importare» (decisione Q3) |
-| Nome | `Input`, `maxLength` come in «Nuovo conto» | Solo con «Crea un conto nuovo». Precompilato: «{bank} {nome dato dalla banca}». Obbligatorio |
+| Nome | `Input`, `maxLength` come in «Nuovo conto» | Solo con «Crea un conto nuovo». Precompilato: il nome del conto (sopra). Obbligatorio |
 | Tipo | `Select` con `accounts.types` | Solo con «Crea un conto nuovo». Default «Conto corrente»; «Deposito» se la banca lo dichiara |
 
 Conti ammessi in «Usa un conto esistente» (stessa regola di `investments.connect.existingHint`): tenuti a mano, non
@@ -785,7 +789,7 @@ Testi generici: valgono per ogni plugin. `{name}` è il nome dal manifest. Nessu
 | `actions.disconnect` | Scollega | Disconnect |
 | `actions.replaceKey` | Sostituisci chiave | Replace key |
 | `disconnect.title` | Scollegare {bank}? | Disconnect {bank}? |
-| `disconnect.description` | L'accesso alla banca viene chiuso. Conti e movimenti restano in Ledgerly e non vengono più aggiornati. | Access to the bank is closed. Accounts and transactions stay in Ledgerly and are no longer updated. |
+| `disconnect.description` | L'accesso alla banca viene chiuso. I conti restano in Ledgerly come «Scollegati», con saldi e movimenti, e non si aggiornano più. Se ricolleghi la stessa banca, ogni conto torna da solo al suo posto. | Access to the bank is closed. The accounts stay in Ledgerly as “Disconnected”, with their balances and transactions, and are no longer updated. If you connect the same bank again, each account goes back to its place by itself. |
 | `disconnect.cancel` | Resta collegata | Stay connected |
 | `disconnect.confirm` | Scollega | Disconnect |
 | `toasts.saved` | Credenziali salvate | Credentials saved |

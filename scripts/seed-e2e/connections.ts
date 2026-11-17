@@ -145,16 +145,19 @@ export async function seedConnections(email: string = USERS.connections.email): 
   // Action needed: the access is given, the accounts are not chosen yet.
   await bank("Zeta Bank", { chosen: false, health: { lastOkAt: null } });
 
-  // An account that comes from the first bank: its page shows the state of the connection.
-  await applyProviderAccounts(ctx, provider, [
-    {
+  // An account that comes from the first bank: its page shows the state of the connection. The
+  // one of Epsilon Bank stays tied when the journey disconnects that bank.
+  await applyProviderAccounts(
+    ctx,
+    provider,
+    ["Alfa Bank", "Epsilon Bank"].map((name) => ({
       provider,
-      providerAccountId: "e2e-stable-alfa-bank",
-      name: "Alfa Bank current account",
-      type: "checking",
+      providerAccountId: `e2e-stable-${name.toLowerCase().replaceAll(" ", "-")}`,
+      name: `${name} current account`,
+      type: "checking" as const,
       currency: "EUR",
-    },
-  ]);
+    })),
+  );
 }
 
 /**

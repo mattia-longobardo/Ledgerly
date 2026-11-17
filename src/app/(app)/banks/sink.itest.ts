@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
-import { createAccount, updateAccountSettings } from "@/modules/accounts/service";
+import { archiveAccount, createAccount, updateAccountSettings } from "@/modules/accounts/service";
 import { getPool } from "@/platform/db/client";
 import { transactionIdsOfAccount, transactionsByIds } from "@/modules/transactions/queries";
 import { categorisableAccountIds } from "@/modules/transactions/service";
@@ -36,6 +36,7 @@ import {
   exposedAccounts,
   readBank,
   runBankPass,
+  tieBack,
 } from "@/platform/plugins/sync";
 import "@/app/plugin-wiring";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
@@ -692,39 +693,70 @@ describe("renewing and disconnecting", () => {
     expect(await rowsOf(ctx)).toHaveLength(1);
   });
 
-  it("disconnecting gives the accounts back to the person with everything they have, and a new access finds the movements again", async () => {
+  it("disconnecting keeps the accounts tied, and connecting the same bank again ties each one back with no choice", async () => {
     const plugin = fakePlugin();
     const { ctx, target, accountId } = await chosen(plugin);
     plugin.gives(answer([movement()]));
     await read(ctx, target, plugin);
 
-    await disconnectBank(ctx, target, bankSink, plugin.deps);
+    await disconnectBank(ctx, target, plugin.deps);
     expect(await listPluginConnections(ctx, PLUGIN)).toEqual([]);
+    // Disconnected, not kept by hand: tied to the bank's id of it, with everything it had.
     expect(await getAccount(ctx, accountId)).toMatchObject({
-      origin: "manual",
-      provider: null,
-      providerAccountId: null,
+      origin: "synced",
+      provider: PROVIDER,
+      providerAccountId: "hash-1",
     });
     expect(await rowsOf(ctx)).toHaveLength(1);
     expect((await listBalanceEntries(ctx, accountId)).some((entry) => entry.source === "provider")).toBe(
       true,
     );
 
-    const connectionId = await access(ctx, plugin);
-    const again = { pluginId: PLUGIN, connectionId };
-    await chooseAccounts(
-      ctx,
-      {
-        ...again,
-        decisions: [
-          { providerAccountId: "hash-1", currency: "EUR", target: { kind: "existing", accountId } },
-        ],
-      },
-      bankSink,
-      NOW,
-    );
-    expect(await read(ctx, again, plugin, later(1))).toMatchObject({ ok: true, created: 0 });
-    expect(await rowsOf(ctx)).toHaveLength(1);
+    // A new access to the same bank: a new id of the account inside the access, the same stable
+    // id, and an account never seen. The known one goes back by itself; only the new one is asked.
+    const SAVINGS: PluginAccount = { ...ACCOUNT, externalId: "u-9", stableId: "hash-9", kind: "SVGS" };
+    const again = fakePlugin({
+      accounts: [{ ...ACCOUNT, externalId: "u-2" }, SAVINGS],
+      session: "session-2",
+    });
+    const connectionId = await access(ctx, again);
+    const back = { pluginId: PLUGIN, connectionId };
+    expect(await tieBack(ctx, back, bankSink, NOW)).toBe(true);
+    expect(await connectionSummary(ctx, connectionId)).toEqual({ accounts: 2, chosen: true });
+    const exposed = await exposedAccounts(ctx, back, bankSink);
+    expect(exposed.accounts.map((one) => [one.providerAccountId, one.linked?.id ?? null])).toEqual([
+      ["hash-1", accountId],
+      ["hash-9", null],
+    ]);
+    expect(await listAccounts(ctx, { includeArchived: true })).toHaveLength(1);
+    // Asked twice, nothing changes.
+    expect(await tieBack(ctx, back, bankSink, NOW)).toBe(false);
+
+    again.gives(answer([movement({ accountExternalId: "u-2" })]));
+    expect(await read(ctx, back, again, later(1))).toMatchObject({ ok: true, created: 0 });
+    expect(again.syncs()[0].body).toMatchObject({ session: { id: "session-2" }, accounts: ["u-2"] });
     expect((await rowsOf(ctx)).map((row) => row.accountId)).toEqual([accountId]);
+    expect((await dueConnections(later(30 * 24))).some((due) => due.id === connectionId)).toBe(true);
+  });
+
+  it("connecting a bank again leaves an account archived meanwhile archived, and a first access to choose", async () => {
+    const plugin = fakePlugin();
+    const { ctx, target, accountId } = await chosen(plugin);
+    await disconnectBank(ctx, target, plugin.deps);
+    await archiveAccount(ctx, accountId);
+
+    const connectionId = await access(ctx, fakePlugin({ session: "session-2" }));
+    expect(await tieBack(ctx, { pluginId: PLUGIN, connectionId }, bankSink, NOW)).toBe(true);
+    expect(await getAccount(ctx, accountId)).toMatchObject({
+      state: "archived",
+      providerAccountId: "hash-1",
+    });
+
+    // Somebody else's first access to the bank: nothing of theirs is tied, the choice stays theirs.
+    const first = await connected(fakePlugin());
+    expect(
+      await tieBack(first.ctx, { pluginId: PLUGIN, connectionId: first.connectionId }, bankSink, NOW),
+    ).toBe(false);
+    expect(await connectionSummary(first.ctx, first.connectionId)).toEqual({ accounts: 1, chosen: false });
   });
 });

@@ -17,13 +17,14 @@ import type { Fetch } from "@/platform/plugins/client";
 import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@/platform/plugins/contract/calls";
 import type { PluginManifest } from "@/platform/plugins/contract/manifest";
 import {
+  disconnectBank,
   completeAccess,
   refreshManifests,
   saveUserCredentials,
   setPluginActive,
   startAccess,
 } from "@/platform/plugins/service";
-import { chooseAccounts, readBank } from "@/platform/plugins/sync";
+import { chooseAccounts, readBank, tieBack } from "@/platform/plugins/sync";
 import "@/app/plugin-wiring";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { createTestUser } from "../../../../../../test/users";
@@ -479,6 +480,59 @@ describe("apply and undo (criteria 4, 5, 7)", () => {
     expect(await openSwitchOf(w.ctx, w.accountId)).toBeNull();
   });
 
+  it("stays open when the bank is disconnected and connected again, and the undo still puts every number back", async () => {
+    const w = await world();
+    const numbersBefore = await incomeAndSpending(w.ctx);
+    const report = await checkSwitch(w.ctx, w.accountId, w.target, null, NOW, w.deps);
+    await applySwitch(
+      w.ctx,
+      w.accountId,
+      { ...w.target, fingerprint: report.fingerprint },
+      null,
+      NOW,
+      w.deps,
+    );
+    const open = await openSwitchOf(w.ctx, w.accountId);
+
+    await disconnectBank(w.ctx, { pluginId: BANK_PLUGIN_ID, connectionId: w.target.connectionId }, w.deps);
+    expect(await getAccount(w.ctx, w.accountId)).toMatchObject({
+      provider: BANK_PROVIDER,
+      providerAccountId: "acc-cur",
+    });
+    await startAccess(w.ctx, { pluginId: BANK_PLUGIN_ID, sessionId: "s", institution: BANK }, NOW, w.deps);
+    const outcome = await completeAccess(
+      w.ctx,
+      {
+        pluginId: BANK_PLUGIN_ID,
+        sessionId: "s",
+        query: { state: accessState, code: "code-2", error: null },
+        presence: null,
+      },
+      NOW,
+      w.deps,
+    );
+    if (!outcome.ok) throw new Error(`access refused: ${outcome.error}`);
+    expect(outcome.connectionId).not.toBe(w.target.connectionId);
+    const again = { pluginId: BANK_PLUGIN_ID, connectionId: outcome.connectionId };
+    expect(await tieBack(w.ctx, again, bankSink, NOW)).toBe(true);
+    const later = new Date(NOW.getTime() + 7 * 3_600_000);
+    expect((await readBank(w.ctx, { ...again, presence: null }, bankSink, later, w.deps)).ok).toBe(true);
+    expect(await openSwitchOf(w.ctx, w.accountId)).toEqual(open);
+    const { rows } = await getPool().query(
+      "select count(*)::int as n from transactions where account_id = $1",
+      [w.accountId],
+    );
+    expect(rows[0].n).toBe(8);
+
+    await undoSwitch(w.ctx, w.accountId, later, w.deps);
+    expect(await getAccount(w.ctx, w.accountId)).toMatchObject({
+      provider: SOURCE,
+      providerAccountId: "src-1",
+    });
+    expect(await incomeAndSpending(w.ctx)).toBe(numbersBefore);
+    expect(await openSwitchOf(w.ctx, w.accountId)).toBeNull();
+  });
+
   it("stops when a manual movement did not reach the source (H38), and reads nothing of the bank", async () => {
     const w = await world();
     await getPool().query(
@@ -553,7 +607,7 @@ async function countsOf(accountId: string) {
 describe("a bank's account already here (H39 for already imported accounts)", () => {
   it("is offered, and the dry run ties each of its movements and writes nothing", async () => {
     const w = await worldWithDouble();
-    const banks = await freeBankAccounts(w.ctx, w.accountId, "EUR");
+    const banks = await freeBankAccounts(w.ctx, w.accountId, "EUR", String);
     const offered = banks.flatMap((bank) => bank.accounts);
     expect(offered.find((one) => one.providerAccountId === "acc-cur")?.here).toEqual({
       id: w.doubleId,
@@ -561,7 +615,7 @@ describe("a bank's account already here (H39 for already imported accounts)", ()
     });
     // An account of the bank is never offered to be joined to itself.
     expect(
-      (await freeBankAccounts(w.ctx, w.doubleId, "EUR")).flatMap((bank) => bank.accounts),
+      (await freeBankAccounts(w.ctx, w.doubleId, "EUR", String)).flatMap((bank) => bank.accounts),
     ).not.toContainEqual(expect.objectContaining({ providerAccountId: "acc-cur" }));
 
     const before = await everything();

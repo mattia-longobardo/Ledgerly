@@ -13,7 +13,6 @@ import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
-import type { BankSink } from "./ports";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
@@ -648,15 +647,15 @@ export async function connectionSharing(
 }
 
 /**
- * Disconnects a bank (§5.4): closes the access at the provider, forgets it here, and gives its
- * accounts back to the person as accounts kept by hand — balances and movements stay. The access
- * is forgotten even when the provider does not answer: a person who disconnects must end up
- * disconnected.
+ * Disconnects a bank (§5.4): closes the access at the provider and forgets it here. Its accounts
+ * stay tied to the bank's ids of them, "disconnected": nothing reads them, their balances and
+ * movements stay, and a new access to the same bank ties them again by itself (`tieBack`). The
+ * access is forgotten even when the provider does not answer: a person who disconnects must end
+ * up disconnected.
  */
 export async function disconnectBank(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   input: { pluginId: string; connectionId: string },
-  sink: Pick<BankSink, "releaseAccounts">,
   deps: Deps = {},
 ): Promise<void> {
   const plugin = await requireActivePlugin(ctx, input.pluginId);
@@ -665,11 +664,9 @@ export async function disconnectBank(
   );
   if (!connection) throw new PluginActionError("not_found");
   const credentials = await readUserCredentials(ctx, input.pluginId);
-  const { sessionId, accounts } = readBag(await readCredentials(ctx, connection.id));
+  const { sessionId } = readBag(await readCredentials(ctx, connection.id));
   if (credentials !== null && sessionId !== "") await revokeQuietly(plugin, credentials, sessionId, deps);
   await deleteConnection(ctx, connection.id);
-  // This bank's accounts only: the other banks of the person keep theirs.
-  await sink.releaseAccounts(ctx, connection.provider, accounts.map(providerAccountIdOf));
 }
 
 /** Drops the pending accesses nobody came back for. Called when one is started: no job of its own. */

@@ -157,6 +157,28 @@ export async function chooseAccounts(
   await saveSchedule(ctx, connection.id, BANK_SCHEDULE, now);
 }
 
+/**
+ * A new access to a bank that was disconnected (§5.4): the accounts it exposes whose id is still
+ * tied here go back to their accounts by themselves, and the connection is complete, so "Choose
+ * the accounts" asks only for the accounts never seen. An archived account stays archived: the
+ * tie comes back, the account comes back to the lists only when the person restores it. Returns
+ * whether any account was tied back; the first reading is the caller's next call.
+ */
+export async function tieBack(
+  ctx: Who,
+  input: { pluginId: string; connectionId: string },
+  sink: BankSink,
+  now: Date = new Date(),
+): Promise<boolean> {
+  const connection = await requireConnection(ctx, input.pluginId, input.connectionId);
+  const bag = readBag(await readCredentials(ctx, connection.id));
+  if (bag.chosen) return false;
+  const linked = await sink.linkedAccounts(ctx, connection.provider);
+  if (!bag.accounts.some((account) => linked.has(providerAccountIdOf(account)))) return false;
+  await chooseAccounts(ctx, { ...input, decisions: [] }, sink, now);
+  return true;
+}
+
 /** What a reading did, or why it did nothing. */
 export type ReadingOutcome =
   | { ok: true; created: number; updated: number; accountErrors: number; complete: boolean }

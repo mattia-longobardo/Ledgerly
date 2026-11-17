@@ -145,14 +145,15 @@ export async function authComplete(body: unknown, deps: Deps = {}): Promise<Auth
   return {
     session: { id: session.session_id, expiresAt: instantOrNull(session.access?.valid_until) },
     institution: { name: session.aspsp.name, country: session.aspsp.country },
-    // An account with no `uid` cannot be read in this access: it is not offered.
+    // An account with no `uid` cannot be read in this access: it is not offered. Its name is the
+    // bank's product: the API's `name` is the holder's, the same on every account of a person.
     accounts: session.accounts.flatMap((account) =>
       account.uid
         ? [
             {
               externalId: account.uid,
               stableId: stableIdOf(account.identification_hash),
-              name: textOrNull(account.name, 200) ?? textOrNull(account.product, 200),
+              name: textOrNull(account.product, 200),
               identifier: textOrNull(account.account_id?.iban, 64),
               currency: account.currency,
               kind: textOrNull(account.cash_account_type, 40),

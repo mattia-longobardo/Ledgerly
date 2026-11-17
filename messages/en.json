@@ -1150,7 +1150,7 @@
       },
       "disconnect": {
         "title": "Disconnect {bank}?",
-        "description": "Access to the bank is closed. Accounts and transactions stay in Ledgerly and are no longer updated.",
+        "description": "Access to the bank is closed. The accounts stay in Ledgerly as “Disconnected”, with their balances and transactions, and are no longer updated. If you connect the same bank again, each account goes back to its place by itself.",
         "cancel": "Stay connected",
         "confirm": "Disconnect"
       },
@@ -1918,7 +1918,8 @@
     },
     "origins": {
       "manual": "Manual",
-      "syncedWith": "Synced with {provider}"
+      "syncedWith": "Synced with {provider}",
+      "disconnectedFrom": "Disconnected from {provider}"
     },
     "synced": {
       "never": "Never",

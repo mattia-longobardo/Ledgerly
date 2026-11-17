@@ -312,6 +312,27 @@ test.describe("the rows of the connections", () => {
     await expect(plugin).toHaveAttribute("data-state", "active");
     await expect(page.getByRole("region", { name: "Banks" }).getByTestId("bank-row")).toHaveCount(6);
   });
+
+  test("disconnecting a bank keeps its account tied to it, shown as disconnected", async ({ page }) => {
+    await page.goto(INTEGRATIONS);
+    const epsilon = row(page, "Epsilon Bank");
+    await epsilon.getByRole("button", { name: "Epsilon Bank" }).click();
+    await page.getByRole("menuitem", { name: "Disconnect" }).click();
+    const dialog = page.getByRole("dialog", { name: "Disconnect Epsilon Bank?" });
+    await expect(dialog).toContainText("each account goes back to its place by itself");
+    await dialog.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Banks" }).getByTestId("bank-row")).toHaveCount(5);
+
+    // Not an account kept by hand: still the bank's, waiting for the bank to be connected again.
+    await page.goto("/accounts");
+    await page
+      .getByRole("link", { name: /Epsilon Bank current account/ })
+      .first()
+      .click();
+    await expect(page.getByText("Disconnected from Enable Banking", { exact: true })).toBeVisible();
+    await expect(page.getByText("Manual", { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("connection-status")).toHaveCount(0);
+  });
 });
 
 test.describe("whose log it is", () => {

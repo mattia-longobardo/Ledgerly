@@ -43,7 +43,7 @@ import { listConnections } from "@/platform/integrations/service";
 import { withJobLock } from "@/platform/jobs/lock";
 import { parseCents } from "@/platform/money";
 import { listPluginConnections } from "@/platform/plugins/queries";
-import { institutionOf } from "@/platform/plugins/rules";
+import { bankAccountNames, type BankAccountType, institutionOf } from "@/platform/plugins/rules";
 import type { Deps, Presence } from "@/platform/plugins/service";
 import { exposedAccounts, previewBankAccount, readBank } from "@/platform/plugins/sync";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
@@ -183,8 +183,14 @@ async function requireSwitchable(ctx: Ctx, accountId: string) {
 /**
  * The accounts of the person's banks in a currency (step "Account", §4): the ones not in Ledgerly,
  * and the ones the bank brought here as an account of their own, which the switch joins (`here`).
+ * Each is named as "Choose the accounts" names it (`kindLabel`: the name of a kind of account).
  */
-export async function freeBankAccounts(ctx: Ctx, accountId: string, currency: string) {
+export async function freeBankAccounts(
+  ctx: Ctx,
+  accountId: string,
+  currency: string,
+  kindLabel: (type: BankAccountType) => string,
+) {
   const banks = [];
   for (const connection of await listPluginConnections(ctx, BANK_PLUGIN_ID)) {
     const exposed = await exposedAccounts(
@@ -192,6 +198,8 @@ export async function freeBankAccounts(ctx: Ctx, accountId: string, currency: st
       { pluginId: BANK_PLUGIN_ID, connectionId: connection.id },
       bankSink,
     );
+    const bank = institutionOf(connection.instanceKey).name;
+    const names = bankAccountNames(exposed.accounts, bank, kindLabel);
     const accounts = [];
     for (const account of exposed.accounts) {
       if (account.currency !== currency) continue;
@@ -199,7 +207,7 @@ export async function freeBankAccounts(ctx: Ctx, accountId: string, currency: st
       if (account.linked !== null && here === null) continue;
       accounts.push({
         providerAccountId: account.providerAccountId,
-        name: account.name,
+        name: names.get(account.providerAccountId) ?? null,
         identifier: account.identifier,
         currency: account.currency,
         here,
@@ -207,7 +215,7 @@ export async function freeBankAccounts(ctx: Ctx, accountId: string, currency: st
     }
     banks.push({
       connectionId: connection.id,
-      bank: institutionOf(connection.instanceKey).name,
+      bank,
       expired: connection.state === "revoked",
       accounts,
     });
