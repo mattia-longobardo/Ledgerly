@@ -214,8 +214,8 @@ because a theme changes colours only.
   selection says so: the diff touches a `queries.ts`, a `schema.ts`, `drizzle/`,
   `src/platform/api`, `src/platform/db` or `src/platform/fx`. Run it with the host quiet.
 
-Both read the schema that the last integration run left in `ledgerly_test`: run them after the
-integration tests.
+Both bring `ledgerly_test` to the checkout's migrations first: the integration tests run on their
+own databases (`ledgerly_<1-4>_test`), and `npm run perf` can run beside them.
 
 ## Keep the map true
 
