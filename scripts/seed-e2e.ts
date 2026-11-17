@@ -1264,8 +1264,8 @@ async function seedBinance(ctx: Ctx, on: string): Promise<void> {
  * next time is days away, and the users are removed when the run ends — so the dispatcher never
  * calls a provider for this user.
  */
-async function seedConnections(): Promise<void> {
-  const ctx = await contextOf(USERS.connections.email);
+async function seedConnections(email: string = USERS.connections.email): Promise<void> {
+  const ctx = await contextOf(email);
   const db = getDb();
   const now = new Date();
   const hours = (count: number) => new Date(now.getTime() + count * 3_600_000);
@@ -1404,8 +1404,8 @@ async function seedConnections(): Promise<void> {
  * its badge and its own menu is on screen for the check. The bank's account is tied to the plugin's
  * provider with nothing behind it: no connection, so no reading ever starts.
  */
-async function seedManual(): Promise<void> {
-  const ctx = await contextOf(USERS.manual.email);
+async function seedManual(email: string = USERS.manual.email): Promise<void> {
+  const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
   const cash = await createAccount(ctx, {
     name: "Contanti",
@@ -1453,8 +1453,8 @@ async function seedManual(): Promise<void> {
  * same IBAN, an example of the standard), and the bank's plugin turned on. The dry run is never
  * started by a test: it would ask a bank. Its own user: the switch journey changes nothing else.
  */
-async function seedSwitching(): Promise<void> {
-  const ctx = await contextOf(USERS.switching.email);
+async function seedSwitching(email: string = USERS.switching.email): Promise<void> {
+  const ctx = await contextOf(email);
   const iban = "IT60X0542811101000000123456";
   const current = await syncedAccount(ctx, "e2e-switching-1", "Conto da passare");
   await getDb().update(accounts).set({ iban, ibanFromSource: true }).where(eq(accounts.id, current));
@@ -1497,8 +1497,8 @@ async function seedSwitching(): Promise<void> {
     .where(eq(integrationConnections.id, connection.id));
 }
 
-async function seedSources(): Promise<void> {
-  const ctx = await contextOf(USERS.sources.email);
+async function seedSources(email: string = USERS.sources.email): Promise<void> {
+  const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
   await createAccount(ctx, {
     name: "Contanti",
@@ -1554,8 +1554,8 @@ async function seedSources(): Promise<void> {
  * that sells everything is a suggestion, an invented shop has nothing. "Bars" beside "Restaurants
  * and bars" is a pair that looks like one category.
  */
-async function seedReview(): Promise<void> {
-  const ctx = await contextOf(USERS.review.email);
+async function seedReview(email: string = USERS.review.email): Promise<void> {
+  const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
   await createDefaultGroups(
     ctx,
@@ -1593,8 +1593,8 @@ async function seedReview(): Promise<void> {
 }
 
 /** A person with movements and no category at all: the guided review starts from the groups. */
-async function seedReviewNew(): Promise<void> {
-  const ctx = await contextOf(USERS.reviewNew.email);
+async function seedReviewNew(email: string = USERS.reviewNew.email): Promise<void> {
+  const ctx = await contextOf(email);
   const on = today(ctx.timeZone);
   const cash = await createAccount(ctx, { name: "Contanti", type: "cash", currency: "EUR" });
   for (const [payee, back] of [
@@ -1613,6 +1613,23 @@ async function seedReviewNew(): Promise<void> {
     });
   }
   await categorise(ctx, await categorisableAccountIds(ctx));
+}
+
+/**
+ * The sync schedule editor (tests/e2e/connections/schedule.spec.ts): a Trek link and the two
+ * services of Investments, all on manual only. Its own user: the spec changes the schedules, while
+ * the screens of `layout` are measured with the same three links.
+ */
+async function seedSchedule(): Promise<void> {
+  const ctx = await contextOf(USERS.schedule.email);
+  const trek = await saveConnection(ctx, {
+    provider: TREK_PROVIDER,
+    credentials: { baseUrl: "https://trek.invalid", token: "e2e-not-a-token" },
+  });
+  await saveSchedule(ctx, trek.id, { rules: [] });
+  const on = today(ctx.timeZone);
+  await seedEtoro(ctx, on);
+  await seedBinance(ctx, on);
 }
 
 async function seedLayout(): Promise<void> {
@@ -2007,6 +2024,14 @@ await seedSources();
 await seedSwitching();
 await seedReview();
 await seedReviewNew();
+await seedReview(USERS.reviewJourney.email);
+await seedReviewNew(USERS.reviewNewJourney.email);
+await seedManual(USERS.manualJourney.email);
+await seedSources(USERS.sendJourney.email);
+await seedSources(USERS.sourceCategories.email);
+await seedSwitching(USERS.switchJourney.email);
+await seedConnections(USERS.connectionsJourney.email);
+await seedSchedule();
 await seedCurrency();
 console.log(`e2e: seeded ${Object.keys(USERS).length} test users`);
 

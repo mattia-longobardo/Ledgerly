@@ -14,7 +14,7 @@ import { sessionState } from "../_shared/env";
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
 test.describe.configure({ mode: "default" });
 
-test.use({ storageState: sessionState("sources") });
+test.use({ storageState: sessionState("sendJourney") });
 
 const EXPENSES = "/expenses?preset=last3Months";
 const ACCOUNT = "Conto corrente app";

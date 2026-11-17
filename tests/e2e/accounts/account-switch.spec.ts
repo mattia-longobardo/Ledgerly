@@ -4,7 +4,7 @@ import { sessionState } from "../_shared/env";
 
 // Release N4b (ux/n4-account-switch.md §2.2, §3, §4): the way into the switch of an account to the
 // bank, up to the step "Account". The dry run is not started: it would ask a bank.
-test.use({ storageState: sessionState("switching") });
+test.use({ storageState: sessionState("switchJourney") });
 test.describe.configure({ mode: "default" });
 
 test("an account of a source offers the move to the bank, and the step Account shows the bank's same account", async ({

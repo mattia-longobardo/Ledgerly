@@ -39,7 +39,7 @@ const row = (page: Page, name: string) =>
   page.getByTestId("connection-row").filter({ has: page.getByText(name, { exact: true }) });
 
 test.describe("the rows of the connections", () => {
-  test.use({ storageState: sessionState("connections") });
+  test.use({ storageState: sessionState("connectionsJourney") });
 
   for (const { width, height } of [
     { width: 1440, height: 900 },
@@ -316,7 +316,7 @@ test.describe("the rows of the connections", () => {
 
 test.describe("whose log it is", () => {
   test("another person, an admin included, does not reach the log of a connection", async ({ browser }) => {
-    const owner = await browser.newContext({ storageState: sessionState("connections") });
+    const owner = await browser.newContext({ storageState: sessionState("connectionsJourney") });
     const page = await owner.newPage();
     await page.goto(INTEGRATIONS);
     await page
@@ -358,7 +358,7 @@ test.describe("whose log it is", () => {
     await context.close();
 
     // The page is the admin's only.
-    const person = await browser.newContext({ storageState: sessionState("connections") });
+    const person = await browser.newContext({ storageState: sessionState("connectionsJourney") });
     expect((await (await person.newPage()).goto("/settings/server"))?.status()).toBe(404);
     await person.close();
   });

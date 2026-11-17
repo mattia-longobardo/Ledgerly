@@ -12,7 +12,7 @@ import { sessionState } from "../_shared/env";
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
 test.describe.configure({ mode: "default" });
 
-test.use({ storageState: sessionState("manual") });
+test.use({ storageState: sessionState("manualJourney") });
 
 /** The last three months: the seeded movement is two days old, in the month before on a 1st or a 2nd. */
 const EXPENSES = "/expenses?preset=last3Months";

@@ -14,7 +14,7 @@ import { sessionState } from "../_shared/env";
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
 test.describe.configure({ mode: "default" });
 
-test.use({ storageState: sessionState("sources") });
+test.use({ storageState: sessionState("sourceCategories") });
 
 const section = (page: Page) => page.getByTestId("source-categories");
 const chooserName = (name: string) => `Ledgerly category for “${name}”`;

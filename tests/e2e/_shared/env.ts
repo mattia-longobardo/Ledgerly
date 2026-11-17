@@ -108,6 +108,46 @@ export const USERS = {
   switching: { email: "switching@example.test", password: "switching-password-123", name: "Switching" },
   review: { email: "review@example.test", password: "review-password-123", name: "Review" },
   reviewNew: { email: "review-new@example.test", password: "review-new-password-123", name: "Review New" },
+  // The users of the journeys that change their data, each a copy of the user the screen check
+  // measures (`a11y.spec.ts`), so that no journey moves what a screen is measured with, and no
+  // two journeys share a user: each spec starts from its own data.
+  reviewJourney: {
+    email: "review-journey@example.test",
+    password: "review-journey-password-123",
+    name: "Review Journey",
+  },
+  reviewNewJourney: {
+    email: "review-new-journey@example.test",
+    password: "review-new-journey-password-123",
+    name: "Review New Journey",
+  },
+  manualJourney: {
+    email: "manual-journey@example.test",
+    password: "manual-journey-password-123",
+    name: "Manual Journey",
+  },
+  sendJourney: {
+    email: "send-journey@example.test",
+    password: "send-journey-password-123",
+    name: "Send Journey",
+  },
+  sourceCategories: {
+    email: "source-categories@example.test",
+    password: "source-categories-password-123",
+    name: "Source Categories",
+  },
+  switchJourney: {
+    email: "switch-journey@example.test",
+    password: "switch-journey-password-123",
+    name: "Switch Journey",
+  },
+  connectionsJourney: {
+    email: "connections-journey@example.test",
+    password: "connections-journey-password-123",
+    name: "Connections Journey",
+  },
+  // The sync schedule editor (tests/e2e/connections/schedule.spec.ts): a Trek link and two services.
+  schedule: { email: "schedule@example.test", password: "schedule-password-123", name: "Schedule" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
   // Nothing else uses it, and the admin spec addresses it by this exact address — the page lists
   // the instance's real users too, and a spec must never touch one.
@@ -177,6 +217,15 @@ export const SESSIONS = {
   // Release N3: "To review" and the automatic categories (tests/e2e/categories/review.spec.ts).
   review: { user: "review", file: "review-session.json" },
   reviewNew: { user: "reviewNew", file: "review-new-session.json" },
+  // The journeys that change their data, on copies of the users of the screen check.
+  reviewJourney: { user: "reviewJourney", file: "review-journey-session.json" },
+  reviewNewJourney: { user: "reviewNewJourney", file: "review-new-journey-session.json" },
+  manualJourney: { user: "manualJourney", file: "manual-journey-session.json" },
+  sendJourney: { user: "sendJourney", file: "send-journey-session.json" },
+  sourceCategories: { user: "sourceCategories", file: "source-categories-session.json" },
+  switchJourney: { user: "switchJourney", file: "switch-journey-session.json" },
+  connectionsJourney: { user: "connectionsJourney", file: "connections-journey-session.json" },
+  schedule: { user: "schedule", file: "schedule-session.json" },
   // TOTP: sessions of users who still have to set it up, so they land on the setup page.
   enroll: { user: "enroll", file: "enroll-session.json" },
   pending: { user: "pending", file: "pending-session.json" },

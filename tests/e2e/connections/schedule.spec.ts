@@ -1,6 +1,6 @@
 // tests/e2e/connections/schedule.spec.ts — the sync schedule editor (docs/scheduler.md), under "Advanced" of
 // Settings › Integrations from release N2 (ux/n2-connection-status.md §8.2), on the seeded
-// `layout` user's Trek link, which starts on manual only and is put back there at the end. The
+// `schedule` user's Trek link, which starts on manual only and is put back there at the end. The
 // address of that link does not exist, so a pass the dispatcher makes in between only records a
 // failed run on a test user. The rows are in order of name, so Trek's control is found by its
 // row: the seeded eToro and Binance links (manual only too) have their own, never touched here.
@@ -11,7 +11,7 @@ import { sessionState } from "../_shared/env";
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
 test.describe.configure({ mode: "default" });
 
-test.use({ storageState: sessionState("layout") });
+test.use({ storageState: sessionState("schedule") });
 
 test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async ({ page }) => {
   await page.goto("/settings/integrations/advanced");

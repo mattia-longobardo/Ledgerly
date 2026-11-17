@@ -23,7 +23,7 @@ const group = (page: Page, text: string) =>
 test.describe.configure({ mode: "serial" });
 
 test.describe("the automatic categories", () => {
-  test.use({ storageState: sessionState("review") });
+  test.use({ storageState: sessionState("reviewJourney") });
 
   test("an automatic category says why, a suggestion waits, and a choice asks about the similar ones", async ({
     page,
@@ -168,7 +168,7 @@ test.describe("the automatic categories", () => {
 });
 
 test.describe("the guided review of a person with no category", () => {
-  test.use({ storageState: sessionState("reviewNew") });
+  test.use({ storageState: sessionState("reviewNewJourney") });
 
   test("starts from the default groups, then the categories, and can be finished later", async ({ page }) => {
     await page.goto(`${REVIEW}?guide=1&bank=Zeta%20Bank`);
@@ -192,7 +192,7 @@ for (const { width, height } of [
   { width: 400, height: 860 },
 ]) {
   test.describe(`To review at ${width} px`, () => {
-    test.use({ storageState: sessionState("review") });
+    test.use({ storageState: sessionState("reviewJourney") });
     test("has no sideways scroll, with a group open", async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto(REVIEW);
