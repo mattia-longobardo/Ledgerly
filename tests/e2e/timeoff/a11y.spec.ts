@@ -49,6 +49,27 @@ const OVERLAYS: Screen[] = [
       await settledDialog(page);
     },
   },
+  {
+    // The list "Remove N days" shows before it writes (17/11/2026): reached without writing.
+    name: "the leave panel, the days a range removes",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/timeoff");
+      await settled(page);
+      const booked = page.getByTestId("leave-cell").first();
+      await booked.click();
+      await page.getByRole("button", { name: "Select more days from here" }).click();
+      await expect(page.getByTestId("selection-bar")).toBeVisible();
+      await booked.click();
+      await page
+        .getByRole("dialog", { name: "New leave" })
+        .getByRole("button", { name: /^Remove \d+ days?$/ })
+        .click();
+      await expect(page.getByRole("dialog", { name: "Remove leave" })).toBeVisible();
+      await settledDialog(page);
+    },
+  },
 ];
 
 test.describe("every screen", () => audit(PAGES));

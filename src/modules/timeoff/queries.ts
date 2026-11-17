@@ -32,6 +32,7 @@ import {
   monthBars,
   monthGroups,
   residual,
+  stillBooked,
   unrecordedLeave,
   yearTotals,
 } from "./rules";
@@ -173,7 +174,8 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
 
   const todayOn = today(preferences.timeZone);
   const minutesPerDay = preferences.minutesPerDay;
-  const views = days.map(asView);
+  // A removal Trek has not confirmed yet is a removal all the same: no balance counts it (N5 fix).
+  const views = days.filter(stillBooked).map(asView);
 
   // The last applied payslip that printed a balance for this kind: the latest month wins, and the
   // read already gave them oldest first.
@@ -243,7 +245,9 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
       allowanceMinutes,
     ),
     opening: openings[kind],
-    days: everyDay.filter((day) => day.kind === kind && day.on >= openings[kind].spentFrom).map(asView),
+    days: everyDay
+      .filter((day) => stillBooked(day) && day.kind === kind && day.on >= openings[kind].spentFrom)
+      .map(asView),
     minutesPerDay,
   });
   const forecastInputs: TimeOffView["forecastInputs"] = {

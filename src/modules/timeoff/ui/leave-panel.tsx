@@ -82,6 +82,8 @@ export function LeavePanel({
   onRangeChange,
   onConfirm,
   onRemove,
+  onRemoveRange,
+  onSelectMore,
   onClose,
 }: {
   entry: LeavePanelEntry;
@@ -94,6 +96,10 @@ export function LeavePanel({
   onRangeChange?: (range: { from: string; to: string } | null) => void;
   onConfirm: (fields: LeaveFormInput) => void;
   onRemove: (row: BookedLeave) => void;
+  /** "Remove N days": everything booked in the range of the fields goes (N5 §7.5). */
+  onRemoveRange?: (range: { from: string; to: string }) => void;
+  /** "Select more days from here": the edited day becomes the first day of a range (N5 §7.5). */
+  onSelectMore?: (date: string) => void;
   onClose: () => void;
 }) {
   const t = useTranslations("timeoff");
@@ -173,13 +179,31 @@ export function LeavePanel({
   );
   const nothing = preview !== null && preview.written.length === 0;
 
+  /** The booked days the range of the fields covers, each with what it carries. */
+  const bookedInRange = useMemo(() => {
+    if (row !== undefined || !validDates || tooLong) return [];
+    const byDate = new Map<string, LeaveDayView[]>();
+    for (const day of data.days) {
+      if (day.on < from || day.on > to) continue;
+      byDate.set(day.on, [...(byDate.get(day.on) ?? []), day]);
+    }
+    return [...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
+  }, [row, validDates, tooLong, from, to, data.days]);
+  /** The step that lists the days "Remove N days" takes away, before it does. */
+  const [removing, setRemoving] = useState(false);
+  const removable = onRemoveRange !== undefined && bookedInRange.length > 0;
+
   function submit(event: FormEvent) {
     event.preventDefault();
     if (saving || preview === null || nothing) return;
     onConfirm({ from, to, kind, fraction, note, editedKind: row?.kind ?? null });
   }
 
-  const title = row === undefined ? t("dialog.addTitle") : t("dialog.editTitle");
+  const title = removing
+    ? t("panel.removeTitle")
+    : row === undefined
+      ? t("dialog.addTitle")
+      : t("dialog.editTitle");
   const description =
     row !== undefined || (validDates && from === to && entry.mode !== "add")
       ? fullDate(from, locale)
@@ -221,280 +245,333 @@ export function LeavePanel({
       width={460}
       finalFocus={finalFocus}
       footer={
-        <>
-          {row !== undefined && (
+        removing ? (
+          <>
+            <Button className="max-md:h-9" onClick={() => setRemoving(false)}>
+              {t("panel.back")}
+            </Button>
             <Button
               variant="danger"
-              className="mr-auto max-md:h-9"
-              onClick={() => onRemove(row)}
+              className="max-md:h-9"
               disabled={saving}
+              onClick={() => onRemoveRange?.({ from, to })}
             >
-              {t("actions.remove")}
+              {t("panel.removeRange", { count: bookedInRange.length })}
             </Button>
-          )}
-          <Button className="max-md:h-9" onClick={onClose} disabled={saving}>
-            {t("actions.cancel")}
-          </Button>
-          <Button
-            variant="primary"
-            className="max-md:h-9"
-            type="submit"
-            form={`${id}-form`}
-            disabled={saving || preview === null || nothing}
-          >
-            {saving ? t("panel.saving") : t("actions.save")}
-          </Button>
-        </>
+          </>
+        ) : (
+          <>
+            {row === undefined && removable && (
+              <Button
+                variant="danger"
+                className="mr-auto max-md:h-9"
+                onClick={() => setRemoving(true)}
+                disabled={saving}
+              >
+                {t("panel.removeRange", { count: bookedInRange.length })}
+              </Button>
+            )}
+            {row !== undefined && (
+              <Button
+                variant="danger"
+                className="mr-auto max-md:h-9"
+                onClick={() => onRemove(row)}
+                disabled={saving}
+              >
+                {t("actions.remove")}
+              </Button>
+            )}
+            <Button className="max-md:h-9" onClick={onClose} disabled={saving}>
+              {t("actions.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              className="max-md:h-9"
+              type="submit"
+              form={`${id}-form`}
+              disabled={saving || preview === null || nothing}
+            >
+              {saving ? t("panel.saving") : t("actions.save")}
+            </Button>
+          </>
+        )
       }
     >
-      <form id={`${id}-form`} onSubmit={submit} className="flex flex-col gap-4" data-testid="leave-panel">
-        {row !== undefined && (row.origin === "trek" || row.pending !== "none") && (
-          <div className="flex flex-wrap gap-1.5">
-            {row.origin === "trek" && <Badge tone="neutral">{t("table.fromTrek")}</Badge>}
-            {row.pending !== "none" && (
-              <Badge tone="warn">{t(`table.pending.${row.pending}` as "table.pending.upsert")}</Badge>
-            )}
-          </div>
-        )}
-
-        {row !== undefined && rows.length > 1 && (
-          <Choice label={t("panel.which")}>
-            <Segmented
-              label={t("panel.which")}
-              value={row.id}
-              onChange={activate}
-              options={rows.map((one) => ({
-                value: one.id,
-                label: one.fraction === 0.5 ? t("panel.half", { kind: nameOf(one.kind) }) : nameOf(one.kind),
-                disabled: saving,
-              }))}
-            />
-          </Choice>
-        )}
-
-        {row === undefined && (
-          <div className="grid grid-cols-2 gap-3 max-[399px]:grid-cols-1">
-            <Field
-              label={t("dialog.from")}
-              htmlFor={`${id}-from`}
-              error={isCivilDate(from) ? undefined : t("errors.invalid")}
-            >
-              <Input
-                id={`${id}-from`}
-                type="date"
-                value={from}
-                onChange={(event) => changeFrom(event.target.value)}
-                disabled={saving}
-                required
-              />
-            </Field>
-            <Field
-              label={t("dialog.to")}
-              htmlFor={`${id}-to`}
-              error={
-                !isCivilDate(to) || to < from
-                  ? t("errors.invalid")
-                  : tooLong
-                    ? t("errors.range_too_long")
-                    : undefined
-              }
-            >
-              <Input
-                id={`${id}-to`}
-                type="date"
-                min={isCivilDate(from) ? from : undefined}
-                value={to}
-                onChange={(event) => changeTo(event.target.value)}
-                disabled={saving}
-                required
-              />
-            </Field>
-          </div>
-        )}
-
-        <Field label={t("dialog.kind")} htmlFor={`${id}-kind`}>
-          <Select
-            id={`${id}-kind`}
-            value={kind}
-            onChange={(event) => setKind(event.target.value as LeaveDayKind)}
-            disabled={saving}
-          >
-            {data.types
-              // A kind nobody books any more is offered only to the row that already carries it.
-              .filter((type) => type.selectable || type.id === row?.kind)
-              .map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-          </Select>
-        </Field>
-
-        <Choice label={t("dialog.duration")}>
-          <Segmented
-            label={t("dialog.duration")}
-            value={fraction}
-            onChange={setFraction}
-            options={[
-              { value: "1", label: t("dialog.wholeDay"), disabled: saving },
-              { value: "0.5", label: t("dialog.halfDay"), disabled: saving },
-            ]}
-          />
-          {row !== undefined && rows.length === 1 && row.fraction === 0.5 && (
-            <LinkButton className="self-start" onClick={() => addOtherHalf(row)} disabled={saving}>
-              {t("panel.otherHalf")}
-            </LinkButton>
+      {removing ? (
+        <div className="flex flex-col gap-3" data-testid="remove-range">
+          <p className="text-base">{t("panel.removeIntro", { count: bookedInRange.length })}</p>
+          <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto rounded-card bg-hover p-3 text-base">
+            {bookedInRange.map(([on, held]) => (
+              <li key={on}>
+                {t("panel.removeLine", {
+                  day: shortDay(on, locale),
+                  kinds: held
+                    .map((one) =>
+                      one.fraction === 0.5 ? t("panel.half", { kind: nameOf(one.kind) }) : nameOf(one.kind),
+                    )
+                    .join(", "),
+                })}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <form id={`${id}-form`} onSubmit={submit} className="flex flex-col gap-4" data-testid="leave-panel">
+          {row !== undefined && (row.origin === "trek" || row.pending !== "none") && (
+            <div className="flex flex-wrap gap-1.5">
+              {row.origin === "trek" && <Badge tone="neutral">{t("table.fromTrek")}</Badge>}
+              {row.pending !== "none" && (
+                <Badge tone="warn">{t(`table.pending.${row.pending}` as "table.pending.upsert")}</Badge>
+              )}
+            </div>
           )}
-        </Choice>
 
-        <Field
-          label={t("dialog.note")}
-          htmlFor={`${id}-note`}
-          hint={typeOf(kind)?.local ? t("dialog.localOnly") : t("dialog.noteHint")}
-        >
-          <Textarea
-            id={`${id}-note`}
-            rows={2}
-            maxLength={200}
-            className="min-h-0"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            disabled={saving}
-          />
-        </Field>
+          {row !== undefined && rows.length > 1 && (
+            <Choice label={t("panel.which")}>
+              <Segmented
+                label={t("panel.which")}
+                value={row.id}
+                onChange={activate}
+                options={rows.map((one) => ({
+                  value: one.id,
+                  label:
+                    one.fraction === 0.5 ? t("panel.half", { kind: nameOf(one.kind) }) : nameOf(one.kind),
+                  disabled: saving,
+                }))}
+              />
+            </Choice>
+          )}
 
-        {preview !== null && (
-          <div className="flex flex-col gap-2 rounded-card bg-hover p-3">
-            <h3 className="text-sm font-semibold">{t("panel.summary")}</h3>
-            <dl
-              aria-live="polite"
-              className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5"
-              data-testid="summary"
+          {row === undefined && (
+            <div className="grid grid-cols-2 gap-3 max-[399px]:grid-cols-1">
+              <Field
+                label={t("dialog.from")}
+                htmlFor={`${id}-from`}
+                error={isCivilDate(from) ? undefined : t("errors.invalid")}
+              >
+                <Input
+                  id={`${id}-from`}
+                  type="date"
+                  value={from}
+                  onChange={(event) => changeFrom(event.target.value)}
+                  disabled={saving}
+                  required
+                />
+              </Field>
+              <Field
+                label={t("dialog.to")}
+                htmlFor={`${id}-to`}
+                error={
+                  !isCivilDate(to) || to < from
+                    ? t("errors.invalid")
+                    : tooLong
+                      ? t("errors.range_too_long")
+                      : undefined
+                }
+              >
+                <Input
+                  id={`${id}-to`}
+                  type="date"
+                  min={isCivilDate(from) ? from : undefined}
+                  value={to}
+                  onChange={(event) => changeTo(event.target.value)}
+                  disabled={saving}
+                  required
+                />
+              </Field>
+            </div>
+          )}
+
+          <Field label={t("dialog.kind")} htmlFor={`${id}-kind`}>
+            <Select
+              id={`${id}-kind`}
+              value={kind}
+              onChange={(event) => setKind(event.target.value as LeaveDayKind)}
+              disabled={saving}
             >
-              <Line label={t("panel.duration")}>
-                {fraction === "0.5"
-                  ? t("panel.durationHalf", {
-                      total: days(preview.totalDays * data.minutesPerDay),
-                      count: preview.written.length,
-                    })
-                  : t("panel.durationWhole", {
-                      total: days(preview.totalDays * data.minutesPerDay),
-                      count: preview.written.length,
-                    })}
-              </Line>
+              {data.types
+                // A kind nobody books any more is offered only to the row that already carries it.
+                .filter((type) => type.selectable || type.id === row?.kind)
+                .map((type) => (
+                  <option key={type.id} value={type.id}>
+                    {type.name}
+                  </option>
+                ))}
+            </Select>
+          </Field>
 
-              {preview.excluded.length > 0 && (
-                <Line label={t("panel.excluded")}>
-                  {preview.excluded.length}:{" "}
-                  {listed(
-                    preview.excluded.map((one) =>
-                      one.reason === "holiday"
-                        ? t("panel.excludedHoliday", { day: shortDay(one.on, locale) })
-                        : shortDay(one.on, locale),
-                    ),
-                  )}
+          <Choice label={t("dialog.duration")}>
+            <Segmented
+              label={t("dialog.duration")}
+              value={fraction}
+              onChange={setFraction}
+              options={[
+                { value: "1", label: t("dialog.wholeDay"), disabled: saving },
+                { value: "0.5", label: t("dialog.halfDay"), disabled: saving },
+              ]}
+            />
+            {row !== undefined && rows.length === 1 && row.fraction === 0.5 && (
+              <LinkButton className="self-start" onClick={() => addOtherHalf(row)} disabled={saving}>
+                {t("panel.otherHalf")}
+              </LinkButton>
+            )}
+          </Choice>
+
+          <Field
+            label={t("dialog.note")}
+            htmlFor={`${id}-note`}
+            hint={typeOf(kind)?.local ? t("dialog.localOnly") : t("dialog.noteHint")}
+          >
+            <Textarea
+              id={`${id}-note`}
+              rows={2}
+              maxLength={200}
+              className="min-h-0"
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              disabled={saving}
+            />
+          </Field>
+
+          {preview !== null && (
+            <div className="flex flex-col gap-2 rounded-card bg-hover p-3">
+              <h3 className="text-sm font-semibold">{t("panel.summary")}</h3>
+              <dl
+                aria-live="polite"
+                className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5"
+                data-testid="summary"
+              >
+                <Line label={t("panel.duration")}>
+                  {fraction === "0.5"
+                    ? t("panel.durationHalf", {
+                        total: days(preview.totalDays * data.minutesPerDay),
+                        count: preview.written.length,
+                      })
+                    : t("panel.durationWhole", {
+                        total: days(preview.totalDays * data.minutesPerDay),
+                        count: preview.written.length,
+                      })}
                 </Line>
-              )}
 
-              {preview.replaced.length > 0 && (
-                <Line label={t("panel.replaces")}>
-                  {preview.replaced.length}:{" "}
-                  {listed(
-                    preview.replaced.map((one) =>
-                      t("panel.replacedDay", {
-                        day: shortDay(one.on, locale),
-                        kind:
-                          one.fraction === 0.5
-                            ? t("panel.half", { kind: nameOf(one.kind) })
-                            : nameOf(one.kind),
-                      }),
-                    ),
-                  )}
-                </Line>
-              )}
+                {preview.excluded.length > 0 && (
+                  <Line label={t("panel.excluded")}>
+                    {preview.excluded.length}:{" "}
+                    {listed(
+                      preview.excluded.map((one) =>
+                        one.reason === "holiday"
+                          ? t("panel.excludedHoliday", { day: shortDay(one.on, locale) })
+                          : shortDay(one.on, locale),
+                      ),
+                    )}
+                  </Line>
+                )}
 
-              {preview.balances.map((one) => (
-                <Line
-                  key={one.kind}
-                  label={t("panel.balance", { kind: nameOf(one.kind) })}
-                  negative={one.afterMinutes !== null && one.afterMinutes < 0}
-                >
-                  {one.beforeMinutes === null || one.afterMinutes === null ? (
-                    <>
-                      {t("panel.balanceUnknown")}{" "}
-                      <Link
-                        href={`/timeoff/settings?year=${data.year}` as Route}
-                        className="focus-ring rounded-[2px] font-medium text-accent underline underline-offset-2"
-                      >
-                        {t("actions.setAllowance")}
-                      </Link>
-                    </>
-                  ) : (
-                    t("panel.balanceChange", {
+                {preview.replaced.length > 0 && (
+                  <Line label={t("panel.replaces")}>
+                    {preview.replaced.length}:{" "}
+                    {listed(
+                      preview.replaced.map((one) =>
+                        t("panel.replacedDay", {
+                          day: shortDay(one.on, locale),
+                          kind:
+                            one.fraction === 0.5
+                              ? t("panel.half", { kind: nameOf(one.kind) })
+                              : nameOf(one.kind),
+                        }),
+                      ),
+                    )}
+                  </Line>
+                )}
+
+                {preview.balances.map((one) => (
+                  <Line
+                    key={one.kind}
+                    label={t("panel.balance", { kind: nameOf(one.kind) })}
+                    negative={one.afterMinutes !== null && one.afterMinutes < 0}
+                  >
+                    {one.beforeMinutes === null || one.afterMinutes === null ? (
+                      <>
+                        {t("panel.balanceUnknown")}{" "}
+                        <Link
+                          href={`/timeoff/settings?year=${data.year}` as Route}
+                          className="focus-ring rounded-[2px] font-medium text-accent underline underline-offset-2"
+                        >
+                          {t("actions.setAllowance")}
+                        </Link>
+                      </>
+                    ) : (
+                      t("panel.balanceChange", {
+                        before: signed(one.beforeMinutes),
+                        after: signed(one.afterMinutes),
+                      })
+                    )}
+                  </Line>
+                ))}
+                {forecasts.map((one) => (
+                  <Line
+                    key={`forecast-${one.kind}`}
+                    label={t("panel.forecast", { kind: nameOf(one.kind), date: forecastDate })}
+                    negative={one.afterMinutes < 0}
+                  >
+                    {t("panel.balanceChange", {
                       before: signed(one.beforeMinutes),
                       after: signed(one.afterMinutes),
-                    })
-                  )}
-                </Line>
-              ))}
-              {forecasts.map((one) => (
-                <Line
-                  key={`forecast-${one.kind}`}
-                  label={t("panel.forecast", { kind: nameOf(one.kind), date: forecastDate })}
-                  negative={one.afterMinutes < 0}
-                >
-                  {t("panel.balanceChange", {
-                    before: signed(one.beforeMinutes),
-                    after: signed(one.afterMinutes),
-                  })}
-                </Line>
-              ))}
-            </dl>
+                    })}
+                  </Line>
+                ))}
+              </dl>
 
-            {preview.balances.length === 0 && !nothing && (
-              <p className="text-sm text-muted">{t("panel.balanceNone")}</p>
-            )}
-            {otherYear !== undefined && (
-              <p className="text-sm text-muted">
-                {t("panel.otherYear", { count: preview.otherYearDays, year: otherYear.slice(0, 4) })}
-              </p>
-            )}
-            {/* Below zero is an ordinary answer — this is also where leave is planned — so it is
+              {preview.balances.length === 0 && !nothing && (
+                <p className="text-sm text-muted">{t("panel.balanceNone")}</p>
+              )}
+              {otherYear !== undefined && (
+                <p className="text-sm text-muted">
+                  {t("panel.otherYear", { count: preview.otherYearDays, year: otherYear.slice(0, 4) })}
+                </p>
+              )}
+              {/* Below zero is an ordinary answer — this is also where leave is planned — so it is
                 said plainly and stops nothing. */}
-            {overdrawn.map((one) => (
-              <p key={one.kind} className="text-sm text-muted">
-                {t("panel.overdrawn", { amount: days(-(one.afterMinutes as number)) })}
-              </p>
-            ))}
-            {forecasts
-              .filter((one) => one.afterMinutes < 0)
-              .map((one) => (
+              {overdrawn.map((one) => (
                 <p key={one.kind} className="text-sm text-muted">
-                  {t("panel.forecastBelowZero", {
-                    kind: nameOf(one.kind),
-                    amount: days(-one.afterMinutes),
-                    date: forecastDate,
-                  })}
+                  {t("panel.overdrawn", { amount: days(-(one.afterMinutes as number)) })}
                 </p>
               ))}
-            {nothing && (
-              <p className="text-sm text-warn">
-                {preview.excluded.length === 1
-                  ? t(`errors.${preview.excluded[0].reason}` as "errors.weekend", {
-                      date: formatDate(preview.excluded[0].on, "long", locale),
-                    })
-                  : t("panel.nothingBookable")}
-              </p>
-            )}
-          </div>
-        )}
+              {forecasts
+                .filter((one) => one.afterMinutes < 0)
+                .map((one) => (
+                  <p key={one.kind} className="text-sm text-muted">
+                    {t("panel.forecastBelowZero", {
+                      kind: nameOf(one.kind),
+                      amount: days(-one.afterMinutes),
+                      date: forecastDate,
+                    })}
+                  </p>
+                ))}
+              {nothing && (
+                <p className="text-sm text-warn">
+                  {preview.excluded.length === 1
+                    ? t(`errors.${preview.excluded[0].reason}` as "errors.weekend", {
+                        date: formatDate(preview.excluded[0].on, "long", locale),
+                      })
+                    : t("panel.nothingBookable")}
+                </p>
+              )}
+            </div>
+          )}
 
-        {error !== null && (
-          <p role="alert" className="text-sm text-neg">
-            {error}
-          </p>
-        )}
-      </form>
+          {row !== undefined && onSelectMore !== undefined && (
+            <LinkButton className="self-start" onClick={() => onSelectMore(row.on)} disabled={saving}>
+              {t("panel.selectMore")}
+            </LinkButton>
+          )}
+
+          {error !== null && (
+            <p role="alert" className="text-sm text-neg">
+              {error}
+            </p>
+          )}
+        </form>
+      )}
     </Modal>
   );
 }

@@ -5267,7 +5267,9 @@
       "removalPending": "Removed here; Trek will be told at the next pass",
       "undo": "Undo",
       "undone": "Undone",
-      "undoFailed": "The undo did not work. Try again from the table."
+      "undoFailed": "The undo did not work. Try again from the table.",
+      "rangeRemoved": "{count, plural, one {# day removed} other {# days removed}}",
+      "rangeRemovalPending": "{count, plural, one {# day removed here} other {# days removed here}}; Trek will be told at the next pass"
     },
     "errors": {
       "invalid": "Check the values and try again.",
@@ -5356,7 +5358,13 @@
       "overdrawn": "The balance goes {amount} below zero. You can confirm: the page lists it among the overdrawn balances.",
       "nothingBookable": "No day in this range can be booked.",
       "forecast": "{kind} forecast on {date}",
-      "forecastBelowZero": "On {date} the {kind} forecast is {amount} under zero. You can confirm: the days are not accrued by then."
+      "forecastBelowZero": "On {date} the {kind} forecast is {amount} under zero. You can confirm: the days are not accrued by then.",
+      "removeRange": "{count, plural, one {Remove # day} other {Remove # days}}",
+      "removeTitle": "Remove leave",
+      "removeIntro": "{count, plural, one {This day loses all its leave:} other {These # days lose all their leave:}}",
+      "removeLine": "{day} · {kinds}",
+      "back": "Back",
+      "selectMore": "Select more days from here"
     },
     "loading": "Loading Time off",
     "accrual": {

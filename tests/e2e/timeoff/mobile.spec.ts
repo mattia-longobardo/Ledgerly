@@ -143,4 +143,42 @@ test.describe("time off on a phone", () => {
     expect(overflow).toBeLessThanOrEqual(0);
     expect(writes).toBe(0);
   });
+
+  test("removes several booked days with taps, the list inside the screen (17/11/2026)", async ({ page }) => {
+    await page.goto("/timeoff");
+    const free = page.locator(`[data-month="3"] [data-testid="free-cell"]`);
+    await free.nth(0).scrollIntoViewIfNeeded();
+    const firstDay = (await free.nth(0).getAttribute("data-date")) as string;
+    const lastDay = (await free.nth(1).getAttribute("data-date")) as string;
+    const day = (date: string) => page.locator(`[data-date="${date}"]`);
+    await day(firstDay).tap();
+    await day(lastDay).tap();
+    const book = page.getByRole("dialog", { name: "New leave" });
+    await book.getByRole("button", { name: "Confirm" }).tap();
+    await expect(book).toBeHidden();
+    await expect(day(lastDay)).toHaveAttribute("data-testid", "leave-cell");
+
+    await day(firstDay).tap();
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    await edit.getByRole("button", { name: "Select more days from here" }).tap();
+    await expect(page.getByTestId("selection-bar")).toBeVisible();
+    await day(lastDay).tap();
+    await page
+      .getByRole("dialog", { name: "New leave" })
+      .getByRole("button", { name: "Remove 2 days" })
+      .tap();
+
+    const list = page.getByRole("dialog", { name: "Remove leave" });
+    const box = await list.boundingBox();
+    const viewport = page.viewportSize()!;
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width);
+    const remove = list.getByRole("button", { name: "Remove 2 days" });
+    await expect(remove).toBeInViewport({ ratio: 1 });
+    await remove.tap();
+
+    await expect(day(firstDay)).toHaveAttribute("data-testid", "free-cell");
+    await expect(day(lastDay)).toHaveAttribute("data-testid", "free-cell");
+    await expect(page.getByText("2 days removed", { exact: true })).toBeVisible();
+  });
 });

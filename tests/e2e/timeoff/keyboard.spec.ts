@@ -78,6 +78,40 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
     await expect(removes).toHaveCount(seeded + 2);
   });
 
+  await test.step("two booked days go together, from the panel of the first one, and Undo brings both", async () => {
+    await focusOn(page.locator(`[data-date="${first}"]`));
+    await page.keyboard.press("Enter");
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    await expect(edit).toBeVisible();
+    await tabUntil(page, 12, async () => (await focused(page)) === 'button "Select more days from here"');
+    expect(await focused(page)).toBe('button "Select more days from here"');
+    await page.keyboard.press("Enter");
+    await expect(edit).toHaveCount(0);
+    await expect(bar).toBeVisible();
+    await expect.poll(focusedDate).toBe(first);
+
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(focusedDate).toBe(last);
+    await page.keyboard.press("Enter");
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await expect(panel).toBeVisible();
+    await tabUntil(page, 20, async () => (await focused(page)) === 'button "Remove 2 days"');
+    expect(await focused(page)).toBe('button "Remove 2 days"');
+    await page.keyboard.press("Enter");
+    const list = page.getByRole("dialog", { name: "Remove leave" });
+    await expect(list.getByRole("listitem")).toHaveCount(2);
+    await list.getByRole("button", { name: "Remove 2 days" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("2 days removed", { exact: true })).toBeVisible();
+    await expect(removes).toHaveCount(seeded);
+
+    await page.keyboard.press("F6");
+    await tabUntil(page, 4, async () => (await focused(page)) === 'button "Undo"');
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Undone")).toBeVisible();
+    await expect(removes).toHaveCount(seeded + 2);
+  });
+
   await test.step("the two days go again, so the next spec finds the year as the seed left it", async () => {
     for (const [index, date] of [first, last].entries()) {
       await focusOn(page.locator(`[data-date="${date}"]`));

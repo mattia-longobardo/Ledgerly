@@ -9,7 +9,8 @@ Questa specifica descrive solo l'interazione e le schermate. Non cambia le regol
 sono in conflitto, vale il piano.
 
 Le decisioni di prodotto che il piano non scrive sono nella §14 «Decisioni prese»: Mattia le ha prese il
-14/11/2026. La specifica è scritta con quelle decisioni.
+14/11/2026 e ne ha cambiata una il 17/11/2026 (Q3, rimozione di più giorni: §7.5). La specifica è scritta con quelle
+decisioni.
 
 ## 1. Cosa cambia, in breve
 
@@ -152,6 +153,10 @@ stateDiagram-v2
   Riposo --> Pannello_nuovo: trascinamento con il mouse, al rilascio
   Pannello_nuovo --> Riposo: «Conferma» (scrive) / «Annulla» / Esc
   Pannello_modifica --> Riposo: «Conferma» / «Rimuovi» / «Annulla» / Esc
+  Pannello_modifica --> PrimoScelto: «Seleziona più giorni da qui» (§7.5)
+  Pannello_nuovo --> Lista_rimozione: «Rimuovi N giorni» (§7.5)
+  Lista_rimozione --> Pannello_nuovo: «Indietro»
+  Lista_rimozione --> Riposo: «Rimuovi N giorni» (scrive) / Esc
 ```
 
 Nessuno stato prima di «Conferma» o «Rimuovi» scrive sul server (criterio 3 di N5).
@@ -302,6 +307,7 @@ Il pannello mostra ogni riga che la regola rimuove o cambia nella riga «Sostitu
 | Pulsante | Componente | Quando | Azione |
 |---|---|---|---|
 | Rimuovi | `Button variant="danger"`, a sinistra | Solo in modifica | §7.4 |
+| Rimuovi N giorni | `Button variant="danger"`, a sinistra | Nuova assenza, se l'intervallo contiene giorni prenotati | §7.5 |
 | Annulla | `Button` (secondario) | Sempre | Chiude senza scrivere; la selezione sparisce |
 | Conferma | `Button variant="primary"`, `type="submit"` | Sempre | Scrive, vedi sotto |
 
@@ -375,6 +381,38 @@ Stesso comportamento per:
 - il pulsante «Rimuovi» della riga in tabella (`RowActions`): sparisce `window.confirm`.
 
 Il pulsante «Modifica» della riga apre lo stesso `LeavePanel` in modifica.
+
+### 7.5 Rimuovere più giorni insieme (decisione del 17/11/2026)
+
+Sostituisce, per la rimozione, la decisione Q3 del 14/11 (§14). Il tocco su un giorno prenotato apre ancora il pannello
+di quel giorno (§7.1); la rimozione di più giorni passa per la selezione di primo e ultimo giorno, come una prenotazione.
+
+1. **Selezione.** L'intervallo si sceglie come in §4: da un giorno libero a un giorno prenotato, oppure da un giorno
+   prenotato con il controllo visibile `LinkButton` «Seleziona più giorni da qui», in fondo al pannello in modifica. Il
+   controllo chiude il pannello e fa del giorno il primo giorno (stato `PrimoScelto`, barra di selezione di §4.4, focus
+   sul giorno). Il secondo clic, tocco o Invio, su un giorno libero o prenotato, apre il pannello «Nuova assenza».
+   Nessun gesto nuovo: stessa sequenza con mouse, touch e tastiera.
+2. **Azione.** Se l'intervallo dei campi «Dal» / «Al» contiene giorni prenotati, il piede del pannello mostra a sinistra
+   `Button variant="danger"` «Rimuovi N giorni» (N = date con almeno una riga). Il numero segue i campi.
+3. **Conferma.** Il pulsante non scrive: il pannello passa alla lista («Rimuovi assenze»), con una riga per giorno —
+   «mar 16 giu · Ferie ½, ROL ½» — e i pulsanti «Indietro» (torna al pannello con i valori) e «Rimuovi N giorni»
+   (`danger`). Solo questo scrive.
+4. **Scrittura.** Una chiamata, una transazione: tutte le righe dell'intervallo, o nessuna. Ogni riga segue la regola di
+   «Rimuovi» (§7.4): cancellata subito se Trek non la conosce, `pending = 'delete'` se la conosce. Trek riceve le
+   rimozioni dal passaggio successivo, una riga per volta, come oggi.
+5. **Dopo.** I giorni spariscono subito dal calendario (aggiornamento ottimistico). Toast «N giorni rimossi», o «N giorni
+   rimossi qui; Trek lo saprà al prossimo passaggio», con «Annulla» (§8): una chiamata riporta tutti i giorni.
+
+Esempio, 400 px: tocco su lun 10 agosto (Ferie) → «Seleziona più giorni da qui» → tocco su ven 14 → «Rimuovi 5 giorni»
+→ lista di 5 righe → «Rimuovi 5 giorni» → calendario libero, toast con «Annulla».
+
+### 7.6 Righe in attesa di Trek
+
+Una riga che Trek conosce e che è stata rimossa resta nel database con `pending = 'delete'` fino al passaggio che la
+toglie da Trek. Per il suo proprietario è già rimossa: il calendario, il pannello, i residui, le previsioni e le
+barre non la contano. Solo la tabella la mostra ancora, con il badge `table.pending.delete`. Correzione del 17/11/2026:
+prima il calendario la mostrava fino al passaggio successivo, e un giorno con una mezza giornata rimasta mostrava due
+righe e nascondeva «Aggiungi l'altra metà» (§7.3).
 
 ## 8. Toast con «Annulla»
 
@@ -593,6 +631,14 @@ dell'azione: un'assenza può durare più giorni.
 | `panel.overdrawn` | Il residuo va sotto zero di {amount}. Puoi confermare: la pagina lo mostra tra i saldi sforati. | The balance goes {amount} below zero. You can confirm: the page lists it among the overdrawn balances. |
 | `panel.half` | {kind} ½ | {kind} ½ |
 | `panel.nothingBookable` | Nessun giorno prenotabile in questo intervallo. | No day in this range can be booked. |
+| `panel.removeRange` | {count, plural, one {Rimuovi # giorno} other {Rimuovi # giorni}} | {count, plural, one {Remove # day} other {Remove # days}} |
+| `panel.removeTitle` | Rimuovi assenze | Remove leave |
+| `panel.removeIntro` | {count, plural, one {Questo giorno perde tutte le sue assenze:} other {Questi # giorni perdono tutte le loro assenze:}} | {count, plural, one {This day loses all its leave:} other {These # days lose all their leave:}} |
+| `panel.removeLine` | {day} · {kinds} | {day} · {kinds} |
+| `panel.back` | Indietro | Back |
+| `panel.selectMore` | Seleziona più giorni da qui | Select more days from here |
+| `toasts.rangeRemoved` | {count, plural, one {# giorno rimosso} other {# giorni rimossi}} | {count, plural, one {# day removed} other {# days removed}} |
+| `toasts.rangeRemovalPending` | {count, plural, one {# giorno rimosso qui} other {# giorni rimossi qui}}; Trek lo saprà al prossimo passaggio | {count, plural, one {# day removed here} other {# days removed here}}; Trek will be told at the next pass |
 | `toasts.undo` | Annulla | Undo |
 | `toasts.undone` | Annullato | Undone |
 | `toasts.undoFailed` | Non è stato possibile annullare. Riprova dalla tabella. | The undo did not work. Try again from the table. |
@@ -653,7 +699,7 @@ Decisioni di prodotto che il piano non scrive. Mattia le ha prese il 14/11/2026.
 |---|---|---|---|
 | Q1 | Un intervallo che passa sopra giorni già prenotati li sostituisce? | Sì, con la regola di §5.5; il pannello li elenca prima di «Conferma» | §5.5 |
 | Q2 | Il residuo insufficiente blocca «Conferma»? | No. Il residuo negativo è un caso normale: la pagina serve anche per pianificare. Il valore negativo si vede in chiaro («3 gg → −2 gg») | §10.5 |
-| Q3 | Il tocco su un giorno prenotato modifica solo quel giorno, o tutto il periodo contiguo dello stesso tipo? | Solo quel giorno | §7.1 |
+| Q3 | Il tocco su un giorno prenotato modifica solo quel giorno, o tutto il periodo contiguo dello stesso tipo? | Solo quel giorno. **Cambiata il 17/11/2026** per la rimozione: più giorni prenotati si rimuovono insieme con la selezione di primo e ultimo giorno, «Rimuovi N giorni» e una lista di conferma; «Annulla» li riporta tutti. Il tocco su un giorno prenotato apre ancora solo quel giorno | §7.1, §7.5 |
 | Q4 | Dopo «Rimuovi» serve una conferma, oltre al toast con «Annulla»? | No: il toast con «Annulla» (8 s) sostituisce `window.confirm` | §7.4, §8 |
 | Q5 | Su telefono il calendario si apre sul mese corrente? | Sì: sotto 768 px, per l'anno corrente, la pagina scorre da sola al mese corrente all'apertura (diversa dal default proposto) | §2.4 |
 | Q6 | Il pannello è una finestra centrata (`Modal`) anche su desktop? | Sì | §5.1 |

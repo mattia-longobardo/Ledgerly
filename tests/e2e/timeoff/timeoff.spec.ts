@@ -277,6 +277,54 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(page.getByTestId("leave-cell")).toHaveCount(3);
   });
 
+  await test.step("several booked days go together: one action, the list, one Undo (17/11/2026)", async () => {
+    await cell(page, TUE).click();
+    await cell(page, THU).click();
+    const book = page.getByRole("dialog", { name: "New leave" });
+    await book.getByRole("button", { name: "Confirm" }).click();
+    await expect(book).toBeHidden();
+    await expect(page.getByTestId("leave-cell")).toHaveCount(6);
+    const writes = countWrites(page);
+
+    // A booked day still opens its own panel; the visible control makes it the first day.
+    await cell(page, TUE).click();
+    const edit = page.getByRole("dialog", { name: "Edit leave" });
+    await edit.getByRole("button", { name: "Select more days from here" }).click();
+    await expect(edit).toBeHidden();
+    await expect(page.getByTestId("selection-bar")).toBeVisible();
+    await cell(page, THU).click();
+    const panel = page.getByRole("dialog", { name: "New leave" });
+    await panel.getByRole("button", { name: "Remove 3 days" }).click();
+    const list = page.getByRole("dialog", { name: "Remove leave" });
+    await expect(list.getByRole("listitem")).toHaveCount(3);
+    expect(writes(), "the list comes before anything is written").toBe(0);
+    await list.getByRole("button", { name: "Remove 3 days" }).click();
+
+    for (const date of [TUE, WED, THU])
+      await expect(cell(page, date)).toHaveAttribute("data-testid", "free-cell");
+    await expect(page.getByText("3 days removed", { exact: true })).toBeVisible();
+    for (const date of [TUE, WED, THU]) await expect(rowsOf(page, date)).toHaveCount(0);
+    expect(writes()).toBe(1);
+
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByText("Undone")).toBeVisible();
+    for (const date of [TUE, WED, THU]) await expect(rowsOf(page, date)).toHaveCount(1);
+    await expect(page.getByTestId("leave-cell")).toHaveCount(6);
+
+    // As the step found the year: the three days go again, this time from a free day before them.
+    await cell(page, MON).click();
+    await cell(page, THU).click();
+    await page
+      .getByRole("dialog", { name: "New leave" })
+      .getByRole("button", { name: "Remove 3 days" })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Remove leave" })
+      .getByRole("button", { name: "Remove 3 days" })
+      .click();
+    await expect(page.getByTestId("leave-cell")).toHaveCount(3);
+  });
+
   await test.step("a day still to come is drawn hollow, not as one already counted (N8)", async () => {
     // This user has no payslips, so every booked day is planned — and planned must not look like
     // a day the payroll has already counted.

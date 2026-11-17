@@ -21,6 +21,7 @@ import {
   type LeaveActionResult,
   type LeaveFormInput,
   removeLeaveAction,
+  removeLeaveRangeAction,
   saveLeaveRangeAction,
   undoLeaveAction,
 } from "../actions";
@@ -32,6 +33,7 @@ import {
   type ResidualInput,
   calendar,
   previewLeaveRange,
+  stillBooked,
 } from "../rules";
 import type { LeaveTypeOption } from "./kinds";
 import { type BookedLeave, type LeavePanelEntry, LeavePanel } from "./leave-panel";
@@ -65,6 +67,8 @@ interface Board {
   today: string;
   /** Whether a write is on its way: the buttons of the table wait for it. */
   busy: boolean;
+  /** A booked day "Select more days from here" made the first day of a range; a new number each time. */
+  startAt: { date: string; key: number } | null;
   openRange: (range: DayRange) => void;
   openAdd: () => void;
   openEdit: (date: string, rowId?: string) => void;
@@ -88,6 +92,7 @@ interface Shown {
 type Change =
   | { type: "save"; fields: LeaveFormInput }
   | { type: "remove"; target: { id: string } | { date: string } }
+  | { type: "removeRange"; range: DayRange }
   | { type: "undo"; undo: LeaveUndo };
 
 const KNOWN_ERRORS = ["invalid", "invalid_input", "not_found", "not_bookable", "range_too_long"];
@@ -123,13 +128,16 @@ export function LeaveBoard({
   const [opened, setOpened] = useState(0);
   const [range, setRange] = useState<DayRange | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [startAt, setStartAt] = useState<{ date: string; key: number } | null>(null);
   /** What had the focus when the panel opened: where it goes back to. */
   const opener = useRef<HTMLElement | null>(null);
 
   const holidaySet = useMemo(() => new Set(holidays), [holidays]);
+  /** The rows still booked: one Trek has not let go of yet is removed for its owner already. */
+  const live = useMemo(() => days.filter(stillBooked), [days]);
   const views = useMemo<LeaveDayView[]>(
-    () => days.map((day) => ({ on: day.on, kind: day.kind, fraction: day.fraction })),
-    [days],
+    () => live.map((day) => ({ on: day.on, kind: day.kind, fraction: day.fraction })),
+    [live],
   );
 
   const [shown, show] = useOptimistic<Shown, Change>({ views, waiting: [] }, (state, change) => {
@@ -158,6 +166,14 @@ export function LeaveBoard({
             (day) => day.on !== date || (gone !== undefined && day.kind !== gone.kind),
           ),
           waiting: [date],
+        };
+      }
+      case "removeRange": {
+        const { from, to } = change.range;
+        const inRange = (on: string) => on >= from && on <= to;
+        return {
+          views: state.views.filter((day) => !inRange(day.on)),
+          waiting: [...new Set(state.views.filter((day) => inRange(day.on)).map((day) => day.on))],
         };
       }
       case "undo":
@@ -262,6 +278,45 @@ export function LeaveBoard({
     [close, messageFor, router, show, t, undoAction],
   );
 
+  /** "Remove N days": one call, one transaction, one toast whose "Undo" brings every day back. */
+  const removeRange = useCallback(
+    (picked: DayRange) => {
+      close();
+      startTransition(async () => {
+        show({ type: "removeRange", range: picked });
+        const result = await removeLeaveRangeAction(picked).catch(() => null);
+        if (result === null) {
+          notify(t("errors.failed"), "error");
+          return;
+        }
+        if (!result.ok) {
+          notify(messageFor(result), "error");
+          router.refresh();
+          return;
+        }
+        if (result.removed === 0) return;
+        notify(
+          result.pending > 0
+            ? t("toasts.rangeRemovalPending", { count: result.days })
+            : t("toasts.rangeRemoved", { count: result.days }),
+          "success",
+          undoAction(result.undo),
+        );
+        router.refresh();
+      });
+    },
+    [close, messageFor, router, show, t, undoAction],
+  );
+
+  /** The edited day becomes the first day of a range: the calendar takes it from here. */
+  const selectMore = useCallback(
+    (date: string) => {
+      close();
+      setStartAt((was) => ({ date, key: (was?.key ?? 0) + 1 }));
+    },
+    [close],
+  );
+
   function confirm(fields: LeaveFormInput) {
     setError(null);
     startTransition(async () => {
@@ -289,6 +344,7 @@ export function LeaveBoard({
       range,
       today,
       busy,
+      startAt,
       openRange: (picked) => open({ mode: "range", ...picked }, picked),
       openAdd: () => {
         // Today when the year shown is this one; otherwise the year's first day.
@@ -296,12 +352,13 @@ export function LeaveBoard({
         open({ mode: "add", from }, null);
       },
       openEdit: (date, rowId) => {
-        const rows = days.filter((day) => day.on === date);
+        // The table may still name a row waiting for Trek; the calendar never does.
+        const rows = days.filter((day) => day.on === date && (stillBooked(day) || day.id === rowId));
         if (rows.length > 0) open({ mode: "edit", date, rows, active: rowId }, null);
       },
       remove,
     }),
-    [months, waiting, range, today, busy, year, days, open, remove],
+    [months, waiting, range, today, busy, startAt, year, days, open, remove],
   );
 
   return (
@@ -318,6 +375,8 @@ export function LeaveBoard({
           onRangeChange={entry.mode === "edit" ? undefined : setRange}
           onConfirm={confirm}
           onRemove={(row) => remove({ id: row.id })}
+          onRemoveRange={entry.mode === "edit" ? undefined : removeRange}
+          onSelectMore={entry.mode === "edit" ? selectMore : undefined}
           onClose={close}
         />
       )}
@@ -348,6 +407,7 @@ export function BoardCalendar({
       range={board.range}
       waiting={board.waiting}
       openOnMonth={openOnMonth}
+      startAt={board.startAt}
       onRange={board.openRange}
       onEdit={board.openEdit}
       onRemove={(date) => board.remove({ date })}

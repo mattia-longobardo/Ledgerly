@@ -20,8 +20,10 @@ import {
   goesToTrek,
   leaveInputSchema,
   leaveRangeInputSchema,
+  leaveRemovalRangeSchema,
   leaveUndoSchema,
   previewLeaveRange,
+  stillBooked,
 } from "./rules";
 import { leaveDays, timeoffAllowances } from "./schema";
 
@@ -533,7 +535,8 @@ export async function saveLeaveRange(
     const existing = await rowsOn(tx, ctx, and(gte(leaveDays.on, from), lte(leaveDays.on, to)));
     const preview = previewLeaveRange(
       { from, to, kind, fraction, editedKind: parsed.data.editedKind ?? null },
-      { days: existing.map(asView), holidays },
+      // The panel works from the rows still booked; the server answers from the same ones.
+      { days: existing.filter(stillBooked).map(asView), holidays },
     );
     if (preview.written.length === 0) throw new TimeOffError("not_bookable", preview.excluded);
 
@@ -592,6 +595,38 @@ export async function removeLeave(
     return { deleted: outcome === "deleted" ? 1 : 0, pending: outcome === "pending" ? 1 : 0, undo };
   }
   return { ...(await clearDay(ctx, date)), undo };
+}
+
+/**
+ * Removes every row still booked between two dates, in one transaction: all of them, or none
+ * (decision of 17/11/2026, spec N5 §7.5). Each row goes the way "Remove" takes one — at once when
+ * Trek never heard of it, marked `pending = 'delete'` when it did — so Trek is told one row at a
+ * time, by the next pass, as for a single day. The answer carries the days as they were, for the
+ * toast's "Undo", and how many dates lost something.
+ */
+export async function removeLeaveRange(
+  ctx: Pick<Ctx, "userId">,
+  input: { from: CivilDate; to: CivilDate },
+): Promise<{ days: number; deleted: number; pending: number; undo: LeaveUndo | null }> {
+  const parsed = leaveRemovalRangeSchema.safeParse(input);
+  if (!parsed.success) throw new TimeOffError("invalid_input");
+  const { from, to } = parsed.data;
+  if (datesBetween(from, to).length > MAX_RANGE_DAYS) throw new TimeOffError("range_too_long");
+
+  return getDb().transaction(async (tx) => {
+    const existing = await rowsOn(tx, ctx, and(gte(leaveDays.on, from), lte(leaveDays.on, to)));
+    const booked = existing.filter(stillBooked);
+    const dates = [...new Set(booked.map((row) => row.on))];
+    if (dates.length === 0) return { days: 0, deleted: 0, pending: 0, undo: null };
+
+    let deleted = 0;
+    let pending = 0;
+    for (const row of booked) {
+      if ((await takeAway(tx, ctx, row)) === "pending") pending += 1;
+      else deleted += 1;
+    }
+    return { days: dates.length, deleted, pending, undo: stateOf(dates, existing) };
+  });
 }
 
 /**

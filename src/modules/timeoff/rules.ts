@@ -56,6 +56,16 @@ export type LeaveOrigin = (typeof LEAVE_ORIGINS)[number];
 export const PENDING_STATES = ["none", "upsert", "delete"] as const;
 export type PendingState = (typeof PENDING_STATES)[number];
 
+/**
+ * Whether a stored row is still leave its owner means to take. A row removed here that Trek holds
+ * stays stored as `pending = 'delete'` until a pass lets it go: for its owner it is already gone,
+ * so the calendar, the panel and every balance leave it out. Only the table still lists it, with
+ * the badge that says Trek has not been told yet.
+ */
+export function stillBooked(row: { pending: PendingState }): boolean {
+  return row.pending !== "delete";
+}
+
 /** The only two sizes a day off comes in. */
 export const DAY_FRACTIONS = [0.5, 1] as const;
 
@@ -440,6 +450,11 @@ export const leaveRangeInputSchema = z
     message: "an edit touches one day",
   });
 export type LeaveRangeFields = z.input<typeof leaveRangeInputSchema>;
+
+/** The two ends of a range whose leave goes, all of it ("Remove N days", N5 §7.5). */
+export const leaveRemovalRangeSchema = z
+  .object({ from: civilDate, to: civilDate })
+  .refine((input) => input.to >= input.from, { path: ["to"], message: "range ends before it begins" });
 
 /**
  * What some days held before a write, as "Undo" hands it back: the dates that were touched and the

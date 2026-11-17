@@ -5267,7 +5267,9 @@
       "removalPending": "Rimossa qui; Trek lo saprà al prossimo passaggio",
       "undo": "Annulla",
       "undone": "Annullato",
-      "undoFailed": "Non è stato possibile annullare. Riprova dalla tabella."
+      "undoFailed": "Non è stato possibile annullare. Riprova dalla tabella.",
+      "rangeRemoved": "{count, plural, one {# giorno rimosso} other {# giorni rimossi}}",
+      "rangeRemovalPending": "{count, plural, one {# giorno rimosso qui} other {# giorni rimossi qui}}; Trek lo saprà al prossimo passaggio"
     },
     "errors": {
       "invalid": "Controlla i valori e riprova.",
@@ -5356,7 +5358,13 @@
       "overdrawn": "Il residuo va sotto zero di {amount}. Puoi confermare: la pagina lo mostra tra i saldi sforati.",
       "nothingBookable": "Nessun giorno prenotabile in questo intervallo.",
       "forecast": "{kind} previsto al {date}",
-      "forecastBelowZero": "Al {date} il previsto di {kind} è sotto zero di {amount}. Puoi confermare: per quella data i giorni non sono ancora maturati."
+      "forecastBelowZero": "Al {date} il previsto di {kind} è sotto zero di {amount}. Puoi confermare: per quella data i giorni non sono ancora maturati.",
+      "removeRange": "{count, plural, one {Rimuovi # giorno} other {Rimuovi # giorni}}",
+      "removeTitle": "Rimuovi assenze",
+      "removeIntro": "{count, plural, one {Questo giorno perde tutte le sue assenze:} other {Questi # giorni perdono tutte le loro assenze:}}",
+      "removeLine": "{day} · {kinds}",
+      "back": "Indietro",
+      "selectMore": "Seleziona più giorni da qui"
     },
     "loading": "Caricamento di Time Off",
     "accrual": {

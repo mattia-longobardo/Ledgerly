@@ -35,6 +35,11 @@ export interface YearCalendarProps {
   waiting?: ReadonlySet<string>;
   /** The month a phone opens on — the current one, in the current year — or `null` for the top. */
   openOnMonth?: number | null;
+  /**
+   * A day to make the first day of a range from outside the grid — "Select more days from here" in
+   * the panel of a booked day (N5 §7.5). A new `key` starts it again on the same day.
+   */
+  startAt?: { date: string; key: number } | null;
   /** Both ends are chosen: the panel opens. Nothing is written here. */
   onRange: (range: DayRange) => void;
   /** A booked day was chosen with no range in progress. */
@@ -77,6 +82,7 @@ export function YearCalendar({
   range = null,
   waiting,
   openOnMonth = null,
+  startAt = null,
   onRange,
   onEdit,
   onRemove,
@@ -115,6 +121,21 @@ export function YearCalendar({
   }, [openOnMonth]);
 
   // A drag that ends anywhere but on a day is a drag given up.
+  // A new request from outside starts a range, once: the key says which request this is.
+  const [startedKey, setStartedKey] = useState<number | null>(null);
+  if (startAt !== null && startAt.key !== startedKey) {
+    setStartedKey(startAt.key);
+    setAnchor(startAt.date);
+    setHover(startAt.date);
+  }
+  const startDate = startAt?.date ?? null;
+  useEffect(() => {
+    if (startDate === null) return;
+    requestAnimationFrame(() => {
+      root.current?.querySelector<HTMLElement>(`button[data-date="${startDate}"]`)?.focus();
+    });
+  }, [startDate, startAt?.key]);
+
   useEffect(() => {
     if (dragFrom === null) return;
     const drop = () => {

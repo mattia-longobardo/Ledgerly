@@ -9,13 +9,16 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
+import { timeOffView } from "./queries";
 import {
   MAX_RANGE_DAYS,
   TimeOffError,
   listLeaveDays,
   markSynced,
   removeLeave,
+  removeLeaveRange,
   restoreLeave,
+  saveAllowance,
   saveLeaveDay,
   saveLeaveRange,
   yearWindow,
@@ -234,6 +237,103 @@ describe("removing, with the state before", () => {
       undo: { dates: [TUE], rows: [] },
     });
     expect(await rows(other)).toHaveLength(1);
+  });
+});
+
+describe("a row Trek still has to let go of (pending = 'delete')", () => {
+  it("is no longer part of the day: half of the other kind beside it is the other half, nothing replaced", async () => {
+    const [vacation] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await markSynced(ctx, [{ id: vacation.id, fraction: 1, kind: "vacation" }]);
+    // The whole vacation day becomes half a day of ROL: the vacation row waits for Trek.
+    await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "rol", fraction: 0.5, editedKind: "vacation" });
+    // "Add the other half": half a day of vacation beside the ROL.
+    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "vacation", fraction: 0.5 });
+    expect(await rows()).toEqual([
+      [TUE, "rol", "0.5", "upsert"],
+      [TUE, "vacation", "0.5", "upsert"],
+    ]);
+    expect(result.undo).toEqual({
+      dates: [TUE],
+      rows: [{ on: TUE, kind: "rol", fraction: 0.5, note: null }],
+    });
+  });
+
+  it("is out of the calendar and of the balances, and still in the table", async () => {
+    await saveAllowance(ctx, 2026, { vacationDays: 20, rolDays: null, totalDays: null, note: null });
+    const [vacation] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await markSynced(ctx, [{ id: vacation.id, fraction: 1, kind: "vacation" }]);
+    const before = await timeOffView(ctx, 2026);
+    expect(before.vacation.residual.plannedMinutes).toBeGreaterThan(0);
+
+    await removeLeave(ctx, { id: vacation.id });
+    const view = await timeOffView(ctx, 2026);
+    const cell = view.calendar[5].weeks.flat().find((one) => one.date === TUE);
+    expect(cell?.kinds).toEqual([]);
+    expect(view.vacation.residual.plannedMinutes).toBe(0);
+    expect(view.rows).toContainEqual(expect.objectContaining({ on: TUE, pending: "delete" }));
+  });
+});
+
+describe("removing a range (decision of 17/11/2026, N5 §7.5)", () => {
+  it("removes every booked row of the range in one go: Trek's rows wait for the pass, one per row", async () => {
+    await saveLeaveDay(ctx, { from: MON, kind: "vacation", fraction: 1, note: "mine" });
+    const [held] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await markSynced(ctx, [{ id: held.id, fraction: 1, kind: "vacation" }]);
+    await saveLeaveDay(ctx, { from: THU, kind: "vacation", fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: THU, kind: "rol", fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: "2026-06-22", kind: "vacation", fraction: 1 });
+    await saveLeaveDay(other, { from: WED, kind: "vacation", fraction: 1 });
+
+    const removed = await removeLeaveRange(ctx, { from: MON, to: FRI });
+    expect(removed).toEqual({
+      days: 3,
+      deleted: 3,
+      pending: 1,
+      undo: {
+        dates: [MON, TUE, THU],
+        rows: [
+          { on: MON, kind: "vacation", fraction: 1, note: "mine" },
+          { on: TUE, kind: "vacation", fraction: 1, note: null },
+          { on: THU, kind: "rol", fraction: 0.5, note: null },
+          { on: THU, kind: "vacation", fraction: 0.5, note: null },
+        ],
+      },
+    });
+    expect(await rows()).toEqual([
+      [TUE, "vacation", "1.0", "delete"],
+      ["2026-06-22", "vacation", "1.0", "upsert"],
+    ]);
+    expect(await rows(other)).toHaveLength(1);
+
+    // "Undo" brings every day back, in one call.
+    if (removed.undo === null) throw new Error("expected an undo");
+    await restoreLeave(ctx, removed.undo);
+    expect(await rows()).toEqual([
+      [MON, "vacation", "1.0", "upsert"],
+      [TUE, "vacation", "1.0", "upsert"],
+      [THU, "rol", "0.5", "upsert"],
+      [THU, "vacation", "0.5", "upsert"],
+      ["2026-06-22", "vacation", "1.0", "upsert"],
+    ]);
+  });
+
+  it("does nothing on a range with nothing booked, and refuses a range that cannot be", async () => {
+    const [held] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await markSynced(ctx, [{ id: held.id, fraction: 1, kind: "vacation" }]);
+    await removeLeave(ctx, { id: held.id });
+    // A row already waiting for Trek is not removed a second time.
+    expect(await removeLeaveRange(ctx, { from: MON, to: FRI })).toEqual({
+      days: 0,
+      deleted: 0,
+      pending: 0,
+      undo: null,
+    });
+    await expect(removeLeaveRange(ctx, { from: FRI, to: MON })).rejects.toMatchObject({
+      code: "invalid_input",
+    });
+    await expect(removeLeaveRange(ctx, { from: "2026-01-01", to: "2026-12-31" })).rejects.toMatchObject({
+      code: "range_too_long",
+    });
   });
 });
 

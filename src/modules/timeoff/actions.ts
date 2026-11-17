@@ -11,7 +11,14 @@ import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { isCivilDate } from "@/platform/dates";
 import { LEAVE_DAY_KINDS, type LeaveUndo } from "./rules";
-import { TimeOffError, removeLeave, restoreLeave, saveAllowance, saveLeaveRange } from "./service";
+import {
+  TimeOffError,
+  removeLeave,
+  removeLeaveRange,
+  restoreLeave,
+  saveAllowance,
+  saveLeaveRange,
+} from "./service";
 
 export type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
 export interface RefusedDate {
@@ -148,6 +155,34 @@ export async function removeLeaveAction(
       ok: true,
       undo: removed.undo,
       days: 0,
+      removed: removed.deleted + removed.pending,
+      pending: removed.pending,
+    };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+/**
+ * "Remove N days": everything booked between two dates, in one transaction (N5 §7.5). Trek hears
+ * of each row as it hears of one removed day: by the pass this starts.
+ */
+export async function removeLeaveRangeAction(range: {
+  from: string;
+  to: string;
+}): Promise<LeaveActionResult> {
+  const ctx = await requireSession();
+  try {
+    const removed = await removeLeaveRange(ctx, range);
+    if (removed.undo === null) {
+      return { ok: true, undo: { dates: [range.from], rows: [] }, days: 0, removed: 0, pending: 0 };
+    }
+    revalidate();
+    if (removed.pending > 0) nudgeTrek(ctx);
+    return {
+      ok: true,
+      undo: removed.undo,
+      days: removed.days,
       removed: removed.deleted + removed.pending,
       pending: removed.pending,
     };
