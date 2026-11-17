@@ -400,6 +400,13 @@
       "when": 1794870499937,
       "tag": "0056_account_iban",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1794908022918,
+      "tag": "0057_account_switch",
+      "breakpoints": true
     }
   ]
 }

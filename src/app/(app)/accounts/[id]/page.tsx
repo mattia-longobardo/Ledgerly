@@ -3,6 +3,17 @@ import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import type { Account } from "@/modules/accounts/queries";
+import { openSwitchOf } from "@/modules/accounts/switching";
+import { UndoSwitch } from "@/modules/accounts/ui/switch/undo-switch";
+import { type CivilDate, civilDateIn } from "@/platform/dates";
+import { labelOf } from "@/platform/integrations/registry";
+import { listConnections } from "@/platform/integrations/service";
+import { findInstancePlugin, isPluginActive, listPluginConnections } from "@/platform/plugins/queries";
+import { ButtonLink } from "@/ui/button";
+import { BANK_PLUGIN_ID } from "../../banks/plugin";
+import { undoSwitchAction } from "./switch/actions";
+import { switchable } from "./switch/switch";
 import { accountsView, listBalanceEntries } from "@/modules/accounts/queries";
 import { hasIbanField } from "@/modules/accounts/rules";
 import {
@@ -242,6 +253,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
         <UnsavedChangesProvider>
           <ConnectionsSection accountId={id} rows={connections} />
           <AccountSettingsForm
+            sourceExtra={await switchBlock(ctx, account)}
             today={today(ctx.timeZone, now)}
             // The place the account holds in the list, so the colour control shows the colour the
             // charts and the list really draw it with (`colorFor`) rather than a fixed blue.
@@ -576,4 +588,66 @@ async function entryRows(ctx: Ctx, accountId: string, currency: string): Promise
       availableInput: formatAmountInput(entry.availableCents, ctx.numberFormat),
     };
   });
+}
+
+/**
+ * The block of the switch to the bank in "Data source" (ux/n4-account-switch.md §2.2, §9.1): "Undo
+ * switch" for an account that was moved, "Move to the bank" for one that may be; nothing when the
+ * person has not turned the bank's plugin on. Read only on the settings tab.
+ */
+async function switchBlock(ctx: Ctx, account: Account): Promise<React.ReactNode> {
+  const t = await getTranslations("accounts.switch");
+  const open = await openSwitchOf(ctx, account.id);
+  if (open !== null) {
+    const source = (await labelOf({ provider: open.fromProvider, instanceKey: "" }, ctx.locale)).name;
+    const day = (instant: Date) => formatDate(civilDateIn(instant, ctx.timeZone), "long", ctx.locale);
+    return (
+      <>
+        <p className="text-sm text-muted">
+          {t("settings.switched", {
+            source,
+            date: day(open.appliedAt),
+            cut: formatDate(open.cutDate as CivilDate, "long", ctx.locale),
+          })}
+        </p>
+        <UndoSwitch
+          account={account.name}
+          source={source}
+          bank={t("done.theBank")}
+          since={day(open.appliedAt)}
+          transfers={(open.counts as Record<string, number>).transfers ?? 0}
+          publishes={(open.interestModes ?? []).length > 0}
+          available={(await listConnections(ctx)).some((one) => one.provider === open.fromProvider)}
+          undo={undoSwitchAction.bind(null, account.id)}
+        />
+      </>
+    );
+  }
+  if (
+    !switchable(account) ||
+    !(await findInstancePlugin(BANK_PLUGIN_ID)) ||
+    !(await isPluginActive(ctx, BANK_PLUGIN_ID))
+  ) {
+    return null;
+  }
+  const banks = await listPluginConnections(ctx, BANK_PLUGIN_ID);
+  return banks.length > 0 ? (
+    <>
+      <p className="text-sm">{t("settings.offer")}</p>
+      <div>
+        <ButtonLink href={`/accounts/${account.id}/switch` as Route} size="sm">
+          {t("settings.offerAction")}
+        </ButtonLink>
+      </div>
+    </>
+  ) : (
+    <>
+      <p className="text-sm">{t("settings.connectFirst")}</p>
+      <div>
+        <ButtonLink href={"/banks/connect" as Route} size="sm">
+          {t("settings.connect")}
+        </ButtonLink>
+      </div>
+    </>
+  );
 }

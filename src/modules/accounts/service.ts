@@ -60,6 +60,7 @@ import {
   observedDays,
 } from "./queries";
 import { accountConnections, accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
+import { switchedAwayFrom } from "./switching";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 export type AccountErrorCode =
@@ -1112,7 +1113,14 @@ export async function applyProviderAccounts(
     .from(accounts)
     .where(userScoped(ctx).owns(accounts))
     .orderBy(asc(accounts.sortOrder), asc(accounts.id));
-  const steps = reconcileProviderAccounts(local, remote, provider);
+  // An account switched away from this source is not this source's any more: its source's account
+  // is neither tied again nor created again, nor marked as gone (rewrite plan N4, §9.2).
+  const away = await switchedAwayFrom(ctx, provider);
+  const steps = reconcileProviderAccounts(
+    local,
+    remote.filter((one) => !away.has(one.providerAccountId)),
+    provider,
+  );
   // The accounts here whose IBAN a new account of the source carries: that account is not created
   // (H39, case 5 of §2.4.2), and the row of the connection says so.
   const ibanConflicts = [

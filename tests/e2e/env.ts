@@ -102,6 +102,8 @@ export const USERS = {
   // the default groups and movements in every state — automatic, suggested, with no category;
   // `reviewNew` has movements and no category at all, for the first step of the guided review.
   sources: { email: "sources@example.test", password: "sources-password-123", name: "Sources" },
+  // Release N4b: an account of a source and the same account in a bank, not imported yet.
+  switching: { email: "switching@example.test", password: "switching-password-123", name: "Switching" },
   review: { email: "review@example.test", password: "review-password-123", name: "Review" },
   reviewNew: { email: "review-new@example.test", password: "review-new-password-123", name: "Review New" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
@@ -167,6 +169,8 @@ export const SESSIONS = {
   manual: { user: "manual", file: "manual-session.json" },
   // Release N3.1: a movement on its way to a source, and the categories of a source.
   sources: { user: "sources", file: "sources-session.json" },
+  // Release N4b: the switch of an account to the bank (tests/e2e/account-switch.spec.ts).
+  switching: { user: "switching", file: "switching-session.json" },
   // Release N3: "To review" and the automatic categories (tests/e2e/review.spec.ts).
   review: { user: "review", file: "review-session.json" },
   reviewNew: { user: "reviewNew", file: "review-new-session.json" },

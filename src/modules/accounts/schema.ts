@@ -252,3 +252,45 @@ export const accountConnections = pgTable(
     check("account_connections_name_ck", sql`length(btrim(${table.name})) between 1 and 60`),
   ],
 );
+
+/**
+ * A switch of an account from one source to another (rewrite plan N4, 04-now.md §4.6.1 point 11):
+ * what was there before, so "Undo switch" puts it back, with no limit of time (H42). One open switch
+ * per account (`undone_at` null). The interest rules' modes before the switch are kept here as
+ * opaque data of the interests module.
+ */
+export const accountSwitches = pgTable(
+  "account_switches",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    fromProvider: text("from_provider").notNull(),
+    fromProviderAccountId: text("from_provider_account_id").notNull(),
+    toProvider: text("to_provider").notNull(),
+    toProviderAccountId: text("to_provider_account_id").notNull(),
+    /** The bank's connection the account now comes from. */
+    connectionId: uuid("connection_id").notNull(),
+    /** The last day the source before read: the history up to it stays the source's. */
+    cutDate: date("cut_date").notNull(),
+    /** The account had no IBAN and took the bank's: "Undo switch" takes it away again. */
+    ibanTaken: boolean("iban_taken").notNull().default(false),
+    interestModes: jsonb("interest_modes").$type<{ ruleId: string; mode: string }[]>().notNull().default([]),
+    counts: jsonb("counts").$type<Record<string, number>>().notNull().default({}),
+    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("account_switches_open_uq")
+      .on(table.accountId)
+      .where(sql`${table.undoneAt} is null`),
+    index("account_switches_user_idx").on(table.userId, table.appliedAt),
+  ],
+);

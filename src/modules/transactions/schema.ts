@@ -19,7 +19,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { accounts } from "../accounts/schema";
+import { accounts, accountSwitches } from "../accounts/schema";
 import { users } from "../../platform/auth/schema";
 import {
   CATEGORY_ORIGINS,
@@ -28,6 +28,7 @@ import {
   TRANSACTION_ORIGINS,
   TRANSACTION_STATES,
   TRANSACTION_TYPES,
+  type TransactionType,
 } from "./rules";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
@@ -513,4 +514,46 @@ export const categoryUndos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("category_undos_user_idx").on(table.userId, table.createdAt)],
+);
+
+/** What a movement was before a switch made it a leg of a transfer (rewrite plan N4, H40). */
+export interface SwitchLegBefore {
+  type: TransactionType;
+  transferGroupId: string | null;
+}
+
+/**
+ * The transfers a switch found between the account and the other accounts of the same bank, on the
+ * whole history and after it (decision H40). "Undo switch" puts each leg back as it was; the rows
+ * are kept, with `undone_at`, so the history of the switch stays readable.
+ */
+export const switchTransferPairs = pgTable(
+  "switch_transfer_pairs",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    switchId: uuid("switch_id")
+      .notNull()
+      .references(() => accountSwitches.id, { onDelete: "cascade" }),
+    outId: uuid("out_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    inId: uuid("in_id")
+      .notNull()
+      .references(() => transactions.id, { onDelete: "cascade" }),
+    outBefore: jsonb("out_before").$type<SwitchLegBefore>().notNull(),
+    inBefore: jsonb("in_before").$type<SwitchLegBefore>().notNull(),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("switch_transfer_pairs_switch_idx").on(table.switchId),
+    uniqueIndex("switch_transfer_pairs_out_uq")
+      .on(table.outId)
+      .where(sql`${table.undoneAt} is null`),
+  ],
 );

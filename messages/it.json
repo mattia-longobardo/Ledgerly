@@ -2184,7 +2184,180 @@
       }
     },
     "showArchived": "Mostra archiviati",
-    "missingRate": "Nessun cambio da {currencies} a {currency}: quei conti restano fuori dai totali."
+    "missingRate": "Nessun cambio da {currencies} a {currency}: quei conti restano fuori dai totali.",
+    "switch": {
+      "title": "Passa «{account}» alla banca",
+      "steps": {
+        "label": "Passi del passaggio",
+        "account": "Conto",
+        "check": "Prova",
+        "done": "Fatto",
+        "completed": "fatto"
+      },
+      "account": {
+        "question": "Quale conto della banca è «{account}»?",
+        "explain": "Ledgerly mostra i conti delle tue banche che non sono ancora in Ledgerly, in {currency}.",
+        "unnamed": "Conto senza nome",
+        "sameIban": "Stesso IBAN",
+        "otherIban": "IBAN diverso.",
+        "expired": "L'accesso a {bank} è scaduto: rinnovalo in Impostazioni › Integrazioni.",
+        "start": "Avvia la prova",
+        "noBank": "Nessuna banca collegata",
+        "noBankText": "Per passare questo conto, collega prima la banca.",
+        "connect": "Collega una banca",
+        "noFree": "Nessun conto da scegliere",
+        "noFreeText": "Le tue banche non condividono un conto in {currency} che non sia già in Ledgerly. Se il conto manca, rinnova l'accesso alla banca e condividilo.",
+        "integrations": "Vai alle integrazioni"
+      },
+      "check": {
+        "waiting": "Prova in corso…",
+        "waitingNote": "Può servire fino a un minuto. Niente viene cambiato.",
+        "title": "Prova del passaggio di «{account}»",
+        "route": "{source} → {bank}",
+        "period": "Movimenti confrontati dal {from} al {to}.",
+        "nothingChanged": "Niente è stato cambiato.",
+        "leaveNote": "Se esci, il conto resta su {source}. Niente è cambiato."
+      },
+      "balance": {
+        "equal": "I saldi sono uguali",
+        "different": "I saldi sono diversi: il passaggio non si può applicare",
+        "noBank": "La banca non ha dato un saldo da confrontare",
+        "noLocal": "{source} non ha ancora letto il saldo di questo conto",
+        "local": "In Ledgerly (da {source}), {date}",
+        "bank": "In {bank}, {kind}, {date}",
+        "difference": "Differenza",
+        "blocked": "Con due saldi diversi Ledgerly non può dire che i conti sono lo stesso conto con gli stessi movimenti. Cosa puoi fare:",
+        "steps": {
+          "look": "Guarda «Da controllare», «Solo su…» e «Solo in banca» qui sotto: di solito la differenza è lì.",
+          "fix": "Correggi su {source} il movimento che manca o che è doppio.",
+          "wait": "Se un movimento è di oggi, aspetta che la banca lo registri.",
+          "again": "Rifai la prova."
+        },
+        "kinds": {
+          "closing": "saldo contabile di fine giornata",
+          "expected": "saldo previsto",
+          "opening": "saldo di inizio giornata",
+          "other": "saldo"
+        }
+      },
+      "movements": {
+        "title": "Movimenti",
+        "matched": "Trovati in tutte e due",
+        "matchedNote": "Ledgerly li riconosce come gli stessi. Restano una riga sola, con la categoria che hanno ora.",
+        "toCheck": "Da controllare",
+        "toCheckNote": "Per questi importi il numero dei movimenti è diverso tra {source} e la banca. Ledgerly non sa quali sono gli stessi: non ne collega nessuno.",
+        "onlyLocal": "Solo su {source}",
+        "onlyLocalNote": "{source} ha questi movimenti, la banca no. Restano in Ledgerly come sono.",
+        "onlyBank": "Solo in banca",
+        "onlyBankNote": "La banca ha questi movimenti nel periodo del confronto, {source} no. Non entrano in Ledgerly: lo storico fino al {date} resta quello di {source}.",
+        "fresh": "Nuovi dalla banca",
+        "freshNote": "Movimenti dopo il {date}, l'ultimo giorno letto da {source}. Entrano in Ledgerly con «Applica».",
+        "onSource": "Su {source}",
+        "inBank": "In banca",
+        "amounts": "{count, plural, one {# importo} other {# importi}}",
+        "out": "{amount} in uscita",
+        "in": "{amount} in entrata"
+      },
+      "more": "Mostra altri {count}",
+      "shown": "{shown} di {total}",
+      "transfers": {
+        "title": "Giroconti",
+        "lead": "{count, plural, one {# spostamento} other {# spostamenti}} tra «{account}» e gli altri conti di {bank} diventano giroconti. Oggi contano come entrate e uscite. Entrate e uscite scendono di {amount} in totale. Il patrimonio non cambia.",
+        "byYear": "Giroconti per anno",
+        "year": "Anno",
+        "count": "Giroconti",
+        "less": "Entrate e uscite in meno",
+        "list": "Elenco dei giroconti",
+        "byPerson": "categoria scelta a mano",
+        "ambiguous": "{count, plural, one {# gruppo di spostamenti uguali resta com'è} other {# gruppi di spostamenti uguali restano come sono}}: Ledgerly non sa quali sono le coppie."
+      },
+      "changes": {
+        "title": "Cosa cambia con «Applica»",
+        "fromBank": "Saldo e movimenti di «{account}» arrivano da {bank}.",
+        "history": "Lo storico resta quello di {source}. Nessun movimento viene tolto.",
+        "fresh": "{count, plural, one {# movimento nuovo entra} other {# movimenti nuovi entrano}} dalla banca.",
+        "transfers": "{count, plural, one {# movimento diventa giroconto} other {# movimenti diventano giroconti}}.",
+        "sourceStops": "{source} non aggiorna più questo conto. Gli altri conti restano.",
+        "manual": "Scrivi i movimenti a mano con l'avviso dei conti di una banca.",
+        "interests": "Le liquidazioni degli interessi non si pubblicano più su {source}.",
+        "undo": "Puoi tornare indietro con «Annulla passaggio»."
+      },
+      "actions": {
+        "cancel": "Annulla",
+        "again": "Rifai la prova",
+        "apply": "Applica",
+        "leave": "Lascia il conto su {source}"
+      },
+      "confirm": {
+        "title": "Passare «{account}» a {bank}?",
+        "body": "Da ora saldo e movimenti arrivano dalla banca. Lo storico resta quello di {source}. Puoi tornare indietro con «Annulla passaggio» nelle impostazioni del conto.",
+        "interests": "Le liquidazioni degli interessi di questo conto non si pubblicano più su {source}.",
+        "transfers": "Entrate e uscite dei mesi passati scendono di {amount} in totale.",
+        "back": "Torna al rapporto",
+        "apply": "Applica passaggio"
+      },
+      "applying": {
+        "title": "Passaggio in corso…",
+        "stay": "Non chiudere questa pagina."
+      },
+      "errors": {
+        "source_unavailable": "Non è stato possibile aggiornare {source}. Il passaggio parte solo con {source} aggiornata.",
+        "bank_unavailable": "La banca non risponde ora. Riprova tra poco.",
+        "consent_expired": "L'accesso alla banca è scaduto. Rinnovalo in Impostazioni › Integrazioni.",
+        "rate_limited": "La banca ha raggiunto il limite di letture. Riprova più tardi.",
+        "account_gone": "La banca non condivide più questo conto. Scegli un altro conto.",
+        "stale": "I dati sono cambiati dopo la prova. Rifai la prova.",
+        "busy": "Un altro passaggio è in corso. Attendi la fine e riprova.",
+        "failed": "Il passaggio non è riuscito. Il conto è rimasto su {source}."
+      },
+      "done": {
+        "title": "«{account}» ora arriva dalla banca",
+        "matched": "{count, plural, one {# movimento collegato} other {# movimenti collegati}} alla banca.",
+        "fresh": "{count, plural, one {# movimento nuovo} other {# movimenti nuovi}} dalla banca.",
+        "transfers": "{count, plural, one {# giroconto riconosciuto} other {# giroconti riconosciuti}}.",
+        "sourceStops": "{source} non aggiorna più questo conto. Ledgerly legge la banca 3 volte al giorno.",
+        "howToUndo": "Per tornare indietro: Impostazioni del conto › «Annulla passaggio».",
+        "theBank": "la banca",
+        "goToAccount": "Vai al conto"
+      },
+      "undo": {
+        "action": "Annulla passaggio",
+        "title": "Annullare il passaggio di «{account}»?",
+        "body": "Il conto torna ad arrivare da {source}, come prima del {date}.",
+        "backTitle": "Torna com'era",
+        "back": {
+          "source": "Saldo e movimenti arrivano di nuovo da {source}.",
+          "rows": "I movimenti collegati alla banca tornano movimenti di {source}. Nessuno viene tolto.",
+          "transfers": "{count, plural, one {# giroconto torna} other {# giroconti tornano}} un'entrata e un'uscita.",
+          "interests": "Le liquidazioni degli interessi tornano a pubblicarsi su {source}. Quelle chiuse nel frattempo non si pubblicano da sole."
+        },
+        "knowTitle": "Cosa sapere",
+        "know": {
+          "bankRows": "I movimenti arrivati dalla banca dopo il {date} non contano più. {source} li porta di nuovo, se li ha.",
+          "bankStays": "{bank} resta collegata. Gli altri conti non cambiano."
+        },
+        "keep": "Lascia il conto su {bank}",
+        "working": "Annullamento…",
+        "failed": "L'annullamento non è riuscito. Il conto è rimasto su {bank}: niente è cambiato.",
+        "done": "Passaggio annullato",
+        "unavailable": "{source} non è più collegata. Collegala di nuovo in Impostazioni › Integrazioni per annullare il passaggio."
+      },
+      "settings": {
+        "offer": "Questo conto è anche in una tua banca? Puoi farlo arrivare dalla banca. Prima vedi una prova: niente cambia finché non scegli «Applica».",
+        "offerAction": "Passa alla banca",
+        "connectFirst": "Per far arrivare questo conto dalla banca, collega prima la banca.",
+        "connect": "Collega una banca",
+        "switched": "Passato da {source} alla banca il {date}. Lo storico fino al {cut} è quello di {source}."
+      },
+      "unsent": {
+        "title": "Prima del passaggio: {count, plural, one {# movimento a mano non è} other {# movimenti a mano non sono}} su {source}",
+        "explain": "Ledgerly ha provato a inviarli ora. Finché non sono su {source}, il passaggio non parte: lo storico e il saldo non sarebbero completi.",
+        "noPayee": "Senza beneficiario",
+        "notSent": "Non inviato a {source}",
+        "toSend": "Da inviare",
+        "then": "Invia di nuovo ogni movimento da Spese, oppure eliminalo. Poi rifai la prova."
+      }
+    }
   },
   "budgets": {
     "title": "Budget",
@@ -5337,7 +5510,13 @@
         "failed": "Non è stato possibile importare i conti. Riprova.",
         "ibanExists": "Questo conto è già in Ledgerly: «{account}» ha lo stesso IBAN. Ledgerly non lo aggiunge una seconda volta.",
         "ibanExistsSource": "Questo conto è già in Ledgerly: «{account}», da un'altra sorgente, ha lo stesso IBAN. Ledgerly non lo aggiunge una seconda volta.",
-        "failedIban": "Un conto ha l'IBAN di un conto già in Ledgerly: Ledgerly non lo aggiunge una seconda volta. Scegli «Usa» o «Non importare» per quel conto."
+        "failedIban": "Un conto ha l'IBAN di un conto già in Ledgerly: Ledgerly non lo aggiunge una seconda volta. Scegli «Usa» o «Non importare» per quel conto.",
+        "sameGroup": "È lo stesso conto di…",
+        "same": "{account} · {source}",
+        "sameNote": "Questo conto non viene importato ora. Dopo questo passo Ledgerly confronta {source} e la banca e ti mostra il risultato. Niente cambia finché non scegli «Applica».",
+        "continue": "Continua",
+        "switchTitle": "Da completare: è lo stesso conto di «{account}».",
+        "switchAction": "Controlla e passa"
       },
       "cancel": {
         "title": "Annullare il collegamento?",

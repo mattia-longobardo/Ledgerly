@@ -9,7 +9,7 @@
  */
 import "server-only";
 import type { Ctx } from "@/platform/context";
-import { addDays, civilDateIn } from "@/platform/dates";
+import { addDays, type CivilDate, civilDateIn } from "@/platform/dates";
 import { pluginProvider } from "@/platform/integrations/rules";
 import {
   type Connection,
@@ -421,4 +421,130 @@ export async function runBankPass(
     return "refused";
   }
   return "failed";
+}
+
+/** What the bank says of one account it shares, read for the dry run of a switch (rewrite plan N4). */
+export interface AccountPreview {
+  /** The balance Ledgerly compares, chosen by the domain's order of the bank's codes (H43). */
+  balance: { kind: string; amount: string; on: CivilDate } | null;
+  movements: ReadingMovement[];
+  /** The number the bank gives for the account (an IBAN when it is one). */
+  identifier: string | null;
+  currency: string;
+}
+
+export type PreviewOutcome =
+  | { ok: true; preview: AccountPreview }
+  | {
+      ok: false;
+      error:
+        "not_active" | "not_found" | "account_gone" | "consent_expired" | "rate_limited" | "bank_unavailable";
+      retryAt: Date | null;
+    };
+
+/**
+ * Reads one account of a bank connection without writing anything (04-now.md §4.6.1, point 14):
+ * no movement, no balance, no row of the history, no change to the connection. The account does
+ * not have to be tied to an account here. A reading the person asks for: it says who asks (`Psu-*`).
+ */
+export async function previewBankAccount(
+  ctx: Who,
+  input: {
+    pluginId: string;
+    connectionId: string;
+    providerAccountId: string;
+    from: CivilDate;
+    presence: Presence | null;
+  },
+  now: Date = new Date(),
+  deps: Deps = {},
+): Promise<PreviewOutcome> {
+  let plugin;
+  try {
+    plugin = await requireActivePlugin(ctx, input.pluginId);
+  } catch (error) {
+    if (error instanceof PluginActionError) return { ok: false, error: "not_active", retryAt: null };
+    throw error;
+  }
+  const connection = (await listPluginConnections(ctx, input.pluginId)).find(
+    (one) => one.id === input.connectionId,
+  );
+  if (!connection) return { ok: false, error: "not_found", retryAt: null };
+  if (connection.state === "revoked") return { ok: false, error: "consent_expired", retryAt: null };
+  const bag = readBag(await readCredentials(ctx, connection.id));
+  const account = bag.accounts.find((one) => providerAccountIdOf(one) === input.providerAccountId);
+  if (!account) return { ok: false, error: "account_gone", retryAt: null };
+  const credentials = await requireUserCredentials(ctx, input.pluginId);
+
+  const batches: SyncResponse[] = [];
+  let cursor: string | null = null;
+  const started = Date.now();
+  try {
+    do {
+      const batch: SyncResponse = await callPlugin(plugin.config, PLUGIN_PATHS.sync, syncResponseSchema, {
+        body: {
+          credentials,
+          session: { id: bag.sessionId },
+          accounts: [account.externalId],
+          from: input.from,
+          cursor,
+          userPresent: input.presence,
+        },
+        timeoutMs: SYNC_TIMEOUT_MS,
+        fetchFn: deps.fetchFn,
+      });
+      batches.push(batch);
+      cursor = batch.cursor;
+    } while (cursor !== null && batches.length < MAX_SYNC_CALLS && Date.now() - started < PRESENT_BUDGET_MS);
+  } catch (error) {
+    if (!(error instanceof PluginCallError)) throw error;
+    const code = readingError(error.code);
+    if (code === "consent_expired" || code === "auth")
+      return { ok: false, error: "consent_expired", retryAt: null };
+    if (code === "rate_limited") {
+      const seconds = Math.max(error.retryAfterSeconds ?? 0, RATE_LIMIT_WAIT_HOURS * 3600);
+      return { ok: false, error: "rate_limited", retryAt: new Date(now.getTime() + seconds * 1000) };
+    }
+    return { ok: false, error: "bank_unavailable", retryAt: null };
+  }
+  // A reading that did not end is not a comparison: the movements of the period would be missing.
+  if (cursor !== null) return { ok: false, error: "bank_unavailable", retryAt: null };
+  const answered = batches.flatMap((batch) =>
+    batch.accounts.filter((one) => one.externalId === account.externalId),
+  );
+  if (answered.some((one) => one.error === "consent_expired")) {
+    return { ok: false, error: "consent_expired", retryAt: null };
+  }
+  if (answered.length > 0 && answered.every((one) => one.error !== null)) {
+    return { ok: false, error: "bank_unavailable", retryAt: null };
+  }
+  const today = civilDateIn(now, ctx.timeZone);
+  const picked = pickBalance(
+    answered.flatMap((one) => one.balances).filter((one) => one.currency === account.currency),
+  );
+  const transactions = batches.flatMap((batch) =>
+    batch.transactions.filter((one) => one.accountExternalId === account.externalId),
+  );
+  const movements = movementIds(input.providerAccountId, transactions).flatMap(
+    ({ transaction, externalId }) => {
+      const movement = toMovement(externalId, transaction);
+      return movement !== null && movement.currency === account.currency ? [movement] : [];
+    },
+  );
+  return {
+    ok: true,
+    preview: {
+      balance:
+        picked === null
+          ? null
+          : {
+              kind: picked.type,
+              amount: picked.amount,
+              on: picked.date !== null && picked.date <= today ? picked.date : today,
+            },
+      movements,
+      identifier: account.identifier,
+      currency: account.currency,
+    },
+  };
 }

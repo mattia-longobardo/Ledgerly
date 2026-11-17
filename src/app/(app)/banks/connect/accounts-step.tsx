@@ -36,6 +36,11 @@ export interface AccountsStepProps {
   linked: { legend: string; account: string }[];
   /** The person's own accounts a bank's account may be tied to. */
   existing: { id: string; name: string; currency: string }[];
+  /**
+   * The person's accounts that come from another source and may be the same account (ux/n4-account-switch.md
+   * §2.1): choosing one imports nothing now; the outcome leads to the check of the switch.
+   */
+  sameAs?: { id: string; name: string; currency: string; source: string }[];
   types: { value: string; label: string }[];
   /** Whether "Cancel" closes the access (a first access) or only leaves the page (a renewal). */
   cancellable: boolean;
@@ -44,11 +49,19 @@ export interface AccountsStepProps {
 const SETTINGS: Route = "/settings/integrations";
 const NEW = "new";
 const SKIP = "skip";
+const SAME = "same:";
 
 /** Where an account starts (§2.4.2 of the N4 specification): never on a new account with an IBAN already here. */
-function startOf(account: AccountToChoose, existing: AccountsStepProps["existing"]): string {
+function startOf(
+  account: AccountToChoose,
+  existing: AccountsStepProps["existing"],
+  sameAs: NonNullable<AccountsStepProps["sameAs"]>,
+): string {
   const owner = account.ibanOwner;
   if (!owner) return NEW;
+  if (!owner.manual && sameAs.some((one) => one.id === owner.id && one.currency === account.currency)) {
+    return `${SAME}${owner.id}`;
+  }
   const usable = existing.some((one) => one.id === owner.id && one.currency === account.currency);
   return owner.manual && usable ? owner.id : SKIP;
 }
@@ -71,6 +84,7 @@ export function AccountsStep({
   accounts,
   linked,
   existing,
+  sameAs = [],
   types,
   cancellable,
 }: AccountsStepProps) {
@@ -81,7 +95,7 @@ export function AccountsStep({
     Object.fromEntries(
       accounts.map((account) => [
         account.providerAccountId,
-        { target: startOf(account, existing), name: account.defaultName, type: account.defaultType },
+        { target: startOf(account, existing, sameAs), name: account.defaultName, type: account.defaultType },
       ]),
     ),
   );
@@ -94,7 +108,17 @@ export function AccountsStep({
   const set = (id: string, patch: Partial<Choice>) =>
     setChoices((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
 
-  const imported = accounts.filter((account) => choices[account.providerAccountId].target !== SKIP);
+  const isSame = (target: string) => target.startsWith(SAME);
+  const imported = accounts.filter((account) => {
+    const target = choices[account.providerAccountId].target;
+    return target !== SKIP && !isSame(target);
+  });
+  const toSwitch = accounts.flatMap((account) => {
+    const target = choices[account.providerAccountId].target;
+    return isSame(target)
+      ? [{ bankAccountId: account.providerAccountId, accountId: target.slice(SAME.length) }]
+      : [];
+  });
   const taken = new Map<string, number>();
   for (const account of accounts) {
     const target = choices[account.providerAccountId].target;
@@ -106,7 +130,8 @@ export function AccountsStep({
     if (choice.target === NEW && choice.name.trim() === "") problems.set(account.providerAccountId, "name");
     if ((taken.get(choice.target) ?? 0) > 1) problems.set(account.providerAccountId, "duplicate");
   }
-  const nothing = imported.length + linked.length === 0;
+  const nothing = imported.length + linked.length + toSwitch.length === 0;
+  const switchList = toSwitch.map((one) => `${one.bankAccountId}.${one.accountId}`).join(",");
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -120,10 +145,19 @@ export function AccountsStep({
     startReading(async () => {
       let ok = false;
       try {
+        // Only "the same account as…": nothing is imported now, the check of the switch comes next.
+        if (imported.length + linked.length === 0) {
+          const first = toSwitch[0];
+          router.push(
+            `/accounts/${first.accountId}/switch?step=check&t=${connectionId}:${first.bankAccountId}` as Route,
+          );
+          return;
+        }
         const decisions: AccountDecision[] = accounts.map((account) => {
           const choice = choices[account.providerAccountId];
           const { providerAccountId, currency } = account;
-          if (choice.target === SKIP) return { providerAccountId, target: { kind: "skip" } };
+          if (choice.target === SKIP || isSame(choice.target))
+            return { providerAccountId, target: { kind: "skip" } };
           if (choice.target === NEW) {
             return {
               providerAccountId,
@@ -139,8 +173,11 @@ export function AccountsStep({
       } catch {
         ok = false;
       }
-      if (ok) router.push(`/banks/connect?step=done&c=${connectionId}` as Route);
-      else setFailed(true);
+      if (ok) {
+        router.push(
+          `/banks/connect?step=done&c=${connectionId}${switchList ? `&same=${encodeURIComponent(switchList)}` : ""}` as Route,
+        );
+      } else setFailed(true);
     });
   }
 
@@ -205,6 +242,7 @@ export function AccountsStep({
           const problem = problems.get(id);
           const chosen = existing.find((one) => one.id === choice.target);
           const offered = existing.filter((one) => one.currency === account.currency);
+          const same = sameAs.filter((one) => one.currency === account.currency);
           const owner = account.ibanOwner ?? null;
           return (
             <fieldset key={id} className="flex flex-col gap-3 rounded-card border border-border p-3">
@@ -227,6 +265,15 @@ export function AccountsStep({
                       {offered.map((one) => (
                         <option key={one.id} value={one.id}>
                           {t("accounts.existing", { account: one.name })}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {same.length > 0 && (
+                    <optgroup label={t("accounts.sameGroup")}>
+                      {same.map((one) => (
+                        <option key={one.id} value={`${SAME}${one.id}`}>
+                          {t("accounts.same", { account: one.name, source: one.source })}
                         </option>
                       ))}
                     </optgroup>
@@ -271,6 +318,13 @@ export function AccountsStep({
                   </Field>
                 </div>
               )}
+              {isSame(choice.target) && (
+                <p className="text-sm text-muted">
+                  {t("accounts.sameNote", {
+                    source: sameAs.find((one) => `${SAME}${one.id}` === choice.target)?.source ?? "",
+                  })}
+                </p>
+              )}
               {chosen && (
                 <p className="text-sm text-muted">{t("accounts.existingNote", { account: chosen.name })}</p>
               )}
@@ -290,7 +344,9 @@ export function AccountsStep({
             {common("cancel")}
           </Button>
           <Button type="submit" variant="primary" disabled={nothing || leaving}>
-            {t("accounts.submit", { count: imported.length })}
+            {imported.length === 0 && toSwitch.length > 0
+              ? t("accounts.continue")
+              : t("accounts.submit", { count: imported.length })}
           </Button>
         </div>
       </form>
