@@ -523,6 +523,29 @@ const PAGES: Screen[] = [
     open: go("/settings/categories"),
   },
 
+  // Release N4b (ux/n4-account-switch.md §2.2, §4): the `switching` user has an account of a source
+  // and the same account in a bank, not imported: the block of the settings and the step "Account".
+  {
+    name: "/accounts/[id] (settings, move to the bank)",
+    session: "switching",
+    open: async (page) => {
+      await page.goto("/accounts");
+      await page.getByRole("link", { name: "Conto da passare" }).first().click();
+      await page.goto(`${new URL(page.url()).pathname}?tab=settings`);
+      await settled(page);
+    },
+  },
+  {
+    name: "/accounts/[id]/switch (account of the bank)",
+    session: "switching",
+    open: async (page) => {
+      await page.goto("/accounts");
+      await page.getByRole("link", { name: "Conto da passare" }).first().click();
+      await page.goto(`${new URL(page.url()).pathname}/switch`);
+      await settled(page);
+    },
+  },
+
   // Release N3, second part (ux/n3-categories-manual.md §12, §13): the `review` user has movements
   // in every state of a category; `reviewNew` has movements and no category.
   { name: "/expenses (automatic categories)", session: "review", open: go("/expenses?preset=last3Months") },

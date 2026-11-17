@@ -39,7 +39,7 @@ export const CROSS_CUTTING = ["a11y", "keyboard", "mobile"];
 export const FLOWS: Flow[] = [
   {
     id: "accounts",
-    specs: ["accounts", "currency"],
+    specs: ["accounts", "currency", "account-switch"],
     screens: "/accounts|new account dialog|as layout / at|sortable table",
   },
   {
@@ -116,7 +116,7 @@ export const MODULES: Module[] = [
   {
     id: "accounts",
     files: ["src/modules/accounts/**", page("accounts"), "src/app/(app)/page.tsx", "src/platform/iban*"],
-    integration: ["src/modules/accounts"],
+    integration: ["src/modules/accounts", "src/app/(app)/accounts"],
     flows: ["accounts"],
     usedBy: [
       "transactions",
@@ -196,7 +196,7 @@ export const MODULES: Module[] = [
     files: ["src/modules/interests/**", page("interests")],
     integration: ["src/modules/interests"],
     flows: ["interests"],
-    usedBy: ["pockets", "funds", "export", "jobs", "e2e:accounts"],
+    usedBy: ["pockets", "funds", "export", "jobs", "accounts", "e2e:accounts"],
   },
   {
     id: "funds",
@@ -324,7 +324,7 @@ export const MODULES: Module[] = [
       "cron/**",
     ],
     integration: ["src/platform/jobs"],
-    usedBy: ["integration:*", "e2e:connections", "e2e:admin"],
+    usedBy: ["integration:*", "e2e:connections", "e2e:admin", "e2e:accounts"],
   },
   {
     id: "admin",
