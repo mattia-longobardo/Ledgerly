@@ -213,9 +213,9 @@ describe("the page's figures", () => {
     expect(await suggestions(ctx)).toEqual([]);
   });
 
-  it("archives rather than deletes an account a subscription pays from", async () => {
+  it("refuses to delete an account a subscription pays from, and never archives it", async () => {
     await createSubscription(ctx, input());
-    expect(await removeAccount(ctx, accountId)).toBe("archived");
+    await expect(removeAccount(ctx, accountId)).rejects.toMatchObject({ code: "in_use" });
   });
 });
 

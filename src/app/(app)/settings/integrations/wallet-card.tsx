@@ -4,10 +4,16 @@ import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
+import { Checkbox, Input } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { connectWalletAction, disconnectWalletAction } from "./actions";
+import {
+  chooseWalletAccountsAction,
+  connectWalletAction,
+  disconnectWalletAction,
+  type WalletAccountRow,
+  walletAccountsAction,
+} from "./actions";
 import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./connection-row";
 
 /**
@@ -21,7 +27,7 @@ export interface WalletCardProps {
 }
 
 /** What this card does itself, with a dialog of its own; the rest is the row's. */
-const HANDLED: readonly ActionKind[] = ["connect", "replaceKey", "disconnect"];
+const HANDLED: readonly ActionKind[] = ["connect", "replaceKey", "disconnect", "chooseAccounts"];
 
 const FORM_ID = "wallet-token-form";
 
@@ -39,6 +45,10 @@ export function WalletCard({ row, connected }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  // "Choose the accounts" (PERS-419): the accounts Wallet has, read when the dialog opens.
+  const [choosing, setChoosing] = useState(false);
+  const [choices, setChoices] = useState<WalletAccountRow[] | null>(null);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -65,6 +75,7 @@ export function WalletCard({ row, connected }: WalletCardProps) {
         setError(null);
         setConnecting(false);
         setDisconnecting(false);
+        setChoosing(false);
         notify(success);
       } catch {
         setError(t("errors.failed"));
@@ -80,6 +91,33 @@ export function WalletCard({ row, connected }: WalletCardProps) {
     run(() => connectWalletAction(token), connected ? t("toasts.replaced") : t("toasts.connected"));
   }
 
+  function openChoice() {
+    setChoosing(true);
+    setChoices(null);
+    startTransition(async () => {
+      try {
+        const result = await walletAccountsAction();
+        if (!result.ok) {
+          setError(messageFor(result.error));
+          return;
+        }
+        setChoices(result.accounts);
+        setPicked(new Set(result.accounts.filter((one) => one.chosen).map((one) => one.externalId)));
+      } catch {
+        setError(t("errors.failed"));
+      }
+    });
+  }
+
+  function toggle(externalId: string, on: boolean) {
+    setPicked((before) => {
+      const next = new Set(before);
+      if (on) next.add(externalId);
+      else next.delete(externalId);
+      return next;
+    });
+  }
+
   return (
     <div className="flex flex-col">
       <ConnectionRow
@@ -89,6 +127,7 @@ export function WalletCard({ row, connected }: WalletCardProps) {
         onAction={(kind) => {
           setError(null);
           if (kind === "disconnect") setDisconnecting(true);
+          else if (kind === "chooseAccounts") openChoice();
           else setConnecting(true);
         }}
       />
@@ -133,6 +172,54 @@ export function WalletCard({ row, connected }: WalletCardProps) {
             </Field>
           </form>
         )}
+      </Modal>
+
+      <Modal
+        open={choosing}
+        onOpenChange={(open) => !open && setChoosing(false)}
+        title={t("choose.title")}
+        description={t("choose.description")}
+        width={460}
+        footer={
+          <>
+            <Button size="sm" onClick={() => setChoosing(false)}>
+              {t("choose.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={pending || choices === null}
+              onClick={() => run(() => chooseWalletAccountsAction([...picked]), t("toasts.chosen"))}
+            >
+              {t("choose.save")}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-2">
+          {error && (
+            <p role="alert" className="text-sm text-neg">
+              {error}
+            </p>
+          )}
+          {choices === null && !error && <p className="text-sm text-muted">{t("choose.loading")}</p>}
+          {choices !== null && choices.length === 0 && (
+            <p className="text-sm text-muted">{t("choose.none")}</p>
+          )}
+          {choices?.map((one) => (
+            <div key={one.externalId} className="flex flex-col">
+              <Checkbox
+                label={one.name}
+                checked={one.here !== null || picked.has(one.externalId)}
+                disabled={one.here !== null || pending}
+                onChange={(event) => toggle(one.externalId, event.target.checked)}
+              />
+              <span className="pl-5 text-sm text-muted">
+                {one.here !== null ? t("choose.here", { account: one.here }) : t("choose.notHere")}
+              </span>
+            </div>
+          ))}
+        </div>
       </Modal>
 
       <Modal

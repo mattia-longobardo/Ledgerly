@@ -8,6 +8,7 @@
  * fills with the modules' own services. A failure is a code of a closed list, never a message.
  */
 import "server-only";
+import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, civilDateIn } from "@/platform/dates";
 import { pluginProvider } from "@/platform/integrations/rules";
@@ -155,6 +156,28 @@ export async function chooseAccounts(
     now,
   );
   await saveSchedule(ctx, connection.id, BANK_SCHEDULE, now);
+  // An account tied after the first reading (chosen later, or deleted and chosen again) has no
+  // history here: the next reading reads it alone, from the start, before the usual ones (PERS-419).
+  const tiedNow = choices.map((choice) => choice.providerAccountId);
+  const job = await readSyncJob(ctx, connection.id, "transactions");
+  if (tiedNow.length > 0 && job?.cursor?.coveredTo !== undefined) {
+    const fresh = new Set([...freshAccounts(job.cursor), ...tiedNow]);
+    await saveSyncJob(ctx, connection.id, "transactions", {
+      cursor: { ...job.cursor, [FRESH]: JSON.stringify([...fresh].sort()) },
+    });
+  }
+}
+
+/** The cursor key of the accounts to read from the start at the next reading. */
+const FRESH = "fresh";
+
+function freshAccounts(cursor: Record<string, string> | null | undefined): string[] {
+  try {
+    const parsed = z.array(z.string()).safeParse(JSON.parse(cursor?.[FRESH] ?? "[]"));
+    return parsed.success ? parsed.data : [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -270,10 +293,15 @@ async function reading(
   const bag = readBag(await readCredentials(ctx, connection.id));
   if (!bag.chosen) return refusal("not_chosen");
   const linked = await sink.linkedAccounts(ctx, connection.provider);
-  const accounts = bag.accounts.filter((account) => linked.has(providerAccountIdOf(account)));
-  if (accounts.length === 0) return refusal("not_chosen");
+  const tied = bag.accounts.filter((account) => linked.has(providerAccountIdOf(account)));
+  if (tied.length === 0) return refusal("not_chosen");
 
   const job = await readSyncJob(ctx, connection.id, "transactions");
+  // Accounts tied after the first reading are read alone, from the start; the others wait for the
+  // next reading, which starts again from where the last complete one ended.
+  const fresh = new Set(freshAccounts(job?.cursor));
+  const freshTied = tied.filter((account) => fresh.has(providerAccountIdOf(account)));
+  const accounts = freshTied.length > 0 ? freshTied : tied;
   const waitUntil = job?.cursor?.retryAfter ? new Date(job.cursor.retryAfter) : null;
   if (input.presence === null && waitUntil !== null && waitUntil.getTime() > now.getTime()) {
     return refusal("rate_limited", waitUntil);
@@ -293,7 +321,7 @@ async function reading(
           credentials,
           session: { id: bag.sessionId },
           accounts: accounts.map((account) => account.externalId),
-          from: coveredTo === null ? null : addDays(coveredTo, -REREAD_DAYS),
+          from: coveredTo === null || freshTied.length > 0 ? null : addDays(coveredTo, -REREAD_DAYS),
           cursor,
           userPresent: input.presence,
         },
@@ -334,9 +362,21 @@ async function reading(
   const today = civilDateIn(now, ctx.timeZone);
   // The next reading starts from here only when this one read everything it asked for.
   const complete = cursor === null;
-  await saveSyncJob(ctx, connection.id, "transactions", {
-    cursor: complete ? { coveredTo: today } : coveredTo === null ? null : { coveredTo },
-  });
+  // A reading of the fresh accounts alone moves nothing for the others: it only takes them off the
+  // list, once it read everything it asked for.
+  const cursorAfter: Record<string, string> | null =
+    freshTied.length > 0
+      ? complete
+        ? coveredTo === null
+          ? null
+          : { coveredTo }
+        : { ...(job?.cursor ?? {}) }
+      : complete
+        ? { coveredTo: today }
+        : coveredTo === null
+          ? null
+          : { coveredTo };
+  await saveSyncJob(ctx, connection.id, "transactions", { cursor: cursorAfter });
   const counts = {
     created: written.created,
     updated: written.updated,

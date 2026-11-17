@@ -263,3 +263,34 @@ export async function checkSubscriptions(
   });
   return { checked: checkedIds.length, written: plan.length };
 }
+
+// ——— What rests on an account (PERS-419) ——————————————————————————————————————————————————————
+// The deletion of an account lists these and moves each to another account first: the foreign key
+// is `on delete no action`, so one left behind makes the deletion refuse.
+
+/** The subscriptions paid from an account, whatever their state. */
+export async function subscriptionsOnAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+): Promise<{ id: string; name: string }[]> {
+  return getDb()
+    .select({ id: subscriptions.id, name: subscriptions.name })
+    .from(subscriptions)
+    .where(and(userScoped(ctx).owns(subscriptions), eq(subscriptions.paymentAccountId, accountId)))
+    .orderBy(asc(subscriptions.name), asc(subscriptions.id));
+}
+
+/** A subscription paid from another account: the same check as the subscription's own form. */
+export async function moveSubscriptionAccount(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  accountId: string,
+): Promise<void> {
+  await checkReferences(ctx, { paymentAccountId: accountId, categoryId: null });
+  const moved = await getDb()
+    .update(subscriptions)
+    .set({ paymentAccountId: accountId })
+    .where(and(eq(subscriptions.id, id), userScoped(ctx).owns(subscriptions)))
+    .returning({ id: subscriptions.id });
+  if (moved.length === 0) throw new SubscriptionError("not_found");
+}

@@ -196,7 +196,7 @@ describe("the rest of the page", () => {
       createRule(ctx, rule({ postingCategoryId: "00000000-0000-4000-8000-000000000000" })),
     ).rejects.toMatchObject({ code: "invalid_category" });
     await createRule(ctx, rule());
-    expect(await removeAccount(ctx, accountId)).toBe("archived");
+    await expect(removeAccount(ctx, accountId)).rejects.toMatchObject({ code: "in_use" });
   });
 });
 

@@ -107,9 +107,13 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
       [nameOf(account), maskIdentifier(account.identifier), account.currency]
         .filter((part) => part !== null)
         .join(" · ");
+    // `all=1` (the menu of the integration's row): the accounts left out before are offered too,
+    // so one can be chosen later; a deleted account is no longer tied and is offered anyway.
+    const offerSkipped = one(params.all) === "1";
     const toChoose = exposed.accounts.filter(
       (account) =>
-        account.linked === null && !(exposed.chosen && exposed.skipped.includes(account.providerAccountId)),
+        account.linked === null &&
+        (offerSkipped || !(exposed.chosen && exposed.skipped.includes(account.providerAccountId))),
     );
 
     if (step === "accounts") {

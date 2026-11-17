@@ -278,7 +278,8 @@
       "toasts": {
         "connected": "Wallet connected",
         "replaced": "Token replaced",
-        "disconnected": "Wallet disconnected"
+        "disconnected": "Wallet disconnected",
+        "chosen": "Accounts saved."
       },
       "errors": {
         "rejected": "Wallet rejected that token.",
@@ -409,6 +410,16 @@
       },
       "fields": {
         "schedule": "Schedule"
+      },
+      "choose": {
+        "title": "Choose the accounts",
+        "description": "Which accounts arrive here. An account left out is not added and not updated.",
+        "loading": "Reading the accounts…",
+        "none": "The source has no accounts.",
+        "here": "Here as “{account}”. To take it off, delete the account.",
+        "notHere": "Not here: chosen, it arrives with its history.",
+        "save": "Save",
+        "cancel": "Cancel"
       }
     },
     "categories": {
@@ -2138,17 +2149,41 @@
       "danger": {
         "title": "Danger zone",
         "description": "Archiving hides the account and keeps its history in past snapshots.",
-        "explain": "Archive it to take it off the list and keep everything, or remove it: removing deletes it outright when nothing rests on it, and archives it when something does.",
+        "explain": "Archive it to take it off the list and keep everything, or delete it with its movements and balances.",
         "archived": "This account is archived. Its balances are still counted in past months.",
         "archive": "Archive account",
         "restore": "Restore account",
-        "confirmTitle": "Remove this account?",
-        "confirmBody": "If no pocket, subscription, interest rule or fund rests on {name}, it is deleted for good, and so is every movement and balance entry it holds. If something does, it is archived instead and its history stays.",
-        "confirm": "Remove account",
+        "confirmTitle": "Delete {name}?",
+        "confirmBody": "{name} is deleted for good, with every movement and balance entry it holds.",
+        "confirm": "Delete for good",
         "cancel": "Keep it",
         "deletedToast": "{name} deleted, with its movements and balances.",
         "archivedToast": "{name} archived. Its history stays in past months.",
-        "remove": "Remove account"
+        "remove": "Delete account",
+        "sourceNote": "It comes from {source}: it leaves the accounts {source} brings here, so the next reading does not add it again. To have it back, choose it again on the integration's page: the history {source} still gives comes back with it.",
+        "loading": "Checking what uses this account…",
+        "movedToast": "Moved: {what}.",
+        "dependents": {
+          "title": "{count, plural, one {Move first the thing that uses this account} other {Move first the # things that use this account}}",
+          "pocket": "Pocket “{name}”",
+          "interestRule": "Interest rule from {since}",
+          "budgetLimit": "Budget limit for “{name}”",
+          "budgetAccount": "Budget limit of the account",
+          "subscription": "Subscription “{name}”",
+          "fund": "Fund “{name}” (its value)",
+          "fundSource": "Contribution source of the fund “{name}”",
+          "choose": "Move to…",
+          "move": "Move"
+        },
+        "errors": {
+          "chooseTarget": "Choose the account to move it to.",
+          "notSynced": "This rule publishes to the source: choose an account that comes from a source.",
+          "conflict": "That account already has this budget limit for the same months.",
+          "accountTaken": "That account already holds the value of another fund.",
+          "invalidAccount": "That account cannot take it: choose an open account.",
+          "inUse": "Something still uses this account: move it first.",
+          "failed": "That did not work. Try again."
+        }
       }
     },
     "estimated": {

@@ -50,7 +50,9 @@ import {
   readSyncJob,
   recordRun,
   saveIbanConflicts,
+  saveSkippedAccounts,
   saveSyncJob,
+  skippedAccounts,
   skipRun,
 } from "../service";
 import {
@@ -450,7 +452,13 @@ async function syncAccounts(
   const balances = await client.balances();
 
   const before = await linkedAccounts(ctx);
-  const applied = await applyProviderAccounts(ctx, WALLET_PROVIDER, remote.map(toRemoteAccount), now);
+  // An account the person left out, or deleted, is neither made nor updated here (PERS-419). One
+  // already here is never left out: the choice offers only the accounts Ledgerly does not have.
+  const leftOut = await skippedAccounts(ctx, connectionId);
+  const chosen = remote.filter(
+    (account) => before.has(account.externalId) || !leftOut.has(account.externalId),
+  );
+  const applied = await applyProviderAccounts(ctx, WALLET_PROVIDER, chosen.map(toRemoteAccount), now);
   await saveIbanConflicts(ctx, connectionId, applied.ibanConflicts);
   const after = await linkedAccounts(ctx);
 
@@ -536,6 +544,85 @@ export async function requestWalletBackfill(
   await saveSyncJob(ctx, connectionId, "transactions", {
     cursor: { ...Object.fromEntries(kept), [BACKFILL_MONTHS]: String(months) },
   });
+}
+
+/* The choice of the accounts (PERS-419) */
+
+/** One Wallet account on the choice of Settings › Integrations. */
+export interface WalletAccountChoice {
+  externalId: string;
+  name: string;
+  /** The account here it arrives in; `null` when Ledgerly does not have it. */
+  local: { id: string; name: string } | null;
+  /** It arrives here: already here, or not left out. */
+  chosen: boolean;
+}
+
+function choiceClient(ctx: Pick<Ctx, "userId">, connectionId: string, options: WalletSyncOptions) {
+  if (options.client) return Promise.resolve(options.client);
+  return walletToken(ctx, connectionId).then((token) => createWalletClient(token, options.clientOptions));
+}
+
+/**
+ * The accounts Wallet has now, as the choice shows them: the ones here (always chosen, removed only
+ * by deleting the account), and the others, chosen unless the person left them out. Read from
+ * Wallet when the choice opens, never stored: no name of a source waits in a column.
+ */
+export async function walletAccountChoices(
+  ctx: Pick<Ctx, "userId">,
+  connectionId: string,
+  options: WalletSyncOptions = {},
+): Promise<WalletAccountChoice[]> {
+  await walletConnection(ctx, connectionId);
+  const client = await choiceClient(ctx, connectionId, options);
+  const remote = await client.accounts();
+  const here = new Map<string, { id: string; name: string }>();
+  for (const account of await listAccounts(ctx, { includeArchived: true })) {
+    if (account.provider !== WALLET_PROVIDER || account.providerAccountId === null) continue;
+    here.set(account.providerAccountId, { id: account.id, name: account.name });
+  }
+  const skipped = await skippedAccounts(ctx, connectionId);
+  return remote
+    .map((account) => {
+      const local = here.get(account.externalId) ?? null;
+      return {
+        externalId: account.externalId,
+        name: account.name,
+        local,
+        chosen: local !== null || !skipped.has(account.externalId),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name) || a.externalId.localeCompare(b.externalId));
+}
+
+/**
+ * Saves which of the Wallet accounts not here arrive here: `chosen` are the source's ids to bring,
+ * every other one is left out. An account already here is not touched — it leaves only by being
+ * deleted. When an account comes back, the next pass downloads the history again, as deep as the
+ * last download, so its movements come back too; what is already here is recognised by its id.
+ * Returns how many accounts come back; the pass is the caller's next call.
+ */
+export async function chooseWalletAccounts(
+  ctx: Pick<Ctx, "userId">,
+  connectionId: string,
+  chosen: readonly string[],
+  options: WalletSyncOptions = {},
+): Promise<{ added: number }> {
+  const choices = await walletAccountChoices(ctx, connectionId, options);
+  const wanted = new Set(chosen);
+  const skipped = await skippedAccounts(ctx, connectionId);
+  let added = 0;
+  for (const choice of choices) {
+    if (choice.local !== null) continue;
+    if (!wanted.has(choice.externalId)) skipped.add(choice.externalId);
+    else if (skipped.delete(choice.externalId)) added += 1;
+  }
+  await saveSkippedAccounts(ctx, connectionId, skipped);
+  if (added > 0) {
+    const job = await readSyncJob(ctx, connectionId, "transactions");
+    await requestWalletBackfill(ctx, connectionId, backfillDepth(job?.cursor));
+  }
+  return { added };
 }
 
 /**

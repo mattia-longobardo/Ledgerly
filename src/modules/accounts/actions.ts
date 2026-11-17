@@ -16,7 +16,6 @@ import {
   type ConnectionInput,
   createAccount,
   deleteBalanceEntry,
-  removeAccount,
   restoreAccount,
   runSnapshot,
   saveBalanceEntry,
@@ -186,12 +185,10 @@ export async function deleteBalanceEntryAction(accountId: string, entryId: strin
   return { ok: true };
 }
 
-/** Archives when something depends on the account, deletes when nothing does (spec §7.1). */
 /**
  * Archiving is the reversible half of §7.1, and it has its own button because "keep it, but out of
- * my way" is a different intention from "remove it": `removeAccount` deletes when nothing depends
- * on the account, and somebody who only wants it off the list should never have to risk that.
- * `restoreAccountAction` is the way back.
+ * my way" is a different intention from "delete it" (`app/(app)/accounts/[id]/delete-actions.ts`),
+ * which never archives. `restoreAccountAction` is the way back.
  */
 export async function archiveAccountAction(id: string): Promise<ActionResult> {
   const ctx = await requireSession();
@@ -201,25 +198,6 @@ export async function archiveAccountAction(id: string): Promise<ActionResult> {
     revalidatePath("/accounts");
     revalidatePath("/");
     return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-/**
- * The two outcomes of §7.1 are not the same thing and the screen has to be able to say which
- * happened: an archived account keeps its history, a deleted one takes every movement and balance
- * with it (F9 P3, rilievo E1).
- */
-export type RemoveResult = { ok: true; outcome: "deleted" | "archived" } | { ok: false; error: string };
-
-export async function removeAccountAction(id: string): Promise<RemoveResult> {
-  const ctx = await requireSession();
-  try {
-    const outcome = await removeAccount(ctx, id);
-    revalidatePath("/accounts");
-    revalidatePath("/");
-    return { ok: true, outcome };
   } catch (error) {
     return failed(error);
   }

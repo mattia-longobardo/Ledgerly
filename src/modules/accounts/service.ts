@@ -17,8 +17,8 @@ import { FOREIGN_KEY_VIOLATION, hasPgError, UNIQUE_VIOLATION } from "@/platform/
 import { userScoped } from "@/platform/db/scope";
 import { convertCents } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
-import { PROVIDERS, syncsTransactions } from "@/platform/integrations/rules";
-import { unlinkEntities } from "@/platform/integrations/service";
+import { syncsTransactions } from "@/platform/integrations/rules";
+import { unlinkEntitiesOfEveryProvider } from "@/platform/integrations/service";
 import { normalizeIban } from "@/platform/iban";
 import { type Cents, sumCents } from "@/platform/money";
 import { managedSinceOf, serviceAccountIds } from "@/modules/investments/managed";
@@ -35,7 +35,6 @@ import {
   accountSettingsSchema,
   type BalanceEntryInput,
   balanceEntrySchema,
-  canDelete,
   CONNECTION_CHANNELS,
   dailySeries,
   hasIbanField,
@@ -59,7 +58,14 @@ import {
   movementBasis,
   observedDays,
 } from "./queries";
-import { accountConnections, accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
+import {
+  accountConnections,
+  accounts,
+  accountSwitches,
+  balanceEntries,
+  manualMovementAccounts,
+  snapshotRuns,
+} from "./schema";
 import { switchedAwayFrom } from "./switching";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
@@ -74,6 +80,8 @@ export type AccountErrorCode =
   | "iban_invalid"
   | "iban_exists"
   | "iban_archived"
+  /** Something of another module still rests on the account: move it first (`removeAccount`). */
+  | "in_use"
   | "invalid";
 
 export class AccountError extends Error {
@@ -286,51 +294,69 @@ export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Prom
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
 }
 
+/** The source an account came from, as a deletion leaves it for the caller to tell that source. */
+export interface DeletedAccount {
+  /** The sources that brought it here: its own, and the one it was switched away from, if any. */
+  sources: { provider: string; providerAccountId: string }[];
+}
+
 /**
- * Deletion when nothing depends on the account, archiving otherwise (spec §7.1). The caller is
- * told which of the two happened so the interface can say so.
+ * Deletes the account, with every movement and balance entry it holds, whatever its source. It
+ * never archives: archiving is its own action (`archiveAccount`), and a button that archived in
+ * secret took five accounts off the list in one evening (PERS-359).
  *
- * What depends on an account lives in other modules — pockets, subscriptions, and from F4 interest
- * rules and funds — and this module does not read their tables (§4.2). Their foreign keys to
- * `accounts` are `on delete no action`, so the database itself refuses the deletion (23503) of an
- * account something still rests on, and that refusal is the reference count. A provider's account
- * is never deleted at all.
+ * What depends on an account lives in other modules — pockets, subscriptions, budget limits,
+ * interest rules, funds and their sources — and this module does not read their tables (§4.2).
+ * Their foreign keys to `accounts` are `on delete no action`, so the database itself refuses the
+ * deletion (23503) of an account something still rests on: that refusal is `in_use`. The use case
+ * of the application lists and moves those things first (`app/(app)/accounts/[id]/delete.ts`).
  *
- * A real deletion also forgets the provider links of the movements it takes with it, through the
+ * A deletion also forgets the provider links of the movements it takes with it, through the
  * integrations service (§4.3: one owner per table — this module never writes `provider_links`
- * itself). The provider ids of the *account* are not there at all: they live in
- * `accounts.provider_account_id` (§11.4), so they go with the row.
+ * itself), for every provider: an account switched from one source to another holds the links of
+ * both. The provider ids of the *account* live in `accounts.provider_account_id` (§11.4), so they
+ * go with the row; the caller gets them back to tell the source the account is no longer chosen.
  */
-export async function removeAccount(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  id: string,
-): Promise<"deleted" | "archived"> {
+export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<DeletedAccount> {
   const account = await requireAccount(ctx, id);
-  if (!canDelete(account, 0)) {
-    await archiveAccount(ctx, id);
-    return "archived";
-  }
   // The ids before the delete, because the movements fall by foreign key and their
   // `provider_links` rows do not (`entity_id` is not a real foreign key: the deviation of §11.4).
-  // Left behind they would hold the entity unique key of rows nothing can resolve, and claim a
-  // `first_seen_at` for movements that no longer exist.
+  // Left behind they would hold the entity unique key of rows nothing can resolve, and a source
+  // chosen again would take its movements for known ones and never import them back.
   const movementIds = await transactionIdsOfAccount(ctx, id);
+  // A switch goes with the account (`on delete cascade`): without it, the source the account left
+  // would no longer know that id is read elsewhere, and would bring the account back.
+  const switched = await getDb()
+    .select({
+      provider: accountSwitches.fromProvider,
+      providerAccountId: accountSwitches.fromProviderAccountId,
+    })
+    .from(accountSwitches)
+    .where(
+      and(
+        eq(accountSwitches.accountId, id),
+        isNull(accountSwitches.undoneAt),
+        userScoped(ctx).owns(accountSwitches),
+      ),
+    )
+    .orderBy(asc(accountSwitches.id));
   try {
     await getDb()
       .delete(accounts)
       .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
   } catch (error) {
     if (!hasPgError(error, FOREIGN_KEY_VIOLATION)) throw error;
-    await archiveAccount(ctx, id);
-    return "archived";
+    throw new AccountError("in_use");
   }
   // After the delete, never before. A link removed while its row survives is worse than an
   // orphan: the next sync would not recognise the movement and would import it a second time,
   // which is wrong money in every total. This way the failure mode is the one we already have.
-  for (const provider of PROVIDERS) {
-    await unlinkEntities(ctx, provider, "transaction", movementIds);
-  }
-  return "deleted";
+  await unlinkEntitiesOfEveryProvider(ctx, "transaction", movementIds);
+  const own =
+    account.provider !== null && account.providerAccountId !== null
+      ? [{ provider: account.provider, providerAccountId: account.providerAccountId }]
+      : [];
+  return { sources: [...own, ...switched] };
 }
 
 /**

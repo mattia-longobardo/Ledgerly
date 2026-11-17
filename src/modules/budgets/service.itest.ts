@@ -159,7 +159,7 @@ describe("budgets on an account (F3)", () => {
 
     await stopLimit(ctx, { categoryId: null, accountId: other, month: "2026-03-01" });
     expect((await budgetsView(ctx, "2026-03-01")).rows).toHaveLength(2);
-    expect(await removeAccount(ctx, other)).toBe("archived");
+    await expect(removeAccount(ctx, other)).rejects.toMatchObject({ code: "in_use" });
   });
 
   it("stops a budget on an account from a later month, on that account and on no other budget", async () => {

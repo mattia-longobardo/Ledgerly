@@ -41,6 +41,7 @@ import {
 import "@/app/plugin-wiring";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";
+import { deleteAccount } from "../accounts/[id]/delete";
 import { bankSink } from "./sink";
 
 // The whole way of a bank's data, with everything real but the plugin: the runtime, the port's
@@ -758,5 +759,61 @@ describe("renewing and disconnecting", () => {
       await tieBack(first.ctx, { pluginId: PLUGIN, connectionId: first.connectionId }, bankSink, NOW),
     ).toBe(false);
     expect(await connectionSummary(first.ctx, first.connectionId)).toEqual({ accounts: 1, chosen: false });
+  });
+});
+
+describe("an account of the bank deleted and chosen again (PERS-419)", () => {
+  const SECOND: PluginAccount = { ...ACCOUNT, externalId: "u-2", stableId: "hash-2", identifier: null };
+  const both = (list: SyncResponse["transactions"]): SyncResponse => ({
+    ...answer(list),
+    accounts: [
+      ...answer([]).accounts,
+      {
+        externalId: "u-2",
+        balances: [{ type: "ITAV", amount: "5.00", currency: "EUR", date: "2026-11-14" }],
+        error: null,
+      },
+    ],
+  });
+
+  it("is no longer read once deleted, and when chosen again is read alone, from the start", async () => {
+    const plugin = fakePlugin({ accounts: [ACCOUNT, SECOND] });
+    const { ctx, connectionId } = await connected(plugin);
+    const target = { pluginId: PLUGIN, connectionId };
+    await chooseAccounts(
+      ctx,
+      { ...target, decisions: [asNew("hash-1", "A"), asNew("hash-2", "B")] },
+      bankSink,
+      NOW,
+    );
+    plugin.gives(both([movement(), movement({ accountExternalId: "u-2", externalId: "ref-2" })]));
+    expect(await read(ctx, target, plugin)).toMatchObject({ ok: true, created: 2 });
+    const first = (await listAccounts(ctx)).find((one) => one.name === "A")!;
+
+    await deleteAccount(ctx, first.id);
+    expect(await getAccount(ctx, first.id)).toBeNull();
+    // Deleted, it is no longer tied: the reading asks the bank for the other account only.
+    await read(ctx, target, plugin, later(1));
+    expect(plugin.syncs().at(-1)?.body.accounts).toEqual(["u-2"]);
+    expect((await listAccounts(ctx)).map((one) => one.name)).toEqual(["B"]);
+    // The choice offers it again, as an account not tied.
+    const exposed = await exposedAccounts(ctx, target, bankSink);
+    expect(exposed.accounts.find((one) => one.providerAccountId === "hash-1")?.linked).toBeNull();
+
+    await chooseAccounts(ctx, { ...target, decisions: [asNew("hash-1", "A again")] }, bankSink, later(2));
+    expect((await readSyncJob(ctx, connectionId, "transactions"))?.cursor?.fresh).toBe('["hash-1"]');
+    expect(await read(ctx, target, plugin, later(3))).toMatchObject({ ok: true, created: 1 });
+    const fresh = plugin.syncs().at(-1)!.body;
+    expect(fresh.accounts).toEqual(["u-1"]);
+    expect(fresh.from).toBeNull();
+    const again = (await listAccounts(ctx)).find((one) => one.name === "A again")!;
+    expect((await transactionIdsOfAccount(ctx, again.id)).length).toBe(1);
+
+    // The next reading is the usual one again: every tied account, from where the last one ended.
+    expect((await readSyncJob(ctx, connectionId, "transactions"))?.cursor?.fresh).toBeUndefined();
+    await read(ctx, target, plugin, later(4));
+    const usual = plugin.syncs().at(-1)!.body;
+    expect(usual.accounts).toEqual(["u-1", "u-2"]);
+    expect(usual.from).not.toBeNull();
   });
 });

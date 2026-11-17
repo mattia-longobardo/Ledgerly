@@ -5,6 +5,7 @@ import { getCategory, TaxonomyError } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import type { MonthKey } from "@/platform/dates";
 import { getDb, type Tx } from "@/platform/db/client";
+import { hasPgError, UNIQUE_VIOLATION } from "@/platform/db/errors";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
 import {
@@ -16,7 +17,7 @@ import {
 } from "./rules";
 import { budgetAlerts, budgetLimits } from "./schema";
 
-export type BudgetErrorCode = "not_found" | "invalid";
+export type BudgetErrorCode = "not_found" | "invalid" | "conflict";
 
 export class BudgetError extends Error {
   constructor(readonly code: BudgetErrorCode) {
@@ -313,4 +314,57 @@ export async function categoriesWithLimit(
       });
   }
   return new Set([...latest.values()].filter((one) => !one.stopped).map((one) => one.categoryId));
+}
+
+// ——— What rests on an account (PERS-419) ——————————————————————————————————————————————————————
+// The deletion of an account lists these and moves each to another account first: the foreign key
+// is `on delete no action`, so one left behind makes the deletion refuse.
+
+/**
+ * The budget limits on an account, one entry per scope: the account alone (`categoryId` null) or
+ * the account with a category. A scope is one limit for the person, however many months it has.
+ */
+export async function limitsOnAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+): Promise<{ categoryId: string | null; categoryName: string | null }[]> {
+  const rows = await getDb()
+    .selectDistinct({ categoryId: budgetLimits.categoryId })
+    .from(budgetLimits)
+    .where(and(userScoped(ctx).owns(budgetLimits), eq(budgetLimits.accountId, accountId)))
+    .orderBy(asc(budgetLimits.categoryId));
+  return Promise.all(
+    rows.map(async ({ categoryId }) => {
+      if (categoryId === null) return { categoryId, categoryName: null };
+      try {
+        return { categoryId, categoryName: (await getCategory(ctx, categoryId)).name };
+      } catch (error) {
+        if (error instanceof TaxonomyError) return { categoryId, categoryName: null };
+        throw error;
+      }
+    }),
+  );
+}
+
+/**
+ * Every month of one scope moved to another account. `conflict` when that account already has a
+ * limit of the same scope for one of those months: the two would be one row.
+ */
+export async function moveLimitsAccount(
+  ctx: Pick<Ctx, "userId">,
+  scope: { accountId: string; categoryId: string | null },
+  accountId: string,
+): Promise<void> {
+  await requireScope(ctx, { categoryId: null, accountId });
+  try {
+    const moved = await getDb()
+      .update(budgetLimits)
+      .set({ accountId })
+      .where(sameScope(ctx, scope))
+      .returning({ id: budgetLimits.id });
+    if (moved.length === 0) throw new BudgetError("not_found");
+  } catch (error) {
+    if (hasPgError(error, UNIQUE_VIOLATION)) throw new BudgetError("conflict");
+    throw error;
+  }
 }

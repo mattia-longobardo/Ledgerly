@@ -4,7 +4,6 @@ import {
   alertsFor,
   BALANCE_SOURCES,
   bucketOf,
-  canDelete,
   dailySeries,
   DEFAULT_STALE_AFTER_HOURS,
   deriveMonthEnds,
@@ -170,14 +169,6 @@ describe("alertsFor", () => {
     const gone = { ...base, state: "unavailable" as const, origin: "synced" as const };
     expect(alertsFor({ ...gone, lowBalanceCents: null }, 10n, now)).toEqual([]);
     expect(alertsFor(gone, 10n, now)).toEqual([{ accountId: "a", kind: "low_balance" }]);
-  });
-});
-
-describe("canDelete", () => {
-  it("allows deletion only for a manual account nothing points at", () => {
-    expect(canDelete({ origin: "manual" }, 0)).toBe(true);
-    expect(canDelete({ origin: "manual" }, 1)).toBe(false);
-    expect(canDelete({ origin: "synced" }, 0)).toBe(false);
   });
 });
 

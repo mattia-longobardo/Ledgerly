@@ -7,7 +7,7 @@ import { resolveExternal } from "@/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { getDb } from "@/platform/db/client";
-import { accountsView, balancesOn, listBalanceEntries, listSnapshotRuns } from "./queries";
+import { accountsView, balancesOn, getAccount, listBalanceEntries, listSnapshotRuns } from "./queries";
 import { balanceEntries } from "./schema";
 import type { IncomingTransaction } from "@/modules/transactions/rules";
 import type { RemoteAccount } from "./rules";
@@ -311,7 +311,7 @@ describe("accountsView", () => {
       openingBalance: { on: "2026-02-10", cents: 100n },
     });
     await updateAccountSettings(ctx, account.id, SETTINGS);
-    await removeAccount(ctx, account.id);
+    await archiveAccount(ctx, account.id);
     const view = await accountsView(ctx, { now: new Date("2026-02-15T10:00:00Z") });
     expect(view.rows).toEqual([]);
   });
@@ -493,7 +493,7 @@ describe("removeAccount", () => {
       ...CHECKING,
       openingBalance: { on: "2026-01-10", cents: 1n },
     });
-    expect(await removeAccount(ctx, account.id)).toBe("deleted");
+    expect(await removeAccount(ctx, account.id)).toEqual({ sources: [] });
     expect((await accountsView(ctx)).rows).toEqual([]);
     expect(await listBalanceEntries(ctx, account.id)).toEqual([]);
   });
@@ -524,11 +524,12 @@ describe("removeAccount", () => {
     const linked = await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"]);
     expect(linked.size).toBe(1);
 
-    expect(await removeAccount(ctx, account.id)).toBe("deleted");
+    await removeAccount(ctx, account.id);
     expect(await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"])).toEqual(new Map());
   });
 
-  it("archives a synced account instead of deleting it", async () => {
+  // PERS-419: the button deletes, whatever the source, and says which source the account came from.
+  it("deletes a synced account too, and gives back its source's id", async () => {
     const remote: RemoteAccount = {
       provider: "wallet",
       providerAccountId: "r1",
@@ -538,10 +539,11 @@ describe("removeAccount", () => {
     };
     await applyProviderAccounts(ctx, "wallet", [remote]);
     const [row] = (await accountsView(ctx)).rows;
-    expect(await removeAccount(ctx, row.account.id)).toBe("archived");
-
-    const archived = (await accountsView(ctx)).rows;
-    expect(archived).toEqual([]);
+    expect(await removeAccount(ctx, row.account.id)).toEqual({
+      sources: [{ provider: "wallet", providerAccountId: "r1" }],
+    });
+    expect(await getAccount(ctx, row.account.id)).toBeNull();
+    await expect(removeAccount(ctx, row.account.id)).rejects.toMatchObject({ code: "not_found" });
   });
 });
 

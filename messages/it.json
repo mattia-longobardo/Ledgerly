@@ -278,7 +278,8 @@
       "toasts": {
         "connected": "Wallet collegato",
         "replaced": "Token sostituito",
-        "disconnected": "Wallet scollegato"
+        "disconnected": "Wallet scollegato",
+        "chosen": "Conti salvati."
       },
       "errors": {
         "rejected": "Wallet ha rifiutato il token.",
@@ -409,6 +410,16 @@
       },
       "fields": {
         "schedule": "Pianificazione"
+      },
+      "choose": {
+        "title": "Scegli i conti",
+        "description": "Quali conti arrivano qui. Un conto non scelto non si aggiunge e non si aggiorna.",
+        "loading": "Leggo i conti…",
+        "none": "La sorgente non ha conti.",
+        "here": "Qui come «{account}». Per toglierlo, elimina il conto.",
+        "notHere": "Non è qui: se lo scegli, arriva con il suo storico.",
+        "save": "Salva",
+        "cancel": "Annulla"
       }
     },
     "categories": {
@@ -2138,17 +2149,41 @@
       "danger": {
         "title": "Zona pericolosa",
         "description": "L'archiviazione nasconde il conto e ne conserva lo storico negli snapshot passati.",
-        "explain": "Archivialo per toglierlo dall'elenco tenendo tutto, oppure rimuovilo: rimuovere lo cancella del tutto quando niente vi si appoggia, e lo archivia quando qualcosa vi si appoggia.",
+        "explain": "Archivialo per toglierlo dall'elenco tenendo tutto, oppure eliminalo con i suoi movimenti e saldi.",
         "archived": "Questo conto è archiviato. I suoi saldi contano ancora nei mesi passati.",
         "archive": "Archivia il conto",
         "restore": "Ripristina conto",
-        "confirmTitle": "Rimuovere questo conto?",
-        "confirmBody": "Se nessun salvadanaio, abbonamento, regola di interessi o fondo si appoggia a {name}, il conto viene cancellato per sempre, e con lui ogni movimento e ogni saldo che contiene. Se invece qualcosa vi si appoggia, viene archiviato e la sua storia resta.",
-        "confirm": "Rimuovi il conto",
+        "confirmTitle": "Eliminare {name}?",
+        "confirmBody": "{name} viene cancellato per sempre, con tutti i movimenti e i saldi che contiene.",
+        "confirm": "Elimina per sempre",
         "cancel": "Lascialo dov'è",
-        "deletedToast": "{name} cancellato, con i suoi movimenti e i suoi saldi.",
+        "deletedToast": "{name} eliminato, con i suoi movimenti e i suoi saldi.",
         "archivedToast": "{name} archiviato. La sua storia resta nei mesi passati.",
-        "remove": "Rimuovi il conto"
+        "remove": "Elimina il conto",
+        "sourceNote": "Arriva da {source}: esce dai conti che {source} porta qui, così la lettura dopo non lo aggiunge di nuovo. Per riaverlo, sceglilo di nuovo nella pagina dell'integrazione: torna con lo storico che {source} dà ancora.",
+        "loading": "Controllo cosa usa questo conto…",
+        "movedToast": "Spostato: {what}.",
+        "dependents": {
+          "title": "{count, plural, one {Prima sposta la cosa che usa questo conto} other {Prima sposta le # cose che usano questo conto}}",
+          "pocket": "Salvadanaio «{name}»",
+          "interestRule": "Regola di interessi dal {since}",
+          "budgetLimit": "Limite di budget per «{name}»",
+          "budgetAccount": "Limite di budget del conto",
+          "subscription": "Abbonamento «{name}»",
+          "fund": "Fondo «{name}» (il suo valore)",
+          "fundSource": "Fonte di versamento del fondo «{name}»",
+          "choose": "Sposta su…",
+          "move": "Sposta"
+        },
+        "errors": {
+          "chooseTarget": "Scegli il conto su cui spostarlo.",
+          "notSynced": "Questa regola pubblica sulla sorgente: scegli un conto che arriva da una sorgente.",
+          "conflict": "Quel conto ha già questo limite di budget per gli stessi mesi.",
+          "accountTaken": "Quel conto tiene già il valore di un altro fondo.",
+          "invalidAccount": "Quel conto non può riceverlo: scegli un conto aperto.",
+          "inUse": "Qualcosa usa ancora questo conto: prima spostalo.",
+          "failed": "Non ha funzionato. Riprova."
+        }
       }
     },
     "estimated": {

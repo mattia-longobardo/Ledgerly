@@ -80,7 +80,7 @@ export default async function SettingsIntegrationsPage({
   const runsOf = (connection: Connection) => runs.filter((run) => run.connectionId === connection.id);
 
   /** The row of a provider with one connection, or "Not connected" while it has none. */
-  async function single(provider: string, name: string, role: string) {
+  async function single(provider: string, name: string, role: string, capabilities = OWN_DIALOGS) {
     const connection = connections.find((one) => one.provider === provider) ?? null;
     if (connection === null) return { connected: false, row: rows.absent(provider, name, role) };
     return {
@@ -90,12 +90,15 @@ export default async function SettingsIntegrationsPage({
         label: await labelOf(connection, ctx.locale),
         detail: role,
         runs: runsOf(connection),
-        capabilities: OWN_DIALOGS,
+        capabilities,
         ibanConflicts: ibanConflicts(connection),
       }),
     };
   }
-  const wallet = await single(WALLET_PROVIDER, t("providers.wallet.name"), t("providers.wallet.role"));
+  const wallet = await single(WALLET_PROVIDER, t("providers.wallet.name"), t("providers.wallet.role"), {
+    ...OWN_DIALOGS,
+    chooseAccountsHref: "own",
+  });
   const trek = await single(TREK_PROVIDER, t("providers.trek.name"), t("providers.trek.role"));
   const waiting = trek.connected ? await pendingCount(ctx) : 0;
 
@@ -116,7 +119,8 @@ export default async function SettingsIntegrationsPage({
                 update: true,
                 renewHref: `/banks/connect?renew=${connection.id}`,
                 replaceKey: "own",
-                chooseAccountsHref: `/banks/connect?step=accounts&c=${connection.id}`,
+                // `all`: the accounts left out are offered again too, so one can be chosen later.
+                chooseAccountsHref: `/banks/connect?step=accounts&c=${connection.id}&all=1`,
                 disconnect: true,
               }
             : { update: false };

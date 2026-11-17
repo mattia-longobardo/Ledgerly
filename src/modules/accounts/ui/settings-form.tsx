@@ -1,23 +1,15 @@
 "use client";
 
-import type { Route } from "next";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
 import { SettingsSection } from "@/ui/section";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
-import {
-  archiveAccountAction,
-  removeAccountAction,
-  restoreAccountAction,
-  saveAccountSettingsAction,
-} from "../actions";
+import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
 import { colorField } from "./display";
 import { ibanErrorText } from "./iban-field";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "../rules";
@@ -62,6 +54,7 @@ export function AccountSettingsForm({
   index,
   today,
   sourceExtra,
+  deleteControl,
 }: {
   account: SettingsValues;
   /** The account's place in the list, the one `colorFor` colours it by. */
@@ -69,14 +62,14 @@ export function AccountSettingsForm({
   today: string;
   /** The block of the switch to the bank (ux/n4-account-switch.md §2.2 and §9.1), drawn by the page. */
   sourceExtra?: ReactNode;
+  /** "Delete account" with its dialog, drawn by the page: it moves what rests on the account first (PERS-419). */
+  deleteControl?: ReactNode;
 }) {
   const t = useTranslations("accounts.settings");
   const types = useTranslations("accounts.types");
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [ibanError, setIbanError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const unsaved = useUnsavedForm(formRef, pending);
   const synced = account.origin === "synced";
@@ -124,30 +117,6 @@ export function AccountSettingsForm({
       } catch {
         setError(t("errors.failed"));
       }
-    });
-  }
-
-  /**
-   * §7.1 does two different things here — archive when something rests on the account, delete when
-   * nothing does — and until F9 the screen said "Archive account" and did neither out loud: one
-   * click, no confirmation, and an account with all its movements was gone for good (rilievo E1).
-   * Now the dialog says what may happen and the toast says what did.
-   */
-  function onRemove() {
-    setConfirming(false);
-    startTransition(async () => {
-      const result = await removeAccountAction(account.id);
-      if (!result.ok) {
-        setError(t("errors.failed"));
-        return;
-      }
-      notify(
-        t(result.outcome === "deleted" ? "danger.deletedToast" : "danger.archivedToast", {
-          name: account.name,
-        }),
-        result.outcome === "deleted" ? "error" : "success",
-      );
-      router.push("/accounts" as Route);
     });
   }
 
@@ -352,36 +321,15 @@ export function AccountSettingsForm({
           ) : (
             <div className="flex flex-wrap gap-2">
               {/* Two intentions, two buttons: archiving keeps everything and can be undone, and
-                  removing may delete. Offering only the second made the first unreachable. */}
+                  deleting deletes. Neither does the other's job in secret. */}
               <Button size="sm" onClick={onArchive} disabled={pending}>
                 {t("danger.archive")}
               </Button>
-              <Button variant="danger" size="sm" onClick={() => setConfirming(true)} disabled={pending}>
-                {t("danger.remove")}
-              </Button>
+              {deleteControl}
             </div>
           )}
         </div>
       </SettingsSection>
-
-      <Modal
-        open={confirming}
-        onOpenChange={setConfirming}
-        title={t("danger.confirmTitle")}
-        width={460}
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button onClick={() => setConfirming(false)} disabled={pending}>
-              {t("danger.cancel")}
-            </Button>
-            <Button variant="danger" onClick={onRemove} disabled={pending}>
-              {t("danger.confirm")}
-            </Button>
-          </div>
-        }
-      >
-        <p className="text-sm text-muted">{t("danger.confirmBody", { name: account.name })}</p>
-      </Modal>
     </form>
   );
 }

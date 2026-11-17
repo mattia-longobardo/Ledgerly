@@ -37,8 +37,8 @@ export interface Capabilities {
   renewHref?: string;
   /** Where the key is replaced; `"own"` when the parent of the row opens its own dialog. */
   replaceKey?: string | "own";
-  /** Where the accounts are chosen, for a connection that is not complete. */
-  chooseAccountsHref?: string;
+  /** Where the accounts are chosen; `"own"` when the parent of the row opens its own dialog. */
+  chooseAccountsHref?: string | "own";
   /** "Test the connection". */
   test?: boolean;
   /** The provider's own page of settings. */
@@ -159,7 +159,10 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
       return can.replaceKey === "own" ? action("replaceKey") : action("replaceKey", can.replaceKey);
     }
     if (kind === "chooseAccounts") {
-      return can.chooseAccountsHref ? action("chooseAccounts", can.chooseAccountsHref) : null;
+      if (can.chooseAccountsHref === undefined) return null;
+      return can.chooseAccountsHref === "own"
+        ? action("chooseAccounts")
+        : action("chooseAccounts", can.chooseAccountsHref);
     }
     if (kind === "resume" || kind === "enable") return action(kind);
     return null;
@@ -247,6 +250,9 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
       if (status.value !== "running" && status.value !== "action") add(actionOf("update", facts));
       add(actionOf("renew", facts));
       add(actionOf("replaceKey", facts));
+      // Which accounts arrive here, at any time and not only before the first reading: an account
+      // deleted here comes back only when it is chosen again (PERS-419).
+      add(actionOf("chooseAccounts", facts));
       if (can.test) add(action("test"));
       if (can.settingsHref) add(action("settings", can.settingsHref));
     }

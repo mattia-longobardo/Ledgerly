@@ -25,6 +25,14 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
   from a provider. A balance that you type on a synced account is a correction, and it wins for
   that date. When the provider stops sending an account, the account becomes `unavailable`; it does
   not disappear.
+- **Archive or delete.** Settings → Danger zone has two buttons. **Archive** hides the account and
+  keeps everything; **Restore** undoes it. **Delete** deletes the account, with its movements and
+  balances, on every account — also one that comes from Wallet or a bank — and never archives it.
+  Before it deletes, the dialog lists what uses the account (pockets, interest rules, budget limits,
+  subscriptions, funds and their contribution sources) and moves each one to another account with
+  **Move to…**. An account of a source also leaves the accounts that source brings here, so the next
+  reading does not add it again. To have it back, choose it again in **Settings → Integrations**
+  ("Choose accounts"): it comes back with the history the source still gives.
 - **Monthly snapshot.** On the 1st of each month, every included account gets a balance for the
   last day of the previous month. You can see each run, and start one, in **Settings → Data**.
 - **Alerts.** Once a day the app checks two conditions: a balance under the account's threshold,
@@ -46,6 +54,10 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
 - **What a sync reads.** The first sync reads the last 12 months. Each later sync reads the last
   7 days again. If Wallet rejects the token, the row of the link says that the key is no longer
   valid and offers "Replace key".
+- **Which accounts arrive.** "Choose accounts" in the menu of the Wallet row, as for a bank, says
+  which Wallet accounts arrive here. An account not chosen is not added and not updated. The accounts
+  already here are always chosen: to take one off, delete it. A new Wallet account arrives unless
+  you leave it out.
 - **One state for each connection.** Every connection — Wallet, Trek, a bank, an investment
   service — has the same row, with one state of five: up to date, in progress, delayed, action
   needed, paused. The row says when the last update was and when the next attempt is, and it has
@@ -195,7 +207,7 @@ A pocket sets money aside without moving it.
   month closed without it). One movement pays one charge only.
 - **Projection by account** is today's balance minus the charges due in the next 30 days or
   12 months. **Export CSV** downloads the table.
-- An account used by a pocket or a subscription is archived instead of deleted.
+- An account used by a pocket or a subscription can be deleted after you move them to another account.
 
 ## Payroll
 

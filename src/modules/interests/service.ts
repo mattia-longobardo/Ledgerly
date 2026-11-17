@@ -413,3 +413,37 @@ export async function accruedInterest(
     );
   return BigInt(row?.net ?? "0");
 }
+
+// ——— What rests on an account (PERS-419) ——————————————————————————————————————————————————————
+// The deletion of an account lists these and moves each to another account first: the foreign key
+// is `on delete no action`, so one left behind makes the deletion refuse.
+
+/** The interest rules on an account, oldest first. */
+export async function rulesOnAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+): Promise<{ id: string; validFrom: string }[]> {
+  return getDb()
+    .select({ id: interestRules.id, validFrom: interestRules.validFrom })
+    .from(interestRules)
+    .where(and(userScoped(ctx).owns(interestRules), eq(interestRules.accountId, accountId)))
+    .orderBy(asc(interestRules.validFrom), asc(interestRules.id));
+}
+
+/** A rule on another account: the same check as the rule's own form (`not_synced` included). */
+export async function moveRuleAccount(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  accountId: string,
+): Promise<void> {
+  const [rule] = await getDb()
+    .select({ mode: interestRules.mode })
+    .from(interestRules)
+    .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
+  if (!rule) throw new InterestError("not_found");
+  await checkAccount(ctx, accountId, rule.mode);
+  await getDb()
+    .update(interestRules)
+    .set({ accountId })
+    .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
+}

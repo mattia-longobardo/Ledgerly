@@ -425,11 +425,6 @@ export function alertsFor(
   return alerts;
 }
 
-/** An account is deletable only when nothing points at it and no provider owns it (spec §7.1). */
-export function canDelete(account: { origin: AccountOrigin }, references: number): boolean {
-  return account.origin === "manual" && references === 0;
-}
-
 export function normalizeName(name: string): string {
   return name.replace(/\s+/g, "").toLocaleLowerCase();
 }

@@ -14,7 +14,13 @@ import { runAfterSync } from "@/platform/jobs/after-sync";
 import type { Ctx } from "@/platform/context";
 import { isKnownProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
 import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
-import { isSyncBusy, requestWalletBackfill, syncWalletNow } from "@/platform/integrations/wallet/sync";
+import {
+  chooseWalletAccounts,
+  isSyncBusy,
+  requestWalletBackfill,
+  syncWalletNow,
+  walletAccountChoices,
+} from "@/platform/integrations/wallet/sync";
 import {
   type Connection,
   deleteConnection,
@@ -188,6 +194,65 @@ export async function redownloadWalletHistoryAction(months: number): Promise<Int
   if (!connection) return { ok: false, error: "notConnected" };
   await requestWalletBackfill(ctx, connection.id, months);
   return syncWalletNowAction();
+}
+
+/** One Wallet account on the choice of the card: no id of an account here, only its name. */
+export interface WalletAccountRow {
+  externalId: string;
+  name: string;
+  /** The name of the account here it arrives in; `null` when Ledgerly does not have it. */
+  here: string | null;
+  chosen: boolean;
+}
+
+/** "Choose the accounts" (PERS-419): the accounts Wallet has now, read when the dialog opens. */
+export async function walletAccountsAction(): Promise<
+  { ok: true; accounts: WalletAccountRow[] } | { ok: false; error: IntegrationActionError }
+> {
+  const ctx = await requireSession();
+  const connection = await walletConnection(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  try {
+    const choices = await walletAccountChoices(ctx, connection.id);
+    return {
+      ok: true,
+      accounts: choices.map((choice) => ({
+        externalId: choice.externalId,
+        name: choice.name,
+        here: choice.local?.name ?? null,
+        chosen: choice.chosen,
+      })),
+    };
+  } catch (error) {
+    if (error instanceof IntegrationError) {
+      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
+    }
+    return { ok: false, error: walletFailure(error).code };
+  }
+}
+
+/**
+ * Saves which Wallet accounts not here arrive here. When one comes back, the history is downloaded
+ * again and the pass runs now, as "Download the history again" does: the account and its movements
+ * are here when the dialog closes.
+ */
+export async function chooseWalletAccountsAction(chosen: string[]): Promise<IntegrationActionResult> {
+  const ctx = await requireSession();
+  const connection = await walletConnection(ctx);
+  if (!connection) return { ok: false, error: "notConnected" };
+  if (!Array.isArray(chosen) || chosen.some((id) => typeof id !== "string"))
+    return { ok: false, error: "failed" };
+  let added: number;
+  try {
+    ({ added } = await chooseWalletAccounts(ctx, connection.id, chosen));
+  } catch (error) {
+    if (error instanceof IntegrationError) {
+      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
+    }
+    return { ok: false, error: walletFailure(error).code };
+  }
+  revalidate();
+  return added > 0 ? syncWalletNowAction() : { ok: true };
 }
 
 /**

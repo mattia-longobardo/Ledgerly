@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, desc, eq, gte, inArray, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
+import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
 import { getDb, type Tx } from "@/platform/db/client";
@@ -767,6 +768,32 @@ export async function unlinkEntities(
   return deleted.length;
 }
 
+/**
+ * {@link unlinkEntities} for every provider at once: what a deleted account took with it may have
+ * come from more than one source (an account switched from one to another keeps the links of both).
+ */
+export async function unlinkEntitiesOfEveryProvider(
+  ctx: Pick<Ctx, "userId">,
+  entityType: string,
+  entityIds: string[],
+): Promise<number> {
+  const type = entityTypeSchema.safeParse(entityType);
+  if (!type.success) throw new IntegrationError("invalid_link");
+  const wanted = [...new Set(entityIds)];
+  if (wanted.length === 0) return 0;
+  const deleted = await getDb()
+    .delete(providerLinks)
+    .where(
+      and(
+        userScoped(ctx).owns(providerLinks),
+        eq(providerLinks.entityType, type.data),
+        inArray(providerLinks.entityId, wanted),
+      ),
+    )
+    .returning({ id: providerLinks.id });
+  return deleted.length;
+}
+
 /** Where a connection's sync stands for one kind: the cursor to resume from and when to run. */
 export async function readSyncJob(
   ctx: Pick<Ctx, "userId">,
@@ -813,6 +840,69 @@ export async function saveSyncJob(
     .onConflictDoUpdate({ target: [syncJobs.connectionId, syncJobs.kind], set: changes })
     .returning();
   return row;
+}
+
+/* The accounts of a source the person did not choose (PERS-419) */
+
+/** The key of the `accounts` cursor that holds the source's ids of the accounts left out. */
+const SKIPPED_ACCOUNTS = "skipped";
+
+/**
+ * The source's ids of the accounts a provider of the core with one connection does not bring here:
+ * the accounts the person left out, or deleted. A reading neither creates nor updates them. Kept in
+ * the cursor of the `accounts` kind, so a new key replaces nothing and the list goes with the
+ * connection; empty when the person never left one out.
+ */
+export async function skippedAccounts(ctx: Pick<Ctx, "userId">, connectionId: string): Promise<Set<string>> {
+  const job = await readSyncJob(ctx, connectionId, "accounts");
+  const parsed = z.array(z.string()).safeParse(safeJson(job?.cursor?.[SKIPPED_ACCOUNTS]));
+  return new Set(parsed.success ? parsed.data : []);
+}
+
+function safeJson(text: string | undefined): unknown {
+  if (text === undefined) return [];
+  try {
+    return JSON.parse(text);
+  } catch {
+    return [];
+  }
+}
+
+/** Writes the accounts left out of a connection, keeping every other key of the cursor. */
+export async function saveSkippedAccounts(
+  ctx: Pick<Ctx, "userId">,
+  connectionId: string,
+  ids: Iterable<string>,
+): Promise<void> {
+  const job = await readSyncJob(ctx, connectionId, "accounts");
+  const kept = Object.entries(job?.cursor ?? {}).filter(([key]) => key !== SKIPPED_ACCOUNTS);
+  const list = [...new Set(ids)].sort();
+  await saveSyncJob(ctx, connectionId, "accounts", {
+    cursor: {
+      ...Object.fromEntries(kept),
+      ...(list.length > 0 ? { [SKIPPED_ACCOUNTS]: JSON.stringify(list) } : {}),
+    },
+  });
+}
+
+/**
+ * A deleted account leaves the accounts its source brings here, so the next reading does not make
+ * it again. Only a provider of the core has such a list: an account of a plugin is no longer tied
+ * once deleted, and a bank reads tied accounts only. Returns whether a list was written; false
+ * when the provider has no connection of the person (nothing would bring the account back).
+ */
+export async function skipSourceAccount(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  providerAccountId: string,
+): Promise<boolean> {
+  if (!isKnownProvider(provider)) return false;
+  const connection = (await listConnections(ctx)).find((one) => one.provider === provider);
+  if (!connection) return false;
+  const skipped = await skippedAccounts(ctx, connection.id);
+  skipped.add(providerAccountId);
+  await saveSkippedAccounts(ctx, connection.id, skipped);
+  return true;
 }
 
 /**

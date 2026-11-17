@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
 import { getAccount } from "@/modules/accounts/queries";
 import { transactionsByIds } from "@/modules/transactions/queries";
 import type { Ctx } from "@/platform/context";
@@ -288,4 +288,35 @@ export async function purgeExpiredPlanned(ctx: Pick<Ctx, "userId">, todayOn: Civ
     )
     .returning({ id: pocketPlannedExpenses.id });
   return removed.length;
+}
+
+// ——— What rests on an account (PERS-419) ——————————————————————————————————————————————————————
+// The deletion of an account lists these and moves each to another account first: the foreign key
+// is `on delete no action`, so one left behind makes the deletion refuse.
+
+/** The pockets an account backs, whatever their state. */
+export async function pocketsOnAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+): Promise<{ id: string; name: string }[]> {
+  return getDb()
+    .select({ id: pockets.id, name: pockets.name })
+    .from(pockets)
+    .where(and(userScoped(ctx).owns(pockets), eq(pockets.backingAccountId, accountId)))
+    .orderBy(asc(pockets.name), asc(pockets.id));
+}
+
+/** A pocket backed by another account: the same check as the pocket's own form. */
+export async function movePocketAccount(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  accountId: string,
+): Promise<void> {
+  await requireBackingAccount(ctx, accountId);
+  const moved = await getDb()
+    .update(pockets)
+    .set({ backingAccountId: accountId })
+    .where(and(eq(pockets.id, id), userScoped(ctx).owns(pockets)))
+    .returning({ id: pockets.id });
+  if (moved.length === 0) throw new PocketError("not_found");
 }

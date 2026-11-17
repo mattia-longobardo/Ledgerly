@@ -9,11 +9,15 @@ import { WalletCard, type WalletCardProps } from "./wallet-card";
 
 const connect = vi.fn();
 const disconnect = vi.fn();
+const listChoice = vi.fn();
+const saveChoice = vi.fn();
 const rowAction = vi.fn();
 
 vi.mock("./actions", () => ({
   connectWalletAction: (...args: unknown[]) => connect(...args),
   disconnectWalletAction: (...args: unknown[]) => disconnect(...args),
+  walletAccountsAction: (...args: unknown[]) => listChoice(...args),
+  chooseWalletAccountsAction: (...args: unknown[]) => saveChoice(...args),
 }));
 vi.mock("./connection-actions", () => ({
   runConnectionAction: (...args: unknown[]) => rowAction(...args),
@@ -57,6 +61,7 @@ const LIVE: ConnectionRowProps = {
   menu: [
     { kind: "update", label: C.actions.update },
     { kind: "replaceKey", label: C.actions.replaceKey },
+    { kind: "chooseAccounts", label: C.actions.chooseAccounts },
     { kind: "test", label: C.actions.test },
     { kind: "advanced", label: C.actions.advanced, href: "/settings/integrations/advanced?c=c1" },
     { kind: "disconnect", label: C.actions.disconnect, danger: true },
@@ -187,5 +192,31 @@ describe("WalletCard", () => {
     expect(PROPS_CARRY_NO_SECRET).toBe(true);
     expect(ROW_CARRIES_NO_SECRET).toBe(true);
     expect(RESULT_CARRIES_NO_SECRET).toBe(true);
+  });
+
+  // PERS-419: which Wallet accounts arrive here, as for a bank.
+  it("chooses the accounts: one here stays chosen, one left out can be chosen again", async () => {
+    listChoice.mockResolvedValueOnce({
+      ok: true,
+      accounts: [
+        { externalId: "wa-1", name: "Conto", here: "Conto corrente", chosen: true },
+        { externalId: "wa-2", name: "Viaggi", here: null, chosen: false },
+        { externalId: "wa-3", name: "Contanti", here: null, chosen: true },
+      ],
+    });
+    saveChoice.mockResolvedValueOnce({ ok: true });
+    renderCard();
+    await fromMenu(C.actions.chooseAccounts);
+    const here = await screen.findByRole("checkbox", { name: "Conto" });
+    expect(here).toBeChecked();
+    expect(here).toBeDisabled();
+    expect(screen.getByText(T.choose.here.replace("{account}", "Conto corrente"))).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Viaggi" })).not.toBeChecked();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Viaggi" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Contanti" }));
+    await userEvent.click(screen.getByRole("button", { name: T.choose.save }));
+    expect(saveChoice).toHaveBeenCalledWith(["wa-1", "wa-2"]);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

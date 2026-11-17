@@ -164,7 +164,14 @@ test.describe("the rows of the connections", () => {
     await alfa.getByRole("button", { name: "Alfa Bank" }).focus();
     await page.keyboard.press("Enter");
     const items = page.getByRole("menuitem");
-    await expect(items).toHaveText(["Update now", "Renew access", "Replace key", "Advanced", "Disconnect"]);
+    await expect(items).toHaveText([
+      "Update now",
+      "Renew access",
+      "Replace key",
+      "Choose accounts",
+      "Advanced",
+      "Disconnect",
+    ]);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("menu")).toHaveCount(0);
     await expect(alfa.getByRole("button", { name: "Alfa Bank" })).toBeFocused();

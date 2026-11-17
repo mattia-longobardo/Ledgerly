@@ -37,6 +37,7 @@ import {
 import { providerName } from "../../banks/provider-name";
 import { ConnectionRow as ConnectionStatus } from "../../settings/integrations/connection-row";
 import { accountConnectionRow } from "./connection-status";
+import { DeleteAccount } from "./delete-account";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
 import { accountDailyBalances, connectionsOf } from "@/modules/accounts/service";
@@ -259,6 +260,13 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           <ConnectionsSection accountId={id} rows={connections} />
           <AccountSettingsForm
             sourceExtra={await switchBlock(ctx, account)}
+            deleteControl={
+              <DeleteAccount
+                accountId={account.id}
+                name={account.name}
+                source={account.origin === "synced" ? (providerLabel ?? null) : null}
+              />
+            }
             today={today(ctx.timeZone, now)}
             // The place the account holds in the list, so the colour control shows the colour the
             // charts and the list really draw it with (`colorFor`) rather than a fixed blue.

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount } from "@/modules/accounts/queries";
-import { removeAccount, saveBalanceEntry } from "@/modules/accounts/service";
+import { archiveAccount, removeAccount, saveBalanceEntry } from "@/modules/accounts/service";
 import { users } from "@/platform/auth/schema";
 import type { Ctx } from "@/platform/context";
 import { addDays, addMonths, monthKey, today } from "@/platform/dates";
@@ -277,21 +277,22 @@ describe("interest on the backing account (spec §7.4)", () => {
 });
 
 describe("an account a pocket rests on (spec §7.1)", () => {
-  it("is archived instead of deleted, and deleted once nothing rests on it", async () => {
+  it("is not deleted, nor archived, while a pocket rests on it, and deleted once nothing does", async () => {
     const account = await anAccount(ctx);
     const pocket = await createPocket(ctx, pocketInput({ backingAccountId: account }));
-    expect(await removeAccount(ctx, account)).toBe("archived");
-    expect((await getAccount(ctx, account))?.state).toBe("archived");
+    await expect(removeAccount(ctx, account)).rejects.toMatchObject({ code: "in_use" });
+    expect((await getAccount(ctx, account))?.state).toBe("active");
 
     await updatePocket(ctx, pocket.id, pocketInput({ backingAccountId: null }));
-    expect(await removeAccount(ctx, account)).toBe("deleted");
+    await removeAccount(ctx, account);
+    expect(await getAccount(ctx, account)).toBeNull();
   });
 
   it("refuses an archived account as backing, and deleting the user still takes everything", async () => {
     const account = await anAccount(ctx);
     await createPocket(ctx, pocketInput({ backingAccountId: account }));
     const other = await anAccount(ctx, "Old");
-    await removeAccount(ctx, other);
+    await archiveAccount(ctx, other);
     await expect(
       createPocket(ctx, pocketInput({ name: "X", backingAccountId: other })),
     ).rejects.toMatchObject({
