@@ -299,6 +299,26 @@ Note di realizzazione di N6:
 - Il rilascio si fa con `scripts/release.sh n6 --before-from <checkout della versione in produzione>`: la fotografia
   «prima» si legge con il codice di prima, perché il codice nuovo chiede tabelle che ancora non esistono.
 
+### N7 · Impostazioni dei plugin e disattivazione di una sorgente
+
+Decisione H55 (Mattia, 18/11/2026). Specifica: [`../plugin-settings.md`](../plugin-settings.md). Stime **[DEV]**.
+Tre parti, ognuna con il suo OK quando tocca un criterio. Dipende da N4. R0 parte dopo N7.3.
+
+| Parte | Contenuto | Git | Migrazioni | Criteri §6 | Dim. |
+|---|---|---|---|---|---|
+| N7.1 · «Scollega» tiene le impostazioni | Conti scelti, pianificazione, profondità dello storico fuori dalla cascata del collegamento; memoria del core «conto della sorgente eliminato» per ogni sorgente; testi nuovi di «Scollega» (specifica §1.3, §4) | Branch + PR | Additive + copia di `sync_jobs.cursor.skipped` | #1 | S |
+| N7.2 · Pagina del plugin | `/settings/integrations/[source]` con le sezioni della specifica §2; «Categorie di {sorgente}» spostata da Settings › Categories; credenziali di Trek tolte da Time Off. Nessun cambio di comportamento | `main` | Nessuna | Nessuno atteso | M |
+| N7.3 · «Disattiva» con conversione | Specifica §3: dialogo con conteggi, conversione in una transazione, riattivazione con riconoscimento dei conti; «Disattiva» anche per Wallet e Trek | Branch + PR | Dati (conversione per utente, nel job dell'azione) | #1, #8 | M |
+
+Criteri di accettazione: 1) scollega → ricollega = stessi conti, stessa scelta, stessa pianificazione; 2) un conto
+eliminato non torna, con la sorgente collegata, scollegata o riattivata; 3) fotografia dei numeri uguale prima e dopo
+«Disattiva», per ogni sorgente; 4) disattiva → riattiva: nessun doppione di conti e di movimenti; 5) un errore nella
+conversione non cambia niente; 6) pagina del plugin a 400 e 1440 px, nei due temi.
+
+Effetti: **N1, N2** (in produzione): «Disattiva» e lo stato «In pausa» di un plugin disattivato cambiano con N7.3.
+**R5a**: il tab Plugin riusa la pagina di N7.2; «Categorie di {sorgente}» resta nella pagina del plugin. **R5c**: Wallet
+e Trek arrivano con pagina e «Disattiva» già pronti; resta la regola «attivi per chi ha già un collegamento».
+
 ---
 
 ## Fase B · riscrittura progressiva

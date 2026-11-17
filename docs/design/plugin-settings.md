@@ -1,14 +1,14 @@
 # Impostazioni dei plugin e disattivazione di una sorgente
 
-Specifica UX. Stato: **proposta, da confermare** (domande in §8). Base: `main` a `v0.29.1`.
+Specifica UX. Stato: **decisa** il 18/11/2026: Mattia ha risposto «ok default» (opzione A di Q1-Q6, decisione H55). Base: `main` a `v0.29.1`.
 Piano: [`rewrite-plan.md`](rewrite-plan.md); regole dei plugin H25-H30, H51 ([`rewrite-plan/01-decisions.md`](rewrite-plan/01-decisions.md));
 addon H50-H52 ([`rewrite-plan/13-plugins-addons.md`](rewrite-plan/13-plugins-addons.md)); modalità dei conti H32-H34
 ([`rewrite-plan/12-account-modes.md`](rewrite-plan/12-account-modes.md)).
 
 Fuori da questo file: macro-categorie, regole automatiche e pagina delle categorie (specifica separata, stessa issue madre).
 
-Segni: **[DEV]** = scelta tecnica da confermare con lo sviluppo. **[NUOVA]** = regola che cambia il piano: vale solo
-dopo la risposta di Mattia in §8.
+Segni: **[DEV]** = scelta tecnica da confermare con lo sviluppo. **[NUOVA]** = regola che cambia il piano, decisa con H55 (18/11/2026)
+(risposte in §8).
 
 ## 0. Riepilogo
 
@@ -185,8 +185,8 @@ Ledgerly sotto); pulsanti a tutta larghezza; nessuno scorrimento orizzontale; ma
 
 ## 3. Disattivazione **[NUOVA]**
 
-Sostituisce H30 («alla disattivazione le credenziali e l'accesso alle banche restano cifrati nel core») e lo stato
-«In pausa» di un plugin disattivato (N2 §3.4), se Mattia sceglie A in Q1.
+Sostituisce (H55) H30 («alla disattivazione le credenziali e l'accesso alle banche restano cifrati nel core») e lo stato
+«In pausa» di un plugin disattivato (N2 §3.4).
 
 ### 3.1 Regola
 
@@ -332,9 +332,9 @@ Spazio `settings.plugin` (nuovo). Solo le chiavi nuove; le altre restano.
 
 Glossario: «Disattiva» (sorgente) e «Scollega» (collegamento) sono due parole diverse e non si scambiano.
 
-## 7. Proposta di rilasci **[PROPOSTA]**
+## 7. Rilasci (H55)
 
-Le dimensioni e le migrazioni sono stime **[DEV]**. Nome di lavoro: **N7**, nella fase A, in tre parti con un OK ognuna.
+Le dimensioni e le migrazioni sono stime **[DEV]**. Rilascio **N7**, nella fase A, in tre parti con un OK ognuna (Q5 A).
 
 | Parte | Contenuto | Migrazioni | Criteri §6 attesi | Git | Dimensione |
 |---|---|---|---|---|---|
@@ -356,15 +356,15 @@ N4 (in produzione) ─► N7.1 ─► N7.2 ─► N7.3 ─► R0
 - N7.1 può partire subito: corregge un difetto in produzione e non dipende da N7.2.
 - **R5a**: il tab Plugin (D3) riusa la pagina di N7.2 e cambia solo l'URL. «Categorie di {sorgente}» non va nel tab
   Finance (riga R5a di `12-account-modes.md` §12.5): resta nella pagina del plugin.
-- **R5c**: Wallet e Trek diventano plugin con pagina e «Disattiva» già pronti. Da togliere da R5c: la regola H30 «attivi
-  da subito per chi ha già un collegamento» resta; il resto di H30 è sostituito da §3 (se Q1 = A). R5c diventa più
+- **R5c**: Wallet e Trek diventano plugin con pagina e «Disattiva» già pronti. Da R5c: la regola H30 «attivi
+  da subito per chi ha già un collegamento» resta; il resto di H30 è sostituito da §3 (H55). R5c diventa più
   piccolo: le schermate esistono già.
-- **N2** (in produzione): lo stato «In pausa» di un plugin disattivato non serve più con Q1 = A: dopo la disattivazione
+- **N2** (in produzione): lo stato «In pausa» di un plugin disattivato non serve più (H55): dopo la disattivazione
   non esistono collegamenti da mostrare.
 
-## 8. Domande per Mattia
+## 8. Domande: decise (H55, «ok default» del 18/11/2026)
 
-| # | Domanda | Esempio | A (consigliata) | B | Effetto |
+| # | Domanda | Esempio | A (scelta) | B (scartata) | Effetto |
 |---|---|---|---|---|---|
 | Q1 | «Disattiva» cancella le impostazioni, come hai chiesto? Questo sostituisce H30 | Disattivi Enable Banking con 2 banche collegate | Sì: chiude gli accessi, cancella chiave e impostazioni, converte i conti in «a mano». Per riattivare reinserisci la chiave e ricolleghi le banche | No: «Disattiva» resta una pausa (H30, tutto salvato e nascosto); serve un'azione in più «Disattiva e cancella» | A: un'azione sola, niente di nascosto che resta. B: riattivi con un clic, ma restano dati che non vedi e due pulsanti da capire |
 | Q2 | Alla riattivazione i vecchi conti tornano da soli? | Riattivi Wallet dopo 2 mesi; nel frattempo hai scritto 5 movimenti a mano sul «Conto corrente» | Sì: Ledgerly tiene solo gli id tecnici (mai visibili) e lega di nuovo ogni conto; i 5 movimenti restano a mano, il saldo dalla prima lettura è quello di Wallet | No: si cancella anche questo; al ricollegamento i conti arrivano nuovi e li unisci con «È lo stesso conto di…» (N4) | A: nessun doppione, nessun lavoro. B: pulizia totale, ma doppioni da unire a mano |
@@ -373,4 +373,4 @@ N4 (in produzione) ─► N7.1 ─► N7.2 ─► N7.3 ─► R0
 | Q5 | La pagina del plugin arriva prima di R5a? | Vuoi associare le categorie di Wallet da un posto solo | Sì: N7.2 nella fase A, dopo N4; R5a cambia solo l'URL | No: solo N7.1 ora; pagina e «Disattiva» entrano in R5a e R5c | A: lo vedi subito; R5c più piccolo. B: la fase A non si allunga; il difetto delle impostazioni sparse resta fino a R5 |
 | Q6 | Le regole di interessi che pubblicano su Wallet tornano a pubblicare alla riattivazione? | Regola 2,5% con «Pubblica su Wallet»; disattivi e riattivi | No: restano «solo calcolo»; le riattivi tu nella regola | Sì: tornano a pubblicare da sole | A: niente scrive su Wallet senza una tua scelta. B: un passo in meno. Con R5c la pubblicazione finisce comunque (ST-14) |
 
-Per rispondere: «ok default» = colonna A per tutte; oppure il numero e la lettera (esempio «Q5 B»).
+Mattia ha risposto «ok default» il 18/11/2026: vale la colonna A di ogni riga.

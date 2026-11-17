@@ -124,7 +124,8 @@ flowchart LR
     C2 --> C3[C3 Android: widget]
     C2 --> C4[C4 Windows]
   end
-  N4 --> R0
+  N4 --> N7[N7 impostazioni dei plugin]
+  N7 --> R0
   N6 --> R0
   R1 --> C0
   R3 --> C1
@@ -144,6 +145,7 @@ flowchart LR
 | N5 | Time Off: primo e ultimo giorno + pannello | Nessun gesto nascosto | `main` | No | No | M |
 | N5.1 | Time Off: maturazione mensile dalle buste paga e residuo previsto a una data (richiesta del 14/11/2026, [`timeoff-accrual.md`](timeoff-accrual.md)) | Quanto matura al mese, quanto resta a fine anno e alla data dell'assenza | `main` | No | No | M |
 | N6 | Fondo pensione standard: un modello, sorgenti di contributo, commissioni generiche, migrazione dei 2 fondi; via il «Deducibile» e i documenti dei fondi; cancellazione dei file di Cometa già salvati (decisione ST-25) | «Aggiungi fondo» senza tipo; un fondo nuovo si configura | branch + PR | Sì, additive + dati; cancellazione di righe e file con dump e copia | Sì (#1, #2) | L |
+| N7 | Impostazioni dei plugin: «Scollega» tiene le impostazioni (N7.1), pagina del plugin (N7.2), «Disattiva» che cancella e converte senza cambiare i numeri (N7.3) (H55, [`plugin-settings.md`](plugin-settings.md)) | Una pagina per sorgente; disattivare una sorgente non cambia i numeri | N7.1 e N7.3 branch + PR; N7.2 `main` | N7.1 additive + dati; N7.3 dati | Sì (N7.1 #1; N7.3 #1, #8) | S + M + M **[DEV]** |
 | R0 | Monorepo npm workspaces, confini e regole di modularità nel gate, codice morto tolto | Nulla | `main` | No | No | M |
 | R1 | Worker dedicato, coda su PostgreSQL, fine del container cron | Nulla | branch + PR | Sì, additive | Sì (#1) | M |
 | R2 | API completa, chiamate dagli involucri, refactor del dominio modulo per modulo | Nulla | `main`; PR per auth e schema | Sì, additive | Sì per le parti #1 e #4 | L |
