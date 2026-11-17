@@ -48,7 +48,7 @@ npm run format && npm run lint && npm run typecheck && npm run format:check && n
 | Command                    | What it does                                                                    |
 | -------------------------- | ------------------------------------------------------------------------------- |
 | `npm test`                 | Unit tests. Needs only Node.                                                    |
-| `npm run test:integration` | Integration tests in a container, against the `ledgerly_test` database and S3.  |
+| `npm run test:integration` | Integration tests in 4 containers, against `ledgerly_<1-4>_test` and S3.        |
 | `npm run e2e`              | End-to-end tests against the deployed site, with temporary test users.          |
 | `npm run test:select`      | Prints the tests that a diff starts, as commands ([testing.md](testing.md)).    |
 | `npm run perf`             | Times the heaviest views against a large test user. `-- --queries`: counts only.|
@@ -59,14 +59,24 @@ tests, the `@smoke` set and the local preview for the E2E tests.
 
 ### Integration tests
 
-They run in a temporary container on the `db_internal` network. They drop and create the schemas
-of `ledgerly_test` on each run, so they must never point at `ledgerly`. In S3 they write only under
-`tests/`.
+They run in 4 shards side by side (vitest `--shard`, by file), each in a temporary container on
+the `db_internal` network, with its own database `ledgerly_<n>_test` and its own S3 prefix
+`tests/<n>/`. Each shard drops and creates the schemas of its database on each run, so they must
+never point at `ledgerly`. One run at a time uses the four databases: a second run waits for the
+first (`/run/lock/ledgerly-integration.lock`). `LEDGERLY_TEST_SHARDS=<1-4>` runs fewer shards.
+`ledgerly_test` stays for the local preview and `npm run perf`.
 
-Create the test database once, as the Postgres superuser:
+Before each test, `resetDatabase()` (`test/db.ts`) empties the tables that have rows and restarts
+the sequences: each test starts from an empty schema, whatever the file before it left.
+
+Create the test databases once, as the Postgres superuser:
 
 ```sql
 CREATE DATABASE ledgerly_test OWNER ledgerly;
+CREATE DATABASE ledgerly_1_test OWNER ledgerly;
+CREATE DATABASE ledgerly_2_test OWNER ledgerly;
+CREATE DATABASE ledgerly_3_test OWNER ledgerly;
+CREATE DATABASE ledgerly_4_test OWNER ledgerly;
 ```
 
 ### End-to-end tests

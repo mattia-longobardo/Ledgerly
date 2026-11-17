@@ -6,7 +6,7 @@ import { runMigrations } from "../src/platform/db/migrate";
  * Drops and recreates the `public` and `drizzle` schemas before every integration run, so
  * `runMigrations` always applies from an empty database (spec §11) instead of from whatever the
  * previous run left behind. Guarded on the database name: this must never run against anything
- * but the `ledgerly_test` database `TEST_DATABASE_URL` points at.
+ * but the `ledgerly_<shard>_test` database `TEST_DATABASE_URL` points at.
  */
 async function resetTestDatabase(pool: Pool): Promise<void> {
   const {
@@ -21,7 +21,7 @@ async function resetTestDatabase(pool: Pool): Promise<void> {
 }
 
 export default async function setup(): Promise<void> {
-  // Set by scripts/test-integration.sh: the separate `ledgerly_test` database of the homelab.
+  // Set by scripts/test-integration.sh: the shard's own `ledgerly_<n>_test` database of the homelab.
   const connectionString = process.env.TEST_DATABASE_URL;
   if (!connectionString) throw new Error("TEST_DATABASE_URL is not set: run `npm run test:integration`");
   const pool = new Pool({ connectionString, max: 1 });

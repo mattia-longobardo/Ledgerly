@@ -2,10 +2,10 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-// The integration project runs inside a throwaway container on the homelab's internal network
-// (scripts/test-integration.sh), against the separate `ledgerly_test` database and Silo (the app's
-// bucket, `tests/` prefix only): the script passes those as TEST_*. Nothing here may point at the
-// production database.
+// The integration project runs inside throwaway containers on the homelab's internal network
+// (scripts/test-integration.sh), one per shard, each against its own `ledgerly_<shard>_test`
+// database and Silo (the app's bucket, `tests/<shard>/` prefix only): the script passes those as
+// TEST_*. Nothing here may point at the production database.
 
 export default defineConfig({
   plugins: [react()],
@@ -68,8 +68,8 @@ export default defineConfig({
             S3_ACCESS_KEY_ID: process.env.TEST_S3_ACCESS_KEY_ID ?? "",
             S3_SECRET_ACCESS_KEY: process.env.TEST_S3_SECRET_ACCESS_KEY ?? "",
             S3_BUCKET: process.env.TEST_S3_BUCKET ?? "",
-            // Every object a service writes lands under `tests/` (see the note above).
-            S3_KEY_PREFIX: "tests/",
+            // Every object a service writes lands under `tests/<shard>/` (see the note above).
+            S3_KEY_PREFIX: process.env.TEST_S3_KEY_PREFIX ?? "tests/",
             APP_ENCRYPTION_KEY: "k1:gBubFxNEhi1CSofEa9MtLb5lSXHXROI4WupEIGMhsZU=",
             CRON_SECRET: "integration-cron-secret-integration",
             HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-test",

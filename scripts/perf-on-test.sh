@@ -26,14 +26,19 @@ mkdir -p "$samples"
 # `docker run --env-file` keeps the quotes around a quoted value, which Compose drops: the file is
 # passed on stdin with one pair of quotes removed (as in `scripts/on-homelab.sh`). `-e DATABASE_URL`
 # comes after it and wins: the test database, never the one in the file.
-probe() {
+script() {
   sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" .env.homelab |
     docker run --rm -i --network db_internal \
     --user "$(id -u):$(id -g)" -e HOME=/tmp \
     --env-file /dev/stdin -e DATABASE_URL \
     -v "$PWD":/app -w /app \
-    node:26-bookworm-slim node --expose-gc --conditions=react-server --import tsx scripts/perf-probe.ts "$@"
+    node:26-bookworm-slim node --expose-gc --conditions=react-server --import tsx "$@"
 }
+probe() { script scripts/perf-probe.ts "$@"; }
+
+# The integration tests run on their own databases (scripts/test-integration.sh): the schema of
+# `ledgerly_test` is brought to the checkout's migrations here, as the preview's seed does.
+script scripts/migrate.ts
 
 # One round: PROCESSES more samples, numbered after the ones that are there.
 round() {
