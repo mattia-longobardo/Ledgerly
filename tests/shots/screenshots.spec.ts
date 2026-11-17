@@ -5,7 +5,7 @@
 // shows a real person's money.
 import { mkdirSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
-import { sessionState } from "../e2e/env";
+import { sessionState } from "../e2e/_shared/env";
 
 const DIR = "docs/screenshots";
 mkdirSync(DIR, { recursive: true });

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  HISTORY_ACCOUNT,
-  history,
-  historyCategoryKinds,
-} from "../../../../tests/fixtures/categories/history";
+import { HISTORY_ACCOUNT, history, historyCategoryKinds } from "../../../../test/fixtures/categories/history";
 import { type CascadeMovement, decide, groupCategories, type Knowledge } from "./cascade";
 import {
   type Example,

@@ -24,9 +24,14 @@ export const ALWAYS = "npm run format:check && npm run lint && npm run typecheck
 const quote = (text: string) => `'${text.replaceAll("'", "'\\''")}'`;
 const flow = (id: string) => FLOWS.find((one) => one.id === id)!;
 
+/** A spec of a flow, as `<flow>/<name>`: what `SITE_ONLY` names, and what a command filters on. */
+const specsOf = (id: string, withScreens: boolean) =>
+  [...flow(id).specs, ...(withScreens ? (flow(id).screens ?? []) : [])].map((spec) => `${id}/${spec}`);
+const file = (spec: string) => `${spec}.spec.ts`;
+
 /**
- * The `@site` tests of some specs, as commands that stay under the site's limit of password
- * sign-ins, with a minute between two of them.
+ * The `@site` tests of some specs (`<flow>/<name>`), as commands that stay under the site's limit
+ * of password sign-ins, with a minute between two of them.
  */
 export function siteCommands(specs: readonly string[]): string[] {
   const groups: string[][] = [[]];
@@ -43,7 +48,7 @@ export function siteCommands(specs: readonly string[]): string[] {
     .filter((group) => group.length > 0)
     .flatMap((group, at) => [
       ...(at > 0 ? ["sleep 60"] : []),
-      `npx playwright test ${group.join(" ")} -g @site`,
+      `npx playwright test ${group.map(file).join(" ")} -g @site`,
     ]);
 }
 
@@ -61,14 +66,25 @@ export function commands(selection: Selection): { before: string[]; after: strin
     before.push(`${INTEGRATION} ${selection.integration.map(quote).join(" ")}`);
   }
   before.push(selection.perf ? "npm run perf" : "npm run perf -- --queries");
-  const specs = [...new Set(selection.flows.flatMap((id) => flow(id).specs))];
-  if (specs.length > 0) before.push(`${PREVIEW} ${specs.join(" ")}`);
-  const screens = selection.screens.flatMap((id) => flow(id).screens ?? []);
-  if (screens.length > 0) {
-    before.push(`${PREVIEW} ${CROSS_CUTTING.join(" ")} -g ${quote(screens.join("|"))}`);
-  }
+  // A changed module's own flows run their whole folder; the flows of the modules that use it run
+  // their journeys alone.
+  const flows = selection.flows.filter((id) => id !== "screens");
+  const whole = flows.filter((id) => selection.screens.includes(id));
+  const journeys = flows.filter((id) => !selection.screens.includes(id));
+  const run = [
+    ...whole.map((id) => `tests/e2e/${id}/`),
+    ...journeys.flatMap((id) => specsOf(id, false).map(file)),
+  ];
+  if (run.length > 0) before.push(`${PREVIEW} ${run.join(" ")}`);
+  const every = selection.flows.includes("screens");
+  if (every) before.push(`${PREVIEW} ${CROSS_CUTTING.map(file).join(" ")}`);
   before.push(`${PREVIEW} -g @smoke`);
-  return { before, after: ["npx playwright test -g @smoke", ...siteCommands(specs)] };
+  const ran = [
+    ...whole.flatMap((id) => specsOf(id, true)),
+    ...journeys.flatMap((id) => specsOf(id, false)),
+    ...(every ? FLOWS.flatMap((one) => (one.screens ?? []).map((spec) => `${one.id}/${spec}`)) : []),
+  ];
+  return { before, after: ["npx playwright test -g @smoke", ...siteCommands(ran)] };
 }
 
 // ——— The tables of docs/testing.md ————————————————————————————————————————————————————————————
@@ -95,13 +111,19 @@ export function mapTable(): string {
 
 export function flowTable(): string {
   const rows = FLOWS.map((one) => {
-    const specs = `${PREVIEW} ${one.specs.join(" ")}`;
-    const screens = one.screens
-      ? code(`${PREVIEW} ${CROSS_CUTTING.join(" ")} -g ${quote(one.screens)}`)
-      : "—";
-    return `| ${code(one.id)} | ${code(specs)} | ${screens} |`;
+    const folder =
+      one.id === "screens"
+        ? `${PREVIEW} ${CROSS_CUTTING.map(file).join(" ")}`
+        : `${PREVIEW} tests/e2e/${one.id}/`;
+    const journeys =
+      one.specs.length > 0 ? code(`${PREVIEW} ${specsOf(one.id, false).map(file).join(" ")}`) : "—";
+    return `| ${code(one.id)} | ${code(folder)} | ${journeys} |`;
   });
-  return ["| Flow | Command | Its screens in the cross-cutting specs |", "|---|---|---|", ...rows].join("\n");
+  return [
+    "| Flow | The whole flow: its folder | Its journeys alone (a module that uses it changed) |",
+    "|---|---|---|",
+    ...rows,
+  ].join("\n");
 }
 
 export function criticalTable(): string {

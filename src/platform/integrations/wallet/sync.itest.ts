@@ -1,5 +1,5 @@
 // The Wallet sync engine against a real Postgres (spec §11). Wallet itself is a stubbed `fetch`
-// answering with the fixtures in `tests/fixtures/wallet/`: there is no token to call the real API
+// answering with the fixtures in `test/fixtures/wallet/`: there is no token to call the real API
 // with, and the real `client.ts` still does the parsing, the paging and the retries.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -26,7 +26,7 @@ import {
   syncWalletNow,
 } from "./sync";
 
-const FIXTURES = join(process.cwd(), "tests/fixtures/wallet");
+const FIXTURES = join(process.cwd(), "test/fixtures/wallet");
 const fixture = (name: string): { [key: string]: unknown } =>
   JSON.parse(readFileSync(join(FIXTURES, name), "utf8"));
 

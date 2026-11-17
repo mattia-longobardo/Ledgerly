@@ -48,12 +48,16 @@ describe("the map covers the repository", () => {
     expect(orphans).toEqual([]);
   });
 
-  it("every spec is in one flow, and the flows of the map exist", () => {
+  it("every spec is in the folder of one flow, and the flows of the map exist", () => {
     const specs = tracked.flatMap((file) => /^tests\/e2e\/(.+)\.spec\.ts$/.exec(file)?.[1] ?? []);
-    for (const spec of specs) {
-      expect(FLOWS.filter((flow) => flow.specs.includes(spec)).length, spec).toBe(1);
+    const listed = FLOWS.flatMap((flow) =>
+      [...flow.specs, ...(flow.screens ?? [])].map((spec) => `${flow.id}/${spec}`),
+    );
+    expect(specs.sort()).toEqual(listed.sort());
+    for (const flow of FLOWS) {
+      for (const spec of flow.screens ?? []) expect(CROSS_CUTTING, `${flow.id}/${spec}`).toContain(spec);
+      for (const spec of flow.specs) expect(CROSS_CUTTING, `${flow.id}/${spec}`).not.toContain(spec);
     }
-    for (const flow of FLOWS) for (const spec of flow.specs) expect(specs, flow.id).toContain(spec);
     for (const row of MODULES) {
       for (const flow of row.flows ?? []) expect(flowIds.has(flow), `${row.id}: ${flow}`).toBe(true);
       for (const user of row.usedBy ?? []) {
@@ -63,6 +67,16 @@ describe("the map covers the repository", () => {
         expect(known, `${row.id}: ${user}`).toBe(true);
       }
     }
+  });
+
+  it("the folder of a flow holds its specs only, and what they share is in _shared", () => {
+    const loose = tracked.filter(
+      (file) =>
+        file.startsWith("tests/e2e/") &&
+        !file.startsWith("tests/e2e/_shared/") &&
+        !/^tests\/e2e\/[^/]+\/[^/]+\.spec\.ts$/.test(file),
+    );
+    expect(loose).toEqual([]);
   });
 
   it("the specs with a test for the site only are the ones the map names", () => {
@@ -121,59 +135,6 @@ describe("Used by", () => {
   });
 });
 
-describe("the screens of a flow", () => {
-  // The titles Playwright matches `-g` against, read once from the suite itself.
-  const listed = JSON.parse(
-    execFileSync(
-      "npx",
-      [
-        "playwright",
-        "test",
-        "-c",
-        "playwright.preview.config.ts",
-        "--list",
-        "--reporter=json",
-        ...CROSS_CUTTING,
-      ],
-      {
-        encoding: "utf8",
-        env: { ...process.env, E2E_BASE_URL: "http://localhost:3999" },
-        maxBuffer: 64 * 1024 * 1024,
-      },
-    ),
-  ) as { suites: Suite[] };
-  interface Suite {
-    title: string;
-    suites?: Suite[];
-    specs?: { title: string; tags: string[]; tests: { projectName: string }[] }[];
-  }
-  const titles: string[] = [];
-  const walk = (suite: Suite, path: string[]) => {
-    for (const spec of suite.specs ?? []) {
-      titles.push([spec.tests[0].projectName, ...path, suite.title, spec.title].join(" "));
-    }
-    for (const child of suite.suites ?? []) walk(child, [...path, suite.title]);
-  };
-  for (const suite of listed.suites) walk(suite, []);
-
-  it("every filter finds a screen", () => {
-    // The listing worked: 363 screens today, after Funds left the four widths for one screen of a kind.
-    expect(titles.length).toBeGreaterThan(300);
-    for (const flow of FLOWS) {
-      if (flow.screens === undefined) continue;
-      expect(
-        titles.some((title) => new RegExp(flow.screens!).test(title)),
-        flow.id,
-      ).toBe(true);
-    }
-  });
-
-  it("every screen of the cross-cutting specs belongs to a flow", () => {
-    const filters = FLOWS.flatMap((flow) => (flow.screens ? [new RegExp(flow.screens)] : []));
-    expect(titles.filter((title) => !filters.some((filter) => filter.test(title)))).toEqual([]);
-  });
-});
-
 describe("the selection", () => {
   it("a file outside the map and a critical file start the full suite", () => {
     expect(select(["somewhere/new.ts"]).full).toEqual(["somewhere/new.ts: outside the map"]);
@@ -213,30 +174,45 @@ describe("the selection", () => {
     expect(selection.flows).toEqual([]);
   });
 
-  it("the common interface starts every screen", () => {
-    const selection = select(["src/ui/modal.tsx"]);
-    expect(selection.flows).toContain("screens");
-    expect(commands(selection).before.join("\n")).toContain(CROSS_CUTTING.join(" "));
+  it("the common interface and the engines of the checks start every screen", () => {
+    for (const file of ["src/ui/modal.tsx", "tests/e2e/_shared/a11y.ts"]) {
+      const selection = select([file]);
+      expect(selection.flows, file).toContain("screens");
+      expect(commands(selection).before, file).toContain(
+        "npx playwright test -c playwright.preview.config.ts a11y.spec.ts keyboard.spec.ts mobile.spec.ts",
+      );
+    }
   });
 
-  it("a cross-cutting spec runs whole only when no module changed with it", () => {
-    expect(select(["tests/e2e/a11y.spec.ts"]).flows).toEqual(["screens"]);
-    const withModule = select(["tests/e2e/a11y.spec.ts", "src/modules/pockets/service.ts"]);
-    expect(withModule.flows).not.toContain("screens");
-    expect(withModule.screens).toEqual(["pockets"]);
+  it("a changed spec starts the folder of its flow, and nothing else", () => {
+    const selection = select(["tests/e2e/pockets/a11y.spec.ts"]);
+    expect(selection.flows).toEqual(["pockets"]);
+    expect(commands(selection).before).toContain(
+      "npx playwright test -c playwright.preview.config.ts tests/e2e/pockets/",
+    );
+  });
+
+  it("a module runs the folder of its flow, and the journeys alone of the flows that use it", () => {
+    const { before } = commands(select(["src/modules/timeoff/rules.ts"]));
+    expect(before).toContain(
+      "npx playwright test -c playwright.preview.config.ts tests/e2e/timeoff/ " +
+        "connections/connections.spec.ts connections/plugins.spec.ts connections/schedule.spec.ts",
+    );
   });
 
   it("the tests for the site stay under the limit of password sign-ins", () => {
     // Two failed on the site when one command spent six sign-ins in forty seconds.
     expect(siteCommands(Object.keys(SITE_ONLY))).toEqual([
-      "npx playwright test auth two-factor -g @site",
+      "npx playwright test auth/auth.spec.ts auth/two-factor.spec.ts -g @site",
       "sleep 60",
-      "npx playwright test preferences mobile security mcp currency investments-service plugins -g @site",
+      "npx playwright test auth/preferences.spec.ts shell/mobile.spec.ts api/security.spec.ts " +
+        "api/mcp.spec.ts accounts/currency.spec.ts investments/investments-service.spec.ts " +
+        "connections/plugins.spec.ts -g @site",
     ]);
-    expect(siteCommands(["plugins", "auth", "expenses"])).toEqual([
-      "npx playwright test auth plugins -g @site",
+    expect(siteCommands(["connections/plugins", "auth/auth", "transactions/expenses"])).toEqual([
+      "npx playwright test auth/auth.spec.ts connections/plugins.spec.ts -g @site",
     ]);
-    expect(siteCommands(["expenses"])).toEqual([]);
+    expect(siteCommands(["transactions/expenses"])).toEqual([]);
   });
 
   it("docs alone start nothing but the checks that always run", () => {

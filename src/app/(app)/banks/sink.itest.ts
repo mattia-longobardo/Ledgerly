@@ -45,7 +45,7 @@ import { bankSink } from "./sink";
 // The whole way of a bank's data, with everything real but the plugin: the runtime, the port's
 // adapter and the accounts' and transactions' own services, on the test database. The plugin's
 // answers are the contract's; the reading of a real bank is the anonymous fixture
-// `tests/fixtures/plugins/enablebanking-reading.json` (names, numbers, amounts and texts are
+// `test/fixtures/plugins/enablebanking-reading.json` (names, numbers, amounts and texts are
 // shapes only).
 
 const PLUGIN = "enablebanking";
@@ -81,7 +81,7 @@ interface Fixture {
   transactions: SyncResponse["transactions"];
 }
 const REAL: Fixture = JSON.parse(
-  readFileSync(join(process.cwd(), "tests/fixtures/plugins/enablebanking-reading.json"), "utf8"),
+  readFileSync(join(process.cwd(), "test/fixtures/plugins/enablebanking-reading.json"), "utf8"),
 );
 const REAL_ANSWER: SyncResponse = syncResponseSchema.parse({
   accounts: REAL.balances,

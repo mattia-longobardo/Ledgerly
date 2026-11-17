@@ -7,8 +7,8 @@ import {
   MARCH,
   MARCH_UNKNOWN_CODE,
   THIRTEENTH,
-} from "../../../../tests/fixtures/payroll/samples";
-import { twinPdf, type TwinPayslip } from "../../../../tests/fixtures/payroll/twin";
+} from "../../../../test/fixtures/payroll/samples";
+import { twinPdf, type TwinPayslip } from "../../../../test/fixtures/payroll/twin";
 import { REPLY_TEAMSYSTEM_CODES } from "../rules";
 import { assemble } from "./assemble";
 import { hasBlockingFailure } from "./checks";

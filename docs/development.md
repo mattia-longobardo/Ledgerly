@@ -84,9 +84,10 @@ CREATE DATABASE ledgerly_4_test OWNER ledgerly;
 Before the run, `scripts/seed-e2e.ts` creates test users on `@example.test` with invented data.
 After the run, it deletes them and all their data. The tests never touch other users.
 
-- `tests/e2e/a11y.spec.ts` checks every screen at 1440 and 400 px: no horizontal scroll, no text
-  overflow, targets of at least 24 × 24 px, no accessibility errors (WCAG 2.1 AA; the rules about
-  colour in both themes).
-  When you add a screen, add it to this list in the same commit.
-- `tests/e2e/keyboard.spec.ts` uses the whole app with the keyboard only.
+- The specs are in one folder per flow, `tests/e2e/<flow>/` (docs/testing.md, "The E2E flows").
+- `tests/e2e/<flow>/a11y.spec.ts` checks every screen of the flow at 1440 and 400 px: no
+  horizontal scroll, no text overflow, targets of at least 24 × 24 px, no accessibility errors
+  (WCAG 2.1 AA; the rules about colour in both themes). When you add a screen, add it to the list
+  of its flow in the same commit.
+- `tests/e2e/<flow>/keyboard.spec.ts` uses the flow with the keyboard only.
 - Flows that need a real mailbox or an Authentik login are not tested end to end.

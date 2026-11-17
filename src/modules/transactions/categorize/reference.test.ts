@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import reference from "../../../../tests/fixtures/categories/reference.json";
+import reference from "../../../../test/fixtures/categories/reference.json";
 import { type CascadeMovement, decide, type Knowledge } from "./cascade";
 import { featuresOf, memoryKey } from "./text";
 

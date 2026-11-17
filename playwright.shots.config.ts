@@ -8,7 +8,7 @@
 // invented payslips, an invented pension fund. **No screenshot in this repository ever shows a
 // real person's money**, and the user it shows is deleted when the run ends.
 import { defineConfig, devices } from "@playwright/test";
-import { BASE_URL } from "./tests/e2e/env";
+import { BASE_URL } from "./tests/e2e/_shared/env";
 
 export default defineConfig({
   testDir: "./tests/shots",
@@ -16,8 +16,8 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   reporter: "list",
-  globalSetup: "./tests/e2e/global-setup.ts",
-  globalTeardown: "./tests/e2e/global-teardown.ts",
+  globalSetup: "./tests/e2e/_shared/global-setup.ts",
+  globalTeardown: "./tests/e2e/_shared/global-teardown.ts",
   use: {
     baseURL: BASE_URL,
     locale: "en-US",

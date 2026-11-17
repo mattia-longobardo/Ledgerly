@@ -31,7 +31,7 @@ import {
   updateManual,
 } from "./manual";
 
-const FIXTURES = join(process.cwd(), "tests/fixtures/wallet");
+const FIXTURES = join(process.cwd(), "test/fixtures/wallet");
 const fixture = (name: string): { [key: string]: unknown } =>
   JSON.parse(readFileSync(join(FIXTURES, name), "utf8"));
 

@@ -26,7 +26,7 @@ Presenza nei dati di produzione (lettura in sola lettura, solo conteggi):
 - `A.P.` e `GOD.` sono presenti solo in una parte delle righe (campo vuoto quando il valore è zero).
 - `MAT.` è il **progressivo dell'anno**: cresce ogni mese e riparte a gennaio. La differenza tra due mesi consecutivi è la maturazione del mese. Le differenze hanno 2 soli valori distinti per tipo (arrotondamento): la maturazione mensile è costante.
 - `permit`: i campi esistono, nessuna riga in produzione.
-- I documenti di prova (`tests/fixtures/payroll/samples.ts`) hanno gli stessi 4 campi per ferie e ROL, in ore.
+- I documenti di prova (`test/fixtures/payroll/samples.ts`) hanno gli stessi 4 campi per ferie e ROL, in ore.
 
 Conclusione: la maturazione mensile **è già nel database**. Oggi la usa solo `payroll`, per riconoscere un permesso come ROL (`parse/leave.ts`, `confirmedBy`).
 

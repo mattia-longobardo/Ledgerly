@@ -22,8 +22,8 @@ import { deleteFolder, ensureBucket } from "@/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../test/fixtures";
 import { addVoluntaryContribution, payrollFund as fundFedByPayslip } from "../../../../test/funds";
-import { APRIL, MARCH, MARCH_REPRINT, THIRTEENTH } from "../../../../tests/fixtures/payroll/samples";
-import { twinPdf, type TwinPayslip } from "../../../../tests/fixtures/payroll/twin";
+import { APRIL, MARCH, MARCH_REPRINT, THIRTEENTH } from "../../../../test/fixtures/payroll/samples";
+import { twinPdf, type TwinPayslip } from "../../../../test/fixtures/payroll/twin";
 import { fundDetail } from "../queries";
 import { funds, pensionCompetences } from "../schema";
 import {

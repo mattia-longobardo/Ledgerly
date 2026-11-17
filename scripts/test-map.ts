@@ -1,8 +1,8 @@
 // scripts/test-map.ts — which tests a changed file starts (docs/testing.md; `test-policy` §1, §4, §6).
 //
 // The map is data: `MODULES` (changed files → module → its integration tests, its E2E flows and the
-// modules that use it), `FLOWS` (one E2E flow → its specs and its screens in the cross-cutting
-// specs) and `CRITICAL` (shared code: the full suite). `scripts/test-select.ts` reads a diff with
+// modules that use it), `FLOWS` (one E2E flow → its folder `tests/e2e/<flow>/`: the specs of its
+// journeys and its pieces of the checks every flow has) and `CRITICAL` (shared code: the full suite). `scripts/test-select.ts` reads a diff with
 // it; `src/test-map.test.ts` holds it to the tree — every file of the repository is in a row or in
 // the critical list, every test belongs to a module or a flow, and a module that imports another
 // one is in its "Used by". The table of docs/testing.md is printed from here.
@@ -26,36 +26,36 @@ export interface Module {
 }
 
 export interface Flow {
+  /** The flow's folder too: `tests/e2e/<id>/`. */
   id: string;
-  /** The spec files of the flow, in `tests/e2e/`, without `.spec.ts`. */
+  /** The specs of the flow's own journeys, in its folder, without `.spec.ts`. */
   specs: string[];
-  /** The flow's screens in `a11y`, `keyboard` and `mobile`: a regular expression for `-g`. */
-  screens?: string;
+  /** Its pieces of the checks every flow has (`CROSS_CUTTING`), in its folder, without `.spec.ts`. */
+  screens?: string[];
 }
 
-/** The specs that measure every screen: a flow runs them through its `screens` filter. */
+/**
+ * The checks every flow has a piece of: the layout and accessibility of its screens, the keyboard,
+ * the phone. Their engines are in `tests/e2e/_shared/`.
+ */
 export const CROSS_CUTTING = ["a11y", "keyboard", "mobile"];
 
 export const FLOWS: Flow[] = [
   {
     id: "accounts",
     specs: ["accounts", "currency", "account-switch"],
-    screens: "/accounts|new account dialog|as layout / at|sortable table",
+    screens: ["a11y", "keyboard"],
   },
   {
     id: "transactions",
     specs: ["expenses", "manual-movement", "manual-send", "wide"],
-    screens: "/expenses \\(a manual|as layout /expenses|transaction dialog|expenses on a phone|row menu",
+    screens: CROSS_CUTTING,
   },
-  {
-    id: "categories",
-    specs: ["categories", "review", "source-categories"],
-    screens: "/settings/categories|/expenses/review|/expenses \\(automatic|as review|category chooser",
-  },
-  { id: "budgets", specs: ["budgets"], screens: "/budgets|budgets on a phone" },
-  { id: "pockets", specs: ["pockets"], screens: "/pockets|pockets on a phone" },
-  { id: "subscriptions", specs: ["subscriptions"], screens: "/subscriptions|subscriptions on a phone" },
-  { id: "interests", specs: ["interests"], screens: "/interests|interests on a phone" },
+  { id: "categories", specs: ["categories", "review", "source-categories"], screens: ["a11y"] },
+  { id: "budgets", specs: ["budgets"], screens: ["a11y", "mobile"] },
+  { id: "pockets", specs: ["pockets"], screens: ["a11y", "mobile"] },
+  { id: "subscriptions", specs: ["subscriptions"], screens: ["a11y", "mobile"] },
+  { id: "interests", specs: ["interests"], screens: ["a11y"] },
   {
     id: "funds",
     specs: [
@@ -67,46 +67,22 @@ export const FLOWS: Flow[] = [
       "funds-settings",
       "funds-tabs",
     ],
-    screens:
-      "/funds|fee dialog|record contribution dialog|source dialog|value dialog of a fund|[Ff]unds? |a fund",
+    screens: CROSS_CUTTING,
   },
   {
     id: "investments",
     specs: ["investments", "investments-home", "investments-service"],
-    screens:
-      "/investments|connect (Binance|eToro) dialog|add manual account dialog|replace key dialog|" +
-      "disconnect dialog|as layout the update value dialog at|period picker of Investments|" +
-      "service|Positions",
+    screens: ["a11y", "keyboard"],
   },
-  { id: "payroll", specs: ["payroll"], screens: "/payroll|rename payslip dialog" },
-  {
-    id: "timeoff",
-    specs: ["timeoff", "holidays"],
-    screens: "/timeoff|leave panel|[Tt]ime off",
-  },
-  {
-    id: "connections",
-    specs: ["connections", "plugins", "schedule"],
-    screens:
-      "/settings/integrations|/banks|from a connection|bank credentials dialog|sync schedule dialog|" +
-      "replace key dialog|disconnect dialog",
-  },
-  {
-    id: "auth",
-    specs: ["auth", "two-factor", "preferences"],
-    screens: "/sign-in|/forgot-password|/settings/profile|/settings/security",
-  },
-  { id: "admin", specs: ["admin"], screens: "/settings/(users|server)|/settings/data" },
+  { id: "payroll", specs: ["payroll"], screens: ["a11y"] },
+  { id: "timeoff", specs: ["timeoff", "holidays"], screens: CROSS_CUTTING },
+  { id: "connections", specs: ["connections", "plugins", "schedule"], screens: ["a11y"] },
+  { id: "auth", specs: ["auth", "two-factor", "preferences"], screens: ["a11y"] },
+  { id: "admin", specs: ["admin"], screens: ["a11y"] },
   { id: "api", specs: ["security", "mcp"] },
-  {
-    id: "shell",
-    specs: ["install", "legal"],
-    screens:
-      "/privacy|/terms|command palette|mobile (More sheet|navigation bar)|phones get bottom tabs|" +
-      "sidebar, the page|a dialog takes the focus",
-  },
-  // Every screen, at every width: the common interface changed.
-  { id: "screens", specs: CROSS_CUTTING },
+  { id: "shell", specs: ["install", "legal"], screens: CROSS_CUTTING },
+  // Every screen of every flow: the common interface, or an engine of the checks, changed.
+  { id: "screens", specs: [] },
 ];
 
 const page = (name: string) => `src/app/(app)/${name}/**`;
@@ -142,7 +118,7 @@ export const MODULES: Module[] = [
   },
   {
     id: "transactions",
-    files: ["src/modules/transactions/**", page("expenses"), "tests/fixtures/categories/**"],
+    files: ["src/modules/transactions/**", page("expenses"), "test/fixtures/categories/**"],
     integration: ["src/modules/transactions", "src/app/(app)/expenses"],
     flows: ["transactions", "categories"],
     usedBy: [
@@ -230,7 +206,7 @@ export const MODULES: Module[] = [
   },
   {
     id: "payroll",
-    files: ["src/modules/payroll/**", page("payroll"), "tests/fixtures/payroll/**"],
+    files: ["src/modules/payroll/**", page("payroll"), "test/fixtures/payroll/**"],
     integration: ["src/modules/payroll"],
     flows: ["payroll"],
     usedBy: ["funds", "timeoff", "export", "imports", "jobs", "e2e:funds"],
@@ -276,8 +252,8 @@ export const MODULES: Module[] = [
       page("settings/integrations"),
       "src/app/plugin-wiring.ts",
       "src/app/api/v1/plugins/**",
-      "tests/fixtures/plugins/**",
-      "tests/fixtures/wallet/**",
+      "test/fixtures/plugins/**",
+      "test/fixtures/wallet/**",
     ],
     integration: ["src/platform/integrations", "src/platform/plugins", "src/app/(app)/banks"],
     flows: ["connections"],
@@ -436,8 +412,14 @@ export const MODULES: Module[] = [
   },
   { id: "perf", files: ["scripts/perf-*", "baselines/performance.json"], usedBy: ["perf"] },
   // The seed gives every flow its users and its data. Each release adds a user for its own flow:
-  // the functional specs of every flow run, and the screens of the changed modules only.
-  { id: "e2e-data", files: ["scripts/seed-e2e.ts", "tests/e2e/env.ts"], usedBy: ["e2e:*"] },
+  // the journeys of every flow run, and the screens of the changed modules only.
+  { id: "e2e-data", files: ["scripts/seed-e2e.ts", "tests/e2e/_shared/env.ts"], usedBy: ["e2e:*"] },
+  // The engines of the checks every flow has: every flow's piece of them runs.
+  {
+    id: "screen-checks",
+    files: ["tests/e2e/_shared/a11y.ts", "tests/e2e/_shared/keyboard.ts"],
+    flows: ["screens"],
+  },
 
   // ——— Files with no test of their own beyond the checks that always run ———
   {
@@ -474,12 +456,11 @@ export const MODULES: Module[] = [
     id: "docs",
     files: ["docs/**", "*.md", "LICENSE", ".env.example", "tests/shots/**", "playwright.shots.config.ts"],
   },
-  // A changed spec starts its own flow. A release adds its screens to the cross-cutting specs:
-  // they run through the screens of the changed modules, and whole when no module changed.
-  ...FLOWS.map((flow) => ({
+  // A changed file of a flow's folder starts the whole folder: its journeys and its screens.
+  ...FLOWS.filter((flow) => flow.id !== "screens").map((flow) => ({
     id: `spec-${flow.id}`,
-    files: flow.specs.map((spec) => `tests/e2e/${spec}.spec.ts`),
-    usedBy: flow.id === "screens" ? [] : [`e2e:${flow.id}`],
+    files: [`tests/e2e/${flow.id}/**`],
+    flows: [flow.id],
   })),
 ];
 
@@ -538,11 +519,11 @@ export const CRITICAL: { files: string[]; why: string }[] = [
   {
     why: "every test stands on it",
     files: [
-      "tests/e2e/helpers.ts",
-      "tests/e2e/global-setup.ts",
-      "tests/e2e/global-teardown.ts",
-      "tests/e2e/homelab.ts",
-      "tests/e2e/totp.ts",
+      "tests/e2e/_shared/helpers.ts",
+      "tests/e2e/_shared/global-setup.ts",
+      "tests/e2e/_shared/global-teardown.ts",
+      "tests/e2e/_shared/homelab.ts",
+      "tests/e2e/_shared/totp.ts",
       "test/*",
     ],
   },
@@ -642,15 +623,15 @@ export const modulesOf = (file: string) =>
  * client, and the `@smoke` tests spend one.
  */
 export const SITE_ONLY: Record<string, number> = {
-  auth: 2,
-  "two-factor": 2,
-  preferences: 1,
-  mobile: 1,
-  security: 0,
-  mcp: 0,
-  currency: 0,
-  "investments-service": 0,
-  plugins: 0,
+  "auth/auth": 2,
+  "auth/two-factor": 2,
+  "auth/preferences": 1,
+  "shell/mobile": 1,
+  "api/security": 0,
+  "api/mcp": 0,
+  "accounts/currency": 0,
+  "investments/investments-service": 0,
+  "connections/plugins": 0,
 };
 /** The password sign-ins one command may spend on the site. */
 export const SIGN_INS = 4;
@@ -662,9 +643,9 @@ export interface Selection {
   modules: Map<string, string[]>;
   /** `"*"` for every integration test, or the paths of the selected modules. */
   integration: "*" | string[];
-  /** The flows whose specs run: the flows of the changed modules and of the modules that use them. */
+  /** The flows whose journeys run: the flows of the changed modules and of the modules that use them. */
   flows: string[];
-  /** The flows of the changed modules: their screens run in `a11y`, `keyboard` and `mobile` too. */
+  /** The flows of the changed modules: their whole folder runs, their screens too. */
   screens: string[];
   perf: boolean;
 }
@@ -725,7 +706,6 @@ export function select(
       else for (const path of byId.get(user)!.integration ?? []) integration.add(path);
     }
   }
-  if (chosen.has("spec-screens") && screens.size === 0) flows.add("screens");
   const inOrder = (ids: ReadonlySet<string>) => FLOWS.map((flow) => flow.id).filter((id) => ids.has(id));
   return {
     full,

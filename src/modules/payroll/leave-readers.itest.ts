@@ -11,8 +11,8 @@ import type { Ctx } from "@/platform/context";
 import { deleteFolder, ensureBucket } from "@/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
-import { APRIL, MARCH, MARCH_REPRINT } from "../../../tests/fixtures/payroll/samples";
-import { twinPdf, type TwinPayslip } from "../../../tests/fixtures/payroll/twin";
+import { APRIL, MARCH, MARCH_REPRINT } from "../../../test/fixtures/payroll/samples";
+import { twinPdf, type TwinPayslip } from "../../../test/fixtures/payroll/twin";
 import {
   applyPayslip,
   leaveEventsOf,

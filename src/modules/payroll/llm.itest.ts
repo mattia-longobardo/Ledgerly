@@ -16,8 +16,8 @@ import {
 import { deleteFolder, ensureBucket } from "@/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
-import { MARCH } from "../../../tests/fixtures/payroll/samples";
-import { twinPdf } from "../../../tests/fixtures/payroll/twin";
+import { MARCH } from "../../../test/fixtures/payroll/samples";
+import { twinPdf } from "../../../test/fixtures/payroll/twin";
 import { fillWithLlm } from "./llm";
 import { decideField, PayrollError, processPayslip, uploadPayslip, verifyPayslip } from "./service";
 

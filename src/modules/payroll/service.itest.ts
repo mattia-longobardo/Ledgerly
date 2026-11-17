@@ -25,8 +25,8 @@ import {
   MARCH_REPRINT,
   MARCH_UNKNOWN_CODE,
   THIRTEENTH,
-} from "../../../tests/fixtures/payroll/samples";
-import { twinPdf, type TwinPayslip } from "../../../tests/fixtures/payroll/twin";
+} from "../../../test/fixtures/payroll/samples";
+import { twinPdf, type TwinPayslip } from "../../../test/fixtures/payroll/twin";
 import { leaveBalanceSnapshots, payrollLeaveEvents, payslips } from "./schema";
 import {
   applyPayslip,

@@ -30,7 +30,7 @@ import {
  * reaches the mappers as the digits the file holds — the whole point of the pipeline under test.
  */
 function fixture(name: string): unknown {
-  return parseJsonPreservingNumbers(readFileSync(join(process.cwd(), "tests/fixtures/wallet", name), "utf8"));
+  return parseJsonPreservingNumbers(readFileSync(join(process.cwd(), "test/fixtures/wallet", name), "utf8"));
 }
 
 function accountsFixture(): WalletAccountPayload[] {

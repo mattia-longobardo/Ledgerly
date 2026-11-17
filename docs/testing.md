@@ -42,14 +42,14 @@ module of each changed file, plus its "Used by". A file can be in more than one 
 is in the row of its module and in the row `data`): all its rows count.
 
 - A module in "Used by" adds its integration tests. A flow in "Used by" (`e2e:<flow>`) adds the
-  specs of that flow.
-- The flows in the column "Command" are the module's own flows: their specs run, and their
-  screens run in the cross-cutting specs `a11y`, `keyboard` and `mobile`.
+  journeys of that flow: its specs, without its screens.
+- The flows in the column "Command" are the module's own flows: their whole folder runs, the
+  journeys and the flow's screens in `a11y`, `keyboard` and `mobile`.
 
 | Changed files | Module | Command | Used by |
 |---|---|---|---|
 | `src/modules/accounts/**`, `src/app/(app)/accounts/**`, `src/app/(app)/page.tsx`, `src/platform/iban*` | `accounts` | `sh scripts/test-integration.sh 'src/modules/accounts' 'src/app/(app)/accounts'`<br>flow `accounts` | `transactions`, `budgets`, `funds`, `interests`, `investments`, `pockets`, `subscriptions`, `api`, `jobs`, `export`, `connections`, `e2e:connections`, `e2e:transactions`, `e2e:investments`, `e2e:funds`, `e2e:budgets`, `e2e:subscriptions`, `e2e:api`, `e2e:categories` |
-| `src/modules/transactions/**`, `src/app/(app)/expenses/**`, `tests/fixtures/categories/**` | `transactions` | `sh scripts/test-integration.sh 'src/modules/transactions' 'src/app/(app)/expenses'`<br>flow `transactions`<br>flow `categories` | `categories`, `subscriptions`, `connections`, `budgets`, `interests`, `jobs`, `accounts`, `funds`, `investments`, `pockets`, `api`, `export`, `e2e:connections`, `e2e:interests`, `e2e:accounts`, `e2e:subscriptions` |
+| `src/modules/transactions/**`, `src/app/(app)/expenses/**`, `test/fixtures/categories/**` | `transactions` | `sh scripts/test-integration.sh 'src/modules/transactions' 'src/app/(app)/expenses'`<br>flow `transactions`<br>flow `categories` | `categories`, `subscriptions`, `connections`, `budgets`, `interests`, `jobs`, `accounts`, `funds`, `investments`, `pockets`, `api`, `export`, `e2e:connections`, `e2e:interests`, `e2e:accounts`, `e2e:subscriptions` |
 | `src/app/(app)/settings/categories/**` | `categories` | `sh scripts/test-integration.sh 'src/app/(app)/settings/categories'`<br>flow `categories` | — |
 | `src/modules/budgets/**`, `src/app/(app)/budgets/**` | `budgets` | `sh scripts/test-integration.sh 'src/modules/budgets'`<br>flow `budgets` | `jobs`, `categories`, `export`, `api`, `e2e:categories`, `e2e:pockets`, `e2e:accounts` |
 | `src/modules/pockets/**`, `src/app/(app)/pockets/**` | `pockets` | `sh scripts/test-integration.sh 'src/modules/pockets'`<br>flow `pockets` | `export`, `jobs`, `e2e:accounts`, `e2e:shell` |
@@ -57,11 +57,11 @@ is in the row of its module and in the row `data`): all its rows count.
 | `src/modules/interests/**`, `src/app/(app)/interests/**` | `interests` | `sh scripts/test-integration.sh 'src/modules/interests'`<br>flow `interests` | `pockets`, `funds`, `export`, `jobs`, `accounts`, `e2e:accounts` |
 | `src/modules/funds/**`, `src/app/(app)/funds/**` | `funds` | `sh scripts/test-integration.sh 'src/modules/funds'`<br>flow `funds` | `investments`, `payroll`, `export`, `jobs`, `e2e:shell` |
 | `src/modules/investments/**`, `src/app/(app)/investments/**`, `src/platform/integrations/investments/**`, `src/platform/integrations/ccxt/**`, `src/platform/integrations/etoro/**`, `test/fixtures/investments/**` | `investments` | `sh scripts/test-integration.sh 'src/modules/investments'`<br>flow `investments` | `funds`, `connections`, `api`, `accounts`, `export`, `e2e:funds`, `e2e:connections`, `e2e:accounts` |
-| `src/modules/payroll/**`, `src/app/(app)/payroll/**`, `tests/fixtures/payroll/**` | `payroll` | `sh scripts/test-integration.sh 'src/modules/payroll'`<br>flow `payroll` | `funds`, `timeoff`, `export`, `imports`, `jobs`, `e2e:funds` |
+| `src/modules/payroll/**`, `src/app/(app)/payroll/**`, `test/fixtures/payroll/**` | `payroll` | `sh scripts/test-integration.sh 'src/modules/payroll'`<br>flow `payroll` | `funds`, `timeoff`, `export`, `imports`, `jobs`, `e2e:funds` |
 | `src/modules/imports/**` | `imports` | `sh scripts/test-integration.sh 'src/modules/imports'` | `payroll`, `funds`, `api`, `export`, `jobs`, `e2e:payroll` |
 | `src/modules/timeoff/**`, `src/app/(app)/timeoff/**`, `src/platform/holidays/**` | `timeoff` | `sh scripts/test-integration.sh 'src/modules/timeoff' 'src/platform/holidays'`<br>flow `timeoff` | `connections`, `export`, `jobs`, `e2e:connections` |
 | `src/modules/users/**`, `src/app/(auth)/**`, `src/app/(app)/settings/profile/**`, `src/app/(app)/settings/security/**`, `src/app/(app)/settings/users/**` | `users` | `sh scripts/test-integration.sh 'src/modules/users'`<br>flow `auth`<br>flow `admin` | every integration test, `e2e:timeoff` |
-| `src/platform/integrations/*`, `src/platform/integrations/wallet/**`, `src/platform/integrations/trek/**`, `src/platform/plugins/**`, `src/platform/plugin-config*`, `plugins/**`, `src/app/(app)/banks/**`, `src/app/(app)/settings/integrations/**`, `src/app/plugin-wiring.ts`, `src/app/api/v1/plugins/**`, `tests/fixtures/plugins/**`, `tests/fixtures/wallet/**` | `connections` | `sh scripts/test-integration.sh 'src/platform/integrations' 'src/platform/plugins' 'src/app/(app)/banks'`<br>flow `connections` | `accounts`, `transactions`, `jobs`, `investments`, `interests`, `timeoff`, `categories`, `admin`, `e2e:accounts`, `e2e:transactions`, `e2e:investments`, `e2e:admin`, `e2e:timeoff`, `e2e:categories` |
+| `src/platform/integrations/*`, `src/platform/integrations/wallet/**`, `src/platform/integrations/trek/**`, `src/platform/plugins/**`, `src/platform/plugin-config*`, `plugins/**`, `src/app/(app)/banks/**`, `src/app/(app)/settings/integrations/**`, `src/app/plugin-wiring.ts`, `src/app/api/v1/plugins/**`, `test/fixtures/plugins/**`, `test/fixtures/wallet/**` | `connections` | `sh scripts/test-integration.sh 'src/platform/integrations' 'src/platform/plugins' 'src/app/(app)/banks'`<br>flow `connections` | `accounts`, `transactions`, `jobs`, `investments`, `interests`, `timeoff`, `categories`, `admin`, `e2e:accounts`, `e2e:transactions`, `e2e:investments`, `e2e:admin`, `e2e:timeoff`, `e2e:categories` |
 | `src/platform/api/**`, `src/platform/mcp/**`, `src/app/api/v1/[[...route]]/**`, `src/app/api/mcp/**`, `src/app/.well-known/**`, `src/baselines.itest.ts`, `baselines/numbers/**`, `baselines/contract/**` | `api` | `sh scripts/test-integration.sh 'src/platform/api' 'src/platform/mcp' 'src/baselines.itest.ts'`<br>flow `api` | `investments`, `accounts`, `transactions`, `imports`, `npm run perf` |
 | `src/platform/jobs/**`, `src/app/api/jobs/**`, `src/app/api/health/**`, `src/app/api/metrics/**`, `cron/**` | `jobs` | `sh scripts/test-integration.sh 'src/platform/jobs'` | every integration test, `e2e:connections`, `e2e:admin`, `e2e:accounts` |
 | `src/platform/settings/**`, `src/app/(app)/settings/server/**`, `src/platform/backup/**`, `src/platform/reports/**` | `admin` | `sh scripts/test-integration.sh 'src/platform/settings' 'src/platform/backup' 'src/platform/reports'`<br>flow `admin` | `payroll`, `jobs`, `api`, `export`, `accounts`, `users`, `e2e:payroll`, `e2e:auth` |
@@ -74,52 +74,55 @@ is in the row of its module and in the row `data`): all its rows count.
 | `src/ui/**`, `src/app/layout.tsx`, `src/app/(app)/layout.tsx`, `src/app/(app)/settings/layout.tsx`, `src/app/(app)/settings/page.tsx`, `src/app/(app)/settings/settings-tabs.tsx`, `src/app/globals.css`, `src/app/error.tsx`, `src/app/global-error.tsx`, `src/app/not-found.tsx`, `src/app/boundaries.test.tsx`, `src/platform/theme*` | `interface` | — | `e2e:screens`, `e2e:transactions`, `e2e:shell` |
 | `src/app/(legal)/**`, `src/app/manifest.webmanifest/**`, `src/app/*.png`, `src/app/icon.svg`, `src/app/favicon.ico`, `scripts/icons.mjs`, `src/app/(app)/navigation*`, `src/app/(app)/palette-actions.ts`, `src/app/(app)/palette-commands*` | `shell` | flow `shell` | — |
 | `scripts/perf-*`, `baselines/performance.json` | `perf` | — | `npm run perf` |
-| `scripts/seed-e2e.ts`, `tests/e2e/env.ts` | `e2e-data` | — | `e2e:*` |
+| `scripts/seed-e2e.ts`, `tests/e2e/_shared/env.ts` | `e2e-data` | — | `e2e:*` |
+| `tests/e2e/_shared/a11y.ts`, `tests/e2e/_shared/keyboard.ts` | `screen-checks` | flow `screens` | — |
 | `scripts/release.sh`, `scripts/release-dump.sh`, `scripts/numbers-*`, `scripts/snapshot-format.ts`, `scripts/on-homelab.sh`, `scripts/preview-on-test.sh`, `scripts/create-*`, `scripts/plugin-probe.ts`, `scripts/modularity.ts`, `scripts/duplication.ts`, `scripts/assertions-diff.ts`, `scripts/source-graph.ts`, `scripts/test-map.ts`, `scripts/test-select.ts`, `src/architecture.test.ts`, `src/tooling.test.ts`, `src/release-script.test.ts`, `src/test-map.test.ts`, `baselines/modularity.json`, `baselines/duplication.json`, `baselines/assertions-exceptions.json`, `eslint.config.mjs`, `.prettierrc.json`, `.prettierignore`, `.gitignore` | `tooling` | — | — |
 | `docs/**`, `*.md`, `LICENSE`, `.env.example`, `tests/shots/**`, `playwright.shots.config.ts` | `docs` | — | — |
-| `tests/e2e/accounts.spec.ts`, `tests/e2e/currency.spec.ts`, `tests/e2e/account-switch.spec.ts` | `spec-accounts` | — | `e2e:accounts` |
-| `tests/e2e/expenses.spec.ts`, `tests/e2e/manual-movement.spec.ts`, `tests/e2e/manual-send.spec.ts`, `tests/e2e/wide.spec.ts` | `spec-transactions` | — | `e2e:transactions` |
-| `tests/e2e/categories.spec.ts`, `tests/e2e/review.spec.ts`, `tests/e2e/source-categories.spec.ts` | `spec-categories` | — | `e2e:categories` |
-| `tests/e2e/budgets.spec.ts` | `spec-budgets` | — | `e2e:budgets` |
-| `tests/e2e/pockets.spec.ts` | `spec-pockets` | — | `e2e:pockets` |
-| `tests/e2e/subscriptions.spec.ts` | `spec-subscriptions` | — | `e2e:subscriptions` |
-| `tests/e2e/interests.spec.ts` | `spec-interests` | — | `e2e:interests` |
-| `tests/e2e/funds.spec.ts`, `tests/e2e/funds-detail.spec.ts`, `tests/e2e/funds-home.spec.ts`, `tests/e2e/funds-new.spec.ts`, `tests/e2e/funds-payslip.spec.ts`, `tests/e2e/funds-settings.spec.ts`, `tests/e2e/funds-tabs.spec.ts` | `spec-funds` | — | `e2e:funds` |
-| `tests/e2e/investments.spec.ts`, `tests/e2e/investments-home.spec.ts`, `tests/e2e/investments-service.spec.ts` | `spec-investments` | — | `e2e:investments` |
-| `tests/e2e/payroll.spec.ts` | `spec-payroll` | — | `e2e:payroll` |
-| `tests/e2e/timeoff.spec.ts`, `tests/e2e/holidays.spec.ts` | `spec-timeoff` | — | `e2e:timeoff` |
-| `tests/e2e/connections.spec.ts`, `tests/e2e/plugins.spec.ts`, `tests/e2e/schedule.spec.ts` | `spec-connections` | — | `e2e:connections` |
-| `tests/e2e/auth.spec.ts`, `tests/e2e/two-factor.spec.ts`, `tests/e2e/preferences.spec.ts` | `spec-auth` | — | `e2e:auth` |
-| `tests/e2e/admin.spec.ts` | `spec-admin` | — | `e2e:admin` |
-| `tests/e2e/security.spec.ts`, `tests/e2e/mcp.spec.ts` | `spec-api` | — | `e2e:api` |
-| `tests/e2e/install.spec.ts`, `tests/e2e/legal.spec.ts` | `spec-shell` | — | `e2e:shell` |
-| `tests/e2e/a11y.spec.ts`, `tests/e2e/keyboard.spec.ts`, `tests/e2e/mobile.spec.ts` | `spec-screens` | — | — |
+| `tests/e2e/accounts/**` | `spec-accounts` | flow `accounts` | — |
+| `tests/e2e/transactions/**` | `spec-transactions` | flow `transactions` | — |
+| `tests/e2e/categories/**` | `spec-categories` | flow `categories` | — |
+| `tests/e2e/budgets/**` | `spec-budgets` | flow `budgets` | — |
+| `tests/e2e/pockets/**` | `spec-pockets` | flow `pockets` | — |
+| `tests/e2e/subscriptions/**` | `spec-subscriptions` | flow `subscriptions` | — |
+| `tests/e2e/interests/**` | `spec-interests` | flow `interests` | — |
+| `tests/e2e/funds/**` | `spec-funds` | flow `funds` | — |
+| `tests/e2e/investments/**` | `spec-investments` | flow `investments` | — |
+| `tests/e2e/payroll/**` | `spec-payroll` | flow `payroll` | — |
+| `tests/e2e/timeoff/**` | `spec-timeoff` | flow `timeoff` | — |
+| `tests/e2e/connections/**` | `spec-connections` | flow `connections` | — |
+| `tests/e2e/auth/**` | `spec-auth` | flow `auth` | — |
+| `tests/e2e/admin/**` | `spec-admin` | flow `admin` | — |
+| `tests/e2e/api/**` | `spec-api` | flow `api` | — |
+| `tests/e2e/shell/**` | `spec-shell` | flow `shell` | — |
 
 ### The E2E flows
 
-One flow is a group of specs with one command. The third column is the command for the screens of
-the flow in the cross-cutting specs. `-c playwright.preview.config.ts` runs against the local
-preview; without it the same command runs against the deployed site.
+One flow is one folder, `tests/e2e/<flow>/`: the specs of its journeys, and its pieces of the
+checks every flow has — `a11y.spec.ts` (its screens), `keyboard.spec.ts`, `mobile.spec.ts`. What
+the folders share is in `tests/e2e/_shared/`: the users and the helpers, and the engines of the
+three checks (`a11y.ts`, `keyboard.ts`). The selection is a filter by folder: no `-g`.
+`-c playwright.preview.config.ts` runs against the local preview; without it the same command
+runs against the deployed site.
 
-| Flow | Command | Its screens in the cross-cutting specs |
+| Flow | The whole flow: its folder | Its journeys alone (a module that uses it changed) |
 |---|---|---|
-| `accounts` | `npx playwright test -c playwright.preview.config.ts accounts currency account-switch` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/accounts\|new account dialog\|as layout / at\|sortable table'` |
-| `transactions` | `npx playwright test -c playwright.preview.config.ts expenses manual-movement manual-send wide` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/expenses \(a manual\|as layout /expenses\|transaction dialog\|expenses on a phone\|row menu'` |
-| `categories` | `npx playwright test -c playwright.preview.config.ts categories review source-categories` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/settings/categories\|/expenses/review\|/expenses \(automatic\|as review\|category chooser'` |
-| `budgets` | `npx playwright test -c playwright.preview.config.ts budgets` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/budgets\|budgets on a phone'` |
-| `pockets` | `npx playwright test -c playwright.preview.config.ts pockets` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/pockets\|pockets on a phone'` |
-| `subscriptions` | `npx playwright test -c playwright.preview.config.ts subscriptions` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/subscriptions\|subscriptions on a phone'` |
-| `interests` | `npx playwright test -c playwright.preview.config.ts interests` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/interests\|interests on a phone'` |
-| `funds` | `npx playwright test -c playwright.preview.config.ts funds funds-detail funds-home funds-new funds-payslip funds-settings funds-tabs` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/funds\|fee dialog\|record contribution dialog\|source dialog\|value dialog of a fund\|[Ff]unds? \|a fund'` |
-| `investments` | `npx playwright test -c playwright.preview.config.ts investments investments-home investments-service` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/investments\|connect (Binance\|eToro) dialog\|add manual account dialog\|replace key dialog\|disconnect dialog\|as layout the update value dialog at\|period picker of Investments\|service\|Positions'` |
-| `payroll` | `npx playwright test -c playwright.preview.config.ts payroll` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/payroll\|rename payslip dialog'` |
-| `timeoff` | `npx playwright test -c playwright.preview.config.ts timeoff holidays` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/timeoff\|leave panel\|[Tt]ime off'` |
-| `connections` | `npx playwright test -c playwright.preview.config.ts connections plugins schedule` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/settings/integrations\|/banks\|from a connection\|bank credentials dialog\|sync schedule dialog\|replace key dialog\|disconnect dialog'` |
-| `auth` | `npx playwright test -c playwright.preview.config.ts auth two-factor preferences` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/sign-in\|/forgot-password\|/settings/profile\|/settings/security'` |
-| `admin` | `npx playwright test -c playwright.preview.config.ts admin` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/settings/(users\|server)\|/settings/data'` |
-| `api` | `npx playwright test -c playwright.preview.config.ts security mcp` | — |
-| `shell` | `npx playwright test -c playwright.preview.config.ts install legal` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile -g '/privacy\|/terms\|command palette\|mobile (More sheet\|navigation bar)\|phones get bottom tabs\|sidebar, the page\|a dialog takes the focus'` |
-| `screens` | `npx playwright test -c playwright.preview.config.ts a11y keyboard mobile` | — |
+| `accounts` | `npx playwright test -c playwright.preview.config.ts tests/e2e/accounts/` | `npx playwright test -c playwright.preview.config.ts accounts/accounts.spec.ts accounts/currency.spec.ts accounts/account-switch.spec.ts` |
+| `transactions` | `npx playwright test -c playwright.preview.config.ts tests/e2e/transactions/` | `npx playwright test -c playwright.preview.config.ts transactions/expenses.spec.ts transactions/manual-movement.spec.ts transactions/manual-send.spec.ts transactions/wide.spec.ts` |
+| `categories` | `npx playwright test -c playwright.preview.config.ts tests/e2e/categories/` | `npx playwright test -c playwright.preview.config.ts categories/categories.spec.ts categories/review.spec.ts categories/source-categories.spec.ts` |
+| `budgets` | `npx playwright test -c playwright.preview.config.ts tests/e2e/budgets/` | `npx playwright test -c playwright.preview.config.ts budgets/budgets.spec.ts` |
+| `pockets` | `npx playwright test -c playwright.preview.config.ts tests/e2e/pockets/` | `npx playwright test -c playwright.preview.config.ts pockets/pockets.spec.ts` |
+| `subscriptions` | `npx playwright test -c playwright.preview.config.ts tests/e2e/subscriptions/` | `npx playwright test -c playwright.preview.config.ts subscriptions/subscriptions.spec.ts` |
+| `interests` | `npx playwright test -c playwright.preview.config.ts tests/e2e/interests/` | `npx playwright test -c playwright.preview.config.ts interests/interests.spec.ts` |
+| `funds` | `npx playwright test -c playwright.preview.config.ts tests/e2e/funds/` | `npx playwright test -c playwright.preview.config.ts funds/funds.spec.ts funds/funds-detail.spec.ts funds/funds-home.spec.ts funds/funds-new.spec.ts funds/funds-payslip.spec.ts funds/funds-settings.spec.ts funds/funds-tabs.spec.ts` |
+| `investments` | `npx playwright test -c playwright.preview.config.ts tests/e2e/investments/` | `npx playwright test -c playwright.preview.config.ts investments/investments.spec.ts investments/investments-home.spec.ts investments/investments-service.spec.ts` |
+| `payroll` | `npx playwright test -c playwright.preview.config.ts tests/e2e/payroll/` | `npx playwright test -c playwright.preview.config.ts payroll/payroll.spec.ts` |
+| `timeoff` | `npx playwright test -c playwright.preview.config.ts tests/e2e/timeoff/` | `npx playwright test -c playwright.preview.config.ts timeoff/timeoff.spec.ts timeoff/holidays.spec.ts` |
+| `connections` | `npx playwright test -c playwright.preview.config.ts tests/e2e/connections/` | `npx playwright test -c playwright.preview.config.ts connections/connections.spec.ts connections/plugins.spec.ts connections/schedule.spec.ts` |
+| `auth` | `npx playwright test -c playwright.preview.config.ts tests/e2e/auth/` | `npx playwright test -c playwright.preview.config.ts auth/auth.spec.ts auth/two-factor.spec.ts auth/preferences.spec.ts` |
+| `admin` | `npx playwright test -c playwright.preview.config.ts tests/e2e/admin/` | `npx playwright test -c playwright.preview.config.ts admin/admin.spec.ts` |
+| `api` | `npx playwright test -c playwright.preview.config.ts tests/e2e/api/` | `npx playwright test -c playwright.preview.config.ts api/security.spec.ts api/mcp.spec.ts` |
+| `shell` | `npx playwright test -c playwright.preview.config.ts tests/e2e/shell/` | `npx playwright test -c playwright.preview.config.ts shell/install.spec.ts shell/legal.spec.ts` |
+| `screens` | `npx playwright test -c playwright.preview.config.ts a11y.spec.ts keyboard.spec.ts mobile.spec.ts` | — |
 
 ### Critical or shared code
 
@@ -130,7 +133,7 @@ A changed file of this list starts the full suite.
 | `package.json`, `package-lock.json`, `Dockerfile`, `.dockerignore`, `entrypoint.sh`, `docker-compose.yml`, `next.config.ts`, `postcss.config.mjs`, `tsconfig.json`, `drizzle.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `playwright.preview.config.ts`, `scripts/copy-pdfjs.mjs`, `scripts/migrate.ts`, `scripts/test-integration.sh`, `src/global.d.ts` | build, runtime and test configuration |
 | `src/proxy*`, `src/instrumentation*`, `src/platform/env*`, `src/platform/context.ts`, `src/platform/auth/**`, `src/app/api/auth/**`, `src/platform/db/client.ts` | every request passes here |
 | `src/platform/money*`, `src/platform/dates*`, `src/platform/format*`, `src/platform/ranges.ts`, `src/platform/i18n/**`, `src/platform/crypto*`, `src/platform/keyring.ts`, `src/platform/version.ts`, `src/platform/mail.ts`, `src/platform/alerts/**`, `src/platform/notifications/**` | used by almost every module |
-| `tests/e2e/helpers.ts`, `tests/e2e/global-setup.ts`, `tests/e2e/global-teardown.ts`, `tests/e2e/homelab.ts`, `tests/e2e/totp.ts`, `test/*` | every test stands on it |
+| `tests/e2e/_shared/helpers.ts`, `tests/e2e/_shared/global-setup.ts`, `tests/e2e/_shared/global-teardown.ts`, `tests/e2e/_shared/homelab.ts`, `tests/e2e/_shared/totp.ts`, `test/*` | every test stands on it |
 
 ### Files that the selection reads from the diff
 
@@ -139,11 +142,12 @@ A changed file of this list starts the full suite.
   `MESSAGES` in `scripts/test-map.ts`). A namespace that is not in the list starts the full suite.
 - `package.json` and `package-lock.json`: critical, except in the commit that closes a release,
   where the version number is the only change.
-- `tests/e2e/a11y.spec.ts`, `keyboard.spec.ts`, `mobile.spec.ts`: a release adds its screens to
-  these files. They run through the screens of the changed modules. They run whole when no module
-  changed with them, and when the common interface changed (row `interface`).
-- `scripts/seed-e2e.ts` and `tests/e2e/env.ts` (row `e2e-data`): each release adds the users of
-  its flow there. The specs of every flow run; the screens of the changed modules only.
+- `tests/e2e/<flow>/**`: a changed spec runs the folder of its flow. A release adds its screens
+  to the `a11y.spec.ts` of its flow, not to another flow's.
+- `tests/e2e/_shared/a11y.ts` and `keyboard.ts` (row `screen-checks`), and the common interface
+  (row `interface`): every flow's `a11y`, `keyboard` and `mobile` run.
+- `scripts/seed-e2e.ts` and `tests/e2e/_shared/env.ts` (row `e2e-data`): each release adds the
+  users of its flow there. The journeys of every flow run; the screens of the changed modules only.
 
 ## The E2E tests, one time, on the local preview
 
@@ -172,10 +176,10 @@ midway can leave data on its user: run `seed` again before the next try.
   the container and in the seed), so a password sign-in, OAuth and the return of a plugin work.
   The seed adds one invented exchange rate when the table has none, never on the site. Each spec
   file that signs in with a password is a client of its own (`previewClient`,
-  `tests/e2e/helpers.ts`): the limit of 5 sign-ins a minute counts for a file, not for the run.
+  `tests/e2e/_shared/helpers.ts`): the limit of 5 sign-ins a minute counts for a file, not for the run.
   There is no red test to expect.
 - **No date written by hand.** A spec takes today and the year from `TODAY`, `THIS_YEAR` and
-  `LAST_YEAR` (`tests/e2e/helpers.ts`), in the time zone of the test users.
+  `LAST_YEAR` (`tests/e2e/_shared/helpers.ts`), in the time zone of the test users.
 - **The image is built one time.** `preview-on-test.sh build` writes the commit on the image when
   the tree is clean. `scripts/release.sh` starts that image for the same commit and builds
   nothing; with no such image it builds the application as before. Remove `ledgerly:preview`
@@ -199,7 +203,7 @@ midway can leave data on its user: run `seed` again before the next try.
 
 A new test gets `@smoke` only when it replaces one of the list: the set stays under one minute.
 
-### What `a11y.spec.ts` measures
+### What `a11y` measures (`tests/e2e/_shared/a11y.ts`)
 
 Every screen at 1440 and 400 px. Funds is also measured at 768 and 375 px, on one screen of each
 kind: the home, a fund's page, the form. The rules about colour (`color-contrast`,
@@ -223,10 +227,10 @@ The map is `scripts/test-map.ts`; the tables above are printed from it
 (`npm run test:select -- --doc`). `src/test-map.test.ts` runs with `npm test` and fails when:
 
 - a file of the repository is in no row and not in the critical list;
-- an integration test or a spec is not started by the command of a module or of a flow;
+- an integration test is not started by the command of a module;
+- a spec is not in the folder of a flow, or the folder holds a spec the map does not name;
 - a file imports a module, and the tests of that file are not in the "Used by" of the module;
-- a screen of `a11y`, `keyboard` or `mobile` belongs to no flow;
 - the tables of this page are not the ones the script prints.
 
-When a change adds a module, a spec, a screen or an import between modules, update
+When a change adds a module, a spec or an import between modules, update
 `scripts/test-map.ts` and this page in the same commit.

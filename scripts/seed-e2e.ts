@@ -1,4 +1,4 @@
-// scripts/seed-e2e.ts — the e2e suite's users on the deployed site (tests/e2e/homelab.ts).
+// scripts/seed-e2e.ts — the e2e suite's users on the deployed site (tests/e2e/_shared/homelab.ts).
 //
 //   seed    removes any test users a failed run left behind, then creates them with their sample
 //           data and writes the signed-in sessions the specs start from;
@@ -21,8 +21,8 @@ import { createFund, recordValuation, setFundState } from "../src/modules/funds/
 import { pensionCompetences } from "../src/modules/funds/schema";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "../src/modules/payroll/service";
 import { createRule } from "../src/modules/interests/service";
-import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../tests/fixtures/payroll/samples";
-import { twinPdf } from "../tests/fixtures/payroll/twin";
+import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../test/fixtures/payroll/samples";
+import { twinPdf } from "../test/fixtures/payroll/twin";
 import { refreshRecurrences } from "../src/modules/transactions/jobs";
 import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "../src/modules/pockets/service";
 import { expenseLinkCandidates } from "../src/modules/pockets/queries";
@@ -80,8 +80,8 @@ import {
   USERS,
   WITHOUT_TOTP,
   sessionState,
-} from "../tests/e2e/env";
-import { totpCode } from "../tests/e2e/totp";
+} from "../tests/e2e/_shared/env";
+import { totpCode } from "../tests/e2e/_shared/totp";
 import {
   addDeposit,
   addVoluntaryContribution,
@@ -182,7 +182,7 @@ writeFileSync(TOTP_FILE, JSON.stringify(totpSecrets, null, 2));
 /**
  * A Playwright storage state holding one user's session cookie. Better Auth is called here as a
  * library rather than over HTTP, so setting these sessions up costs none of the run's rate-limited
- * sign-ins (tests/e2e/env.ts) and a spec that only needs to be signed in spends none either.
+ * sign-ins (tests/e2e/_shared/env.ts) and a spec that only needs to be signed in spends none either.
  */
 async function writeSessionState(name: keyof typeof SESSIONS): Promise<void> {
   const user = USERS[SESSIONS[name].user];
@@ -846,7 +846,7 @@ function workingDay(from: string, delta: number): string {
 }
 
 /**
- * The layout and accessibility check (tests/e2e/a11y.spec.ts) opens every screen of the app, and a
+ * The layout and accessibility check (tests/e2e/<flow>/a11y.spec.ts) opens every screen of the app, and a
  * screen opened on an empty state measures an empty state: the fault the check is looking for —
  * a table reaching past a phone's window, a figure spilling out of its card — only appears once
  * there is something to lay out. So this one user is given something on every page.
