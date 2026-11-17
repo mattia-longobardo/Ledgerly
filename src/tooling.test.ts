@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { changedLines, withoutImports } from "../scripts/assertions-diff";
 import { measureDuplication } from "../scripts/duplication";
 import { canonical, differences, namesIn, project, sha256 } from "../scripts/snapshot-format";
+import { toMidnightInRome, waitBeforeTest } from "../test/clock";
 
 // The measuring tools of the rewrite plan (release N0): the scripts in `scripts/` that the gates
 // run. They are tested here because the unit project reads `src/` only.
@@ -123,5 +124,20 @@ it("adds", () => {
   it("sees an assertion that was adapted", () => {
     expect(changedLines(before, before.replace("toBe(3)", "toBe(4)"))).toBe(2);
     expect(withoutImports(before)).toHaveLength(5);
+  });
+});
+
+describe("the wait of a test that reads today twice (S-8)", () => {
+  it("is nothing away from a midnight in Rome", () => {
+    expect(waitBeforeTest(Date.parse("2026-11-17T11:00:00Z"))).toBe(0);
+    // 23:59:54 in Rome (CET): six seconds left.
+    expect(waitBeforeTest(Date.parse("2026-11-17T22:59:54Z"))).toBe(0);
+  });
+
+  it("lasts until just past a midnight in Rome less than five seconds away", () => {
+    // 23:59:57.500 in Rome (CET), then in summer (CEST).
+    expect(waitBeforeTest(Date.parse("2026-11-17T22:59:57.500Z"))).toBe(2_550);
+    expect(waitBeforeTest(Date.parse("2026-07-01T21:59:58Z"))).toBe(2_050);
+    expect(toMidnightInRome(Date.parse("2026-11-17T23:00:00Z"))).toBe(24 * 3_600_000);
   });
 });

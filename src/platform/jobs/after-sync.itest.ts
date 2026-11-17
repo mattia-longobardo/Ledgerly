@@ -14,12 +14,16 @@ import { TREK_PROVIDER } from "@/platform/integrations/rules";
 import { integrationConnections } from "@/platform/integrations/schema";
 import { finishRun, lastMovementChangeAt, recordRun, saveConnection } from "@/platform/integrations/service";
 import { notificationsLog } from "@/platform/notifications/schema";
+import { dayClock } from "../../../test/clock";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { anAccount, movement, newContext } from "../../../test/fixtures";
 import { AFTER_SYNC_JOBS, runAfterSync } from "./after-sync";
 import { withJobLock } from "./lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "./schema";
+
+// Each test reads "today", and the code under it reads it again: one day for both (S-8).
+dayClock();
 
 // A Trek pass that answers without calling Trek: the dispatch is real, the pass beside the point.
 vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn(async () => "answered") }));

@@ -24,6 +24,7 @@ import { listConnections, listRuns, saveSyncJob } from "@/platform/integrations/
 import { type EtoroTrade, tradeSchema } from "@/platform/integrations/etoro/client";
 import { tradeEventsOf } from "@/platform/integrations/etoro/mapping";
 import { withJobLock } from "@/platform/jobs/lock";
+import { dayClock } from "../../../test/clock";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { GAP_NOTES } from "./cutoff";
@@ -49,6 +50,9 @@ import {
   setSourcesForTests,
   verifyKey,
 } from "./sync";
+
+// Each test reads "today", and the code under it reads it again: one day for both (S-8).
+dayClock();
 
 const CANARY_KEY = "canary-etoro-api-key-5c1d77";
 const CANARY_USER = "canary-etoro-user-key-a90e3f";
