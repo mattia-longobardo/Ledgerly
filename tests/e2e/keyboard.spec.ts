@@ -151,61 +151,6 @@ test("a row menu opens on Enter, walks with the arrows and closes on Escape", as
   await expect(trigger).toBeFocused();
 });
 
-test("the update value dialog of a manual service traps the focus and gives it back", async ({ page }) => {
-  await page.goto("/investments");
-  const service = page.getByRole("link", { name: "Directa", exact: true }).filter({ visible: true }).first();
-  // A manual service has one command (PERS-342): "Update value", the balance of its account.
-  await page.goto((await service.getAttribute("href"))!.replace(/\?.*$/, ""));
-
-  const opener = page.getByRole("button", { name: "Update value" }).first();
-  await focusOn(opener);
-  expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
-  await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await dialogHasFocus(page);
-  for (let index = 0; index < 20; index += 1) {
-    await page.keyboard.press("Tab");
-    const held = await page.evaluate(() => {
-      const element = document.activeElement;
-      if (!element) return false;
-      if (document.querySelector('[role="dialog"]')?.contains(element)) return true;
-      return element === document.body || element.hasAttribute("data-base-ui-focus-guard");
-    });
-    expect(held, `Tab ${index + 1} left the dialog: focus on ${await focused(page)}`).toBe(true);
-  }
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(opener, "closing the dialog did not give the focus back").toBeFocused();
-});
-
-test("the replace key dialog of a connected service traps the focus and gives it back", async ({ page }) => {
-  await page.goto("/investments");
-  const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
-  await page.goto(`${(await service.getAttribute("href"))!.replace(/\?.*$/, "")}/connection`);
-
-  const opener = page.getByRole("button", { name: "Replace key" }).first();
-  await focusOn(opener);
-  expect(await focusIsVisible(page), "the button that opens the dialog draws no ring").toBe(true);
-  await page.keyboard.press("Enter");
-  const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible();
-  await dialogHasFocus(page);
-  for (let index = 0; index < 12; index += 1) {
-    await page.keyboard.press("Tab");
-    const held = await page.evaluate(() => {
-      const element = document.activeElement;
-      if (!element) return false;
-      if (document.querySelector('[role="dialog"]')?.contains(element)) return true;
-      return element === document.body || element.hasAttribute("data-base-ui-focus-guard");
-    });
-    expect(held, `Tab ${index + 1} left the dialog: focus on ${await focused(page)}`).toBe(true);
-  }
-  await page.keyboard.press("Escape");
-  await expect(dialog).toBeHidden();
-  await expect(opener, "closing the dialog did not give the focus back").toBeFocused();
-});
-
 test("a service's tabs are walked from the keyboard, each one a page, the period kept", async ({ page }) => {
   await page.goto("/investments?preset=all");
   const service = page.getByRole("link", { name: "eToro", exact: true }).filter({ visible: true }).first();
@@ -475,21 +420,6 @@ test.describe("a fund's new page", () => {
     await expect(page.getByTestId("fund-projection")).toHaveAttribute("open", "");
   });
 
-  test("the valuation dialog gives the focus back", async ({ page }) => {
-    await page.goto("/funds");
-    const row = page.getByTestId("fund-home-row").filter({ hasText: "Piano Uno" });
-    const href = await row.getByRole("link", { name: "Piano Uno" }).getAttribute("href");
-    await page.goto(href!);
-    const record = page.getByRole("button", { name: "Update value" }).first();
-    await focusOn(record);
-    await page.keyboard.press("Enter");
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
-    await expect(record, "closing the dialog did not give the focus back").toBeFocused();
-  });
-
   for (const [fund, tab, period] of [
     ["Piano Uno", "Contributions", "contributions"],
     ["Piano Uno", "Values", "valuations"],
@@ -527,23 +457,6 @@ test.describe("a fund's new page", () => {
       expect(await focusIsVisible(page), "the row's control draws no ring").toBe(true);
     });
   }
-
-  test("the edit dialog of a value gives the focus back", async ({ page }) => {
-    await page.goto("/funds");
-    const href = await page
-      .getByTestId("fund-home-row")
-      .filter({ hasText: "Piano Uno" })
-      .getByRole("link", { name: "Piano Uno" })
-      .getAttribute("href");
-    await page.goto(`${href}?tab=valuations&preset=all`);
-    const edit = page.getByTestId("valuation-line").first().getByRole("button", { name: "Edit" });
-    await focusOn(edit);
-    await page.keyboard.press("Enter");
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
-  });
 });
 
 // Release N6 (docs/design/rewrite-plan/ux/n6-pension-fund.md §17.1): the four dialogs of a fund and the

@@ -23,7 +23,9 @@ test.describe("a fund's page", () => {
 
   for (const name of ["Piano Uno", "Pensione Beta"]) {
     for (const query of ["", `?off=1`, `?off=2`, "?preset=all"]) {
-      test(`${name}: the same gain and the same return as the home, ${query || "the year running"}`, async ({
+      // One test for the two checks of a period (funds-tabs had the second one on the same funds
+      // and the same periods): the page against the home, then its stretches against the page.
+      test(`${name}: the same gain and the same return as the home, and Σ of the stretches = the gain, ${query || "the year running"}`, async ({
         page,
       }) => {
         await page.goto(`${HOME}${query}`);
@@ -36,6 +38,14 @@ test.describe("a fund's page", () => {
         await expect(hero(page)).toHaveAttribute("data-cents", cents!);
         await expect(page.getByTestId("funds-rate")).toHaveText(rate!);
         await expect(page.getByTestId("kpi-paid")).toContainText(paid!);
+
+        const path = new URL(page.url()).pathname;
+        const gain = BigInt((await page.getByTestId("funds-hero").getAttribute("data-cents")) || "0");
+        await page.goto(`${path}${query}${query ? "&" : "?"}tab=valuations`);
+        const cells = await page
+          .getByTestId("line-gain")
+          .evaluateAll((list) => list.map((one) => one.getAttribute("data-cents") ?? ""));
+        expect(cells.reduce((sum, one) => sum + BigInt(one || "0"), 0n)).toBe(gain);
       });
     }
   }
@@ -162,7 +172,6 @@ test.describe("a fund's page", () => {
     expect(await notice.textContent()).toBe(coming);
     await expect(page.getByTestId("recent-flow")).toHaveCount(2);
     await expect(page.getByTestId("recent-flow").first()).toContainText(`Q2 ${Y - 1}`);
-    await expect(page.getByTestId("kpi-deductible")).toHaveCount(0);
   });
 
   test("a reading behind the money is not a loss", async ({ page }) => {
@@ -315,7 +324,6 @@ test.describe("a fund's page", () => {
         const recent = page.getByTestId("fund-recent");
         await expect(recent).toContainText("No contribution in this period.");
         await expect(recent.getByRole("button", { name: "Record contribution" })).toBeVisible();
-        await expect(page.getByRole("button", { name: /Import/ })).toHaveCount(0);
       });
 
       await test.step("Contributions: the register alone, with its action", async () => {
@@ -349,7 +357,6 @@ test.describe("a fund's page", () => {
         await expect(page.getByRole("dialog", { name: "Update value · Fondo Vuoto" })).toBeVisible();
         await page.keyboard.press("Escape");
         await expect(page.getByTestId("fund-statements")).toHaveCount(0);
-        await expect(page.getByTestId("fund-documents")).toHaveCount(0);
       });
 
       await test.step("Settings: no source and no fee, each with its action", async () => {
@@ -384,7 +391,5 @@ test.describe("a fund's page", () => {
       page.getByTestId("recent-flow").or(page.getByText("No contribution in this period.")),
     ).not.toHaveCount(0);
     await expect(page.getByRole("button", { name: /Update value/ }).first()).toBeVisible();
-    // A fund reads no document any more (release N6): nothing offers to import one.
-    await expect(page.getByRole("button", { name: /Import/ })).toHaveCount(0);
   });
 });

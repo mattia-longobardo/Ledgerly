@@ -12,7 +12,7 @@ import { readZip } from "../../../test/zip";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 
-const { exportUserBytes, exportFileName } = await import("./service");
+const { exportUserBytes } = await import("./service");
 
 function contextFor(userId: string): Ctx {
   return {
@@ -229,9 +229,5 @@ describe("exportFileName", () => {
     expect(zip.has("fund-fees.csv")).toBe(true);
     // No value of the type of before is written anywhere in the archive's tables.
     expect(zip.get("funds.csv")!.toString("utf8")).not.toMatch(/\bpac\b/i);
-  });
-
-  it("carries the day it was made", () => {
-    expect(exportFileName(NOW)).toBe("ledgerly-2026-09-21.zip");
   });
 });

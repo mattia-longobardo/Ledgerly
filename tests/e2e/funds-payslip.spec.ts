@@ -187,23 +187,16 @@ test.describe("a fund fed by the payslip", () => {
       );
     });
 
-    await test.step("no document anywhere: nothing to import, no list, no statement, no address", async () => {
+    await test.step("no document anywhere: no statement, no file to send", async () => {
       await tab(page, "Values").click();
       await expect(page.getByTestId("valuation-line")).toHaveCount(1);
       // Nothing was ever read from a document for this fund: the block of the old statements is not there.
       await expect(page.getByTestId("fund-statements")).toHaveCount(0);
-      await expect(page.getByTestId("fund-documents")).toHaveCount(0);
-      await expect(page.getByTestId("fund-document")).toHaveCount(0);
+      // The list, the import and the address of a document: funds-tabs.spec.ts, on every tab.
       for (const name of ["Overview", "Contributions", "Values", "Settings"]) {
         await tab(page, name).click();
         await expect(tab(page, name)).toHaveAttribute("aria-current", "page");
-        await expect(page.getByRole("button", { name: /Import/ }), name).toHaveCount(0);
         await expect(page.locator('input[type="file"]'), name).toHaveCount(0);
-        await expect(page.locator('a[href*="/documents/"]'), name).toHaveCount(0);
-      }
-      const path = new URL(fundUrl).pathname;
-      for (const address of [`${path}/documents/anything`, `${path}/documents/${path.split("/").pop()}`]) {
-        expect((await page.request.get(address, { maxRedirects: 0 })).status(), address).toBe(404);
       }
     });
 
@@ -333,11 +326,7 @@ test.describe("what a document left before release N6", () => {
     await expect(statements.getByRole("link")).toHaveCount(0);
     await expect(statements.getByRole("button")).toHaveCount(0);
     await expect(statements).not.toContainText(".pdf");
-    // No list of documents and nothing to import: a new value enters with "Update value" alone.
-    await expect(page.getByTestId("fund-documents")).toHaveCount(0);
-    await expect(page.getByTestId("fund-document")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /Import/ })).toHaveCount(0);
-    await expect(page.locator('a[href*="/documents/"]')).toHaveCount(0);
+    // A new value enters with "Update value" alone.
     await expect(page.getByRole("banner").getByRole("button", { name: "Update value" })).toBeVisible();
 
     // The rows the export left are in the register as history: "Imported", with no action.

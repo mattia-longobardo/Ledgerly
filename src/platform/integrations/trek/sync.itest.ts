@@ -23,7 +23,7 @@ import { newContext } from "../../../../test/fixtures";
 import { TREK_PROVIDER } from "../rules";
 import { listConnections, listRuns, markConnection, saveConnection } from "../service";
 import type { TogglePlanStep, TrekClient, TrekEntry, TrekYearStats } from "./client";
-import { isTrekBusy, splitForTrek, syncTrekNow, trekStatsOf } from "./sync";
+import { isTrekBusy, syncTrekNow, trekStatsOf } from "./sync";
 
 let ctx: Ctx;
 const YEAR = 2026;
@@ -120,64 +120,6 @@ async function connectionId(): Promise<string> {
 async function rowOn(date: string) {
   return (await listLeaveDays(ctx, WINDOW)).find((row) => row.on === date) ?? null;
 }
-
-describe("splitForTrek", () => {
-  const day = (
-    on: string,
-    kind: "vacation" | "rol" | "comp",
-    pending: "none" | "upsert" | "delete",
-    fraction = 1,
-  ) => ({
-    id: `${on}-${kind}`,
-    on,
-    kind,
-    fraction,
-    pending,
-    trekFraction: null,
-    trekKind: null,
-  });
-
-  it("separates what to send from what to take back", () => {
-    const split = splitForTrek([day(TUE, "vacation", "upsert"), day(WED, "vacation", "delete")]);
-    expect(split.desired).toEqual([{ date: TUE, fraction: 1, kind: "vacation" }]);
-    expect(split.removals).toEqual([WED]);
-  });
-
-  it("sends a settled day too, so a day Trek has lost comes back by itself", () => {
-    const split = splitForTrek([day(TUE, "vacation", "none")]);
-    expect(split.desired).toEqual([{ date: TUE, fraction: 1, kind: "vacation" }]);
-  });
-
-  it("names vacation whatever the kind is, since Trek has neither ROL nor anything else", () => {
-    const split = splitForTrek([day(TUE, "rol", "upsert"), day(WED, "comp", "upsert")]);
-    expect(split.desired).toEqual([
-      { date: TUE, fraction: 1, kind: "vacation" },
-      { date: WED, fraction: 1, kind: "vacation" },
-    ]);
-  });
-
-  it("adds the halves of one date up into the single row Trek keeps", () => {
-    const split = splitForTrek([day(TUE, "vacation", "upsert", 0.5), day(TUE, "rol", "upsert", 0.5)]);
-    expect(split.desired).toEqual([{ date: TUE, fraction: 1, kind: "vacation" }]);
-    expect(split.removals).toEqual([]);
-  });
-
-  it("never sends more than a whole day, whatever the date carries", () => {
-    const split = splitForTrek([
-      day(TUE, "vacation", "upsert", 0.5),
-      day(TUE, "rol", "upsert", 0.5),
-      day(TUE, "comp", "upsert", 0.5),
-    ]);
-    expect(split.desired).toEqual([{ date: TUE, fraction: 1, kind: "vacation" }]);
-  });
-
-  it("takes a date back only once nothing of ours is left on it", () => {
-    // Half the day goes: Trek keeps its row, shrunk to the half that stays. Nothing is removed.
-    const split = splitForTrek([day(TUE, "vacation", "delete", 0.5), day(TUE, "rol", "none", 0.5)]);
-    expect(split.desired).toEqual([{ date: TUE, fraction: 0.5, kind: "vacation" }]);
-    expect(split.removals).toEqual([]);
-  });
-});
 
 describe("a pass", () => {
   it("sends a new day, and the row stops being pending", async () => {

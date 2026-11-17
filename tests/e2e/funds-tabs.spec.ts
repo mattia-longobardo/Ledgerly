@@ -79,23 +79,6 @@ test.describe("the tabs", () => {
     await expect(page.getByText(`No data in ${Y - 9}`)).toBeVisible();
   });
 
-  for (const name of ["Piano Uno", "Pensione Beta"]) {
-    for (const query of ["", `?off=1`, `?off=2`, "?preset=all"]) {
-      test(`${name}: Σ of the stretches = the gain of the Overview, ${query || "the year running"}`, async ({
-        page,
-      }) => {
-        const path = await fundPath(page, name);
-        await page.goto(`${path}${query}`);
-        const gain = BigInt((await page.getByTestId("funds-hero").getAttribute("data-cents")) || "0");
-        await page.goto(`${path}${query}${query ? "&" : "?"}tab=valuations`);
-        const cells = await page
-          .getByTestId("line-gain")
-          .evaluateAll((list) => list.map((one) => one.getAttribute("data-cents") ?? ""));
-        expect(cells.reduce((sum, one) => sum + BigInt(one || "0"), 0n)).toBe(gain);
-      });
-    }
-  }
-
   test("the stretch return says what it is, and appears only in Values", async ({ page }) => {
     const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?tab=valuations&preset=all`);
@@ -117,7 +100,6 @@ test.describe("the tabs", () => {
     await page.goto(`${path}?tab=contributions&preset=all`);
     await expect(page.getByTestId("payslip-line")).toHaveCount(3);
     await expect(page.getByTestId("contribution-row")).toHaveCount(5);
-    await expect(page.getByTestId("fund-deductible")).toHaveCount(0);
   });
 
   test.describe("the phone", () => {

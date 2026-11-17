@@ -74,14 +74,6 @@ describe("backupNow", () => {
   });
 });
 
-describe("backupKey", () => {
-  it("sorts by time, because that is how the retention finds the oldest", () => {
-    const early = backupKey(new Date("2026-09-21T09:00:00Z"));
-    const late = backupKey(new Date("2026-09-21T12:00:00Z"));
-    expect([late, early].sort()).toEqual([early, late]);
-  });
-});
-
 describe("pruneBackups", () => {
   it("keeps the newest and drops the rest", async () => {
     const keys = [

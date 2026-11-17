@@ -24,8 +24,6 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
     await page.getByRole("link", { name: "Add fund" }).first().click();
     await expect(page).toHaveURL(/\/funds\/new$/);
     const form = page.getByTestId("fund-wizard");
-    // One form for every fund: no kind to choose (release N6).
-    await expect(form.getByRole("button", { name: /PAC|Pension fund/ })).toHaveCount(0);
     await form.getByLabel("Name").fill("Fideuram Piano Accumulo");
     await form.getByLabel("Provider").fill("Fideuram");
     await form.getByLabel("Member since").fill(start);

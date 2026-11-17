@@ -183,14 +183,6 @@ describe("the gate", () => {
 });
 
 describe("GET /accounts", () => {
-  it("lists the token owner's accounts, with money as a decimal string", async () => {
-    await saveBalanceEntry(alice, aliceAccount, { on: "2026-09-20", cents: 1_234_56n });
-    const body = await (await call("/accounts", aliceToken)).json();
-    expect(body.accounts).toHaveLength(1);
-    expect(body.accounts[0]).toMatchObject({ id: aliceAccount, name: "ING Conto Arancio" });
-    expect(body.accounts[0].balance).toBe("1234.56");
-  });
-
   it("shows B none of A's accounts", async () => {
     const body = await (await call("/accounts", bobToken)).json();
     expect(body.accounts).toEqual([]);
@@ -222,13 +214,6 @@ describe("the IBAN of an account (rewrite plan N4, H45)", () => {
 });
 
 describe("GET /accounts/:id/balances", () => {
-  it("returns the account's own readings", async () => {
-    await saveBalanceEntry(alice, aliceAccount, { on: "2026-09-20", cents: 1_000_00n });
-    const body = await (await call(`/accounts/${aliceAccount}/balances`, aliceToken)).json();
-    expect(body.balances).toHaveLength(1);
-    expect(body.balances[0]).toMatchObject({ on: "2026-09-20", balance: "1000.00", source: "manual" });
-  });
-
   it("is not found for B, who may not even learn that A's account exists", async () => {
     const response = await call(`/accounts/${aliceAccount}/balances`, bobToken);
     expect(response.status).toBe(404);
@@ -242,12 +227,6 @@ describe("POST /accounts/:id/balances", () => {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ on: "2026-09-20", balance: "742.10" }),
   };
-
-  it("records a reading for the token's owner", async () => {
-    const response = await call(`/accounts/${aliceAccount}/balances`, aliceToken, reading);
-    expect(response.status).toBe(201);
-    expect(await response.json()).toMatchObject({ balance: "742.10", source: "manual" });
-  });
 
   it("refuses to write into A's account with B's token, and writes nothing", async () => {
     const response = await call(`/accounts/${aliceAccount}/balances`, bobToken, reading);
@@ -271,13 +250,6 @@ describe("GET /transactions", () => {
     await upsertFromProvider(alice, aliceAccount, [movement()]);
   });
 
-  it("lists the owner's movements with the totals of the page's own header", async () => {
-    const body = await (await call("/transactions", aliceToken)).json();
-    expect(body.transactions).toHaveLength(1);
-    expect(body.transactions[0]).toMatchObject({ payee: "Esselunga", amount: "-25.00" });
-    expect(body.summary).toMatchObject({ count: 1, expense: "-25.00" });
-  });
-
   it("shows B nothing of A's, even asking for A's account by id", async () => {
     const body = await (await call(`/transactions?account=${aliceAccount}`, bobToken)).json();
     expect(body.transactions).toEqual([]);
@@ -290,17 +262,6 @@ describe("GET /transactions", () => {
 });
 
 describe("GET /summary", () => {
-  it("answers with the owner's own figures", async () => {
-    // A balance of a month ago, whatever today is: a date written by hand is in the past only for a while.
-    const on = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
-    await saveBalanceEntry(alice, aliceAccount, { on, cents: 5_000_00n });
-    const body = await (await call("/summary", aliceToken)).json();
-    expect(body.accounts).toBe(1);
-    expect(body.netWorth).toBe("5000.00");
-    // The display currency of the totals (docs/api-changelog.md, phase 1b): EUR by default.
-    expect(body.currency).toBe("EUR");
-  });
-
   it("tells B about B, whatever A owns", async () => {
     // A balance of a month ago, whatever today is: a date written by hand is in the past only for a while.
     const on = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);

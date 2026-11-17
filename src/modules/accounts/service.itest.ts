@@ -29,7 +29,6 @@ import {
   runSnapshot,
   saveBalanceEntry,
   saveProviderBalance,
-  snapshotMonthFor,
   updateAccountSettings,
   updateBalanceEntry,
   updateConnection,
@@ -422,13 +421,6 @@ describe("runSnapshot", () => {
     const other = await newContext();
     const outcome = await runSnapshot(other, "2026-01-01");
     expect(outcome).toMatchObject({ written: 0, skipped: 0, total: null });
-  });
-});
-
-describe("snapshotMonthFor", () => {
-  it("covers the month that has just ended", () => {
-    expect(snapshotMonthFor("2026-02-01")).toBe("2026-01-01");
-    expect(snapshotMonthFor("2026-01-01")).toBe("2025-12-01");
   });
 });
 

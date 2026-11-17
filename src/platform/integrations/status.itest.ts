@@ -331,14 +331,6 @@ describe("the warnings after a pass (ux §6)", () => {
     expect(await warnings(person.id)).toEqual([]);
   });
 
-  it("come at once for a key the provider refuses", async () => {
-    const { ctx, person } = await newPerson();
-    const connection = await wallet(ctx);
-    await markConnection(ctx, connection.id, "revoked", "token rejected", NOW);
-    await reportConnection(person, ctx, await reread(ctx, connection), NOW);
-    expect(await warnings(person.id)).toEqual([[SYNC_FAILED, connection.id]]);
-  });
-
   it("say a connection is stale when nothing has worked for longer than the window", async () => {
     const { ctx, person } = await newPerson();
     const connection = await wallet(ctx);

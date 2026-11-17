@@ -45,92 +45,86 @@ test.describe("the rows of the connections", () => {
     { width: 1440, height: 900 },
     { width: 400, height: 860 },
   ]) {
-    for (const theme of ["light", "dark"] as const) {
-      test(`one row per connection, each in its state, at ${width} px in the ${theme} theme`, async ({
-        page,
-      }) => {
-        await page.setViewportSize({ width, height });
-        await page.goto(INTEGRATIONS);
-        await page.evaluate((value) => {
-          document.documentElement.dataset.theme = value;
-        }, theme);
-        const banks = page.getByRole("region", { name: "Banks" });
+    // One theme: a theme changes colours only, and this test reads none.
+    test(`one row per connection, each in its state, at ${width} px`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto(INTEGRATIONS);
+      const banks = page.getByRole("region", { name: "Banks" });
 
-        await test.step("every state is a word beside the name, with its sentence", async () => {
-          const expected: [string, string, string, RegExp][] = [
-            ["Alfa Bank", "ok", "Up to date", UP_TO_DATE],
-            ["Beta Bank", "late", "Delayed", LATE],
-            ["Gamma Bank", "action", "Action needed", /^Access to Gamma Bank has expired\.$/],
-            ["Delta Bank", "running", "In progress", /^Update in progress…$/],
-            ["Epsilon Bank", "ok", "Up to date", UP_TO_DATE],
-            [
-              "Zeta Bank",
-              "action",
-              "Action needed",
-              /^You gave access, but you have not chosen the accounts yet\.$/,
-            ],
-            ["Trek", "paused", "Paused", /^Automatic update is off\.$/],
-          ];
-          for (const [name, value, word, sentence] of expected) {
-            const one = row(page, name);
-            await expect(one, name).toHaveAttribute("data-status", value);
-            // The word beside the name: the history, closed, has the words of its readings too.
-            await expect(one.getByText(word, { exact: true }).first(), name).toBeVisible();
-            await expect(one.getByText(sentence).first(), name).toBeVisible();
-          }
-        });
-
-        await test.step("the banks are in order of name, whatever their state", async () => {
-          const names = await banks.getByTestId("bank-row").locator(".font-semibold").allTextContents();
-          expect(names).toEqual([
-            "Alfa Bank",
-            "Beta Bank",
-            "Delta Bank",
-            "Epsilon Bank",
-            "Gamma Bank",
+      await test.step("every state is a word beside the name, with its sentence", async () => {
+        const expected: [string, string, string, RegExp][] = [
+          ["Alfa Bank", "ok", "Up to date", UP_TO_DATE],
+          ["Beta Bank", "late", "Delayed", LATE],
+          ["Gamma Bank", "action", "Action needed", /^Access to Gamma Bank has expired\.$/],
+          ["Delta Bank", "running", "In progress", /^Update in progress…$/],
+          ["Epsilon Bank", "ok", "Up to date", UP_TO_DATE],
+          [
             "Zeta Bank",
-          ]);
-        });
-
-        await test.step("one action when something has to be done, none when nothing has", async () => {
-          await expect(row(page, "Beta Bank").getByRole("button", { name: "Update now" })).toBeVisible();
-          await expect(row(page, "Gamma Bank").getByRole("link", { name: "Renew access" })).toHaveAttribute(
-            "href",
-            /\/banks\/connect\?renew=/,
-          );
-          await expect(row(page, "Zeta Bank").getByRole("link", { name: "Choose accounts" })).toBeVisible();
-          await expect(row(page, "Trek").getByRole("button", { name: "Turn on again" })).toBeVisible();
-          for (const name of ["Alfa Bank", "Delta Bank"]) {
-            await expect(row(page, name).getByRole("button", { name: "Update now" })).toHaveCount(0);
-          }
-        });
-
-        await test.step("an access about to end is said under the row, with the way to renew it", async () => {
-          const notice = row(page, "Epsilon Bank").getByRole("status");
-          await expect(notice).toContainText(/Access to Epsilon Bank expires in 1[12] days\./);
-          await expect(notice.getByRole("button", { name: "Renew access" })).toBeVisible();
-        });
-
-        await test.step("nothing reaches past the window", async () => {
-          const overflow = await page.evaluate(
-            () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-          );
-          expect(overflow).toBeLessThanOrEqual(0);
-        });
-
-        await test.step("no technical word and no code in the normal view", async () => {
-          for (const toggle of await page.getByRole("button", { name: "History", exact: true }).all()) {
-            await toggle.click();
-          }
-          const texts = await page.getByTestId("connection-row").allInnerTexts();
-          expect(texts.length).toBeGreaterThanOrEqual(7);
-          for (const text of texts) {
-            expect(text).not.toMatch(TECHNICAL);
-            expect(text).not.toMatch(CODES);
-          }
-        });
+            "action",
+            "Action needed",
+            /^You gave access, but you have not chosen the accounts yet\.$/,
+          ],
+          ["Trek", "paused", "Paused", /^Automatic update is off\.$/],
+        ];
+        for (const [name, value, word, sentence] of expected) {
+          const one = row(page, name);
+          await expect(one, name).toHaveAttribute("data-status", value);
+          // The word beside the name: the history, closed, has the words of its readings too.
+          await expect(one.getByText(word, { exact: true }).first(), name).toBeVisible();
+          await expect(one.getByText(sentence).first(), name).toBeVisible();
+        }
       });
-    }
+
+      await test.step("the banks are in order of name, whatever their state", async () => {
+        const names = await banks.getByTestId("bank-row").locator(".font-semibold").allTextContents();
+        expect(names).toEqual([
+          "Alfa Bank",
+          "Beta Bank",
+          "Delta Bank",
+          "Epsilon Bank",
+          "Gamma Bank",
+          "Zeta Bank",
+        ]);
+      });
+
+      await test.step("one action when something has to be done, none when nothing has", async () => {
+        await expect(row(page, "Beta Bank").getByRole("button", { name: "Update now" })).toBeVisible();
+        await expect(row(page, "Gamma Bank").getByRole("link", { name: "Renew access" })).toHaveAttribute(
+          "href",
+          /\/banks\/connect\?renew=/,
+        );
+        await expect(row(page, "Zeta Bank").getByRole("link", { name: "Choose accounts" })).toBeVisible();
+        await expect(row(page, "Trek").getByRole("button", { name: "Turn on again" })).toBeVisible();
+        for (const name of ["Alfa Bank", "Delta Bank"]) {
+          await expect(row(page, name).getByRole("button", { name: "Update now" })).toHaveCount(0);
+        }
+      });
+
+      await test.step("an access about to end is said under the row, with the way to renew it", async () => {
+        const notice = row(page, "Epsilon Bank").getByRole("status");
+        await expect(notice).toContainText(/Access to Epsilon Bank expires in 1[12] days\./);
+        await expect(notice.getByRole("button", { name: "Renew access" })).toBeVisible();
+      });
+
+      await test.step("nothing reaches past the window", async () => {
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        expect(overflow).toBeLessThanOrEqual(0);
+      });
+
+      await test.step("no technical word and no code in the normal view", async () => {
+        for (const toggle of await page.getByRole("button", { name: "History", exact: true }).all()) {
+          await toggle.click();
+        }
+        const texts = await page.getByTestId("connection-row").allInnerTexts();
+        expect(texts.length).toBeGreaterThanOrEqual(7);
+        for (const text of texts) {
+          expect(text).not.toMatch(TECHNICAL);
+          expect(text).not.toMatch(CODES);
+        }
+      });
+    });
   }
 
   test("the history opens with the keyboard, shows ten readings and leads to all of them", async ({

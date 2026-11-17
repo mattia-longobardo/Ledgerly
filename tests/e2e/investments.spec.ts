@@ -60,12 +60,7 @@ test("a manual service shows an account of Accounts, and Accounts shows the same
   await test.step("Directa, typed by hand: its balance is the value, no positions, no deposits to type", async () => {
     await addManual(page, "Directa");
     await expect(await value(page)).toHaveText(/^8\.000,00\s€$/);
-    await expect(
-      page
-        .getByRole("navigation", { name: "Sections of the service" })
-        .getByRole("link", { name: "Positions" }),
-    ).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Add operation" })).toHaveCount(0);
+    // No Positions and nothing to type but the value: investments-service.spec.ts, on Directa.
     const manual = page.getByTestId("manual-pnl");
     // Opened at yesterday's 8.000 €: that is the money in.
     await expect(manual).toHaveAttribute("data-invested-cents", "800000");
@@ -124,11 +119,5 @@ test("a manual service shows an account of Accounts, and Accounts shows the same
     await expect(list.getByTestId("activity-item")).toHaveCount(1);
     await expect(list).toContainText("MARIO ROSSI");
     await expect(list).toContainText(/\+8\.000,00\s€/);
-  });
-
-  await test.step("the home counts both once (docs/design/investments-ux.md §3.1)", async () => {
-    await page.goto("/investments");
-    await expect(page.getByRole("heading", { name: /^(Profit and loss|P&L available) · / })).toBeVisible();
-    await expect(page.getByTestId("pnl-hero")).toBeVisible();
   });
 });

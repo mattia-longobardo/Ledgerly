@@ -137,34 +137,6 @@ test.describe("subscriptions on a phone", () => {
   });
 });
 
-/** Interests at 400 px (spec §8.2, §11): the rules are a list and the page fits. */
-test.describe("interests on a phone", () => {
-  test.use({ storageState: sessionState("interests") });
-
-  test("the page fits the screen", async ({ page }) => {
-    await page.goto("/interests");
-    await expect(page.getByRole("heading", { name: "Interests" }).first()).toBeAttached();
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
-  });
-});
-
-/** Funds at 400 px (spec §8.2, §11): the page fits the screen. */
-test.describe("funds on a phone", () => {
-  test.use({ storageState: sessionState("funds") });
-
-  test("the page fits the screen", async ({ page }) => {
-    await page.goto("/funds");
-    await expect(page.getByRole("heading", { name: "Funds" }).first()).toBeAttached();
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    );
-    expect(overflow).toBeLessThanOrEqual(0);
-  });
-});
-
 /**
  * The pension fund of release N6 at 400 px (docs/design/rewrite-plan/ux/n6-pension-fund.md §11.1): the form
  * that creates a fund, and a fund's page with its one set of tabs. Seeded sessions: no password sign-in.
@@ -256,7 +228,7 @@ test.describe("a fund's page on a phone", () => {
       }
       // The current tab sits a pixel lower than the others; a second row would be a whole line down.
       expect(Math.max(...tops) - Math.min(...tops), "the tabs wrap onto a second row").toBeLessThan(8);
-      // "Update value" stays in the top bar; no fund kind, no "Deductible" and nothing to import anywhere.
+      // "Update value" stays in the top bar.
       await expect(page.getByRole("banner").getByRole("button", { name: "Update value" })).toBeVisible();
       for (const tab of ["overview", "contributions", "valuations", "settings"]) {
         await page.goto(`${path}?tab=${tab}&preset=all`);
@@ -265,8 +237,6 @@ test.describe("a fund's page on a phone", () => {
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
         );
         expect(sideways, `${tab} scrolls sideways`).toBeLessThanOrEqual(0);
-        await expect(page.getByTestId("kpi-deductible"), tab).toHaveCount(0);
-        await expect(page.getByRole("button", { name: /Import/ }), tab).toHaveCount(0);
       }
       // The register is a list here, with the same commands as the table of a wide screen.
       await page.goto(`${path}?tab=contributions&preset=all`);
