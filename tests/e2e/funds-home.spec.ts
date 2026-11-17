@@ -19,7 +19,7 @@ test("the Contributions tab says a fee is unknown, and a debit with no amount re
   page,
 }) => {
   await page.goto(`${PATH}?preset=all`);
-  await page.getByRole("link", { name: "PAC Delta" }).filter({ visible: true }).first().click();
+  await page.getByRole("link", { name: "Piano Delta" }).filter({ visible: true }).first().click();
   await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Contributions" }).click();
   await expect(page.getByTestId("fee-unknown")).toContainText("A fee is unknown");
   // The debit's own card: what it looks for, with no amount and no fee in the sentence.
@@ -79,7 +79,7 @@ test.describe("the home", () => {
     expect(total).toBe(await heroCents(page));
     expect(await rowsTotal(page)).toBe(total);
     // The archived fund has its badge here, since it has data, and its old value is not held today.
-    const gamma = page.getByTestId("fund-home-row").filter({ hasText: "PAC Gamma" });
+    const gamma = page.getByTestId("fund-home-row").filter({ hasText: "Piano Gamma" });
     await expect(gamma.getByText("Archived")).toBeVisible();
     await expect(gamma).not.toContainText("410,00");
     await expect(page.getByText(/Value 3\.960,00/)).toBeVisible();
@@ -123,7 +123,7 @@ test.describe("the home", () => {
     page,
   }) => {
     await page.goto(PATH);
-    const delta = page.getByTestId("fund-home-row").filter({ hasText: "PAC Delta" });
+    const delta = page.getByTestId("fund-home-row").filter({ hasText: "Piano Delta" });
     await expect(delta.getByRole("button", { name: "Record the first value" })).toBeVisible();
     await expect(delta.getByTestId("fund-gain")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: new RegExp(`^Gain available · ${Y}`) })).toBeVisible();
@@ -163,9 +163,9 @@ test.describe("the home", () => {
   test("a value of the 1st of January closes the year before; the money stays on its own day", async ({
     page,
   }) => {
-    // PAC Beta reads 2.100,00 € on 1 Jan Y−2: that closes Y−3, on 2.000,00 € paid in.
+    // Piano Beta reads 2.100,00 € on 1 Jan Y−2: that closes Y−3, on 2.000,00 € paid in.
     await page.goto(`${PATH}?off=3`);
-    const beta = page.getByTestId("fund-home-row").filter({ hasText: "PAC Beta" });
+    const beta = page.getByTestId("fund-home-row").filter({ hasText: "Piano Beta" });
     expect(BigInt((await beta.getByTestId("fund-gain").getAttribute("data-cents"))!)).toBe(10_000n);
     await expect(beta).toContainText("01 Jan");
     // So Y−2 has money and no value of its own, even with a reading on its first day.
@@ -205,7 +205,7 @@ test.describe("the home", () => {
     await page.getByText("Chart data").click();
     const dates = page.locator("details table tbody tr");
     const count = await dates.count();
-    // Three readings of PAC Beta, one of Pensione Alfa, one of PAC Gamma: no month in between.
+    // Three readings of Piano Beta, one of Pensione Alfa, one of Piano Gamma: no month in between.
     expect(count).toBe(5);
     await expect(page.locator('svg rect[data-band="neg"]')).toHaveCount(0);
   });
@@ -213,11 +213,11 @@ test.describe("the home", () => {
   test("the phone has the same controls", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(PATH);
-    const delta = page.getByTestId("fund-home-item").filter({ hasText: "PAC Delta" });
+    const delta = page.getByTestId("fund-home-item").filter({ hasText: "Piano Delta" });
     await expect(delta.getByRole("button", { name: "Record the first value" })).toBeVisible();
-    const beta = page.getByTestId("fund-home-item").filter({ hasText: "PAC Beta" });
-    await expect(beta.getByRole("button", { name: /Highlight PAC Beta/ })).toBeVisible();
-    await expect(beta.getByRole("link", { name: "PAC Beta" })).toBeVisible();
+    const beta = page.getByTestId("fund-home-item").filter({ hasText: "Piano Beta" });
+    await expect(beta.getByRole("button", { name: /Highlight Piano Beta/ })).toBeVisible();
+    await expect(beta.getByRole("link", { name: "Piano Beta" })).toBeVisible();
     await expect(page.getByRole("group", { name: "Date range" }).first()).toBeVisible();
     await expect(page.getByTestId("fund-home-row").first()).toBeHidden();
   });

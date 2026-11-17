@@ -5,7 +5,7 @@
 import { expect, test } from "@playwright/test";
 import { sessionState } from "./env";
 
-test.use({ storageState: sessionState("tokens") });
+test.use({ storageState: sessionState("categories") });
 
 test("a person builds a group, hangs a sub-category on it and deletes both", async ({ page }) => {
   const group = `E2E ${Date.now()}`;

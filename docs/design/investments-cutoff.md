@@ -8,7 +8,7 @@ Regole di Mattia del 29–30/10/2026 (thread su PERS-79), scritte in `investment
 - **Migrazione 0042** `reading_reconstructed`: lo stato `estimated` delle letture diventa
   `reconstructed` (check aggiornato), `price_source` `estimated` → `close`, la copertura
   `balance_history` ricostruita diventa `complete`. Nessuna colonna nuova.
-- **Pulizia** (`settleCutoff`, alla prima passata del sync o con `scripts/investments-cutoff.ts`), solo
+- **Pulizia** (`settleCutoff`, alla prima passata del sync; lo script usa e getta `scripts/investments-cutoff.ts` è stato tolto dopo l'uso), solo
   per i servizi sincronizzati collegati come nuovi:
   - cancella gli eventi del provider prima del taglio (con le gambe e i link `provider_links`), le
     letture prima del taglio e le posizioni del provider rimaste senza gambe e senza letture;

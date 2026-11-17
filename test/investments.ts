@@ -16,7 +16,7 @@ interface ServiceInput {
 }
 
 /** An account of Accounts made for a service: Investments creates none (PERS-342). */
-export async function serviceAccount(
+async function serviceAccount(
   ctx: Ctx,
   input: { name: string; category: InvestmentCategory; currency: string },
 ): Promise<string> {
@@ -46,7 +46,7 @@ export async function manualService(ctx: Ctx, input: ServiceInput): Promise<{ ac
  * The provider of {@link engineService}: no catalog entry, no connection — a service the module
  * writes, so the engine's tests can type its operations as a provider would deliver them.
  */
-export const ENGINE_PROVIDER = "test:engine";
+const ENGINE_PROVIDER = "test:engine";
 
 /**
  * A service whose book the module writes, for the tests of the engine (§2): a manual period in

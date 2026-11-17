@@ -407,7 +407,7 @@ async function seedInvestments(): Promise<void> {
   const fineco = await syncedAccount(ctx, "e2e-investments-2", "Fineco", "investment");
   await saveProviderBalance(ctx, fineco, { on: addDays(on, -1), cents: 0n });
   await upsertFromProvider(ctx, fineco, [
-    walletMovement("e2e-investments-tx-3", on, 800_000n, "MATTIA LONGOBARDO", null),
+    walletMovement("e2e-investments-tx-3", on, 800_000n, "MARIO ROSSI", null),
   ]);
   await saveProviderBalance(ctx, fineco, { on, cents: 800_000n });
 }
@@ -514,7 +514,8 @@ async function seedFunds(): Promise<void> {
 /**
  * The new Funds home (docs/design/funds-ux.md §6): the years, counted back from this one, each in a
  * state of the table. Y−4: payslips alone. Y−3: measured, with an archived fund. Y−2: money and no
- * value. Y−1: nothing. Y: one PAC measured, a pension fund with an old value, a PAC with no value.
+ * value. Y−1: nothing. Y: one fund with a debit plan measured, a pension fund with an old value, a
+ * fund with a debit plan and no value.
  * Every amount is invented.
  */
 async function seedFundsHome(): Promise<void> {
@@ -523,7 +524,7 @@ async function seedFundsHome(): Promise<void> {
   const year = Number(on.slice(0, 4));
 
   const beta = await debitFund(ctx, {
-    name: "PAC Beta",
+    name: "Piano Beta",
     provider: "Esempio",
     startOn: `${year - 3}-01-10`,
   });
@@ -582,7 +583,7 @@ async function seedFundsHome(): Promise<void> {
   });
 
   const gamma = await debitFund(ctx, {
-    name: "PAC Gamma",
+    name: "Piano Gamma",
     provider: "Esempio",
     startOn: `${year - 3}-03-10`,
   });
@@ -596,7 +597,7 @@ async function seedFundsHome(): Promise<void> {
   await setFundState(ctx, gamma.id, "archived");
 
   const delta = await debitFund(ctx, {
-    name: "PAC Delta",
+    name: "Piano Delta",
     provider: "Esempio",
     startOn: `${year}-01-01`,
   });
@@ -617,7 +618,7 @@ async function seedFundsDetail(email: string): Promise<void> {
   const thisMonth = `${on.slice(0, 7)}-01`;
 
   const pac = await debitFund(ctx, {
-    name: "PAC Piano",
+    name: "Piano Uno",
     provider: "Esempio",
     debitDay: 1,
     startOn: `${year - 2}-01-05`,
@@ -1799,7 +1800,7 @@ async function seedLayout(): Promise<void> {
     tiers: [{ upToCents: null, annualRate: "0.0365" }],
   });
 
-  // ——— An investment PAC with its deposits and valuations ———
+  // ——— A fund with a debit plan, with its deposits and valuations ———
   const layoutYear = Number(on.slice(0, 4));
   const pac = await debitFund(ctx, {
     name: "Fideuram Master Selection",
@@ -1873,8 +1874,7 @@ async function seedLayout(): Promise<void> {
 
   // ——— The fund fed by the payslip, with what its two documents left before release N6 ———
   // A fund reads no document any more: the rows the operations export and the statement of August
-  // wrote are written here as they were read — the twins `EXPORT_AUGUST` and `POSITION_AUGUST` of
-  // `tests/fixtures/cometa/samples.ts`, moved to last year.
+  // wrote are written here as they were read, moved to last year.
   const pension = await payrollFund(ctx, {
     name: "Cometa",
     provider: "Cometa",

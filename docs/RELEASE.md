@@ -108,23 +108,9 @@ That is another thing: it is not the release's dump and a release does not rely 
 
 ### The documents a fund's import left (release N6, step A4)
 
-One time only, after N6 is in production and stable. The step deletes files and rows and cannot be
-undone without the copy, so it has its own commit, deploy and approval.
-
-```bash
-docker tag ledgerly:latest ledgerly:pre-n6-a4
-folder=$(sh scripts/release-dump.sh n6-a4 | tail -n 1)            # the dump
-sh scripts/fund-documents-on-homelab.sh copy "$folder"             # files/ and files.sha256
-sh scripts/fund-documents-on-homelab.sh verify "$folder"           # store = copy = rows: "uguale"
-# restore test: the dump into a throwaway database, count the rows of the two kinds, drop it
-sh scripts/fund-documents-on-homelab.sh delete "$folder" --yes <n> # files first, then the rows
-sh scripts/fund-documents-on-homelab.sh count                      # 0 rows
-```
-
-`delete` runs `verify` again and refuses unless `--yes` is the number of rows it found. The numbers
-snapshot before and after must be equal: what was read from the documents is the fund's own data
-and stays. The way back is the dump (rows) and `files/` (originals). That folder is kept until the
-owner says to remove it.
+Done on 15/11/2026, with `v0.16.0`. The one-time scripts of the step (`scripts/fund-documents.ts`,
+`scripts/fund-documents-on-homelab.sh`, `src/modules/imports/retired.ts`) were removed after it: they
+are in the history of the repository, before the commit that removed them.
 
 ## 3. Build and start
 

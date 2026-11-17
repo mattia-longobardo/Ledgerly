@@ -328,7 +328,7 @@ const PAGES: Screen[] = [
     session: "fundsHome",
     open: go(`/funds${query}`),
   })),
-  ...(["PAC Piano", "Pensione Beta"] as const).flatMap((fund) =>
+  ...(["Piano Uno", "Pensione Beta"] as const).flatMap((fund) =>
     (
       [
         ["the year running", ""],

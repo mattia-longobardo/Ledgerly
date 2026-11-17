@@ -238,7 +238,7 @@ test.describe("the form of a fund on a phone", () => {
 test.describe("a fund's page on a phone", () => {
   test.use({ storageState: sessionState("fundsDetail") });
 
-  for (const fund of ["PAC Piano", "Pensione Beta"]) {
+  for (const fund of ["Piano Uno", "Pensione Beta"]) {
     test(`${fund}: the four tabs are on one row, and no tab scrolls the page sideways`, async ({ page }) => {
       await page.goto("/funds?preset=all");
       const href = await page

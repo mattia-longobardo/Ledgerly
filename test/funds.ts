@@ -30,7 +30,7 @@ import type { Cents } from "@/platform/money";
 /** A text no movement carries: a debit source that finds nothing until a test gives it a payee. */
 const NO_MATCH = "no-movement-carries-this";
 
-export interface DebitFundInput {
+interface DebitFundInput {
   name: string;
   provider?: string | null;
   compartment?: string | null;
@@ -147,7 +147,7 @@ export async function saveDepositRule(
   if (input.active) await setSourceState(ctx, saved.id, "active");
 }
 
-export interface PayrollFundInput {
+interface PayrollFundInput {
   name: string;
   provider?: string | null;
   compartment?: string | null;
@@ -231,7 +231,7 @@ export async function addVoluntaryContribution(
   });
 }
 
-export interface ImportedOperation {
+interface ImportedOperation {
   originKey: string;
   originalType: string;
   classification: FundOperation["classification"];

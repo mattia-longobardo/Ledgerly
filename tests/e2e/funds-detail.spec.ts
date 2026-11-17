@@ -21,7 +21,7 @@ test.describe("a fund's page", () => {
     return href!.split("?")[0];
   }
 
-  for (const name of ["PAC Piano", "Pensione Beta"]) {
+  for (const name of ["Piano Uno", "Pensione Beta"]) {
     for (const query of ["", `?off=1`, `?off=2`, "?preset=all"]) {
       test(`${name}: the same gain and the same return as the home, ${query || "the year running"}`, async ({
         page,
@@ -41,7 +41,7 @@ test.describe("a fund's page", () => {
   }
 
   test("market − fees = gain, on the page of a fund", async ({ page }) => {
-    await page.goto(await fundPath(page, "PAC Piano"));
+    await page.goto(await fundPath(page, "Piano Uno"));
     const amount = async (id: string) =>
       Number(
         (await page.getByTestId(id).locator("span").nth(1).textContent())!
@@ -57,7 +57,7 @@ test.describe("a fund's page", () => {
     page,
   }) => {
     await page.goto(`${HOME}?off=1`);
-    await row(page, "PAC Piano").getByRole("link", { name: "PAC Piano" }).click();
+    await row(page, "Piano Uno").getByRole("link", { name: "Piano Uno" }).click();
     await expect(page).toHaveURL(new RegExp(`off=1$`));
     await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
     const tabs = page.getByRole("navigation", { name: "Fund" });
@@ -103,7 +103,7 @@ test.describe("a fund's page", () => {
   });
 
   test("one return on the page, with XIRR in its tooltip from 365 days", async ({ page }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?off=2`);
     const rate = page.getByTestId("funds-rate");
     await expect(rate).toHaveCount(1);
@@ -119,7 +119,7 @@ test.describe("a fund's page", () => {
   test("the debit and this month's status stay as of today; a past year says its value and today's", async ({
     page,
   }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(path);
     const plan = await page.getByTestId("kpi-debit").textContent();
     expect(plan).toContain("250,00");
@@ -136,7 +136,7 @@ test.describe("a fund's page", () => {
   });
 
   test("the projection of a fund with a debit stands on its plan", async ({ page }) => {
-    await page.goto(await fundPath(page, "PAC Piano"));
+    await page.goto(await fundPath(page, "Piano Uno"));
     await expect(page.getByTestId("fund-projection")).toContainText("If the plan stays at 250,00");
     await page.getByTestId("fund-projection").getByText("See all the rates").click();
     await expect(page.getByTestId("fund-projection").locator("table")).toBeVisible();
@@ -166,7 +166,7 @@ test.describe("a fund's page", () => {
   });
 
   test("a reading behind the money is not a loss", async ({ page }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?preset=all&view=value`);
     await page.getByTestId("fund-performance").getByText("Chart data").click();
     // One point per reading, nothing in between, and the money that reading could see.
@@ -189,7 +189,7 @@ test.describe("a fund's page", () => {
   test("a year before the data links to the first; a year to come goes back; an old address opens", async ({
     page,
   }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?off=9`);
     await expect(page.getByText(`No data in ${Y - 9}`)).toBeVisible();
     await expect(page.getByRole("link", { name: `Go to ${Y - 2}` })).toBeVisible();
@@ -207,7 +207,9 @@ test.describe("a fund's page", () => {
     const other = await browser.newContext({ storageState: sessionState("fundsHome") });
     const theirs = await other.newPage();
     await theirs.goto(HOME);
-    const href = await row(theirs, "PAC Beta").getByRole("link", { name: "PAC Beta" }).getAttribute("href");
+    const href = await row(theirs, "Piano Beta")
+      .getByRole("link", { name: "Piano Beta" })
+      .getAttribute("href");
     expect((await theirs.goto(href!))?.status()).toBe(200);
     await other.close();
     expect((await page.goto(href!))?.status()).toBe(404);
@@ -235,9 +237,9 @@ test.describe("a fund's page", () => {
       page,
     }) => {
       await page.goto(`${HOME}?preset=all`);
-      const gamma = page.getByTestId("fund-home-row").filter({ hasText: "PAC Gamma" });
+      const gamma = page.getByTestId("fund-home-row").filter({ hasText: "Piano Gamma" });
       const cents = await gamma.getByTestId("fund-gain").getAttribute("data-cents");
-      await gamma.getByRole("link", { name: "PAC Gamma" }).click();
+      await gamma.getByRole("link", { name: "Piano Gamma" }).click();
       await expect(hero(page)).toHaveAttribute("data-cents", cents!);
       await expect(page.locator("h1")).toContainText("Archived");
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
@@ -248,8 +250,8 @@ test.describe("a fund's page", () => {
       await page.goto(`${HOME}?off=1`);
       await page
         .getByTestId("fund-home-row")
-        .filter({ hasText: "PAC Beta" })
-        .getByRole("link", { name: "PAC Beta" })
+        .filter({ hasText: "Piano Beta" })
+        .getByRole("link", { name: "Piano Beta" })
         .click();
       await expect(hero(page)).toHaveText(`No value in ${Y - 1}`);
       await expect(page.getByTestId("fund-value")).toContainText("Last value");

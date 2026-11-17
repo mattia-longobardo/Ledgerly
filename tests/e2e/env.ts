@@ -78,8 +78,10 @@ export const USERS = {
   // F8: the admin journey. Its own user rather than a promoted `owner`, so every spec that signs
   // in as an ordinary one keeps meaning what it says.
   admin: { email: "admin@example.test", password: "admin-password-123", name: "Admin" },
-  // F8: personal access tokens and "Export my data", which need nobody else's data.
-  tokens: { email: "tokens@example.test", password: "tokens-password-123", name: "Tokens" },
+  // F8.1: Settings › Categories, which starts from the default tree and needs nobody else's data.
+  categories: { email: "categories@example.test", password: "categories-password-123", name: "Categories" },
+  // F8: the Client API and "Export my data", which need nobody else's data.
+  security: { email: "security@example.test", password: "security-password-123", name: "Security" },
   // F9: the one user every screen is measured on (tests/e2e/a11y.spec.ts). It is seeded with
   // something on every page — accounts, movements, budgets, pockets, subscriptions, an interest
   // rule, a fund with a debit plan, a fund fed by the payslip and an applied payslip — because a layout check run against an
@@ -160,7 +162,8 @@ export const SESSIONS = {
   timeoffPhone: { user: "timeoffPhone", file: "timeoff-phone-session.json" },
   // The seed promotes this one, so Admin › Users and Admin › Server have a journey (F8).
   admin: { user: "admin", file: "admin-session.json" },
-  tokens: { user: "tokens", file: "tokens-session.json" },
+  categories: { user: "categories", file: "categories-session.json" },
+  security: { user: "security", file: "security-session.json" },
   // F9: the layout and accessibility check (tests/e2e/a11y.spec.ts).
   layout: { user: "layout", file: "layout-session.json" },
   // Release N2: the rows of the connections, in every state (tests/e2e/connections.spec.ts).

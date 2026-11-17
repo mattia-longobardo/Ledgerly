@@ -402,14 +402,14 @@ test.describe("the Funds home", () => {
 
     // A row's series toggle, its name and its action are three stops, each with its ring.
     await page.goto("/funds");
-    const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Beta" });
-    const toggle = row.getByRole("button", { name: /Highlight PAC Beta/ });
+    const row = page.getByTestId("fund-home-row").filter({ hasText: "Piano Beta" });
+    const toggle = row.getByRole("button", { name: /Highlight Piano Beta/ });
     await focusOn(toggle);
     expect(await focusIsVisible(page), "the series toggle draws no ring").toBe(true);
     await page.keyboard.press("Enter");
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
     await page.keyboard.press("Tab");
-    await expect(row.getByRole("link", { name: "PAC Beta" })).toBeFocused();
+    await expect(row.getByRole("link", { name: "Piano Beta" })).toBeFocused();
     expect(await focusIsVisible(page), "the fund's name draws no ring").toBe(true);
 
     const record = row.getByRole("button", { name: "Update value" });
@@ -477,8 +477,8 @@ test.describe("a fund's new page", () => {
 
   test("the valuation dialog gives the focus back", async ({ page }) => {
     await page.goto("/funds");
-    const row = page.getByTestId("fund-home-row").filter({ hasText: "PAC Piano" });
-    const href = await row.getByRole("link", { name: "PAC Piano" }).getAttribute("href");
+    const row = page.getByTestId("fund-home-row").filter({ hasText: "Piano Uno" });
+    const href = await row.getByRole("link", { name: "Piano Uno" }).getAttribute("href");
     await page.goto(href!);
     const record = page.getByRole("button", { name: "Update value" }).first();
     await focusOn(record);
@@ -491,8 +491,8 @@ test.describe("a fund's new page", () => {
   });
 
   for (const [fund, tab, period] of [
-    ["PAC Piano", "Contributions", "contributions"],
-    ["PAC Piano", "Values", "valuations"],
+    ["Piano Uno", "Contributions", "contributions"],
+    ["Piano Uno", "Values", "valuations"],
     ["Pensione Beta", "Contributions", "contributions"],
     ["Pensione Beta", "Values", "valuations"],
   ] as const) {
@@ -532,8 +532,8 @@ test.describe("a fund's new page", () => {
     await page.goto("/funds");
     const href = await page
       .getByTestId("fund-home-row")
-      .filter({ hasText: "PAC Piano" })
-      .getByRole("link", { name: "PAC Piano" })
+      .filter({ hasText: "Piano Uno" })
+      .getByRole("link", { name: "Piano Uno" })
       .getAttribute("href");
     await page.goto(`${href}?tab=valuations&preset=all`);
     const edit = page.getByTestId("valuation-line").first().getByRole("button", { name: "Edit" });

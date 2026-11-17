@@ -29,8 +29,8 @@ test.describe("the tabs", () => {
   const periodControl = (page: Page) => page.getByRole("group", { name: "Date range" }).first();
 
   for (const [name, tab, testId] of [
-    ["PAC Piano", "contributions", "contribution-row"],
-    ["PAC Piano", "valuations", "valuation-line"],
+    ["Piano Uno", "contributions", "contribution-row"],
+    ["Piano Uno", "valuations", "valuation-line"],
     ["Pensione Beta", "contributions", "contribution-row"],
     ["Pensione Beta", "valuations", "valuation-line"],
   ] as const) {
@@ -68,7 +68,7 @@ test.describe("the tabs", () => {
   test("the Contributions tab adds up to the Overview's paid in; the debit stays in every period", async ({
     page,
   }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?off=1`);
     const paid = (await page.getByTestId("kpi-paid").locator("span").nth(1).textContent())!.trim();
     await page.goto(`${path}?tab=contributions&off=1`);
@@ -79,7 +79,7 @@ test.describe("the tabs", () => {
     await expect(page.getByText(`No data in ${Y - 9}`)).toBeVisible();
   });
 
-  for (const name of ["PAC Piano", "Pensione Beta"]) {
+  for (const name of ["Piano Uno", "Pensione Beta"]) {
     for (const query of ["", `?off=1`, `?off=2`, "?preset=all"]) {
       test(`${name}: Σ of the stretches = the gain of the Overview, ${query || "the year running"}`, async ({
         page,
@@ -97,7 +97,7 @@ test.describe("the tabs", () => {
   }
 
   test("the stretch return says what it is, and appears only in Values", async ({ page }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?tab=valuations&preset=all`);
     await expect(page.getByRole("columnheader", { name: "Stretch return" })).toBeVisible();
     await expect(page.getByTestId("stretch-rate-note")).toContainText("not the return of the period");
@@ -136,8 +136,8 @@ test.describe("the tabs", () => {
     };
 
     for (const [name, tab, row, item] of [
-      ["PAC Piano", "contributions", "contribution-row", "contribution-item"],
-      ["PAC Piano", "valuations", "valuation-line", "valuation-item"],
+      ["Piano Uno", "contributions", "contribution-row", "contribution-item"],
+      ["Piano Uno", "valuations", "valuation-line", "valuation-item"],
       ["Pensione Beta", "contributions", "contribution-row", "contribution-item"],
       ["Pensione Beta", "valuations", "valuation-line", "valuation-item"],
     ] as const) {
@@ -181,7 +181,7 @@ test.describe("the tabs", () => {
     expect(bad.status()).toBe(404);
     const euro = await page.request.get(`${HOME}/%E2%82%AC/returns`, { maxRedirects: 0 });
     expect(euro.status()).toBe(404);
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?span=99999999999`);
     expect(new URL(page.url()).search).toBe("");
     await page.goto(`${path}?span=abc`);
@@ -189,7 +189,7 @@ test.describe("the tabs", () => {
   });
 
   test("the old returns page goes to Values, with its period", async ({ page }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}/returns?off=1`);
     await expect(page).toHaveURL(new RegExp(`${path}\\?tab=valuations&off=1$`));
     await expect(page.getByTestId("fund-valuations")).toBeVisible();
@@ -202,7 +202,7 @@ test.describe("the tabs", () => {
   // Release N6 (docs/design/rewrite-plan/ux/n6-pension-fund.md §2): the tab of the debits is the one of
   // every contribution, and a fund reads no document any more.
   test("the old Deposits address goes to Contributions, with its period", async ({ page }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     /** Where the address led: the fund's own page, with exactly these parameters, in any order. */
     const landed = async (expected: Record<string, string>) => {
       await expect(page).toHaveURL(/tab=contributions/);
@@ -312,10 +312,10 @@ test.describe("the tabs", () => {
     });
   });
 
-  test("a value recorded by hand can be edited and deleted from the tab; the dialog speaks the new words", async ({
+  test("a value recorded by hand opens its Edit dialog from the tab, and the dialog speaks the new words", async ({
     page,
   }) => {
-    const path = await fundPath(page, "PAC Piano");
+    const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?tab=valuations&preset=all`);
     await page.getByTestId("valuation-line").first().getByRole("button", { name: "Edit" }).click();
     await expect(page.getByRole("dialog")).toContainText("Edit value");
@@ -331,7 +331,7 @@ test.describe("the tabs", () => {
     };
     // One set of tabs for every fund (release N6).
     const TABS = ["overview", "contributions", "valuations", "settings"] as const;
-    const FUNDS = ["PAC Piano", "Pensione Beta"] as const;
+    const FUNDS = ["Piano Uno", "Pensione Beta"] as const;
 
     for (const [language, session] of [
       ["en", "fundsDetail"],

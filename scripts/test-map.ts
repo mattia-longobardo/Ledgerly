@@ -200,7 +200,7 @@ export const MODULES: Module[] = [
   },
   {
     id: "funds",
-    files: ["src/modules/funds/**", page("funds"), "tests/fixtures/cometa/**"],
+    files: ["src/modules/funds/**", page("funds")],
     integration: ["src/modules/funds"],
     flows: ["funds"],
     usedBy: ["investments", "payroll", "export", "jobs", "e2e:shell"],
@@ -451,8 +451,6 @@ export const MODULES: Module[] = [
       "scripts/preview-on-test.sh",
       "scripts/create-*",
       "scripts/plugin-probe.ts",
-      "scripts/fund-documents*",
-      "scripts/investments-cutoff.ts",
       "scripts/modularity.ts",
       "scripts/duplication.ts",
       "scripts/assertions-diff.ts",

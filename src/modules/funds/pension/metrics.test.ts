@@ -18,7 +18,7 @@ const QUARTERLY_CALENDAR = { rule: { day: 20, offsetMonths: 1 }, entries: [] };
 /** 5,16 € + 5,16 € once, 12 € a year taken 3 € a quarter. */
 const QUARTERLY_FEES = { enrollmentCents: 1032n, quarterCents: 300n };
 
-/** The twin fund of `tests/fixtures/cometa`: invented amounts that add up like the real ones. */
+/** A twin fund: invented amounts that add up like the real ones. */
 
 const operation = (overrides: Partial<OperationLike>): OperationLike => ({
   id: `op-${overrides.operationDate}-${overrides.classification ?? "contribution"}`,

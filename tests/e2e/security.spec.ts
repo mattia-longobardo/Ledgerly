@@ -4,7 +4,7 @@
 import { expect, request as http, test } from "@playwright/test";
 import { BASE_URL, sessionState } from "./env";
 
-test.use({ storageState: sessionState("tokens") });
+test.use({ storageState: sessionState("security") });
 
 test.describe.configure({ mode: "serial" });
 

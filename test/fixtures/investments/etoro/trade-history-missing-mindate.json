@@ -1,7 +1,0 @@
-{
-  "request": "/api/v1/trading/info/trade/history",
-  "status": 400,
-  "body": {
-    "message": "Missing required query parameter [MinDate]."
-  }
-}

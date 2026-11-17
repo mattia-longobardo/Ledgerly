@@ -122,7 +122,7 @@ test("a manual service shows an account of Accounts, and Accounts shows the same
     await openTab(page, "Activity");
     const list = page.getByTestId("manual-activity");
     await expect(list.getByTestId("activity-item")).toHaveCount(1);
-    await expect(list).toContainText("MATTIA LONGOBARDO");
+    await expect(list).toContainText("MARIO ROSSI");
     await expect(list).toContainText(/\+8\.000,00\s€/);
   });
 
