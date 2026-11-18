@@ -140,53 +140,76 @@ export function LeaveBoard({
     [live],
   );
 
-  const [shown, show] = useOptimistic<Shown, Change>({ views, waiting: [] }, (state, change) => {
-    switch (change.type) {
-      case "save": {
-        const fields = change.fields;
-        const preview = previewLeaveRange(
-          {
-            from: fields.from,
-            to: fields.to,
-            kind: fields.kind as LeaveDayKind,
-            fraction: Number(fields.fraction),
-            editedKind: (fields.editedKind ?? null) as LeaveDayKind | null,
-            otherKind: (fields.otherKind ?? null) as LeaveDayKind | null,
-          },
-          { days: state.views, holidays: holidaySet, year },
-        );
-        return { views: preview.after, waiting: preview.written };
+  /**
+   * What a write left on screen until the page is read again: the optimistic state ends with the
+   * action, and the server's rows come with the refresh after it. Without it the calendar went back
+   * to the rows before the write for that moment, and a tap on a day just booked started a new range.
+   */
+  const [held, setHeld] = useState<{ days: BookedLeave[]; shown: Shown } | null>(null);
+  const base = useMemo<Shown>(
+    () => (held !== null && held.days === days ? held.shown : { views, waiting: [] }),
+    [held, days, views],
+  );
+  const applyChange = useCallback(
+    (state: Shown, change: Change): Shown => {
+      switch (change.type) {
+        case "save": {
+          const fields = change.fields;
+          const preview = previewLeaveRange(
+            {
+              from: fields.from,
+              to: fields.to,
+              kind: fields.kind as LeaveDayKind,
+              fraction: Number(fields.fraction),
+              editedKind: (fields.editedKind ?? null) as LeaveDayKind | null,
+              otherKind: (fields.otherKind ?? null) as LeaveDayKind | null,
+            },
+            { days: state.views, holidays: holidaySet, year },
+          );
+          return { views: preview.after, waiting: preview.written };
+        }
+        case "remove": {
+          const target = change.target;
+          const gone = "id" in target ? days.find((day) => day.id === target.id) : undefined;
+          const date = "id" in target ? gone?.on : target.date;
+          if (date === undefined) return state;
+          return {
+            views: state.views.filter(
+              (day) => day.on !== date || (gone !== undefined && day.kind !== gone.kind),
+            ),
+            waiting: [date],
+          };
+        }
+        case "removeRange": {
+          const { from, to } = change.range;
+          const inRange = (on: string) => on >= from && on <= to;
+          return {
+            views: state.views.filter((day) => !inRange(day.on)),
+            waiting: [...new Set(state.views.filter((day) => inRange(day.on)).map((day) => day.on))],
+          };
+        }
+        case "undo":
+          return {
+            views: [
+              ...state.views.filter((day) => !change.undo.dates.includes(day.on)),
+              ...change.undo.rows.map((row) => ({ on: row.on, kind: row.kind, fraction: row.fraction })),
+            ],
+            waiting: change.undo.dates,
+          };
       }
-      case "remove": {
-        const target = change.target;
-        const gone = "id" in target ? days.find((day) => day.id === target.id) : undefined;
-        const date = "id" in target ? gone?.on : target.date;
-        if (date === undefined) return state;
-        return {
-          views: state.views.filter(
-            (day) => day.on !== date || (gone !== undefined && day.kind !== gone.kind),
-          ),
-          waiting: [date],
-        };
-      }
-      case "removeRange": {
-        const { from, to } = change.range;
-        const inRange = (on: string) => on >= from && on <= to;
-        return {
-          views: state.views.filter((day) => !inRange(day.on)),
-          waiting: [...new Set(state.views.filter((day) => inRange(day.on)).map((day) => day.on))],
-        };
-      }
-      case "undo":
-        return {
-          views: [
-            ...state.views.filter((day) => !change.undo.dates.includes(day.on)),
-            ...change.undo.rows.map((row) => ({ on: row.on, kind: row.kind, fraction: row.fraction })),
-          ],
-          waiting: change.undo.dates,
-        };
-    }
-  });
+    },
+    [days, holidaySet, year],
+  );
+  const [shown, show] = useOptimistic<Shown, Change>(base, applyChange);
+  /** After a write that went through: what it shows stays until the server's rows arrive. */
+  const keep = useCallback(
+    (change: Change) => setHeld({ days, shown: applyChange(base, change) }),
+    [days, applyChange, base],
+  );
+  /** A booked day tapped before its rows arrived: it opens when they do. */
+  const [deferred, setDeferred] = useState<{ date: string; rowId?: string; days: BookedLeave[] } | null>(
+    null,
+  );
 
   const months = useMemo(
     () => calendar(year, shown.views, holidaySet, weekStart, countedThrough, minutesPerDay),
@@ -223,11 +246,12 @@ export function LeaveBoard({
           notify(t("toasts.undoFailed"), "error");
           return;
         }
+        keep({ type: "undo", undo: state });
         notify(t("toasts.undone"));
         router.refresh();
       });
     },
-    [router, show, t],
+    [keep, router, show, t],
   );
 
   const undoAction = useCallback(
@@ -266,6 +290,7 @@ export function LeaveBoard({
           return;
         }
         if (result.removed === 0) return;
+        keep({ type: "remove", target });
         // A day Trek holds does not go until Trek agrees: "removed" alone would be a lie the badge
         // on the row contradicts.
         notify(
@@ -276,7 +301,7 @@ export function LeaveBoard({
         router.refresh();
       });
     },
-    [close, messageFor, router, show, t, undoAction],
+    [close, keep, messageFor, router, show, t, undoAction],
   );
 
   /** "Remove N days": one call, one transaction, one toast whose "Undo" brings every day back. */
@@ -296,6 +321,7 @@ export function LeaveBoard({
           return;
         }
         if (result.removed === 0) return;
+        keep({ type: "removeRange", range: picked });
         notify(
           result.pending > 0
             ? t("toasts.rangeRemovalPending", { count: result.days })
@@ -306,7 +332,7 @@ export function LeaveBoard({
         router.refresh();
       });
     },
-    [close, messageFor, router, show, t, undoAction],
+    [close, keep, messageFor, router, show, t, undoAction],
   );
 
   /** The edited day becomes the first day of a range: the calendar takes it from here. */
@@ -332,10 +358,45 @@ export function LeaveBoard({
         if (result.error === "not_found") router.refresh();
         return;
       }
+      keep({ type: "save", fields });
       close();
       notify(t("toasts.saved", { days: daysText(result.days) }), "success", undoAction(result.undo));
       router.refresh();
     });
+  }
+
+  /** The rows the calendar shows, removals on their way left out (N5 §7.4); the table may still
+   * name a row waiting for Trek, the calendar never does. */
+  const rowsOf = useCallback(
+    (date: string, rowId?: string) => {
+      const shownRow = (day: BookedLeave) =>
+        shown.views.some((one) => one.on === day.on && one.kind === day.kind);
+      return days.filter((day) => day.on === date && (stillBooked(day) ? shownRow(day) : day.id === rowId));
+    },
+    [days, shown.views],
+  );
+  const unread = useCallback(
+    (date: string) =>
+      shown.views.some(
+        (one) =>
+          one.on === date &&
+          !days.some(
+            (day) =>
+              stillBooked(day) && day.on === date && day.kind === one.kind && day.fraction === one.fraction,
+          ),
+      ),
+    [days, shown.views],
+  );
+  // The rows have arrived: the deferred tap opens its panel (state set while rendering, not in an effect).
+  if (deferred !== null && deferred.days !== days) {
+    setDeferred(null);
+    const rows = rowsOf(deferred.date, deferred.rowId);
+    if (rows.length > 0) {
+      setError(null);
+      setRange(null);
+      setOpened((count) => count + 1);
+      setEntry({ mode: "edit", date: deferred.date, rows, active: deferred.rowId });
+    }
   }
 
   const board = useMemo<Board>(
@@ -353,18 +414,19 @@ export function LeaveBoard({
         open({ mode: "add", from }, null);
       },
       openEdit: (date, rowId) => {
-        // The rows the calendar shows, removals on their way left out (N5 §7.4); the table may still
-        // name a row waiting for Trek, the calendar never does.
-        const shownRow = (day: BookedLeave) =>
-          shown.views.some((one) => one.on === day.on && one.kind === day.kind);
-        const rows = days.filter(
-          (day) => day.on === date && (stillBooked(day) ? shownRow(day) : day.id === rowId),
-        );
+        // A day the calendar shows and the server's rows do not have yet: booked or changed a moment
+        // ago. Its panel needs the rows, so it opens when they arrive instead of on the old ones.
+        if (unread(date)) {
+          opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setDeferred({ date, rowId, days });
+          return;
+        }
+        const rows = rowsOf(date, rowId);
         if (rows.length > 0) open({ mode: "edit", date, rows, active: rowId }, null);
       },
       remove,
     }),
-    [months, waiting, range, today, busy, startAt, year, days, shown.views, open, remove],
+    [months, waiting, range, today, busy, startAt, year, days, unread, rowsOf, open, remove],
   );
 
   return (

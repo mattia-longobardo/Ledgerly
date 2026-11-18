@@ -72,6 +72,8 @@ function renderBoard(days: BookedLeave[] = []) {
   return render(board(days));
 }
 
+/** The panel, under either name: the toast is a dialog too. */
+const PANEL = /^(New|Edit) leave$/;
 const cell = (date: string) => document.querySelector(`[data-date="${date}"]`) as HTMLElement;
 const writes = () =>
   save.mock.calls.length + remove.mock.calls.length + removeRange.mock.calls.length + undo.mock.calls.length;
@@ -199,6 +201,27 @@ describe("a booked day", () => {
     expect(remove).toHaveBeenLastCalledWith({ date: "2026-06-16" });
     expect(await screen.findByText("2 leaves removed")).toBeInTheDocument();
     expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("opens its own panel when it is tapped right after Confirm, before the page is read again", async () => {
+    const { rerender } = renderBoard();
+    await userEvent.click(cell("2026-06-16"));
+    await userEvent.click(cell("2026-06-16"));
+    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Confirm" }));
+    await screen.findByText("Leave saved · 5 d");
+    expect(screen.queryByRole("dialog", { name: PANEL })).not.toBeInTheDocument();
+
+    // The write is done and the page is not read again yet: the day stays booked on the calendar,
+    // and a tap on it starts no new range.
+    await userEvent.click(cell("2026-06-16"));
+    expect(cell("2026-06-16")).not.toHaveAttribute("data-selected");
+    expect(screen.queryByRole("dialog", { name: PANEL })).not.toBeInTheDocument();
+
+    // The server's rows arrive: the tap opens the panel of the booked day.
+    rerender(board([booked("2026-06-16")]));
+    const panel = within(await screen.findByRole("dialog", { name: "Edit leave" }));
+    expect(panel.getByLabelText("Type")).toHaveValue("vacation");
+    expect(save).toHaveBeenCalledOnce();
   });
 
   it("is not in the panel when the day is tapped again before the page is read again", async () => {
