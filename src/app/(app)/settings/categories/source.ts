@@ -15,10 +15,13 @@ import {
   sourceNamesByCategory,
   undoSourceCategory,
 } from "@/modules/transactions/source-categories";
+import { colorOfCategory, listCategoriesWithUsage } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { monthKey, today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { labelOf } from "@/platform/integrations/registry";
+
+import type { SourceCategoryRow } from "./source-categories";
 
 type Who = Pick<Ctx, "userId" | "timeZone">;
 
@@ -50,14 +53,64 @@ export async function sourceCategorySections(
   return sections;
 }
 
+/**
+ * "Categories of {source}" as the source's page draws it (plugin-settings.md §2.2): each category
+ * of the source with the category it counts under, and the categories of its kind it may be
+ * matched to. `null` while the source has given no category.
+ */
+export async function sourceCategoryRows(
+  ctx: Pick<Ctx, "userId" | "locale">,
+  provider: string,
+): Promise<{ name: string; rows: SourceCategoryRow[] } | null> {
+  const section = (await sourceCategorySections(ctx)).find((one) => one.provider === provider);
+  if (!section) return null;
+  const categories = await listCategoriesWithUsage(ctx, { includeArchived: true });
+  const byId = new Map(categories.map(({ category }) => [category.id, category]));
+  // What a source's category may be matched to: the categories in use, in tree order, by kind.
+  const matchable = categories
+    .filter(({ category }) => category.archivedAt === null)
+    .map(({ category }) => ({
+      id: category.id,
+      name: category.name,
+      color: colorOfCategory(category, byId),
+      depth: (category.parentId === null ? 0 : 1) as 0 | 1,
+      type: category.type,
+    }));
+  return {
+    name: section.name,
+    rows: section.rows.map((row) => {
+      const counted = row.categoryId === null ? undefined : byId.get(row.categoryId);
+      // The kind of a source's category is the kind of the category it counts under.
+      const type = counted?.type ?? "expense";
+      return {
+        id: row.id,
+        name: row.name,
+        nested: row.groupName !== null && row.groupName !== row.name,
+        count: row.count,
+        isNew: row.isNew,
+        choice: row.choice,
+        category:
+          row.choice === "matched" && counted
+            ? { id: counted.id, name: counted.name, color: colorOfCategory(counted, byId) }
+            : null,
+        options: matchable.filter((option) => option.type === type),
+      };
+    }),
+  };
+}
+
 /** For each category: "From {source}: {names}", where the names say more than the category's own. */
 export async function sourceNotes(
   ctx: Pick<Ctx, "userId" | "locale">,
-): Promise<Map<string, { source: string; names: string[] }>> {
+): Promise<Map<string, { provider: string; source: string; names: string[] }>> {
   const byCategory = await sourceNamesByCategory(ctx);
-  const notes = new Map<string, { source: string; names: string[] }>();
+  const notes = new Map<string, { provider: string; source: string; names: string[] }>();
   for (const [categoryId, entry] of byCategory) {
-    notes.set(categoryId, { source: await nameOf(entry.provider, ctx.locale), names: entry.names });
+    notes.set(categoryId, {
+      provider: entry.provider,
+      source: await nameOf(entry.provider, ctx.locale),
+      names: entry.names,
+    });
   }
   return notes;
 }

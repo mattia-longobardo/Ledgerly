@@ -1109,6 +1109,49 @@
         "failed": "Non è stato possibile salvare. Riprova."
       }
     },
+    "plugin": {
+      "page": {
+        "back": "Integrazioni"
+      },
+      "sections": {
+        "connection": "Collegamento",
+        "connectionHint": "Credenziali di {provider} e stato della lettura.",
+        "accounts": "Conti",
+        "accountsHint": "Quali conti di {provider} entrano in Ledgerly.",
+        "categories": "Categorie di {provider}",
+        "categoriesHint": "{provider} dà già una categoria ai suoi movimenti. Scegli a quale categoria di Ledgerly corrisponde ognuna.",
+        "schedule": "Pianificazione",
+        "scheduleHint": "Quando Ledgerly legge da solo ogni collegamento.",
+        "history": "Storico",
+        "historyHint": "Quanti mesi di movimenti Ledgerly legge da {provider}.",
+        "writes": "Scrittura su {provider}",
+        "writesHint": "Cosa Ledgerly scrive su {provider}. Si cambia dove nasce: nella regola, nel movimento, nel giorno.",
+        "advanced": "Avanzate",
+        "advancedHint": "Il registro delle letture, per capire un problema."
+      },
+      "accounts": {
+        "choose": "Scegli i conti",
+        "chooseFor": "Scegli i conti di {name}",
+        "chooseHint": "Ledgerly legge l'elenco dei conti quando lo apri."
+      },
+      "writes": {
+        "none": "Niente da scrivere adesso.",
+        "rule": "Regola di interessi su «{account}»: pubblica ogni liquidazione",
+        "unsent": "{count, plural, one {# movimento da inviare} other {# movimenti da inviare}}",
+        "pendingDays": "{count, plural, one {# modifica ai giorni da inviare} other {# modifiche ai giorni da inviare}}"
+      },
+      "advanced": {
+        "log": "Registro delle letture di {name}"
+      },
+      "categories": {
+        "movedHint": "Le categorie di {provider} si associano nella pagina di {provider}."
+      },
+      "settingsOf": "Impostazioni di {provider}",
+      "movedHint": "Il collegamento a {provider} e la sua pianificazione sono nella pagina di {provider}.",
+      "disconnect": {
+        "toDeactivate": "Vuoi smettere di usare {provider}? Disattivalo"
+      }
+    },
     "banks": {
       "title": "Banche",
       "description": "Collega i tuoi conti bancari. Ledgerly legge saldi e movimenti e non può fare pagamenti.",

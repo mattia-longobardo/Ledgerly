@@ -627,6 +627,8 @@ export interface ConnectionSummary {
   chosen: boolean;
   /** The accounts the person left out. */
   skipped: number;
+  /** The bank's ids of the accounts the access exposes. */
+  accountIds: string[];
 }
 
 export async function connectionSummary(
@@ -634,7 +636,12 @@ export async function connectionSummary(
   connectionId: string,
 ): Promise<ConnectionSummary> {
   const bag = readBag(await readCredentials(ctx, connectionId));
-  return { accounts: bag.accounts.length, chosen: bag.chosen, skipped: bag.skipped.length };
+  return {
+    accounts: bag.accounts.length,
+    chosen: bag.chosen,
+    skipped: bag.skipped.length,
+    accountIds: bag.accounts.map(providerAccountIdOf),
+  };
 }
 
 /**

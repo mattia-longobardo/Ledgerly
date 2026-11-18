@@ -9,6 +9,8 @@ import { draftOf, formatRate, tierChips } from "@/modules/interests/ui/present";
 import { PostingCell } from "@/modules/interests/ui/posting-cell";
 import { RuleButton, RuleStateButton } from "@/modules/interests/ui/rule-dialog";
 import { requireSession } from "@/platform/auth/session";
+import { coreCreatesRecords } from "@/platform/integrations/rules";
+import { listConnections } from "@/platform/integrations/service";
 import { civilDateIn, today } from "@/platform/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
 import { Card, CardHeader } from "@/ui/card";
@@ -45,8 +47,19 @@ export async function generateMetadata({ params }: PageProps<"/interests/[id]">)
 export default async function RulePage({ params }: PageProps<"/interests/[id]">) {
   const { ctx, detail } = await load((await params).id);
   const t = await getTranslations("interests");
-  const [open, categories] = await Promise.all([listAccounts(ctx), categoryOptions(ctx, "income")]);
-  const accounts = open.map((account) => ({ id: account.id, name: account.name }));
+  const [open, categories, connections] = await Promise.all([
+    listAccounts(ctx),
+    categoryOptions(ctx, "income"),
+    listConnections(ctx),
+  ]);
+  // "Publish" only on an account whose source is connected and writes (plugin-settings.md §2.2).
+  const writes = (provider: string | null) =>
+    provider !== null && coreCreatesRecords(provider) && connections.some((one) => one.provider === provider);
+  const accounts = open.map((account) => ({
+    id: account.id,
+    name: account.name,
+    publishable: writes(account.provider),
+  }));
   const money = (cents: bigint | null) => formatMoney(cents, ctx.numberFormat);
   const { rule } = detail;
   const labels = {

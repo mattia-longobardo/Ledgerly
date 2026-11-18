@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, useTransition } from "react";
@@ -345,5 +346,65 @@ export function ConnectionRow({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * One source in the list of Settings › Integrations (plugin-settings.md §2.1): the name, the state
+ * of its connection, one line of summary and an arrow. The whole row is the one link to the
+ * source's page, where every setting of the source is.
+ */
+export function SourceLinkRow({
+  slug,
+  name,
+  status,
+  summary,
+  href,
+}: {
+  slug: string;
+  name: string;
+  status: RowStatusValue;
+  summary: string | null;
+  href: string;
+}) {
+  const t = useTranslations("settings.connections");
+  return (
+    <Link
+      href={href as Route}
+      data-testid="source-row"
+      data-source={slug}
+      data-status={status}
+      className="focus-ring flex min-h-6 items-center justify-between gap-4 px-4 py-3.5 hover:bg-hover"
+    >
+      <span className="min-w-0">
+        <span className="flex flex-wrap items-center gap-x-2">
+          <span aria-hidden className={cn("size-[7px] shrink-0 rounded-full", DOT[status])} />
+          <span className="min-w-0 font-semibold break-words">{name}</span>
+          <span className={cn("text-sm font-medium whitespace-nowrap", TONE_TEXT[WORD_TONE[status]])}>
+            {t(`status.${status}`)}
+          </span>
+        </span>
+        {summary !== null && <span className="mt-0.5 block text-sm text-muted">{summary}</span>}
+      </span>
+      <span aria-hidden className="shrink-0 text-muted">
+        →
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * Under "Disconnect" (plugin-settings.md §4.2): a disconnection keeps the settings, and the way
+ * to stop using a source for good is on the source's page.
+ */
+export function DeactivateLink({ href, provider }: { href: string; provider: string }) {
+  const t = useTranslations("settings.plugin");
+  return (
+    <Link
+      href={href as Route}
+      className="focus-ring inline-flex min-h-6 items-center self-start rounded-[2px] text-accent underline underline-offset-2"
+    >
+      {t("disconnect.toDeactivate", { provider })}
+    </Link>
   );
 }

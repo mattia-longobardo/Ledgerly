@@ -11,7 +11,9 @@ import type { Ctx } from "@/platform/context";
 import { addDays, civilDateIn } from "@/platform/dates";
 import { formatDate } from "@/platform/format";
 import type { ConnectionLabel } from "@/platform/integrations/registry";
+import { isPluginProvider, PROVIDERS } from "@/platform/integrations/rules";
 import type { Connection, RecentRun } from "@/platform/integrations/service";
+import { providerOf } from "@/modules/investments/catalog";
 import {
   clock,
   codeKey,
@@ -80,6 +82,41 @@ const ADVANCED = "/settings/integrations/advanced";
 
 export function advancedHref(connectionId: string): string {
   return `${ADVANCED}?c=${connectionId}`;
+}
+
+/**
+ * The page of a source (rewrite plan N7.2, plugin-settings.md §2.1): a plugin's id, or the id of a
+ * provider of the core. The investment services have none: their settings are on the service's
+ * page (§1.1, row 17).
+ */
+export function sourceSlugOf(provider: string): string | null {
+  if (isPluginProvider(provider)) return provider.slice("plugin:".length);
+  if (providerOf(provider) !== null) return null;
+  return (PROVIDERS as readonly string[]).includes(provider) ? provider : null;
+}
+
+/** Where the settings of a source are; `null` for a provider without a page of its own. */
+export function sourceHref(provider: string): string | null {
+  const slug = sourceSlugOf(provider);
+  return slug === null ? null : `/settings/integrations/${slug}`;
+}
+
+/**
+ * The accounts here that a bank's access reads, and that stay "Disconnected" after "Disconnect":
+ * the accounts of `provider` whose id is one of the access's. An account deleted here is not one of
+ * them, even when the bank still has it (plugin-settings.md §4.2).
+ */
+export function accountsLeft(
+  accounts: readonly { provider: string | null; providerAccountId: string | null }[],
+  provider: string,
+  ids: ReadonlySet<string>,
+): number {
+  return accounts.filter(
+    (account) =>
+      account.provider === provider &&
+      account.providerAccountId !== null &&
+      ids.has(account.providerAccountId),
+  ).length;
 }
 
 /** The state of a connection from what the page read about it. */

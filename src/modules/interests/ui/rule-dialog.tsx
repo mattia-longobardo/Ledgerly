@@ -47,7 +47,8 @@ export function RuleDialog({
   onClose,
 }: {
   draft: RuleDraft;
-  accounts: readonly { id: string; name: string }[];
+  /** `publishable`: the account's source is connected and takes a record written here. */
+  accounts: readonly { id: string; name: string; publishable?: boolean }[];
   /** The income categories a published settlement may be filed under (spec §7.6). */
   categories: readonly CategoryOption[];
   onClose: () => void;
@@ -61,6 +62,10 @@ export function RuleDialog({
   const [categoryId, setCategoryId] = useState<string | null>(draft.categoryId);
   const [picking, setPicking] = useState(false);
   const chosen = categories.find((option) => option.id === categoryId) ?? null;
+  const [accountId, setAccountId] = useState(draft.accountId);
+  // The option is drawn only where it can work (plugin-settings.md §2.2); a rule that already
+  // publishes keeps its choice when it is saved.
+  const publishable = accounts.find((account) => account.id === accountId)?.publishable === true;
 
   function setTier(index: number, field: "upTo" | "rate", value: string) {
     setTiers((current) => current.map((tier, i) => (i === index ? { ...tier, [field]: value } : tier)));
@@ -109,7 +114,12 @@ export function RuleDialog({
       <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
         <div className="col-span-full">
           <Field label={t("form.account")} htmlFor={`${id}-account`}>
-            <Select id={`${id}-account`} name="account" defaultValue={draft.accountId}>
+            <Select
+              id={`${id}-account`}
+              name="account"
+              defaultValue={draft.accountId}
+              onChange={(event) => setAccountId(event.target.value)}
+            >
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name}
@@ -237,41 +247,55 @@ export function RuleDialog({
             <Input id={`${id}-match`} name="match" maxLength={80} defaultValue={draft.payeeMatch} />
           </Field>
         </div>
-        {/*
+        {publishable && (
+          <>
+            {/*
           The category the published record is filed under in Wallet (spec §7.6): a local category
           of this user's, which the posting resolves to Wallet's own id through the `category`
           links. A category that has never been linked publishes the record uncategorised and the
           payout says so — the posting is never failed and no category is ever invented.
         */}
-        <div className="col-span-full">
-          <Field label={t("form.category")} htmlFor={`${id}-category`} hint={t("form.categoryHint")}>
-            <CategoryPicker
-              categories={categories}
-              currentId={categoryId}
-              open={picking}
-              onOpenChange={setPicking}
-              onPick={setCategoryId}
-              uncategorisedLabel={t("form.noCategory")}
-              searchLabel={t("form.categorySearch")}
-              noMatchLabel={t("form.categoryNoMatch")}
-              triggerLabel={t("form.category")}
-              triggerId={`${id}-category`}
-              triggerClassName="focus-ring flex h-8 w-full items-center gap-2 rounded-ctl border border-border bg-card px-2.5 text-left text-base"
-            >
-              {chosen ? (
-                <>
-                  <span aria-hidden className="size-2 rounded-[2px]" style={{ background: chosen.color }} />
-                  <span className="truncate">{chosen.name}</span>
-                </>
-              ) : (
-                <span className="text-muted">{t("form.noCategory")}</span>
-              )}
-            </CategoryPicker>
-          </Field>
-        </div>
+            <div className="col-span-full">
+              <Field label={t("form.category")} htmlFor={`${id}-category`} hint={t("form.categoryHint")}>
+                <CategoryPicker
+                  categories={categories}
+                  currentId={categoryId}
+                  open={picking}
+                  onOpenChange={setPicking}
+                  onPick={setCategoryId}
+                  uncategorisedLabel={t("form.noCategory")}
+                  searchLabel={t("form.categorySearch")}
+                  noMatchLabel={t("form.categoryNoMatch")}
+                  triggerLabel={t("form.category")}
+                  triggerId={`${id}-category`}
+                  triggerClassName="focus-ring flex h-8 w-full items-center gap-2 rounded-ctl border border-border bg-card px-2.5 text-left text-base"
+                >
+                  {chosen ? (
+                    <>
+                      <span
+                        aria-hidden
+                        className="size-2 rounded-[2px]"
+                        style={{ background: chosen.color }}
+                      />
+                      <span className="truncate">{chosen.name}</span>
+                    </>
+                  ) : (
+                    <span className="text-muted">{t("form.noCategory")}</span>
+                  )}
+                </CategoryPicker>
+              </Field>
+            </div>
+          </>
+        )}
         <div className="col-span-full flex flex-col gap-2">
-          <Checkbox name="publish" defaultChecked={draft.publish} label={t("form.publish")} />
-          <p className="text-xs text-faint">{t("form.publishHint")}</p>
+          {publishable ? (
+            <>
+              <Checkbox name="publish" defaultChecked={draft.publish} label={t("form.publish")} />
+              <p className="text-xs text-faint">{t("form.publishHint")}</p>
+            </>
+          ) : (
+            draft.publish && <input type="hidden" name="publish" value="on" />
+          )}
           <Checkbox name="active" defaultChecked={draft.active} label={t("form.active")} />
         </div>
         {error && (
@@ -300,7 +324,7 @@ export function RuleButton({
   size = "sm",
 }: {
   draft: RuleDraft;
-  accounts: readonly { id: string; name: string }[];
+  accounts: readonly { id: string; name: string; publishable?: boolean }[];
   categories: readonly CategoryOption[];
   label: string;
   variant?: "primary" | "secondary" | "ghost";

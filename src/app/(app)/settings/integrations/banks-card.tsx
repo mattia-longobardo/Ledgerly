@@ -10,7 +10,7 @@ import { Input, Textarea } from "@/ui/input";
 import { ActionMenu } from "@/ui/menu";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./connection-row";
+import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink } from "./connection-row";
 import {
   disconnectBankAction,
   type PluginActionResult,
@@ -32,6 +32,8 @@ export interface BanksCardProps {
   openReplace: boolean;
   /** What "Disconnect" leaves, by row: the accounts of the bank here, and the ones left out. */
   leave: Record<string, { accounts: number; excluded: number }>;
+  /** The plugin's name and page, where it is turned off (plugin-settings.md §4.2). */
+  provider: { name: string; href: string };
 }
 
 const FORM_ID = "bank-credentials-form";
@@ -55,6 +57,7 @@ export function BanksCard({
   banks,
   openReplace,
   leave,
+  provider,
 }: BanksCardProps) {
   const t = useTranslations("settings.banks");
   const common = useTranslations("common");
@@ -385,13 +388,14 @@ export function BanksCard({
           </>
         }
       >
-        {error ? (
-          <p role="alert" className="text-sm text-neg">
-            {error}
-          </p>
-        ) : (
-          <span />
-        )}
+        <div className="flex flex-col gap-2 text-sm">
+          {error && (
+            <p role="alert" className="text-neg">
+              {error}
+            </p>
+          )}
+          <DeactivateLink href={provider.href} provider={provider.name} />
+        </div>
       </Modal>
     </div>
   );

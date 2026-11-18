@@ -1,5 +1,7 @@
 "use client";
 
+import type { Route } from "next";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { CATEGORY_TYPES, type CategoryType, NAME_MAX } from "@/modules/transactions/rules";
@@ -32,7 +34,7 @@ export interface CategoryNode {
   archived: boolean;
   usage: number;
   /** The categories of a source that count under it, where their names say more than its own. */
-  source?: { name: string; names: readonly string[] } | null;
+  source?: { name: string; names: readonly string[]; href: string | null } | null;
 }
 
 export interface CategoryGroup {
@@ -99,10 +101,20 @@ export function CategoryTree({ groups }: { groups: CategoryGroup[] }) {
   /** "From {source}: …" under a category that a source's categories count under (ux §6.4). */
   function sourceNote(node: CategoryNode) {
     if (!node.source || node.source.names.length === 0) return null;
-    return (
-      <span className="truncate text-sm text-muted">
-        {t("source.fromProvider", { provider: node.source.name, names: node.source.names.join(", ") })}
-      </span>
+    const text = t("source.fromProvider", {
+      provider: node.source.name,
+      names: node.source.names.join(", "),
+    });
+    // The match is changed on the source's page (plugin-settings.md §2.2): the note leads there.
+    return node.source.href === null ? (
+      <span className="truncate text-sm text-muted">{text}</span>
+    ) : (
+      <Link
+        href={node.source.href as Route}
+        className="focus-ring block min-h-6 truncate rounded-[2px] text-sm leading-6 text-muted hover:underline"
+      >
+        {text}
+      </Link>
     );
   }
 

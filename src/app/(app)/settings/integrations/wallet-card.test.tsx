@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../messages/en.json";
 import type { IntegrationActionResult } from "./actions";
 import type { ConnectionRowProps } from "./connection-row";
-import { WalletCard, type WalletCardProps } from "./wallet-card";
+import { WalletAccounts, WalletCard, type WalletCardProps } from "./wallet-card";
 
 const connect = vi.fn();
 const disconnect = vi.fn();
@@ -25,6 +25,7 @@ vi.mock("./connection-actions", () => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
 const T = messages.settings.integrations;
+const P = messages.settings.plugin;
 const C = messages.settings.connections;
 const TOKEN = "wallet-secret-token-9f3a";
 const NAME = T.providers.wallet.name;
@@ -61,7 +62,6 @@ const LIVE: ConnectionRowProps = {
   menu: [
     { kind: "update", label: C.actions.update },
     { kind: "replaceKey", label: C.actions.replaceKey },
-    { kind: "chooseAccounts", label: C.actions.chooseAccounts },
     { kind: "test", label: C.actions.test },
     { kind: "advanced", label: C.actions.advanced, href: "/settings/integrations/advanced?c=c1" },
     { kind: "disconnect", label: C.actions.disconnect, danger: true },
@@ -91,6 +91,7 @@ function renderCard(connected = true) {
         row={connected ? LIVE : ABSENT}
         connected={connected}
         leave={{ accounts: 2, excluded: 1 }}
+        deactivateHref="/settings/integrations/wallet#deactivate"
       />
     </NextIntlClientProvider>,
   );
@@ -173,6 +174,11 @@ describe("WalletCard", () => {
     expect(dialog).toHaveTextContent(`Access to ${NAME} is closed. The 2 accounts stay in Ledgerly`);
     expect(dialog).toHaveTextContent("The account choice and the schedule stay");
     expect(dialog).toHaveTextContent("1 excluded account stays excluded.");
+    // The way to stop for good is on the source's page (plugin-settings.md §4.2).
+    expect(screen.getByRole("link", { name: `Want to stop using ${NAME}? Turn it off` })).toHaveAttribute(
+      "href",
+      "/settings/integrations/wallet#deactivate",
+    );
     await userEvent.click(screen.getByRole("button", { name: T.disconnect.cancel }));
     expect(disconnect).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -201,7 +207,15 @@ describe("WalletCard", () => {
     expect(RESULT_CARRIES_NO_SECRET).toBe(true);
   });
 
-  // PERS-419: which Wallet accounts arrive here, as for a bank.
+  it("keeps the choice of the accounts out of the row's menu: it is a section of the page", async () => {
+    renderCard();
+    await userEvent.click(screen.getByRole("button", { name: NAME }));
+    expect(screen.queryByRole("menuitem", { name: C.actions.chooseAccounts })).not.toBeInTheDocument();
+  });
+});
+
+describe("WalletAccounts", () => {
+  // PERS-419: which Wallet accounts arrive here, as for a bank; on the source's page from N7.2.
   it("chooses the accounts: one here stays chosen, one left out can be chosen again", async () => {
     listChoice.mockResolvedValueOnce({
       ok: true,
@@ -212,8 +226,14 @@ describe("WalletCard", () => {
       ],
     });
     saveChoice.mockResolvedValueOnce({ ok: true });
-    renderCard();
-    await fromMenu(C.actions.chooseAccounts);
+    render(
+      <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
+        <WalletAccounts />
+      </NextIntlClientProvider>,
+    );
+    // The list is read only when asked for: the page never calls the source by itself.
+    expect(listChoice).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: P.accounts.choose }));
     const here = await screen.findByRole("checkbox", { name: "Conto" });
     expect(here).toBeChecked();
     expect(here).toBeDisabled();

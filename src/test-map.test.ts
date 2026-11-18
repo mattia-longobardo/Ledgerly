@@ -153,7 +153,11 @@ describe("the selection", () => {
   it("a message starts the module that shows it, and an unknown one everything", () => {
     expect(select(["messages/en.json"]).full).toHaveLength(1);
     expect(select(["messages/en.json"], { messages: ["timeoff"] }).screens).toEqual(["timeoff"]);
-    expect(select(["messages/en.json"], { messages: ["settings.categories"] }).flows).toEqual(["categories"]);
+    // A source's categories are on the source's page too (rewrite plan N7.2).
+    expect(select(["messages/en.json"], { messages: ["settings.categories"] }).flows).toEqual([
+      "categories",
+      "connections",
+    ]);
     expect(select(["messages/en.json"], { messages: ["new-namespace"] }).full).toHaveLength(1);
   });
 

@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
   colorOfCategory,
@@ -17,19 +18,7 @@ import { type LabelRow, LabelsCard } from "./labels-card";
 import { mergeProposalsView } from "./merge";
 import { type MergeSide, MergeProposals } from "./merge-proposals";
 import { sourceCategorySections, sourceNotes } from "./source";
-import {
-  keepSourceCategoryAction,
-  setSourceCategoryAction,
-  undoSourceCategoryAction,
-} from "./source-actions";
-import { SourceCategories, type SourceCategoryCommands } from "./source-categories";
-
-/** The writes of "Categories of {source}", handed to the component: actions of the application. */
-const SOURCE_COMMANDS: SourceCategoryCommands = {
-  set: setSourceCategoryAction,
-  undo: undoSourceCategoryAction,
-  keep: keepSourceCategoryAction,
-};
+import { sourceHref } from "../integrations/connection-view";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
@@ -45,8 +34,9 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function SettingsCategoriesPage() {
   const ctx = await requireSession();
-  const [t, categories, labels, proposals, sources, notes] = await Promise.all([
+  const [t, plugin, categories, labels, proposals, sources, notes] = await Promise.all([
     getTranslations("settings"),
+    getTranslations("settings.plugin"),
     listCategoriesWithUsage(ctx, { includeArchived: true }),
     listLabelsWithUsage(ctx),
     mergeProposalsView(ctx),
@@ -65,7 +55,11 @@ export default async function SettingsCategoriesPage() {
     archived: category.archivedAt !== null,
     usage,
     source: notes.has(category.id)
-      ? { name: notes.get(category.id)?.source ?? "", names: notes.get(category.id)?.names ?? [] }
+      ? {
+          name: notes.get(category.id)?.source ?? "",
+          names: notes.get(category.id)?.names ?? [],
+          href: sourceHref(notes.get(category.id)?.provider ?? ""),
+        }
       : null,
   });
 
@@ -103,38 +97,11 @@ export default async function SettingsCategoriesPage() {
   };
   const noCategories = !categories.some(({ category }) => category.archivedAt === null);
 
-  // What a source's category may be matched to: the categories in use, in tree order, by kind.
-  const matchable = categories
-    .filter(({ category }) => category.archivedAt === null)
-    .map(({ category }) => ({
-      id: category.id,
-      name: category.name,
-      color: colorOfCategory(category, byId),
-      depth: (category.parentId === null ? 0 : 1) as 0 | 1,
-      type: category.type,
-    }));
-  const sourceSections = sources.map((section) => ({
-    provider: section.provider,
-    name: section.name,
-    rows: section.rows.map((row) => {
-      const counted = row.categoryId === null ? undefined : byId.get(row.categoryId);
-      // The kind of a source's category is the kind of the category it counts under.
-      const type = counted?.type ?? "expense";
-      return {
-        id: row.id,
-        name: row.name,
-        nested: row.groupName !== null && row.groupName !== row.name,
-        count: row.count,
-        isNew: row.isNew,
-        choice: row.choice,
-        category:
-          row.choice === "matched" && counted
-            ? { id: counted.id, name: counted.name, color: colorOfCategory(counted, byId) }
-            : null,
-        options: matchable.filter((option) => option.type === type),
-      };
-    }),
-  }));
+  // "Categories of {source}" are on the source's page (plugin-settings.md §2.2): one line each here.
+  const moved = sources.flatMap((section) => {
+    const href = sourceHref(section.provider);
+    return href === null ? [] : [{ provider: section.provider, name: section.name, href }];
+  });
 
   return (
     <SettingsGrid>
@@ -157,6 +124,17 @@ export default async function SettingsCategoriesPage() {
       )}
       <SettingsSection title={t("categories.title")} description={t("categories.description")} padded={false}>
         <CategoryTree groups={groups} />
+        {moved.map((source) => (
+          <p key={source.provider} className="border-t border-border px-4 py-3 text-sm text-muted">
+            {plugin("categories.movedHint", { provider: source.name })}{" "}
+            <Link
+              href={source.href as Route}
+              className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent underline underline-offset-2"
+            >
+              {plugin("settingsOf", { provider: source.name })}
+            </Link>
+          </p>
+        ))}
         {noCategories && (
           <div className="border-t border-border px-4 py-3">
             <DefaultGroupsButton
@@ -171,16 +149,6 @@ export default async function SettingsCategoriesPage() {
           </div>
         )}
       </SettingsSection>
-      {sourceSections.map((section) => (
-        <SettingsSection
-          key={section.provider}
-          title={t("categories.source.title", { provider: section.name })}
-          description={t("categories.source.description", { provider: section.name })}
-          padded={false}
-        >
-          <SourceCategories source={section.name} rows={section.rows} commands={SOURCE_COMMANDS} />
-        </SettingsSection>
-      ))}
       <SettingsSection title={t("labels.title")} description={t("labels.description")} padded={false}>
         <LabelsCard rows={labelRows} />
       </SettingsSection>

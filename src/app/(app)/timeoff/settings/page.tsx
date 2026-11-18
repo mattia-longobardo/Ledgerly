@@ -1,24 +1,18 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
-import { allowanceOf, listAllowances, pendingCount } from "@/modules/timeoff/service";
+import { allowanceOf, listAllowances } from "@/modules/timeoff/service";
 import type { Allowance } from "@/modules/timeoff/service";
 import type { AllowanceSummary } from "@/modules/timeoff/ui/leave-actions";
 import { AllowanceForm, PatronSaintForm, WorkingHoursForm } from "@/modules/timeoff/ui/settings-forms";
 import { YearPicker } from "@/modules/timeoff/ui/year-picker";
 import { getPreferences } from "@/modules/users/service";
-import {
-  connectionRows,
-  OWN_DIALOGS,
-  RUNS_PER_CONNECTION,
-} from "@/app/(app)/settings/integrations/connection-view";
-import { TrekCard } from "@/app/(app)/settings/integrations/trek-card";
+import { sourceHref } from "@/app/(app)/settings/integrations/connection-view";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn, today as todayIn } from "@/platform/dates";
 import { formatDate } from "@/platform/format";
 import { countDaysByCalendar, listCalendars } from "@/platform/holidays/service";
 import { TREK_PROVIDER } from "@/platform/integrations/rules";
-import { labelOf } from "@/platform/integrations/registry";
-import { listConnections, recentRuns, SYNC_RUN_RETENTION_DAYS } from "@/platform/integrations/service";
+import { ButtonLink } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { Page } from "@/ui/shell/page";
 import { TabLinks } from "@/ui/tab-links";
@@ -47,8 +41,8 @@ function summary(year: number, allowance: Allowance | null): AllowanceSummary {
 
 /**
  * Time off › Settings (PERS-158): everything that only leave depends on, in one place — the year's
- * allowance, how long a working day is, the holidays, and the Trek link. The values keep their own
- * tables; the connection itself is still managed on Settings › Integrations, like every other.
+ * allowance, how long a working day is, the holidays, and the way to the Trek link. The values keep
+ * their own tables; the connection itself is on Trek's page of Settings › Integrations.
  */
 export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/timeoff/settings">) {
   const ctx = await requireSession();
@@ -61,14 +55,14 @@ export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/
   const asked = Number(Array.isArray(query.year) ? query.year[0] : query.year);
   const year = Number.isInteger(asked) && asked >= 1990 && asked <= currentYear + 1 ? asked : currentYear;
 
-  const [allowance, previous, allowances, preferences, calendars, counts, connections] = await Promise.all([
+  const plugin = await getTranslations("settings.plugin");
+  const [allowance, previous, allowances, preferences, calendars, counts] = await Promise.all([
     allowanceOf(ctx, year),
     allowanceOf(ctx, year - 1),
     listAllowances(ctx),
     getPreferences(ctx),
     listCalendars(ctx),
     countDaysByCalendar(ctx, currentYear),
-    listConnections(ctx),
   ]);
 
   const calendarRows: CalendarRow[] = calendars.map((calendar) => ({
@@ -85,29 +79,9 @@ export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/
     days: counts[calendar.id] ?? 0,
   }));
 
-  const trek = connections.find((connection) => connection.provider === TREK_PROVIDER) ?? null;
-  const waiting = trek ? await pendingCount(ctx) : 0;
-  // The row of the connection: the same one Settings › Integrations shows (ux n2 §3.3).
-  const now = new Date();
-  const rows = await connectionRows(ctx, now);
-  const name = integrations("providers.trek.name");
-  const role = integrations("providers.trek.role");
-  const trekRow =
-    trek === null
-      ? rows.absent(TREK_PROVIDER, name, role)
-      : rows.row({
-          connection: trek,
-          label: await labelOf(trek, ctx.locale),
-          detail: role,
-          runs: (
-            await recentRuns(
-              ctx,
-              RUNS_PER_CONNECTION,
-              new Date(now.getTime() - SYNC_RUN_RETENTION_DAYS * 86_400_000),
-            )
-          ).filter((run) => run.connectionId === trek.id),
-          capabilities: OWN_DIALOGS,
-        });
+  // The connection to Trek is on its own page (plugin-settings.md §2.2): a link here.
+  const trekName = integrations("providers.trek.name");
+  const trekHref = sourceHref(TREK_PROVIDER) ?? "/settings/integrations";
   const hrefFor = (one: number) => `/timeoff/settings?year=${one}` as Route;
 
   return (
@@ -158,13 +132,12 @@ export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/
               <PatronSaintForm patronSaint={preferences.patronSaint} />
             </div>
           </SettingsSection>
-          <SettingsSection
-            title={integrations("providers.trek.name")}
-            description={t("settings.trek.description")}
-            padded={false}
-          >
-            {/* The same row and the same dialogs as on Settings › Integrations. */}
-            <TrekCard row={trekRow} connected={trek !== null} pending={waiting} />
+          <SettingsSection title={trekName} description={plugin("movedHint", { provider: trekName })}>
+            <div>
+              <ButtonLink href={trekHref as Route} size="sm">
+                {plugin("settingsOf", { provider: trekName })}
+              </ButtonLink>
+            </div>
           </SettingsSection>
         </SettingsGrid>
       </UnsavedChangesProvider>

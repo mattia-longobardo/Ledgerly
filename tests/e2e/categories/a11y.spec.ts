@@ -10,6 +10,12 @@ const PAGES: Screen[] = [
     session: "sources",
     open: go("/settings/categories"),
   },
+  // Release N7.2: the section of a source's categories is on the source's page.
+  {
+    name: "/settings/integrations/[source] (categories of a source)",
+    session: "sources",
+    open: go("/settings/integrations/wallet"),
+  },
 
   // Release N3, second part (ux/n3-categories-manual.md §12, §13): the `review` user has movements
   // in every state of a category; `reviewNew` has movements and no category.
@@ -47,7 +53,7 @@ const OVERLAYS: Screen[] = [
     session: "sources",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/categories");
+      await page.goto("/settings/integrations/wallet");
       await settled(page);
       await page
         .getByTestId("source-category-row")

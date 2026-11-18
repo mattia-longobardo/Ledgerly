@@ -1109,6 +1109,49 @@
         "failed": "Couldn't save. Try again."
       }
     },
+    "plugin": {
+      "page": {
+        "back": "Integrations"
+      },
+      "sections": {
+        "connection": "Connection",
+        "connectionHint": "{provider} credentials and the state of the reading.",
+        "accounts": "Accounts",
+        "accountsHint": "Which {provider} accounts come into Ledgerly.",
+        "categories": "{provider} categories",
+        "categoriesHint": "{provider} already gives its transactions a category. Choose which Ledgerly category each one matches.",
+        "schedule": "Schedule",
+        "scheduleHint": "When Ledgerly reads each connection by itself.",
+        "history": "History",
+        "historyHint": "How many months of transactions Ledgerly reads from {provider}.",
+        "writes": "Writing to {provider}",
+        "writesHint": "What Ledgerly writes to {provider}. Change it where it starts: in the rule, the transaction, the day.",
+        "advanced": "Advanced",
+        "advancedHint": "The log of the readings, to understand a problem."
+      },
+      "accounts": {
+        "choose": "Choose accounts",
+        "chooseFor": "Choose accounts of {name}",
+        "chooseHint": "Ledgerly reads the list of accounts when you open it."
+      },
+      "writes": {
+        "none": "Nothing to write now.",
+        "rule": "Interest rule on “{account}”: posts each payout",
+        "unsent": "{count, plural, one {# transaction to send} other {# transactions to send}}",
+        "pendingDays": "{count, plural, one {# change to your days to send} other {# changes to your days to send}}"
+      },
+      "advanced": {
+        "log": "Log of the readings of {name}"
+      },
+      "categories": {
+        "movedHint": "{provider} categories are matched on the {provider} page."
+      },
+      "settingsOf": "{provider} settings",
+      "movedHint": "The {provider} connection and its schedule are on the {provider} page.",
+      "disconnect": {
+        "toDeactivate": "Want to stop using {provider}? Turn it off"
+      }
+    },
     "banks": {
       "title": "Banks",
       "description": "Connect your bank accounts. Ledgerly reads balances and transactions and cannot make payments.",

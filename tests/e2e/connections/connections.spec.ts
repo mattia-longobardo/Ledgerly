@@ -14,6 +14,10 @@ test.describe.configure({ mode: "default" });
 
 const INTEGRATIONS = "/settings/integrations";
 const ADVANCED = "/settings/integrations/advanced";
+// The pages of the sources (rewrite plan N7.2): every connection of a source is on its page.
+const BANKS = "/settings/integrations/enablebanking";
+const TREK = "/settings/integrations/trek";
+const WALLET = "/settings/integrations/wallet";
 
 /** The words the normal view never shows (criterion 1 of N2; ux §1.2). */
 const TECHNICAL = /\b(plugin|sync|synchroni[sz]ation|token|session|job|run|API|HTTP|429|cron|log)\b/i;
@@ -49,8 +53,28 @@ test.describe("the rows of the connections", () => {
     test(`one row per connection, each in its state, at ${width} px`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto(INTEGRATIONS);
-      const banks = page.getByRole("region", { name: "Banks" });
 
+      await test.step("the list: one row per source, each a link to its page with its state", async () => {
+        const sources = page.getByTestId("source-row");
+        await expect(sources.filter({ hasText: "Trek" })).toHaveAttribute("data-status", "paused");
+        await expect(sources.filter({ hasText: "Wallet" })).toHaveAttribute("data-status", "paused");
+        // The worst of the banks: one needs an action.
+        await expect(sources.filter({ hasText: "Enable Banking" })).toHaveAttribute("data-status", "action");
+        await expect(sources.filter({ hasText: "Enable Banking" })).toHaveAttribute("href", BANKS);
+        await expect(page.getByTestId("bank-row")).toHaveCount(0);
+      });
+
+      await page.goto(TREK);
+      await test.step("the source's page has the row of its connection", async () => {
+        const one = row(page, "Trek");
+        await expect(one).toHaveAttribute("data-status", "paused");
+        await expect(one.getByText("Paused", { exact: true }).first()).toBeVisible();
+        await expect(one.getByText(/^Automatic update is off\.$/).first()).toBeVisible();
+        await expect(one.getByRole("button", { name: "Turn on again" })).toBeVisible();
+      });
+
+      await page.goto(BANKS);
+      const banks = page.getByRole("region", { name: "Connection" });
       await test.step("every state is a word beside the name, with its sentence", async () => {
         const expected: [string, string, string, RegExp][] = [
           ["Alfa Bank", "ok", "Up to date", UP_TO_DATE],
@@ -64,7 +88,6 @@ test.describe("the rows of the connections", () => {
             "Action needed",
             /^You gave access, but you have not chosen the accounts yet\.$/,
           ],
-          ["Trek", "paused", "Paused", /^Automatic update is off\.$/],
         ];
         for (const [name, value, word, sentence] of expected) {
           const one = row(page, name);
@@ -94,7 +117,6 @@ test.describe("the rows of the connections", () => {
           /\/banks\/connect\?renew=/,
         );
         await expect(row(page, "Zeta Bank").getByRole("link", { name: "Choose accounts" })).toBeVisible();
-        await expect(row(page, "Trek").getByRole("button", { name: "Turn on again" })).toBeVisible();
         for (const name of ["Alfa Bank", "Delta Bank"]) {
           await expect(row(page, name).getByRole("button", { name: "Update now" })).toHaveCount(0);
         }
@@ -118,7 +140,7 @@ test.describe("the rows of the connections", () => {
           await toggle.click();
         }
         const texts = await page.getByTestId("connection-row").allInnerTexts();
-        expect(texts.length).toBeGreaterThanOrEqual(7);
+        expect(texts.length).toBeGreaterThanOrEqual(6);
         for (const text of texts) {
           expect(text).not.toMatch(TECHNICAL);
           expect(text).not.toMatch(CODES);
@@ -127,10 +149,60 @@ test.describe("the rows of the connections", () => {
     });
   }
 
+  test("the list leads to a source's page and back with the keyboard", async ({ page }) => {
+    await page.goto(INTEGRATIONS);
+    const trek = page.getByTestId("source-row").filter({ hasText: "Trek" });
+    await hydrated(trek);
+    await trek.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`${TREK}$`));
+    await expect(page.getByRole("heading", { level: 2, name: "Trek", exact: true })).toBeVisible();
+    const back = page.getByRole("link", { name: "← Integrations", exact: true });
+    await hydrated(back);
+    await back.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(new RegExp(`${INTEGRATIONS}$`));
+  });
+
+  test("a source's page has every setting of the source, each in its section", async ({ page }) => {
+    // plugin-settings.md §2.2: connection, accounts, schedule, history, writing, advanced.
+    await page.goto(WALLET);
+    for (const name of ["Connection", "Accounts", "Schedule", "History", "Advanced"]) {
+      await expect(page.getByRole("region", { name, exact: true }), name).toBeVisible();
+    }
+    const writes = page.getByRole("region", { name: /^Writing to / });
+    await expect(writes).toContainText("Nothing to write now.");
+    await expect(
+      page.getByRole("region", { name: "Accounts" }).getByRole("button", { name: "Choose accounts" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Schedule" }).getByRole("button", { name: /schedule/i }),
+    ).toBeVisible();
+    // The choice of the accounts is a section, not an entry of the row's menu.
+    const wallet = page.getByTestId("connection-row");
+    await wallet
+      .getByRole("button", { name: /Wallet/ })
+      .first()
+      .click();
+    await expect(page.getByRole("menuitem", { name: "Choose accounts" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    // A bank: one line per bank leads to the choice of its accounts.
+    await page.goto(BANKS);
+    await expect(
+      page
+        .getByRole("region", { name: "Accounts" })
+        .getByRole("link", { name: "Choose accounts of Alfa Bank" }),
+    ).toHaveAttribute("href", /\/banks\/connect\?step=accounts&c=[0-9a-f-]{36}&all=1$/);
+    // Trek: the days waiting to reach it.
+    await page.goto(TREK);
+    await expect(page.getByRole("region", { name: /^Writing to / })).toContainText("Nothing to write now.");
+  });
+
   test("the history opens with the keyboard, shows ten readings and leads to all of them", async ({
     page,
   }) => {
-    await page.goto(INTEGRATIONS);
+    await page.goto(BANKS);
     const alfa = row(page, "Alfa Bank");
     const toggle = alfa.getByRole("button", { name: "History", exact: true });
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -159,7 +231,7 @@ test.describe("the rows of the connections", () => {
   });
 
   test("the menu of a row walks with the arrows and opens Advanced on that connection", async ({ page }) => {
-    await page.goto(INTEGRATIONS);
+    await page.goto(BANKS);
     const alfa = row(page, "Alfa Bank");
     await alfa.getByRole("button", { name: "Alfa Bank" }).focus();
     await page.keyboard.press("Enter");
@@ -183,8 +255,8 @@ test.describe("the rows of the connections", () => {
   });
 
   test("a second bank can be connected: the procedure opens with a bank already there", async ({ page }) => {
-    await page.goto(INTEGRATIONS);
-    const banks = page.getByRole("region", { name: "Banks" });
+    await page.goto(BANKS);
+    const banks = page.getByRole("region", { name: "Connection" });
     await expect(banks.getByTestId("bank-row")).toHaveCount(6);
     await expect(banks.getByText("For now you can connect one bank only.")).toHaveCount(0);
     await banks.getByRole("link", { name: "Connect a bank" }).click();
@@ -193,26 +265,37 @@ test.describe("the rows of the connections", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
-  test("Advanced: the schedule of each connection, the log with its filter, and the report", async ({
+  test("the schedule is on the source's page: fixed for a bank, a control for the others", async ({
     page,
-    context,
   }) => {
+    await page.goto(BANKS);
+    const banks = page.getByRole("region", { name: "Schedule" }).getByTestId("schedule-row");
+    await expect(banks.filter({ hasText: "Alfa Bank" })).toContainText(/3 times a day · Next: /);
+    await expect(banks.filter({ hasText: "Zeta Bank" })).toContainText("Automatic update is off");
+    await expect(
+      banks.filter({ hasText: "Alfa Bank" }).getByRole("button", { name: /schedule/i }),
+    ).toHaveCount(0);
+    // Each connection leads to its own log.
+    await expect(
+      page
+        .getByRole("region", { name: "Advanced" })
+        .getByRole("link", { name: "Log of the readings of Alfa Bank" }),
+    ).toHaveAttribute("href", /\/settings\/integrations\/advanced\?c=[0-9a-f-]{36}#log$/);
+
+    await page.goto(TREK);
+    const trek = page.getByRole("region", { name: "Schedule" }).getByTestId("schedule-row");
+    await expect(trek.filter({ hasText: "Trek" }).getByRole("button", { name: /schedule/i })).toBeVisible();
+
+    // "Advanced" keeps the log; the schedule of a source is not there any more (plugin-settings.md §2.2).
+    await page.goto(ADVANCED);
+    await expect(page.getByTestId("schedule-row")).toHaveCount(0);
+  });
+
+  test("Advanced: the log with its filter, and the report", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.goto(INTEGRATIONS);
     await page.getByRole("link", { name: /^Advanced/ }).click();
     await expect(page).toHaveURL(new RegExp(`${ADVANCED}$`));
-
-    await test.step("the schedule: fixed for a bank, a control for the others, off where it is off", async () => {
-      const schedule = page.getByTestId("schedule-row");
-      await expect(schedule.filter({ hasText: "Alfa Bank" })).toContainText(/3 times a day · Next: /);
-      await expect(schedule.filter({ hasText: "Zeta Bank" })).toContainText("Automatic update is off");
-      await expect(
-        schedule.filter({ hasText: "Trek" }).getByRole("button", { name: /schedule/i }),
-      ).toBeVisible();
-      await expect(
-        schedule.filter({ hasText: "Alfa Bank" }).getByRole("button", { name: /schedule/i }),
-      ).toHaveCount(0);
-    });
 
     const log = page.getByRole("region", { name: "Log" });
     await test.step("the log has the technical columns, and the code of a failure", async () => {
@@ -283,13 +366,16 @@ test.describe("the rows of the connections", () => {
   test("a plugin turned off keeps its connections in sight, paused, with the way to turn it on", async ({
     page,
   }) => {
-    await page.goto(INTEGRATIONS);
+    await page.goto(BANKS);
     const plugin = page.locator('[data-testid="plugin-row"][data-plugin="enablebanking"]');
     await plugin.getByRole("button", { name: "Enable Banking" }).click();
     await page.getByRole("menuitem", { name: "Turn off" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Turn off" }).click();
+    await expect(page.getByText("Enable Banking turned off")).toBeVisible();
+    // A plugin that is not on has no page: its address leads to the list (plugin-settings.md §2.1).
+    await page.goto(BANKS);
+    await expect(page).toHaveURL(/\/settings\/integrations#source-enablebanking$/);
     await expect(plugin).toHaveAttribute("data-state", "paused");
-    await expect(page.getByRole("region", { name: "Banks" })).toHaveCount(0);
 
     // Every connection of the plugin is "Paused": no warning, no reading, the history still there.
     const rows = page.getByTestId("connection-row").filter({ hasText: "Enable Banking is not active." });
@@ -316,19 +402,24 @@ test.describe("the rows of the connections", () => {
     // Turned on again from the plugin's own entry, which starts no reading by itself.
     await page.goto(INTEGRATIONS);
     await plugin.getByRole("button", { name: "Turn on" }).click();
-    await expect(plugin).toHaveAttribute("data-state", "active");
-    await expect(page.getByRole("region", { name: "Banks" }).getByTestId("bank-row")).toHaveCount(6);
+    await expect(page.getByTestId("source-row").filter({ hasText: "Enable Banking" })).toBeVisible();
+    await page.goto(BANKS);
+    await expect(page.getByRole("region", { name: "Connection" }).getByTestId("bank-row")).toHaveCount(6);
   });
 
   test("disconnecting a bank keeps its account tied to it, shown as disconnected", async ({ page }) => {
-    await page.goto(INTEGRATIONS);
+    await page.goto(BANKS);
     const epsilon = row(page, "Epsilon Bank");
     await epsilon.getByRole("button", { name: "Epsilon Bank" }).click();
     await page.getByRole("menuitem", { name: "Disconnect" }).click();
     const dialog = page.getByRole("dialog", { name: "Disconnect Epsilon Bank?" });
     await expect(dialog).toContainText("each account goes back to its place by itself");
+    // The way to stop for good is the source's page (plugin-settings.md §4.2).
+    await expect(
+      dialog.getByRole("link", { name: "Want to stop using Enable Banking? Turn it off" }),
+    ).toHaveAttribute("href", `${BANKS}#deactivate`);
     await dialog.getByRole("button", { name: "Disconnect", exact: true }).click();
-    await expect(page.getByRole("region", { name: "Banks" }).getByTestId("bank-row")).toHaveCount(5);
+    await expect(page.getByRole("region", { name: "Connection" }).getByTestId("bank-row")).toHaveCount(5);
 
     // Not an account kept by hand: still the bank's, waiting for the bank to be connected again.
     await page.goto("/accounts");
@@ -347,7 +438,7 @@ test.describe("whose log it is", () => {
   test("another person, an admin included, does not reach the log of a connection", async ({ browser }) => {
     const owner = await browser.newContext({ storageState: sessionState("connectionsJourney") });
     const page = await owner.newPage();
-    await page.goto(INTEGRATIONS);
+    await page.goto(BANKS);
     await page
       .getByTestId("connection-row")
       .filter({ hasText: "Beta Bank" })

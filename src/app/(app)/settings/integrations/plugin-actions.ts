@@ -33,7 +33,7 @@ async function attempt(work: () => Promise<void>): Promise<PluginActionResult> {
     console.error("[plugins] an action failed", redactForLog(error));
     return { ok: false, error: "failed" };
   }
-  revalidatePath("/settings/integrations");
+  revalidatePath("/settings/integrations", "layout");
   return { ok: true };
 }
 
@@ -99,7 +99,7 @@ export async function syncBankNowAction(pluginId: string, connectionId: string):
       { pluginId, connectionId, presence: await requestPresence() },
       bankSink,
     );
-    revalidatePath("/settings/integrations");
+    revalidatePath("/settings/integrations", "layout");
     if (!outcome.ok) {
       return {
         ok: false,

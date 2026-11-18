@@ -325,6 +325,21 @@ Note di realizzazione di N7.1:
   ai conti esclusi del collegamento. eToro e Binance: la pianificazione resta come per le altre sorgenti.
 - Il link «Vuoi smettere di usare {provider}? Disattivalo» del dialogo (specifica §4.2) arriva con N7.2, con la pagina.
 
+Note di realizzazione di N7.2:
+
+- Scelta [DEV] della specifica (§2.2, sezioni per sorgente): fino a R5c la tabella delle sorgenti del core è nel
+  componente della pagina (`settings/integrations/page.tsx`), che disegna l'elenco e la pagina di una sorgente;
+  `[source]/page.tsx` lo riesporta e non nomina nessun fornitore (M12). Un plugin non attivo non ha pagina: il suo
+  indirizzo porta all'elenco, sulla sua riga.
+- Spostati nella pagina: credenziali e righe dei collegamenti, «Scegli i conti» (Wallet: sezione «Conti»; banca: un link
+  per banca), «Categorie di {sorgente}», pianificazione e storico (tolti da Avanzate, che tiene il registro e la
+  pianificazione dei servizi di Investimenti), «Scrittura su {sorgente}» in sola lettura. Time Off › Impostazioni e
+  Settings › Categories hanno un link alla pagina.
+- «Pubblica su {sorgente}» nella regola di interessi: solo su un conto di una sorgente collegata che scrive; una regola che
+  pubblica già tiene la scelta. «Disattiva» di Enable Banking resta il menu del plugin, in cima alla pagina, fino a N7.3.
+- Non fatto (resta per N7.3 o dopo): la zona «Disattiva» in fondo, «Eliminati in Ledgerly · Riprendi» separato dai
+  conti esclusi, la riga «Scollegato dal {date}», l'ingresso dal dettaglio del conto e dal menu della riga.
+
 Effetti: **N1, N2** (in produzione): «Disattiva» e lo stato «In pausa» di un plugin disattivato cambiano con N7.3.
 **R5a**: il tab Plugin riusa la pagina di N7.2; «Categorie di {sorgente}» resta nella pagina del plugin. **R5c**: Wallet
 e Trek arrivano con pagina e «Disattiva» già pronti; resta la regola «attivi per chi ha già un collegamento».

@@ -126,7 +126,7 @@ export async function importBankAccountsAction(
   } catch (error) {
     return refusal(error);
   }
-  revalidatePath("/settings/integrations");
+  revalidatePath("/settings/integrations", "layout");
   return { ok: true };
 }
 
@@ -155,6 +155,6 @@ export async function cancelBankConnectionAction(connectionId: string): Promise<
   } catch (error) {
     return refusal(error);
   }
-  revalidatePath("/settings/integrations");
+  revalidatePath("/settings/integrations", "layout");
   return { ok: true };
 }

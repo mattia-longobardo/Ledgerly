@@ -9,7 +9,24 @@ const PAGES: Screen[] = [
   // the plugin's row "Active" and the section "Banks" on its guide; the admin's has "Not active".
   // The procedure, for the same user, stops at its guard.
   { name: "/banks/connect (no credentials)", session: "layout", open: go("/banks/connect") },
-  // Release N2: "Advanced", with the schedule of each of this user's links and the log.
+  // Release N7.2 (plugin-settings.md §2): the page of each source, with every setting of its own.
+  // The layout user: the bank plugin on its guide, Trek with its schedule, Wallet with nothing.
+  {
+    name: "/settings/integrations/[source] (plugin, guide)",
+    session: "layout",
+    open: go("/settings/integrations/enablebanking"),
+  },
+  {
+    name: "/settings/integrations/[source] (schedule)",
+    session: "layout",
+    open: go("/settings/integrations/trek"),
+  },
+  {
+    name: "/settings/integrations/[source] (not connected)",
+    session: "layout",
+    open: go("/settings/integrations/wallet"),
+  },
+  // Release N2: "Advanced", with the schedule of each of this user's services and the log.
   {
     name: "/settings/integrations/advanced",
     session: "layout",
@@ -24,10 +41,15 @@ const PAGES: Screen[] = [
     open: go("/settings/integrations"),
   },
   {
-    name: "/settings/integrations (history open)",
+    name: "/settings/integrations/[source] (six banks)",
+    session: "connections",
+    open: go("/settings/integrations/enablebanking"),
+  },
+  {
+    name: "/settings/integrations/[source] (history open)",
     session: "connections",
     open: async (page) => {
-      await page.goto("/settings/integrations");
+      await page.goto("/settings/integrations/enablebanking");
       await settled(page);
       for (const toggle of await page.getByRole("button", { name: /^(History|Cronologia)$/ }).all()) {
         await toggle.click();
@@ -67,7 +89,7 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/integrations");
+      await page.goto("/settings/integrations/enablebanking");
       await settled(page);
       await page.getByRole("button", { name: /Enter credentials|Inserisci credenziali/ }).click();
       await settledDialog(page);
@@ -79,8 +101,8 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      // From release N2 the schedule is under "Advanced" (ux/n2-connection-status.md §8.2).
-      await page.goto("/settings/integrations/advanced");
+      // From release N7.2 the schedule is on the source's page (plugin-settings.md §2.2).
+      await page.goto("/settings/integrations/trek");
       await settled(page);
       // The rows are in order of name; every seeded link of this user is on manual only.
       await page
@@ -96,8 +118,8 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      // From release N2 the schedule is under "Advanced" (ux/n2-connection-status.md §8.2).
-      await page.goto("/settings/integrations/advanced");
+      // From release N7.2 the schedule is on the source's page (plugin-settings.md §2.2).
+      await page.goto("/settings/integrations/trek");
       await settled(page);
       // The rows are in order of name; every seeded link of this user is on manual only.
       await page

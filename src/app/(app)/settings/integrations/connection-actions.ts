@@ -61,7 +61,7 @@ const CODE_OF_ANSWER: Record<string, Refusal> = {
 };
 
 function revalidate(): void {
-  revalidatePath("/settings/integrations");
+  revalidatePath("/settings/integrations", "layout");
   revalidatePath("/settings/integrations/advanced");
   revalidatePath("/timeoff/settings");
   revalidatePath("/accounts", "layout");

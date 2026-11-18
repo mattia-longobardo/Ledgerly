@@ -13,7 +13,13 @@ import { monthKey, today } from "@/platform/dates";
 import { getPool } from "@/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
-import { setSourceCategory, sourceCategorySections, sourceNotes, undoSourceCategoryChange } from "./source";
+import {
+  setSourceCategory,
+  sourceCategoryRows,
+  sourceCategorySections,
+  sourceNotes,
+  undoSourceCategoryChange,
+} from "./source";
 
 const SOURCE = "wallet";
 const MONTH = monthKey(today("Europe/Rome"));
@@ -100,7 +106,27 @@ describe("the categories of a source, as the screen shows them", () => {
     await setSourceCategory(ctx, { id: tobacco!.id, categoryId: alcohol.id });
 
     const notes = await sourceNotes(ctx);
-    expect(notes.get(alcohol.id)).toEqual({ source: section.name, names: ["Alcohol, tobacco", "Tobacco"] });
+    expect(notes.get(alcohol.id)).toEqual({
+      provider: section.provider,
+      source: section.name,
+      names: ["Alcohol, tobacco", "Tobacco"],
+    });
+  });
+
+  it("draws the same match on the source's page, with the categories it may be matched to (N7.2)", async () => {
+    const alcohol = await categoryNamed("Alcohol, tobacco");
+    const [section] = await sourceCategorySections(ctx);
+    const tobacco = section.rows.find((row) => row.name === "Tobacco");
+    await setSourceCategory(ctx, { id: tobacco!.id, categoryId: alcohol.id });
+
+    const view = await sourceCategoryRows(ctx, section.provider);
+    expect(view?.name).toBe(section.name);
+    expect(view?.rows.map((row) => row.name)).toEqual(section.rows.map((row) => row.name));
+    const row = view?.rows.find((one) => one.name === "Tobacco");
+    expect(row).toMatchObject({ choice: "matched", category: { id: alcohol.id, name: "Alcohol, tobacco" } });
+    expect(row?.options.map((option) => option.id)).toContain(alcohol.id);
+    // A source that gave no category has no section.
+    expect(await sourceCategoryRows(ctx, "plugin:none")).toBeNull();
   });
 });
 

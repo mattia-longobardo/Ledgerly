@@ -6,7 +6,7 @@ import { parseKeyRing, sealJson } from "../../src/platform/crypto";
 import { today } from "../../src/platform/dates";
 import { getDb } from "../../src/platform/db/client";
 import { readEnv } from "../../src/platform/env";
-import { pluginProvider, TREK_PROVIDER } from "../../src/platform/integrations/rules";
+import { pluginProvider, TREK_PROVIDER, WALLET_PROVIDER } from "../../src/platform/integrations/rules";
 import { integrationConnections, syncRuns } from "../../src/platform/integrations/schema";
 import { saveConnection, savePluginConnection, saveSchedule } from "../../src/platform/integrations/service";
 import { findInstancePlugin } from "../../src/platform/plugins/queries";
@@ -36,6 +36,12 @@ export async function seedConnections(email: string = USERS.connections.email): 
     credentials: { baseUrl: "https://trek.invalid", token: "e2e-not-a-token" },
   });
   await saveSchedule(ctx, trek.id, { rules: [] });
+  // Release N7.2: the page of a source of the core with every section. Paused too: never read.
+  const wallet = await saveConnection(ctx, {
+    provider: WALLET_PROVIDER,
+    credentials: { token: "e2e-not-a-token" },
+  });
+  await saveSchedule(ctx, wallet.id, { rules: [] });
 
   // The banks need the plugin of the instance; the seed cannot reach a plugin itself, so the
   // credentials are sealed here as the app would seal them, and never checked.

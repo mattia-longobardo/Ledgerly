@@ -158,6 +158,8 @@ export const MODULES: Module[] = [
     files: [page("settings/categories")],
     integration: ["src/app/(app)/settings/categories"],
     flows: ["categories"],
+    // A source's categories are drawn on the source's page (rewrite plan N7.2).
+    usedBy: ["e2e:connections"],
   },
   {
     id: "budgets",
@@ -194,7 +196,7 @@ export const MODULES: Module[] = [
     files: ["src/modules/interests/**", page("interests")],
     integration: ["src/modules/interests"],
     flows: ["interests"],
-    usedBy: ["pockets", "funds", "export", "jobs", "accounts", "e2e:accounts"],
+    usedBy: ["pockets", "funds", "export", "jobs", "accounts", "e2e:accounts", "e2e:connections"],
   },
   {
     id: "funds",
@@ -371,7 +373,7 @@ export const MODULES: Module[] = [
       "e2e:auth",
     ],
   },
-  { id: "queries", files: ["src/**/queries.ts", "src/**/*-queries.ts"], usedBy: ["perf"] },
+  { id: "queries", files: ["src/**/queries.ts", "src/**/*-queries.ts"], usedBy: ["perf", "e2e:connections"] },
   {
     id: "shared-domain",
     files: [
@@ -603,6 +605,7 @@ export const MESSAGES: Record<string, string> = {
   "settings.labels": "categories",
   "settings.integrations": "connections",
   "settings.plugins": "connections",
+  "settings.plugin": "connections",
   "settings.banks": "connections",
   "settings.connections": "connections",
   "settings.diagnostics": "connections",

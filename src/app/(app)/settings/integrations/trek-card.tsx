@@ -8,7 +8,7 @@ import { Input } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
 import { connectTrekAction, disconnectTrekAction } from "./actions";
-import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./connection-row";
+import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink } from "./connection-row";
 
 /**
  * Everything the browser is told about the Trek link. **No token and no URL**: both live in the
@@ -21,6 +21,8 @@ export interface TrekCardProps {
   connected: boolean;
   /** Days still waiting to reach Trek: the one number that says the two calendars disagree. */
   pending: number;
+  /** The source's page, where it is turned off (plugin-settings.md §4.2). */
+  deactivateHref: string;
 }
 
 /** What this card does itself, with a dialog of its own; the rest is the row's. */
@@ -39,7 +41,7 @@ const FORM_ID = "trek-token-form";
  * unmounts on close: it is never in React state, never in a prop, and never in the DOM a moment
  * longer than the dialog is open.
  */
-export function TrekCard({ row, connected, pending: waiting }: TrekCardProps) {
+export function TrekCard({ row, connected, pending: waiting, deactivateHref }: TrekCardProps) {
   const t = useTranslations("settings.integrations");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -207,13 +209,14 @@ export function TrekCard({ row, connected, pending: waiting }: TrekCardProps) {
           </>
         }
       >
-        {error ? (
-          <p role="alert" className="text-sm text-neg">
-            {error}
-          </p>
-        ) : (
-          <span />
-        )}
+        <div className="flex flex-col gap-2 text-sm">
+          {error && (
+            <p role="alert" className="text-neg">
+              {error}
+            </p>
+          )}
+          <DeactivateLink href={deactivateHref} provider={row.name} />
+        </div>
       </Modal>
     </div>
   );

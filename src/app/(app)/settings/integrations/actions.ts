@@ -59,7 +59,7 @@ export type IntegrationActionError =
 export type IntegrationActionResult = { ok: true } | { ok: false; error: IntegrationActionError };
 
 function revalidate(): void {
-  revalidatePath("/settings/integrations");
+  revalidatePath("/settings/integrations", "layout");
 }
 
 /** The signed-in user's Wallet connection, or `null` when no token has ever been saved. */

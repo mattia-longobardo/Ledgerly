@@ -5,14 +5,13 @@ import "@/app/plugin-wiring";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@/platform/context";
 import { NULL_DISPLAY } from "@/platform/format";
-import { labelOf, passFor } from "@/platform/integrations/registry";
+import { labelOf } from "@/platform/integrations/registry";
 import { connectionReport, scheduleSummary } from "@/platform/integrations/report";
 import { isPluginProvider } from "@/platform/integrations/rules";
 import {
   type Connection,
   listConnections,
   listRuns,
-  readSyncJob,
   recentRuns,
   SYNC_RUN_RETENTION_DAYS,
   type SyncRun,
@@ -26,11 +25,9 @@ import { Select } from "@/ui/input";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { EmptyState } from "@/ui/states";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { RUNS_PER_CONNECTION, statusOf } from "../connection-view";
+import { RUNS_PER_CONNECTION, sourceSlugOf, statusOf } from "../connection-view";
 import { formatInstant } from "../format-instant";
-import { recommendedSchedule } from "../recommended-schedule";
-import { ScheduleControl } from "../schedule-control";
-import { HistoryDepth } from "./history-depth";
+import { ScheduleCell } from "../schedule-cell";
 import { ReportButton } from "./report-button";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -129,14 +126,8 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
   ]);
   const shown = runs.slice(0, limit);
 
-  // How far back a provider reads, for the ones that read a chosen depth.
-  const depths = new Map<string, { months: number; choices: readonly number[] }>();
-  for (const connection of connections) {
-    const history = passFor(connection.provider)?.history;
-    if (!history) continue;
-    const job = await readSyncJob(ctx, connection.id, "transactions");
-    depths.set(connection.id, { months: history.depthOf(job?.cursor), choices: history.choices });
-  }
+  // The investment services have no page of their own: their schedule stays here.
+  const services = byName.filter((connection) => sourceSlugOf(connection.provider) === null);
 
   // The report of the current filter: a closed list of fields (`report.ts`).
   const report = connectionReport({
@@ -221,62 +212,40 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
         <p className="text-sm text-muted">{t("advanced.intro")}</p>
       </div>
 
-      <SettingsSection
-        title={t("advanced.schedule.title")}
-        description={t("advanced.schedule.description")}
-        padded={false}
-      >
-        <ul className="flex flex-col">
-          {byName.map((connection) => {
-            const label = labels.get(connection.id);
-            const depth = depths.get(connection.id);
-            const times = connection.schedule.rules.reduce(
-              (sum, rule) => sum + (rule.kind === "times" ? rule.times.length : 0),
-              0,
-            );
-            const next = connection.nextSyncAt ? formatInstant(connection.nextSyncAt, ctx) : null;
-            return (
-              <li
-                key={connection.id}
-                className="border-t border-border first:border-t-0"
-                data-testid="schedule-row"
-              >
-                <div className="flex flex-col gap-x-5 gap-y-1.5 px-4 py-3.5 md:flex-row md:items-start md:justify-between">
-                  <span className="min-w-0 font-semibold break-words">{label?.name}</span>
-                  <div className="min-w-0 text-sm md:text-right">
-                    {!active(connection) ? (
-                      <span className="text-muted">
-                        {t("text.pausedProvider", { provider: label?.provider ?? "" })}
-                      </span>
-                    ) : isPluginProvider(connection.provider) ? (
-                      // The schedule of a plugin's connection is the provider's own: no control.
-                      <span className={times === 0 ? "text-muted" : undefined}>
-                        {times === 0
-                          ? t("advanced.schedule.off")
-                          : next === null
-                            ? t("advanced.schedule.fixedNoNext", { count: times })
-                            : t("advanced.schedule.fixed", { count: times, time: next })}
-                      </span>
-                    ) : (
-                      <ScheduleControl
-                        provider={connection.provider}
+      {/* The services only: a source's schedule is on the source's page (plugin-settings.md §2.2). */}
+      {services.length > 0 && (
+        <SettingsSection
+          title={t("advanced.schedule.title")}
+          description={t("advanced.schedule.description")}
+          padded={false}
+        >
+          <ul className="flex flex-col">
+            {services.map((connection) => {
+              const label = labels.get(connection.id);
+              return (
+                <li
+                  key={connection.id}
+                  className="border-t border-border first:border-t-0"
+                  data-testid="schedule-row"
+                >
+                  <div className="flex flex-col gap-x-5 gap-y-1.5 px-4 py-3.5 md:flex-row md:items-start md:justify-between">
+                    <span className="min-w-0 font-semibold break-words">{label?.name}</span>
+                    <div className="min-w-0 text-sm md:text-right">
+                      <ScheduleCell
+                        connection={connection}
                         name={label?.name ?? ""}
-                        schedule={connection.schedule}
-                        recommended={recommendedSchedule(connection.provider)}
-                        next={next}
-                        timeZone={ctx.timeZone}
+                        provider={label?.provider ?? ""}
+                        active={active(connection)}
+                        ctx={ctx}
                       />
-                    )}
+                    </div>
                   </div>
-                </div>
-                {depth && active(connection) && (
-                  <HistoryDepth connectionId={connection.id} months={depth.months} choices={depth.choices} />
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </SettingsSection>
+                </li>
+              );
+            })}
+          </ul>
+        </SettingsSection>
+      )}
 
       {/* The filter is a navigation that lands here: the reader goes on from the log (§12). */}
       <div id="log" tabIndex={-1} className="focus:outline-none">

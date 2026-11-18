@@ -1,5 +1,6 @@
-// tests/e2e/categories/source-categories.spec.ts — "Categories of {source}" in Settings › Categories (rewrite
-// plan N3.1; ux/n3-categories-manual.md §6.4): each category a source gives is matched to a
+// tests/e2e/categories/source-categories.spec.ts — "Categories of {source}" on the source's page (rewrite
+// plan N3.1, moved there by N7.2; ux/n3-categories-manual.md §6.4, plugin-settings.md §2.2): each
+// category a source gives is matched to a
 // category of the person or added as its own, the change counts at once in Expenses, and "Undo"
 // takes it back.
 //
@@ -27,8 +28,11 @@ const rowOf = (page: Page, name: string): Locator =>
 const chooser = (page: Page, name: string): Locator =>
   rowOf(page, name).getByRole("button", { name: chooserName(name), exact: true });
 
+/** The page of the source the `sources` user's categories come from. */
+const SOURCE_PAGE = "/settings/integrations/wallet";
+
 async function open(page: Page) {
-  await page.goto("/settings/categories");
+  await page.goto(SOURCE_PAGE);
   await expect(section(page)).toBeVisible();
 }
 
@@ -44,14 +48,22 @@ test("the section lists the source's categories with what each counts under", as
   await expect(chooser(page, "Spesa")).toContainText("Added as “Spesa”");
   await expect(rowOf(page, "Tabacchi")).toContainText("Tabacchi · 2 transactions");
   await expect(chooser(page, "Tabacchi")).toContainText("Alcolici e tabacchi");
-  // The category the two count under says so in the tree.
-  await expect(page.getByText(/^From .+: Alcolici e tabacchi, Tabacchi$/)).toBeVisible();
 
   // The one that has just arrived is marked, and is alone under "New".
   await expect(rowOf(page, "Animali").getByText("New", { exact: true })).toBeVisible();
   await section(page).getByRole("button", { name: "New (1)" }).click();
   await expect(section(page).getByTestId("source-category-row").locator("visible=true")).toHaveCount(1);
   await expect(rowOf(page, "Animali")).toBeVisible();
+
+  // Settings › Categories has no section of the source any more: the tree's note and one line lead
+  // to the source's page, where the match is changed.
+  await page.goto("/settings/categories");
+  await expect(section(page)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^From .+: Alcolici e tabacchi, Tabacchi$/ })).toHaveAttribute(
+    "href",
+    SOURCE_PAGE,
+  );
+  await expect(page.getByRole("link", { name: /^.+ settings$/ })).toHaveAttribute("href", SOURCE_PAGE);
 });
 
 test("a match counts at once in Expenses, and adding the category back puts its movements back", async ({

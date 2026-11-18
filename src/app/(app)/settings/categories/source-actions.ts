@@ -10,6 +10,7 @@ import { setSourceCategory, undoSourceCategoryChange } from "./source";
 
 function revalidate(): void {
   revalidatePath("/settings/categories");
+  revalidatePath("/settings/integrations", "layout");
   revalidatePath("/expenses");
   revalidatePath("/budgets");
   revalidatePath("/");

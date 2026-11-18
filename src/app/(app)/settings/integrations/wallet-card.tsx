@@ -14,7 +14,7 @@ import {
   type WalletAccountRow,
   walletAccountsAction,
 } from "./actions";
-import { type ActionKind, ConnectionRow, type ConnectionRowProps } from "./connection-row";
+import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink } from "./connection-row";
 
 /**
  * Everything the browser is told about the link. **No token, and no field one could travel in**
@@ -26,10 +26,12 @@ export interface WalletCardProps {
   connected: boolean;
   /** What "Disconnect" leaves: the accounts of Wallet here, and the ones left out. */
   leave: { accounts: number; excluded: number };
+  /** The source's page, where it is turned off (plugin-settings.md §4.2). */
+  deactivateHref: string;
 }
 
 /** What this card does itself, with a dialog of its own; the rest is the row's. */
-const HANDLED: readonly ActionKind[] = ["connect", "replaceKey", "disconnect", "chooseAccounts"];
+const HANDLED: readonly ActionKind[] = ["connect", "replaceKey", "disconnect"];
 
 const FORM_ID = "wallet-token-form";
 
@@ -43,14 +45,10 @@ const FORM_ID = "wallet-token-form";
  * unmounts on close — so the secret is never in React state, never in a prop and never in the DOM
  * a moment longer than the dialog is open.
  */
-export function WalletCard({ row, connected, leave }: WalletCardProps) {
+export function WalletCard({ row, connected, leave, deactivateHref }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  // "Choose the accounts" (PERS-419): the accounts Wallet has, read when the dialog opens.
-  const [choosing, setChoosing] = useState(false);
-  const [choices, setChoices] = useState<WalletAccountRow[] | null>(null);
-  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -77,7 +75,6 @@ export function WalletCard({ row, connected, leave }: WalletCardProps) {
         setError(null);
         setConnecting(false);
         setDisconnecting(false);
-        setChoosing(false);
         notify(success);
       } catch {
         setError(t("errors.failed"));
@@ -93,33 +90,6 @@ export function WalletCard({ row, connected, leave }: WalletCardProps) {
     run(() => connectWalletAction(token), connected ? t("toasts.replaced") : t("toasts.connected"));
   }
 
-  function openChoice() {
-    setChoosing(true);
-    setChoices(null);
-    startTransition(async () => {
-      try {
-        const result = await walletAccountsAction();
-        if (!result.ok) {
-          setError(messageFor(result.error));
-          return;
-        }
-        setChoices(result.accounts);
-        setPicked(new Set(result.accounts.filter((one) => one.chosen).map((one) => one.externalId)));
-      } catch {
-        setError(t("errors.failed"));
-      }
-    });
-  }
-
-  function toggle(externalId: string, on: boolean) {
-    setPicked((before) => {
-      const next = new Set(before);
-      if (on) next.add(externalId);
-      else next.delete(externalId);
-      return next;
-    });
-  }
-
   return (
     <div className="flex flex-col">
       <ConnectionRow
@@ -129,7 +99,6 @@ export function WalletCard({ row, connected, leave }: WalletCardProps) {
         onAction={(kind) => {
           setError(null);
           if (kind === "disconnect") setDisconnecting(true);
-          else if (kind === "chooseAccounts") openChoice();
           else setConnecting(true);
         }}
       />
@@ -177,6 +146,119 @@ export function WalletCard({ row, connected, leave }: WalletCardProps) {
       </Modal>
 
       <Modal
+        open={disconnecting}
+        onOpenChange={(open) => !open && setDisconnecting(false)}
+        title={t("disconnect.title", { name: row.name })}
+        description={[
+          t("disconnect.description", { name: row.name, count: leave.accounts }),
+          leave.excluded > 0 ? t("disconnect.excluded", { count: leave.excluded }) : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        width={420}
+        footer={
+          <>
+            <Button size="sm" onClick={() => setDisconnecting(false)}>
+              {t("disconnect.cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={pending}
+              onClick={() => run(disconnectWalletAction, t("toasts.disconnected"))}
+            >
+              {t("disconnect.confirm")}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-2 text-sm">
+          {error && (
+            <p role="alert" className="text-neg">
+              {error}
+            </p>
+          )}
+          <DeactivateLink href={deactivateHref} provider={row.name} />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/**
+ * "Accounts" on the source's page (plugin-settings.md §2.2): which accounts of Wallet come into
+ * Ledgerly. The list is Wallet's own, read when the person asks for it: the page never calls the
+ * source by itself.
+ */
+export function WalletAccounts() {
+  const t = useTranslations("settings.integrations");
+  const plugin = useTranslations("settings.plugin");
+  const [choosing, setChoosing] = useState(false);
+  const [choices, setChoices] = useState<WalletAccountRow[] | null>(null);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function messageFor(code: string): string {
+    if (code === "rejected") return t("errors.rejected");
+    if (code === "unreachable") return t("errors.unreachable");
+    if (code === "notConnected") return t("errors.notConnected");
+    if (code === "busy") return t("errors.busy");
+    if (code === "provider") return t("errors.provider");
+    return t("errors.failed");
+  }
+
+  function run(work: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) {
+    startTransition(async () => {
+      try {
+        const result = await work();
+        if (!result.ok) {
+          setError(messageFor(result.error));
+          return;
+        }
+        setError(null);
+        setChoosing(false);
+        notify(success);
+      } catch {
+        setError(t("errors.failed"));
+      }
+    });
+  }
+
+  function openChoice() {
+    setChoosing(true);
+    setChoices(null);
+    startTransition(async () => {
+      try {
+        const result = await walletAccountsAction();
+        if (!result.ok) {
+          setError(messageFor(result.error));
+          return;
+        }
+        setChoices(result.accounts);
+        setPicked(new Set(result.accounts.filter((one) => one.chosen).map((one) => one.externalId)));
+      } catch {
+        setError(t("errors.failed"));
+      }
+    });
+  }
+
+  function toggle(externalId: string, on: boolean) {
+    setPicked((before) => {
+      const next = new Set(before);
+      if (on) next.add(externalId);
+      else next.delete(externalId);
+      return next;
+    });
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+      <p className="text-sm text-muted">{plugin("accounts.chooseHint")}</p>
+      <Button size="sm" disabled={pending} onClick={openChoice}>
+        {plugin("accounts.choose")}
+      </Button>
+      <Modal
         open={choosing}
         onOpenChange={(open) => !open && setChoosing(false)}
         title={t("choose.title")}
@@ -222,42 +304,6 @@ export function WalletCard({ row, connected, leave }: WalletCardProps) {
             </div>
           ))}
         </div>
-      </Modal>
-
-      <Modal
-        open={disconnecting}
-        onOpenChange={(open) => !open && setDisconnecting(false)}
-        title={t("disconnect.title", { name: row.name })}
-        description={[
-          t("disconnect.description", { name: row.name, count: leave.accounts }),
-          leave.excluded > 0 ? t("disconnect.excluded", { count: leave.excluded }) : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        width={420}
-        footer={
-          <>
-            <Button size="sm" onClick={() => setDisconnecting(false)}>
-              {t("disconnect.cancel")}
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={pending}
-              onClick={() => run(disconnectWalletAction, t("toasts.disconnected"))}
-            >
-              {t("disconnect.confirm")}
-            </Button>
-          </>
-        }
-      >
-        {error ? (
-          <p role="alert" className="text-sm text-neg">
-            {error}
-          </p>
-        ) : (
-          <span />
-        )}
       </Modal>
     </div>
   );
