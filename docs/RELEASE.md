@@ -45,7 +45,7 @@ commands. The names `G1`…`G10` are those of the rewrite plan
 
 ```bash
 npm run format:check && npm run lint && npm run typecheck   # G1, always
-npm test                          # G2 and G4, always complete: the unit tests, with `src/architecture.test.ts`
+npm test                          # G2 and G4, always complete: the unit tests, with `tools/architecture.test.ts`
 npm run assertions-diff           # G2: no refactor commit changed a test besides its imports
 npm run test:select               # prints the rest: what follows is its answer for this release
 sh scripts/test-integration.sh <the modules of the selection>   # G3 and G5; with no argument, all of it

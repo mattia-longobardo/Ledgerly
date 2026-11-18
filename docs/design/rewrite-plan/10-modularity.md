@@ -175,6 +175,21 @@ unità che si importano a vicenda contando anche le aree di `platform` (tra ques
 Un'unità è `modules/<nome>`, `platform/<area>` o `platform/integrations/<provider>`. Da N0 `src/architecture.test.ts`
 tiene il codice a queste liste: una violazione nuova fallisce, e fallisce una voce che non esiste più.
 
+**Misura di R0** (monorepo; `npm run modularity`, `npm run cleanliness`, `npm run duplication`). Le unità hanno gli
+stessi nomi: `scripts/source-graph.ts` legge i file di ogni pacchetto con il percorso che avevano in `src/`, e un file
+diviso in parti (Q6) come il file che era. Import tra moduli 137 (N0: 154) → 120 (tutti dal loro `index.ts` fuori dal pacchetto
+`domain`); 12 moduli su 12 con `index.ts` e `client.ts` dove serve al browser; coppie di unità che si importano 54
+(invariate), 1 gruppo di cicli di 7 moduli (invariato); `platform → modules` 79 → 76. Liste nuove di R0, che possono
+solo accorciarsi: M1 16 dipendenze di pacchetto fuori da §10.2 (10 di `domain`, decisione di Mattia del 18/11/2026 su
+PERS-434: auth, provider, posta, storage, PDF e i messaggi delle mail restano in `domain` fino a R1/R2/R5c) e 14 import
+che escono da un pacchetto (`messages/*.json`, `package.json`); M3 286 import profondi dentro `domain`: le unità del
+dominio sono un solo ciclo a runtime (27 unità) e un `index.ts` dentro il ciclo legge costanti non ancora
+inizializzate, quindi dentro `domain` si importa il file finché R2 non scioglie i cicli; da fuori, solo gli ingressi;
+M5 16 accessi a tabelle di un'altra unità. M6 per `domain` e `api-contract`: 0. Q9: 0 export senza uso (779 tolti).
+Q6: 45 file oltre 400 righe (60 prima delle divisioni; i file di [`05-refactor.md`](05-refactor.md) §5.3 sono fuori).
+Liste di Q5-Q8 e Q10: complessità 199, nomi corti 1306, funzioni oltre 60 righe 299, parametri 57, cast 523. Righe
+duplicate 18.660 su 99.967 (18,67%), non cresciute rispetto a `main` prima di R0 (18,92%).
+
 | # | Accoppiamento di oggi | Dove (`percorso:riga`) | Come si scioglie | Rilascio | Voci |
 |---|---|---|---|---|---|
 | C1 | Ciclo `accounts ↔ transactions` | `src/modules/accounts/service.ts:23-24`, `src/modules/accounts/actions.ts:10`, `src/modules/transactions/service.ts:11`, `src/modules/transactions/queries.ts:25` | Porta `MovementsPort` dichiarata da `accounts`; `transactions` la realizza | R2 (accounts) | ACC-8, TR-7 |

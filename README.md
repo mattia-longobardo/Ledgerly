@@ -33,6 +33,13 @@ Next.js and TypeScript, PostgreSQL with Drizzle, S3-compatible storage for docum
 for sign-in. It runs as two containers (the app and a cron sidecar) behind Traefik on the homelab,
 at `https://dash.longobardo.me`.
 
+An npm-workspaces monorepo: `apps/web` (the Next.js app, with the REST API, MCP and the jobs until
+they move out), `packages/domain` (the modules, their schema and the server code they use; the
+migrations are in `drizzle/`), `packages/api-contract` (the zod primitives of the wire),
+`packages/plugin-contract` and `packages/plugin-host` (the two sides of a plugin) and
+`plugins/enablebanking`. The rules between them are in
+[`docs/design/rewrite-plan/10-modularity.md`](docs/design/rewrite-plan/10-modularity.md).
+
 ## Documentation
 
 | Guide                                | For                                                            |

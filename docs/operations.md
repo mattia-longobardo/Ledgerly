@@ -151,16 +151,29 @@ written by a command and checked by another.
 
 | File                                 | Written by                                                    | Checked by                                  |
 | ------------------------------------ | ------------------------------------------------------------- | ------------------------------------------- |
-| `modularity.json`                    | `npm run modularity`                                          | `npm test` (`src/architecture.test.ts`)     |
+| `modularity.json`, `exports.json`    | `npm run modularity`                                          | `npm test` (`tools/architecture.test.ts`)   |
+| `cleanliness.json`                   | `npm run cleanliness`                                         | `npm run lint`                              |
 | `duplication.json`                   | `npm run duplication`                                         | `npm run duplication -- --check`            |
 | `performance.json`                   | `npm run perf -- --write`                                     | `npm run perf`                              |
-| `numbers/reference.json`             | `npm run test:integration -- src/baselines.itest.ts -u`       | `npm run test:integration`                  |
+| `numbers/reference.json`             | `npm run test:integration -- tools/baselines.itest.ts -u`     | `npm run test:integration`                  |
 | `contract/api.json`, `contract/mcp.json` | the same command                                          | `npm run test:integration`                  |
 | `assertions-exceptions.json`         | by hand, with the decision that allows the change             | `npm run assertions-diff`                   |
 
 - **Modularity:** the known imports between modules, the units that import each other and the
-  cycles. The lists only get shorter: a new violation fails the test, and so does an entry that
-  is gone until `npm run modularity` removes it.
+  cycles; from R0 also the packages' dependencies that §10.2 does not allow and the imports out of
+  a package (M1), the imports past a module's entry (M3) and another unit's tables (M5). The lists
+  only get shorter: a new violation fails the test, and so does an entry that is gone until
+  `npm run modularity` removes it. `exports.json` is the reference of every entry of a package
+  (M7): a change of a package's interface changes it in the same commit. What has no list must
+  hold everywhere: a package imports only what its `package.json` declares, the domain never
+  reaches Next.js, React or Hono, no package cycle, a client component only the `client.ts`
+  entries, one name declared once in a unit of the domain, every package at the root's version.
+- **Cleanliness (R0):** rules Q1-Q3 (the names and the purity of a module's files) and Q5-Q8, Q10
+  (names, size of a file and of a function, complexity, `any` and `as`) with ESLint, thresholds of
+  decision I15 in `scripts/cleanliness-rules.json`. `eslint.config.mjs` turns a rule off for the
+  files on its list only; `npm run lint` fails on a new violation and on an entry that is gone.
+  `tsc` holds the unused locals and parameters and `tools/cleanliness.test.ts` the exports without
+  a use (Q9). A file split in parts (`service.ts` → `service/`) is measured as the file it was.
 - **Duplication:** the lines that are a copy of other lines (50 tokens and 6 lines, names and
   literals made equal), per unit. A measure, with no threshold yet.
 - **Performance:** median time and number of queries of the widest views and of every route of
