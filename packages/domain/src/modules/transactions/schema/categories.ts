@@ -15,8 +15,7 @@ import {
 import { users } from "../../../platform/auth/schema";
 import { CATEGORY_TYPES } from "../rules";
 import type { RuleCondition } from "../categorize/user-rules";
-
-export const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../../platform/db/checks";
 
 /**
  * Spending categories (spec §6), on two levels since F2.5: a group (no parent) and its

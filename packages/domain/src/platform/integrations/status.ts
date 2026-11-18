@@ -6,7 +6,7 @@
  * Pure rules: no database, no network, no provider's name. The pages translate what these
  * functions return; nothing here builds a sentence.
  */
-import { addDays, civilDateIn, daysBetween, minutesOfDayIn } from "../dates";
+import { addDays, civilDateIn, daysBetween, minutesOfDayIn } from "../../shared/dates";
 
 /* The error codes */
 

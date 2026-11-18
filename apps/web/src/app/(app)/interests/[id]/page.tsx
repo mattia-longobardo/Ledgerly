@@ -11,7 +11,7 @@ import { RuleButton, RuleStateButton } from "@/modules/interests/ui/rule-dialog"
 import { requireSession } from "@/platform/auth/session";
 import { coreCreatesRecords } from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
-import { civilDateIn, today } from "@ledgerly/domain/platform/dates";
+import { civilDateIn, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";

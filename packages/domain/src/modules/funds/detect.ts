@@ -1,5 +1,6 @@
-import type { CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import type { CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
+import { daysBetween } from "../../shared/dates";
 
 /**
  * What makes one charge the same charge as another (owner, 2026-09-20).
@@ -110,10 +111,6 @@ function median(values: readonly bigint[]): Cents | null {
   return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2n;
 }
 
-function daysApart(from: CivilDate, to: CivilDate): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
-}
-
 /**
  * What the charges carrying one key add up to: when they started, what they usually cost, how far
  * apart they fall and on which day of the month. Everything here is read off the charges — nothing
@@ -121,7 +118,7 @@ function daysApart(from: CivilDate, to: CivilDate): number {
  */
 export function summarise(key: RecurrenceKey, charges: readonly DetectedCharge[]): Detection {
   const ordered = [...charges].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
-  const gaps = ordered.slice(1).map((charge, index) => daysApart(ordered[index].on, charge.on));
+  const gaps = ordered.slice(1).map((charge, index) => daysBetween(ordered[index].on, charge.on));
   const days = ordered.map((charge) => Number(charge.on.slice(8, 10)));
   const agreed = days.length > 0 && days.every((day) => Math.abs(day - days[0]) <= 3);
   return {

@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";

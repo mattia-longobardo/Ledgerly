@@ -24,7 +24,7 @@ import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guid
 import { type ReviewGroupView, ReviewList } from "@/modules/transactions/ui/review-list";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
-import { isCivilDate, today } from "@ledgerly/domain/platform/dates";
+import { isCivilDate, today } from "@ledgerly/domain/shared/dates";
 import { shiftRange } from "@ledgerly/domain/platform/ranges";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { ButtonLink } from "@/ui/button";

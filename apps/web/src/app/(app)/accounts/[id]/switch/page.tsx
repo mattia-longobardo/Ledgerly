@@ -6,7 +6,7 @@ import { openSwitchOf } from "@ledgerly/domain/accounts";
 import { SwitchCheck } from "@/modules/accounts/ui/switch/switch-check";
 import { UndoSwitch } from "@/modules/accounts/ui/switch/undo-switch";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 import { normalizeIban } from "@ledgerly/domain/platform/iban";
 import { labelOf } from "@/platform/integrations/registry";

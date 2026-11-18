@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "../../../../platform/context";
-import { type CivilDate, civilDateIn } from "../../../../platform/dates";
+import { type CivilDate, civilDateIn } from "../../../../shared/dates";
 import { getDb, type Tx } from "../../../../platform/db/client";
 import { userScoped } from "../../../../platform/db/scope";
 import type { UiLocale } from "../../../../platform/format";

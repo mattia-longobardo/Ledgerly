@@ -35,13 +35,13 @@ import {
   writeTransferPairs,
 } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/platform/dates";
+import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { passFor } from "@/platform/integrations/registry";
 import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { withJobLock } from "@ledgerly/domain/platform/jobs";
-import { parseCents } from "@ledgerly/domain/platform/money";
+import { parseCents } from "@ledgerly/domain/shared/money";
 import { listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import { bankAccountNames, type BankAccountType, institutionOf } from "@ledgerly/domain/platform/plugins";
 import type { Deps, Presence } from "@ledgerly/plugin-host";

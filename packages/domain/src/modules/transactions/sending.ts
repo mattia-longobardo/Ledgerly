@@ -8,11 +8,11 @@
 // second one.
 import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import type { Ctx } from "../../platform/context";
-import { type CivilDate, civilDateIn } from "../../platform/dates";
+import { type CivilDate, civilDateIn } from "../../shared/dates";
 import { getDb, type Tx } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import { linkExternal } from "../../platform/integrations/service";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import type { SendState } from "./rules";
 import { transactions } from "./schema";
 

@@ -7,7 +7,7 @@ import type { ConnectableProvider, OperationSummary, ServiceContext } from "@/mo
 import type { ActivityRow } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { civilDateIn, type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import { civilDateIn, type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 
 /**

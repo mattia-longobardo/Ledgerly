@@ -1,6 +1,6 @@
-import { type CivilDate, type MonthKey } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, type MonthKey } from "@ledgerly/domain/shared/dates";
 import { type NumberFormat, type UiLocale, formatDate, formatMoney } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 
 /**
  * The colours of the accounts, in order; an account's own colour wins when it has one. The same

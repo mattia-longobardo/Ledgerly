@@ -5,14 +5,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@ledgerly/domain/accounts";
+import { parseAmount } from "@ledgerly/domain/platform/format";
 import { suggestFor } from "@ledgerly/domain/transactions";
 import { MANUAL_KINDS } from "@ledgerly/domain/transactions";
 import { TransactionError } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
-import { type CivilDate, isCivilDate, today } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { coreConnectionAction } from "../settings/integrations/actions";
 import {
   changeVisibility,
@@ -24,12 +24,13 @@ import {
   retrySend,
   updateManual,
 } from "./manual";
+import { civilDate } from "@ledgerly/api-contract";
 
 /** What the dialog sends: the amount as the person typed it, in their own number format. */
 const formSchema = z.object({
   kind: z.enum(MANUAL_KINDS),
   amount: z.string().max(40),
-  on: z.string().refine(isCivilDate),
+  on: civilDate(),
   accountId: z.uuid(),
   categoryId: z.uuid().nullable(),
   payee: z.string().max(255),

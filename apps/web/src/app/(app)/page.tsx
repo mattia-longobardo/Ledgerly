@@ -8,7 +8,7 @@ import { changeBetween, counterValue } from "@/modules/accounts/ui/display";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { parsePeriodQuery } from "@/modules/accounts/ui/period";
 import { requireSession } from "@/platform/auth/session";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

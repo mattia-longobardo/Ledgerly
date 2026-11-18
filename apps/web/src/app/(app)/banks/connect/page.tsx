@@ -13,7 +13,7 @@ import { accountsOfProvider } from "@ledgerly/domain/accounts";
 import { movementSpanByAccount } from "@ledgerly/domain/transactions";
 import { withParams } from "@/ui/url";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn, today } from "@ledgerly/domain/platform/dates";
+import { civilDateIn, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
 import { listRuns, readSyncJob } from "@ledgerly/domain/platform/integrations";
 import {

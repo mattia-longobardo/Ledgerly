@@ -3,8 +3,8 @@ import { redactForLog } from "../../platform/auth/logger";
 import { users } from "../../platform/auth/schema";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
-import { numberStyle } from "../../platform/format";
 import { getPreferences } from "./service";
+import { buildCtx } from "./rules";
 
 /** A user as a scheduled job meets them: who, and where to write if they must be told. */
 export interface Person {
@@ -27,15 +27,7 @@ export async function personById(id: string): Promise<Person | null> {
 
 /** The context a job acts in for one user: their own language, zone and number format. */
 export async function contextFor(person: Pick<Person, "id">): Promise<Ctx> {
-  const preferences = await getPreferences({ userId: person.id });
-  return {
-    userId: person.id,
-    role: "user",
-    locale: preferences.locale,
-    timeZone: preferences.timeZone,
-    numberFormat: numberStyle(preferences),
-    displayCurrency: preferences.displayCurrency,
-  };
+  return buildCtx({ id: person.id }, await getPreferences({ userId: person.id }));
 }
 
 /**

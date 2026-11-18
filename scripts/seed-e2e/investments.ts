@@ -3,7 +3,7 @@ import { createAccount, saveBalanceEntry, saveProviderBalance } from "@domain/mo
 import { connectInvestmentProvider, setSourcesForTests } from "@domain/modules/investments/sync";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { type Ctx } from "@domain/platform/context";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { listConnections, saveSchedule } from "@domain/platform/integrations/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";

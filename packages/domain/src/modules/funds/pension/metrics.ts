@@ -1,11 +1,5 @@
-import {
-  type CivilDate,
-  daysBetween,
-  lastDayOfMonth,
-  type MonthKey,
-  monthKey,
-} from "../../../platform/dates";
-import type { Cents } from "../../../platform/money";
+import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey, monthKey } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 import {
   accruedTotal,
   awaitingCredit,

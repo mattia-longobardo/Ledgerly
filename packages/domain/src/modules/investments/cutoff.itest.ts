@@ -7,7 +7,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { listBalanceEntries } from "../accounts/queries";
 import { createAccount, saveBalanceEntry } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
-import { addDays, today } from "../../platform/dates";
+import { addDays, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { saveRates } from "../../platform/fx/service";
 import type { InvestmentSource, ProviderEvent } from "../../platform/integrations/investments/source";

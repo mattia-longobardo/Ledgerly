@@ -1,4 +1,4 @@
-import { type Cents } from "../../platform/money";
+import { type Cents } from "../../shared/money";
 import {
   addDays,
   type CivilDate,
@@ -6,7 +6,7 @@ import {
   lastDayOfMonth,
   type MonthKey,
   monthKey,
-} from "../../platform/dates";
+} from "../../shared/dates";
 import { SOURCE_PRECEDENCE } from "../accounts/rules";
 import { modifiedDietz } from "../investments/pnl";
 import { xirr, type Xirr } from "../investments/xirr";

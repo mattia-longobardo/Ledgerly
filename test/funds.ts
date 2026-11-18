@@ -25,7 +25,7 @@ import {
 import type { Ctx } from "@domain/platform/context";
 import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
-import type { Cents } from "@domain/platform/money";
+import type { Cents } from "@domain/shared/money";
 
 /** A text no movement carries: a debit source that finds nothing until a test gives it a payee. */
 const NO_MATCH = "no-movement-carries-this";

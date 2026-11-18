@@ -3,7 +3,7 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useRef, useState } from "react";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { NumberFormat, UiLocale } from "@ledgerly/domain/platform/format";
 import { Button } from "@/ui/button";
 import { arrangeFees } from "@ledgerly/domain/funds/client";

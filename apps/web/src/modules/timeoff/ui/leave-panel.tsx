@@ -5,7 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, type RefObject, useId, useMemo, useState } from "react";
-import { daysBetween, isCivilDate } from "@ledgerly/domain/platform/dates";
+import { daysBetween, isCivilDate } from "@ledgerly/domain/shared/dates";
 import { type UiLocale, formatDate } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";

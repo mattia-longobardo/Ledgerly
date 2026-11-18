@@ -2,10 +2,10 @@ import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, ne, sql, 
 import { alias } from "drizzle-orm/pg-core";
 import { listAccounts } from "../../accounts/queries";
 import type { Ctx } from "../../../platform/context";
-import { type CivilDate, type MonthKey, monthKey } from "../../../platform/dates";
+import { type CivilDate, type MonthKey, monthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import { type TransactionType } from "../rules";
 import type { RuleCondition } from "../categorize/user-rules";
 import { categories, categoryRules, transactions } from "../schema";

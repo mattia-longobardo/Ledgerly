@@ -48,7 +48,7 @@ import { createApiClientWith, deleteApiClient } from "../apps/web/src/platform/a
 import { getAuth } from "@domain/platform/auth/auth";
 import { authAccounts, users } from "@domain/platform/auth/schema";
 import type { Ctx } from "@domain/platform/context";
-import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { addDays, addMonths, monthKey, today } from "@domain/shared/dates";
 import { getDb, getPool } from "@domain/platform/db/client";
 import * as tables from "@domain/platform/db/tables";
 import { readEnv } from "@domain/platform/env";

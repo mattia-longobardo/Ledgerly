@@ -9,7 +9,7 @@
  */
 import { z } from "zod";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/platform/dates";
+import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import {
   changeSourceSkippedIds,

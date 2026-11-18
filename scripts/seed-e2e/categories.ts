@@ -7,7 +7,7 @@ import { DEFAULT_GROUPS } from "@domain/modules/transactions/categorize/tables";
 import { createManualTransaction } from "@domain/modules/transactions/manual";
 import { categorisableAccountIds } from "@domain/modules/transactions/service";
 import { createCategory } from "@domain/modules/transactions/taxonomy";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf } from "./common";
 

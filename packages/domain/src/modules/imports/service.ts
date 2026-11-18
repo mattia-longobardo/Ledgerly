@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import type { Ctx } from "../../platform/context";
-import { today } from "../../platform/dates";
+import { today } from "../../shared/dates";
 import { type Db, getDb, type Tx } from "../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../platform/db/errors";
 import { userScoped } from "../../platform/db/scope";

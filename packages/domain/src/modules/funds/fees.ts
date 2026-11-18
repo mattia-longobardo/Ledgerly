@@ -5,8 +5,8 @@
 // is read in three places only — the fee proposed for a new contribution, the fee estimated for a
 // payslip period that no operation has confirmed yet, and the yearly cost on assets, shown and
 // never subtracted because it is already inside the value.
-import type { CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import type { CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 import type { AccrualPeriod, PayrollComponent } from "./sources";
 
 export const FEE_BASES = ["one_off", "per_contribution", "periodic", "on_assets", "per_request"] as const;

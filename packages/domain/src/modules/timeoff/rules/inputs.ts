@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { type CivilDate, addDays, isCivilDate } from "../../../platform/dates";
+import { type CivilDate, addDays } from "../../../shared/dates";
 import { DAY_FRACTIONS, LEAVE_DAY_KINDS } from "./days";
+import { civilDate } from "../../../shared/inputs";
 
 /* What a caller may state */
 
-const civilDate = z.string().refine(isCivilDate, "not a civil date");
 const MAX_NOTE = 200;
 
 /**
@@ -54,8 +54,8 @@ export function allowanceMismatchDays(input: {
  */
 export const leaveInputSchema = z
   .object({
-    from: civilDate,
-    to: civilDate.nullish().default(null),
+    from: civilDate("not a civil date"),
+    to: civilDate("not a civil date").nullish().default(null),
     kind: z.enum(LEAVE_DAY_KINDS),
     fraction: z.number().nullish().default(null),
     note: z.string().trim().max(MAX_NOTE).nullish().default(null),
@@ -73,8 +73,8 @@ export type LeaveInput = z.input<typeof leaveInputSchema>;
 /** The leave panel's fields as a caller states them: both ends, always (rewrite plan N5). */
 export const leaveRangeInputSchema = z
   .object({
-    from: civilDate,
-    to: civilDate,
+    from: civilDate("not a civil date"),
+    to: civilDate("not a civil date"),
     kind: z.enum(LEAVE_DAY_KINDS),
     fraction: z.number().refine((value) => (DAY_FRACTIONS as readonly number[]).includes(value)),
     note: z.string().trim().max(MAX_NOTE).nullish().default(null),
@@ -99,7 +99,7 @@ export type LeaveRangeFields = z.input<typeof leaveRangeInputSchema>;
 
 /** The two ends of a range whose leave goes, all of it ("Remove N days", N5 §7.5). */
 export const leaveRemovalRangeSchema = z
-  .object({ from: civilDate, to: civilDate })
+  .object({ from: civilDate("not a civil date"), to: civilDate("not a civil date") })
   .refine((input) => input.to >= input.from, { path: ["to"], message: "range ends before it begins" });
 
 /**
@@ -109,11 +109,11 @@ export const leaveRemovalRangeSchema = z
  */
 export const leaveUndoSchema = z
   .object({
-    dates: z.array(civilDate).min(1).max(366),
+    dates: z.array(civilDate("not a civil date")).min(1).max(366),
     rows: z
       .array(
         z.object({
-          on: civilDate,
+          on: civilDate("not a civil date"),
           kind: z.enum(LEAVE_DAY_KINDS),
           fraction: z.number().refine((value) => (DAY_FRACTIONS as readonly number[]).includes(value)),
           note: z.string().trim().max(MAX_NOTE).nullable(),

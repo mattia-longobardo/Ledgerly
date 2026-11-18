@@ -1,14 +1,10 @@
 import { z } from "zod";
 import { payeeKeyOf, RECURRENCE_BANDS } from "../transactions/rules";
-import {
-  addDays,
-  type CivilDate,
-  dayOfWeek,
-  isCivilDate,
-  lastDayOfMonth,
-  monthKey,
-} from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { addDays, type CivilDate, dayOfWeek, lastDayOfMonth, monthKey } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
+import { divRound } from "../../shared/money";
+import { dayNumber } from "../../shared/dates";
+import { civilDate, optionalText } from "../../shared/inputs";
 
 export const CYCLES = ["weekly", "monthly", "quarterly", "yearly"] as const;
 export const SUBSCRIPTION_STATES = ["active", "paused", "cancelled"] as const;
@@ -29,22 +25,17 @@ const WEEKLY_REACH = 3;
 
 const MONTHS_PER_CYCLE: Record<Exclude<Cycle, "weekly">, number> = { monthly: 1, quarterly: 3, yearly: 12 };
 
-/** `numerator / denominator` rounded half-up, for positive amounts. */
-function divideHalfUp(numerator: bigint, denominator: bigint): bigint {
-  return (numerator * 2n + denominator) / (denominator * 2n);
-}
-
 /** Spec §7.5: what a plan costs per month — ×52/12, ×1, ÷3, ÷12 — half-up to the cent. */
 export function monthlyEquivalent(price: Cents, cycle: Cycle): Cents {
   switch (cycle) {
     case "weekly":
-      return divideHalfUp(price * 52n, 12n);
+      return divRound(price * 52n, 12n);
     case "monthly":
       return price;
     case "quarterly":
-      return divideHalfUp(price, 3n);
+      return divRound(price, 3n);
     case "yearly":
-      return divideHalfUp(price, 12n);
+      return divRound(price, 12n);
   }
 }
 
@@ -74,11 +65,6 @@ export function addCycles(anchor: CivilDate, cycle: Cycle, count: number): Civil
   const first = `${Math.floor(index / 12)}-${pad((index % 12) + 1)}-01`;
   const last = Number(lastDayOfMonth(first).slice(8));
   return `${first.slice(0, 8)}${pad(Math.min(day, last))}`;
-}
-
-function dayNumber(date: CivilDate): number {
-  const [year, month, day] = parts(date);
-  return Date.UTC(year, month - 1, day) / 86_400_000;
 }
 
 /** How many cycles from the anchor to the first charge on or after `date`. */
@@ -391,23 +377,13 @@ export function suggestionsFrom(
     .sort((a, b) => a.name.localeCompare(b.name) || a.payeeKey.localeCompare(b.payeeKey));
 }
 
-const civilDate = z.string().refine(isCivilDate, "Not a civil date");
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .default(null);
-
 export const subscriptionInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   categoryId: z.uuid().nullable().default(null),
   utility: z.number().int().min(1).max(10).default(5),
   priceCents: z.bigint().positive(),
   cycle: z.enum(CYCLES),
-  nextChargeOn: civilDate,
+  nextChargeOn: civilDate(),
   paymentAccountId: z.uuid().nullable().default(null),
   payeeMatch: optionalText(80),
   /** A fraction as text, e.g. "0.05": the database's `numeric`, never a float. */

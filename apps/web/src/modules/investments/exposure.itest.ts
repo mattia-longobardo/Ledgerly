@@ -5,7 +5,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
-import { today } from "@domain/platform/dates";
+import { today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import type {
   HoldingsSnapshot,

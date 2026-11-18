@@ -8,7 +8,7 @@
  * per market (`trades:ETH/EUR`: the next pass starts at it, inclusive), and `assets`, every coin
  * ever seen, so a market found once is followed for good (B3).
  */
-import { addDays, type CivilDate, civilDateIn } from "../../dates";
+import { addDays, type CivilDate, civilDateIn } from "../../../shared/dates";
 import {
   type FlowCursor,
   type FxLookup,

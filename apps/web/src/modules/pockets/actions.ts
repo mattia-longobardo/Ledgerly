@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@ledgerly/domain/accounts";
+import { parseAmount } from "@ledgerly/domain/platform/format";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {

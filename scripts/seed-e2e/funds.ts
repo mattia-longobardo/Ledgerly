@@ -4,7 +4,7 @@ import { pensionCompetences } from "@domain/modules/funds/schema";
 import { createFund, recordValuation, setFundState } from "@domain/modules/funds/service";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { getPreferences, updatePreferences } from "@domain/modules/users/service";
-import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { addDays, addMonths, monthKey, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
 import {

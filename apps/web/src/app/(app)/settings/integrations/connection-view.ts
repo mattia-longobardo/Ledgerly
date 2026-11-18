@@ -8,7 +8,7 @@ import "server-only";
 import "@/app/plugin-wiring";
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { addDays, civilDateIn } from "@ledgerly/domain/platform/dates";
+import { addDays, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 import type { ConnectionLabel } from "@/platform/integrations/registry";
 import { isPluginProvider, PROVIDERS } from "@ledgerly/domain/platform/integrations";

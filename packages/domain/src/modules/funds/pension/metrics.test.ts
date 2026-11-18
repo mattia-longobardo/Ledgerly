@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MonthKey } from "../../../platform/dates";
+import type { MonthKey } from "../../../shared/dates";
 import {
   bridge,
   currentCompartment,

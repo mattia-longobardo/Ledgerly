@@ -14,7 +14,7 @@ import { createSubscription } from "@domain/modules/subscriptions/service";
 import { createCategory } from "@domain/modules/transactions/taxonomy";
 import { listTransactions } from "@domain/modules/transactions/queries";
 import type { Ctx } from "@domain/platform/context";
-import { addDays } from "@domain/platform/dates";
+import { addDays } from "@domain/shared/dates";
 import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import {
   deleteConnection,

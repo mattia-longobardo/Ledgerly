@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { PeriodBarView } from "@/modules/accounts/ui/period-bar";
 import { PERIOD_KEYS, periodSpan, SECTION_PRESETS, sectionPeriod } from "@ledgerly/domain/investments/client";
 import { periodText } from "@/modules/investments/ui/period-control";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { UiLocale } from "@ledgerly/domain/platform/format";
 import type { Params } from "@/ui/url";
 

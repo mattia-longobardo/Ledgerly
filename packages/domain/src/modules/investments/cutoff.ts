@@ -1,8 +1,8 @@
 // src/modules/investments/cutoff.ts — the 12 months of a synced service (PERS-145): its opening at
 // the cut-off, and every difference of its cash as an entry with a name and a day, so that the P&L
 // has nothing left that no part explains. Pure: no database, no clock.
-import { addDays, type CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { addDays, type CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 import { type Book, compareEvents, type EventLike, type OperationLike, type ReadingLike } from "./rules";
 
 /**

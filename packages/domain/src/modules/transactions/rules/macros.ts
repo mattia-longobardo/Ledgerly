@@ -1,4 +1,4 @@
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import { type CategoryType, type TransactionOrigin, type TransactionType } from "./vocabulary";
 
 /* The macro decides how a movement counts (categories-and-rules.md §3.2, CR3) */

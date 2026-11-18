@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, lte, ne, or, sql } from "drizzle-orm";
 import type { Ctx } from "../../context";
 import { getDb } from "../../db/client";
-import { civilDateIn } from "../../dates";
+import { civilDateIn } from "../../../shared/dates";
 import { userScoped } from "../../db/scope";
 import { type SyncKind } from "../rules";
 import {

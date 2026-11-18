@@ -1,6 +1,6 @@
 import { getDb } from "@domain/platform/db/client";
 import type { Ctx } from "@domain/platform/context";
-import { today } from "@domain/platform/dates";
+import { today } from "@domain/shared/dates";
 import { createAccount } from "@domain/modules/accounts/service";
 import { accountTypeOf } from "@domain/modules/investments/catalog";
 import { type InvestmentCategory } from "@domain/modules/investments/rules";

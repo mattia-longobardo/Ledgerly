@@ -7,7 +7,7 @@ import { ServiceActions } from "@/modules/investments/ui/dialogs";
 import { ServiceCrumb, type ServiceTab, ServiceTabs } from "@/modules/investments/ui/service-nav";
 import { ServicePeriodControl } from "./service-period";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { Badge } from "@/ui/badge";
 import { Page } from "@/ui/shell/page";
 import { alertsOf, firstDayOf, instantText, loadService, providerOf, serviceContextOf } from "./service-data";

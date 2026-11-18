@@ -3,7 +3,7 @@ import { z } from "zod";
 import { balanceDays, getAccount } from "../../accounts/queries";
 import { openedNoLaterThan, takeOverEntries } from "../../accounts/service";
 import type { Ctx } from "../../../platform/context";
-import { type CivilDate, today } from "../../../platform/dates";
+import { type CivilDate, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import {

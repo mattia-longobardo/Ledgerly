@@ -2,7 +2,7 @@ import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount, listAccounts } from "../../accounts/queries";
 import type { Ctx } from "../../../platform/context";
-import type { CivilDate } from "../../../platform/dates";
+import type { CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import {

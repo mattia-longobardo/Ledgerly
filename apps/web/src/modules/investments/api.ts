@@ -5,7 +5,7 @@ import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { instant, money } from "@/platform/api/json";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { PnlParts, PeriodParams } from "@ledgerly/domain/investments";
 import {
   type HoldingRow,

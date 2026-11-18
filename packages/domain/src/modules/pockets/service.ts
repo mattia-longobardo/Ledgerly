@@ -3,11 +3,11 @@ import { getAccount } from "../accounts/queries";
 import { transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
 import { isFutureDate } from "../accounts/rules";
-import { addDays, type CivilDate, type MonthKey, monthKey, today } from "../../platform/dates";
+import { addDays, type CivilDate, type MonthKey, monthKey, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../platform/db/errors";
 import { userScoped } from "../../platform/db/scope";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import { moveSchema, PLANNED_GRACE_DAYS, type PocketInput, pocketInputSchema, plannedSchema } from "./rules";
 import { pocketExpenseLinks, pocketMovements, pocketPlannedExpenses, pockets } from "./schema";
 

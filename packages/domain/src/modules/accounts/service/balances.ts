@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import { type CivilDate, isCivilDate, today } from "../../../platform/dates";
+import { type CivilDate, isCivilDate, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { type Cents } from "../../../platform/money";
+import { type Cents } from "../../../shared/money";
 import { managedSinceOf } from "../../investments/managed";
 import { type BalanceEntryInput, balanceEntrySchema, isFutureDate } from "../rules";
 import { type BalanceEntry } from "../queries";

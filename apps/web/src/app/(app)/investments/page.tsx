@@ -19,9 +19,9 @@ import {
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { type Cents, sumCents } from "@ledgerly/domain/platform/money";
+import { type Cents, sumCents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

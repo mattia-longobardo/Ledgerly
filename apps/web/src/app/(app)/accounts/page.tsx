@@ -16,7 +16,7 @@ import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { syncedServicesOf } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { ButtonLink } from "@/ui/button";
 import { Badge } from "@/ui/badge";

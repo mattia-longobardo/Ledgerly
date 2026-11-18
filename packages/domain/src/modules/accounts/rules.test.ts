@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { monthsBetween } from "../../platform/dates";
+import { monthsBetween } from "../../shared/dates";
 import {
   alertsFor,
   BALANCE_SOURCES,
@@ -13,13 +13,13 @@ import {
   type LocalAccount,
   monthEndSeries,
   normalizeName,
-  parseAmount,
   reconcileProviderAccounts,
   type RemoteAccount,
   settingsForSynced,
   SOURCE_PRECEDENCE,
   totalSeries,
 } from "./rules";
+import { parseAmount } from "../../platform/format";
 
 const MONTHS = monthsBetween("2026-01-01", "2026-04-01");
 

@@ -36,7 +36,7 @@ import { subscriptionsView } from "@domain/modules/subscriptions/queries";
 import { timeOffView } from "@domain/modules/timeoff/queries";
 import { expensesView } from "@domain/modules/transactions/queries";
 import type { Ctx } from "@domain/platform/context";
-import { lastDayOfMonth, today } from "@domain/platform/dates";
+import { lastDayOfMonth, today } from "@domain/shared/dates";
 import { monthlyFigures } from "../apps/web/src/platform/reports/monthly";
 import { canonical, differences, project, namesIn, sha256, type Json } from "./snapshot-format";
 

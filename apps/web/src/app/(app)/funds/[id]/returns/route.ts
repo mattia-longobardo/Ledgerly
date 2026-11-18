@@ -2,7 +2,7 @@ import { isFundId } from "@ledgerly/domain/funds";
 import { returnsTarget } from "@ledgerly/domain/funds";
 import type { Query } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 
 /**
  * The old returns page (docs/design/funds-ux.md §6, F4): the Valuations tab has its lines now. The target

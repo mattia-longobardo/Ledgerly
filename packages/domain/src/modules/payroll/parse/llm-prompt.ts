@@ -1,5 +1,5 @@
 import type { PageText } from "../../imports/pdf/text";
-import { centsToDecimal, parseCents } from "../../../platform/money";
+import { centsToDecimal, parseCents } from "../../../shared/money";
 import { FIELDS, type FieldName } from "../fields";
 
 /** At most this much of the document's text goes out (plan F5 §3.5). */

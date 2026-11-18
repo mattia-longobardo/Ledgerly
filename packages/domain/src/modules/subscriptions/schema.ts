@@ -16,8 +16,7 @@ import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories, transactions } from "../transactions/schema";
 import { CHARGE_STATES, CYCLES, SUBSCRIPTION_STATES } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../platform/db/checks";
 
 /**
  * A recurring charge entered by hand (spec §6, §7.5). `next_charge_on` is the date of one charge,

@@ -9,7 +9,7 @@ import type { IncomingTransaction } from "@domain/modules/transactions/rules";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
 import type { Ctx } from "@domain/platform/context";
-import { monthKey, today } from "@domain/platform/dates";
+import { monthKey, today } from "@domain/shared/dates";
 import { getPool } from "@domain/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../../../test/db";
 import { createTestUser } from "../../../../../../../test/users";

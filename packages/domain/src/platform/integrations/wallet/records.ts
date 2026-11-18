@@ -31,7 +31,7 @@ import { displayPayee } from "../../../modules/transactions/rules";
 import { getTransaction } from "../../../modules/transactions/queries";
 import { releaseLocalEdits, upsertFromProvider } from "../../../modules/transactions/service";
 import type { Ctx } from "../../context";
-import type { Cents } from "../../money";
+import type { Cents } from "../../../shared/money";
 import { WALLET_PROVIDER } from "../rules";
 import { type Connection, externalIdsOf, listConnections, readCredentials } from "../service";
 import {

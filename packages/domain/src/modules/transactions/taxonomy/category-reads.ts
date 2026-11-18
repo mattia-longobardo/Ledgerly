@@ -7,6 +7,7 @@ import type { EntityType } from "../../../platform/integrations/rules";
 import { CATEGORY_TYPES, categoryColor, type CategoryType, NAME_MAX, treeOrder } from "../rules";
 import { retypeMovements } from "../macro";
 import { categories, labels, transactions } from "../schema";
+import { HEX_COLOR } from "../../../shared/inputs";
 
 export type Category = typeof categories.$inferSelect;
 export type Label = typeof labels.$inferSelect;
@@ -40,8 +41,6 @@ export class TaxonomyError extends Error {
   }
 }
 
-const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
-
 export const nameSchema = z.string().trim().min(1).max(NAME_MAX);
 
 /** Absent or blank means "no value" rather than a rejection: the forms submit empty inputs. */
@@ -49,7 +48,7 @@ const blank = (value: unknown) =>
   value === undefined || (typeof value === "string" && value.trim() === "") ? null : value;
 
 const colourSchema = z
-  .preprocess(blank, z.string().trim().regex(HEX_COLOUR).nullable())
+  .preprocess(blank, z.string().trim().regex(HEX_COLOR).nullable())
   .transform((value) => value?.toLowerCase() ?? null);
 
 /** Absent or blank is "no parent": the category is a group of its own. */

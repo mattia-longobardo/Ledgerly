@@ -5,7 +5,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
-import { parseAmount } from "@ledgerly/domain/accounts/client";
+import { parseAmount } from "@ledgerly/domain/platform/format";
 import {
   AMOUNT_OPS,
   COUNTERPARTY_OPS,

@@ -1,8 +1,7 @@
 import { sql } from "drizzle-orm";
 import { check, date, numeric, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import { FX_SOURCES } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../db/checks";
 
 /**
  * One ECB reference rate (docs/design/investments.md §1.8): what one unit of `currency` was worth

@@ -6,7 +6,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
 import { TransactionError } from "@ledgerly/domain/transactions";
 import {

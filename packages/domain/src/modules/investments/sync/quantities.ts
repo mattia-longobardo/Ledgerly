@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, lt, ne, notInArray, or } from "drizzle-orm";
 import { getAccount } from "../../accounts/queries";
 import type { Ctx } from "../../../platform/context";
-import { addDays, type CivilDate, civilDateIn, today } from "../../../platform/dates";
+import { addDays, type CivilDate, civilDateIn, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { type RateTable } from "../../../platform/fx/rules";
@@ -20,8 +20,9 @@ import {
   saveSyncJob,
   unlinkEntities,
 } from "../../../platform/integrations/service";
-import type { Cents } from "../../../platform/money";
-import { divRound, formatDecimal, parseDecimal, QUANTITY_SCALE, RATE_SCALE } from "../rules";
+import type { Cents } from "../../../shared/money";
+import { QUANTITY_SCALE, RATE_SCALE } from "../rules";
+import { divRound, formatDecimal, parseDecimal } from "../../../shared/money";
 import {
   investmentAccountPeriods,
   investmentAccounts,

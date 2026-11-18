@@ -22,8 +22,8 @@ import { documents } from "../imports/schema";
 import { LEAVE_KINDS } from "./fields";
 import type { CheckResult, Warning } from "./parse/checks";
 import { CODE_ROLES, LINE_UNITS, PAYSLIP_TYPES, TFR_SOURCES } from "./rules";
+import { inList } from "../../platform/db/checks";
 
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 const money = (name: string) => bigint(name, { mode: "bigint" });
 const hours = (name: string) => numeric(name, { precision: 8, scale: 2 });
 

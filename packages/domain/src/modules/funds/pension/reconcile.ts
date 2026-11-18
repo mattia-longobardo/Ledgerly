@@ -5,8 +5,8 @@ import {
   lastDayOfMonth,
   type MonthKey,
   monthKey,
-} from "../../../platform/dates";
-import type { Cents } from "../../../platform/money";
+} from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 import {
   type AccrualPeriod,
   competencePeriod,

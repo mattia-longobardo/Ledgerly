@@ -9,7 +9,6 @@ import { openJson, sealJson } from "../crypto";
 import { getDb } from "../db/client";
 import { invalidateMailTransport, sendMail } from "../mail";
 import {
-  keyRing,
   LLM_FALLBACK,
   OIDC_PROBE,
   OIDC_PROVIDER,
@@ -18,11 +17,13 @@ import {
   SMTP_TRANSPORT,
   smtpConfig,
 } from "./config";
+import { keyRing } from "../crypto";
 import { type LlmProbeResult, probeLlmFallback } from "./llm-probe";
 import { discoveryUrlFor, issuerChanged, oidcInputSchema } from "./oidc";
 import { type OidcProbeOutcome, type OidcProbeResult, probeOidc } from "./oidc-probe";
 import { appSettings } from "./schema";
 import { type MailPolicy, mailPolicyFrom, smtpInputSchema } from "./smtp";
+import { requireAdminCtx } from "../context";
 
 export { LLM_FALLBACK } from "./config";
 
@@ -31,10 +32,6 @@ export class SettingsError extends Error {
     super(code);
     this.name = "SettingsError";
   }
-}
-
-function requireAdminCtx(ctx: Pick<Ctx, "role">): void {
-  if (ctx.role !== "admin") throw new SettingsError("forbidden");
 }
 
 /** What Admin › Server shows of the fallback: never the key, only its last four characters. */
@@ -57,7 +54,7 @@ const API_KEY = z
   .regex(/^sk-[A-Za-z0-9_-]{20,200}$/);
 
 export async function llmFallbackView(ctx: Pick<Ctx, "role">): Promise<LlmFallbackView | null> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const [row] = await getDb().select().from(appSettings).where(eq(appSettings.key, LLM_FALLBACK));
   if (!row?.value) return null;
   return {
@@ -75,7 +72,7 @@ export async function saveLlmFallback(
   ctx: Pick<Ctx, "role" | "userId">,
   input: { model: string; apiKey: string },
 ): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const model = MODEL.safeParse(input.model);
   if (!model.success) throw new SettingsError("invalid");
   const typed = input.apiKey.trim();
@@ -96,7 +93,7 @@ export async function saveLlmFallback(
 }
 
 export async function removeLlmFallback(ctx: Pick<Ctx, "role">): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   await getDb().delete(appSettings).where(eq(appSettings.key, LLM_FALLBACK));
 }
 
@@ -120,7 +117,7 @@ export async function testLlmFallback(
   ctx: Pick<Ctx, "role">,
   deps: { fetch: typeof fetch } = { fetch: globalThis.fetch },
 ): Promise<LlmProbeResult> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   return probeLlmFallback(await llmFallbackCredentials(), deps);
 }
 
@@ -156,7 +153,7 @@ async function lastOidcCheck(): Promise<OidcProbeResult | null> {
 }
 
 export async function oidcView(ctx: Pick<Ctx, "role">): Promise<OidcView> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const [config, lastCheck] = await Promise.all([oidcConfig(), lastOidcCheck()]);
   return {
     issuer: config.issuer,
@@ -180,7 +177,7 @@ export async function saveOidc(
   ctx: Pick<Ctx, "role" | "userId">,
   input: unknown,
 ): Promise<{ signedEveryoneOut: boolean }> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const parsed = oidcInputSchema.safeParse(input);
   if (!parsed.success) throw new SettingsError("invalid");
   // A URL that `discoveryUrlFor` cannot build from is not an issuer, whatever `z.url()` thinks.
@@ -216,7 +213,7 @@ export async function saveOidc(
 
 /** Forgets the saved provider: the instance falls back to `.env.homelab` (plan F8 §3.4.3). */
 export async function removeOidc(ctx: Pick<Ctx, "role">): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   await getDb().delete(appSettings).where(eq(appSettings.key, OIDC_PROVIDER));
   invalidateAuth();
 }
@@ -231,7 +228,7 @@ export async function testOidc(
   ctx: Pick<Ctx, "role" | "userId">,
   deps: { fetch: typeof fetch } = { fetch: globalThis.fetch },
 ): Promise<OidcProbeResult> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const config = await oidcConfig();
   const result = await probeOidc(config, deps);
   const value = { outcome: result.outcome };
@@ -260,7 +257,7 @@ interface SmtpView {
 }
 
 export async function smtpView(ctx: Pick<Ctx, "role">): Promise<SmtpView> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const [config, row] = await Promise.all([smtpConfig(), readSetting(SMTP_TRANSPORT)]);
   return {
     host: config.host,
@@ -276,7 +273,7 @@ export async function smtpView(ctx: Pick<Ctx, "role">): Promise<SmtpView> {
 }
 
 export async function saveSmtp(ctx: Pick<Ctx, "role" | "userId">, input: unknown): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const parsed = smtpInputSchema.safeParse(input);
   if (!parsed.success) throw new SettingsError("invalid");
   const current = await readSetting(SMTP_TRANSPORT);
@@ -308,7 +305,7 @@ export async function saveSmtp(ctx: Pick<Ctx, "role" | "userId">, input: unknown
 
 /** Forgets the saved transport: the instance falls back to `.env.homelab`. */
 export async function removeSmtp(ctx: Pick<Ctx, "role">): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   await getDb().delete(appSettings).where(eq(appSettings.key, SMTP_TRANSPORT));
   invalidateMailTransport();
 }
@@ -338,7 +335,7 @@ export async function sendTestEmail(
   ctx: Pick<Ctx, "role" | "userId" | "locale">,
   deps: { sendMail: typeof sendMail } = { sendMail },
 ): Promise<MailProbeResult> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const [person] = await getDb().select({ email: users.email }).from(users).where(eq(users.id, ctx.userId));
   if (!person?.email) return { outcome: "noAddress" };
   try {

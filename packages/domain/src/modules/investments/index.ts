@@ -44,8 +44,6 @@ export {
   PRODUCTS,
   QUANTITY_SCALE,
   STALE_VALUE_DAYS,
-  formatDecimal,
-  parseDecimal,
   plainDecimal,
   unitPriceOf,
 } from "./rules";

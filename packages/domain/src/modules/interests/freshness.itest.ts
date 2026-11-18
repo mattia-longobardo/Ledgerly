@@ -6,7 +6,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { listAccounts } from "../accounts/queries";
 import { applyProviderAccounts, saveBalanceEntry, saveProviderBalance } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
-import { addDays, type CivilDate, today } from "../../platform/dates";
+import { addDays, type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { deleteConnection, saveConnection } from "../../platform/integrations/service";

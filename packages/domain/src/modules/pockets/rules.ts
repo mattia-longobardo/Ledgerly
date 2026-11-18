@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { addDays, type CivilDate, isCivilDate, lastDayOfMonth, type MonthKey } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { addDays, type CivilDate, lastDayOfMonth, type MonthKey } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
+import { civilDate } from "../../shared/inputs";
 
 export const POCKET_STATES = ["active", "paused", "archived"] as const;
 export const MOVEMENT_KINDS = ["accrual", "deposit", "withdrawal", "adjustment"] as const;
@@ -100,8 +101,7 @@ export function monthEndBalances(
   });
 }
 
-const civilDate = z.string().refine(isCivilDate, "Not a civil date");
-const monthKey = civilDate.refine((value) => value.endsWith("-01"), "Not a month");
+const monthKey = civilDate().refine((value) => value.endsWith("-01"), "Not a month");
 const positive = z.bigint().positive();
 
 export const pocketInputSchema = z.object({
@@ -121,7 +121,7 @@ export type PocketInput = z.input<typeof pocketInputSchema>;
 
 export const moveSchema = z.object({
   cents: positive,
-  on: civilDate,
+  on: civilDate(),
   reason: z
     .string()
     .trim()
@@ -133,6 +133,6 @@ export const moveSchema = z.object({
 
 export const plannedSchema = z.object({
   cents: positive,
-  dueOn: civilDate,
+  dueOn: civilDate(),
   description: z.string().trim().min(1).max(200),
 });

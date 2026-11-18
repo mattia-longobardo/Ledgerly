@@ -3,7 +3,7 @@ import { claimForExtraction, type Document, type EvidenceInput, failExtraction, 
 import { readPdfText } from "../../imports/pdf/text";
 import { MIN_TEXT_CHARS } from "../../imports/rules";
 import type { Ctx } from "../../../platform/context";
-import { addMonths, isCivilDate } from "../../../platform/dates";
+import { addMonths, isCivilDate } from "../../../shared/dates";
 import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { effectiveValue, FIELD_NAMES, FIELDS, isDerived, isFieldName, MONEY_FIELDS } from "../fields";

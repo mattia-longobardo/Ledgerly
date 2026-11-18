@@ -4,7 +4,7 @@ import { getAccount } from "../accounts/queries";
 import { archiveAccount, removeAccount, saveBalanceEntry } from "../accounts/service";
 import { users } from "../../platform/auth/schema";
 import type { Ctx } from "../../platform/context";
-import { addDays, addMonths, monthKey, today } from "../../platform/dates";
+import { addDays, addMonths, monthKey, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";

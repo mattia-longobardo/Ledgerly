@@ -22,7 +22,7 @@ import {
 } from "@ledgerly/domain/transactions";
 import { TransactionError } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { getDb } from "@ledgerly/domain/platform/db";
 
 type Who = Pick<Ctx, "userId" | "timeZone">;

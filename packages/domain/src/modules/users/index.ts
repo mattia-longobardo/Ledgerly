@@ -2,6 +2,7 @@
 export { contextFor, forEachUser, personById } from "./jobs";
 export type { Person } from "./jobs";
 export { describeUserAgent, initialsOf, personActionRefusal } from "./rules";
+export { buildCtx } from "./rules";
 export type { PersonAction, PersonRefusal, Preferences, TimeOffPreferences } from "./rules";
 export {
   findSessionToken,

@@ -26,8 +26,7 @@ import {
   SNAPSHOT_STATES,
   TRENDS,
 } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../platform/db/checks";
 
 export const accountGroups = pgTable(
   "account_groups",

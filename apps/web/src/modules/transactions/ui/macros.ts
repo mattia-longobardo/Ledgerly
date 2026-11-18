@@ -4,6 +4,7 @@
 // amount is drawn.
 import { type CategoryMacroTotal, shareOf } from "@ledgerly/domain/transactions";
 import { type CategoryType, CATEGORY_TYPES } from "@ledgerly/domain/transactions";
+import { abs } from "@ledgerly/domain/shared/money";
 
 /** Income, Expenses, Transfers: the type of a category, always in this order (CR1). */
 export const MACROS = CATEGORY_TYPES;
@@ -55,8 +56,6 @@ function add(a: Amount, b: Amount): Amount {
     outCents: a.outCents + b.outCents,
   };
 }
-
-const abs = (value: bigint) => (value < 0n ? -value : value);
 
 /** Biggest first; at a tie, by name (§5.2): a line at zero falls to the end of its list. */
 function byTotal(a: CategoryLine, b: CategoryLine): number {

@@ -11,7 +11,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { type KeyRing, openJson, parseKeyRing, sealJson } from "@ledgerly/domain/platform/crypto";
+import { openJson, sealJson } from "@ledgerly/domain/platform/crypto";
 import { getDb, type Tx } from "@ledgerly/domain/platform/db";
 import { userScoped } from "@ledgerly/domain/platform/db";
 import { readEnv } from "@ledgerly/domain/platform/env";
@@ -61,6 +61,7 @@ import {
   plugins,
   pluginUserCredentials,
 } from "@ledgerly/domain/platform/plugins";
+import { keyRing } from "@ledgerly/domain/platform/crypto";
 
 /** Why a plugin action refused: the codes of ux/n1-plugin-bank.md §7, plus the two of a guard. */
 export type PluginActionCode =
@@ -94,13 +95,6 @@ export class PluginActionError extends Error {
 /** For the tests: the `fetch` the calls to a plugin go through. */
 export interface Deps {
   fetchFn?: Fetch;
-}
-
-let ring: KeyRing | undefined;
-
-function keyRing(): KeyRing {
-  ring ??= parseKeyRing(readEnv().APP_ENCRYPTION_KEY);
-  return ring;
 }
 
 /* The manifest */

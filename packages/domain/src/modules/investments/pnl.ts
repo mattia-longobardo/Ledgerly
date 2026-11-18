@@ -2,14 +2,13 @@
 // U1): what a service and the portfolio earned or lost between two days, split into additive parts,
 // with how far the number can be trusted. Pure: no database, no clock. Amounts are bigint cents; the
 // one float is a rate of return, a ratio that is never written back.
-import { addDays, type CivilDate, daysBetween, isCivilDate } from "../../platform/dates";
+import { addDays, type CivilDate, daysBetween, isCivilDate } from "../../shared/dates";
 import { convertCents, type RateTable } from "../../platform/fx/rules";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import {
   type AdjustmentClass,
   type Book,
   compareEvents,
-  divRound,
   eventsOn,
   type FlowEntry,
   flowEntriesOn,
@@ -22,7 +21,9 @@ import {
   sortedPeriods,
   valueOn,
 } from "./rules";
+import { divRound } from "../../shared/money";
 import { xirr, type Xirr } from "./xirr";
+import { abs } from "../../shared/money";
 
 // ——— The period (§1.2, §2.1) ————————————————————————————————————————————————————————————————
 
@@ -158,7 +159,6 @@ interface Replay {
   costs: Map<string, CostState>;
 }
 
-const abs = (value: bigint) => (value < 0n ? -value : value);
 const POSITION = /^trade:(.+):(open|close)$/;
 
 /**
@@ -522,7 +522,7 @@ function flatSince(book: Book, end: CivilDate): CivilDate {
 }
 
 /** The first day the book knows anything of: its first period or its first event. */
-function firstDayOf(book: Book): CivilDate | null {
+export function firstDayOf(book: Book): CivilDate | null {
   const days = [...book.periods.map((period) => period.fromOn), ...book.events.map((event) => event.on)];
   return days.length === 0 ? null : days.reduce((a, b) => (a < b ? a : b));
 }

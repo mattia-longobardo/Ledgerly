@@ -8,7 +8,7 @@ import { YearPicker } from "@/modules/timeoff/ui/year-picker";
 import { getPreferences } from "@ledgerly/domain/users";
 import { sourceHref } from "@/app/(app)/settings/integrations/connection-view";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn, today as todayIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn, today as todayIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 import { countDaysByCalendar, listCalendars } from "@ledgerly/domain/platform/holidays";
 import { TREK_PROVIDER } from "@ledgerly/domain/platform/integrations";

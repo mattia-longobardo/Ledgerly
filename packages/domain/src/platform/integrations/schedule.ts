@@ -16,7 +16,7 @@ import {
   lastDayOfMonth,
   monthKey,
   wallClockIn,
-} from "../dates";
+} from "../../shared/dates";
 
 /**
  * The shortest gap between two passes of one connection, over all its rules together. Every pass
@@ -227,14 +227,14 @@ export function parseCron(expression: string): CronFields | null {
 
 /* Which minutes of a day a rule names */
 
-function dayNumber(day: CivilDate): number {
+function dayOfMonth(day: CivilDate): number {
   return Number(day.slice(8, 10));
 }
 
 function daysMatch(days: SyncDays, day: CivilDate): boolean {
   if (days.kind === "every") return true;
   if (days.kind === "weekdays") return days.weekdays.includes(dayOfWeek(day) || 7);
-  const number = dayNumber(day);
+  const number = dayOfMonth(day);
   return days.monthDays.some(
     (wanted) => wanted === number || (wanted === LAST_DAY && lastDayOfMonth(monthKey(day)) === day),
   );
@@ -248,7 +248,7 @@ function cronOf(expression: string): CronFields | null {
 
 function cronDayMatches(cron: CronFields, day: CivilDate): boolean {
   if (!cron.months.has(Number(day.slice(5, 7)))) return false;
-  const byMonthDay = cron.monthDays.has(dayNumber(day));
+  const byMonthDay = cron.monthDays.has(dayOfMonth(day));
   const byWeekday = cron.weekdays.has(dayOfWeek(day));
   if (cron.eitherDay) return byMonthDay || byWeekday;
   return (cron.monthDaysAny || byMonthDay) && (cron.weekdaysAny || byWeekday);

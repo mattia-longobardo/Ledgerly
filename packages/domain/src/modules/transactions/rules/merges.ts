@@ -1,4 +1,4 @@
-import { type CivilDate, civilDateIn } from "../../../platform/dates";
+import { type CivilDate, civilDateIn } from "../../../shared/dates";
 import {
   displayPayee,
   type IncomingTransaction,

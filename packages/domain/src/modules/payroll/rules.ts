@@ -1,5 +1,5 @@
-import { addMonths, type CivilDate, type MonthKey } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { addMonths, type CivilDate, type MonthKey } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 import type { MoneyField } from "./fields";
 
 export const PAYSLIP_TYPES = ["ordinary", "thirteenth", "fourteenth", "fifteenth", "bonus", "settlement"] as const;

@@ -11,9 +11,10 @@ import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
 import { instant, money } from "@/platform/api/json";
 import type { ApiScope } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { isCivilDate, monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { monthlyFigures } from "@/platform/reports/monthly";
+import { civilDate } from "@ledgerly/api-contract";
 
 /**
  * The tools of the MCP server (docs/auth-design.md D6, v1). Each one calls the same services as
@@ -35,7 +36,7 @@ const DEFAULT_TRANSACTIONS = 50;
 const MAX_BALANCES = 200;
 const DEFAULT_BALANCES = 50;
 
-const civilDate = z.string().refine(isCivilDate, "A date as YYYY-MM-DD");
+const civilDateField = civilDate("A date as YYYY-MM-DD");
 const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "A month as YYYY-MM");
 
 /** The JSON of a tool's answer, as text: every MCP client reads that, whatever it does with the rest. */
@@ -172,8 +173,8 @@ export function buildMcpServer(ctx: Ctx, scopes: readonly ApiScope[]): McpServer
         "Movements filtered by period, account, category, type and payee text, with the totals of the " +
         "whole filtered range (not just the page), as GET /api/v1/transactions. Paginate with offset.",
       inputSchema: {
-        from: civilDate.optional().describe("First day included, YYYY-MM-DD."),
-        to: civilDate.optional().describe("Last day included, YYYY-MM-DD."),
+        from: civilDateField.optional().describe("First day included, YYYY-MM-DD."),
+        to: civilDateField.optional().describe("Last day included, YYYY-MM-DD."),
         account_id: z.uuid().optional().describe("Only this account, from list_accounts."),
         category_id: z
           .uuid()
@@ -290,8 +291,8 @@ function registerInvestmentTools(server: McpServer, ctx: Ctx): void {
           .regex(/^(\d{4}|all)$/)
           .optional()
           .describe("A year (YYYY) or `all`; default the year running."),
-        from: civilDate.optional().describe("First day, YYYY-MM-DD; with `to`, wins over `period`."),
-        to: civilDate.optional().describe("Last day, YYYY-MM-DD."),
+        from: civilDateField.optional().describe("First day, YYYY-MM-DD; with `to`, wins over `period`."),
+        to: civilDateField.optional().describe("Last day, YYYY-MM-DD."),
       },
       annotations: READ_ONLY,
     },

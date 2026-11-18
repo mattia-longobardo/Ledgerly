@@ -5,7 +5,7 @@ import { deleteBalanceEntry, removeAccount, runSnapshot } from "../accounts/serv
 import { chargeCandidates } from "../transactions/queries";
 import { markRemovedUpstream, purgeRemovedUpstream, upsertFromProvider } from "../transactions/service";
 import type { Ctx } from "../../platform/context";
-import { today } from "../../platform/dates";
+import { today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";

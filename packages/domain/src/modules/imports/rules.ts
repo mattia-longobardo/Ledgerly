@@ -1,4 +1,4 @@
-import { addDays, type CivilDate } from "../../platform/dates";
+import { addDays, type CivilDate } from "../../shared/dates";
 
 /**
  * The kinds a document row can have. The two after `payslip` are of documents a fund read before

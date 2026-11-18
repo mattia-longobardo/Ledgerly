@@ -7,7 +7,7 @@ import { createManualTransaction } from "@domain/modules/transactions/manual";
 import { transactionsSummary } from "@domain/modules/transactions/queries";
 import { createCategory, getCategory } from "@domain/modules/transactions/taxonomy";
 import type { Ctx } from "@domain/platform/context";
-import { monthKey, today } from "@domain/platform/dates";
+import { monthKey, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../../../test/db";
 import { createTestUser } from "../../../../../../../test/users";

@@ -9,7 +9,7 @@
  * `fetch` is injected so the tests never leave the process.
  */
 import { z } from "zod";
-import type { CivilDate } from "../dates";
+import type { CivilDate } from "../../shared/dates";
 import type { HolidaySource } from "./rules";
 
 const DEFAULT_TIMEOUT_MS = 15_000;

@@ -84,7 +84,7 @@ export function resolveSpecifier(fromRel: string, specifier: string): string | n
   for (const [name, path] of PACKAGE_ENTRIES) if (specifier === name) return path;
   if (specifier.startsWith("@ledgerly/domain/")) {
     const entry = specifier.slice("@ledgerly/domain/".length);
-    return entry.startsWith("platform/") ? entry : `modules/${entry}`;
+    return /^(platform|shared)\//.test(entry) ? entry : `modules/${entry}`;
   }
   for (const [alias, path] of ALIASES)
     if (specifier.startsWith(alias)) return path + specifier.slice(alias.length);
@@ -139,6 +139,8 @@ const SPLIT_FILES = ["service", "queries", "rules", "schema", "jobs"];
 export function unitOf(rel: string): string {
   const parts = rel.split("/");
   if (parts[0] === "modules" && parts.length > 2) return `modules/${parts[1]}`;
+  // The domain's shared primitives (R0, 10-modularity.md §10.3, level 0): one unit each.
+  if (parts[0] === "shared" && parts.length > 1) return `shared/${parts[1].replace(/\.tsx?$/, "")}`;
   if (parts[0] === "platform") {
     // A provider has its folder; `service/` is the core's file split in parts (rule Q6), not a provider.
     if (parts[1] === "integrations" && parts.length > 3 && !SPLIT_FILES.includes(parts[2])) {

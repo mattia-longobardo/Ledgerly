@@ -7,12 +7,12 @@ import { createAccount, deleteBalanceEntry, removeAccount, saveBalanceEntry } fr
 import { chargeCandidates, getTransaction } from "../transactions/queries";
 import { payeeKeyOf } from "../transactions/rules";
 import type { Ctx } from "../../platform/context";
-import { type CivilDate, daysBetween, isCivilDate, today } from "../../platform/dates";
+import { type CivilDate, daysBetween, isCivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../platform/db/errors";
 import { userScoped } from "../../platform/db/scope";
 import { isDisplayCurrency } from "../../platform/fx/rules";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import { carriesKey, type Detection, recurrenceKeyOf, summarise } from "./detect";
 import { contributionFee, FEE_BASES, FEE_PERIODS, feeModes, needsPeriod } from "./fees";
 import {
@@ -33,6 +33,7 @@ import {
   periodsPerYear,
   type SourceState,
 } from "./sources";
+import { civilDate, optionalText } from "../../shared/inputs";
 
 export type Fund = typeof funds.$inferSelect;
 export type FundSource = typeof fundContributionSources.$inferSelect;
@@ -71,27 +72,18 @@ export class FundError extends Error {
 
 // ——— Inputs ——————————————————————————————————————————————————————————————————————————————————
 
-const civilDate = z.string().refine(isCivilDate, "Not a civil date");
 const optionalDate = z
   .string()
   .nullable()
   .default(null)
   .transform((value) => (value === "" ? null : value))
   .refine((value) => value === null || isCivilDate(value), "Not a civil date");
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .default(null);
 
 const fundInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   provider: optionalText(80),
   compartment: optionalText(80),
-  startOn: civilDate,
+  startOn: civilDate(),
   code: optionalText(40),
 });
 export type FundInput = z.input<typeof fundInputSchema>;
@@ -859,7 +851,7 @@ const periodOfSource = z
 const contributionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("voluntary"),
-    on: civilDate,
+    on: civilDate(),
     amountCents: z.bigint().positive(),
     feeCents: fee,
     transactionId: z.uuid().nullable().default(null),
@@ -867,7 +859,7 @@ const contributionSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("payroll"),
-    on: civilDate,
+    on: civilDate(),
     workerCents: z.bigint().nonnegative(),
     employerCents: z.bigint().nonnegative(),
     tfrCents: z.bigint().nonnegative(),
@@ -879,7 +871,7 @@ const contributionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("other"),
     classification: z.enum(["enrollment", "transfer_in", "switch", "withdrawal"]),
-    on: civilDate,
+    on: civilDate(),
     amountCents: z.bigint().nonnegative(),
     /** Joining only: the period whose payslips accrued the enrolment quota, so the two reconcile. */
     period: periodOfSource,

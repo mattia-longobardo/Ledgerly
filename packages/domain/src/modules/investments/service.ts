@@ -6,13 +6,13 @@ import { replacePortfolioPoints, saveBalanceEntry } from "../accounts/service";
 import { valuationAccountIds } from "../funds/queries";
 import { getTransaction, movementsByAccount } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
-import { addDays, type CivilDate, isCivilDate, today } from "../../platform/dates";
+import { addDays, type CivilDate, isCivilDate, today } from "../../shared/dates";
 import { getDb, type Tx } from "../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../platform/db/errors";
 import { userScoped } from "../../platform/db/scope";
 import { eurPerUnitOn, type RateTable } from "../../platform/fx/rules";
 import { ratesOn } from "../../platform/fx/service";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import { ASSET_SEED, MANUAL_PROVIDER } from "./catalog";
 import {
   type AccountBalanceLike,
@@ -22,11 +22,9 @@ import {
   atRate,
   type Book,
   compareEvents,
-  divRound,
   computePoints,
   type EventLike,
   type EventOrigin,
-  formatDecimal,
   INVESTMENT_CATEGORIES,
   type Leg,
   MANUAL_MODE,
@@ -35,7 +33,6 @@ import {
   type TransferLeg,
   type OperationKind,
   type OperationLike,
-  parseDecimal,
   PRICE_SCALE,
   PRODUCT_PATTERN,
   positionCents,
@@ -45,6 +42,7 @@ import {
   READING_STATUSES,
   RECONCILIATION_KINDS,
 } from "./rules";
+import { divRound, formatDecimal, parseDecimal } from "../../shared/money";
 import {
   investmentAccountPeriods,
   investmentAccounts,
@@ -58,6 +56,8 @@ import {
   investmentReadingScopes,
   investmentReconciliations,
 } from "./schema";
+import { abs } from "../../shared/money";
+import { civilDate } from "../../shared/inputs";
 
 export type InvestmentAccount = typeof investmentAccounts.$inferSelect;
 export type InvestmentAsset = typeof investmentAssets.$inferSelect;
@@ -542,7 +542,7 @@ export async function createManualService(
  * is the provider's, and a correction belongs to Accounts.
  */
 export const serviceValueSchema = z.object({
-  on: z.string().refine(isCivilDate, "Not a civil date"),
+  on: civilDate(),
   cents: z.bigint().nonnegative(),
 });
 export type ServiceValueInput = z.input<typeof serviceValueSchema>;
@@ -789,13 +789,12 @@ const optionalNote = z
   .nullable()
   .default(null);
 
-const civil = z.string().refine(isCivilDate, "Not a civil date");
 const positive = z.bigint().positive();
 
 export const buyInputSchema = z.object({
   asset: z.union([z.object({ id: z.uuid() }), z.object({ create: assetInputSchema })]),
   product: z.string().regex(new RegExp(PRODUCT_PATTERN)).default("custody"),
-  on: civil,
+  on: civilDate(),
   /** Quantity and unit price, or only the total (a BTP, a fund bought for an amount, A3). */
   quantity: positive.nullable().default(null),
   unitPrice: z.bigint().nonnegative().nullable().default(null),
@@ -871,21 +870,21 @@ export async function addAsset(
 export const operationInputSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.enum(["deposit", "withdrawal"]),
-    on: civil,
+    on: civilDate(),
     amountCents: positive,
     transactionId: z.uuid().nullable().default(null),
     note: optionalNote,
   }),
   z.object({
     kind: z.literal("account_valuation"),
-    on: civil,
+    on: civilDate(),
     amountCents: z.bigint().nonnegative(),
     note: optionalNote,
   }),
   z.object({
     kind: z.literal("valuation"),
     holdingId: z.uuid(),
-    on: civil,
+    on: civilDate(),
     unitPrice: z.bigint().nonnegative().nullable().default(null),
     amountCents: z.bigint().nonnegative().nullable().default(null),
     note: optionalNote,
@@ -893,7 +892,7 @@ export const operationInputSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.enum(["sell", "close"]),
     holdingId: z.uuid(),
-    on: civil,
+    on: civilDate(),
     quantity: positive.nullable().default(null),
     unitPrice: z.bigint().nonnegative().nullable().default(null),
     /** The proceeds in the asset's currency, when no price is typed. */
@@ -904,15 +903,15 @@ export const operationInputSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("income"),
     holdingId: z.uuid().nullable().default(null),
-    on: civil,
+    on: civilDate(),
     amountCents: positive,
     note: optionalNote,
   }),
   z.object({
     kind: z.literal("adjustment"),
-    on: civil,
+    on: civilDate(),
     amountCents: z.bigint().refine((value) => value !== 0n, "An adjustment moves the value"),
-    validUntil: civil.nullable().default(null),
+    validUntil: civilDate().nullable().default(null),
     adjustmentClass: z.enum(ADJUSTMENT_CLASSES).default("data"),
     note: z.string().trim().min(1).max(200),
   }),
@@ -1297,7 +1296,7 @@ export async function confirmZeroReading(ctx: WriteCtx, readingId: string): Prom
 export const reconciliationInputSchema = z.object({
   holdingId: z.uuid(),
   kind: z.enum(RECONCILIATION_KINDS),
-  effectiveOn: civil,
+  effectiveOn: civilDate(),
   /** For `partial`: how much of the position the provider covers. */
   quantity: positive.nullable().default(null),
   /** For `outside_scope`: the product the manual position really is in. */
@@ -1389,7 +1388,6 @@ export async function transferLegs(ctx: Pick<Ctx, "userId">): Promise<TransferLe
   const currencies = new Map(
     (await listAccounts(ctx, { includeArchived: true })).map((account) => [account.id, account.currency]),
   );
-  const abs = (value: bigint) => (value < 0n ? -value : value);
   return rows.map((row) => {
     const asset = row.assetId !== null && row.quantity !== null;
     const cash =

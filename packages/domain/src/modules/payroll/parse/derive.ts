@@ -1,4 +1,4 @@
-import { centsToDecimal, type Cents, parseCents } from "../../../platform/money";
+import { centsToDecimal, type Cents, parseCents } from "../../../shared/money";
 import { type FieldName, type MoneyField } from "../fields";
 import { isExtraMonth, type PayslipType, type TfrSource } from "../rules";
 import type { Warning } from "./checks";

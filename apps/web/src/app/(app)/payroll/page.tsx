@@ -7,7 +7,7 @@ import { AutoRefresh } from "@/modules/payroll/ui/auto-refresh";
 import { registerGroups, STATE_TONE } from "@/modules/payroll/ui/present";
 import { RegisterTable } from "@/modules/payroll/ui/register-table";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";

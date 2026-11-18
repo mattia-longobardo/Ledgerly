@@ -3,7 +3,7 @@ import { holidaysFor } from "../../platform/holidays/service";
 import { trekStatsOf } from "../../platform/integrations/trek/sync";
 import { getPreferences } from "../users/service";
 import type { Ctx } from "../../platform/context";
-import { type CivilDate, type MonthKey, addMonths, monthKey, today } from "../../platform/dates";
+import { type CivilDate, type MonthKey, addMonths, monthKey, today } from "../../shared/dates";
 import {
   type AccrualKind,
   type AccrualView,

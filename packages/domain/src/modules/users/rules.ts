@@ -1,6 +1,7 @@
 import { z } from "zod";
-import type { Role } from "../../platform/context";
+import type { Ctx, Role } from "../../platform/context";
 import { DEFAULT_DISPLAY_CURRENCY, DISPLAY_CURRENCIES } from "../../platform/fx/rules";
+import { numberStyle } from "../../platform/format";
 
 const VALID_TIME_ZONES = new Set(Intl.supportedValuesOf("timeZone"));
 
@@ -132,4 +133,20 @@ export function initialsOf(name: string, email: string): string {
     return (first + last).toUpperCase();
   }
   return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
+}
+
+/**
+ * The context a person acts in (audit USR-3): their role, language, zone, number format and display
+ * currency. The session, an API token and a job all build it here; a job passes no role and acts
+ * as a user.
+ */
+export function buildCtx(user: { id: string; role?: string | null }, preferences: Preferences): Ctx {
+  return {
+    userId: user.id,
+    role: user.role === "admin" ? "admin" : "user",
+    locale: preferences.locale,
+    timeZone: preferences.timeZone,
+    numberFormat: numberStyle(preferences),
+    displayCurrency: preferences.displayCurrency,
+  };
 }

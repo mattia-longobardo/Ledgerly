@@ -8,7 +8,7 @@ import { AlertsForm } from "@/modules/budgets/ui/alerts-form";
 import { budgetName, NO_COLOR } from "@/modules/budgets/ui/present";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatWholePercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";

@@ -9,7 +9,7 @@ import { InactiveSubscriptions, SubscriptionsTable } from "@/modules/subscriptio
 import { SuggestionsButton } from "@/modules/subscriptions/ui/suggestions-dialog";
 import { categoryOptions } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
 import { buttonClassName } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

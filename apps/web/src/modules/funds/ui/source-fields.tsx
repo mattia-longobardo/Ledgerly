@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { type ReactNode, useId } from "react";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { UiLocale } from "@ledgerly/domain/platform/format";
 import { LinkButton } from "@/ui/button";
 import { Field } from "@/ui/field";

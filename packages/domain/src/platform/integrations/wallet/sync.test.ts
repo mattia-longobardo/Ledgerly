@@ -2,7 +2,7 @@
 // vocabularies. Everything else in `sync.ts` writes to the database and is covered by
 // `sync.itest.ts` against a real Postgres (spec §11: no in-memory fakes).
 import { describe, expect, it } from "vitest";
-import { civilDateIn } from "../../dates";
+import { civilDateIn } from "../../../shared/dates";
 import type { WalletAccount, WalletCategory, WalletTransaction } from "./client";
 import {
   MAX_WINDOW_REMOVAL_SHARE,

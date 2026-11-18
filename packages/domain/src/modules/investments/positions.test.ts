@@ -2,14 +2,8 @@ import { describe, expect, it } from "vitest";
 import { NO_RATES } from "../../platform/fx/rules";
 import { pnlOf, type PnlService } from "./pnl";
 import { closedGroups, contributionsOf, onCostOf, periodReturnOf } from "./positions";
-import {
-  type Book,
-  type EventLike,
-  type OperationLike,
-  parseDecimal,
-  PRICE_SCALE,
-  QUANTITY_SCALE,
-} from "./rules";
+import { type Book, type EventLike, type OperationLike, PRICE_SCALE, QUANTITY_SCALE } from "./rules";
+import { parseDecimal } from "../../shared/money";
 
 const qty = (value: string) => parseDecimal(value, QUANTITY_SCALE);
 const eur = (value: number) => BigInt(Math.round(value * 100));

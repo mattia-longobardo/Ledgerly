@@ -40,7 +40,7 @@ import { periodText } from "@/modules/investments/ui/period-control";
 import { chargeCandidates } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import {
   formatDate,
   formatDecimalText,
@@ -48,7 +48,7 @@ import {
   formatPercent,
   NULL_DISPLAY,
 } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

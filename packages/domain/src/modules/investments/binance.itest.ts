@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "../../platform/context";
-import { addDays } from "../../platform/dates";
+import { addDays } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { saveRates } from "../../platform/fx/service";
 import { binanceSource } from "../../platform/integrations/ccxt/source";

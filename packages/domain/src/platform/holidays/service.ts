@@ -1,6 +1,6 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import type { Ctx } from "../context";
-import type { CivilDate } from "../dates";
+import type { CivilDate } from "../../shared/dates";
 import { getDb } from "../db/client";
 import { userScoped } from "../db/scope";
 import { type HolidaySource, type PatronSaint, italianHolidays } from "./rules";

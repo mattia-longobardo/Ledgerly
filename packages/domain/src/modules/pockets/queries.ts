@@ -12,10 +12,10 @@ import {
   monthKey,
   monthsBetween,
   today,
-} from "../../platform/dates";
+} from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import {
   etaMonths,
   freeBalance,

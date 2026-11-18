@@ -9,7 +9,7 @@ import { markNotSent } from "@domain/modules/transactions/sending";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { keepSourceCategory, listSourceCategories } from "@domain/modules/transactions/source-categories";
 import { createCategory, listCategories } from "@domain/modules/transactions/taxonomy";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
 import { pluginProvider } from "@domain/platform/integrations/rules";

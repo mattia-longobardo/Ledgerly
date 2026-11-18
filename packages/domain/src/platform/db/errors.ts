@@ -20,3 +20,8 @@ export function hasPgError(error: unknown, code: string, constraint?: string): b
 export const UNIQUE_VIOLATION = "23505";
 /** A row is still referenced by a foreign key that does not cascade (23503). */
 export const FOREIGN_KEY_VIOLATION = "23503";
+
+/** True for the unique violation of one named constraint, wherever drizzle wrapped it. */
+export function isUniqueViolation(error: unknown, constraint: string): boolean {
+  return hasPgError(error, UNIQUE_VIOLATION, constraint);
+}

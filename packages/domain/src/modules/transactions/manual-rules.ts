@@ -4,8 +4,8 @@
  * caller.
  */
 import { z } from "zod";
-import { type CivilDate, isCivilDate, wallClockIn } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { type CivilDate, isCivilDate, wallClockIn } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 import type { TransactionType } from "./rules";
 
 /** A manual movement is money out or money in: a giroconto is two movements a provider pairs. */

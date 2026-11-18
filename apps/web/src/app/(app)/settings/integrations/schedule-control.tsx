@@ -12,7 +12,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import {
   LAST_DAY,
   MAX_RULES,

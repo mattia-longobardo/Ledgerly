@@ -1,17 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { addDays } from "../../platform/dates";
+import { addDays } from "../../shared/dates";
 import { NO_RATES } from "../../platform/fx/rules";
 import { cashGaps, cashImpact, openingCashAt } from "./cutoff";
 import { pnlOf, type PnlParts, type PnlService, portfolioPnl, type ServicePnl } from "./pnl";
 import { contributionsOf } from "./positions";
-import {
-  type Book,
-  type EventLike,
-  type OperationLike,
-  parseDecimal,
-  QUANTITY_SCALE,
-  type ReadingLike,
-} from "./rules";
+import { type Book, type EventLike, type OperationLike, QUANTITY_SCALE, type ReadingLike } from "./rules";
+import { parseDecimal } from "../../shared/money";
 
 // PERS-145: the 12 months of a synced service — a cut-off with its opening, no estimate, no "Other",
 // and one engine whose parts add up to every period's P&L, service by service and in the portfolio.

@@ -22,7 +22,7 @@ import { macroViews } from "@/modules/transactions/ui/macros";
 import { SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
-import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/platform/dates";
+import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
 import { shiftRange } from "@ledgerly/domain/platform/ranges";
 import { Badge } from "@/ui/badge";

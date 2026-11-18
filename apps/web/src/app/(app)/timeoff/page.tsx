@@ -13,7 +13,7 @@ import type { BookedLeave } from "@/modules/timeoff/ui/leave-panel";
 import { YearPicker } from "@/modules/timeoff/ui/year-picker";
 import { KIND_CLASS, leaveTypeOptions, weekdayInitials } from "@/modules/timeoff/ui/kinds";
 import { requireSession } from "@/platform/auth/session";
-import { today as todayIn } from "@ledgerly/domain/platform/dates";
+import { today as todayIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, NULL_DISPLAY, type UiLocale } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";

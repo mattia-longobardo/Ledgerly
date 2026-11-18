@@ -211,7 +211,7 @@ export function measurePackages(repo: string): PackageMeasure {
         const entry = specifier.slice(name.length);
         const browserSafe =
           name === "@ledgerly/domain"
-            ? /\/client$/.test(entry) || /^\/platform\/[^/]+$/.test(entry)
+            ? /\/client$/.test(entry) || /^\/(platform|shared)\/[^/]+$/.test(entry)
             : !name.startsWith("@ledgerly/");
         if (!browserSafe) measure.clientReach.push(`${path} → ${specifier}`);
       }

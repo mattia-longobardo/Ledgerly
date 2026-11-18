@@ -1,5 +1,5 @@
-import { type CivilDate, type MonthKey } from "../../../platform/dates";
-import type { Cents } from "../../../platform/money";
+import { type CivilDate, type MonthKey } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 import type { PeriodFees } from "../fees";
 
 /**

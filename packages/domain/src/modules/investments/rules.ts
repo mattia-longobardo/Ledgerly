@@ -9,9 +9,12 @@ import {
   monthKey,
   addMonths,
   isCivilDate,
-} from "../../platform/dates";
+} from "../../shared/dates";
 import { convertCents, type RateTable } from "../../platform/fx/rules";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
+import { divRound } from "../../shared/money";
+import { abs } from "../../shared/money";
+import { daysBetween } from "../../shared/dates";
 
 // ——— Vocabulary ——————————————————————————————————————————————————————————————————————————————
 
@@ -120,43 +123,6 @@ export const QUANTITY_SCALE = 18;
 export const PRICE_SCALE = 12;
 /** `numeric(20,10)`: a rate in units of 10⁻¹⁰, as `fx_rates`. */
 export const RATE_SCALE = 10;
-
-const DECIMAL = /^([+-])?(\d+)(?:\.(\d+))?$/;
-
-/**
- * A plain decimal string ("12.5", "-0.000001") as an integer of `scale` decimals, rounded half away
- * from zero past them. Anything else — a comma, an exponent, a symbol — is a `RangeError`: callers
- * normalise first.
- */
-export function parseDecimal(input: string, scale: number): bigint {
-  const match = DECIMAL.exec(input.trim());
-  if (!match) throw new RangeError(`Not a plain decimal: "${input}"`);
-  const [, sign, whole, fraction = ""] = match;
-  const kept = fraction.padEnd(scale + 1, "0");
-  let value = BigInt(whole) * 10n ** BigInt(scale) + BigInt(kept.slice(0, scale) || "0");
-  if (Number(kept[scale]) >= 5) value += 1n;
-  return sign === "-" ? -value : value;
-}
-
-/** The canonical decimal string of a fixed-point integer, without trailing zeros: "12.5", "-3". */
-export function formatDecimal(value: bigint, scale: number): string {
-  const negative = value < 0n;
-  const abs = negative ? -value : value;
-  const unit = 10n ** BigInt(scale);
-  const fraction = (abs % unit).toString().padStart(scale, "0").replace(/0+$/, "");
-  return `${negative ? "-" : ""}${abs / unit}${fraction ? `.${fraction}` : ""}`;
-}
-
-/** `numerator / denominator` rounded half away from zero, for any signs. */
-export function divRound(numerator: bigint, denominator: bigint): bigint {
-  if (denominator === 0n) throw new RangeError("Division by zero");
-  const negative = numerator < 0n !== denominator < 0n;
-  const n = numerator < 0n ? -numerator : numerator;
-  const d = denominator < 0n ? -denominator : denominator;
-  const quotient = n / d;
-  const rounded = (n % d) * 2n >= d ? quotient + 1n : quotient;
-  return negative ? -rounded : rounded;
-}
 
 /** Quantity × unit price, in cents of the price's currency. */
 export function positionCents(quantity: bigint, unitPrice: bigint): Cents {
@@ -352,8 +318,6 @@ export interface HoldingState {
   staleRate: boolean;
   open: boolean;
 }
-
-const abs = (value: bigint) => (value < 0n ? -value : value);
 
 /**
  * Every holding's state at the end of `on` (§2.1, A2): quantity, last price, value and cost, from
@@ -959,7 +923,7 @@ interface TransferProposal {
 }
 
 function daysApart(a: CivilDate, b: CivilDate): number {
-  return Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000;
+  return Math.abs(daysBetween(a, b));
 }
 
 /**

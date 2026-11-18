@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { MonthKey } from "../../platform/dates";
+import type { MonthKey } from "../../shared/dates";
 import { annualisedOverPeriods, forecast, monthlyRhythm, periodReturns, periodStats } from "./rules";
 
 describe("where the fund is heading (owner, 2026-09-20)", () => {

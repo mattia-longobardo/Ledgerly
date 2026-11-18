@@ -6,7 +6,7 @@ import { listOwnSessions } from "@ledgerly/domain/users";
 import { hasPasswordAccount, hasSsoAccount } from "@ledgerly/domain/platform/auth";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { listApiClients } from "@/platform/auth/api-clients";

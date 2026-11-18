@@ -1,4 +1,4 @@
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import { type TransactionState, type TransactionType } from "./vocabulary";
 
 /* Provider input */

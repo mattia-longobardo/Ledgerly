@@ -19,7 +19,7 @@ import {
 } from "@domain/modules/transactions/taxonomy";
 import { macroViews } from "@/modules/transactions/ui/macros";
 import type { Ctx } from "@domain/platform/context";
-import { monthKey, today } from "@domain/platform/dates";
+import { monthKey, today } from "@domain/shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../../../test/db";
 import { createTestUser } from "../../../../../../../test/users";
 import { mergeProposalsView, mergeTwoCategories, undoMergeOfTwo } from "./merge";

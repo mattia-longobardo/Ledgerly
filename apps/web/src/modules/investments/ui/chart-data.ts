@@ -1,7 +1,7 @@
 // The P&L chart's numbers (docs/design/investments-ux.md §2.2, §7), shared by the home and a
 // service's Overview: the running total, the labels it samples and its best and worst interval.
 import { formatPercent, type NumberFormat } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 
 export const toCents = (value: number | null): Cents | null =>
   value === null ? null : BigInt(Math.round(value));

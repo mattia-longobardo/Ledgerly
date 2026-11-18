@@ -9,7 +9,6 @@ import { z } from "zod";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { isCivilDate } from "@ledgerly/domain/platform/dates";
 import { LEAVE_DAY_KINDS, type LeaveUndo } from "@ledgerly/domain/timeoff";
 import {
   TimeOffError,
@@ -19,6 +18,7 @@ import {
   saveAllowance,
   saveLeaveRange,
 } from "@ledgerly/domain/timeoff";
+import { civilDate } from "@ledgerly/api-contract";
 
 type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
 interface RefusedDate {
@@ -142,7 +142,7 @@ export async function saveLeaveRangeAction(input: LeaveFormInput): Promise<Leave
 
 const removalSchema = z.union([
   z.object({ id: z.uuid() }),
-  z.object({ date: z.string().refine(isCivilDate, "not a civil date") }),
+  z.object({ date: civilDate("not a civil date") }),
 ]);
 
 /** "Remove": one row by its id, or everything on one date (Delete on a day of the calendar). */

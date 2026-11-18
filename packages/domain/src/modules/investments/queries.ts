@@ -4,13 +4,13 @@ import { dailyBalancesOf } from "../accounts/service";
 import { fundsOverview } from "../funds/overview";
 import { escapeLike, linkCandidates, movementsByAccount, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
-import { addDays, civilDateIn, type CivilDate, type MonthKey, today } from "../../platform/dates";
+import { addDays, civilDateIn, type CivilDate, type MonthKey, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import { convertCents, NO_RATES, type RateTable } from "../../platform/fx/rules";
 import { ratesOn } from "../../platform/fx/service";
 import { externalIdsOf } from "../../platform/integrations/service";
-import { type Cents, sumCents } from "../../platform/money";
+import { type Cents, sumCents } from "../../shared/money";
 import { ACTIVITY_FAMILIES, type ActivityFamily, type DescribedLeg, familyOf, kindsOf } from "./activity";
 import { INVESTMENT_PROVIDERS, type InvestmentProvider, providerOf } from "./catalog";
 import {
@@ -19,7 +19,6 @@ import {
   type DayValue,
   type FlowEntry,
   flowEntriesOn,
-  formatDecimal,
   type HoldingState,
   accountPnl,
   type AccountPnl,
@@ -30,7 +29,6 @@ import {
   monthsBack,
   type AccountOrigin,
   type OperationKind,
-  parseDecimal,
   type Performance,
   performance,
   PRICE_SCALE,
@@ -39,6 +37,7 @@ import {
   transferProposals,
   valueOn,
 } from "./rules";
+import { formatDecimal, parseDecimal } from "../../shared/money";
 import {
   investmentAssets,
   investmentEvents,
@@ -71,6 +70,7 @@ import {
   type PortfolioPnl,
   replayHoldings,
   type ServicePnl,
+  firstDayOf,
 } from "./pnl";
 import { type BarGrain, barIntervals, type Interval, periodSpan, valueDays } from "./period";
 import { type SyncStatus, syncStatus } from "./sync";
@@ -1053,7 +1053,7 @@ async function pnlInputs(
     });
   }
 
-  const earliest = period.from ?? firstDayOf(live) ?? todayOn;
+  const earliest = period.from ?? firstDayOfAll(live) ?? todayOn;
   const converts = live.some((one) => one.account.currency !== currency);
   const rates = converts
     ? await ratesOn(
@@ -1066,11 +1066,9 @@ async function pnlInputs(
 }
 
 /** The first day any live service has something: its first period or its first event. */
-function firstDayOf(live: Loaded[]): CivilDate | null {
-  const firsts = live.flatMap((one) => [
-    ...one.book.periods.map((p) => p.fromOn),
-    ...one.book.events.map((event) => event.on),
-  ]);
+/** The first day of any of the books: the earliest of each book's own first day. */
+function firstDayOfAll(live: Loaded[]): CivilDate | null {
+  const firsts = live.flatMap((one) => firstDayOf(one.book) ?? []);
   return firsts.length === 0 ? null : firsts.reduce((a, b) => (a < b ? a : b));
 }
 
@@ -1188,7 +1186,7 @@ export async function servicePositions(
   const one = loaded[0];
   if (!one) return null;
   const { services, display } = await pnlInputs(ctx, [one], period, todayOn);
-  const firstOn = firstDayOf([one]);
+  const firstOn = firstDayOfAll([one]);
   const reading = [...one.book.readingRows]
     .filter((row) => row.on <= period.to && row.status !== "pending_zero")
     .at(-1);
@@ -1240,7 +1238,7 @@ async function pnlView(
   const measured = services.map((one) => pnlOf(one, period.from, period.to, display));
   const portfolio = portfolioPnl(measured, display.currency);
 
-  const firstOn = firstDayOf(live);
+  const firstOn = firstDayOfAll(live);
   const span = periodSpan(period, firstOn);
   const { grain: barGrain, intervals } = barIntervals(span.from, span.to);
   const { grain: valueGrain, days } = valueDays(span.from, span.to);

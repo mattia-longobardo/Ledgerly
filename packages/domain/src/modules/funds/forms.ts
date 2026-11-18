@@ -1,10 +1,11 @@
 // What the forms of Funds hold and how it becomes what the service takes (release N6 of the rewrite
 // plan; screens: docs/design/rewrite-plan/ux/n6-pension-fund.md). Pure: the same shapes go from the
 // page to the client component and back to the Server Action, as text the person typed.
-import { parseAmount } from "../accounts/rules";
-import { fractionToPercent, percentToFraction } from "../interests/rules";
+import { parseAmount } from "../../platform/format";
+import { fractionToPercent } from "../interests/rules";
+import { percentToFraction } from "../../shared/money";
 import { formatAmountInput, type NumberFormat, numberSeparators } from "../../platform/format";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import { type FeeBasis, feeModes, type FeePeriod, needsPeriod } from "./fees";
 import type { ManualClass } from "./pension/rules";
 import type { ContributionInput, FeeInput, FundInput, SourceInput } from "./service";

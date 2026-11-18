@@ -4,7 +4,7 @@ import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/bank
 import { accounts } from "@domain/modules/accounts/schema";
 import { createAccount } from "@domain/modules/accounts/service";
 import { parseKeyRing, sealJson } from "@domain/platform/crypto";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { readEnv } from "@domain/platform/env";
 import { pluginProvider } from "@domain/platform/integrations/rules";

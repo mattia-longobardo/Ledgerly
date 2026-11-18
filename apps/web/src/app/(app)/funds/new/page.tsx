@@ -7,7 +7,7 @@ import { FUND_TEMPLATES } from "@ledgerly/domain/funds";
 import { FundWizard } from "@/modules/funds/ui/fund-wizard";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/shell/page";
 import { Skeleton } from "@/ui/skeleton";

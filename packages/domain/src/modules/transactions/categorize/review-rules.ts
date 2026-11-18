@@ -2,7 +2,7 @@
  * The rules of "To review" (rewrite plan N3; ux/n3-categories-manual.md §4, §6): how the movements
  * with no category are grouped, and which categories look like the same one. Pure.
  */
-import type { CivilDate } from "../../../platform/dates";
+import type { CivilDate } from "../../../shared/dates";
 import { normalise } from "./text";
 
 /** A movement that waits for a category, as the review shows it. */

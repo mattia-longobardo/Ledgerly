@@ -3,10 +3,10 @@ import { listAccounts } from "../accounts/queries";
 import { monthSpending } from "../transactions/queries";
 import { categoryOptions, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
-import { addMonths, type MonthKey } from "../../platform/dates";
+import { addMonths, type MonthKey } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import {
   type AlertSettings,
   type BudgetRow,

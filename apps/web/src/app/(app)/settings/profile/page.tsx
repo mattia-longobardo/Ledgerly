@@ -5,7 +5,7 @@ import { getPreferences } from "@ledgerly/domain/users";
 import { hasSsoAccount } from "@ledgerly/domain/platform/auth";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { utcOffsetLabel } from "@ledgerly/domain/platform/dates";
+import { utcOffsetLabel } from "@ledgerly/domain/shared/dates";
 import { mailPolicy } from "@ledgerly/domain/platform/settings";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { NameForm } from "./name-form";

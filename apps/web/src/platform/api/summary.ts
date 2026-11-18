@@ -1,6 +1,6 @@
 import "server-only";
 import { Hono } from "hono";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { monthlyFigures } from "@/platform/reports/monthly";
 import { withToken, type ApiEnv } from "./auth";
 import { money } from "./json";

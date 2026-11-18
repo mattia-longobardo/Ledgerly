@@ -11,9 +11,9 @@ import {
   toCents,
 } from "@/modules/investments/ui/chart-data";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { Card } from "@/ui/card";
 import { MultiLine, StackedBars, stackLayers } from "@/ui/chart";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";

@@ -15,9 +15,9 @@ import {
 import { KeyCheckLine } from "@/modules/investments/ui/key-check";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";

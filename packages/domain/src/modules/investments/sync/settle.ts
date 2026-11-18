@@ -2,7 +2,7 @@ import { and, asc, eq, inArray, isNotNull, lt, notInArray } from "drizzle-orm";
 import { getAccount } from "../../accounts/queries";
 import { alertAdmins } from "../../../platform/alerts/gotify";
 import type { Ctx } from "../../../platform/context";
-import { type CivilDate, today } from "../../../platform/dates";
+import { type CivilDate, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import {
@@ -19,7 +19,7 @@ import {
   recordRun,
   unlinkEntities,
 } from "../../../platform/integrations/service";
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import { cashGaps, GAP_NOTES, openingCashAt } from "../cutoff";
 import {
   investmentAccountPeriods,

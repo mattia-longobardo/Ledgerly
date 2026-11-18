@@ -20,7 +20,7 @@ import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
 import { refreshRecurrences } from "../../apps/web/src/modules/transactions/jobs";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
-import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { addDays, addMonths, monthKey, today } from "@domain/shared/dates";
 import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
 import { saveConnection, saveSchedule } from "@domain/platform/integrations/service";
 import { findInstancePlugin } from "@domain/platform/plugins/queries";

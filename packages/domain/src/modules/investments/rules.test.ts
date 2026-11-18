@@ -8,11 +8,9 @@ import {
   type EventLike,
   flowEntriesOn,
   flowsOn,
-  formatDecimal,
   investorFlows,
   holdingStates,
   type OperationLike,
-  parseDecimal,
   performance,
   pointDays,
   positionCents,
@@ -24,6 +22,7 @@ import {
   unitPriceOf,
   valueOn,
 } from "./rules";
+import { formatDecimal, parseDecimal } from "../../shared/money";
 
 // ——— Builders —————————————————————————————————————————————————————————————————————————————
 

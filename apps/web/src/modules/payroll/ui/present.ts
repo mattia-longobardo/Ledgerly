@@ -2,7 +2,7 @@ import type { Evidence } from "@ledgerly/domain/imports/client";
 import type { DocumentState } from "@ledgerly/domain/imports/client";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { type Cents, parseCents } from "@ledgerly/domain/platform/money";
+import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import {
   effectiveValue,
   FIELD_GROUPS,

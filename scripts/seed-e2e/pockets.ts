@@ -2,7 +2,7 @@
 import { saveBalanceEntry } from "@domain/modules/accounts/service";
 import { addPlannedExpense, addToPocket, createPocket } from "@domain/modules/pockets/service";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
 

@@ -7,7 +7,7 @@ import { BUDGET_ALERT_KIND } from "@/modules/budgets/jobs";
 import { setLimit } from "@domain/modules/budgets/service";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import type { Ctx } from "@domain/platform/context";
-import { monthKey, today } from "@domain/platform/dates";
+import { monthKey, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
 import { TREK_PROVIDER } from "@domain/platform/integrations/rules";

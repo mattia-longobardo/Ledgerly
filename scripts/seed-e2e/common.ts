@@ -7,7 +7,7 @@ import { applyProviderAccounts } from "@domain/modules/accounts/service";
 import { type IncomingTransaction } from "@domain/modules/transactions/rules";
 import { users } from "@domain/platform/auth/schema";
 import { type Ctx } from "@domain/platform/context";
-import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { addDays, addMonths, monthKey, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
 import { saveRates, storedRange } from "@domain/platform/fx/service";

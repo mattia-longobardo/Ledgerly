@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { civilDateIn } from "../../platform/dates";
+import { civilDateIn } from "../../shared/dates";
 import {
   isAfterToday,
   manualColumns,

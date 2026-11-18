@@ -18,9 +18,9 @@ import {
   assignPayments,
   paymentWindow,
   paysInterest,
-  percentToFraction,
   fractionToPercent,
 } from "./rules";
+import { percentToFraction } from "../../shared/money";
 
 const S = 1_000_000_000_000n; // one cent in fixed point
 

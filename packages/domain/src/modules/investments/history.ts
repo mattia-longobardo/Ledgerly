@@ -7,9 +7,11 @@
  * exchange never reported shows up at the far end of the history, not as a jump at the connection.
  * A quantity that comes out below zero (a stream that missed a deposit) counts as zero.
  */
-import type { CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
-import { divRound, DUST_QUANTITY, type OperationKind, QUANTITY_SCALE } from "./rules";
+import type { CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
+import { DUST_QUANTITY, type OperationKind, QUANTITY_SCALE } from "./rules";
+import { divRound } from "../../shared/money";
+import { abs } from "../../shared/money";
 
 /** The scale of the rates a source gives (account units per coin): the scale of its decimals. */
 export const HISTORY_RATE_SCALE = 18;
@@ -44,8 +46,6 @@ interface HistoryMove {
   /** A coin's quantity, or cents of cash when `symbol` is `null`. */
   delta: bigint;
 }
-
-const abs = (value: bigint) => (value < 0n ? -value : value);
 
 /**
  * The moves of the legs (PERS-100). A coin's leg moves its quantity. The cash moves in two ways: a

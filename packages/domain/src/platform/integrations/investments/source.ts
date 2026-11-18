@@ -8,8 +8,8 @@
  * them itself (eToro's `displayCurrency`). The pass converts the rest at the ECB rate of the day,
  * unless the source priced the leg itself (`fxRate`, an exchange's own market, §1.8).
  */
-import type { CivilDate } from "../../dates";
-import type { Cents } from "../../money";
+import type { CivilDate } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 
 /** The outcome of a key check (§5.2): an allowlist, so anything not known to be read only is refused. */
 type KeyCheckResult = "read-only" | "write" | "unknown-flag" | "unverifiable";

@@ -4,7 +4,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { type CivilDate, isCivilDate } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
 import { Button } from "@/ui/button";
 import { Select } from "@/ui/input";

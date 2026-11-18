@@ -13,8 +13,8 @@
  */
 
 import { z, type ZodType } from "zod";
-import { addDays, type CivilDate, isCivilDate } from "../../dates";
-import { type Cents, centsToDecimal } from "../../money";
+import { addDays, type CivilDate, isCivilDate } from "../../../shared/dates";
+import { type Cents, centsToDecimal } from "../../../shared/money";
 import {
   type DateWindow,
   mapWalletAccount,

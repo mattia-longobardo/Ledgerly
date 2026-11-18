@@ -14,8 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "../auth/schema";
 import { HOLIDAY_SOURCES } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../db/checks";
 
 /**
  * A public-holiday calendar a person has subscribed to (M3): a country, and as much of a place

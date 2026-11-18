@@ -22,8 +22,7 @@ import {
   MAX_DOCUMENT_BYTES,
   VERIFICATION_STATES,
 } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../platform/db/checks";
 
 /**
  * An imported document (spec §6, §9.3): one row per file a person sent, found again by its SHA-256

@@ -22,7 +22,7 @@ import { transactionIdsOfAccount } from "@domain/modules/transactions/queries";
 import { pendingSends } from "@domain/modules/transactions/sending";
 import { sourceCategoryCount } from "@domain/modules/transactions/source-categories";
 import type { Ctx } from "@domain/platform/context";
-import { addDays } from "@domain/platform/dates";
+import { addDays } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { sourceSettings, sourceSkippedAccounts } from "@domain/platform/integrations/schema";

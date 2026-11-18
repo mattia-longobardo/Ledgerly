@@ -1,5 +1,5 @@
-import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 
 export const FUND_STATES = ["active", "archived"] as const;
 export const VALUATION_SOURCES = ["manual", "import"] as const;

@@ -26,7 +26,8 @@ import {
   TRANSACTION_STATES,
   TRANSACTION_TYPES,
 } from "../rules";
-import { categories, categoryRules, inList, labels, sourceCategories } from "./categories";
+import { categories, categoryRules, labels, sourceCategories } from "./categories";
+import { inList } from "../../../platform/db/checks";
 
 /**
  * One movement (spec §6, §7.2). The provider owns `payee`, `amountCents` and `occurredAt`; the

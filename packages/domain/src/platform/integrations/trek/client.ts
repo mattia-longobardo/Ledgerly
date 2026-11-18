@@ -53,7 +53,7 @@
  * write to somebody else's calendar.
  */
 import { z } from "zod";
-import type { CivilDate } from "../../dates";
+import type { CivilDate } from "../../../shared/dates";
 
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 const CLIENT_INFO = { name: "ledgerly", version: "1" } as const;

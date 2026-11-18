@@ -1,5 +1,5 @@
-import { type CivilDate, isCivilDate } from "./dates";
-import { type Cents, centsToDecimal } from "./money";
+import { type CivilDate, isCivilDate } from "../shared/dates";
+import { type Cents, centsToDecimal, parseCents } from "../shared/money";
 
 /** The saved `number_format` preference: the locale whose conventions a number starts from. */
 type NumberFormatName = "it-IT" | "en-US" | "fr-FR";
@@ -254,4 +254,19 @@ export function formatWholePercent(percent: number, format: NumberFormat): strin
   const style = resolveStyle(format);
   const { sign, body } = digitsOf(percent, style, { maximumFractionDigits: 0 });
   return `${sign}${body}${style.name === "en-US" ? "" : NBSP}%`;
+}
+
+/**
+ * An amount as a person types it, in their own number format (spec §8.5): "1.234,56", "1 234,56"
+ * or "1,234.56", with or without a euro sign. Grouping and decimal separators are resolved by the
+ * style rather than guessed, so "1.234" is one thousand in Italian and one point two in English —
+ * and they come from the same place `formatAmountInput` writes them, including the user's own
+ * decimal-separator override, so a field always reads back what it printed.
+ */
+export function parseAmount(input: string, format: NumberFormat): Cents {
+  const cleaned = input.replace(/[\s\u00a0\u202f€]/g, "").replace(/\u2212/g, "-");
+  if (cleaned === "") throw new RangeError("Empty amount");
+  const { decimal, group } = numberSeparators(format);
+  const plain = cleaned.split(group).join("").replace(decimal, ".");
+  return parseCents(plain);
 }

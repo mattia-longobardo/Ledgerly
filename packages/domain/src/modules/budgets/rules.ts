@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { type MonthKey, isCivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { type MonthKey, isCivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 
 /** How close to the limit a budget turns "Near limit" (spec §7.3): spent ≥ 85 % of it. */
 const NEAR_LIMIT_PERCENT = 85n;

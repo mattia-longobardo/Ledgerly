@@ -11,7 +11,7 @@ import {
 } from "@/modules/pockets/ui/pocket-actions";
 import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
-import { addMonths, monthKey, today } from "@ledgerly/domain/platform/dates";
+import { addMonths, monthKey, today } from "@ledgerly/domain/shared/dates";
 import {
   formatAmountInput,
   formatDate,

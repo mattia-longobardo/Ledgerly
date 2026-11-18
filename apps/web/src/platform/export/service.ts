@@ -14,7 +14,7 @@ import { listTransactions, MAX_LIMIT, rulesForExport } from "@ledgerly/domain/tr
 import { getPreferences } from "@ledgerly/domain/users";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { amount, day, ratio, type Row, type Section, sectionCsv, sectionsJson } from "./sections";
 import { type ZipEntry, zipStream, zipToBytes } from "./zip";
 

@@ -2,7 +2,7 @@ import { and, asc, eq, gte, inArray, lte, ne, sql } from "drizzle-orm";
 import { getPreferences } from "../users/service";
 import { holidaysFor } from "../../platform/holidays/service";
 import type { Ctx } from "../../platform/context";
-import type { CivilDate } from "../../platform/dates";
+import type { CivilDate } from "../../shared/dates";
 import { getDb, type Tx } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import {

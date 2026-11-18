@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAccount } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
-import { addDays, today } from "../../platform/dates";
+import { addDays, today } from "../../shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { createManualTransaction, deleteManualTransaction, updateManualTransaction } from "./manual";

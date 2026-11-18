@@ -14,8 +14,7 @@ import {
 import { users } from "../auth/schema";
 import { CONNECTION_STATES, ENTITY_TYPES, SKIP_REASONS, SYNC_KINDS, SYNC_STATES } from "./rules";
 import { DEFAULT_SYNC_SCHEDULE, type SyncSchedule } from "./schedule";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../db/checks";
 
 /** `bytea` as a Node `Buffer`: `seal`/`open` (spec §9.4) speak Buffer, and pg returns one. */
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({

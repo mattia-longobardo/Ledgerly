@@ -8,12 +8,12 @@ import {
   monthKey,
   monthsBetween,
   today,
-} from "../../platform/dates";
+} from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import { convertCents, type DisplayCurrency } from "../../platform/fx/rules";
 import { ratesOn } from "../../platform/fx/service";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import {
   type AccountAlert,
   type BalancePoint,

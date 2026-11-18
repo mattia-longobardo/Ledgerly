@@ -13,9 +13,9 @@ import {
 } from "@ledgerly/domain/investments";
 import { LinkTransferButton, OperationMenu, UnlinkTransferButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
-import { type MonthKey, today as todayOn } from "@ledgerly/domain/platform/dates";
+import { type MonthKey, today as todayOn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, monthName } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

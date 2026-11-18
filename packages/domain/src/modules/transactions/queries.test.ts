@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import type { CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 import {
   DEFAULT_LIMIT,
   MAX_LIMIT,

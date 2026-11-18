@@ -2,11 +2,10 @@
 // §3.4, U4): what each position added to the period, the open ones and the sold ones together, and
 // the closes grouped by position. Pure: it reads what `pnl.ts` measured and adds nothing to it, so the
 // rows close on the service's P&L to the cent (PERS-113 · 1, 4, 5, 9).
-import type { CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import type { CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 import type { Exit, HoldingPnl, ServicePnl } from "./pnl";
-
-const abs = (value: bigint) => (value < 0n ? -value : value);
+import { abs } from "../../shared/money";
 
 interface ContributionRow {
   key: string;

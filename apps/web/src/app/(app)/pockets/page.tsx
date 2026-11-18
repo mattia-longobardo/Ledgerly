@@ -5,7 +5,7 @@ import { pocketsView } from "@ledgerly/domain/pockets";
 import { type DialogContext, PocketActions, RestorePocket } from "@/modules/pockets/ui/pocket-actions";
 import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatWholePercent } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { cn } from "@/ui/cn";

@@ -8,8 +8,8 @@ import {
   lastDayOfMonth,
   monthKey,
   monthsBetween,
-} from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+} from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 import { modifiedDietz } from "../investments/pnl";
 import { xirr, type Xirr } from "../investments/xirr";
 import {

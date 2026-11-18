@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, lt, lte, max, min } from "drizzle-orm";
-import type { CivilDate } from "../dates";
+import type { CivilDate } from "../../shared/dates";
 import { getDb } from "../db/client";
 import { type FxRate, NO_RATES, type RateTable, rateTable } from "./rules";
 import { fxRates } from "./schema";

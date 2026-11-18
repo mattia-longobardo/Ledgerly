@@ -1,6 +1,6 @@
 import { and, asc, eq, notInArray } from "drizzle-orm";
 import { openedNoLaterThan } from "../../accounts/service";
-import { addDays, type CivilDate, civilDateIn, today } from "../../../platform/dates";
+import { addDays, type CivilDate, civilDateIn, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { ratesOn } from "../../../platform/fx/service";
@@ -12,7 +12,8 @@ import {
   saveSyncJob,
 } from "../../../platform/integrations/service";
 import { estimateHistory, HISTORY_RATE_SCALE, type HistoryLeg, historyMoves } from "../history";
-import { formatDecimal, parseDecimal, QUANTITY_SCALE } from "../rules";
+import { QUANTITY_SCALE } from "../rules";
+import { formatDecimal, parseDecimal } from "../../../shared/money";
 import {
   investmentAccountPeriods,
   investmentAccounts,

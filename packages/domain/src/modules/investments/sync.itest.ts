@@ -9,7 +9,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { listAccounts, listBalanceEntries } from "../accounts/queries";
 import { applyProviderAccounts, createAccount, saveBalanceEntry } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
-import { addDays, today } from "../../platform/dates";
+import { addDays, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { saveRates } from "../../platform/fx/service";
 import {

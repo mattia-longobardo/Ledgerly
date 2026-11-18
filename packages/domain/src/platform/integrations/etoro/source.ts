@@ -2,7 +2,7 @@
  * eToro as an {@link InvestmentSource} (docs/design/investments.md §3.3): the client's calls in
  * the order a pass makes them, mapped by `mapping.ts`. No database, no state between calls.
  */
-import { civilDateIn } from "../../dates";
+import { civilDateIn } from "../../../shared/dates";
 import { type InvestmentSource, SourceError } from "../investments/source";
 import { EtoroClient, type EtoroClientOptions } from "./client";
 import {

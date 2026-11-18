@@ -6,7 +6,7 @@ import { listTransactions } from "../transactions/queries";
 import { hideTransaction, upsertFromProvider } from "../transactions/service";
 import { createCategory } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
-import { addDays, type CivilDate, today } from "../../platform/dates";
+import { addDays, type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";

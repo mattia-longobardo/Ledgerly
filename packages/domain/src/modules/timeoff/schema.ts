@@ -13,8 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { users } from "../../platform/auth/schema";
 import { LEAVE_DAY_KINDS, LEAVE_ORIGINS, PENDING_STATES, TREK_KINDS } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../platform/db/checks";
 
 /**
  * What a year grants (spec §6, §7.9): days of vacation and days of ROL. One row per year — a year

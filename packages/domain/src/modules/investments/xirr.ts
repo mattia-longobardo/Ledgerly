@@ -1,8 +1,9 @@
 // src/modules/investments/xirr.ts — the money-weighted return of an account or of the portfolio
 // (docs/design/investments.md §2.4, D8). Pure, and the one place of the module that works in
 // floating point: a rate of return is a ratio, never an amount, and nothing here is written back.
-import type { CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import type { CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
+import { dayNumber } from "../../shared/dates";
 
 /** A dated amount seen from the person: money put in is negative, money taken out positive. */
 interface DatedFlow {
@@ -20,11 +21,6 @@ const XIRR_MAX = 10;
 /** Points of the scan for sign changes, evenly spaced in log(1 + r). */
 const STEPS = 4000;
 const TOLERANCE = 1e-10;
-const DAY_MS = 86_400_000;
-
-function dayNumber(on: CivilDate): number {
-  return Date.parse(`${on}T00:00:00Z`) / DAY_MS;
-}
 
 /**
  * XIRR (§2.4): the annual rate r for which Σ cᵢ / (1 + r)^(tᵢ / 365) = 0, with tᵢ the days from

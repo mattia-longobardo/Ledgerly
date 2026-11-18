@@ -4,10 +4,10 @@ import { getAccount } from "../accounts/queries";
 import { dailyBalancesOf } from "../accounts/service";
 import { listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
-import { addDays, type CivilDate, isCivilDate, today } from "../../platform/dates";
+import { addDays, type CivilDate, today } from "../../shared/dates";
 import { getDb, type Tx } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import {
   accrueDay,
   DAY_BASES,
@@ -25,6 +25,7 @@ import {
   validateTiers,
 } from "./rules";
 import { interestAccruals, interestEntries, interestRules, interestRuleTiers } from "./schema";
+import { civilDate } from "../../shared/inputs";
 
 export type InterestRule = typeof interestRules.$inferSelect;
 export type InterestEntry = typeof interestEntries.$inferSelect;
@@ -40,7 +41,6 @@ export class InterestError extends Error {
   }
 }
 
-const civilDate = z.string().refine(isCivilDate, "Not a civil date");
 const fraction = z
   .string()
   .regex(/^\d+(\.\d{1,6})?$/)
@@ -52,8 +52,8 @@ const ruleInputSchema = z
     taxRate: fraction,
     dayBasis: z.enum(DAY_BASES),
     settlement: z.enum(SETTLEMENTS),
-    validFrom: civilDate,
-    validTo: civilDate.nullable().default(null),
+    validFrom: civilDate(),
+    validTo: civilDate().nullable().default(null),
     runHour: z.int().min(0).max(23).nullable().default(null),
     mode: z.enum(RULE_MODES).default("analyze_only"),
     /** The local category a published settlement is filed under in Wallet (spec §7.6). */

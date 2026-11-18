@@ -1,7 +1,7 @@
 import "server-only";
 import { createTranslator } from "use-intl/core";
 import { forEachUser } from "@ledgerly/domain/users";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { formatMoney, type UiLocale } from "@ledgerly/domain/platform/format";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";

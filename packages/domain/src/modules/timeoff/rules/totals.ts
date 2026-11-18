@@ -1,4 +1,4 @@
-import { type MonthKey, monthKey } from "../../../platform/dates";
+import { type MonthKey, monthKey } from "../../../shared/dates";
 import { LEAVE_DAY_KINDS, dayStatus, minuteWeight, type LeaveDayKind, type LeaveDayView } from "./days";
 
 /* Leave the payslips know about and the calendar does not (M2) */

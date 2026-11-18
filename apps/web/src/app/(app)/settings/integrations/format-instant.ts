@@ -1,5 +1,5 @@
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 
 /**

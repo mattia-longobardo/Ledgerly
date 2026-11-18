@@ -6,9 +6,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { linkOwnTransfers } from "@ledgerly/domain/transactions";
-import { parseAmount } from "@ledgerly/domain/accounts";
+import { parseAmount } from "@ledgerly/domain/platform/format";
 import {
   AccountError,
   addConnection,

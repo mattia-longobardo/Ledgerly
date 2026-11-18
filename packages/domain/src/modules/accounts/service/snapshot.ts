@@ -1,11 +1,11 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import { type CivilDate, addMonths, lastDayOfMonth, type MonthKey, monthKey } from "../../../platform/dates";
+import { type CivilDate, addMonths, lastDayOfMonth, type MonthKey, monthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { convertCents } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
-import { type Cents, sumCents } from "../../../platform/money";
+import { type Cents, sumCents } from "../../../shared/money";
 import { isStale } from "../rules";
 import { balancesOn } from "../queries";
 import { accounts, balanceEntries, snapshotRuns } from "../schema";

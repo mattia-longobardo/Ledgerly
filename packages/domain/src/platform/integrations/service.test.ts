@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isUniqueViolation } from "./service";
+import { isUniqueViolation } from "../db/errors";
 
 /** What node-postgres throws for a unique violation, reduced to the fields that matter. */
 const violation = (constraint: string) =>

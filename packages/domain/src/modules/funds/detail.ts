@@ -1,6 +1,6 @@
 // The numbers of a fund's page (docs/design/funds-ux.md §5.3, §6, F3). Pure, and on top of `home.ts`:
 // a fund's page is the home of that one fund, so its gain and its return cannot differ from its row.
-import type { CivilDate } from "../../platform/dates";
+import type { CivilDate } from "../../shared/dates";
 import { type FundLine, firstDataOn, type HomeFund, type HomeSummary, homeSummary, lineOf } from "./home";
 import type { FundPeriod } from "./period";
 import type { FundForecast } from "./rules";

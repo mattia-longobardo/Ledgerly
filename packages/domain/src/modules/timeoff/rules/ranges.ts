@@ -1,4 +1,4 @@
-import { type CivilDate } from "../../../platform/dates";
+import { type CivilDate } from "../../../shared/dates";
 import { LEAVE_DAY_KINDS, bookable, goesToTrek, type LeaveDayKind, type LeaveDayView } from "./days";
 import { datesBetween } from "./inputs";
 import { byDeclaredOrder, residual, type ResidualInput } from "./residual";

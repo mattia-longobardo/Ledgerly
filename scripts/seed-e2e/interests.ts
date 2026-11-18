@@ -1,6 +1,6 @@
 // scripts/seed-e2e/interests.ts — the users and the data of the flow `interests` (tests/e2e/interests/).
 import { createAccount } from "@domain/modules/accounts/service";
-import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { addDays, addMonths, monthKey, today } from "@domain/shared/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf } from "./common";
 

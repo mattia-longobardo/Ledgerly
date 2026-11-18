@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAmount } from "../modules/accounts/rules";
+import { parseAmount } from "./format";
 import {
   formatAmountInput,
   formatDate,

@@ -2,10 +2,10 @@ import { and, asc, desc, eq, exists, ilike, inArray, isNull, lt, gte, or, sql, t
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
 import { type Account } from "../../accounts/queries";
 import type { Ctx } from "../../../platform/context";
-import { addDays, type CivilDate, type MonthKey } from "../../../platform/dates";
+import { addDays, type CivilDate, type MonthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import { type CategoryState, type TransactionType } from "../rules";
 import { categories, labels, transactionLabels, transactions } from "../schema";
 import { type Label, type TreeCategory } from "../taxonomy";
@@ -237,10 +237,6 @@ export function shareOf(part: Cents, whole: Cents): number {
   if (total === 0n) return 0;
   const value = part < 0n ? -part : part;
   return Number((value * 1000n) / total) / 10;
-}
-
-export function abs(value: Cents): Cents {
-  return value < 0n ? -value : value;
 }
 
 /** Midnight of a civil date in the user's own zone, as the instant the column is compared to. */

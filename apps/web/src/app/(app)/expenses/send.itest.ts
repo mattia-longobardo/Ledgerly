@@ -12,7 +12,7 @@ import { updateTransaction } from "@domain/modules/transactions/service";
 import { chooseSourceCategory, listSourceCategories } from "@domain/modules/transactions/source-categories";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
 import type { Ctx } from "@domain/platform/context";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { DEFAULT_SYNC_SCHEDULE } from "@domain/platform/integrations/schedule";

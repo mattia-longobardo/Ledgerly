@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { AccountForm } from "@/modules/accounts/ui/account-form";
 import { listAccounts } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/shell/page";
 

@@ -16,8 +16,8 @@
  * This file speaks to the client and to nothing else: what waits, and what becomes of it, is handed
  * in by the pass, which is the one that may reach the modules.
  */
-import type { CivilDate } from "../../dates";
-import type { Cents } from "../../money";
+import type { CivilDate } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 import { type WalletClient, WalletError } from "./client";
 
 /** What a record written from here carries in its note: `ledgerly-movement:<key>`. */

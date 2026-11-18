@@ -27,8 +27,8 @@ import {
   type TrekDay,
 } from "../../../modules/timeoff/service";
 import type { Ctx } from "../../context";
-import type { CivilDate } from "../../dates";
-import { today } from "../../dates";
+import type { CivilDate } from "../../../shared/dates";
+import { today } from "../../../shared/dates";
 import { withJobLock } from "../../jobs/lock";
 import { TREK_PROVIDER } from "../rules";
 import {

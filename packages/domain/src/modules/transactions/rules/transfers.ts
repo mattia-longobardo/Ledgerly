@@ -1,4 +1,4 @@
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import { DAY_MS, type TransactionType } from "./vocabulary";
 
 /* Transfers */

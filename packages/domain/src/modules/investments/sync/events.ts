@@ -1,18 +1,12 @@
-import { addDays, type CivilDate, civilDateIn } from "../../../platform/dates";
+import { addDays, type CivilDate, civilDateIn } from "../../../shared/dates";
 import { type Tx } from "../../../platform/db/client";
 import { eurPerUnitOn, type RateTable } from "../../../platform/fx/rules";
 import { saveRates, storedRange } from "../../../platform/fx/service";
 import { fetchEcbRates } from "../../../platform/fx/sources";
 import { type ProviderEvent } from "../../../platform/integrations/investments/source";
 import { linkExternal } from "../../../platform/integrations/service";
-import {
-  divRound,
-  type OperationKind,
-  parseDecimal,
-  PRICE_SCALE,
-  QUANTITY_SCALE,
-  RATE_SCALE,
-} from "../rules";
+import { type OperationKind, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE } from "../rules";
+import { divRound, parseDecimal } from "../../../shared/money";
 import { type InvestmentAccount, insertEvent, type LegInput, type WriteCtx } from "../service";
 import { assetFor, providerHoldingFor } from "./readings";
 import { SyncError } from "./sources";

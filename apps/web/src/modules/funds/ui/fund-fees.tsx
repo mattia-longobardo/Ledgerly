@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
 import { assetsCost, feeValidOn } from "@ledgerly/domain/funds";
 import { feeFormOf } from "@ledgerly/domain/funds";

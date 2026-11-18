@@ -11,7 +11,7 @@ import {
   saveProviderBalance,
 } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
-import { addDays, today } from "../../platform/dates";
+import { addDays, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { debitFund } from "../../../../../test/funds";
@@ -30,7 +30,8 @@ import {
   investmentsPortfolio,
   serviceDetail,
 } from "./queries";
-import { parseDecimal, PRICE_SCALE, QUANTITY_SCALE } from "./rules";
+import { PRICE_SCALE, QUANTITY_SCALE } from "./rules";
+import { parseDecimal } from "../../shared/money";
 import {
   investmentAccountPeriods,
   investmentAccounts,

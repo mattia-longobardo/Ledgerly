@@ -1,5 +1,5 @@
 import type { useTranslations } from "next-intl";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import {
   formatAmountInput,
   formatDate,

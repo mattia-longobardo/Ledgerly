@@ -40,7 +40,7 @@ import {
 } from "../../../modules/transactions/service";
 import { alignCategoryTypesToMovements } from "../../../modules/transactions/taxonomy";
 import type { Ctx } from "../../context";
-import { civilDateIn, startOfDayIn, today } from "../../dates";
+import { civilDateIn, startOfDayIn, today } from "../../../shared/dates";
 import { withJobLock } from "../../jobs/lock";
 import { KINDS_OF, type SyncKind, WALLET_PROVIDER } from "../rules";
 import {

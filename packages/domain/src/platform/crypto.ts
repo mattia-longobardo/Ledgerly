@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { KEY_ID, type KeyRing, parseKeyRing } from "./keyring";
+import { readEnv } from "./env";
 
 // Re-exported so a caller that seals also gets the ring it seals with from one import.
 export { type KeyRing, parseKeyRing };
@@ -74,4 +75,12 @@ export function openJson(ring: KeyRing, blob: Buffer): Record<string, string> {
     if (typeof value !== "string") throw new Error("Sealed credentials must be string values");
   }
   return parsed as Record<string, string>;
+}
+
+let ring: KeyRing | undefined;
+
+/** The key ring of spec §9.4, parsed once: the first key seals, every key still opens. */
+export function keyRing(): KeyRing {
+  ring ??= parseKeyRing(readEnv().APP_ENCRYPTION_KEY);
+  return ring;
 }

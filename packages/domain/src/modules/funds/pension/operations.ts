@@ -1,9 +1,9 @@
 import { and, asc, desc, inArray } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import type { CivilDate } from "../../../platform/dates";
+import type { CivilDate } from "../../../shared/dates";
 import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import { fundOperations, fundValuations, positionSnapshots, unitMovements } from "../schema";
 
 export type Operation = typeof fundOperations.$inferSelect;

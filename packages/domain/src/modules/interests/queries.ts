@@ -4,10 +4,10 @@ import { incomeCandidates } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";
 import type { Ctx } from "../../platform/context";
-import { addDays, type CivilDate, today } from "../../platform/dates";
+import { addDays, type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import {
   assignPayments,
   fixedFromDecimal,

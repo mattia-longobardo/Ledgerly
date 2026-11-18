@@ -5,7 +5,7 @@
  * (rule M8: only the application joins a port and its adapter). Nothing here imports a module.
  */
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 
 type Who = Pick<Ctx, "userId" | "timeZone">;
 

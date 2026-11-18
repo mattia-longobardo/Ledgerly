@@ -21,6 +21,7 @@ import { getDb } from "@ledgerly/domain/platform/db";
 import { mailAllowed } from "@ledgerly/domain/platform/settings";
 import { deleteFolder } from "@ledgerly/domain/platform/storage";
 import { personActionRefusal, type PersonAction, type PersonRefusal } from "@ledgerly/domain/users";
+import { requireAdminCtx } from "@ledgerly/domain/platform/context";
 
 /**
  * Admin › Users (spec §7.10, design rows 870–877): who may sign in, how, and with what role.
@@ -37,10 +38,6 @@ export class AdminError extends Error {
     super(code);
     this.name = "AdminError";
   }
-}
-
-function requireAdminCtx(ctx: Pick<Ctx, "role">): void {
-  if (ctx.role !== "admin") throw new AdminError("forbidden");
 }
 
 /** How a person gets in. `invited` is a link that has gone out and not been accepted yet. */
@@ -78,7 +75,7 @@ function methodOf(hasPassword: boolean, hasSso: boolean): SignInMethod {
  * have all expired shows no date rather than a wrong one.
  */
 export async function listPeople(ctx: Pick<Ctx, "role" | "userId">): Promise<PersonRow[]> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   const db = getDb();
   const lastSignIn = db
     .select({ userId: sessions.userId, at: max(sessions.createdAt).as("at") })
@@ -202,7 +199,7 @@ export async function invitePerson(
   input: { email: string; role: Role },
   deps: { sendInvitationEmail: typeof sendInvitationEmail } = { sendInvitationEmail },
 ): Promise<InviteOutcome> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   const parsed = z
     .object({ email: z.email().max(320), role: z.enum(["admin", "user"]) })
     .safeParse({ email: input.email.trim().toLowerCase(), role: input.role });
@@ -225,7 +222,7 @@ export async function invitePerson(
 
 /** Withdraws an invitation that has not been accepted: the link stops working immediately. */
 export async function revokeInvitation(ctx: Pick<Ctx, "role">, id: string): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   const parsed = z.uuid().safeParse(id);
   if (!parsed.success) throw new AdminError("invalid");
   const deleted = await getDb()
@@ -242,7 +239,7 @@ export async function setPersonRole(
   userId: string,
   role: Role,
 ): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   const target = await requirePerson(userId);
   if (target.role === role) return;
   if (role === "user") await guard(ctx, "demote", target);
@@ -259,7 +256,7 @@ export async function setPersonBlocked(
   userId: string,
   blocked: boolean,
 ): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   const target = await requirePerson(userId);
   if (blocked) await guard(ctx, "block", target);
   await getDb()
@@ -281,7 +278,7 @@ export async function setPersonBlocked(
  * the admin's own account: Settings › Security does that, with the password.
  */
 export async function resetPersonTwoFactor(ctx: Pick<Ctx, "role" | "userId">, userId: string): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   if (!roles[ctx.role].authorize({ twoFactor: ["reset"] }).success) throw new AdminError("forbidden");
   const target = await requirePerson(userId);
   if (target.id === ctx.userId) throw new AdminError("self");
@@ -309,7 +306,7 @@ export async function sendPersonReset(
   ctx: Pick<Ctx, "role" | "userId">,
   userId: string,
 ): Promise<ResetOutcome> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   const target = await requirePerson(userId);
   if (!(await hasPasswordAccount(target.id))) return "sso_only";
   if (!(await mailAllowed("invitations"))) return "mail_off";
@@ -330,7 +327,7 @@ export async function sendPersonReset(
  * worse than an orphaned object, and orphans are what `housekeeping` is for (plan F8 §3.4.2).
  */
 export async function removePerson(ctx: Pick<Ctx, "role" | "userId">, userId: string): Promise<void> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new AdminError("forbidden"));
   const target = await requirePerson(userId);
   await guard(ctx, "remove", target);
   await getDb().delete(users).where(eq(users.id, target.id));

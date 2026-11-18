@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays } from "../../platform/dates";
+import { addDays } from "../../shared/dates";
 import { NO_RATES, rateTable } from "../../platform/fx/rules";
 import {
   type AdjustmentClass,
@@ -20,13 +20,13 @@ import {
   flowsOn,
   type HoldingLike,
   type OperationLike,
-  parseDecimal,
   performance,
   PRICE_SCALE,
   QUANTITY_SCALE,
   type ReadingLike,
   valueOn,
 } from "./rules";
+import { parseDecimal } from "../../shared/money";
 
 // ——— Builders —————————————————————————————————————————————————————————————————————————————
 

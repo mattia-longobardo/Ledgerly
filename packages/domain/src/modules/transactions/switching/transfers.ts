@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import { type CivilDate, civilDateIn } from "../../../platform/dates";
+import { type CivilDate, civilDateIn } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { linkExternal } from "../../../platform/integrations/service";

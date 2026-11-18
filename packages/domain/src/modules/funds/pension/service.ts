@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Ctx } from "../../../platform/context";
 import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import {
   fundContributionSources,
   fundOperations,

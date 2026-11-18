@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import type { FundDetail } from "@ledgerly/domain/funds";
 import { FundFeesSection } from "./fund-fees";

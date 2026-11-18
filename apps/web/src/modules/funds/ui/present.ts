@@ -4,7 +4,7 @@ import {
   type NumberFormat,
   type UiLocale,
 } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import type { MoneyOrigin } from "@ledgerly/domain/funds";
 import type { ValuationRow } from "@ledgerly/domain/funds";
 import type { DebitStatus, SourceKind } from "@ledgerly/domain/funds";

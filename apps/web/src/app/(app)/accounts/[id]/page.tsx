@@ -6,7 +6,7 @@ import { getTranslations } from "next-intl/server";
 import type { Account } from "@ledgerly/domain/accounts";
 import { openSwitchOf } from "@ledgerly/domain/accounts";
 import { UndoSwitch } from "@/modules/accounts/ui/switch/undo-switch";
-import { type CivilDate, civilDateIn } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { labelOf } from "@/platform/integrations/registry";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin, isPluginActive, listPluginConnections } from "@ledgerly/domain/platform/plugins";
@@ -51,9 +51,9 @@ import { tierChips } from "@/modules/interests/ui/present";
 import { requireSession } from "@/platform/auth/session";
 import { getAccount } from "@ledgerly/domain/accounts";
 import { managedSinceOf, serviceAccountIds, syncedServicesOf } from "@ledgerly/domain/investments";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { groupIban } from "@ledgerly/domain/platform/iban";
-import { centsToDecimal } from "@ledgerly/domain/platform/money";
+import { centsToDecimal } from "@ledgerly/domain/shared/money";
 import {
   formatAmountInput,
   formatDate,

@@ -8,7 +8,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import {
   HolidayServiceError,
   addCalendar,

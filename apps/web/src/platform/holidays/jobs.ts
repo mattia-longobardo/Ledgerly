@@ -12,7 +12,7 @@
 import "server-only";
 import { forEachUser } from "@ledgerly/domain/users";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { listCalendars, markCalendarFailed, refreshCalendar } from "@ledgerly/domain/platform/holidays";

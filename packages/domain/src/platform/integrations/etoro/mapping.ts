@@ -2,8 +2,8 @@
  * From eToro's answers to the shapes of the investment contract (docs/design/investments.md §3.3,
  * D17). Pure: the fixtures of the spike (`test/fixtures/investments/etoro/`) drive every case.
  */
-import { addDays, type CivilDate } from "../../dates";
-import { centsFromNumber } from "../../money";
+import { addDays, type CivilDate } from "../../../shared/dates";
+import { centsFromNumber } from "../../../shared/money";
 import {
   type AssetRef,
   type CoverageWindow,

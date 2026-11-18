@@ -4,7 +4,7 @@ import { createSubscription } from "@domain/modules/subscriptions/service";
 import { refreshRecurrences } from "../../apps/web/src/modules/transactions/jobs";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
 

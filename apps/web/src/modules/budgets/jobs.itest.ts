@@ -3,7 +3,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import type { Ctx } from "@domain/platform/context";
-import { monthKey, today } from "@domain/platform/dates";
+import { monthKey, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { notificationsLog } from "@domain/platform/notifications/schema";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";

@@ -1,6 +1,6 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import { today } from "../../../platform/dates";
+import { today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { FOREIGN_KEY_VIOLATION, hasPgError } from "../../../platform/db/errors";
 import { userScoped } from "../../../platform/db/scope";

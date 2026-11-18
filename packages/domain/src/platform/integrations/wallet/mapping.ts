@@ -18,8 +18,8 @@ import {
   lastDayOfMonth,
   type MonthKey,
   monthKey,
-} from "../../dates";
-import { type Cents, centsFromNumber, parseCents } from "../../money";
+} from "../../../shared/dates";
+import { type Cents, centsFromNumber, parseCents } from "../../../shared/money";
 import { FIRST_LINK_MONTHS } from "./depth";
 
 /**

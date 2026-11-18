@@ -9,7 +9,7 @@
 
 import type { Params } from "@/modules/accounts/ui/controls";
 import { TRANSACTION_TYPES, type TransactionType } from "@ledgerly/domain/transactions/client";
-import { type CivilDate, isCivilDate } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
 
 export {
   type DateRange,

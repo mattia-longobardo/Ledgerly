@@ -28,12 +28,12 @@ import {
   TransactionError,
 } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import type { UiLocale } from "@ledgerly/domain/platform/format";
 import { labelOf } from "@/platform/integrations/registry";
 import { coreCreatesRecords, isPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { hasCapability } from "@ledgerly/plugin-contract";
 import { listInstancePlugins } from "@ledgerly/domain/platform/plugins";
 

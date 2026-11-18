@@ -8,7 +8,7 @@ import { listAccounts, listBalanceEntries } from "../../../modules/accounts/quer
 import { listTransactions } from "../../../modules/transactions/queries";
 import { listCategories } from "../../../modules/transactions/taxonomy";
 import type { Ctx } from "../../context";
-import { addDays } from "../../dates";
+import { addDays } from "../../../shared/dates";
 
 const addMinutes = (instant: Date, minutes: number) => new Date(instant.getTime() + minutes * 60_000);
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";

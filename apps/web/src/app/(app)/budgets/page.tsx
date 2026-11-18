@@ -8,7 +8,7 @@ import { presentRows } from "@/modules/budgets/ui/present";
 import { PeriodStepper } from "@/modules/accounts/ui/controls";
 import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
-import { addMonths, lastDayOfMonth, monthKey, today } from "@ledgerly/domain/platform/dates";
+import { addMonths, lastDayOfMonth, monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatWholePercent } from "@ledgerly/domain/platform/format";
 import { Card } from "@/ui/card";
 import { cn } from "@/ui/cn";

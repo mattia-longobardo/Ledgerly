@@ -18,8 +18,7 @@ import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories } from "../transactions/schema";
 import { ACCRUAL_STATUSES, DAY_BASES, POSTING_STATES, RULE_MODES, RULE_STATES, SETTLEMENTS } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../platform/db/checks";
 
 /**
  * How an account earns interest (spec §6, §7.6): tiers, tax withheld, day basis, settlement

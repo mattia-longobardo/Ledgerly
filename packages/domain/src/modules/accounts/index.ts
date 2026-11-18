@@ -10,14 +10,7 @@ export {
   movementBasis,
 } from "./queries";
 export type { Account } from "./queries";
-export {
-  ACCOUNT_TYPES,
-  MANUAL_MOVEMENT_MODES,
-  accountMode,
-  hasIbanField,
-  movementEffect,
-  parseAmount,
-} from "./rules";
+export { ACCOUNT_TYPES, MANUAL_MOVEMENT_MODES, accountMode, hasIbanField, movementEffect } from "./rules";
 export type { AccountMode, MovementEffect } from "./rules";
 export {
   AccountError,

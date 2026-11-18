@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 import { labelOf, passFor } from "@/platform/integrations/registry";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";

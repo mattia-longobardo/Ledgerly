@@ -7,7 +7,7 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "../../platform/context";
-import { today } from "../../platform/dates";
+import { today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import { retypeMovements } from "./macro";

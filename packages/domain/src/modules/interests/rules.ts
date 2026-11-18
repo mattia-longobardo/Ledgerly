@@ -1,6 +1,6 @@
-import { addDays, type CivilDate, lastDayOfMonth, monthKey } from "../../platform/dates";
+import { addDays, type CivilDate, lastDayOfMonth, monthKey } from "../../shared/dates";
 import { payeeKeyOf } from "../transactions/rules";
-import { type Cents, centsToDecimal } from "../../platform/money";
+import { type Cents, centsToDecimal } from "../../shared/money";
 
 export const DAY_BASES = ["365", "360"] as const;
 export const SETTLEMENTS = ["daily", "monthly", "quarterly", "annual"] as const;
@@ -267,21 +267,6 @@ export function validateTiers(tiers: readonly Tier[]): boolean {
     if (rate < 0n || rate > FIXED_SCALE) return false;
   }
   return true;
-}
-
-/**
- * A percentage as typed, already in plain decimal form ("2.75", "26"), as the fraction a rate
- * column stores ("0.0275"), exactly: the point moves two places, no float. Up to four decimals of a
- * percent (six of the fraction).
- */
-export function percentToFraction(plain: string): string {
-  const match = /^(\d{1,3})(?:\.(\d{1,4}))?$/.exec(plain.trim());
-  if (!match) throw new RangeError(`Not a percentage: "${plain}"`);
-  const [, whole, decimals = ""] = match;
-  const digits = (whole.padStart(3, "0") + decimals.padEnd(4, "0")).replace(/^0+(?=\d)/, "");
-  const scaled = BigInt(digits); // hundredths of a basis point: the fraction × 10⁶
-  const fraction = scaled.toString().padStart(7, "0");
-  return `${fraction.slice(0, -6)}.${fraction.slice(-6)}`;
 }
 
 /** A stored fraction ("0.027500") as the percentage it is, trimmed ("2.75"). */

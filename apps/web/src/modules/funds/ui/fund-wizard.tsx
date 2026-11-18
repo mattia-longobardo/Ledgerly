@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
 import { createFundAction } from "@/app/(app)/funds/fund-setup";
-import { parseAmount } from "@ledgerly/domain/accounts/client";
-import { type CivilDate, isCivilDate } from "@ledgerly/domain/platform/dates";
+import { parseAmount } from "@ledgerly/domain/platform/format";
+import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
 import {
   formatDate,
   formatMoney,

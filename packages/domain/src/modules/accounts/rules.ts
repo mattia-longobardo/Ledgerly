@@ -2,14 +2,13 @@ import { z } from "zod";
 import {
   addMonths,
   type CivilDate,
-  isCivilDate,
   lastDayOfMonth,
   type MonthKey,
   monthKey,
   monthsApart,
-} from "../../platform/dates";
-import { type NumberFormat, numberSeparators } from "../../platform/format";
-import { type Cents, parseCents, sumCents } from "../../platform/money";
+} from "../../shared/dates";
+import { type Cents, divRound, sumCents } from "../../shared/money";
+import { civilDate, optionalText, HEX_COLOR } from "../../shared/inputs";
 
 export const ACCOUNT_TYPES = [
   "checking",
@@ -97,18 +96,7 @@ export function bucketOf(account: { type: AccountType; countsAsLiquid: boolean }
   return natural === "investments" || natural === "other" ? "cash" : natural;
 }
 
-const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const CURRENCY = /^[A-Z]{3}$/;
-
-const civilDate = z.string().refine(isCivilDate, "Not a civil date");
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .default(null);
 
 /** Amounts arrive from forms as plain decimal strings and live as cents from here on. */
 const cents = z.bigint();
@@ -123,9 +111,9 @@ export const accountCreateSchema = z.object({
   /** As typed: the service checks it (`normalizeIban`) and answers `iban_invalid`. */
   iban: optionalText(64),
   purpose: optionalText(120),
-  openedOn: civilDate.nullable().default(null),
+  openedOn: civilDate().nullable().default(null),
   notes: optionalText(2000),
-  openingBalance: z.object({ on: civilDate, cents }).nullable().default(null),
+  openingBalance: z.object({ on: civilDate(), cents }).nullable().default(null),
 });
 export type AccountCreateInput = z.infer<typeof accountCreateSchema>;
 
@@ -139,7 +127,7 @@ export const accountSettingsSchema = z.object({
   /** As typed: the service checks it (`normalizeIban`) and answers `iban_invalid`. */
   iban: optionalText(64),
   purpose: optionalText(120),
-  openedOn: civilDate.nullable().default(null),
+  openedOn: civilDate().nullable().default(null),
   notes: optionalText(2000),
   inNetWorth: z.boolean(),
   inSnapshot: z.boolean(),
@@ -152,7 +140,7 @@ export const accountSettingsSchema = z.object({
 export type AccountSettingsInput = z.infer<typeof accountSettingsSchema>;
 
 export const balanceEntrySchema = z.object({
-  on: civilDate,
+  on: civilDate(),
   cents,
   availableCents: cents.nullable().default(null),
   note: optionalText(200),
@@ -324,13 +312,7 @@ export function estimatedMonths(points: readonly BalancePoint[], months: readonl
 }
 
 function roundedBetween(from: Cents, to: Cents, step: number, span: number): Cents {
-  const numerator = (to - from) * BigInt(step);
-  const denominator = BigInt(span);
-  const quotient = numerator / denominator;
-  const remainder = numerator % denominator;
-  const half = remainder < 0n ? -remainder * 2n : remainder * 2n;
-  const bump = half >= denominator ? (numerator < 0n ? -1n : 1n) : 0n;
-  return from + quotient + bump;
+  return from + divRound((to - from) * BigInt(step), BigInt(span));
 }
 
 /**
@@ -533,21 +515,6 @@ export function reconcileProviderAccounts(
     if (account.state === "active") steps.push({ action: "unavailable", id: account.id });
   }
   return steps;
-}
-
-/**
- * An amount as a person types it, in their own number format (spec §8.5): "1.234,56", "1 234,56"
- * or "1,234.56", with or without a euro sign. Grouping and decimal separators are resolved by the
- * style rather than guessed, so "1.234" is one thousand in Italian and one point two in English —
- * and they come from the same place `formatAmountInput` writes them, including the user's own
- * decimal-separator override, so a field always reads back what it printed.
- */
-export function parseAmount(input: string, format: NumberFormat): Cents {
-  const cleaned = input.replace(/[\s\u00a0\u202f€]/g, "").replace(/\u2212/g, "-");
-  if (cleaned === "") throw new RangeError("Empty amount");
-  const { decimal, group } = numberSeparators(format);
-  const plain = cleaned.split(group).join("").replace(decimal, ".");
-  return parseCents(plain);
 }
 
 /* Account modes and manual movements (rewrite plan, 12-account-modes.md) */

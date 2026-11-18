@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, type CivilDate } from "../../platform/dates";
+import { addDays, type CivilDate } from "../../shared/dates";
 import {
   compareSources,
   comparisonFrom,

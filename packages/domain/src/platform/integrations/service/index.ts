@@ -1,6 +1,5 @@
 export {
   IntegrationError,
-  isUniqueViolation,
   findConnection,
   saveConnection,
   savePluginConnection,

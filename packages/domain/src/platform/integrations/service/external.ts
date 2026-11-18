@@ -4,7 +4,8 @@ import { getDb, type Tx } from "../../db/client";
 import { userScoped } from "../../db/scope";
 import { entityTypeSchema, type ProviderLink, providerLinkSchema } from "../rules";
 import { providerLinks } from "../schema";
-import { IntegrationError, isUniqueViolation } from "./connections";
+import { IntegrationError } from "./connections";
+import { isUniqueViolation } from "../../db/errors";
 
 /**
  * Records that a provider's `externalId` stands for a local entity, or that it still does.

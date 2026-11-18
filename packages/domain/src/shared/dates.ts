@@ -162,6 +162,12 @@ export function addDays(date: CivilDate, days: number): CivilDate {
 }
 
 /** Whole days from one civil date to another, the first excluded and the last included. */
+/** A civil date as the number of days since 1970-01-01: the difference of two is the days between them. */
+export function dayNumber(date: CivilDate): number {
+  const [year, month, day] = parts(date);
+  return Date.UTC(year, month - 1, day) / 86_400_000;
+}
+
 export function daysBetween(from: CivilDate, to: CivilDate): number {
   const [fy, fm, fd] = parts(from);
   const [ty, tm, td] = parts(to);

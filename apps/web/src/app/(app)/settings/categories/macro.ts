@@ -19,7 +19,7 @@ import {
 } from "@ledgerly/domain/transactions";
 import type { CategoryType } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { sourceNotes } from "./source";
 

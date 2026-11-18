@@ -41,8 +41,7 @@ import {
   READING_STATUSES,
   RECONCILIATION_KINDS,
 } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../platform/db/checks";
 
 // ——— Investments v2 (docs/design/investments.md §1.3–1.6) ————————————————————————————————————
 

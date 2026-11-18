@@ -9,7 +9,7 @@ import {
   lastDayOfMonth,
   type MonthKey,
   monthKey,
-} from "../../platform/dates";
+} from "../../shared/dates";
 
 export const SOURCE_KINDS = ["payroll", "bank_debit", "manual"] as const;
 export type SourceKind = (typeof SOURCE_KINDS)[number];

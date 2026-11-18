@@ -11,7 +11,7 @@ import {
   isCivilDate,
   lastDayOfMonth,
   monthKey,
-} from "../../platform/dates";
+} from "../../shared/dates";
 import {
   type DateRange,
   presetRange,

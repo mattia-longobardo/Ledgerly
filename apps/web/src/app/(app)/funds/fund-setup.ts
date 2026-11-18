@@ -6,7 +6,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@ledgerly/domain/accounts";
+import { parseAmount } from "@ledgerly/domain/platform/format";
 import {
   feeInputOf,
   fundInputOf,

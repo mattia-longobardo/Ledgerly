@@ -5,7 +5,7 @@ import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { centsFrom, instant, money } from "@/platform/api/json";
-import { today } from "@ledgerly/domain/platform/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { AccountError } from "@ledgerly/domain/accounts";
 import { saveBalanceEntry } from "@ledgerly/domain/accounts";
 import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "@ledgerly/domain/accounts";

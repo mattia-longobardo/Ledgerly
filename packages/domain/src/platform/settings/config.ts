@@ -1,10 +1,11 @@
 import { eq } from "drizzle-orm";
-import { type KeyRing, openJson, parseKeyRing } from "../crypto";
+import { openJson } from "../crypto";
 import { getDb } from "../db/client";
 import { readEnv } from "../env";
 import { discoveryUrlFor, issuerFromDiscoveryUrl } from "./oidc";
 import { appSettings } from "./schema";
 import { type Encryption, encryptionFrom, type MailCategory, type MailPolicy, mailPolicyFrom } from "./smtp";
+import { keyRing } from "../crypto";
 
 /**
  * The effective server settings: what the processes that *use* them read, as opposed to what an
@@ -25,14 +26,6 @@ export const SMTP_TRANSPORT = "smtp.transport";
 export const EXPORT_LAST = "export.last";
 /** The last database backup: its key in S3, its size and when it was taken (design row 887). */
 export const BACKUP_LAST = "backup.last";
-
-let ring: KeyRing | undefined;
-
-/** The key ring of spec §9.4, parsed once: the first key seals, every key still opens. */
-export function keyRing(): KeyRing {
-  ring ??= parseKeyRing(readEnv().APP_ENCRYPTION_KEY);
-  return ring;
-}
 
 interface SettingsRow {
   value: Record<string, unknown> | null;

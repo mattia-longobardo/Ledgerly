@@ -7,8 +7,8 @@
  * Both rules take no choice when the data do not allow one: with different counts in a group,
  * nothing is tied (criterion 2 of N4, decision H44; risk R-34).
  */
-import { addDays, type CivilDate } from "../../platform/dates";
-import type { Cents } from "../../platform/money";
+import { addDays, type CivilDate } from "../../shared/dates";
+import type { Cents } from "../../shared/money";
 
 /** The days the two sides of a movement may be apart: a bank books later than the source writes. */
 export const SWITCH_MATCH_MAX_DAYS = 5;

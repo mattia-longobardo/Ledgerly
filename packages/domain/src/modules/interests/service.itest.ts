@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { removeAccount, saveBalanceEntry } from "../accounts/service";
 import { upsertFromProvider } from "../transactions/service";
 import type { Ctx } from "../../platform/context";
-import { monthKey, startOfDayIn, today } from "../../platform/dates";
+import { monthKey, startOfDayIn, today } from "../../shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { interestsAccrualJob } from "../../../../../apps/web/src/modules/interests/jobs";

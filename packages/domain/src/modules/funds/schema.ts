@@ -30,6 +30,7 @@ import {
   SOURCE_KINDS,
   SOURCE_STATES,
 } from "./sources";
+import { inList } from "../../platform/db/checks";
 
 /**
  * What the tables of before the single fund model still check (release N6). The code reads and
@@ -39,8 +40,6 @@ import {
 const LEGACY_FUND_TYPES = ["pac", "pension"] as const;
 const LEGACY_DEPOSIT_SOURCES = ["manual", "rule"] as const;
 const LEGACY_RULE_KINDS = ["contribution", "payment_schedule"] as const;
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 
 /**
  * A pension fund: its name, who runs it, and the account that holds its value, so net worth has one

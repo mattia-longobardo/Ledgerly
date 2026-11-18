@@ -10,7 +10,7 @@ import { applyPayslip, codeMapOf, processPayslip, uploadPayslip, verifyPayslip }
 import { chargeCandidates } from "../../transactions/queries";
 import { upsertFromProvider } from "../../transactions/service";
 import type { Ctx } from "../../../platform/context";
-import { civilDateIn } from "../../../platform/dates";
+import { civilDateIn } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { deleteFolder, ensureBucket } from "../../../platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";

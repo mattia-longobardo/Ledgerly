@@ -2,8 +2,8 @@ import "server-only";
 import { accountsView } from "@ledgerly/domain/accounts";
 import { transactionsSummary } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { lastDayOfMonth, type MonthKey } from "@ledgerly/domain/platform/dates";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import { lastDayOfMonth, type MonthKey } from "@ledgerly/domain/shared/dates";
+import type { Cents } from "@ledgerly/domain/shared/money";
 
 /**
  * The figures of one month: what is owned at the end of it, and what moved during it.

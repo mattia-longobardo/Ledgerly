@@ -3,10 +3,10 @@ import { balancesOn, listAccounts } from "../accounts/queries";
 import { listRecurringPatterns, payeeSamples, transactionsByIds } from "../transactions/queries";
 import { colorOfCategory, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
-import { addDays, type CivilDate, civilDateIn, today } from "../../platform/dates";
+import { addDays, type CivilDate, civilDateIn, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
-import type { Cents } from "../../platform/money";
+import type { Cents } from "../../shared/money";
 import {
   dueDates,
   LOW_UTILITY,

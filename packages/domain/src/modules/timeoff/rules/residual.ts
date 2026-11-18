@@ -1,4 +1,4 @@
-import { type CivilDate, type MonthKey, addDays, dayOfWeek } from "../../../platform/dates";
+import { type CivilDate, type MonthKey, addDays, dayOfWeek } from "../../../shared/dates";
 import { isWeekend } from "../../../platform/holidays/rules";
 import {
   LEAVE_DAY_KINDS,

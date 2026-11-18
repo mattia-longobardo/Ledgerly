@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import type { Person } from "../../users/jobs";
 import type { Ctx } from "../../../platform/context";
-import { today } from "../../../platform/dates";
+import { today } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import {

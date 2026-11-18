@@ -4,7 +4,7 @@
  * so every screen speaks of time in one way. Pure: "today" is passed in.
  */
 
-import { addDays, addMonths, type CivilDate, lastDayOfMonth, monthKey } from "./dates";
+import { addDays, addMonths, type CivilDate, lastDayOfMonth, monthKey } from "../shared/dates";
 
 /** The four presets of the design, in the order the segmented control shows them. */
 export const RANGE_PRESETS = ["thisMonth", "lastMonth", "last3Months", "ytd"] as const;

@@ -13,8 +13,8 @@ import {
   valueRows,
 } from "../../imports/pdf/layout";
 import type { PageText } from "../../imports/pdf/text";
-import { type CivilDate } from "../../../platform/dates";
-import { centsToDecimal, type Cents, parseCents } from "../../../platform/money";
+import { type CivilDate } from "../../../shared/dates";
+import { centsToDecimal, type Cents, parseCents } from "../../../shared/money";
 import { FIELDS, type FieldName, isDerived, type MoneyField } from "../fields";
 import {
   type CodeRole,

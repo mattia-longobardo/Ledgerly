@@ -1,0 +1,18 @@
+// The zod primitives of the wire (rewrite plan R0, audit TR-2, MCP-4): what REST, MCP and the
+// forms of the web app accept. The contract imports zod and nothing else (10-modularity.md §10.2),
+// so the check of a civil date is its own here; the domain has its own for its input schemas.
+import { z } from "zod";
+
+const CIVIL_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** `YYYY-MM-DD` and a day of the calendar: no 31 April, no 29 February out of a leap year. */
+function isCalendarDate(value: string): boolean {
+  const match = CIVIL_DATE.exec(value);
+  if (!match) return false;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+}
+
+/** A civil date on the wire; the message is the caller's when it has one. */
+export const civilDate = (message?: string) => z.string().refine(isCalendarDate, message);

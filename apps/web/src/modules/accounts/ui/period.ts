@@ -21,7 +21,7 @@ import {
   type MonthKey,
   monthKey,
   monthsBetween,
-} from "@ledgerly/domain/platform/dates";
+} from "@ledgerly/domain/shared/dates";
 import type { Params } from "@/ui/url";
 
 /** The window these screens open on: the one Expenses opens on. */

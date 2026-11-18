@@ -8,6 +8,7 @@ import { readEnv } from "@ledgerly/domain/platform/env";
 import { BACKUP_LAST, readSetting } from "@ledgerly/domain/platform/settings";
 import { appSettings } from "@ledgerly/domain/platform/settings";
 import { deleteObject, listFolder, putObject } from "@ledgerly/domain/platform/storage";
+import { requireAdminCtx } from "@ledgerly/domain/platform/context";
 
 /**
  * The daily database backup (spec §10.2, §9.4): `pg_dump -Fc` into S3, thirty kept.
@@ -112,10 +113,6 @@ export const dumpDatabase: Dump = () =>
     });
   });
 
-function requireAdminCtx(ctx: Pick<Ctx, "role">): void {
-  if (ctx.role !== "admin") throw new BackupError("forbidden");
-}
-
 /** The key of a backup: sortable by name, which is how the retention finds the oldest. */
 export function backupKey(at: Date): string {
   return `${BACKUP_FOLDER}/${at.toISOString().replaceAll(/[:.]/g, "-").toLowerCase()}.dump`;
@@ -131,7 +128,7 @@ export async function backupNow(
   deps: { dump: Dump } = { dump: dumpDatabase },
   now: Date = new Date(),
 ): Promise<BackupResult> {
-  requireAdminCtx(ctx);
+  requireAdminCtx(ctx, () => new BackupError("forbidden"));
   return runBackup(deps.dump, now);
 }
 

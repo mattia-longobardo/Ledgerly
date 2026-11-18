@@ -13,7 +13,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import type { MonthKey } from "@ledgerly/domain/platform/dates";
+import type { MonthKey } from "@ledgerly/domain/shared/dates";
 import { type UiLocale, formatDate } from "@ledgerly/domain/platform/format";
 import { notify } from "@/ui/toast";
 import type { ForecastInput } from "@ledgerly/domain/timeoff/client";

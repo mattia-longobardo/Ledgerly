@@ -214,7 +214,7 @@ export function looksLikePrivateKey(text: string): boolean {
   return /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]+-----END [A-Z ]*PRIVATE KEY-----/.test(text);
 }
 
-function dayNumber(day: string): number {
+function dayStamp(day: string): number {
   return Number(day.replaceAll("-", ""));
 }
 
@@ -283,8 +283,8 @@ export function measureReading(
   measures.textMaxLength = textMax;
   days.sort();
   if (days.length > 0) {
-    measures.oldestBooking = dayNumber(days[0]);
-    measures.newestBooking = dayNumber(days.at(-1) as string);
+    measures.oldestBooking = dayStamp(days[0]);
+    measures.newestBooking = dayStamp(days.at(-1) as string);
     measures.historyDays = daysBetween(days[0], today);
   }
   return measures;

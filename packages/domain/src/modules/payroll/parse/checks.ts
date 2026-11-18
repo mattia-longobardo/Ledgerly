@@ -1,4 +1,4 @@
-import { centsToDecimal, type Cents } from "../../../platform/money";
+import { centsToDecimal, type Cents } from "../../../shared/money";
 import { LEAVE_COLUMNS, LEAVE_KINDS, leaveField, type MoneyField } from "../fields";
 import { medianCents, type PayslipType } from "../rules";
 import { hundredthsOf, moneyOf, type Values } from "./derive";

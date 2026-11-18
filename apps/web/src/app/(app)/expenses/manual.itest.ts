@@ -17,7 +17,7 @@ import {
 } from "@domain/modules/accounts/service";
 import { getTransaction, listTransactions } from "@domain/modules/transactions/queries";
 import type { Ctx } from "@domain/platform/context";
-import { addDays, today } from "@domain/platform/dates";
+import { addDays, today } from "@domain/shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { createTestUser } from "../../../../../../test/users";
 import {

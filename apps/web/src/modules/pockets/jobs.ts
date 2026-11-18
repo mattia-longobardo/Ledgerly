@@ -1,6 +1,6 @@
 import "server-only";
 import { forEachUser } from "@ledgerly/domain/users";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { accrueMonth, purgeExpiredPlanned } from "@ledgerly/domain/pockets";

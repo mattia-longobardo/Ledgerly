@@ -5,9 +5,9 @@ import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { instant, money } from "@/platform/api/json";
-import { isCivilDate } from "@ledgerly/domain/platform/dates";
 import { listTransactions, MAX_LIMIT, transactionsSummary } from "@ledgerly/domain/transactions";
 import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
+import { civilDate } from "@ledgerly/api-contract";
 
 /**
  * The transactions module's `/api/v1` routes (spec §4.2). One list, filtered the way the Expenses
@@ -15,11 +15,9 @@ import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
  */
 export const transactionsApi = new Hono<ApiEnv>();
 
-const civilDate = z.string().refine(isCivilDate, "Not a civil date");
-
 const query = z.object({
-  from: civilDate.optional(),
-  to: civilDate.optional(),
+  from: civilDate("Not a civil date").optional(),
+  to: civilDate("Not a civil date").optional(),
   account: z.uuid().optional(),
   type: z.enum(TRANSACTION_TYPES).optional(),
   payee: z.string().trim().min(1).max(200).optional(),

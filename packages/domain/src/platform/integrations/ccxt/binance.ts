@@ -7,8 +7,8 @@
  * are floats (`2.114e-5`), so the raw strings of `info` are read wherever Binance gives them.
  */
 import { z } from "zod";
-import type { CivilDate } from "../../dates";
-import type { Cents } from "../../money";
+import type { CivilDate } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 import {
   type AssetRef,
   type CoverageWindow,
@@ -21,6 +21,7 @@ import {
   type SnapshotPosition,
 } from "../investments/source";
 import { BINANCE_PROVIDER } from "../rules";
+import { formatDecimal } from "../../../shared/money";
 
 export { BINANCE_PROVIDER };
 
@@ -46,10 +47,7 @@ function plain(value: number): string {
 
 /** An integer of 18 decimals as a plain decimal string without trailing zeros. */
 export function decimal(value: bigint): string {
-  const negative = value < 0n;
-  const abs = negative ? -value : value;
-  const fraction = (abs % ONE).toString().padStart(SCALE, "0").replace(/0+$/, "");
-  return `${negative ? "-" : ""}${abs / ONE}${fraction ? `.${fraction}` : ""}`;
+  return formatDecimal(value, SCALE);
 }
 
 const mul = (a: bigint, b: bigint) => (a * b) / ONE;

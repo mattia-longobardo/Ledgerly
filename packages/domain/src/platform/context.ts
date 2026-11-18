@@ -21,3 +21,8 @@ export interface Ctx {
    */
   displayCurrency: DisplayCurrency;
 }
+
+/** The one admin guard (audit PLT-4): a context that is not an admin's is refused with `refuse()`. */
+export function requireAdminCtx(ctx: Pick<Ctx, "role">, refuse: () => Error): void {
+  if (ctx.role !== "admin") throw refuse();
+}

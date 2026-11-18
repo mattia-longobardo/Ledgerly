@@ -7,11 +7,12 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { AccountError } from "@ledgerly/domain/accounts";
-import { parseAmount } from "@ledgerly/domain/accounts";
+import { parseAmount } from "@ledgerly/domain/platform/format";
 import { requireSession } from "@/platform/auth/session";
 import { numberSeparators, type NumberFormat } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
-import { parseDecimal, plainDecimal, PRICE_SCALE, QUANTITY_SCALE } from "@ledgerly/domain/investments";
+import type { Cents } from "@ledgerly/domain/shared/money";
+import { plainDecimal, PRICE_SCALE, QUANTITY_SCALE } from "@ledgerly/domain/investments";
+import { parseDecimal } from "@ledgerly/domain/shared/money";
 import {
   confirmZeroReading,
   createManualService,

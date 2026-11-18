@@ -1,10 +1,10 @@
 import { and, eq, gt, gte, inArray, isNull, or } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import { type CivilDate, addDays } from "../../../platform/dates";
+import { type CivilDate, addDays } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { syncsTransactions } from "../../../platform/integrations/rules";
-import { type Cents } from "../../../platform/money";
+import { type Cents } from "../../../shared/money";
 import { dailyNetByAccount, manualMovementsByAccount } from "../../transactions/queries";
 import { dailySeries, deriveMonthEnds, movementBalances, withMovementPoints } from "../rules";
 import {

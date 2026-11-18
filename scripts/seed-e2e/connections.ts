@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/banks/plugin";
 import { applyProviderAccounts } from "@domain/modules/accounts/service";
 import { parseKeyRing, sealJson } from "@domain/platform/crypto";
-import { today } from "@domain/platform/dates";
+import { today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { readEnv } from "@domain/platform/env";
 import { pluginProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";

@@ -5,12 +5,12 @@ import { getPreferences } from "@ledgerly/domain/users";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { readEnv } from "@ledgerly/domain/platform/env";
-import { numberStyle } from "@ledgerly/domain/platform/format";
 import { principalOf, verifyAccessJwt } from "./access-token-rules";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { type ApiScope, issuerFor, type ResourceKey, resourceFor } from "@ledgerly/domain/platform/auth";
 import { oauthClients } from "@ledgerly/domain/platform/auth";
 import { users } from "@ledgerly/domain/platform/auth";
+import { buildCtx } from "@ledgerly/domain/users";
 
 /**
  * The resource server of D3: turns an OAuth access token into the same `Ctx` a session would be.
@@ -88,14 +88,7 @@ export async function authenticateAccessToken(
   if (!person || person.banned) return null;
   const preferences = await getPreferences({ userId: principal.userId });
   return {
-    ctx: {
-      userId: principal.userId,
-      role: person.role === "admin" ? "admin" : "user",
-      locale: preferences.locale,
-      timeZone: preferences.timeZone,
-      numberFormat: numberStyle(preferences),
-      displayCurrency: preferences.displayCurrency,
-    },
+    ctx: buildCtx({ id: principal.userId, role: person.role }, preferences),
     scopes: principal.scopes,
     clientId: principal.clientId,
   };

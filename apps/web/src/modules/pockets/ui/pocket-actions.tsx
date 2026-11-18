@@ -3,9 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { parseAmount } from "@ledgerly/domain/accounts/client";
+import { parseAmount } from "@ledgerly/domain/platform/format";
 import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/platform/money";
+import type { Cents } from "@ledgerly/domain/shared/money";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, InputGroup, Select } from "@/ui/input";

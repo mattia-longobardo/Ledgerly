@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 # The workspaces (R0): the install links each one by its `package.json`.
 COPY apps/web/package.json ./apps/web/
+COPY packages/api-contract/package.json ./packages/api-contract/
 COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
 COPY packages/plugin-host/package.json ./packages/plugin-host/

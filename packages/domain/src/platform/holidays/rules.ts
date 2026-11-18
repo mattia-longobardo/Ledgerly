@@ -1,4 +1,4 @@
-import { addDays, type CivilDate, dayOfWeek } from "../dates";
+import { addDays, type CivilDate, dayOfWeek } from "../../shared/dates";
 
 /**
  * Where a subscribed calendar's days come from (M3).

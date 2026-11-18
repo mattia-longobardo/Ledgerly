@@ -22,12 +22,12 @@ import { addSwitchCounts, openSwitches, openSwitchOf } from "@ledgerly/domain/ac
 import { planTransfers } from "@ledgerly/domain/transactions";
 import { transferCandidates, writeTransferPairs } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { type CivilDate, civilDateIn, wallClockIn } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, civilDateIn, wallClockIn } from "@ledgerly/domain/shared/dates";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { isPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { connectionSharing } from "@ledgerly/plugin-host";
 import { exposedAccounts } from "@ledgerly/plugin-host";
-import { parseCents } from "@ledgerly/domain/platform/money";
+import { parseCents } from "@ledgerly/domain/shared/money";
 import { type BankSink, type ReadingMovement, SinkRefusal } from "@ledgerly/plugin-host";
 
 type AccountType = (typeof ACCOUNT_TYPES)[number];

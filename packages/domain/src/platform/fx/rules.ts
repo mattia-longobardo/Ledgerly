@@ -1,4 +1,4 @@
-import { addDays, type CivilDate } from "../dates";
+import { addDays, type CivilDate } from "../../shared/dates";
 
 /**
  * Exchange rates (docs/design/investments.md §1.8). Market data, not a person's: one row per day

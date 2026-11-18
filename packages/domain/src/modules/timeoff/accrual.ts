@@ -1,4 +1,4 @@
-import { type CivilDate, type MonthKey, addMonths, monthKey, monthsApart } from "../../platform/dates";
+import { type CivilDate, type MonthKey, addMonths, monthKey, monthsApart } from "../../shared/dates";
 import {
   type LeaveDayKind,
   type LeaveDayView,

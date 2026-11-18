@@ -1,14 +1,15 @@
-import { addDays, type CivilDate, civilDateIn, isCivilDate } from "../../../platform/dates";
-import type { Cents } from "../../../platform/money";
+import { addDays, type CivilDate, civilDateIn } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 import { displayPayee, excludeHidden, payeeKeyOf } from "./records";
 import {
-  DAY_MS,
   RECURRENCE_AMOUNT_TOLERANCE,
   RECURRENCE_BANDS,
   RECURRENCE_MIN_OCCURRENCES,
   type Cadence,
   type TransactionType,
 } from "./vocabulary";
+import { abs } from "../../../shared/money";
+import { dayNumber } from "../../../shared/dates";
 
 /* Recurrences */
 
@@ -44,15 +45,6 @@ const TOLERANCE_SCALE = 1_000_000n;
 const TOLERANCE_SCALED = BigInt(Math.round(RECURRENCE_AMOUNT_TOLERANCE * Number(TOLERANCE_SCALE)));
 
 /** Days since the epoch of a civil date: exact, and the only arithmetic the bands need. */
-function dayNumber(date: CivilDate): number {
-  if (!isCivilDate(date)) throw new RangeError(`Not a civil date: "${date}"`);
-  const [year, month, day] = date.split("-").map(Number);
-  return Date.UTC(year, month - 1, day) / DAY_MS;
-}
-
-function abs(value: Cents): Cents {
-  return value < 0n ? -value : value;
-}
 
 /** The median of ascending positive amounts; an even count takes the two middles, rounded up. */
 function median(sorted: readonly Cents[]): Cents {

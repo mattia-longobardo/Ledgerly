@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { and, eq, like } from "drizzle-orm";
 import { openJson, parseKeyRing } from "@domain/platform/crypto";
-import { civilDateIn } from "@domain/platform/dates";
+import { civilDateIn } from "@domain/shared/dates";
 import { getDb, getPool } from "@domain/platform/db/client";
 import { readEnv } from "@domain/platform/env";
 import { integrationConnections } from "@domain/platform/integrations/schema";

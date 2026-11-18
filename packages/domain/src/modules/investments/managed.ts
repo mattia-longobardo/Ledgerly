@@ -1,6 +1,6 @@
 import { and, eq, inArray, max, ne, notInArray } from "drizzle-orm";
 import type { Ctx } from "../../platform/context";
-import type { CivilDate } from "../../platform/dates";
+import type { CivilDate } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import { MANUAL_PROVIDER, providerOf } from "./catalog";

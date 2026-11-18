@@ -13,7 +13,7 @@ import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
 import { MACROS, type Macro, macroViews } from "@/modules/transactions/ui/macros";
 import { listAccounts } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
 import { Page } from "@/ui/shell/page";
 import { EmptyState } from "@/ui/states";

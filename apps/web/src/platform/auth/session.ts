@@ -7,21 +7,13 @@ import { getPreferences } from "@ledgerly/domain/users";
 import type { Preferences } from "@ledgerly/domain/users";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { readEnv } from "@ledgerly/domain/platform/env";
-import { numberStyle } from "@ledgerly/domain/platform/format";
 import { hasPasswordAccount } from "@ledgerly/domain/platform/auth";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { TWO_FACTOR_SETUP_PATH, twoFactorSetupRequired } from "@ledgerly/domain/platform/auth";
+import { buildCtx } from "@ledgerly/domain/users";
 
-export function ctxFrom(user: { id: string; role?: string | null }, prefs: Preferences): Ctx {
-  return {
-    userId: user.id,
-    role: user.role === "admin" ? "admin" : "user",
-    locale: prefs.locale,
-    timeZone: prefs.timeZone,
-    numberFormat: numberStyle(prefs),
-    displayCurrency: prefs.displayCurrency,
-  };
-}
+/** The session's context: the one mapping of the domain (audit USR-3). */
+export { buildCtx as ctxFrom };
 
 /**
  * The signed-in user and their saved preferences, or null. Cached per request. `setupPending`: the
@@ -58,7 +50,7 @@ const getSignedIn = cache(async () => {
  */
 export const getOptionalCtx = cache(async (): Promise<Ctx | null> => {
   const signedIn = await getSignedIn();
-  return signedIn && !signedIn.setupPending ? ctxFrom(signedIn.user, signedIn.preferences) : null;
+  return signedIn && !signedIn.setupPending ? buildCtx(signedIn.user, signedIn.preferences) : null;
 });
 
 /**

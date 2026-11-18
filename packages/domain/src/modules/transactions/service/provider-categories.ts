@@ -2,12 +2,8 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import {
-  externalIdsOf,
-  IntegrationError,
-  isUniqueViolation,
-  linkExternal,
-} from "../../../platform/integrations/service";
+import { externalIdsOf, IntegrationError, linkExternal } from "../../../platform/integrations/service";
+import { isUniqueViolation } from "../../../platform/db/errors";
 import { type CategoryType, NAME_MAX } from "../rules";
 import { categories } from "../schema";
 import { TaxonomyError, adoptOrCreateCategory } from "../taxonomy";

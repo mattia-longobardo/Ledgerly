@@ -1,8 +1,8 @@
 // The words of a fee row (release N6, screens §7.1), shared by the list, the summary of the form
 // that creates a fund and Settings. Pure: the translator comes from the caller.
 import type { useTranslations } from "next-intl";
-import { parseAmount } from "@ledgerly/domain/accounts/client";
-import { isCivilDate } from "@ledgerly/domain/platform/dates";
+import { parseAmount } from "@ledgerly/domain/platform/format";
+import { isCivilDate } from "@ledgerly/domain/shared/dates";
 import {
   formatDate,
   formatMoney,

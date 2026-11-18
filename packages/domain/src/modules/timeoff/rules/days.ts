@@ -1,4 +1,4 @@
-import { type CivilDate, type MonthKey } from "../../../platform/dates";
+import { type CivilDate, type MonthKey } from "../../../shared/dates";
 import { isWeekend } from "../../../platform/holidays/rules";
 
 /** What a day off can be. */

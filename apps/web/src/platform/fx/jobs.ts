@@ -10,7 +10,7 @@
 import "server-only";
 import { firstBalanceDay } from "@ledgerly/domain/accounts";
 import { forEachUser } from "@ledgerly/domain/users";
-import { type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { rangesToFetch } from "@ledgerly/domain/platform/fx";

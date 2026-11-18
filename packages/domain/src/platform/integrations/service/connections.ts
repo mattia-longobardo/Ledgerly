@@ -1,10 +1,8 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { Ctx } from "../../context";
-import { type KeyRing, openJson, parseKeyRing, sealJson } from "../../crypto";
+import { openJson, sealJson } from "../../crypto";
 import { getDb } from "../../db/client";
-import { UNIQUE_VIOLATION, hasPgError } from "../../db/errors";
 import { userScoped } from "../../db/scope";
-import { readEnv } from "../../env";
 import {
   type ConnectionState,
   credentialsSchema,
@@ -17,6 +15,7 @@ import {
 import { parseSyncSchedule, type ScheduleProblem, type SyncSchedule } from "../schedule";
 import { integrationConnections, sourceSettings, syncJobs, syncRuns } from "../schema";
 import { SETTING_KEYS } from "./schedule";
+import { keyRing } from "../../crypto";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
 type IntegrationErrorCode =
@@ -86,19 +85,6 @@ export const CONNECTION_COLUMNS = {
 
 export type SyncRun = typeof syncRuns.$inferSelect;
 export type SyncJob = typeof syncJobs.$inferSelect;
-
-let ring: KeyRing | undefined;
-
-/** The key ring of spec §9.4, parsed once: the first key seals, every key still opens. */
-function keyRing(): KeyRing {
-  ring ??= parseKeyRing(readEnv().APP_ENCRYPTION_KEY);
-  return ring;
-}
-
-/** True for the unique violation of one named constraint, wherever drizzle wrapped it. */
-export function isUniqueViolation(error: unknown, constraint: string): boolean {
-  return hasPgError(error, UNIQUE_VIOLATION, constraint);
-}
 
 /** A row as {@link Connection}: the stored schedule read back through its schema. */
 export function toConnection(row: Omit<Connection, "schedule"> & { schedule: unknown }): Connection {

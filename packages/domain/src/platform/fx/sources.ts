@@ -6,7 +6,7 @@
  * process.
  */
 import { z } from "zod";
-import { type CivilDate, isCivilDate } from "../dates";
+import { type CivilDate, isCivilDate } from "../../shared/dates";
 import { eurPerUnitOf, type FxRange, type FxRate } from "./rules";
 
 const FRANKFURTER_BASE = "https://api.frankfurter.dev";

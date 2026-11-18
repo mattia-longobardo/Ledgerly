@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import { addDays, type CivilDate } from "../../../platform/dates";
+import { addDays, type CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import {
@@ -9,18 +9,17 @@ import {
   type HoldingsSnapshot,
   type KeyCheck,
 } from "../../../platform/integrations/investments/source";
-import type { Cents } from "../../../platform/money";
+import type { Cents } from "../../../shared/money";
 import {
   emptyReadingStatus,
-  formatDecimal,
   type KeyCheckOrigin,
   missingPricesOf,
-  parseDecimal,
   PRICE_SCALE,
   QUANTITY_SCALE,
   RATE_SCALE,
   type ReadingStatus,
 } from "../rules";
+import { formatDecimal, parseDecimal } from "../../../shared/money";
 import {
   investmentAssets,
   investmentEvents,

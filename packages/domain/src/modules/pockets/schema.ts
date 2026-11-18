@@ -15,8 +15,7 @@ import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { transactions } from "../transactions/schema";
 import { MOVEMENT_KINDS, POCKET_STATES } from "./rules";
-
-const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
+import { inList } from "../../platform/db/checks";
 
 /**
  * A virtual envelope (spec §6, §7.4): money earmarked without moving it. The backing account is
