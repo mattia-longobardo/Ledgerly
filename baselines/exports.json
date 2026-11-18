@@ -1,7 +1,18 @@
 {
   "apps/api/src/index.ts": [
     "ApiEnv",
-    "apiRoutes"
+    "MacroMoveUndo",
+    "MacroMoveView",
+    "apiRoutes",
+    "deleteCategoryEverywhere",
+    "macroMoveView",
+    "mergeTwoCategories",
+    "moveToMacro",
+    "setSourceCategory",
+    "sourceNotes",
+    "undoMergeOfTwo",
+    "undoMoveToMacro",
+    "undoSourceCategoryChange"
   ],
   "packages/api-contract/src/index.ts": [
     "API_ERRORS",

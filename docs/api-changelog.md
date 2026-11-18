@@ -15,6 +15,14 @@ written before it keeps working.
   preferences; a field left out of the `PATCH` keeps its value, a new `timeZone` moves the times of
   the connections. New `GET /api/v1/profile` (`read`) and `PATCH /api/v1/profile` (`write`, `name`
   only; `409` with `reason: "sso"` when the identity provider manages the name).
+- Categories and labels (`read` to list, `write` to change): `GET`/`POST /categories`,
+  `PATCH`/`DELETE /categories/{id}`, `POST /categories/{id}/archive`, `POST /categories/restore`,
+  `POST /categories/{id}/move`, `GET`/`POST /categories/{id}/macro-move`,
+  `POST /categories/macro-move/undo`, `POST /categories/merge`, `POST /categories/merge/undo`;
+  `GET`/`POST /labels`, `PATCH`/`DELETE /labels/{id}`; `GET /source-categories`,
+  `PUT /source-categories/{id}`, `POST /source-categories/undo/{undoId}`,
+  `POST /source-categories/{id}/keep`. A refusal of the taxonomy answers `409`
+  (`reason: "duplicate"`) or `400` with its code in `reason`; an `undo` goes back as it came.
 
 ## 2026-11-14 · one pension fund model (release N6)
 

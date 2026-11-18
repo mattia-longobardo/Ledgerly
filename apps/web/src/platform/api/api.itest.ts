@@ -377,6 +377,65 @@ describe("users and settings: profile and preferences", () => {
   });
 });
 
+describe("users and settings: categories and labels", () => {
+  const send = (method: string, body?: unknown): RequestInit => ({
+    method,
+    headers: { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const group = { name: "Home", parentId: null, type: "expense", color: null };
+
+  it("creates, changes, archives, restores and deletes a category of the token's person only", async () => {
+    const created = await call("/categories", aliceToken, send("POST", group));
+    expect(created.status).toBe(201);
+    const { id } = await created.json();
+    const renamed = await call(`/categories/${id}`, aliceToken, send("PATCH", { ...group, name: "House" }));
+    expect(await renamed.json()).toMatchObject({ id, name: "House", depth: 0, usage: 0, archivedAt: null });
+    expect((await call(`/categories/${id}`, bobToken, send("PATCH", group))).status).toBe(404);
+    const archived = await call(`/categories/${id}/archive`, aliceToken, send("POST"));
+    expect(await archived.json()).toEqual({ ids: [id] });
+    expect((await call("/categories/restore", aliceToken, send("POST", { ids: [id] }))).status).toBe(204);
+    const names = (await (await call("/categories", aliceToken)).json()).categories.map(
+      (c: { name: string }) => c.name,
+    );
+    expect(names).toContain("House");
+    const deleted = await call(`/categories/${id}`, aliceToken, send("DELETE"));
+    expect(await deleted.json()).toEqual({ removed: 1, uncategorised: 0, external: { state: "not_linked" } });
+  });
+
+  it("refuses a second category with the same name as a conflict", async () => {
+    expect((await call("/categories", aliceToken, send("POST", group))).status).toBe(201);
+    const again = await call("/categories", aliceToken, send("POST", group));
+    expect(again.status).toBe(409);
+    expect(await again.json()).toEqual({ error: "conflict", reason: "duplicate" });
+  });
+
+  it("creates, changes and deletes a label", async () => {
+    const created = await call("/labels", aliceToken, send("POST", { name: "Trip", color: "#3366cc" }));
+    const { id } = await created.json();
+    const changed = await call(`/labels/${id}`, aliceToken, send("PATCH", { name: "Trips", color: null }));
+    expect(await changed.json()).toEqual({ id, name: "Trips", color: null, usage: 0 });
+    expect((await call(`/labels/${id}`, aliceToken, send("DELETE"))).status).toBe(204);
+    expect((await (await call("/labels", aliceToken)).json()).labels).toEqual([]);
+  });
+
+  it("tells what a move to another macro changes, and merges two categories with an Undo", async () => {
+    const first = await (await call("/categories", aliceToken, send("POST", group))).json();
+    const second = await (
+      await call("/categories", aliceToken, send("POST", { ...group, name: "Flat" }))
+    ).json();
+    const facts = await call(`/categories/${first.id}/macro-move`, aliceToken);
+    expect(await facts.json()).toMatchObject({ from: "expense", count: 0, amount: "0.00", sources: [] });
+    const merged = await (
+      await call("/categories/merge", aliceToken, send("POST", { keepId: first.id, dropId: second.id }))
+    ).json();
+    expect(merged.moved).toBe(0);
+    const undone = await call("/categories/merge/undo", aliceToken, send("POST", { undo: merged.undo }));
+    expect(await undone.json()).toEqual({ moved: 0 });
+    expect((await (await call("/source-categories", aliceToken)).json()).sourceCategories).toEqual([]);
+  });
+});
+
 describe("a deleted Client API", () => {
   it("stops its token on every route at once", async () => {
     await deleteApiClient(alice, clientOf.get(aliceToken)!);

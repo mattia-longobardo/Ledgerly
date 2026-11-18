@@ -368,6 +368,7 @@ export const MODULES: Module[] = [
     ],
     flows: ["connections"],
     usedBy: [
+      "api",
       "accounts",
       "transactions",
       "jobs",

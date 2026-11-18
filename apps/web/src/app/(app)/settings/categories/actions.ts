@@ -9,7 +9,6 @@ import {
   archiveCategory,
   createCategory,
   createLabel,
-  deleteCategory,
   deleteLabel,
   moveCategory,
   restoreCategories,
@@ -22,10 +21,8 @@ import { requireSession } from "@/platform/auth/session";
 import { formatMoney } from "@ledgerly/domain/platform/format";
 import { type MacroMoveUndo, type MacroMoveView, macroMoveView, moveToMacro, undoMoveToMacro } from "./macro";
 import { mergeTwoCategories, undoMergeOfTwo } from "./merge";
-import {
-  deleteWalletCategories,
-  type WalletDeletionOutcome,
-} from "@ledgerly/domain/platform/integrations/wallet";
+import { deleteCategoryEverywhere } from "@ledgerly/api";
+import type { WalletDeletionOutcome } from "@ledgerly/domain/platform/integrations/wallet";
 
 /**
  * The cards call these inside a transition with no error boundary, so a refusal comes back as a
@@ -133,19 +130,7 @@ export async function deleteLabelAction(id: string): Promise<TaxonomyActionResul
   return run(() => deleteLabel(ctx, id));
 }
 
-/**
- * Deletes a category for good, here **and on Wallet** (owner, 2026-09-21).
- *
- * The two steps are orchestrated here rather than inside either service, and on purpose: the
- * taxonomy is a module and Wallet is a platform integration that already depends on that module,
- * so a service calling the other way round would close a circle. The action is the one place that
- * legitimately knows about both.
- *
- * The local delete goes first. If it fails, nothing has been destroyed anywhere; if Wallet then
- * refuses — its own records may still reference the category — the answer says so and the person
- * can finish the job there. The other order would let Wallet lose a category for a deletion that
- * never happened here.
- */
+/** Deletes a category for good, here and at its source: `deleteCategoryEverywhere`, as the route. */
 export async function deleteCategoryAction(
   id: string,
 ): Promise<
@@ -154,15 +139,9 @@ export async function deleteCategoryAction(
 > {
   const ctx = await requireSession();
   try {
-    const deletion = await deleteCategory(ctx, id);
-    const wallet = await deleteWalletCategories(ctx, deletion.externalIds);
+    const { removed, uncategorised, external } = await deleteCategoryEverywhere(ctx, id);
     revalidate();
-    return {
-      ok: true,
-      removed: deletion.removed.length,
-      uncategorised: deletion.uncategorised,
-      wallet,
-    };
+    return { ok: true, removed, uncategorised, wallet: external };
   } catch (error) {
     if (error instanceof TaxonomyError) return { ok: false, error: error.code };
     throw error;

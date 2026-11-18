@@ -136,3 +136,8 @@ export async function labelOf(
   const label = await passFor(connection.provider)?.label?.(connection, locale);
   return label ?? named(connection.provider);
 }
+
+/** The name a person reads for a source: what a provider of one connection is called. */
+export async function sourceNameOf(provider: string, locale: UiLocale): Promise<string> {
+  return (await labelOf({ provider, instanceKey: "" }, locale)).provider;
+}

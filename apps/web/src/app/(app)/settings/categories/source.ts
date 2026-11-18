@@ -5,35 +5,19 @@
 // them (rule M8). A change is one transaction — the movements, the category put away and the
 // limits, or nothing — and so is its "Undo".
 import "server-only";
-import { limitsSnapshot, type LimitsSnapshot, mergeLimits, restoreLimits } from "@ledgerly/domain/budgets";
-import {
-  chooseSourceCategory,
-  listSourceCategories,
-  type SourceCategoryChange,
-  type SourceCategoryHooks,
-  type SourceCategoryView,
-  sourceNamesByCategory,
-  undoSourceCategory,
-} from "@ledgerly/domain/transactions";
+import { sourceNotes as notesOfSources } from "@ledgerly/api";
+import { listSourceCategories, type SourceCategoryView } from "@ledgerly/domain/transactions";
 import { colorOfCategory, listCategoriesWithUsage } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { monthKey, today } from "@ledgerly/domain/shared/dates";
-import { getDb } from "@ledgerly/domain/platform/db";
-import { labelOf } from "@/platform/integrations/registry";
+import { sourceNameOf } from "@/platform/integrations/registry";
 
 import type { SourceCategoryRow } from "./source-categories";
-
-type Who = Pick<Ctx, "userId" | "timeZone">;
 
 /** The categories of one source, under the name a person reads for it. */
 interface SourceCategoriesSection {
   provider: string;
   name: string;
   rows: SourceCategoryView[];
-}
-
-async function nameOf(provider: string, locale: Ctx["locale"]): Promise<string> {
-  return (await labelOf({ provider, instanceKey: "" }, locale)).provider;
 }
 
 /** One section for each source that has given a category, in the order of the sources' ids. */
@@ -45,7 +29,7 @@ export async function sourceCategorySections(
   for (const row of rows) {
     let section = sections.find((one) => one.provider === row.provider);
     if (!section) {
-      section = { provider: row.provider, name: await nameOf(row.provider, ctx.locale), rows: [] };
+      section = { provider: row.provider, name: await sourceNameOf(row.provider, ctx.locale), rows: [] };
       sections.push(section);
     }
     section.rows.push(row);
@@ -101,43 +85,7 @@ export async function sourceCategoryRows(
 }
 
 /** For each category: "From {source}: {names}", where the names say more than the category's own. */
-export async function sourceNotes(
-  ctx: Pick<Ctx, "userId" | "locale">,
-): Promise<Map<string, { provider: string; source: string; names: string[] }>> {
-  const byCategory = await sourceNamesByCategory(ctx);
-  const notes = new Map<string, { provider: string; source: string; names: string[] }>();
-  for (const [categoryId, entry] of byCategory) {
-    notes.set(categoryId, {
-      provider: entry.provider,
-      source: await nameOf(entry.provider, ctx.locale),
-      names: entry.names,
-    });
-  }
-  return notes;
-}
+export const sourceNotes = (ctx: Pick<Ctx, "userId" | "locale">) => notesOfSources(ctx, sourceNameOf);
 
-/** The budgets' side of a change: the limits of a category put away go to the one that stays. */
-function limitHooks(ctx: Who): SourceCategoryHooks {
-  const month = monthKey(today(ctx.timeZone));
-  return {
-    async onArchive({ keepId, dropId }, tx) {
-      const before = await limitsSnapshot(ctx, [keepId, dropId], month, tx);
-      const summed = await mergeLimits(ctx, { keepId, dropId, month }, tx);
-      return summed > 0 ? before : null;
-    },
-    onRestore: (limits, tx) => restoreLimits(ctx, limits as LimitsSnapshot, tx),
-  };
-}
-
-/** Matches a source's category to a category of the person, or adds it back as its own (`null`). */
-export async function setSourceCategory(
-  ctx: Who,
-  input: { id: string; categoryId: string | null },
-): Promise<SourceCategoryChange> {
-  return getDb().transaction((tx) => chooseSourceCategory(ctx, input, tx, limitHooks(ctx)));
-}
-
-/** "Undo" of the last change. `null` when it can no longer be undone. */
-export async function undoSourceCategoryChange(ctx: Who, undoId: string): Promise<{ moved: number } | null> {
-  return getDb().transaction((tx) => undoSourceCategory(ctx, undoId, tx, limitHooks(ctx)));
-}
+// The use cases of a change live in `apps/api`, with the routes; the screen's views stay here.
+export { setSourceCategory, undoSourceCategoryChange } from "@ledgerly/api";
