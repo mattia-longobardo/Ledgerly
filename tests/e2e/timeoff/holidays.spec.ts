@@ -103,8 +103,8 @@ test("the patron saint and the working day are saved on their own, on Time off â
   await page.goto("/timeoff/settings");
   await page.getByLabel("Patron saint holiday").selectOption(patronBefore);
   await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Patron saint saved")).toBeVisible();
+  await expect(page.getByText("Patron saint saved").last()).toBeVisible();
   await page.getByLabel("Hours in a working day").fill(hoursBefore);
   await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Working hours saved")).toBeVisible();
+  await expect(page.getByText("Working hours saved").last()).toBeVisible();
 });

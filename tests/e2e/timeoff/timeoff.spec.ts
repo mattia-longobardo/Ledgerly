@@ -67,7 +67,7 @@ async function fromTheSeed(page: Page): Promise<void> {
   if ((await total.inputValue()) !== "") {
     await total.fill("");
     await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Allowance saved")).toBeVisible();
+    await expect(page.getByText("Allowance saved").last()).toBeVisible();
   }
   await page.goto("/timeoff");
   for (const date of [MON, TUE, WED, THU, FRI]) {
@@ -308,6 +308,9 @@ test("time off counts the year, says where each number comes from, and refuses a
     await book.getByRole("button", { name: "Confirm" }).click();
     await expect(book).toBeHidden();
     await expect(page.getByTestId("leave-cell")).toHaveCount(6);
+    // The server's rows have arrived (as the step below waits for Friday's): a booked day opens its
+    // own panel only from them, and under load they come after the calendar is drawn.
+    for (const date of [TUE, WED, THU]) await expect(rowsOf(page, date)).toHaveCount(1);
     const writes = countWrites(page);
 
     // A booked day still opens its own panel; the visible control makes it the first day.
@@ -421,7 +424,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     await tabs.getByRole("link", { name: "Settings" }).click();
     await form.getByLabel("Days granted in total").fill("");
     await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Allowance saved")).toBeVisible();
+    await expect(page.getByText("Allowance saved").last()).toBeVisible();
   });
 
   await test.step("the year picker moves the whole screen, and the URL with it", async () => {
