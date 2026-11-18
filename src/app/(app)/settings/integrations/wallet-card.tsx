@@ -173,7 +173,12 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
               variant="danger"
               size="sm"
               disabled={pending}
-              onClick={() => run(disconnectWalletAction, t("toasts.disconnected"))}
+              onClick={() =>
+                run(
+                  disconnectWalletAction,
+                  t("toasts.disconnected", { provider: t("providers.wallet.name") }),
+                )
+              }
             >
               {t("disconnect.confirm")}
             </Button>

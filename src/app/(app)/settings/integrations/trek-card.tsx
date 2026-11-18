@@ -202,7 +202,9 @@ export function TrekCard({ row, connected, pending: waiting, deactivateHref }: T
               variant="danger"
               size="sm"
               disabled={pending}
-              onClick={() => run(disconnectTrekAction, t("toasts.disconnected"))}
+              onClick={() =>
+                run(disconnectTrekAction, t("toasts.disconnected", { provider: t("providers.trek.name") }))
+              }
             >
               {t("disconnect.confirm")}
             </Button>

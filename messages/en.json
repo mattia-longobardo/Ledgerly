@@ -280,7 +280,7 @@
       "toasts": {
         "connected": "Wallet connected",
         "replaced": "Token replaced",
-        "disconnected": "Wallet disconnected",
+        "disconnected": "{provider} disconnected",
         "chosen": "Accounts saved."
       },
       "errors": {
