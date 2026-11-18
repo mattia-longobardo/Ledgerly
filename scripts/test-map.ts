@@ -184,21 +184,34 @@ export const MODULES: Module[] = [
     files: ["src/modules/pockets/**", page("pockets")],
     integration: ["src/modules/pockets"],
     flows: ["pockets"],
-    usedBy: ["export", "jobs", "accounts", "e2e:accounts", "e2e:shell"],
+    // "Move to another section" counts the expenses a pocket uses (N3.3).
+    usedBy: ["export", "jobs", "accounts", "categories", "e2e:accounts", "e2e:shell", "e2e:categories"],
   },
   {
     id: "subscriptions",
     files: ["src/modules/subscriptions/**", page("subscriptions")],
     integration: ["src/modules/subscriptions"],
     flows: ["subscriptions"],
-    usedBy: ["export", "jobs", "accounts", "e2e:accounts", "e2e:shell"],
+    // "Move to another section" counts the charges of a subscription (N3.3).
+    usedBy: ["export", "jobs", "accounts", "categories", "e2e:accounts", "e2e:shell", "e2e:categories"],
   },
   {
     id: "interests",
     files: ["src/modules/interests/**", page("interests")],
     integration: ["src/modules/interests"],
     flows: ["interests"],
-    usedBy: ["pockets", "funds", "export", "jobs", "accounts", "e2e:accounts", "e2e:connections"],
+    // "Move to another section" asks whether a rule posts under the category (N3.3).
+    usedBy: [
+      "pockets",
+      "funds",
+      "export",
+      "jobs",
+      "accounts",
+      "categories",
+      "e2e:accounts",
+      "e2e:connections",
+      "e2e:categories",
+    ],
   },
   {
     id: "funds",
