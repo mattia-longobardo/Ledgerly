@@ -154,7 +154,9 @@ describe("the selection", () => {
     expect(select(["messages/en.json"]).full).toHaveLength(1);
     expect(select(["messages/en.json"], { messages: ["timeoff"] }).screens).toEqual(["timeoff"]);
     // A source's categories are on the source's page too (rewrite plan N7.2).
+    // ... and the page of the categories in Expenses calls its actions (N3.2, N3.3).
     expect(select(["messages/en.json"], { messages: ["settings.categories"] }).flows).toEqual([
+      "transactions",
       "categories",
       "connections",
     ]);

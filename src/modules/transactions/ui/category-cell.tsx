@@ -18,7 +18,15 @@ const REASONS = ["memory", "similar", "merchant_type", "brand", "salary", "fee"]
 /** What the cell of a category needs of a row. */
 type CellRow = Pick<
   RowView,
-  "id" | "categoryId" | "categoryName" | "categoryColor" | "categoryState" | "categoryReason" | "suggestion"
+  | "id"
+  | "categoryId"
+  | "categoryName"
+  | "categoryColor"
+  | "categoryState"
+  | "categoryReason"
+  | "suggestion"
+  | "macros"
+  | "paired"
 >;
 
 /**
@@ -151,7 +159,11 @@ export function CategoryCell({
   const named = row.categoryName !== null && row.categoryColor !== null;
   const picker = (
     <CategoryPicker
-      categories={categories}
+      categories={categories.filter(
+        (option) =>
+          option.type === undefined || row.macros === undefined || row.macros.some((m) => m === option.type),
+      )}
+      note={row.paired === true ? t("row.paired") : undefined}
       currentId={row.categoryId}
       open={open}
       onOpenChange={onOpenChange}

@@ -19,6 +19,7 @@ import {
   categoryUndos,
   transactions,
 } from "../schema";
+import { retypeMovements } from "../macro";
 import { chosenBy, TransactionError } from "../service";
 import {
   type MergeCategory,
@@ -219,6 +220,7 @@ export async function changeCategories(
       .insert(categoryUndos)
       .values(userScoped(ctx).stamp({ rows: before }))
       .returning({ id: categoryUndos.id });
+    await retypeMovements(tx, ctx);
     return { count: before.length, undoId: undo.id };
   });
 }
@@ -241,6 +243,7 @@ export async function undoChange(ctx: Who, undoId: string): Promise<number> {
         .set({ ...values, categoryOrigin: values.categoryOrigin as (typeof AUTOMATIC)[number] | null })
         .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
     }
+    await retypeMovements(tx, ctx);
     return undo.rows.length;
   });
 }

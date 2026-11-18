@@ -16,7 +16,8 @@ export type GroupKey = string;
 /** One of the default groups a new person starts from (decision K4; ux/n3-categories-manual.md §7.2). */
 export interface DefaultGroup {
   key: GroupKey;
-  type: "expense" | "income";
+  /** QC7 (categories-and-rules.md): two groups of Income, and two categories of Transfers. */
+  type: "expense" | "income" | "transfer";
   en: string;
   it: string;
   examples: { en: string; it: string };

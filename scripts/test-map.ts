@@ -51,7 +51,7 @@ export const FLOWS: Flow[] = [
     specs: ["expenses", "manual-movement", "manual-send", "wide"],
     screens: CROSS_CUTTING,
   },
-  { id: "categories", specs: ["categories", "review", "source-categories"], screens: ["a11y"] },
+  { id: "categories", specs: ["categories", "review", "source-categories"], screens: ["a11y", "keyboard"] },
   { id: "budgets", specs: ["budgets"], screens: ["a11y", "mobile"] },
   { id: "pockets", specs: ["pockets"], screens: ["a11y", "mobile"] },
   { id: "subscriptions", specs: ["subscriptions"], screens: ["a11y", "mobile"] },
@@ -158,8 +158,9 @@ export const MODULES: Module[] = [
     files: [page("settings/categories")],
     integration: ["src/app/(app)/settings/categories"],
     flows: ["categories"],
-    // A source's categories are drawn on the source's page (rewrite plan N7.2).
-    usedBy: ["e2e:connections"],
+    // A source's categories are drawn on the source's page (rewrite plan N7.2); the page of the
+    // categories in Expenses calls its Server Actions (N3.2, N3.3).
+    usedBy: ["e2e:connections", "e2e:transactions"],
   },
   {
     id: "budgets",
@@ -175,6 +176,7 @@ export const MODULES: Module[] = [
       "e2e:categories",
       "e2e:pockets",
       "e2e:accounts",
+      "e2e:transactions",
     ],
   },
   {
@@ -373,7 +375,11 @@ export const MODULES: Module[] = [
       "e2e:auth",
     ],
   },
-  { id: "queries", files: ["src/**/queries.ts", "src/**/*-queries.ts"], usedBy: ["perf", "e2e:connections"] },
+  {
+    id: "queries",
+    files: ["src/**/queries.ts", "src/**/*-queries.ts"],
+    usedBy: ["perf", "e2e:connections", "e2e:transactions"],
+  },
   {
     id: "shared-domain",
     files: [

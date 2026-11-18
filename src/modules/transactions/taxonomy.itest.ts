@@ -835,11 +835,11 @@ describe("the type a category's movements say it is", () => {
     for (let i = 0; i < 4; i += 1) await addTransaction(ctx, account, interest.id, 1_000n, "income");
     for (let i = 0; i < 3; i += 1) await addTransaction(ctx, account, groceries.id, -1_000n, "expense");
 
-    expect(await alignCategoryTypesToMovements(ctx)).toBe(1);
+    expect(await alignCategoryTypesToMovements(ctx, new Date(0))).toBe(1);
     expect((await getCategory(ctx, interest.id))?.type).toBe("income");
     expect((await getCategory(ctx, groceries.id))?.type).toBe("expense");
     // Nothing left to do on the second pass.
-    expect(await alignCategoryTypesToMovements(ctx)).toBe(0);
+    expect(await alignCategoryTypesToMovements(ctx, new Date(0))).toBe(0);
   });
 
   it("takes the silent children of a group with it, and never a type set by hand", async () => {
@@ -863,10 +863,20 @@ describe("the type a category's movements say it is", () => {
     });
     for (let i = 0; i < 5; i += 1) await addTransaction(ctx, account, group.id, 1_000n, "income");
 
-    await alignCategoryTypesToMovements(ctx);
+    await alignCategoryTypesToMovements(ctx, new Date(0));
     expect((await getCategory(ctx, group.id))?.type).toBe("income");
     expect((await getCategory(ctx, silent.id))?.type).toBe("income");
     expect((await getCategory(ctx, byHand.id))?.type).toBe("expense");
+  });
+
+  // CR8 (categories-and-rules.md): the macro is the person's choice; only a new category is aligned.
+  it("never moves a category created before the pass", async () => {
+    const account = await anAccount(ctx);
+    const old = await createCategory(ctx, { name: "Refunds", type: "expense" });
+    for (let i = 0; i < 4; i += 1) await addTransaction(ctx, account, old.id, 1_000n, "income");
+
+    expect(await alignCategoryTypesToMovements(ctx, new Date(Date.now() + 60_000))).toBe(0);
+    expect((await getCategory(ctx, old.id))?.type).toBe("expense");
   });
 });
 

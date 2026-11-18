@@ -4,21 +4,30 @@
     "type": "expense",
     "en": "Home",
     "it": "Casa",
-    "examples": { "en": "Rent, mortgage, bills, maintenance", "it": "Affitto, mutuo, bollette, manutenzione" }
+    "examples": {
+      "en": "Rent, mortgage, bills, maintenance",
+      "it": "Affitto, mutuo, bollette, manutenzione"
+    }
   },
   {
     "key": "groceries",
     "type": "expense",
     "en": "Groceries",
     "it": "Spesa alimentare",
-    "examples": { "en": "Supermarket, food shops", "it": "Supermercato, alimentari" }
+    "examples": {
+      "en": "Supermarket, food shops",
+      "it": "Supermercato, alimentari"
+    }
   },
   {
     "key": "restaurants",
     "type": "expense",
     "en": "Restaurants and bars",
     "it": "Ristoranti e bar",
-    "examples": { "en": "Lunches, dinners, coffee, deliveries", "it": "Pranzi, cene, caffè, consegne" }
+    "examples": {
+      "en": "Lunches, dinners, coffee, deliveries",
+      "it": "Pranzi, cene, caffè, consegne"
+    }
   },
   {
     "key": "transport",
@@ -45,48 +54,99 @@
     "type": "expense",
     "en": "Shopping",
     "it": "Shopping",
-    "examples": { "en": "Clothing, electronics, home goods", "it": "Abbigliamento, elettronica, casa" }
+    "examples": {
+      "en": "Clothing, electronics, home goods",
+      "it": "Abbigliamento, elettronica, casa"
+    }
   },
   {
     "key": "leisure",
     "type": "expense",
     "en": "Leisure",
     "it": "Tempo libero",
-    "examples": { "en": "Sport, cinema, books, hobbies", "it": "Sport, cinema, libri, hobby" }
+    "examples": {
+      "en": "Sport, cinema, books, hobbies",
+      "it": "Sport, cinema, libri, hobby"
+    }
   },
   {
     "key": "travel",
     "type": "expense",
     "en": "Travel",
     "it": "Viaggi",
-    "examples": { "en": "Flights, hotels, holidays", "it": "Voli, alberghi, vacanze" }
+    "examples": {
+      "en": "Flights, hotels, holidays",
+      "it": "Voli, alberghi, vacanze"
+    }
   },
   {
     "key": "subscriptions",
     "type": "expense",
     "en": "Subscriptions and services",
     "it": "Abbonamenti e servizi",
-    "examples": { "en": "Phone, internet, streaming", "it": "Telefono, internet, streaming" }
+    "examples": {
+      "en": "Phone, internet, streaming",
+      "it": "Telefono, internet, streaming"
+    }
   },
   {
     "key": "taxes_fees",
     "type": "expense",
     "en": "Taxes and fees",
     "it": "Tasse e commissioni",
-    "examples": { "en": "Taxes, stamp duties, bank fees", "it": "Imposte, bolli, commissioni della banca" }
+    "examples": {
+      "en": "Taxes, stamp duties, bank fees",
+      "it": "Imposte, bolli, commissioni della banca"
+    }
   },
   {
     "key": "other",
     "type": "expense",
     "en": "Other",
     "it": "Altro",
-    "examples": { "en": "Everything else", "it": "Tutto il resto" }
+    "examples": {
+      "en": "Everything else",
+      "it": "Tutto il resto"
+    }
   },
   {
     "key": "income",
     "type": "income",
-    "en": "Income",
-    "it": "Entrate",
-    "examples": { "en": "Salary, refunds, other income", "it": "Stipendio, rimborsi, altre entrate" }
+    "en": "Work",
+    "it": "Lavoro",
+    "examples": {
+      "en": "Salary, bonuses, expense refunds",
+      "it": "Stipendio, premi, rimborsi spese"
+    }
+  },
+  {
+    "key": "other_income",
+    "type": "income",
+    "en": "Other income",
+    "it": "Altre entrate",
+    "examples": {
+      "en": "Gifts, refunds, interest",
+      "it": "Regali, rimborsi, interessi"
+    }
+  },
+  {
+    "key": "savings",
+    "type": "transfer",
+    "en": "Savings",
+    "it": "Risparmio",
+    "examples": {
+      "en": "To your savings or deposit account",
+      "it": "Verso il conto deposito o di risparmio"
+    }
+  },
+  {
+    "key": "credit_card",
+    "type": "transfer",
+    "en": "Credit card",
+    "it": "Carta di credito",
+    "examples": {
+      "en": "Card repayments and top-ups",
+      "it": "Saldo e ricariche della carta"
+    }
   }
 ]

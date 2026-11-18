@@ -421,6 +421,13 @@
       "when": 1794958155852,
       "tag": "0059_source_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1795480000000,
+      "tag": "0060_macro_type",
+      "breakpoints": true
     }
   ]
 }

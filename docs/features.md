@@ -112,6 +112,12 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
   group has its page: what it spent, received or moved against the period before, the chart, its
   budget and its movements. The row's menu renames, recolours, moves a category to another group of
   the same section, merges, archives and deletes; moving, merging and archiving offer "Undo".
+- **The section decides how a movement counts** (N3.3). A movement with a category of Transfers is a
+  transfer: it leaves income, spending and budgets. Under Income, Expenses or no category the sign
+  decides; a leg of a pair stays a transfer. The category picker of a movement offers its sign's
+  section and Transfers. "Move to another section…" moves a group, or a category of Transfers, with
+  the numbers said first (subscriptions, pockets, interest and the budget that stops) and "Undo". A
+  source's category may count under Transfers; its movements keep the source's category.
 - **Labels**, the proposals to merge and the default groups are in **Settings → Categories**.
 
 ## Budgets

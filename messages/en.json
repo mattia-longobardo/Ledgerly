@@ -534,7 +534,13 @@
         "undo": "Undo",
         "toasts": {
           "linked": "{name} now matches {category}: {count, plural, one {# transaction} other {# transactions}}",
-          "added": "{name} added as a category: {count, plural, one {# transaction} other {# transactions}}"
+          "added": "{name} added as a category: {count, plural, one {# transaction} other {# transactions}}",
+          "macro": "{count, plural, one {# transaction no longer counts} other {# transactions no longer count}} as {from}.",
+          "fromWord": {
+            "income": "income",
+            "expense": "expenses",
+            "transfer": "transfers"
+          }
         },
         "failed": "Couldn't save. Try again."
       },
@@ -1513,7 +1519,8 @@
       "noCategoryMatch": "No category matches",
       "noPayee": "No payee",
       "save": "Save",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "paired": "It is a transfer between your accounts."
     },
     "badges": {
       "manual": "Manual",
@@ -1901,6 +1908,32 @@
         "openInExpenses": "Open in Expenses",
         "noMovements": "No transactions in this period",
         "archived": "Archived"
+      },
+      "macroMove": {
+        "open": "Move to another section…",
+        "title": "Move “{name}” to another section",
+        "to": "Section",
+        "group": "Group",
+        "ownGroup": "None: it becomes a group",
+        "loading": "Calculating…",
+        "effect": "{count, plural, =0 {No transaction counts differently.} one {# transaction no longer counts as {from}: {amount} since {year}.} other {# transactions no longer count as {from}: {amount} since {year}.}}",
+        "children": "{count, plural, one {Its # category goes to {macro} too.} other {Its # categories go to {macro} too.}}",
+        "linked": "{count, plural, one {# transaction is linked} other {# transactions are linked}} to {where}: it will no longer count there.",
+        "where": {
+          "subscriptions": "Subscriptions",
+          "pockets": "Pockets",
+          "interests": "Interest"
+        },
+        "budget": "The budget stops from this month: past months stay in Budgets.",
+        "sources": "The transactions of {provider} with this category move with it.",
+        "action": "Move",
+        "done": "“{name}” moved to {macro}",
+        "failed": "The move could not be calculated. Try again."
+      },
+      "fromWord": {
+        "income": "income",
+        "expense": "expenses",
+        "transfer": "transfers"
       }
     },
     "tabs": {

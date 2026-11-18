@@ -66,9 +66,10 @@ function byTotal(a: CategoryLine, b: CategoryLine): number {
 }
 
 /**
- * The three macros of a period. A movement counts in the macro of its own type (§5.3): until N3.3
- * a movement whose type is not its category's macro shows its category in the macro of the type
- * too, so the total of each macro is always the header of Expenses for the same days and accounts.
+ * The three macros of a period. A movement counts in the macro of its own type (§5.3), so the total
+ * of each macro is always the header of Expenses for the same days and accounts. From N3.3 the type
+ * follows the category's macro (`macro.ts`); a movement whose sign leaves it in another macro (a
+ * refund under a category of Expenses) shows its category in the macro of its type too.
  */
 export function macroViews(
   categories: readonly MacroCategory[],

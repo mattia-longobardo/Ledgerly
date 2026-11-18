@@ -38,6 +38,7 @@ import {
 } from "../../settings/categories/actions";
 import { ColorDot, ColorSwatchPicker } from "../../settings/categories/color-swatch";
 import { DeleteCategoryDialog } from "../../settings/categories/delete-dialog";
+import { MacroMoveDialog } from "./macro-dialog";
 
 type Macro = CategoryType;
 const MACROS: readonly Macro[] = ["income", "expense", "transfer"];
@@ -91,6 +92,7 @@ type Dialog =
   | { kind: "add"; group: BoardLine | null; macro: Macro }
   | { kind: "color"; line: BoardLine }
   | { kind: "move"; line: BoardLine }
+  | { kind: "macro"; line: BoardLine; children: number }
   | { kind: "merge"; line: BoardLine; hasChildren: boolean }
   | { kind: "archive"; line: BoardLine; children: number }
   | { kind: "delete"; line: BoardLine; children: number };
@@ -367,6 +369,13 @@ export function CategoriesBoard({
       }
       if (line.parentId !== null && line.type !== "transfer") {
         items.push({ label: t("move.group"), onSelect: () => setDialog({ kind: "move", line }) });
+      }
+      // A group, or a category of Transfers (§5.6): its movements count as the macro of arrival.
+      if (line.parentId === null || line.type === "transfer") {
+        items.push({
+          label: t("macroMove.open"),
+          onSelect: () => setDialog({ kind: "macro", line, children: childrenOf(line.id).length }),
+        });
       }
       if (line.canMerge) {
         items.push({
@@ -967,6 +976,16 @@ export function CategoriesBoard({
           </div>
         )}
       </Modal>
+
+      {dialog?.kind === "macro" && (
+        <MacroMoveDialog
+          key={dialog.line.id}
+          line={dialog.line}
+          childCount={dialog.children}
+          groupsOf={groupsOf}
+          onClose={close}
+        />
+      )}
 
       <DeleteCategoryDialog
         category={dialog?.kind === "delete" ? dialog.line : null}

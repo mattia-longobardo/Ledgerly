@@ -320,3 +320,25 @@ export async function movePocketAccount(
     .returning({ id: pockets.id });
   if (moved.length === 0) throw new PocketError("not_found");
 }
+
+/** How many of some movements are expenses linked to a pocket (categories-and-rules.md §3.5). */
+export async function expensesAmong(
+  ctx: Pick<Ctx, "userId">,
+  transactionIds: readonly string[],
+): Promise<number> {
+  let found = 0;
+  // In slices: a list of ids is one parameter each, and Postgres takes 65535 of them at most.
+  for (let start = 0; start < transactionIds.length; start += 5000) {
+    const rows = await getDb()
+      .select({ id: pocketExpenseLinks.id })
+      .from(pocketExpenseLinks)
+      .where(
+        and(
+          userScoped(ctx).owns(pocketExpenseLinks),
+          inArray(pocketExpenseLinks.transactionId, transactionIds.slice(start, start + 5000)),
+        ),
+      );
+    found += rows.length;
+  }
+  return found;
+}

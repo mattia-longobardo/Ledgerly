@@ -22,6 +22,7 @@ export type SourceCategoryResult =
       name: string;
       categoryName: string;
       choice: "added" | "matched";
+      macro?: { from: "income" | "expense" | "transfer"; to: "income" | "expense" | "transfer" } | null;
       moved: number;
       undoId: string | null;
     }

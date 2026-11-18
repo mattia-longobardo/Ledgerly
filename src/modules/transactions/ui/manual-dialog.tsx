@@ -250,7 +250,10 @@ export function ManualTransactionDialog({
   }
 
   const account = accounts?.find((one) => one.id === form.accountId) ?? null;
-  const offered = categories.filter((category) => category.type === form.kind);
+  // Its own macro or Transfers (categories-and-rules.md §3.2, QC2).
+  const offered = categories.filter(
+    (category) => category.type === form.kind || category.type === "transfer",
+  );
   const category = offered.find((one) => one.id === form.categoryId) ?? null;
   const suggested =
     category === null && !categoryChosen ? (offered.find((one) => one.id === suggestedId) ?? null) : null;

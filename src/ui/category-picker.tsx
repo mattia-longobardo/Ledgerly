@@ -13,6 +13,8 @@ export interface CategoryOption {
   depth?: 0 | 1;
   /** The title the option is listed under (the macro, categories-and-rules.md §2.4); none: no title. */
   section?: string;
+  /** The macro the option is in, for a picker that offers only some (§3.2). */
+  type?: string;
 }
 
 interface PickerItem {
@@ -89,6 +91,7 @@ export function CategoryPicker({
   triggerId,
   triggerClassName,
   disabled,
+  note,
   children,
 }: {
   categories: readonly CategoryOption[];
@@ -104,6 +107,8 @@ export function CategoryPicker({
   triggerId?: string;
   triggerClassName: string;
   disabled?: boolean;
+  /** A sentence above the list, about why it offers what it does (`text-sm text-muted`). */
+  note?: string;
   children: ReactNode;
 }) {
   const listId = useId();
@@ -185,6 +190,7 @@ export function CategoryPicker({
               onKeyDown={onKeyDown}
               className="h-7 w-full rounded-[5px] border border-border bg-card px-2 text-sm placeholder:text-faint focus:border-accent focus:outline-none"
             />
+            {note !== undefined && <p className="px-2 text-sm text-muted">{note}</p>}
             <ul
               id={listId}
               role="listbox"
