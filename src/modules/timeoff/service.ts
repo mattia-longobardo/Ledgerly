@@ -426,14 +426,18 @@ export async function closePendingDeletes(ctx: Pick<Ctx, "userId">): Promise<num
  * as it is here, never sent. The days stay days of Ledgerly, so the residual does not move.
  * Returns how many changes will not reach the source.
  */
-export async function forgetPendingDays(tx: Tx, ctx: Pick<Ctx, "userId">): Promise<number> {
+export async function forgetPendingDays(
+  tx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  now: Date = new Date(),
+): Promise<number> {
   const removed = await tx
     .delete(leaveDays)
     .where(and(userScoped(ctx).owns(leaveDays), eq(leaveDays.pending, "delete")))
     .returning({ id: leaveDays.id });
   const kept = await tx
     .update(leaveDays)
-    .set({ pending: "none", updatedAt: new Date() })
+    .set({ pending: "none", updatedAt: now })
     .where(and(userScoped(ctx).owns(leaveDays), ne(leaveDays.pending, "none")))
     .returning({ id: leaveDays.id });
   return removed.length + kept.length;

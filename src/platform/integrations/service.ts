@@ -1083,6 +1083,30 @@ export async function linksOfEntity(
 }
 
 /**
+ * How many readings of these connections are running now (a run younger than the orphan limit):
+ * "Turn off" waits for none, as a reading that goes on would write the source's rows again.
+ */
+export async function runningReadings(
+  ctx: Pick<Ctx, "userId">,
+  connectionIds: readonly string[],
+  now: Date = new Date(),
+): Promise<number> {
+  if (connectionIds.length === 0) return 0;
+  const rows = await getDb()
+    .select({ id: syncRuns.id })
+    .from(syncRuns)
+    .where(
+      and(
+        userScoped(ctx).owns(syncRuns),
+        inArray(syncRuns.connectionId, [...connectionIds]),
+        eq(syncRuns.state, "running"),
+        gte(syncRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS)),
+      ),
+    );
+  return rows.length;
+}
+
+/**
  * "Turn off" a source (plugin-settings.md §3.2), the part of this platform, inside the caller's
  * transaction: every connection of the source goes, with its sync jobs and its log (`on delete
  * cascade`), and so do the settings a "Disconnect" kept and the accounts the person left out. The

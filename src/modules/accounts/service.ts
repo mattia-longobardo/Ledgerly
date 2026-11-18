@@ -22,6 +22,7 @@ import {
   linkExternal,
   linksOf,
   linksOfEntity,
+  unlinkEntities,
   unlinkEntitiesOfEveryProvider,
 } from "@/platform/integrations/service";
 import { normalizeIban } from "@/platform/iban";
@@ -394,6 +395,15 @@ export async function releaseSourceAccounts(
   const released = rows.flatMap((row) =>
     row.providerAccountId === null ? [] : [{ id: row.id, providerAccountId: row.providerAccountId }],
   );
+  // An account holds one link of a type per provider: an older one (an id the account had before a
+  // switch) would refuse the new one and undo the whole turn-off.
+  await unlinkEntities(
+    ctx,
+    provider,
+    "account",
+    released.map((one) => one.id),
+    tx,
+  );
   for (const one of released) {
     await linkExternal(
       ctx,
@@ -433,9 +443,13 @@ export async function releaseSourceAccounts(
 export async function restoreSourceAccounts(
   ctx: Pick<Ctx, "userId">,
   provider: string,
+  /** The source's ids the new connection reads (a bank's access); every one when absent. */
+  only?: ReadonlySet<string>,
   now: Date = new Date(),
 ): Promise<number> {
-  const links = await linksOf(ctx, provider, "account");
+  const links = new Map(
+    [...(await linksOf(ctx, provider, "account"))].filter(([id]) => only === undefined || only.has(id)),
+  );
   if (links.size === 0) return 0;
   let restored = 0;
   await getDb().transaction(async (tx) => {

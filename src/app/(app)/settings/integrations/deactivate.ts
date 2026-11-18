@@ -13,7 +13,7 @@ import { forgetSourceCategories, sourceCategoryCount } from "@/modules/transacti
 import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { isKnownProvider, KINDS_OF, pluginProvider } from "@/platform/integrations/rules";
-import { forgetSource, listConnections } from "@/platform/integrations/service";
+import { forgetSource, listConnections, runningReadings } from "@/platform/integrations/service";
 import { PLUGIN_ID } from "@/platform/plugins/contract/manifest";
 import { isPluginActive } from "@/platform/plugins/queries";
 import { type Deps as PluginDeps, forgetPlugin, prepareAccessClosing } from "@/platform/plugins/service";
@@ -112,6 +112,17 @@ export async function deactivateSource(
     clearTimeout(timer);
     if (outcome === "late") throw new DeactivateError("failed");
   }
+  // A reading of the dispatcher, or one the last reading found running ("busy"), is not over:
+  // it would write the source's accounts again after the conversion. Nothing has changed yet.
+  if (
+    (await runningReadings(
+      ctx,
+      connections.map((one) => one.id),
+      now,
+    )) > 0
+  ) {
+    throw new DeactivateError("failed");
+  }
 
   const closeAccesses =
     source.pluginId === null ? async () => {} : await prepareAccessClosing(ctx, source.pluginId, deps.plugin);
@@ -122,7 +133,7 @@ export async function deactivateSource(
     await stopPublishing(tx, ctx, ids);
     await forgetSends(tx, ctx, ids);
     await forgetSourceCategories(tx, ctx, source.provider);
-    if (source.days) await forgetPendingDays(tx, ctx);
+    if (source.days) await forgetPendingDays(tx, ctx, now);
     await forgetSource(tx, ctx, source.provider);
     if (source.pluginId !== null) await forgetPlugin(tx, ctx, source.pluginId, now);
     return accounts.length;

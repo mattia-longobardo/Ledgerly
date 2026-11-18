@@ -30,6 +30,7 @@ import {
   deletedSourceAccounts,
   deleteConnection,
   listConnections,
+  recordRun,
   saveConnection,
   skippedAccounts,
 } from "@/platform/integrations/service";
@@ -286,6 +287,14 @@ describe("Turn off Wallet", () => {
     expect(await listConnections(ctx)).toHaveLength(1);
   });
 
+  it("a reading still running stops it before anything changes (it would write the accounts again)", async () => {
+    const { connection } = await walletInUse();
+    await recordRun(ctx, { connectionId: connection.id, kind: "transactions" });
+    expect(await codeOf(deactivateSource(ctx, wallet(), deps, new Date()))).toBe("failed");
+    expect(await listConnections(ctx)).toHaveLength(1);
+    expect((await deactivationCounts(ctx, wallet())).accounts).toBe(2);
+  });
+
   it("a last reading that fails does not stop it (§3.2, step 1)", async () => {
     await walletInUse();
     const failing = { finalRead: async () => Promise.reject(new Error("down")) };
@@ -505,7 +514,9 @@ describe("Turn off a bank's plugin", () => {
 
     // Turned on again: the key again, the bank again, and the same account comes back (§3.4).
     const again = await bankAccess(plugin);
-    expect(await restoreSourceAccounts(ctx, PROVIDER)).toBe(1);
+    // Only the accounts the new access exposes come back: another bank's stay kept by hand.
+    expect(await restoreSourceAccounts(ctx, PROVIDER, new Set(["another-bank"]))).toBe(0);
+    expect(await restoreSourceAccounts(ctx, PROVIDER, new Set(["hash-1"]))).toBe(1);
     expect(await tieBack(ctx, { pluginId: PLUGIN, connectionId: again }, bankSink, BANK_NOW)).toBe(true);
     await readBank(
       ctx,

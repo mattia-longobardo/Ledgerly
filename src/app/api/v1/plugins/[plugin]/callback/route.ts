@@ -75,7 +75,18 @@ export async function GET(
     if (!outcome.ok) return back(outcome);
     const target = { pluginId: plugin, connectionId: outcome.connectionId };
     // A plugin turned on again: its accounts kept by hand are tied to it again first (§3.4).
-    const tiedBack = outcome.renewed ? 0 : await restoreSourceAccounts(session.ctx, pluginProvider(plugin));
+    // Only the accounts this access exposes: another bank's stay kept by hand until it is back.
+    const tiedBack = outcome.renewed
+      ? 0
+      : await restoreSourceAccounts(
+          session.ctx,
+          pluginProvider(plugin),
+          new Set(
+            (await exposedAccounts(session.ctx, target, bankSink)).accounts.map(
+              (one) => one.providerAccountId,
+            ),
+          ),
+        );
     if (!outcome.renewed && !(await tieBack(session.ctx, target, bankSink))) return back(outcome);
     const exposed = await exposedAccounts(session.ctx, target, bankSink);
     const unasked = exposed.accounts.some(

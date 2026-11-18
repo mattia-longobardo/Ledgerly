@@ -111,6 +111,9 @@ export async function connectWalletAction(token: string): Promise<IntegrationAct
   // which is how a token in clear reaches `sync_runs.error`, `last_error` and this very card.
   // "Wallet rejected that token" is the honest sentence: it is the token that is wrong.
   if (!isUsableToken(secret)) return { ok: false, error: "rejected" };
+  // Wallet turned on again: its accounts kept by hand come back to it before the connection can
+  // be read, so no reading makes them a second time (plugin-settings.md §3.4).
+  const back = await restoreSourceAccounts(ctx, WALLET_PROVIDER);
   try {
     await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: secret } });
   } catch (error) {
@@ -119,8 +122,6 @@ export async function connectWalletAction(token: string): Promise<IntegrationAct
     if (error instanceof IntegrationError) return { ok: false, error: "failed" };
     throw error;
   }
-  // Wallet turned on again: its accounts kept by hand come back to it before the first reading.
-  const back = await restoreSourceAccounts(ctx, WALLET_PROVIDER);
   revalidate();
   return back > 0 ? { ok: true, back } : { ok: true };
 }
