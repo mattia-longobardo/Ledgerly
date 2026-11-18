@@ -135,7 +135,7 @@ A changed file of this list starts the full suite.
 |---|---|
 | `package.json`, `package-lock.json`, `Dockerfile`, `.dockerignore`, `entrypoint.sh`, `docker-compose.yml`, `next.config.ts`, `postcss.config.mjs`, `tsconfig.json`, `drizzle.config.ts`, `vitest.config.ts`, `playwright.config.ts`, `playwright.preview.config.ts`, `scripts/copy-pdfjs.mjs`, `scripts/migrate.ts`, `scripts/test-integration.sh`, `src/global.d.ts` | build, runtime and test configuration |
 | `src/proxy*`, `src/instrumentation*`, `src/platform/env*`, `src/platform/context.ts`, `src/platform/auth/**`, `src/app/api/auth/**`, `src/platform/db/client.ts` | every request passes here |
-| `src/platform/money*`, `src/platform/dates*`, `src/platform/format*`, `src/platform/ranges.ts`, `src/platform/i18n/**`, `src/platform/crypto*`, `src/platform/keyring.ts`, `src/platform/version.ts`, `src/platform/mail.ts`, `src/platform/alerts/**`, `src/platform/notifications/**` | used by almost every module |
+| `src/platform/money*`, `src/platform/dates*`, `src/platform/format*`, `src/platform/ranges.ts`, `src/platform/i18n/**`, `src/platform/crypto*`, `src/platform/keyring.ts`, `src/platform/version.ts`, `src/platform/next-version.ts`, `src/platform/mail.ts`, `src/platform/alerts/**`, `src/platform/notifications/**` | used by almost every module |
 | `tests/e2e/_shared/helpers.ts`, `tests/e2e/_shared/global-setup.ts`, `tests/e2e/_shared/global-teardown.ts`, `tests/e2e/_shared/homelab.ts`, `tests/e2e/_shared/totp.ts`, `test/*` | every test stands on it |
 
 ### Files that the selection reads from the diff

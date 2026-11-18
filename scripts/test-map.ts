@@ -588,6 +588,7 @@ export const CRITICAL: { files: string[]; why: string }[] = [
       "src/platform/crypto*",
       "src/platform/keyring.ts",
       "src/platform/version.ts",
+      "src/platform/next-version.ts",
       "src/platform/mail.ts",
       "src/platform/alerts/**",
       "src/platform/notifications/**",
