@@ -204,8 +204,10 @@ export const MODULES: Module[] = [
     files: ["src/modules/interests/**", page("interests")],
     integration: ["src/modules/interests"],
     flows: ["interests"],
-    // "Move to another section" asks whether a rule posts under the category (N3.3).
+    // "Move to another section" asks whether a rule posts under the category (N3.3). "Turn off" a
+    // source stops the rules that publish to it (N7.3).
     usedBy: [
+      "connections",
       "pockets",
       "funds",
       "export",
@@ -298,7 +300,12 @@ export const MODULES: Module[] = [
       "test/fixtures/plugins/**",
       "test/fixtures/wallet/**",
     ],
-    integration: ["src/platform/integrations", "src/platform/plugins", "src/app/(app)/banks"],
+    integration: [
+      "src/platform/integrations",
+      "src/platform/plugins",
+      "src/app/(app)/banks",
+      "src/app/(app)/settings/integrations",
+    ],
     flows: ["connections"],
     usedBy: [
       "accounts",
