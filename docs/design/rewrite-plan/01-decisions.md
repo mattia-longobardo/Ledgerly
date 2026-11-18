@@ -3,7 +3,7 @@
 Indice del piano: [`../rewrite-plan.md`](../rewrite-plan.md).
 
 Tutte le decisioni sono di Mattia: del **13/11/2026**, salvo §1.0 che è del **14/11/2026**, del **15/11/2026**
-(H31-H38), del **16/11/2026** (H39-H53) e del **17/11/2026** (H54). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
+(H31-H38), del **16/11/2026** (H39-H53), del **17/11/2026** (H54) e del **18/11/2026** (H55-H56). Dove §1.0 e una decisione più vecchia dicono cose diverse, vale §1.0. Le decisioni H12-H20 (standardizzazione) sono di Mattia; rilasci e default
 che le applicano sono una revisione **approvata da Mattia il 14/11/2026**
 ([`11-standardization.md`](11-standardization.md), decisione H21). Le
 righe di questo registro che la revisione riscrive hanno il segno «(rev.)». La colonna «Sostituisce» cita i documenti esistenti,
@@ -148,6 +148,16 @@ Modello, domande decise ed effetti sugli altri rilasci: [`13-plugins-addons.md`]
 | H50 | **Sezione Addons.** Un addon è un modulo del core che il singolo utente può disattivare: un modulo intero (Investments, Work) oppure una sotto-categoria (Payroll, Subscriptions, Budgets, Pockets, Time Off). I moduli necessari al funzionamento di base dell'applicazione non si disattivano. Dettagli: H52 | Precisa D2 «moduli attivabili» e R5a «Moduli attivabili per utente»: nome, elenco di partenza e regola dei moduli di base. D3: Settings ha in più il tab «Addons» | R5a |
 | H51 | **I plugin li gestiscono gli utenti, come nel piano prima di H48.** Ogni utente attiva e gestisce i suoi plugin; l'admin non fa niente nell'interfaccia (H25, H27). Enable Banking: ogni utente registra la sua applicazione e inserisce le sue credenziali (C1c). Motivo: l'applicazione gratuita è «Restricted»; con un'applicazione unica l'admin dovrebbe collegare a mano, nel suo pannello di Enable Banking, i conti di ogni altro utente | H48 e H49. Le domande PA2-PA8 non servono più | N1 (già in produzione), R5a, R5c: nessun cambio |
 | H52 | **Addons, con i default (PA1, PA9-PA16).** PA1: la sezione Addons entra in R5a; nessun rilascio nuovo. PA9: moduli di base, non disattivabili: Overview, Accounts, Expenses con le categorie, Settings, collegamenti e sorgenti, avvisi, esportazione. Addon: Investments (con i fondi pensione), Work (Payroll, Time Off), Budgets, Subscriptions, Pockets, Interests. PA10: un addon disattivato è spento ovunque: menu, pagine, riquadri di Overview, job, avvisi e mail, API e MCP (errore dichiarato «modulo non attivo»); i dati restano e tornano alla riattivazione. PA11: patrimonio e totali non cambiano; i conti del modulo continuano a contare, con l'ultimo valore letto. PA12: la disattivazione di un addon non spegne e non blocca un altro addon; la funzione che ne dipende resta senza la parte che manca, e Ledgerly elenca cosa si ferma prima della conferma. PA13: per gli utenti di oggi tutti gli addon sono attivi; un utente nuovo sceglie nel primo avvio. PA14: l'admin non limita gli addon. PA15: il nome nelle schermate è «Addons», in italiano e in inglese. PA16: tab proprio, Settings › Addons | Le opzioni B delle domande PA1 e PA9-PA16: rilascio nuovo N7; Interests di base; spento solo nell'interfaccia; conti fuori dai totali; blocco delle dipendenze; tutti attivi per l'utente nuovo; limiti dell'admin; nome «Moduli»; sezione nel tab «Profilo» | R5a; R1, R2, R5b, R5e per gli effetti |
+### Categorie con un modello piccolo (decisione del 18/11/2026)
+
+Domanda di Mattia del 18/11/2026: un modello piccolo addestrato per lo scopo migliorerebbe categorie e documenti?
+Risposta con l'analisi; parole di Mattia: «alla fine della riscrittura del codice, prima delle applicazioni, mettiamo
+questo step per le categorie; vorrei anche che imparasse dall'utente».
+
+| ID | Decisione | Sostituisce | Rilascio |
+|---|---|---|---|
+| H56 | **Categorie con un modello piccolo, alla fine della fase B.** 1) Un modello di embedding multilingue piccolo, locale, su CPU, entra come livello della cascata delle categorie: dopo memoria e regole della persona, prima delle tabelle. Non sostituisce il classificatore per utente. 2) Gira nel worker (R1), mai nella richiesta web. 3) **Impara dall'utente:** il classificatore per utente si riaddestra sulle conferme e sulle correzioni della persona, sopra gli embedding. 4) Condizioni: misura prima/dopo su dati veri (copertura e precisione sulle conferme della persona); il modello e il suo runtime passano dal Security Gatekeeper (H11). 5) I documenti (buste paga) restano con regole + OpenAI (D18): nessun cambio | — (rilascio nuovo). Scartati: fine-tuning del modello (servono migliaia di esempi etichettati); un LLM locale per le buste paga | R6 |
+
 ### Impostazioni dei plugin e disattivazione di una sorgente (decisione del 18/11/2026)
 
 Richiesta di Mattia del 17/11/2026; risposta «ok default» alle 6 domande della specifica

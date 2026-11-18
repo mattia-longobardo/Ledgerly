@@ -158,6 +158,7 @@ flowchart LR
 | R5e | Avvisi, blocco «Da fare», «Nascondi importi» | Avvisi solo quando serve un'azione | branch + PR | Sì, additive | Sì (#1) | M |
 | R5g | Lavoro standard: tipi di assenza come dati, profili delle buste paga, configurazione del datore | Payroll e Time Off senza codice per un altro datore o contratto | branch + PR | Sì, additive + dati | Sì (#1) | L |
 | R5f | Pulizia dello schema | Nulla | branch + PR | Sì, rimozioni | Sì (#1) | S |
+| R6 | Categorie con modello: embedding locale come livello della cascata, classificatore che impara dalla persona (H56) | Più movimenti con una categoria dal primo collegamento | branch + PR | No (solo additive, se servono) | Sì (#7) | M |
 | C0 | Prove tecniche degli involucri | Nulla | fuori da `main` | No | Gate Security Gatekeeper | S |
 | C1 | Android: involucro, login, cache cifrata | App Android installata a mano | `main` | No | No | M |
 | C2 | Android: biometria, avvisi periodici, condivisione PDF, azioni rapide | App «compagno» completa | `main` | No | No | M |

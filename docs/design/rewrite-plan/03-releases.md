@@ -498,6 +498,24 @@ Elenco delle voci: [`11-standardization.md`](11-standardization.md) §11.5.
 | Dipende da | R2 (timeoff, payroll, documents), R5c (Trek come plugin), R0 (`shared/country`) |
 | Dimensione | L |
 
+### R6 · Categorie con modello
+
+Decisione H56 di Mattia del 18/11/2026. Ultimo rilascio della fase B: dopo R5f e prima di C0.
+
+| | |
+|---|---|
+| Obiettivo | Una categoria giusta anche per un testo mai visto (cold start), e un classificatore che impara dalle scelte della persona |
+| Contenuto | Un modello di embedding multilingue piccolo, locale, su CPU, come livello nuovo della cascata delle categorie: memoria → regole della persona → **modello** → tabelle → niente. Non sostituisce il classificatore per utente: il classificatore si riaddestra sulle conferme e sulle correzioni della persona, con gli embedding come caratteristiche. Il calcolo (embedding e addestramento) gira nel worker (R1), mai nella richiesta web. Nessun cambio per i documenti: buste paga con regole + OpenAI (D18) |
+| Per l'utente | Più movimenti con una categoria già al primo collegamento; le correzioni della persona contano alla lettura successiva |
+| Git | Branch + PR · `feat(transactions)` · criterio #7 (dipendenza nuova: modello e runtime) |
+| Migrazioni | Nessuna prevista; una colonna o tabella per gli embedding, se serve, solo additiva |
+| Rollback | Immagini `pre-r6`; il livello si spegne senza togliere i dati: la cascata torna quella di oggi |
+| Test e gate | G1-G9. Misura prima/dopo su dati veri: copertura e precisione sulle conferme della persona, sullo stesso insieme. Test della cascata su soglie e non su valori esatti (il modello non è deterministico come il classificatore di oggi). Nessuna confidenza, modello o embedding verso browser, export, API o MCP (`categorize/boundaries.test.ts`) |
+| Criteri di accettazione | 1) Copertura più alta e precisione non più bassa di oggi, sulle conferme della persona. 2) Una correzione della persona cambia la risposta del classificatore alla lettura successiva. 3) Il modello e il suo runtime hanno l'OK del Security Gatekeeper (H11). 4) Fotografia dei numeri uguale al deploy |
+| OK di Mattia | Sì, sul SHA della PR, con la misura prima/dopo |
+| Dipende da | R1 (worker), R5f; dati veri della persona per la misura |
+| Dimensione | M |
+
 ---
 
 ## Fase C · app
