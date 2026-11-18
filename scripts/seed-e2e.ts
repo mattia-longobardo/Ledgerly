@@ -215,6 +215,8 @@ await seedTimeOff(USERS.timeoff.email);
 
 await seedTimeOff(USERS.timeoffPhone.email);
 
+await seedTimeOff(USERS.timeoffHolidays.email);
+
 await seedLayout();
 
 await seedConnections();
@@ -230,6 +232,9 @@ await seedReview();
 await seedReviewNew();
 
 await seedReview(USERS.reviewJourney.email);
+
+// Expenses › Categories (N3.2): the default groups and movements with their categories.
+await seedReview(USERS.categories.email);
 
 await seedReviewNew(USERS.reviewNewJourney.email);
 

@@ -11,6 +11,8 @@ export interface CategoryOption {
   color: string;
   /** 1 for a sub-category, which the pickers indent under its group. */
   depth?: 0 | 1;
+  /** The title the option is listed under (the macro, categories-and-rules.md §2.4); none: no title. */
+  section?: string;
 }
 
 interface PickerItem {
@@ -18,6 +20,7 @@ interface PickerItem {
   name: string;
   color: string | null;
   depth?: 0 | 1;
+  section?: string;
 }
 
 /** Case and accents aside: "caffe" finds "Caffè". */
@@ -49,6 +52,17 @@ export function searchCategories(items: readonly PickerItem[], query: string): P
     if (parent && matches.has(parent)) return true;
     return item.depth !== 1 && items.some((child) => parentOf.get(child) === item && matches.has(child));
   });
+}
+
+/** The rows in runs of one title each, in their order: a row with no title is a run of its own. */
+function sectionsOf(items: readonly PickerItem[]): { title?: string; items: PickerItem[] }[] {
+  const runs: { title?: string; items: PickerItem[] }[] = [];
+  for (const item of items) {
+    const last = runs.at(-1);
+    if (last && item.section !== undefined && last.title === item.section) last.items.push(item);
+    else runs.push({ title: item.section, items: [item] });
+  }
+  return runs;
 }
 
 /**
@@ -178,30 +192,47 @@ export function CategoryPicker({
               className="max-h-[300px] overflow-y-auto"
             >
               {shown.length === 0 && <li className="px-2 py-1.5 text-sm text-muted">{noMatchLabel}</li>}
-              {shown.map((item, index) => (
-                <li
-                  key={item.id ?? "none"}
-                  id={optionId(index)}
-                  role="option"
-                  aria-selected={item.id === currentId}
-                  onClick={() => pick(item)}
-                  onMouseMove={() => setActive(index)}
-                  className={cn(
-                    "flex h-7 cursor-default items-center gap-2 rounded-[5px] px-2 text-sm",
-                    index === highlighted && "bg-hover",
-                    // A sub-category sits under its group (F2.5).
-                    item.depth === 1 && "pl-6",
-                    item.id === currentId && "font-medium",
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className={cn("size-2 shrink-0 rounded-[2px]", item.color === null && "bg-faint")}
-                    style={item.color === null ? undefined : { background: item.color }}
-                  />
-                  <span className="min-w-0 truncate">{item.name}</span>
-                </li>
-              ))}
+              {sectionsOf(shown).map(({ title, items: inSection }) => {
+                const options = inSection.map((item) => {
+                  const index = shown.indexOf(item);
+                  return (
+                    <li
+                      key={item.id ?? "none"}
+                      id={optionId(index)}
+                      role="option"
+                      aria-selected={item.id === currentId}
+                      onClick={() => pick(item)}
+                      onMouseMove={() => setActive(index)}
+                      className={cn(
+                        "flex h-7 cursor-default items-center gap-2 rounded-[5px] px-2 text-sm",
+                        index === highlighted && "bg-hover",
+                        // A sub-category sits under its group (F2.5).
+                        item.depth === 1 && "pl-6",
+                        item.id === currentId && "font-medium",
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className={cn("size-2 shrink-0 rounded-[2px]", item.color === null && "bg-faint")}
+                        style={item.color === null ? undefined : { background: item.color }}
+                      />
+                      <span className="min-w-0 truncate">{item.name}</span>
+                    </li>
+                  );
+                });
+                if (title === undefined) return options;
+                return (
+                  <li key={title} role="group" aria-label={title}>
+                    <span
+                      aria-hidden
+                      className="block px-2 pt-1.5 pb-0.5 text-micro font-medium tracking-[0.04em] text-faint uppercase"
+                    >
+                      {title}
+                    </span>
+                    <ul role="none">{options}</ul>
+                  </li>
+                );
+              })}
             </ul>
           </Popover.Popup>
         </Popover.Positioner>

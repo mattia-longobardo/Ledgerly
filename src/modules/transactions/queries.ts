@@ -1153,6 +1153,54 @@ export async function categoryTotals(
     );
 }
 
+/** The money of one category in one macro (categories-and-rules.md §5.3): `null` is no category. */
+export interface CategoryMacroTotal {
+  categoryId: string | null;
+  /** The movement's own type: a movement counts in the macro of its type, as in Expenses. */
+  type: TransactionType;
+  count: number;
+  totalCents: Cents;
+  /** The positive and the negative movements apart: what Transfers shows as "In" and "Out". */
+  inCents: Cents;
+  outCents: Cents;
+}
+
+/**
+ * The totals of the page of the categories (categories-and-rules.md §5.3): one row for each
+ * category and type, over the filtered range, hidden and gone-from-provider rows left out as in
+ * every total. Summed by the movement's type, so the total of Expenses here is the header's.
+ */
+export async function categoryMacroTotals(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  filters: TransactionFilters = {},
+): Promise<CategoryMacroTotal[]> {
+  const rows = await getDb()
+    .select({
+      categoryId: transactions.categoryId,
+      type: transactions.type,
+      total: count(),
+      totalCents: sum(transactions.amountCents),
+      inCents: sum(
+        sql`case when ${transactions.amountCents} > 0 then ${transactions.amountCents} else 0 end`,
+      ),
+      outCents: sum(
+        sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`,
+      ),
+    })
+    .from(transactions)
+    .where(conditions(ctx, withoutHidden(filters)))
+    .groupBy(transactions.categoryId, transactions.type)
+    .orderBy(asc(transactions.categoryId), asc(transactions.type));
+  return rows.map((row) => ({
+    categoryId: row.categoryId,
+    type: row.type,
+    count: Number(row.total),
+    totalCents: cents(row.totalCents),
+    inCents: cents(row.inCents),
+    outCents: cents(row.outCents),
+  }));
+}
+
 /** What one group of categories spent in one day or month (F2.5): the Expenses chart's unit. */
 export interface SpendingPoint {
   /** The day, or the first of the month, in the user's own zone. */
@@ -1176,6 +1224,9 @@ export async function spendingOverTime(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters,
   grain: "day" | "month",
+  // The page of one category draws its own macro (categories-and-rules.md §5.4): what came in for
+  // Income, what went out for Transfers. Expenses keeps the spending.
+  type: TransactionType = "expense",
 ): Promise<SpendingPoint[]> {
   const parents = alias(categories, "spending_parents");
   const bucket =
@@ -1190,14 +1241,15 @@ export async function spendingOverTime(
       groupColor: sql<
         string | null
       >`case when ${categories.parentId} is null then ${categories.color} else ${parents.color} end`,
-      cents: sum(transactions.amountCents),
+      cents:
+        type === "transfer"
+          ? sum(sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`)
+          : sum(transactions.amountCents),
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
     .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
-    .where(
-      and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, "expense")),
-    )
+    .where(and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, type)))
     // By position, for the same reason as `monthlyTotals`.
     .groupBy(sql`1`, sql`2`, sql`3`, sql`4`)
     .orderBy(sql`1`, sql`2`);
@@ -1206,7 +1258,7 @@ export async function spendingOverTime(
     groupId: row.groupId,
     groupName: row.groupName,
     groupColor: row.groupColor,
-    cents: -cents(row.cents),
+    cents: type === "income" ? cents(row.cents) : -cents(row.cents),
   }));
 }
 

@@ -4,13 +4,21 @@ import { budgetsView } from "@/modules/budgets/queries";
 import { setLimit } from "@/modules/budgets/service";
 import { createManualTransaction } from "@/modules/transactions/manual";
 import { dismissMergeProposal, listMergeProposals } from "@/modules/transactions/categorize/review";
-import { listTransactions } from "@/modules/transactions/queries";
-import { createCategory, listCategories } from "@/modules/transactions/taxonomy";
+import { categoryMacroTotals, listTransactions, transactionsSummary } from "@/modules/transactions/queries";
+import {
+  archiveCategory,
+  createCategory,
+  getCategory,
+  listCategories,
+  moveCategory,
+  restoreCategories,
+} from "@/modules/transactions/taxonomy";
+import { macroViews } from "@/modules/transactions/ui/macros";
 import type { Ctx } from "@/platform/context";
 import { monthKey, today } from "@/platform/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
-import { mergeProposalsView, mergeTwoCategories } from "./merge";
+import { mergeProposalsView, mergeTwoCategories, undoMergeOfTwo } from "./merge";
 
 // The merge of two categories that look the same (rewrite plan N3; ux §6.3): movements, budgets
 // and sub-categories move together, or nothing does.
@@ -141,5 +149,113 @@ describe("mergeTwoCategories", () => {
       "Refunds",
       "Tobacco",
     ]);
+  });
+});
+
+// Expenses › Categories (categories-and-rules.md §5, N3.2): the totals are the header of Expenses,
+// and moving, merging and archiving have their "Undo".
+describe("the page of the categories", () => {
+  it("totals each macro as the header of Expenses does, for the same days and accounts", async () => {
+    const ctx = await newContext();
+    const { tobacco, account } = await twoCategories(ctx);
+    const work = await createCategory(ctx, { name: "Work", type: "income" });
+    const salary = await createCategory(ctx, { name: "Salary", parentId: work.id, type: "income" });
+    for (const [kind, categoryId, amountCents] of [
+      ["income", salary.id, 300_000n],
+      // A refund filed under an expense category: it counts as income until N3.3 (§5.3).
+      ["income", tobacco.id, 200n],
+      ["expense", null, 900n],
+    ] as const) {
+      await createManualTransaction(ctx, {
+        kind,
+        amountCents,
+        on: TODAY,
+        accountId: account.id,
+        categoryId,
+        payee: "Shop",
+        note: "",
+      });
+    }
+    const filters = { from: TODAY, to: TODAY, accountIds: [account.id] };
+    const [summary, totals, categories] = await Promise.all([
+      transactionsSummary(ctx, filters),
+      categoryMacroTotals(ctx, filters),
+      listCategories(ctx, { includeArchived: true }),
+    ]);
+    const [income, expense] = macroViews(
+      categories.map((one) => ({ ...one, archived: one.archivedAt !== null })),
+      totals,
+    );
+    expect(expense.totalCents).toBe(summary.expenseCents);
+    expect(income.totalCents).toBe(summary.incomeCents);
+    expect(expense.rest?.count).toBe(1);
+    // Nobody else's movements reach the page.
+    expect(await categoryMacroTotals(await newContext(), filters)).toEqual([]);
+  });
+
+  it("archives a group with its categories, and Undo brings every one of them back", async () => {
+    const ctx = await newContext();
+    const home = await createCategory(ctx, { name: "Home" });
+    const rent = await createCategory(ctx, { name: "Rent", parentId: home.id });
+    const bills = await createCategory(ctx, { name: "Bills", parentId: home.id });
+    await archiveCategory(ctx, bills.id);
+
+    const ids = await archiveCategory(ctx, home.id);
+    expect(ids.sort()).toEqual([home.id, rent.id].sort());
+    expect(await listCategories(ctx)).toEqual([]);
+
+    await restoreCategories(ctx, ids);
+    expect((await listCategories(ctx)).map((one) => one.name)).toEqual(["Home", "Rent"]);
+    // The one archived before stays put away, and nobody else can restore these.
+    expect((await getCategory(ctx, bills.id)).archivedAt).not.toBeNull();
+    await archiveCategory(ctx, home.id);
+    expect(await restoreCategories(await newContext(), ids)).toBe(0);
+  });
+
+  it("moves a category to a group of the same macro only, and back with Undo", async () => {
+    const ctx = await newContext();
+    const home = await createCategory(ctx, { name: "Home" });
+    const bills = await createCategory(ctx, { name: "Bills" });
+    const power = await createCategory(ctx, { name: "Power", parentId: home.id });
+    const work = await createCategory(ctx, { name: "Work", type: "income" });
+
+    const { fromId } = await moveCategory(ctx, power.id, bills.id);
+    expect(fromId).toBe(home.id);
+    expect((await getCategory(ctx, power.id)).parentId).toBe(bills.id);
+    await expect(moveCategory(ctx, power.id, work.id)).rejects.toMatchObject({ code: "invalid_parent" });
+
+    await moveCategory(ctx, power.id, fromId);
+    expect((await getCategory(ctx, power.id)).parentId).toBe(home.id);
+  });
+
+  it("undoes a merge: movements, budgets and the category come back as they were", async () => {
+    const ctx = await newContext();
+    const { tobacco, both } = await twoCategories(ctx);
+    await setLimit(ctx, { categoryId: tobacco.id, accountId: null, month: MONTH, cents: 2_000n });
+    await setLimit(ctx, { categoryId: both.id, accountId: null, month: MONTH, cents: 5_000n });
+    const before = await listTransactions(ctx);
+
+    const { undo } = await mergeTwoCategories(ctx, { keepId: both.id, dropId: tobacco.id });
+    // As the browser keeps it, and sends it back.
+    const moved = await undoMergeOfTwo(ctx, JSON.parse(JSON.stringify(undo)));
+
+    expect(moved).toBe(2);
+    const after = await listTransactions(ctx);
+    expect(after.map((row) => [row.id, row.categoryId]).sort()).toEqual(
+      before.map((row) => [row.id, row.categoryId]).sort(),
+    );
+    expect((await listCategories(ctx)).map((one) => one.name).sort()).toEqual([
+      "Alcohol, tobacco",
+      "Tobacco",
+    ]);
+    const view = await budgetsView(ctx, MONTH);
+    expect(view.rows.map((row) => [row.categoryId, row.limitCents]).sort()).toEqual(
+      [
+        [tobacco.id, 2_000n],
+        [both.id, 5_000n],
+      ].sort(),
+    );
+    // Somebody else cannot replay it.
+    await expect(undoMergeOfTwo(await newContext(), undo)).rejects.toMatchObject({ code: "not_found" });
   });
 });

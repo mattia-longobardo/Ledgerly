@@ -46,6 +46,68 @@ function Dot({ color }: { color: string | null }) {
   );
 }
 
+/** A menu's summary: "All …", the one name picked, or how many. */
+const summaryOf = (count: number, all: string, oneName: string | undefined, some: string) =>
+  count === 0 ? all : count === 1 && oneName !== undefined ? oneName : some;
+
+/**
+ * The accounts menu of the filter row, multiple choice: Expenses and the page of the categories
+ * (categories-and-rules.md §5.1) draw the same one. Links only, like the rest of the row.
+ */
+export async function AccountsMenu({
+  accounts,
+  selection,
+  path,
+  carry,
+}: {
+  accounts: readonly AccountFilterOption[];
+  selection: readonly string[];
+  path: string;
+  carry: Params;
+}) {
+  const t = await getTranslations("expenses.filters");
+  const accountHref = (id: string) => withParams(path, carry, { acc: listParam(toggle(selection, id)) });
+  return (
+    <DismissableDetails className="relative">
+      <summary className={cn(CONTROL, selection.length > 0 && "border-accent")}>
+        <Landmark aria-hidden className="size-3.5 text-muted" />
+        {summaryOf(
+          selection.length,
+          t("accounts.all"),
+          accounts.find((one) => one.id === selection[0])?.name,
+          t("accounts.some", { count: selection.length }),
+        )}
+        <ChevronDown aria-hidden className="size-3 text-muted" />
+      </summary>
+      <div className={cn(PANEL, "w-[240px]")}>
+        <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
+          {t("accounts.title")}
+          <Link
+            href={withParams(path, carry, { acc: "" })}
+            className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
+          >
+            {t("accounts.clear")}
+          </Link>
+        </div>
+        <div className="max-h-[320px] overflow-y-auto">
+          {accounts.map((one) => (
+            <Link
+              key={one.id}
+              href={accountHref(one.id)}
+              aria-current={selection.includes(one.id) ? "true" : undefined}
+              className={OPTION}
+            >
+              <Box checked={selection.includes(one.id)} />
+              <span className="min-w-0 flex-1 truncate">{one.name}</span>
+              <span className="text-micro text-muted">{one.count}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </DismissableDetails>
+  );
+}
+
 /**
  * The filter row of the design: the date range with its stepper, its four presets and its
  * two-month picker, then categories, account, type (F2.5), "Show hidden", the payee search and
@@ -82,8 +144,6 @@ export async function FilterBar({
   /** A filter changes, the period does not: the links keep the window the reader is looking at. */
   const carry: Params = query.params;
   const categoryHref = (id: string) => withParams(path, carry, { cat: listParam(toggle(selected, id)) });
-  const accountHref = (id: string) =>
-    withParams(path, carry, { acc: listParam(toggle(accountSelection, id)) });
   // In the fixed order of the types, so one selection is always one address.
   const typeHref = (type: TransactionType) => {
     const next = toggle(typeSelection, type);
@@ -91,10 +151,6 @@ export async function FilterBar({
       type: listParam(TRANSACTION_TYPES.filter((one) => next.includes(one))),
     });
   };
-  /** A menu's summary: "All …", the one name picked, or how many. */
-  const summaryOf = (count: number, all: string, oneName: string | undefined, some: string) =>
-    count === 0 ? all : count === 1 && oneName !== undefined ? oneName : some;
-
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <PeriodStepper
@@ -173,43 +229,7 @@ export async function FilterBar({
       </DismissableDetails>
 
       {/* Accounts and types are multiple choice too, like the categories. */}
-      <DismissableDetails className="relative">
-        <summary className={cn(CONTROL, accountSelection.length > 0 && "border-accent")}>
-          <Landmark aria-hidden className="size-3.5 text-muted" />
-          {summaryOf(
-            accountSelection.length,
-            t("accounts.all"),
-            accounts.find((one) => one.id === accountSelection[0])?.name,
-            t("accounts.some", { count: accountSelection.length }),
-          )}
-          <ChevronDown aria-hidden className="size-3 text-muted" />
-        </summary>
-        <div className={cn(PANEL, "w-[240px]")}>
-          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
-            {t("accounts.title")}
-            <Link
-              href={withParams(path, carry, { acc: "" })}
-              className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
-            >
-              {t("accounts.clear")}
-            </Link>
-          </div>
-          <div className="max-h-[320px] overflow-y-auto">
-            {accounts.map((one) => (
-              <Link
-                key={one.id}
-                href={accountHref(one.id)}
-                aria-current={accountSelection.includes(one.id) ? "true" : undefined}
-                className={OPTION}
-              >
-                <Box checked={accountSelection.includes(one.id)} />
-                <span className="min-w-0 flex-1 truncate">{one.name}</span>
-                <span className="text-micro text-muted">{one.count}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </DismissableDetails>
+      <AccountsMenu accounts={accounts} selection={accountSelection} path={path} carry={carry} />
 
       <DismissableDetails className="relative">
         <summary className={cn(CONTROL, typeSelection.length > 0 && "border-accent")}>

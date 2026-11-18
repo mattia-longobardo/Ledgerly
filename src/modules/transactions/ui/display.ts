@@ -272,3 +272,18 @@ export function rangeLabel(range: DateRange, locale: UiLocale): string {
   if (isSingleMonth(range)) return formatDate(range.from, "monthYear", locale);
   return `${formatDate(range.from, "long", locale)} – ${formatDate(range.to, "long", locale)}`;
 }
+
+/**
+ * The options of a category picker under the title of their macro (categories-and-rules.md §2.4,
+ * N3.2): Income, Expenses, Transfers, in this order, each in its tree order. A sub-category has its
+ * group's type, so a group never leaves its children.
+ */
+export function withMacroTitles<T extends { type: "income" | "expense" | "transfer" }>(
+  options: readonly T[],
+  titles: Record<"income" | "expense" | "transfer", string>,
+): (T & { section: string })[] {
+  const order = ["income", "expense", "transfer"] as const;
+  return order.flatMap((type) =>
+    options.filter((option) => option.type === type).map((option) => ({ ...option, section: titles[type] })),
+  );
+}

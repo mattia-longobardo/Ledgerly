@@ -106,7 +106,13 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
 - **Transfers** are paired only by the reference that Wallet gives them, never by amount and date.
 - **Recurrences.** A payee becomes a recurrence after three payments at a regular interval (weekly
   to yearly), with amounts within 10 % of the median.
-- **Categories and labels** are in **Settings → Data**. Categories are archived, never deleted.
+- **Expenses › Categories** (`/expenses/categories`) shows the three sections — Income, Expenses,
+  Transfers — with their groups and categories, closed by default, and the totals of the same period
+  and accounts as Expenses (the total of a section is the header of Expenses). Each category and
+  group has its page: what it spent, received or moved against the period before, the chart, its
+  budget and its movements. The row's menu renames, recolours, moves a category to another group of
+  the same section, merges, archives and deletes; moving, merging and archiving offer "Undo".
+- **Labels**, the proposals to merge and the default groups are in **Settings → Categories**.
 
 ## Budgets
 

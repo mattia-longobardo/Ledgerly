@@ -10,6 +10,7 @@
 // what it changes.
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
+import { hydrated } from "../_shared/helpers";
 
 // The tests of this file change the data of one user, each from what the one before left: they run
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
@@ -55,15 +56,20 @@ test("the section lists the source's categories with what each counts under", as
   await expect(section(page).getByTestId("source-category-row").locator("visible=true")).toHaveCount(1);
   await expect(rowOf(page, "Animali")).toBeVisible();
 
-  // Settings › Categories has no section of the source any more: the tree's note and one line lead
-  // to the source's page, where the match is changed.
+  // Settings › Categories has no section of the source any more: one line leads to the source's
+  // page, where the match is changed, and so does the note of the category on Expenses › Categories
+  // (where the tree went in N3.2).
   await page.goto("/settings/categories");
   await expect(section(page)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /^.+ settings$/ })).toHaveAttribute("href", SOURCE_PAGE);
+  await page.goto("/expenses/categories");
+  const expand = page.getByRole("button", { name: "Expand all" });
+  await hydrated(expand);
+  await expand.click();
   await expect(page.getByRole("link", { name: /^From .+: Alcolici e tabacchi, Tabacchi$/ })).toHaveAttribute(
     "href",
     SOURCE_PAGE,
   );
-  await expect(page.getByRole("link", { name: /^.+ settings$/ })).toHaveAttribute("href", SOURCE_PAGE);
 });
 
 test("a match counts at once in Expenses, and adding the category back puts its movements back", async ({

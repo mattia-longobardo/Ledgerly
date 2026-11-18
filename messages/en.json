@@ -537,7 +537,9 @@
           "added": "{name} added as a category: {count, plural, one {# transaction} other {# transactions}}"
         },
         "failed": "Couldn't save. Try again."
-      }
+      },
+      "movedHint": "Groups and categories are in Expenses › Categories.",
+      "movedLink": "Open Expenses › Categories"
     },
     "labels": {
       "title": "Labels",
@@ -1798,6 +1800,114 @@
       "applied": "{count, plural, one {# transaction updated} other {# transactions updated}}",
       "undo": "Undo",
       "failed": "Couldn't apply the category. The first transaction is saved. Try again."
+    },
+    "categories": {
+      "title": "Categories",
+      "macroLabel": "Section",
+      "macro": {
+        "income": "Income",
+        "expense": "Expenses",
+        "transfer": "Transfers"
+      },
+      "count": "{count, plural, one {# transaction} other {# transactions}}",
+      "transferSplit": "In {in} · Out {out}",
+      "in": "In",
+      "out": "Out",
+      "shareOf": "Share of {name}",
+      "budget": "Budget {limit}",
+      "budgetStatus": {
+        "on_track": "within limit",
+        "near": "near limit",
+        "over": "over limit"
+      },
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "showArchived": "Show archived",
+      "onlyGroup": "Only “{group}”",
+      "betweenAccounts": "Between your accounts",
+      "toCategorize": "To categorize ({count})",
+      "review": "Review",
+      "open": "Open",
+      "newGroup": "New group",
+      "addCategory": "Add a category",
+      "addTransferCategory": "Add a transfer category",
+      "addIn": "In {macro} › {group}",
+      "actions": "Actions for {name}",
+      "rename": "Rename",
+      "nameOf": "Name of {name}",
+      "renamed": "Renamed to “{name}”",
+      "color": "Colour…",
+      "colorOf": "Colour of {name}",
+      "openGroup": "Open the group",
+      "source": "From {provider}: {names}",
+      "undo": "Undo",
+      "undone": "Undone",
+      "errors": {
+        "duplicate": "“{name}” already exists in {group}."
+      },
+      "move": {
+        "group": "Move to another group…",
+        "action": "Move",
+        "pick": "Choose a group",
+        "body": "“{name}” stays in {macro}: no transaction counts differently.",
+        "done": "“{name}” moved to {group}"
+      },
+      "merge": {
+        "open": "Merge with…",
+        "action": "Merge",
+        "keep": "The category that stays",
+        "pick": "Choose a category",
+        "body": "{count, plural, =0 {“{name}” has no transactions.} one {The transaction of “{name}” moves to it.} other {The # transactions of “{name}” move to it.}} “{name}” is archived, and its budget is added to the other one.",
+        "done": "“{name}” merged into {keep} · {count, plural, =0 {no transaction moved} one {# transaction moved} other {# transactions moved}}"
+      },
+      "archive": {
+        "title": "Archive “{name}”?",
+        "body": "{count, plural, =0 {No transaction is in “{name}”.} one {The transaction stays in “{name}”.} other {The # transactions stay in “{name}”.}} The category no longer appears in pickers.",
+        "children": "{count, plural, one {Its # category is archived too.} other {Its # categories are archived too.}}",
+        "done": "“{name}” archived"
+      },
+      "empty": {
+        "title": "No categories yet",
+        "description": "Start from the default groups, or create a group of your own."
+      },
+      "chart": {
+        "income": {
+          "title": "Received over time",
+          "inRange": "received in the range",
+          "empty": "Nothing received in this range.",
+          "summary": "Received over the range, {total} in all."
+        },
+        "transfer": {
+          "title": "Moved over time",
+          "inRange": "moved out in the range",
+          "empty": "Nothing moved in this range.",
+          "summary": "Moved out over the range, {total} in all."
+        }
+      },
+      "detail": {
+        "path": "Where this category is",
+        "spent": "Spent",
+        "received": "Received",
+        "moved": "Moved",
+        "count": "Transactions",
+        "vsPrevious": "{delta} vs previous period",
+        "perMonth": "Monthly average",
+        "budget": "Budget",
+        "budgetLimit": "{limit} a month",
+        "overMonths": "{count, plural, =0 {never over the limit} one {# month over the limit} other {# months over the limit}}",
+        "openBudgets": "Open",
+        "categories": "Categories",
+        "movements": "Transactions",
+        "openInExpenses": "Open in Expenses",
+        "noMovements": "No transactions in this period",
+        "archived": "Archived"
+      }
+    },
+    "tabs": {
+      "label": "Expenses pages",
+      "movements": "Transactions",
+      "categories": "Categories",
+      "review": "To review"
     }
   },
   "overview": {

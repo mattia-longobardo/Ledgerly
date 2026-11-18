@@ -17,7 +17,7 @@ import { listTransactions } from "@/modules/transactions/queries";
 import { categorisableAccountIds } from "@/modules/transactions/service";
 import { listCategories, listLabels } from "@/modules/transactions/taxonomy";
 import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
-import { categoryColor, categoryColors } from "@/modules/transactions/ui/display";
+import { categoryColor, categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { presetRange, RANGE_PRESETS } from "@/modules/transactions/ui/filters";
 import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guide";
@@ -35,6 +35,7 @@ import { EmptyState } from "@/ui/states";
 import { StepIndicator } from "@/ui/step-indicator";
 import { withParams } from "@/ui/url";
 import { rowViewOf } from "../row-view";
+import { ExpensesTabs } from "../tabs";
 
 const HERE = "/expenses/review";
 /** The four windows of Expenses, and "All" — the default: the page empties a queue, it reads no month. */
@@ -118,12 +119,21 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
   const count = groups.reduce((sum, group) => sum + group.count, 0) + review.singles.length;
 
   const colorOf = categoryColors(categories);
-  const options = categories.map((category) => ({
-    id: category.id,
-    name: category.name,
-    color: colorOf.get(category.id) as string,
-    depth: category.depth,
-  }));
+  // Under the title of their macro, in every picker of the page (categories-and-rules.md §2.4).
+  const options = withMacroTitles(
+    categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      color: colorOf.get(category.id) as string,
+      depth: category.depth,
+      type: category.type,
+    })),
+    {
+      income: t("categories.macro.income"),
+      expense: t("categories.macro.expense"),
+      transfer: t("categories.macro.transfer"),
+    },
+  );
   const accountName = new Map(accounts.map((account) => [account.id, account.name]));
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
 
@@ -386,6 +396,18 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
       <Page title={title} parent={parent}>
         {heading}
         {indicator}
+        {!guided && (
+          <ExpensesTabs
+            current="review"
+            params={{
+              preset: params.preset,
+              from: params.from,
+              to: params.to,
+              off: params.off,
+              acc: params.acc,
+            }}
+          />
+        )}
         {guided && step === "categories" && count > 0 && (
           <Card className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 flex-1 flex-col gap-1">

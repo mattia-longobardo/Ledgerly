@@ -14,6 +14,7 @@ describe("paletteCommands", () => {
       ["settings-categories", "/settings/categories"],
       ["settings-data", "/settings/data"],
       ["to-review", "/expenses/review"],
+      ["categories", "/expenses/categories"],
       ["add-transaction", "/expenses?add=1"],
       ["timeoff-settings", "/timeoff/settings"],
       ["payroll-settings", "/payroll/settings"],

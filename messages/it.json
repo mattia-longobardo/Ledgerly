@@ -537,7 +537,9 @@
           "added": "{name} aggiunta come categoria: {count, plural, one {# movimento} other {# movimenti}}"
         },
         "failed": "Non è stato possibile salvare. Riprova."
-      }
+      },
+      "movedHint": "Gruppi e categorie sono in Spese › Categorie.",
+      "movedLink": "Apri Spese › Categorie"
     },
     "labels": {
       "title": "Etichette",
@@ -1798,6 +1800,114 @@
       "applied": "{count, plural, one {# movimento aggiornato} other {# movimenti aggiornati}}",
       "undo": "Annulla",
       "failed": "Non è stato possibile applicare la categoria. Il primo movimento è salvato. Riprova."
+    },
+    "categories": {
+      "title": "Categorie",
+      "macroLabel": "Macro",
+      "macro": {
+        "income": "Entrate",
+        "expense": "Uscite",
+        "transfer": "Trasferimenti"
+      },
+      "count": "{count, plural, one {# movimento} other {# movimenti}}",
+      "transferSplit": "Entrati {in} · Usciti {out}",
+      "in": "Entrati",
+      "out": "Usciti",
+      "shareOf": "Quota di {name}",
+      "budget": "Budget {limit}",
+      "budgetStatus": {
+        "on_track": "nel limite",
+        "near": "vicino al limite",
+        "over": "sopra il limite"
+      },
+      "expandAll": "Espandi tutto",
+      "collapseAll": "Richiudi tutto",
+      "showArchived": "Mostra archiviate",
+      "onlyGroup": "Solo «{group}»",
+      "betweenAccounts": "Tra i tuoi conti",
+      "toCategorize": "Da categorizzare ({count})",
+      "review": "Rivedi",
+      "open": "Apri",
+      "newGroup": "Nuovo gruppo",
+      "addCategory": "Aggiungi una categoria",
+      "addTransferCategory": "Aggiungi una categoria di Trasferimenti",
+      "addIn": "In {macro} › {group}",
+      "actions": "Azioni per {name}",
+      "rename": "Rinomina",
+      "nameOf": "Nome di {name}",
+      "renamed": "Rinominata in «{name}»",
+      "color": "Colore…",
+      "colorOf": "Colore di {name}",
+      "openGroup": "Apri il gruppo",
+      "source": "Da {provider}: {names}",
+      "undo": "Annulla",
+      "undone": "Annullato",
+      "errors": {
+        "duplicate": "Esiste già «{name}» in {group}."
+      },
+      "move": {
+        "group": "Sposta in un altro gruppo…",
+        "action": "Sposta",
+        "pick": "Scegli un gruppo",
+        "body": "«{name}» resta in {macro}: nessun movimento conta in modo diverso.",
+        "done": "«{name}» spostata in {group}"
+      },
+      "merge": {
+        "open": "Unisci con…",
+        "action": "Unisci",
+        "keep": "La categoria che resta",
+        "pick": "Scegli una categoria",
+        "body": "{count, plural, =0 {«{name}» non ha movimenti.} one {Il movimento di «{name}» passa a lei.} other {I # movimenti di «{name}» passano a lei.}} «{name}» viene archiviata, e il suo budget si somma all'altro.",
+        "done": "«{name}» unita a {keep} · {count, plural, =0 {nessun movimento spostato} one {# movimento spostato} other {# movimenti spostati}}"
+      },
+      "archive": {
+        "title": "Archiviare «{name}»?",
+        "body": "{count, plural, =0 {Nessun movimento è in «{name}».} one {Il movimento resta in «{name}».} other {I # movimenti restano in «{name}».}} La categoria non compare più nei selettori.",
+        "children": "{count, plural, one {Anche la sua # categoria viene archiviata.} other {Anche le sue # categorie vengono archiviate.}}",
+        "done": "«{name}» archiviata"
+      },
+      "empty": {
+        "title": "Ancora nessuna categoria",
+        "description": "Parti dai gruppi predefiniti, o crea un gruppo tuo."
+      },
+      "chart": {
+        "income": {
+          "title": "Entrate nel tempo",
+          "inRange": "ricevuti nel periodo",
+          "empty": "Nessuna entrata in questo periodo.",
+          "summary": "Ricevuti nel periodo, {total} in tutto."
+        },
+        "transfer": {
+          "title": "Spostati nel tempo",
+          "inRange": "usciti nel periodo",
+          "empty": "Niente spostato in questo periodo.",
+          "summary": "Usciti nel periodo, {total} in tutto."
+        }
+      },
+      "detail": {
+        "path": "Dove si trova questa categoria",
+        "spent": "Speso",
+        "received": "Ricevuto",
+        "moved": "Spostato",
+        "count": "Movimenti",
+        "vsPrevious": "{delta} sul periodo precedente",
+        "perMonth": "Media al mese",
+        "budget": "Budget",
+        "budgetLimit": "{limit} al mese",
+        "overMonths": "{count, plural, =0 {mai sopra il limite} one {# mese sopra il limite} other {# mesi sopra il limite}}",
+        "openBudgets": "Apri",
+        "categories": "Categorie",
+        "movements": "Movimenti",
+        "openInExpenses": "Apri in Spese",
+        "noMovements": "Nessun movimento in questo periodo",
+        "archived": "Archiviata"
+      }
+    },
+    "tabs": {
+      "label": "Pagine di Spese",
+      "movements": "Movimenti",
+      "categories": "Categorie",
+      "review": "Da rivedere"
     }
   },
   "overview": {

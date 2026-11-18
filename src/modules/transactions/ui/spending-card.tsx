@@ -32,6 +32,7 @@ export async function SpendingCard({
   path,
   params,
   numberFormat,
+  kind = "expense",
 }: {
   /** Biggest spender first. */
   bands: readonly SpendingBand[];
@@ -44,8 +45,19 @@ export async function SpendingCard({
   /** Everything the page carries, for the grain links. */
   params: Params;
   numberFormat: NumberFormat;
+  /** The macro drawn: the page of one category of Income or Transfers says what came in or moved. */
+  kind?: "income" | "expense" | "transfer";
 }) {
-  const t = await getTranslations("expenses.spending");
+  const spending = await getTranslations("expenses.spending");
+  const words = await getTranslations("expenses.categories.chart");
+  // The heading's own words for the macro; the rest of the card is the same for all three.
+  const t = (
+    key: "title" | "inRange" | "empty" | "summary" | "legend" | "grain" | "grains.month" | "grains.day",
+    values?: { total: string },
+  ) =>
+    kind !== "expense" && (key === "title" || key === "inRange" || key === "empty" || key === "summary")
+      ? words(`${kind}.${key}`, values)
+      : spending(key, values);
   const spent = totals.reduce((sum, value) => sum + value, 0n);
 
   return (

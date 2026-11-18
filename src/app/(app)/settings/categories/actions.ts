@@ -11,13 +11,15 @@ import {
   createLabel,
   deleteCategory,
   deleteLabel,
+  moveCategory,
+  restoreCategories,
   restoreCategory,
   TaxonomyError,
   updateCategory,
   updateLabel,
 } from "@/modules/transactions/taxonomy";
 import { requireSession } from "@/platform/auth/session";
-import { mergeTwoCategories } from "./merge";
+import { mergeTwoCategories, undoMergeOfTwo } from "./merge";
 import {
   deleteWalletCategories,
   type WalletDeletionOutcome,
@@ -48,7 +50,8 @@ export interface LabelFormInput {
  */
 function revalidate(): void {
   revalidatePath("/settings/categories");
-  revalidatePath("/expenses");
+  // Expenses, "To review" and the page of the categories with its details.
+  revalidatePath("/expenses", "layout");
   revalidatePath("/budgets");
   revalidatePath("/subscriptions");
 }
@@ -85,6 +88,37 @@ export async function archiveCategoryAction(id: string): Promise<TaxonomyActionR
 export async function restoreCategoryAction(id: string): Promise<TaxonomyActionResult> {
   const ctx = await requireSession();
   return run(() => restoreCategory(ctx, id));
+}
+
+/** Archive with "Undo" (categories-and-rules.md §5.6): the ids put away, the group's children too. */
+export async function archiveWithUndoAction(
+  id: string,
+): Promise<{ ok: true; ids: string[] } | { ok: false; error: string }> {
+  const ctx = await requireSession();
+  let ids: string[] = [];
+  const result = await run(async () => {
+    ids = await archiveCategory(ctx, id);
+  });
+  return result.ok ? { ok: true, ids } : result;
+}
+
+/** "Undo" of an archive: every category it put away comes back. */
+export async function restoreCategoriesAction(ids: string[]): Promise<TaxonomyActionResult> {
+  const ctx = await requireSession();
+  return run(() => restoreCategories(ctx, ids));
+}
+
+/** "Move to another group" of the same macro; `fromId` is the group it left, for "Undo". */
+export async function moveCategoryAction(
+  id: string,
+  parentId: string,
+): Promise<{ ok: true; fromId: string } | { ok: false; error: string }> {
+  const ctx = await requireSession();
+  let fromId = "";
+  const result = await run(async () => {
+    ({ fromId } = await moveCategory(ctx, id, parentId));
+  });
+  return result.ok ? { ok: true, fromId } : result;
 }
 
 export async function createLabelAction(input: LabelFormInput): Promise<TaxonomyActionResult> {
@@ -146,17 +180,41 @@ export async function deleteCategoryAction(
 export async function mergeCategoriesAction(
   keepId: string,
   dropId: string,
-): Promise<{ ok: true; moved: number } | { ok: false; error: "failed" }> {
+): Promise<{ ok: true; moved: number; undo: unknown } | { ok: false; error: "failed" }> {
   const ctx = await requireSession();
   if (!z.uuid().safeParse(keepId).success || !z.uuid().safeParse(dropId).success) {
     return { ok: false, error: "failed" };
   }
   try {
-    const { moved } = await mergeTwoCategories(ctx, { keepId, dropId });
-    revalidatePath("/settings/categories");
-    revalidatePath("/expenses");
-    revalidatePath("/budgets");
-    revalidatePath("/");
+    const { moved, undo } = await mergeTwoCategories(ctx, { keepId, dropId });
+    revalidateMerge();
+    return { ok: true, moved, undo };
+  } catch (error) {
+    if (error instanceof TransactionError || error instanceof z.ZodError)
+      return { ok: false, error: "failed" };
+    throw error;
+  }
+}
+
+function revalidateMerge(): void {
+  revalidatePath("/settings/categories");
+  revalidatePath("/expenses", "layout");
+  revalidatePath("/budgets");
+  revalidatePath("/");
+}
+
+/**
+ * "Undo" of a merge (categories-and-rules.md §5.6), with what `mergeCategoriesAction` handed back.
+ * shortcut: the state before is held by the browser, not stored; a merge of more than 100,000
+ * movements cannot be undone (`mergeUndoSchema`). Store it like `category_undos` if one ever needs to.
+ */
+export async function undoMergeAction(
+  undo: unknown,
+): Promise<{ ok: true; moved: number } | { ok: false; error: "failed" }> {
+  const ctx = await requireSession();
+  try {
+    const moved = await undoMergeOfTwo(ctx, undo);
+    revalidateMerge();
     return { ok: true, moved };
   } catch (error) {
     if (error instanceof TransactionError || error instanceof z.ZodError)

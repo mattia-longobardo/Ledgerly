@@ -44,6 +44,39 @@ const PAGES: Screen[] = [
     open: go("/expenses/review?guide=1&bank=Zeta%20Bank"),
   },
   { name: "/settings/categories (a merge proposal)", session: "review", open: go("/settings/categories") },
+
+  // Release N3.2 (categories-and-rules.md §5): the `review` user has the default groups and movements.
+  { name: "/expenses/categories", session: "review", open: go("/expenses/categories?preset=last3Months") },
+  {
+    name: "/expenses/categories (every group open)",
+    session: "review",
+    open: async (page) => {
+      await page.goto("/expenses/categories?preset=last3Months");
+      await settled(page);
+      await page.getByRole("button", { name: "Expand all" }).click();
+    },
+  },
+  { name: "/expenses/categories (Income)", session: "review", open: go("/expenses/categories?macro=income") },
+  {
+    name: "/expenses/categories (Transfers)",
+    session: "review",
+    open: go("/expenses/categories?macro=transfer"),
+  },
+  {
+    name: "/expenses/categories/[id]",
+    session: "review",
+    open: async (page) => {
+      await page.goto("/expenses/categories?preset=last3Months");
+      await settled(page);
+      await page
+        .locator("main")
+        .getByRole("button", { name: /^Actions for / })
+        .first()
+        .click();
+      await page.getByRole("menuitem", { name: "Open the group" }).click();
+      await page.waitForURL(/\/expenses\/categories\/[0-9a-f-]{36}/);
+    },
+  },
 ];
 
 const OVERLAYS: Screen[] = [
@@ -84,6 +117,33 @@ const OVERLAYS: Screen[] = [
       await page.goto("/expenses?preset=last3Months");
       await settled(page);
       await page.getByTestId("suggestion-chip").locator("visible=true").first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the new group dialog",
+    session: "review",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses/categories");
+      await settled(page);
+      await page.getByRole("button", { name: "New group" }).click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the archive dialog of a group",
+    session: "review",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses/categories");
+      await settled(page);
+      await page
+        .locator("main")
+        .getByRole("button", { name: /^Actions for / })
+        .first()
+        .click();
+      await page.getByRole("menuitem", { name: "Archive" }).click();
       await settledDialog(page);
     },
   },

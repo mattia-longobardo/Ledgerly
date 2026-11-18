@@ -15,6 +15,7 @@ import {
   groupedBreakdown,
   monthLabel,
   spendingLayers,
+  withMacroTitles,
 } from "@/modules/transactions/ui/display";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
@@ -37,6 +38,7 @@ import type {
 } from "@/modules/transactions/ui/view";
 import { requireSession } from "@/platform/auth/session";
 import { sendSourceNames } from "./manual";
+import { ExpensesTabs } from "./tabs";
 import { rowViewOf } from "./row-view";
 import { addDays, monthKey, monthsBetween, today } from "@/platform/dates";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
@@ -121,6 +123,21 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     color: colorOf.get(category.id) as string,
     depth: category.depth,
   }));
+  // The pickers list the categories under the title of their macro (categories-and-rules.md §2.4).
+  const pickerOptions = withMacroTitles(
+    view.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      color: colorOf.get(category.id) as string,
+      depth: category.depth,
+      type: category.type,
+    })),
+    {
+      income: t("categories.macro.income"),
+      expense: t("categories.macro.expense"),
+      transfer: t("categories.macro.transfer"),
+    },
+  );
   const categoryCount = new Map(
     view.facets.categories.map((facet) => [facet.categoryId ?? UNCATEGORISED, facet.count]),
   );
@@ -301,7 +318,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
 
   return (
     <ManualMovement {...manual}>
-      <CategoryActions commands={CATEGORY_COMMANDS} categories={options}>
+      <CategoryActions commands={CATEGORY_COMMANDS} categories={pickerOptions}>
         <Page title={t("title")} actions={<AddMovementButton short />}>
           {/* Income and spending leave the giroconti out: moving money between two of the person's own
           accounts is neither (spec §7.2, F2.5). The net is the cash flow, every movement summed, as
@@ -335,6 +352,17 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
               </p>
             )}
           </div>
+
+          <ExpensesTabs
+            current="movements"
+            params={{
+              preset: query.params.preset,
+              from: query.params.from,
+              to: query.params.to,
+              off: query.params.off,
+              acc: query.params.acc,
+            }}
+          />
 
           <FilterBar
             query={query}
@@ -407,7 +435,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
                 <Card padded={false} className="overflow-clip">
                   <TransactionsTable
                     groups={groups}
-                    categories={options}
+                    categories={pickerOptions}
                     labels={view.labels}
                     params={query.params}
                     sort={query.sort}

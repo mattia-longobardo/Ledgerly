@@ -484,27 +484,24 @@ export async function renameCategory(ctx: Pick<Ctx, "userId">, id: string, name:
  * away should not leave its children offered in every picker. Restoring brings the group alone
  * back, because which of its children are still wanted is not something this can know.
  */
-async function setArchived(ctx: Pick<Ctx, "userId">, id: string, archivedAt: Date | null): Promise<void> {
+async function setArchived(ctx: Pick<Ctx, "userId">, id: string, archivedAt: Date | null): Promise<string[]> {
   const categoryId = parsed(idSchema, id);
-  await getDb().transaction(async (tx) => {
+  return getDb().transaction(async (tx) => {
     const [row] = await tx
       .update(categories)
       .set({ archivedAt })
       .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)))
       .returning({ id: categories.id, parentId: categories.parentId });
     if (!row) throw new TaxonomyError("not_found");
-    if (archivedAt !== null && row.parentId === null) {
-      await tx
-        .update(categories)
-        .set({ archivedAt })
-        .where(
-          and(
-            eq(categories.parentId, row.id),
-            isNull(categories.archivedAt),
-            userScoped(ctx).owns(categories),
-          ),
-        );
-    }
+    if (archivedAt === null || row.parentId !== null) return [row.id];
+    const children = await tx
+      .update(categories)
+      .set({ archivedAt })
+      .where(
+        and(eq(categories.parentId, row.id), isNull(categories.archivedAt), userScoped(ctx).owns(categories)),
+      )
+      .returning({ id: categories.id });
+    return [row.id, ...children.map((child) => child.id)];
   });
 }
 
@@ -512,12 +509,47 @@ async function setArchived(ctx: Pick<Ctx, "userId">, id: string, archivedAt: Dat
  * A category is archived, never deleted (spec §7.2): the movements filed under it keep their
  * history, and the name stays taken so the next sync adopts this row instead of making a twin.
  */
-export async function archiveCategory(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
-  await setArchived(ctx, id, new Date());
+/** Returns the ids it archived, the group's own sub-categories with it: what "Undo" restores. */
+export async function archiveCategory(ctx: Pick<Ctx, "userId">, id: string): Promise<string[]> {
+  return setArchived(ctx, id, new Date());
 }
 
 export async function restoreCategory(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
   await setArchived(ctx, id, null);
+}
+
+/** "Undo" of an archive (categories-and-rules.md §5.6): the categories it put away, all of them. */
+export async function restoreCategories(ctx: Pick<Ctx, "userId">, ids: readonly string[]): Promise<number> {
+  const wanted = z.array(idSchema).min(1).max(500).safeParse(ids);
+  if (!wanted.success) throw new TaxonomyError("invalid");
+  const rows = await getDb()
+    .update(categories)
+    .set({ archivedAt: null })
+    .where(and(inArray(categories.id, wanted.data), userScoped(ctx).owns(categories)))
+    .returning({ id: categories.id });
+  return rows.length;
+}
+
+/**
+ * "Move to another group" (categories-and-rules.md §5.6): a category goes under another group of the
+ * same macro, so no movement counts differently. Returns the group it left, for "Undo".
+ */
+export async function moveCategory(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  parentId: string,
+): Promise<{ fromId: string }> {
+  const current = await getCategory(ctx, id);
+  if (current.parentId === null) throw new TaxonomyError("invalid_parent");
+  const target = await categoryById(ctx, parsed(idSchema, parentId));
+  if (!target || target.type !== current.type) throw new TaxonomyError("invalid_parent");
+  await updateCategory(ctx, current.id, {
+    name: current.name,
+    parentId: target.id,
+    type: current.type,
+    color: current.color,
+  });
+  return { fromId: current.parentId };
 }
 
 /** What a deletion took with it, so the screen can say it rather than guess. */

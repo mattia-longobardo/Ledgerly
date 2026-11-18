@@ -1,65 +1,153 @@
-// tests/e2e/categories/categories.spec.ts — Settings › Categories (F8.1, owner 2026-09-21): the tree, the
-// colour a group lends its sub-categories, and the deletion that says what it takes before it
-// takes it. Its own user, with no Wallet connection, so nothing here can reach an external
-// account: the dialog still says Wallet is included, which is the sentence worth checking.
-import { expect, test } from "@playwright/test";
+// tests/e2e/categories/categories.spec.ts — Expenses › Categories (categories-and-rules.md §5, N3.2):
+// the three macros with their groups and totals, the page of a category, and the structure changed
+// from the row's menu — moving, merging and archiving with "Undo", deleting with what it takes said
+// first. Its own user, with no Wallet connection, so nothing here can reach an external account.
+import { type Page, expect, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
+import { hydrated } from "../_shared/helpers";
 
 test.use({ storageState: sessionState("categories") });
 
-test("a person builds a group, hangs a sub-category on it and deletes both", async ({ page }) => {
-  const group = `E2E ${Date.now()}`;
-  // Names nothing else on the page shares: "Sub" alone also matches the Subscriptions nav item.
-  const child = `${group} sub`;
+/** A group's row: the item that holds the button named after the group. */
+const groupRow = (page: Page, name: string) =>
+  page
+    .getByRole("listitem")
+    .filter({ has: page.getByRole("button", { name, exact: true }) })
+    .first();
 
-  await test.step("a new group gets a colour without being asked for one", async () => {
-    await page.goto("/settings/categories");
-    await expect(page.getByRole("heading", { name: "Categories", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "New group" }).click();
-    const dialog = page.getByRole("dialog", { name: "New group" });
-    await dialog.getByLabel("Name").fill(group);
-    // The colour field is there and nothing has been picked: "Automatic" is the state it opens in.
-    await expect(dialog.getByRole("button", { name: "Automatic" })).toHaveAttribute("aria-pressed", "true");
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(page.locator("main").getByText(group, { exact: true })).toBeVisible();
+async function act(page: Page, name: string, item: string) {
+  await page.getByRole("button", { name: `Actions for ${name}`, exact: true }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+}
+
+async function undo(page: Page) {
+  await page.getByRole("button", { name: "Undo" }).last().click();
+  await expect(page.getByText("Undone").last()).toBeVisible();
+}
+
+test("each macro totals what the header of Expenses says, for the same period", async ({ page }) => {
+  await page.goto("/expenses?preset=last3Months");
+  const spending = await page
+    .locator("dl > div")
+    .filter({ has: page.locator("dt", { hasText: /^Spending$/ }) })
+    .locator("dd")
+    .textContent();
+  await page.goto("/expenses/categories?preset=last3Months");
+  await expect(page.getByRole("heading", { name: "Categories", level: 1 })).toBeVisible();
+  // The three macros, Expenses first.
+  for (const macro of ["Income", "Expenses", "Transfers"]) {
+    await expect(page.getByRole("button", { name: macro, exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: "Expenses", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByTestId("macro-total")).toHaveText(spending ?? "");
+  // The movements with no category have their own row, which leads to "To review".
+  await expect(page.getByRole("link", { name: "Review", exact: true })).toHaveAttribute(
+    "href",
+    /\/expenses\/review/,
+  );
+});
+
+test("a person builds groups, moves, merges and archives with Undo, opens a category and deletes", async ({
+  page,
+}) => {
+  const first = `E2E ${Date.now()}`;
+  const second = `${first} two`;
+  const a = `${first} a`;
+  const b = `${first} b`;
+
+  await test.step("two new groups, closed, each with the colour picked for it", async () => {
+    await page.goto("/expenses/categories");
+    for (const name of [first, second]) {
+      const add = page.getByRole("button", { name: "New group" });
+      await hydrated(add);
+      await add.click();
+      const dialog = page.getByRole("dialog", { name: "New group" });
+      await dialog.getByLabel("Name").fill(name);
+      await expect(dialog.getByRole("button", { name: "Automatic" })).toHaveAttribute("aria-pressed", "true");
+      await dialog.getByRole("button", { name: "Save" }).click();
+      await expect(dialog).toBeHidden();
+      await expect(page.getByRole("button", { name, exact: true })).toHaveAttribute("aria-expanded", "false");
+    }
   });
 
-  await test.step("a sub-category is added from its own group's row", async () => {
-    const section = page.getByRole("listitem").filter({ hasText: group }).first();
-    await section.getByRole("button", { name: "Add sub-category" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add sub-category" });
-    await dialog.getByLabel("Name").fill(child);
-    // A sub-category has no colour of its own: the dialog says whose it wears.
-    await expect(dialog.getByText(`It is drawn in ${group}'s colour.`)).toBeVisible();
-    await expect(dialog.getByLabel("Colour")).toHaveCount(0);
-    await dialog.getByRole("button", { name: "Save" }).click();
-    await expect(page.locator("main").getByText(child, { exact: true })).toBeVisible();
-  });
-
-  await test.step("the child is drawn in the group's colour, not one of its own", async () => {
-    const dots = page
-      .getByRole("listitem")
-      .filter({ hasText: group })
-      .first()
-      .locator("span[style*='background-color']");
-    const colours = await dots.evaluateAll((nodes) =>
-      nodes.map((node) => getComputedStyle(node).backgroundColor),
+  await test.step("a group opens, and its categories are added under it", async () => {
+    await page.getByRole("button", { name: first, exact: true }).click();
+    await expect(page.getByRole("button", { name: first, exact: true })).toHaveAttribute(
+      "aria-expanded",
+      "true",
     );
-    expect(colours.length).toBeGreaterThanOrEqual(2);
-    expect(new Set(colours).size).toBe(1);
+    for (const name of [a, b]) {
+      await groupRow(page, first).getByRole("button", { name: "Add a category" }).click();
+      const dialog = page.getByRole("dialog", { name: "Add a category" });
+      await expect(dialog).toContainText(`In Expenses › ${first}`);
+      await dialog.getByLabel("Name").fill(name);
+      await dialog.getByRole("button", { name: "Save" }).click();
+      await expect(dialog).toBeHidden();
+      await expect(groupRow(page, first).getByRole("link", { name, exact: true })).toBeVisible();
+    }
+  });
+
+  await test.step("a category moves to another group of the macro, and Undo puts it back", async () => {
+    await act(page, a, "Move to another group…");
+    const dialog = page.getByRole("dialog", { name: "Move to another group…" });
+    await dialog.getByLabel("Group").selectOption({ label: second });
+    await dialog.getByRole("button", { name: "Move", exact: true }).click();
+    await expect(page.getByText(`“${a}” moved to ${second}`)).toBeVisible();
+    await expect(groupRow(page, first).getByRole("link", { name: a, exact: true })).toHaveCount(0);
+    await undo(page);
+    await expect(groupRow(page, first).getByRole("link", { name: a, exact: true })).toBeVisible();
+  });
+
+  await test.step("two categories merge into one, and Undo brings the other back", async () => {
+    await act(page, b, "Merge with…");
+    const dialog = page.getByRole("dialog", { name: "Merge categories" });
+    await dialog.getByLabel("The category that stays").selectOption({ label: `${first} › ${a}` });
+    await dialog.getByRole("button", { name: "Merge", exact: true }).click();
+    await expect(page.getByText(new RegExp(`“${b}” merged into ${a}`))).toBeVisible();
+    await expect(page.getByRole("link", { name: b, exact: true })).toHaveCount(0);
+    await undo(page);
+    await expect(groupRow(page, first).getByRole("link", { name: b, exact: true })).toBeVisible();
+  });
+
+  await test.step("archiving a group says its categories go too, and Undo brings all of them back", async () => {
+    await act(page, first, "Archive");
+    const dialog = page.getByRole("dialog", { name: `Archive “${first}”?` });
+    await expect(dialog).toContainText("Its 2 categories are archived too.");
+    await dialog.getByRole("button", { name: "Archive", exact: true }).click();
+    await expect(page.getByText(`“${first}” archived`)).toBeVisible();
+    await expect(page.getByRole("button", { name: first, exact: true })).toHaveCount(0);
+    await undo(page);
+    await expect(groupRow(page, first).getByRole("link", { name: a, exact: true })).toBeVisible();
+    await expect(groupRow(page, first).getByRole("link", { name: b, exact: true })).toBeVisible();
+  });
+
+  await test.step("a category opens on its own page, with the period of the list", async () => {
+    await groupRow(page, first).getByRole("link", { name: a, exact: true }).click();
+    await expect(page).toHaveURL(/\/expenses\/categories\/[0-9a-f-]{36}/);
+    await expect(page.getByRole("heading", { name: a, level: 1 })).toBeVisible();
+    await expect(page.getByText("Spent", { exact: true })).toBeVisible();
+    await expect(page.getByText("No transactions in this period")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open in Expenses" })).toHaveAttribute("href", /cat=/);
+    await page
+      .getByRole("navigation", { name: "Where this category is" })
+      .getByRole("link", { name: "Expenses" })
+      .click();
+    await expect(page).toHaveURL(/\/expenses\/categories(\?|$)/);
   });
 
   await test.step("deleting says what it takes, Wallet included, and only then takes it", async () => {
-    const section = page.getByRole("listitem").filter({ hasText: group }).first();
-    // `exact`: the sub-category's own menu is named "<group> sub" and would match too.
-    await section.getByRole("button", { name: group, exact: true }).click();
-    await page.getByRole("menuitem", { name: "Delete" }).click();
-    const dialog = page.getByRole("dialog", { name: "Delete this category?" });
-    await expect(dialog).toContainText("cannot be undone");
-    await expect(dialog).toContainText("Its sub-categories are deleted with it.");
-    await expect(dialog).toContainText("It is deleted in Wallet too, if it came from there.");
-    await dialog.getByRole("button", { name: "Delete" }).click();
-    await expect(page.locator("main").getByText(group, { exact: true })).toHaveCount(0);
-    await expect(page.locator("main").getByText(child, { exact: true })).toHaveCount(0);
+    for (const name of [first, second]) {
+      await act(page, name, "Delete");
+      const dialog = page.getByRole("dialog", { name: "Delete this category?" });
+      await expect(dialog).toContainText("cannot be undone");
+      await expect(dialog).toContainText("It is deleted in Wallet too, if it came from there.");
+      if (name === first) await expect(dialog).toContainText("Its sub-categories are deleted with it.");
+      await dialog.getByRole("button", { name: "Delete" }).click();
+      await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);
+    }
+    await expect(page.locator("main").getByText(a, { exact: true })).toHaveCount(0);
   });
 });

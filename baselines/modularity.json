@@ -231,7 +231,7 @@
     "app/(app)/payroll/settings/page.tsx: reply",
     "app/(app)/payroll/settings/page.tsx: teamsystem",
     "app/(app)/settings/categories/actions.ts: wallet",
-    "app/(app)/settings/categories/category-tree.tsx: wallet",
+    "app/(app)/settings/categories/delete-dialog.tsx: wallet",
     "app/(app)/settings/integrations/actions.ts: trek",
     "app/(app)/settings/integrations/actions.ts: wallet",
     "app/(app)/settings/integrations/page.tsx: trek",

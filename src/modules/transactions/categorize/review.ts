@@ -391,11 +391,31 @@ export async function restoreMergeProposal(ctx: Who, a: string, b: string): Prom
  * move under it, and it is archived. Refused for a category a source gives, for two kinds, and
  * where the sub-categories would end on a third level.
  */
+/** What a merge changed, for its "Undo" (categories-and-rules.md §5.6): ids only, no amount. */
+export interface MergeUndo {
+  keepId: string;
+  dropId: string;
+  movedIds: string[];
+  suggestedIds: string[];
+  childIds: string[];
+  /** The default group the one put away stood for (`category_group_marks`), if any. */
+  groupKey: string | null;
+}
+
+export const mergeUndoSchema = z.object({
+  keepId: z.uuid(),
+  dropId: z.uuid(),
+  movedIds: z.array(z.uuid()).max(100_000),
+  suggestedIds: z.array(z.uuid()).max(100_000),
+  childIds: z.array(z.uuid()).max(500),
+  groupKey: z.string().max(60).nullable(),
+});
+
 export async function mergeCategories(
   ctx: Who,
   input: { keepId: string; dropId: string },
   tx: Tx,
-): Promise<{ moved: number }> {
+): Promise<{ moved: number; undo: MergeUndo }> {
   const { keepId, dropId } = z.object({ keepId: z.uuid(), dropId: z.uuid() }).parse(input);
   if (keepId === dropId) throw new TransactionError("invalid");
   const rows = await tx
@@ -426,15 +446,19 @@ export async function mergeCategories(
     .set({ categoryId: keepId })
     .where(and(userScoped(ctx).owns(transactions), eq(transactions.categoryId, dropId)))
     .returning({ id: transactions.id });
-  await tx
+  const suggested = await tx
     .update(transactions)
     .set({ suggestedCategoryId: keepId })
-    .where(and(userScoped(ctx).owns(transactions), eq(transactions.suggestedCategoryId, dropId)));
+    .where(and(userScoped(ctx).owns(transactions), eq(transactions.suggestedCategoryId, dropId)))
+    .returning({ id: transactions.id });
   // The memory is rewritten at the next training; until then what it knew of the one is the other's.
   await tx
     .delete(categoryMemory)
     .where(and(eq(categoryMemory.userId, ctx.userId), eq(categoryMemory.categoryId, dropId)));
-  await tx.delete(categoryGroupMarks).where(eq(categoryGroupMarks.categoryId, dropId));
+  const [mark] = await tx
+    .delete(categoryGroupMarks)
+    .where(eq(categoryGroupMarks.categoryId, dropId))
+    .returning({ groupKey: categoryGroupMarks.groupKey });
   if (children.length > 0) {
     await tx
       .update(categories)
@@ -445,7 +469,72 @@ export async function mergeCategories(
     .update(categories)
     .set({ archivedAt: new Date() })
     .where(and(eq(categories.id, dropId), userScoped(ctx).owns(categories)));
-  return { moved: moved.length };
+  return {
+    moved: moved.length,
+    undo: {
+      keepId,
+      dropId,
+      movedIds: moved.map((row) => row.id),
+      suggestedIds: suggested.map((row) => row.id),
+      childIds: children.map((row) => row.id),
+      groupKey: mark?.groupKey ?? null,
+    },
+  };
+}
+
+/**
+ * "Undo" of a merge, inside the caller's transaction: the one put away comes back with its
+ * movements, suggestions and sub-categories — only those still in the one that stayed. The memory
+ * of the classifier is rewritten at the next training, as after the merge. Returns the movements
+ * moved back.
+ */
+export async function unmergeCategories(ctx: Who, input: unknown, tx: Tx): Promise<number> {
+  const undo = mergeUndoSchema.parse(input);
+  const [drop] = await tx
+    .update(categories)
+    .set({ archivedAt: null })
+    .where(and(eq(categories.id, undo.dropId), userScoped(ctx).owns(categories)))
+    .returning({ id: categories.id });
+  if (!drop) throw new TransactionError("not_found");
+  const back = (column: typeof transactions.categoryId | typeof transactions.suggestedCategoryId) =>
+    and(userScoped(ctx).owns(transactions), eq(column, undo.keepId));
+  let moved = 0;
+  // In slices: a list of ids is one parameter each, and Postgres takes 65535 of them at most.
+  for (let start = 0; start < undo.movedIds.length; start += 5000) {
+    const ids = undo.movedIds.slice(start, start + 5000);
+    const rows = await tx
+      .update(transactions)
+      .set({ categoryId: undo.dropId })
+      .where(and(back(transactions.categoryId), inArray(transactions.id, ids)))
+      .returning({ id: transactions.id });
+    moved += rows.length;
+  }
+  for (let start = 0; start < undo.suggestedIds.length; start += 5000) {
+    const ids = undo.suggestedIds.slice(start, start + 5000);
+    await tx
+      .update(transactions)
+      .set({ suggestedCategoryId: undo.dropId })
+      .where(and(back(transactions.suggestedCategoryId), inArray(transactions.id, ids)));
+  }
+  if (undo.childIds.length > 0) {
+    await tx
+      .update(categories)
+      .set({ parentId: undo.dropId })
+      .where(
+        and(
+          userScoped(ctx).owns(categories),
+          eq(categories.parentId, undo.keepId),
+          inArray(categories.id, undo.childIds),
+        ),
+      );
+  }
+  if (undo.groupKey !== null) {
+    await tx
+      .insert(categoryGroupMarks)
+      .values(userScoped(ctx).stamp({ categoryId: undo.dropId, groupKey: undo.groupKey }))
+      .onConflictDoNothing();
+  }
+  return moved;
 }
 
 /* Default groups */

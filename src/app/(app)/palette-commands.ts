@@ -31,6 +31,13 @@ export function paletteCommands(role: Role, t: Translator): NavLink[] {
     ...(role === "admin" ? (["users", "server"] as const).map(settings) : []),
     // "To review", which has no place in the menu until the menu changes (R5a).
     command("to-review", "/expenses/review", t("expenses.review.palette"), "expenses"),
+    // Expenses › Categories (categories-and-rules.md §5.1), the same until the menu changes.
+    command(
+      "categories",
+      "/expenses/categories",
+      `${t("expenses.title")} › ${t("expenses.categories.title")}`,
+      "expenses",
+    ),
     // The manual movement, as a command: the Expenses page opens its dialog (N3).
     command("add-transaction", "/expenses?add=1", t("expenses.manual.palette"), "expenses"),
     command("timeoff-settings", "/timeoff/settings", `${t("timeoff.title")} › ${t("timeoff.tabs.settings")}`),
