@@ -33,7 +33,9 @@ export async function enqueue(task: Task): Promise<boolean> {
 }
 
 /**
- * The oldest waiting task whose key nothing is running, marked as `workerId`'s. `SKIP LOCKED`
+ * The oldest waiting task whose key nothing is running, marked as `workerId`'s. A task is due by the
+ * app's clock or by the database's, which stamped its `run_after`: a few milliseconds between the
+ * two must not hide a task just queued. `SKIP LOCKED`
  * passes over a row another claim holds; the one worker claims one task at a time, so the check on
  * the running rows reads committed rows only.
  */
@@ -49,7 +51,8 @@ export async function claimNext(workerId: string, now: Date = new Date()): Promi
       attempts = attempts + 1
     where id = (
       select q.id from job_queue q
-      where q.status = 'queued' and q.run_after <= ${now.toISOString()}::timestamptz
+      where q.status = 'queued'
+        and q.run_after <= greatest(${now.toISOString()}::timestamptz, now())
         and not exists (select 1 from job_queue r where r.key = q.key and r.status = 'running')
       order by q.run_after, q.id
       for update skip locked
