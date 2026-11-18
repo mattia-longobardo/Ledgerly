@@ -44,3 +44,5 @@ export {
   setPersonRole,
 } from "./people";
 export type { AdminErrorCode, InviteOutcome, PersonStatus, ResetOutcome, SignInMethod } from "./people";
+export { ApiClientError, deleteApiClient, listApiClients } from "./client-registry";
+export { endOwnSession } from "./own-sessions";

@@ -5,11 +5,17 @@
 import "server-only";
 import { apiRoutes, readTools } from "@ledgerly/api";
 import { connectionCases } from "@/app/(app)/settings/integrations/api-cases";
+import { serverCases } from "@/app/(app)/settings/server/api-cases";
 import { api } from "@/platform/api/app";
 import { withToken } from "@/platform/api/auth";
 import { sourceNameOf } from "@/platform/integrations/registry";
 
-const adapters = { guard: withToken, sourceName: sourceNameOf, connections: connectionCases };
+export const adapters = {
+  guard: withToken,
+  sourceName: sourceNameOf,
+  connections: connectionCases,
+  server: serverCases,
+};
 
 api.route("/", apiRoutes(adapters));
 

@@ -1,14 +1,10 @@
 import "server-only";
-import { and, arrayContains, desc, eq } from "drizzle-orm";
+import { ApiClientError } from "@ledgerly/domain/platform/auth";
 import { headers } from "next/headers";
 import { z } from "zod";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import { getDb } from "@ledgerly/domain/platform/db";
-import { userScoped } from "@ledgerly/domain/platform/db";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { type Auth, getAuth } from "@ledgerly/domain/platform/auth";
-import { type ApiScope, issuerFor, resourceFor } from "@ledgerly/domain/platform/auth";
-import { oauthClients } from "@ledgerly/domain/platform/auth";
+import { issuerFor, resourceFor } from "@ledgerly/domain/platform/auth";
 import { API_SCOPES, MAX_CLIENT_NAME, parseScopes } from "@ledgerly/domain/platform/auth";
 
 /**
@@ -17,45 +13,6 @@ import { API_SCOPES, MAX_CLIENT_NAME, parseScopes } from "@ledgerly/domain/platf
  * as that person, exactly as a PAT did, and only on `/api/v1`. The secret is shown once and stored
  * hashed by the plugin, like a PAT's.
  */
-
-export class ApiClientError extends Error {
-  constructor(readonly code: "invalid" | "not_found") {
-    super(code);
-    this.name = "ApiClientError";
-  }
-}
-
-export interface ApiClientView {
-  clientId: string;
-  name: string;
-  scopes: ApiScope[];
-  createdAt: Date;
-  disabled: boolean;
-}
-
-/** The person's own Client API rows: confidential `client_credentials` clients they own. */
-export async function listApiClients(ctx: Pick<Ctx, "userId">): Promise<ApiClientView[]> {
-  const rows = await getDb()
-    .select({
-      clientId: oauthClients.clientId,
-      name: oauthClients.name,
-      scopes: oauthClients.clientCredentialsScopes,
-      createdAt: oauthClients.createdAt,
-      disabled: oauthClients.disabled,
-    })
-    .from(oauthClients)
-    .where(
-      and(userScoped(ctx).owns(oauthClients), arrayContains(oauthClients.grantTypes, ["client_credentials"])),
-    )
-    .orderBy(desc(oauthClients.createdAt), desc(oauthClients.id));
-  return rows.map((row) => ({
-    clientId: row.clientId,
-    name: row.name ?? row.clientId,
-    scopes: API_SCOPES.filter((scope) => row.scopes?.includes(scope)),
-    createdAt: row.createdAt,
-    disabled: row.disabled === true,
-  }));
-}
 
 const createInput = z.object({
   name: z.string().trim().min(1).max(MAX_CLIENT_NAME),
@@ -122,12 +79,6 @@ export async function createApiClientWith(
  * Deletes one of the person's own clients. Its tokens stop at once: the resource server reads the
  * client on every call (`access-token.ts`), and the tokens' rows go with it by cascade.
  */
-export async function deleteApiClient(ctx: Pick<Ctx, "userId">, clientId: string): Promise<void> {
-  const parsed = z.string().min(1).max(200).safeParse(clientId);
-  if (!parsed.success) throw new ApiClientError("invalid");
-  const deleted = await getDb()
-    .delete(oauthClients)
-    .where(and(eq(oauthClients.clientId, parsed.data), userScoped(ctx).owns(oauthClients)))
-    .returning({ id: oauthClients.id });
-  if (deleted.length === 0) throw new ApiClientError("not_found");
-}
+
+// Read and deleted in the domain, with `/api/v1/api-clients`.
+export { ApiClientError, deleteApiClient, listApiClients } from "@ledgerly/domain/platform/auth";

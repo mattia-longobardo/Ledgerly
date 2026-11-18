@@ -433,14 +433,14 @@ export const MODULES: Module[] = [
       "apps/web/src/platform/reports",
     ],
     flows: ["admin"],
-    usedBy: ["payroll", "jobs", "api", "export", "accounts", "users", "e2e:payroll", "e2e:auth"],
+    usedBy: ["payroll", "jobs", "api", "export", "accounts", "users", "e2e:payroll", "e2e:auth", "e2e:api"],
   },
   {
     id: "export",
     files: ["apps/web/src/platform/export/**", page("settings/data")],
     integration: ["apps/web/src/platform/export"],
     flows: ["api"],
-    usedBy: ["subscriptions", "jobs", "e2e:admin", "e2e:subscriptions"],
+    usedBy: ["subscriptions", "jobs", "admin", "e2e:admin", "e2e:subscriptions"],
   },
   {
     id: "storage",

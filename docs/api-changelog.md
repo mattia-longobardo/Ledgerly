@@ -33,6 +33,15 @@ written before it keeps working.
   test, history, its accounts, disconnect) until it is a plugin; `capabilities` says what a
   connection offers through the API. `POST /connections` refuses every provider for now. The start
   and the renewal of a bank's access are not served yet.
+- Security, people and server: `GET /sessions`, `DELETE /sessions/{id}`, `GET /api-clients`,
+  `DELETE /api-clients/{clientId}`, `GET /connected-apps`, `DELETE /connected-apps/{clientId}`
+  (scope `security`); `GET /people`, `POST /people/invitations`, `DELETE /people/invitations/{id}`,
+  `PATCH`/`DELETE /people/{id}`, `POST /people/{id}/password-reset`, `DELETE /people/{id}/two-factor`,
+  `GET /server/settings`, `PUT`/`DELETE /server/llm`, `/server/oidc`, `/server/smtp`, their
+  `POST …/test`, `POST /server/backups`, `GET /server/jobs`, `POST /server/jobs/{name}/run` (scope
+  `admin`, and the admin role at every call). No token is granted these scopes yet: until the
+  first-party clients exist, each of these routes answers `403`. `oidc.displayName` and
+  `llm.provider` (only `openai`) are settings (E8).
 - New MCP tools (scope `read`), from the same descriptors and handlers as their routes, answering
   what the route answers: `get_preferences`, `get_profile`, `list_categories` (argument `archived`),
   `list_labels`, `list_connections`.

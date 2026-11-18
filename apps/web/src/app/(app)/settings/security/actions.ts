@@ -1,5 +1,6 @@
 // src/app/(app)/settings/security/actions.ts — the Client API (docs/auth-design.md D3) and the
-// connected apps. Both are managed only with a session: nothing under /api/v1 can mint or revoke one.
+// connected apps. Under /api/v1 they are managed only with the scope `security`, which only the
+// first-party clients can be granted — never a Client API, never a self-registered client.
 "use server";
 
 import { revalidatePath } from "next/cache";

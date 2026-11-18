@@ -45,7 +45,9 @@ test("a Client API is shown once, gets a token, works on /api/v1 and stops the m
   expect(summary.status()).toBe(200);
   expect(await summary.json()).toMatchObject({ month: expect.any(String) });
 
-  // No administrative surface exists under /api/v1, whoever the token belongs to.
+  // The administrative surface of /api/v1 (/people, /server/*) answers only a token with the scope
+  // `admin` of an admin, and only the first-party clients can be granted it: a Client API never is.
+  // `/users` is not one of its routes.
   expect((await script.get("/api/v1/users", { headers })).status()).toBe(404);
   // The scope is the second gate: a read-only client cannot upload.
   const upload = await script.post("/api/v1/imports", { headers, multipart: { kind: "payslip" } });

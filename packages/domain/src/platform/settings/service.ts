@@ -35,7 +35,11 @@ export class SettingsError extends Error {
 }
 
 /** What Admin › Server shows of the fallback: never the key, only its last four characters. */
+/** The AI services a document can be read with when its reader cannot (spec D18: one, E8: a setting). */
+const AI_PROVIDERS = ["openai"] as const;
+
 interface LlmFallbackView {
+  provider: (typeof AI_PROVIDERS)[number];
   model: string;
   keyHint: string;
   updatedAt: Date;
@@ -58,6 +62,7 @@ export async function llmFallbackView(ctx: Pick<Ctx, "role">): Promise<LlmFallba
   const [row] = await getDb().select().from(appSettings).where(eq(appSettings.key, LLM_FALLBACK));
   if (!row?.value) return null;
   return {
+    provider: "openai",
     model: String(row.value.model ?? ""),
     keyHint: String(row.value.keyHint ?? ""),
     updatedAt: row.updatedAt,
@@ -70,11 +75,13 @@ export async function llmFallbackView(ctx: Pick<Ctx, "role">): Promise<LlmFallba
  */
 export async function saveLlmFallback(
   ctx: Pick<Ctx, "role" | "userId">,
-  input: { model: string; apiKey: string },
+  input: { provider?: string; model: string; apiKey: string },
 ): Promise<void> {
   requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const model = MODEL.safeParse(input.model);
   if (!model.success) throw new SettingsError("invalid");
+  const provider = input.provider ?? "openai";
+  if (!AI_PROVIDERS.some((one) => one === provider)) throw new SettingsError("invalid");
   const typed = input.apiKey.trim();
   const [current] = await getDb().select().from(appSettings).where(eq(appSettings.key, LLM_FALLBACK));
   if (typed === "" && !current?.sealed) throw new SettingsError("invalid");
@@ -82,7 +89,7 @@ export async function saveLlmFallback(
   if (key && !key.success) throw new SettingsError("invalid");
   const sealed = key?.success ? sealJson(keyRing(), { apiKey: key.data }) : current!.sealed!;
   const keyHint = key?.success ? key.data.slice(-4) : String(current?.value?.keyHint ?? "");
-  const value = { model: model.data, keyHint };
+  const value = { provider, model: model.data, keyHint };
   await getDb()
     .insert(appSettings)
     .values({ key: LLM_FALLBACK, value, sealed, updatedBy: ctx.userId })
@@ -134,6 +141,8 @@ export async function llmFallbackAvailable(): Promise<boolean> {
 
 /** What the card shows: every field except the secret, which is only ever four characters of hint. */
 interface OidcView {
+  /** E8: what the sign-in calls the provider; null keeps the text of today. */
+  displayName: string | null;
   issuer: string;
   clientId: string;
   adminGroup: string;
@@ -154,8 +163,13 @@ async function lastOidcCheck(): Promise<OidcProbeResult | null> {
 
 export async function oidcView(ctx: Pick<Ctx, "role">): Promise<OidcView> {
   requireAdminCtx(ctx, () => new SettingsError("forbidden"));
-  const [config, lastCheck] = await Promise.all([oidcConfig(), lastOidcCheck()]);
+  const [config, lastCheck, saved] = await Promise.all([
+    oidcConfig(),
+    lastOidcCheck(),
+    readSetting(OIDC_PROVIDER),
+  ]);
   return {
+    displayName: typeof saved?.value?.displayName === "string" ? saved.value.displayName : null,
     issuer: config.issuer,
     clientId: config.clientId,
     adminGroup: config.adminGroup,
@@ -191,11 +205,13 @@ export async function saveOidc(
   if (typed === "" && !current?.sealed) throw new SettingsError("invalid");
   const sealed = typed === "" ? current!.sealed! : sealJson(keyRing(), { clientSecret: typed });
   const secretHint = typed === "" ? String(current?.value?.secretHint ?? "") : typed.slice(-4);
+  const savedName = typeof current?.value?.displayName === "string" ? current.value.displayName : null;
   const value = {
     issuer: parsed.data.issuer.trim(),
     clientId: parsed.data.clientId,
     adminGroup: parsed.data.adminGroup,
     secretHint,
+    displayName: parsed.data.displayName === undefined ? savedName : parsed.data.displayName,
   };
   const before = typeof current?.value?.issuer === "string" ? String(current.value.issuer) : null;
   const signedEveryoneOut = issuerChanged(before, value.issuer);
