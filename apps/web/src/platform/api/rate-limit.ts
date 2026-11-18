@@ -20,5 +20,5 @@ export function takeSlot(key: string, now: Date = new Date()): Promise<RateVerdi
 
 /** For the tests: every window goes, so a test does not inherit another's. */
 export async function resetRateLimits(): Promise<void> {
-  await deleteExpiredLimits(new Date(8.64e15));
+  await deleteExpiredLimits(new Date("9999-12-31T00:00:00Z"));
 }
