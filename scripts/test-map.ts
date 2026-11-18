@@ -450,7 +450,12 @@ export const MODULES: Module[] = [
   // ——— Cross-cutting rows: a file here is also in the row of its module ———
   {
     id: "data",
-    files: ["drizzle/**", "packages/domain/src/**/schema.ts", "packages/domain/src/platform/db/**"],
+    files: [
+      "drizzle/**",
+      "packages/domain/src/**/schema.ts",
+      "packages/domain/src/**/schema/*.ts",
+      "packages/domain/src/platform/db/**",
+    ],
     integration: ["packages/domain/src/platform/db"],
     usedBy: ["integration:*", "perf"],
   },
@@ -480,13 +485,13 @@ export const MODULES: Module[] = [
   {
     id: "shared-domain",
     files: [
-      "packages/domain/src/modules/accounts/service.ts",
+      "packages/domain/src/modules/accounts/service/**",
       "packages/domain/src/modules/accounts/queries.ts",
       "packages/domain/src/modules/accounts/rules.ts",
-      "packages/domain/src/modules/transactions/service.ts",
-      "packages/domain/src/modules/transactions/queries.ts",
-      "packages/domain/src/modules/transactions/rules.ts",
-      "packages/domain/src/platform/integrations/service.ts",
+      "packages/domain/src/modules/transactions/service/**",
+      "packages/domain/src/modules/transactions/queries/**",
+      "packages/domain/src/modules/transactions/rules/**",
+      "packages/domain/src/platform/integrations/service/**",
       "packages/domain/src/platform/integrations/rules.ts",
     ],
     usedBy: [
@@ -584,6 +589,11 @@ export const MODULES: Module[] = [
       "scripts/assertions-diff.ts",
       "scripts/source-graph.ts",
       "scripts/unused-exports.ts",
+      "scripts/cleanliness.ts",
+      "scripts/packages.ts",
+      "baselines/exports.json",
+      "scripts/cleanliness-rules.json",
+      "baselines/cleanliness.json",
       "scripts/test-map.ts",
       "scripts/test-select.ts",
       "tools/architecture.test.ts",

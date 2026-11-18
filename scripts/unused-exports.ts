@@ -6,6 +6,7 @@
 //
 // No package of its own (decision H11): the compiler of `typescript`, which the project already has,
 // resolves every import the way `tsc` does.
+import { readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
 
@@ -46,6 +47,25 @@ const isProduct = (rel: string) =>
   !/\.(test|itest)\.tsx?$/.test(rel) &&
   !rel.endsWith(".d.ts");
 
+/** The entries of the packages: the files their `package.json` exports, as repository paths. */
+function packageEntries(repo: string): Set<string> {
+  const entries = new Set<string>();
+  for (const group of ["apps", "packages", "plugins"]) {
+    for (const name of readdirSync(join(repo, group))) {
+      const folder = `${group}/${name}`;
+      let manifest: { exports?: Record<string, string> };
+      try {
+        manifest = JSON.parse(readFileSync(join(repo, folder, "package.json"), "utf8"));
+      } catch {
+        continue;
+      }
+      for (const path of Object.values(manifest.exports ?? {}))
+        entries.add(`${folder}/${path.replace(/^\.\//, "")}`);
+    }
+  }
+  return entries;
+}
+
 /** `<file>: <name>` for every exported name of a product file that nothing uses, sorted. */
 export function unusedExports(repo: string): string[] {
   const parsed = ts.getParsedCommandLineOfConfigFile(
@@ -67,6 +87,15 @@ export function unusedExports(repo: string): string[] {
   const used = new Set<ts.Symbol>();
   /** `<file>#<name>` of the entries (`index.ts`, `client.ts`) another file imports a name from. */
   const entryNames = new Set<string>();
+  /** Every name of a module a file takes whole (`import * as`, `import()`): each one is used. */
+  const markWhole = (module: ts.Symbol) => {
+    const declaration = module.declarations?.[0];
+    const file = declaration ? relOf(declaration.getSourceFile().fileName) : "";
+    for (const each of checker.getExportsOfModule(module)) {
+      used.add(target(each));
+      entryNames.add(`${file}#${each.name}`);
+    }
+  };
   const markEntry = (symbol: ts.Symbol) => {
     const immediate = checker.getImmediateAliasedSymbol(symbol);
     const declaration = immediate?.declarations?.[0];
@@ -94,10 +123,17 @@ export function unusedExports(repo: string): string[] {
         }
         if (namedBindings && ts.isNamespaceImport(namedBindings)) {
           const resolved = checker.getSymbolAtLocation(node.moduleSpecifier);
-          if (resolved) for (const each of checker.getExportsOfModule(resolved)) used.add(target(each));
+          if (resolved) markWhole(resolved);
         }
-      } else if (ts.isExportDeclaration(node) && node.moduleSpecifier && !node.exportClause) {
-        // `export * from` marks nothing by itself: what the names of the entry are used for does.
+      } else if (ts.isExportDeclaration(node) && node.moduleSpecifier && node.exportClause) {
+        // An entry that re-exports another entry's name (a module's `index.ts` from the folder of a
+        // file split in parts) uses it; the outer name is checked on its own.
+        if (ts.isNamedExports(node.exportClause)) {
+          for (const element of node.exportClause.elements) {
+            const symbol = checker.getSymbolAtLocation(element.name);
+            if (symbol) markEntry(symbol);
+          }
+        }
       } else if (
         ts.isCallExpression(node) &&
         node.expression.kind === ts.SyntaxKind.ImportKeyword &&
@@ -105,7 +141,7 @@ export function unusedExports(repo: string): string[] {
         ts.isStringLiteralLike(node.arguments[0])
       ) {
         const resolved = checker.getSymbolAtLocation(node.arguments[0]);
-        if (resolved) for (const each of checker.getExportsOfModule(resolved)) used.add(target(each));
+        if (resolved) markWhole(resolved);
       }
       ts.forEachChild(node, visit);
     };
@@ -113,12 +149,13 @@ export function unusedExports(repo: string): string[] {
   }
 
   const found: string[] = [];
+  const entries = packageEntries(repo);
   for (const file of program.getSourceFiles()) {
     const rel = relOf(file.fileName);
     if (!isProduct(rel)) continue;
     const moduleSymbol = checker.getSymbolAtLocation(file);
     if (!moduleSymbol) continue;
-    if (/\/(index|client)\.ts$/.test(rel)) {
+    if (entries.has(rel) && /\/(index|client)\.ts$/.test(rel)) {
       // An entry's name is used when a file imports it from the entry itself.
       for (const symbol of checker.getExportsOfModule(moduleSymbol)) {
         if (!entryNames.has(`${rel}#${symbol.name}`)) found.push(`${rel}: ${symbol.name}`);

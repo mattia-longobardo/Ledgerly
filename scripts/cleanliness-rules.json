@@ -1,0 +1,21 @@
+{
+  "//": "Rules Q5-Q8 and Q10 of the rewrite plan (10-modularity.md §10.8, thresholds of decision I15), read by eslint.config.mjs and scripts/cleanliness.ts.",
+  "files": ["apps/*/src/**/*.{ts,tsx}", "packages/*/src/**/*.{ts,tsx}", "plugins/*/src/**/*.{ts,tsx}"],
+  "ignores": ["**/*.test.ts", "**/*.test.tsx", "**/*.itest.ts", "**/*.d.ts"],
+  "rules": {
+    "id-length": ["error", { "min": 3, "exceptions": ["id", "to", "x", "y"], "properties": "never" }],
+    "max-lines": ["error", { "max": 400, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": ["error", { "max": 60, "skipBlankLines": true, "skipComments": true }],
+    "max-params": ["error", 4],
+    "complexity": ["error", 12],
+    "max-depth": ["error", 4],
+    "@typescript-eslint/no-explicit-any": "error",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "TSAsExpression:not([typeAnnotation.typeName.name='const'])",
+        "message": "Q10: no `as` cast; read outside data with zod."
+      }
+    ]
+  }
+}

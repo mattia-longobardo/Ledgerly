@@ -97,14 +97,28 @@ function withIndex(files: ReadonlyMap<string, string>, path: string): string {
   return files.has(`${path}/index.ts`) ? `${path}/index` : path;
 }
 
+/**
+ * A file split in parts (rule Q6: `service.ts` → `service/…` with its `index.ts`) is read as the
+ * one file it was: its parts as `…/service.ts`, an import of it as `…/service`. The known lists
+ * keep their entries, and the imports between its parts are not imports between files.
+ */
+export function asOneFile(files: ReadonlyMap<string, string>, path: string): string {
+  const folder = path.endsWith("/index") ? path.slice(0, -"/index".length) : posix.dirname(path);
+  const unit = unitOf(path);
+  if (folder === unit || !folder.startsWith(`${unit}/`) || !files.has(`${folder}/index.ts`)) return path;
+  return path.endsWith("/index") || !/\.tsx?$/.test(path) ? folder : `${folder}.ts`;
+}
+
 /** Every import between two files of the tree, once per (file, target), sorted. */
 export function importEdges(files: ReadonlyMap<string, string>): Edge[] {
   const edges = new Map<string, Edge>();
-  for (const [rel, content] of files) {
+  for (const [file, content] of files) {
+    const rel = asOneFile(files, file);
     for (const match of content.matchAll(SPECIFIER)) {
-      const resolved = resolveSpecifier(rel, match[1]);
+      const resolved = resolveSpecifier(file, match[1]);
       if (resolved === null || resolved.startsWith("..")) continue;
-      const to = withIndex(files, resolved);
+      const to = asOneFile(files, withIndex(files, resolved));
+      if (to === rel.replace(/\.tsx?$/, "")) continue;
       edges.set(`${rel} → ${to}`, { from: rel, to });
     }
   }
@@ -119,11 +133,17 @@ export function edgeKey(edge: Edge): string {
  * The unit a path belongs to: `modules/<name>`, `platform/integrations/<provider>` for a provider's
  * folder, `platform/<area>` for the rest of platform, and the first folder otherwise (`app`, `ui`).
  */
+/** The names of a unit's files that grew into a folder of parts (rule Q1, Q6). */
+const SPLIT_FILES = ["service", "queries", "rules", "schema", "jobs"];
+
 export function unitOf(rel: string): string {
   const parts = rel.split("/");
   if (parts[0] === "modules" && parts.length > 2) return `modules/${parts[1]}`;
   if (parts[0] === "platform") {
-    if (parts[1] === "integrations" && parts.length > 3) return `platform/integrations/${parts[2]}`;
+    // A provider has its folder; `service/` is the core's file split in parts (rule Q6), not a provider.
+    if (parts[1] === "integrations" && parts.length > 3 && !SPLIT_FILES.includes(parts[2])) {
+      return `platform/integrations/${parts[2]}`;
+    }
     return `platform/${parts[1].replace(/\.tsx?$/, "")}`;
   }
   return parts[0].replace(/\.tsx?$/, "");

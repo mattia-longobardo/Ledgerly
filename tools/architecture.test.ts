@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { measureModularity, type ModularityBaseline } from "../scripts/modularity";
+import { entryExports, measureModularity, type ModularityBaseline } from "../scripts/modularity";
+import { measurePackages } from "../scripts/packages";
 import {
+  asOneFile,
   cycleGroups,
   reciprocalPairs,
   resolveSpecifier,
@@ -20,7 +22,8 @@ const SCHEMA_TARGET = /^modules\/([^/]+)\/schema$/;
 const TABLES_IMPORTER_PREFIXES = ["platform/db/", "platform/auth/"];
 
 function isSchemaFile(rel: string): boolean {
-  return rel.split("/").pop() === "schema.ts";
+  // A schema split in parts (rule Q6) is a folder `schema/`.
+  return rel.split("/").pop() === "schema.ts" || rel.split("/").at(-2) === "schema";
 }
 
 /**
@@ -147,7 +150,24 @@ describe("the known modularity violations", () => {
     expect(now.forbiddenNameKeys.filter((key) => key.startsWith("funds."))).toEqual([]);
   });
 
+  it("gain no dependency of a package outside §10.2, and no import out of a package (M1)", () => {
+    expect(added(known.packageDependencies, now.packageDependencies)).toEqual([]);
+    expect(added(known.packageEscapes, now.packageEscapes)).toEqual([]);
+  });
+
+  it("gain no import of another module's file past its entry (M3)", () => {
+    expect(added(known.deepImports, now.deepImports)).toEqual([]);
+  });
+
+  it("gain no use of another unit's table, imported or written in SQL (M5)", () => {
+    expect(added(known.tableAccess, now.tableAccess)).toEqual([]);
+  });
+
   it("list nothing that is gone: remove the entry with `npm run modularity`", () => {
+    expect(added(now.packageDependencies, known.packageDependencies)).toEqual([]);
+    expect(added(now.packageEscapes, known.packageEscapes)).toEqual([]);
+    expect(added(now.deepImports, known.deepImports)).toEqual([]);
+    expect(added(now.tableAccess, known.tableAccess)).toEqual([]);
     expect(added(now.crossModuleImports, known.crossModuleImports)).toEqual([]);
     expect(added(now.reciprocalUnits, known.reciprocalUnits)).toEqual([]);
     expect(added(now.forbiddenNames, known.forbiddenNames)).toEqual([]);
@@ -189,12 +209,21 @@ describe("saving an investment key", () => {
   const OTHERS = new Set(["WALLET_PROVIDER", "TREK_PROVIDER"]);
   const OWNER = "modules/investments/sync.ts";
 
+  /** The tree, a file split in parts read as the one file it was (rule Q6, scripts/source-graph.ts). */
+  function asFiles(): Map<string, string> {
+    const joined = new Map<string, string>();
+    for (const [rel, file] of TREE) {
+      const one = asOneFile(TREE, rel);
+      joined.set(one, (joined.get(one) ?? "") + readFileSync(file, "utf8"));
+    }
+    return joined;
+  }
+
   function calls(): Map<string, string[]> {
     const found = new Map<string, string[]>();
-    for (const [rel, file] of TREE) {
+    for (const [rel, content] of asFiles()) {
       if (rel === SELF || /\.(test|itest)\.tsx?$/.test(rel) || rel === "platform/integrations/service.ts")
         continue;
-      const content = readFileSync(file, "utf8");
       const providers = [...content.matchAll(CALL)].map((match) => match[1]);
       if (content.includes("saveConnection(") || providers.length > 0) found.set(rel, providers);
     }
@@ -204,7 +233,7 @@ describe("saving an investment key", () => {
   it("happens only in the investments sync, twice: connecting and replacing the key", () => {
     const found = calls();
     expect(found.get(OWNER)).toEqual(["provider.id", "provider.id"]);
-    const owner = readFileSync(TREE.get(OWNER)!, "utf8");
+    const owner = asFiles().get(OWNER)!;
     const connect = owner.slice(owner.indexOf("export async function connectInvestmentProvider("));
     const replace = owner.slice(owner.indexOf("export async function replaceKey("));
     expect(connect.split("export async function")[1]).toContain("saveConnection(");
@@ -225,5 +254,53 @@ describe("the image's dependencies (PERS-87 SEC-04)", () => {
     const dockerfile = readFileSync(join(ROOT, "Dockerfile"), "utf8");
     const installs = dockerfile.split("\n").filter((line) => /\bnpm (ci|install|i)\b/.test(line));
     expect(installs).toEqual(["RUN npm ci --ignore-scripts"]);
+  });
+});
+
+/**
+ * The packages of the monorepo (rewrite plan R0, 10-modularity.md §10.2, §10.6): what has no known
+ * list must hold for the whole tree.
+ */
+describe("the packages", () => {
+  const measure = measurePackages(ROOT);
+
+  it("import only what their package.json declares (M1)", () => {
+    expect(measure.undeclared).toEqual([]);
+  });
+
+  it("keep the domain off Next.js, React and Hono, and the contracts on zod alone (M6)", () => {
+    expect(measure.layers).toEqual([]);
+  });
+
+  it("form no cycle (M4)", () => {
+    expect(measure.packageCycles).toEqual([]);
+  });
+
+  it("are reached by their entries only: the aliases of the tests stay in the tests (M3)", () => {
+    expect(measure.aliases).toEqual([]);
+  });
+
+  it("give a client component the browser's entries only: no server code in a bundle", () => {
+    expect(measure.clientReach).toEqual([]);
+  });
+
+  it("export named names from every entry, no `export *` (M7)", () => {
+    expect(measure.starExports).toEqual([]);
+  });
+
+  it("export what the reference file says, entry by entry (M7)", () => {
+    const reference = JSON.parse(readFileSync(join(ROOT, "baselines/exports.json"), "utf8"));
+    expect(entryExports(ROOT)).toEqual(reference);
+  });
+
+  it("give every module of the domain its entry (M7)", () => {
+    const modules = readdirSync(join(ROOT, "packages/domain/src/modules"));
+    expect(
+      modules.filter((name) => !existsSync(join(ROOT, "packages/domain/src/modules", name, "index.ts"))),
+    ).toEqual([]);
+  });
+
+  it("declare a name once in a unit of the domain (Q4)", () => {
+    expect(measure.duplicateNames).toEqual([]);
   });
 });

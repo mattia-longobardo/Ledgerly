@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "build": "npm run build --workspace @ledgerly/web",
-    "lint": "eslint .",
+    "lint": "eslint . && tsx scripts/cleanliness.ts --check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "next typegen apps/web && tsc --noEmit",
@@ -31,7 +31,8 @@
     "db:generate": "drizzle-kit generate",
     "user:create-admin": "sh scripts/on-homelab.sh scripts/create-admin.ts",
     "user:create-api-client": "sh scripts/on-homelab.sh scripts/create-api-client.ts",
-    "unused-exports": "tsx scripts/unused-exports.ts"
+    "unused-exports": "tsx scripts/unused-exports.ts",
+    "cleanliness": "tsx scripts/cleanliness.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1131.0",

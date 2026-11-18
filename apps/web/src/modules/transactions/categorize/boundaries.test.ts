@@ -9,7 +9,17 @@ import { treeFiles } from "../../../../../../scripts/source-graph";
 
 // A path of the one source tree, wherever its package keeps the file (R0: `scripts/source-graph.ts`).
 const TREE = treeFiles(process.cwd());
-const read = (path: string) => readFileSync(TREE.get(path) ?? path, "utf8");
+/** A file of the tree; a file split in parts (rule Q6) is read whole, its parts one after the other. */
+const read = (path: string) => {
+  const file = TREE.get(path);
+  if (file !== undefined) return readFileSync(file, "utf8");
+  const folder = path.replace(/\.tsx?$/, "/");
+  const parts = [...TREE]
+    .filter(([rel]) => rel.startsWith(folder))
+    .map(([, part]) => readFileSync(part, "utf8"));
+  if (parts.length === 0) throw new Error(`${path}: no such file`);
+  return parts.join("\n");
+};
 
 const PRIVATE = [
   "categoryModels",

@@ -106,7 +106,8 @@ describe("Used by", () => {
       const target = fileOf(edge.to);
       if (target === undefined) continue;
       const to = tree.get(target)!;
-      const from = tree.get(edge.from)!;
+      // A file split in parts is read as one file (Q6): its `index.ts` stands for it.
+      const from = tree.get(edge.from) ?? tree.get(edge.from.replace(/\.tsx?$/, "/index.ts"))!;
       if (!selections.has(to)) selections.set(to, select([to]));
       const selection = selections.get(to)!;
       // Critical code runs everything; the common interface is measured on every screen.
