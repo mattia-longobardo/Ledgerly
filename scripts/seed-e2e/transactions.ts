@@ -1,8 +1,8 @@
 // scripts/seed-e2e/transactions.ts — the users and the data of the flow `transactions` (tests/e2e/transactions/).
 import { and, eq } from "drizzle-orm";
-import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../src/app/(app)/banks/plugin";
-import { createManual } from "../../src/app/(app)/expenses/manual";
-import { setSourceCategory } from "../../src/app/(app)/settings/categories/source";
+import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/banks/plugin";
+import { createManual } from "../../apps/web/src/app/(app)/expenses/manual";
+import { setSourceCategory } from "../../apps/web/src/app/(app)/settings/categories/source";
 import { accounts } from "@domain/modules/accounts/schema";
 import { applyProviderAccounts, createAccount, saveProviderBalance } from "@domain/modules/accounts/service";
 import { markNotSent } from "@domain/modules/transactions/sending";

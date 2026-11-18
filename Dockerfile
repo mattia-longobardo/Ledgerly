@@ -4,6 +4,7 @@ FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # The workspaces (R0): the install links each one by its `package.json`.
+COPY apps/web/package.json ./apps/web/
 COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
 COPY packages/plugin-host/package.json ./packages/plugin-host/
@@ -19,7 +20,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN mkdir -p public && npm run build
+RUN mkdir -p apps/web/public && npm run build
 RUN ./node_modules/.bin/esbuild scripts/migrate.ts --bundle --platform=node --format=esm --target=node26 \
       --external:pg-native \
       --banner:js="import{createRequire}from'node:module';const require=createRequire(import.meta.url);" \
@@ -33,13 +34,14 @@ FROM node:26-alpine AS runner
 RUN apk add --no-cache wget postgresql18-client
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0
-COPY --from=builder --chown=1000:1000 /app/.next/standalone ./
-COPY --from=builder --chown=1000:1000 /app/.next/static ./.next/static
-COPY --from=builder --chown=1000:1000 /app/public ./public
+# The app is the workspace `apps/web` (R0): its standalone output keeps the monorepo's layout.
+COPY --from=builder --chown=1000:1000 /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=1000:1000 /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=1000:1000 /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=1000:1000 /app/migrate.mjs ./migrate.mjs
 COPY --chown=1000:1000 drizzle ./drizzle
 COPY --chown=1000:1000 entrypoint.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh && mkdir -p .next/cache && chown -R 1000:1000 .next
+RUN chmod +x entrypoint.sh && mkdir -p apps/web/.next/cache && chown -R 1000:1000 apps/web/.next
 USER 1000:1000
 EXPOSE 3000
 ENTRYPOINT ["/app/entrypoint.sh"]

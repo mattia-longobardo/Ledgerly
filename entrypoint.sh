@@ -5,4 +5,4 @@ if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 node /app/migrate.mjs
-exec node /app/server.js
+exec node /app/apps/web/server.js

@@ -16,18 +16,18 @@
     "types": ["node"],
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./apps/web/src/*"],
       "@plugin-contract/*": ["./packages/plugin-contract/src/*"],
       "@domain/*": ["./packages/domain/src/*"],
       "@plugin-host/*": ["./packages/plugin-host/src/*"]
     }
   },
   "include": [
-    "next-env.d.ts",
+    "apps/web/next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
+    "apps/web/.next/types/**/*.ts",
+    "apps/web/.next/dev/types/**/*.ts",
     "**/*.mts"
   ],
   "exclude": ["node_modules", "Fondo Cometa", "Payroll", "UI Recreation and branding decisions"]

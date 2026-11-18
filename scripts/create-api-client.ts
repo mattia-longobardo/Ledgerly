@@ -8,7 +8,7 @@
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { serializeSignedCookie } from "better-call";
 import { eq } from "drizzle-orm";
-import { createApiClientWith } from "../src/platform/auth/api-clients";
+import { createApiClientWith } from "../apps/web/src/platform/auth/api-clients";
 import { createAuth } from "@domain/platform/auth/auth";
 import { users } from "@domain/platform/auth/schema";
 import { getDb } from "@domain/platform/db/client";

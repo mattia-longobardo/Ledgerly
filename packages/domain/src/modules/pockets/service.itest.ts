@@ -10,7 +10,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { createRule } from "../interests/service";
 import { hideTransaction, upsertFromProvider } from "../transactions/service";
-import { pocketsAccrualJob } from "../../../../../src/modules/pockets/jobs";
+import { pocketsAccrualJob } from "../../../../../apps/web/src/modules/pockets/jobs";
 import { expenseLinkCandidates, pocketsOnAccount, pocketsTotal, pocketsView } from "./queries";
 import {
   accrueMonth,

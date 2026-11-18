@@ -1,0 +1,38 @@
+{
+  "name": "@ledgerly/web",
+  "version": "0.35.2",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prebuild": "node ../../scripts/copy-pdfjs.mjs public/pdfjs",
+    "build": "next build"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.8.0",
+    "@better-auth/oauth-provider": "1.7.14",
+    "@fontsource-variable/inter": "5.3.0",
+    "@ledgerly/domain": "0.35.2",
+    "@ledgerly/plugin-contract": "0.35.2",
+    "@ledgerly/plugin-host": "0.35.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@tailwindcss/postcss": "4.3.3",
+    "better-auth": "1.7.14",
+    "clsx": "2.1.1",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.13.14",
+    "jose": "6.2.12",
+    "lucide-react": "1.45.0",
+    "next": "16.4.3",
+    "next-intl": "4.14.4",
+    "pdfjs-dist": "6.3.289",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "tailwind-merge": "3.7.0",
+    "tailwindcss": "4.3.3",
+    "uqr": "0.1.3",
+    "use-intl": "4.14.4",
+    "yazl": "3.3.1",
+    "zod": "4.6.7"
+  }
+}

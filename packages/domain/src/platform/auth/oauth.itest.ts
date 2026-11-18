@@ -15,7 +15,7 @@ vi.mock("next/server", () => ({ after: () => {} }));
 
 const { getAuth, invalidateAuth } = await import("./auth");
 const { createApiClient, deleteApiClient, listApiClients, ApiClientError } =
-  await import("../../../../../src/platform/auth/api-clients");
+  await import("../../../../../apps/web/src/platform/auth/api-clients");
 const { api } = await import("@/platform/api/app");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
 

@@ -14,7 +14,7 @@ import {
   reportConnection,
   SYNC_FAILED,
   SYNC_STALE,
-} from "../../../../../src/platform/integrations/alerts";
+} from "../../../../../apps/web/src/platform/integrations/alerts";
 import { asAutomatic } from "./origin";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "./rules";
 import { integrationConnections, syncRuns } from "./schema";

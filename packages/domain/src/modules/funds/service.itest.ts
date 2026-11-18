@@ -13,7 +13,7 @@ import { addDeposit, debitFund, payrollFund, saveDepositRule } from "../../../..
 import { fundSummary } from "./detail";
 import { firstDataOn, homeSummary } from "./home";
 import { fundHomeRow, fundsHomeRows } from "./home-queries";
-import { fundsDepositsJob } from "../../../../../src/modules/funds/jobs";
+import { fundsDepositsJob } from "../../../../../apps/web/src/modules/funds/jobs";
 import { fundsOverview } from "./overview";
 import { allPeriod } from "./period";
 import { type FundDetail, fundDetail, fundDetailFlows, hasPayrollCalendar } from "./queries";

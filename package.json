@@ -12,12 +12,11 @@
     "apps/*"
   ],
   "scripts": {
-    "prebuild": "node scripts/copy-pdfjs.mjs",
-    "build": "next build",
+    "build": "npm run build --workspace @ledgerly/web",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "next typegen apps/web && tsc --noEmit",
     "test": "vitest run --project 'unit-*'",
     "test:watch": "vitest --project 'unit-*'",
     "test:integration": "sh scripts/test-integration.sh",

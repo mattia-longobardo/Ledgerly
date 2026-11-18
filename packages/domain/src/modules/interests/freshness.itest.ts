@@ -13,7 +13,7 @@ import { deleteConnection, saveConnection } from "../../platform/integrations/se
 import { SyncBusyError, type WalletSyncResult } from "../../platform/integrations/wallet/sync";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, newContext } from "../../../../../test/fixtures";
-import { accrueDueRules } from "../../../../../src/modules/interests/jobs";
+import { accrueDueRules } from "../../../../../apps/web/src/modules/interests/jobs";
 import { interestAccruals } from "./schema";
 import { createRule } from "./service";
 

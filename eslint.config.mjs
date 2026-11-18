@@ -6,7 +6,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    files: ["src/app/**/*.{ts,tsx}", "src/ui/**/*.{ts,tsx}"],
+    files: ["apps/web/src/app/**/*.{ts,tsx}", "apps/web/src/ui/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -23,9 +23,11 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
+    "apps/web/.next/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "apps/web/next-env.d.ts",
     "drizzle/**",
     "test-results/**",
     "playwright-report/**",
@@ -33,6 +35,6 @@ export default defineConfig([
     "Payroll/**",
     "UI Recreation and branding decisions/**",
     // Copied from node_modules before each build (scripts/copy-pdfjs.mjs).
-    "public/pdfjs/**",
+    "apps/web/public/pdfjs/**",
   ]),
 ]);

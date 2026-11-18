@@ -9,8 +9,10 @@
 //
 // Takes the destination as an argument so the test can copy into a throwaway directory.
 import { cpSync, mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const from = "node_modules/pdfjs-dist";
+// From the root of the monorepo, wherever the command runs (the app runs it before its build).
+const from = fileURLToPath(new URL("../node_modules/pdfjs-dist", import.meta.url));
 const to = process.argv[2] ?? "public/pdfjs";
 mkdirSync(to, { recursive: true });
 cpSync(`${from}/build/pdf.worker.min.mjs`, `${to}/pdf.worker.min.mjs`);

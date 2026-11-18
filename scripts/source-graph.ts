@@ -36,7 +36,7 @@ export function isTestFile(rel: string): boolean {
  * known lists of `baselines/` and the plan's tables keep their names that way.
  */
 export const SOURCE_ROOTS: readonly { dir: string; prefix: string }[] = [
-  { dir: "src", prefix: "" },
+  { dir: "apps/web/src", prefix: "" },
   { dir: "packages/domain/src", prefix: "" },
   { dir: "packages/plugin-host/src", prefix: "platform/plugins/" },
   { dir: "packages/plugin-contract/src", prefix: "platform/plugins/contract/" },

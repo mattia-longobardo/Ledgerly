@@ -23,7 +23,12 @@ export default defineConfig({
         test: {
           name: "unit-node",
           environment: "node",
-          include: ["src/**/*.test.ts", "packages/*/src/**/*.test.ts", "plugins/**/*.test.ts"],
+          include: [
+            "apps/web/src/**/*.test.ts",
+            "tools/**/*.test.ts",
+            "packages/*/src/**/*.test.ts",
+            "plugins/**/*.test.ts",
+          ],
         },
       },
       {
@@ -31,7 +36,7 @@ export default defineConfig({
         test: {
           name: "unit-dom",
           environment: "jsdom",
-          include: ["src/**/*.test.tsx", "packages/*/src/**/*.test.tsx"],
+          include: ["apps/web/src/**/*.test.tsx", "packages/*/src/**/*.test.tsx"],
           setupFiles: ["./test/setup-dom.ts"],
           // A `userEvent` interaction is several real timer ticks, and the whole suite runs its
           // files in parallel: with the 5 s default, the longest component tests time out on a
@@ -45,7 +50,7 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
-          include: ["src/**/*.itest.ts", "packages/*/src/**/*.itest.ts"],
+          include: ["apps/web/src/**/*.itest.ts", "tools/**/*.itest.ts", "packages/*/src/**/*.itest.ts"],
           fileParallelism: false,
           testTimeout: 30_000,
           hookTimeout: 60_000,

@@ -1,6 +1,6 @@
 // scripts/seed-e2e/connections.ts — the users and the data of the flow `connections` (tests/e2e/connections/).
 import { eq } from "drizzle-orm";
-import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../src/app/(app)/banks/plugin";
+import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/banks/plugin";
 import { applyProviderAccounts } from "@domain/modules/accounts/service";
 import { parseKeyRing, sealJson } from "@domain/platform/crypto";
 import { today } from "@domain/platform/dates";

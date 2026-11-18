@@ -1,7 +1,7 @@
 // scripts/seed-e2e/subscriptions.ts — the users and the data of the flow `subscriptions` (tests/e2e/subscriptions/).
 import { saveBalanceEntry } from "@domain/modules/accounts/service";
 import { createSubscription } from "@domain/modules/subscriptions/service";
-import { refreshRecurrences } from "../../src/modules/transactions/jobs";
+import { refreshRecurrences } from "../../apps/web/src/modules/transactions/jobs";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
 import { addDays, today } from "@domain/platform/dates";

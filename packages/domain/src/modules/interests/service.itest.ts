@@ -5,7 +5,7 @@ import type { Ctx } from "../../platform/context";
 import { monthKey, startOfDayIn, today } from "../../platform/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
-import { interestsAccrualJob } from "../../../../../src/modules/interests/jobs";
+import { interestsAccrualJob } from "../../../../../apps/web/src/modules/interests/jobs";
 import { interestsView, ruleDetail, rulesOnAccount } from "./queries";
 import { accruedInterest, createRule, InterestError, setRuleState, updateRule } from "./service";
 

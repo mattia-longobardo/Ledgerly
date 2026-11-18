@@ -10,7 +10,7 @@ import { addDays, type CivilDate, today } from "../../platform/dates";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
-import { subscriptionsCheckJob } from "../../../../../src/modules/subscriptions/jobs";
+import { subscriptionsCheckJob } from "../../../../../apps/web/src/modules/subscriptions/jobs";
 import { subscriptionsOnAccount, subscriptionsView, suggestions } from "./queries";
 import { addCycles } from "./rules";
 import { subscriptions } from "./schema";

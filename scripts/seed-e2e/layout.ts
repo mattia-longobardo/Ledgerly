@@ -1,7 +1,7 @@
 // scripts/seed-e2e/layout.ts — the `layout` user, who has something on every page: the screen, keyboard and
 // phone checks of every flow are measured on it.
 import { createHash } from "node:crypto";
-import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../src/app/(app)/banks/plugin";
+import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/banks/plugin";
 import {
   addConnection,
   createAccount,
@@ -17,7 +17,7 @@ import { expenseLinkCandidates } from "@domain/modules/pockets/queries";
 import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "@domain/modules/pockets/service";
 import { createSubscription } from "@domain/modules/subscriptions/service";
 import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
-import { refreshRecurrences } from "../../src/modules/transactions/jobs";
+import { refreshRecurrences } from "../../apps/web/src/modules/transactions/jobs";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
 import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
