@@ -12,7 +12,7 @@ import { redactForLog } from "@/platform/auth/logger";
 import { getOptionalSession } from "@/platform/auth/session";
 import { readEnv } from "@/platform/env";
 import { pluginProvider } from "@/platform/integrations/rules";
-import { PLUGIN_ID } from "@/platform/plugins/contract/manifest";
+import { PLUGIN_ID } from "@ledgerly/plugin-contract";
 import { completeAccess, type ReturnOutcome } from "@/platform/plugins/service";
 import { exposedAccounts, readBank, tieBack } from "@/platform/plugins/sync";
 import { presenceOf } from "@/app/(app)/banks/presence";

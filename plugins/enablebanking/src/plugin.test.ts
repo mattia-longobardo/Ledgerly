@@ -10,10 +10,10 @@ import {
   SECRET_HEADER,
   syncResponseSchema,
   verifyResponseSchema,
-} from "../../../src/platform/plugins/contract/calls";
-import { errorBodySchema } from "../../../src/platform/plugins/contract/errors";
-import { checkPlugin } from "../../../src/platform/plugins/contract/kit";
-import { manifestSchema } from "../../../src/platform/plugins/contract/manifest";
+} from "@plugin-contract/calls";
+import { errorBodySchema } from "@plugin-contract/errors";
+import { checkPlugin } from "@plugin-contract/kit";
+import { manifestSchema } from "@plugin-contract/manifest";
 import { PluginFailure } from "./failure";
 import {
   accountNameOf,

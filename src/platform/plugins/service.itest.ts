@@ -9,8 +9,8 @@ import { type Connection, listConnections, listRuns, saveConnection } from "@/pl
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import type { Fetch } from "./client";
-import { PLUGIN_PATHS, SECRET_HEADER } from "./contract/calls";
-import type { PluginManifest } from "./contract/manifest";
+import { PLUGIN_PATHS, SECRET_HEADER } from "@plugin-contract/calls";
+import type { PluginManifest } from "@plugin-contract/manifest";
 import {
   credentialsStatus,
   isPluginActive,

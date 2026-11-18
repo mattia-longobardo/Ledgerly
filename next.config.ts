@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
   // node_modules, never bundled. Listed before the package is added so the phase that adds it
   // changes no build setting.
   serverExternalPackages: ["ccxt"],
+  // The workspaces of the monorepo (R0) ship TypeScript sources: Next compiles them with the app.
+  transpilePackages: ["@ledgerly/plugin-contract"],
   // A document is at most 10 MB (spec §9.3); the multipart envelope needs a little more.
   experimental: { proxyClientMaxBodySize: "11mb", serverActions: { bodySizeLimit: "11mb" } },
   async headers() {

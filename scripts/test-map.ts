@@ -291,6 +291,7 @@ export const MODULES: Module[] = [
       "src/platform/integrations/wallet/**",
       "src/platform/integrations/trek/**",
       "src/platform/plugins/**",
+      "packages/plugin-contract/**",
       "src/platform/plugin-config*",
       "plugins/**",
       page("banks"),

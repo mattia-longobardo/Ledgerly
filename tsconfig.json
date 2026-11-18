@@ -15,7 +15,10 @@
     "incremental": true,
     "types": ["node"],
     "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./src/*"] }
+    "paths": {
+      "@/*": ["./src/*"],
+      "@plugin-contract/*": ["./packages/plugin-contract/src/*"]
+    }
   },
   "include": [
     "next-env.d.ts",

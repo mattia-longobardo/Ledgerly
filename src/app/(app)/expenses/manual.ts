@@ -38,7 +38,7 @@ import { labelOf } from "@/platform/integrations/registry";
 import { coreCreatesRecords, isPluginProvider, pluginProvider } from "@/platform/integrations/rules";
 import { listConnections } from "@/platform/integrations/service";
 import type { Cents } from "@/platform/money";
-import { hasCapability } from "@/platform/plugins/contract/manifest";
+import { hasCapability } from "@ledgerly/plugin-contract";
 import { listInstancePlugins } from "@/platform/plugins/queries";
 
 type ManualCtx = Pick<Ctx, "userId" | "timeZone">;

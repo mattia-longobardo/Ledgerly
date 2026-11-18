@@ -14,7 +14,7 @@ import type { Ctx } from "@/platform/context";
 import { getDb } from "@/platform/db/client";
 import { isKnownProvider, KINDS_OF, pluginProvider } from "@/platform/integrations/rules";
 import { forgetSource, listConnections, runningReadings } from "@/platform/integrations/service";
-import { PLUGIN_ID } from "@/platform/plugins/contract/manifest";
+import { PLUGIN_ID } from "@ledgerly/plugin-contract";
 import { isPluginActive } from "@/platform/plugins/queries";
 import { type Deps as PluginDeps, forgetPlugin, prepareAccessClosing } from "@/platform/plugins/service";
 

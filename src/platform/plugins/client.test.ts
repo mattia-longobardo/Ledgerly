@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { callPlugin, type Fetch, PluginCallError } from "./client";
-import { SECRET_HEADER, verifyResponseSchema } from "./contract/calls";
-import { acceptsContract, hasCapability, manifestSchema } from "./contract/manifest";
+import { SECRET_HEADER, verifyResponseSchema } from "@plugin-contract/calls";
+import { acceptsContract, hasCapability, manifestSchema } from "@plugin-contract/manifest";
 
 const PLUGIN = { id: "one", url: "http://plugin.test:8787", secret: "0123456789abcdef0123456789abcdef" };
 

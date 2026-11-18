@@ -5,8 +5,8 @@
  * behind it, never becomes a message.
  */
 import type { z } from "zod";
-import { SECRET_HEADER } from "./contract/calls";
-import { errorBodySchema, type PluginErrorCode } from "./contract/errors";
+import { SECRET_HEADER } from "@ledgerly/plugin-contract";
+import { errorBodySchema, type PluginErrorCode } from "@ledgerly/plugin-contract";
 import type { ConfiguredPlugin } from "@/platform/plugin-config";
 
 /**

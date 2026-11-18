@@ -38,8 +38,8 @@ import {
   PLUGIN_PATHS,
   type PluginAccount,
   verifyResponseSchema,
-} from "./contract/calls";
-import { manifestSchema } from "./contract/manifest";
+} from "@ledgerly/plugin-contract";
+import { manifestSchema } from "@ledgerly/plugin-contract";
 import {
   configuredPlugins,
   findInstancePlugin,

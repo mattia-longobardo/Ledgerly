@@ -14,8 +14,8 @@ import type { Ctx } from "@/platform/context";
 import { getPool } from "@/platform/db/client";
 import { PROVIDERS } from "@/platform/integrations/rules";
 import type { Fetch } from "@/platform/plugins/client";
-import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@/platform/plugins/contract/calls";
-import type { PluginManifest } from "@/platform/plugins/contract/manifest";
+import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@plugin-contract/calls";
+import type { PluginManifest } from "@plugin-contract/manifest";
 import {
   disconnectBank,
   completeAccess,

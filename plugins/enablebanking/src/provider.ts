@@ -5,7 +5,7 @@
  */
 import type { KeyObject } from "node:crypto";
 import { z } from "zod";
-import type { PluginErrorCode } from "../../../src/platform/plugins/contract/errors";
+import type { PluginErrorCode } from "@ledgerly/plugin-contract";
 import { PluginFailure } from "./failure";
 import { signToken } from "./jwt";
 

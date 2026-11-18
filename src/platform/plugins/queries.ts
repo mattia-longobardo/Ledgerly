@@ -12,7 +12,7 @@ import { readEnv } from "@/platform/env";
 import { pluginProvider } from "@/platform/integrations/rules";
 import { type Connection, listConnections } from "@/platform/integrations/service";
 import { type ConfiguredPlugin, parsePluginConfig } from "@/platform/plugin-config";
-import { acceptsContract, type PluginManifest } from "./contract/manifest";
+import { acceptsContract, type PluginManifest } from "@ledgerly/plugin-contract";
 import { type UserPluginState, userPluginState } from "./rules";
 import { pluginActivations, plugins, pluginUserCredentials } from "./schema";
 

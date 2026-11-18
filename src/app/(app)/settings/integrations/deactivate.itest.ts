@@ -37,8 +37,8 @@ import {
 import type { WalletClientOptions } from "@/platform/integrations/wallet/client";
 import { chooseWalletAccounts, syncWalletNow } from "@/platform/integrations/wallet/sync";
 import type { Fetch } from "@/platform/plugins/client";
-import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@/platform/plugins/contract/calls";
-import type { PluginManifest } from "@/platform/plugins/contract/manifest";
+import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@plugin-contract/calls";
+import type { PluginManifest } from "@plugin-contract/manifest";
 import { credentialsStatus, isPluginActive } from "@/platform/plugins/queries";
 import {
   completeAccess,

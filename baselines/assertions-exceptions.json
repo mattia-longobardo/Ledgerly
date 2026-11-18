@@ -273,5 +273,10 @@
     "file": "tests/e2e/transactions/wide.spec.ts",
     "decision": "T-21",
     "reason": "only paths changed: the specs in tests/e2e/<flow>/, the shared files in tests/e2e/_shared/, the fixtures in test/fixtures/"
+  },
+  {
+    "file": "packages/plugin-contract/src/isolation.test.ts",
+    "decision": "R0",
+    "reason": "monorepo: the contract is the package `plugin-contract`; only its path and the package name the plugin imports changed"
   }
 ]

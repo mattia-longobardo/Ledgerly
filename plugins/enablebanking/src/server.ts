@@ -5,12 +5,8 @@
  */
 import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { PLUGIN_PATHS, SECRET_HEADER } from "../../../src/platform/plugins/contract/calls";
-import {
-  PLUGIN_ERROR_STATUS,
-  type PluginErrorBody,
-  type PluginErrorCode,
-} from "../../../src/platform/plugins/contract/errors";
+import { PLUGIN_PATHS, SECRET_HEADER } from "@ledgerly/plugin-contract";
+import { PLUGIN_ERROR_STATUS, type PluginErrorBody, type PluginErrorCode } from "@ledgerly/plugin-contract";
 import { PluginFailure } from "./failure";
 import { authComplete, authRevoke, authStart, type Deps, institutions, sync, verify } from "./handlers";
 import { MANIFEST } from "./manifest";

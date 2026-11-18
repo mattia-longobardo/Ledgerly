@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PluginAccount, SyncResponse } from "./contract/calls";
+import type { PluginAccount, SyncResponse } from "@plugin-contract/calls";
 import {
   bankAccountNames,
   bankAccountType,

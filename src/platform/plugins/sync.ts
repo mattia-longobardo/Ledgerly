@@ -26,7 +26,12 @@ import {
 } from "@/platform/integrations/service";
 import { withJobLock } from "@/platform/jobs/lock";
 import { callPlugin, PluginCallError } from "./client";
-import { PLUGIN_PATHS, type PluginAccount, type SyncResponse, syncResponseSchema } from "./contract/calls";
+import {
+  PLUGIN_PATHS,
+  type PluginAccount,
+  type SyncResponse,
+  syncResponseSchema,
+} from "@ledgerly/plugin-contract";
 import { type AccountChoice, type BankSink, type ReadingMovement, SinkRefusal } from "./ports";
 import { listPluginConnections } from "./queries";
 import {

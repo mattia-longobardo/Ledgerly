@@ -23,7 +23,7 @@ export default defineConfig({
         test: {
           name: "unit-node",
           environment: "node",
-          include: ["src/**/*.test.ts", "plugins/**/*.test.ts"],
+          include: ["src/**/*.test.ts", "packages/*/src/**/*.test.ts", "plugins/**/*.test.ts"],
         },
       },
       {

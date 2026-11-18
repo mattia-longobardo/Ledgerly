@@ -3,7 +3,7 @@
  * §4.1 and §4.2; ux/n1-plugin-bank.md §2.2, §5.1, §7).
  */
 import { createHash } from "node:crypto";
-import type { PluginAccount, PluginTransaction, SyncResponse } from "./contract/calls";
+import type { PluginAccount, PluginTransaction, SyncResponse } from "@ledgerly/plugin-contract";
 
 /** How long a person has to come back from the provider's site. */
 export const AUTH_STATE_MINUTES = 15;

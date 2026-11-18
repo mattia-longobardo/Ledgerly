@@ -17,8 +17,8 @@ import {
   type PluginAccount,
   type SyncResponse,
   syncResponseSchema,
-} from "@/platform/plugins/contract/calls";
-import type { PluginManifest } from "@/platform/plugins/contract/manifest";
+} from "@plugin-contract/calls";
+import type { PluginManifest } from "@plugin-contract/manifest";
 import { credentialsStatus, listPluginConnections } from "@/platform/plugins/queries";
 import {
   completeAccess,

@@ -8,7 +8,10 @@ import { describe, expect, it } from "vitest";
 // packages' boundary test.
 
 const ROOT = process.cwd();
-const CONTRACT = "src/platform/plugins/contract";
+const CONTRACT = "packages/plugin-contract/src";
+const PACKAGE = "@ledgerly/plugin-contract";
+/** The tests reach the contract's files by the path alias of the tests. */
+const TEST_ALIAS = "@plugin-contract/";
 const IMPORT = /(?:from|import)\s+["']([^"']+)["']/g;
 
 function files(dir: string): string[] {
@@ -46,6 +49,8 @@ describe("a plugin is isolated (M9)", () => {
           (target) =>
             !target.startsWith(own) &&
             !target.startsWith(`${CONTRACT}/`) &&
+            target !== PACKAGE &&
+            !(isTest(file) && target.startsWith(TEST_ALIAS)) &&
             !target.startsWith("node:") &&
             target !== "zod" &&
             !(isTest(file) && target === "vitest"),

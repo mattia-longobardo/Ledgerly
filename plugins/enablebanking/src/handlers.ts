@@ -18,7 +18,7 @@ import {
   type SyncResponse,
   verifyRequestSchema,
   type VerifyResponse,
-} from "../../../src/platform/plugins/contract/calls";
+} from "@ledgerly/plugin-contract";
 import { PluginFailure } from "./failure";
 import { parsePrivateKey } from "./jwt";
 import {

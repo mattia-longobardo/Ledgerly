@@ -1,4 +1,4 @@
-import type { PluginErrorCode } from "../../../src/platform/plugins/contract/errors";
+import type { PluginErrorCode } from "@ledgerly/plugin-contract";
 
 /**
  * A failure with a code of the contract. The message is the code: the provider's own words never

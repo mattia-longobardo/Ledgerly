@@ -1,4 +1,4 @@
-import type { PluginManifest } from "../../../src/platform/plugins/contract/manifest";
+import type { PluginManifest } from "@ledgerly/plugin-contract";
 import { PROVIDER_HOST } from "./provider";
 
 /** The countries the provider covers: the EEA and the United Kingdom. Names come from the core's locale data. */

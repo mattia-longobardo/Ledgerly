@@ -15,12 +15,7 @@ import { getDb, getPool } from "../src/platform/db/client";
 import { readEnv } from "../src/platform/env";
 import { integrationConnections } from "../src/platform/integrations/schema";
 import { callPlugin, PluginCallError } from "../src/platform/plugins/client";
-import {
-  accountSchema,
-  PLUGIN_PATHS,
-  type SyncResponse,
-  syncResponseSchema,
-} from "../src/platform/plugins/contract/calls";
+import { accountSchema, PLUGIN_PATHS, type SyncResponse, syncResponseSchema } from "@plugin-contract/calls";
 import { configuredPlugin } from "../src/platform/plugins/queries";
 import { measureReading } from "../src/platform/plugins/rules";
 import { pluginUserCredentials } from "../src/platform/plugins/schema";

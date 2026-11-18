@@ -6,6 +6,11 @@
   "engines": {
     "node": ">=26"
   },
+  "workspaces": [
+    "packages/*",
+    "plugins/*",
+    "apps/*"
+  ],
   "scripts": {
     "prebuild": "node scripts/copy-pdfjs.mjs",
     "build": "next build",

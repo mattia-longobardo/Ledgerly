@@ -13,7 +13,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "../auth/schema";
-import type { PluginManifest } from "./contract/manifest";
+import type { PluginManifest } from "@ledgerly/plugin-contract";
 
 /** `bytea` as a Node `Buffer`: what `seal` produces and `open` reads. */
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
