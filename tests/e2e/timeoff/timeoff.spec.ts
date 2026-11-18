@@ -57,9 +57,33 @@ function countWrites(page: Page): () => number {
   return () => writes;
 }
 
+/**
+ * The year as the seed made it, whatever a run stopped half-way left (a run that timed out kept the
+ * days it had booked, and the next one counted them): no day of the March week, no total stated.
+ */
+async function fromTheSeed(page: Page): Promise<void> {
+  await page.goto("/timeoff/settings");
+  const total = page.getByLabel("Days granted in total");
+  if ((await total.inputValue()) !== "") {
+    await total.fill("");
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Allowance saved")).toBeVisible();
+  }
+  await page.goto("/timeoff");
+  for (const date of [MON, TUE, WED, THU, FRI]) {
+    for (let left = await rowsOf(page, date).count(); left > 0; left -= 1) {
+      await rowsOf(page, date).first().getByRole("button", { name: "Remove" }).click();
+      await expect(rowsOf(page, date)).toHaveCount(left - 1);
+    }
+  }
+}
+
 test("time off counts the year, says where each number comes from, and refuses a day nobody works", async ({
   page,
 }) => {
+  // One long journey: under four workers it needs more than the default 30 seconds.
+  test.slow();
+  await fromTheSeed(page);
   await test.step("the allowance reads in one unit — days, ROL included (N5)", async () => {
     await page.goto("/timeoff");
     await expect(page.getByRole("heading", { name: "Work & Time off", level: 1 })).toBeVisible();
@@ -416,6 +440,7 @@ test("time off counts the year, says where each number comes from, and refuses a
 test("the cards say what a month grants, and the panel what will be left on the day (N5.1)", async ({
   page,
 }) => {
+  await fromTheSeed(page);
   await test.step("with no payslip the rate is the allowance over twelve, and the card says so", async () => {
     await page.goto("/timeoff");
     const vacation = page.getByTestId("vacation-card-accrual");
