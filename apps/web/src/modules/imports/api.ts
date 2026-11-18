@@ -1,12 +1,12 @@
 import "server-only";
-import { after } from "next/server";
 import { Hono } from "hono";
 import { z } from "zod";
-import { processPayslip, uploadPayslip } from "@ledgerly/domain/payroll";
+import { uploadPayslip } from "@ledgerly/domain/payroll";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
-import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { DOCUMENT_KINDS, isReadKind, MAX_DOCUMENT_BYTES, type ReadKind } from "@ledgerly/domain/imports";
 import { ImportError } from "@ledgerly/domain/imports";
@@ -28,16 +28,9 @@ export const importsApi = new Hono<ApiEnv>();
 
 const kindSchema = z.enum(DOCUMENT_KINDS);
 
-/** Reads the document after the answer has gone out, exactly as the Server Actions do (§7.8). */
-function readLater(ctx: Ctx, kind: ReadKind, documentId: string): void {
-  after(async () => {
-    try {
-      if (kind === "payslip") await processPayslip(ctx, documentId);
-    } catch (error) {
-      // Left `extracting`: the hourly sweep reads it again (spec §10.2), but said out loud here.
-      console.error(`[api] reading ${documentId} failed`, redactForLog(error));
-    }
-  });
+/** Reads the document in the worker, exactly as the Server Actions do (§7.8). */
+async function readLater(ctx: Ctx, kind: ReadKind, documentId: string): Promise<void> {
+  if (kind === "payslip") await enqueue(tasks.readDocument(ctx.userId, documentId));
 }
 
 const REFUSALS: Partial<Record<string, "too_large" | "unsupported_format" | "invalid">> = {
@@ -65,7 +58,7 @@ importsApi.post("/imports", withToken("imports"), async (c) => {
   const upload = { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
   try {
     const result = await uploadPayslip(ctx, upload);
-    if (!result.duplicate) readLater(ctx, kind.data, result.document.id);
+    if (!result.duplicate) await readLater(ctx, kind.data, result.document.id);
     return c.json(
       {
         id: result.document.id,

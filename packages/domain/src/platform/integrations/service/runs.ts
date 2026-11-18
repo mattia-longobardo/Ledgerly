@@ -266,15 +266,18 @@ export async function recentRuns(
 /**
  * Closes the runs nobody is running any more: a process that died in the middle of a pass left
  * its run `running` for ever. Past an hour it is a failed run with the reason `orphaned` — no
- * pass lasts that long. The connection's health is left alone: nothing was learnt about it.
+ * pass lasts that long — and so is every run started before the worker that starts now
+ * (`startedBefore`): it was the worker's. The connection's health is left alone: nothing was
+ * learnt about it.
  */
-export async function closeOrphanRuns(now: Date = new Date()): Promise<number> {
+export async function closeOrphanRuns(
+  now: Date = new Date(),
+  startedBefore: Date = new Date(now.getTime() - ORPHAN_AFTER_MS),
+): Promise<number> {
   const closed = await getDb()
     .update(syncRuns)
     .set({ state: "failed", finishedAt: now, error: "orphaned" })
-    .where(
-      and(eq(syncRuns.state, "running"), lt(syncRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS))),
-    )
+    .where(and(eq(syncRuns.state, "running"), lt(syncRuns.startedAt, startedBefore)))
     .returning({ id: syncRuns.id });
   return closed.length;
 }

@@ -14,8 +14,8 @@ function bearerToken(header: string | null): string | null {
  * Prometheus text format for the homelab's Prometheus/Grafana (spec §10.4). The scrape target is
  * the `ledgerly` service on the compose network (spec §13); the app itself is reached only
  * over LAN/NetBird, but this endpoint must still never serve unauthenticated: a missing
- * `METRICS_TOKEN` (dev/test without it configured) or any failed check is a bare 404, matching
- * `/api/jobs/tick`'s behaviour, so the endpoint reveals nothing either way.
+ * `METRICS_TOKEN` (dev/test without it configured) or any failed check is a bare 404, so the
+ * endpoint reveals nothing either way.
  */
 export async function GET(request: Request) {
   const expected = readEnv().METRICS_TOKEN;

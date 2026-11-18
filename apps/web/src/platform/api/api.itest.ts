@@ -136,7 +136,7 @@ let aliceAccount: string;
 beforeEach(async () => {
   await resetDatabase();
   invalidateAuth();
-  resetRateLimits();
+  await resetRateLimits();
   sessions.clear();
   clientOf.clear();
   alice = await newContext();

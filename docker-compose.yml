@@ -46,36 +46,48 @@ services:
       - mail_internal
       - ledgerly_plugins
 
-# Ledgerly Cron # --------------------------------------------------------------------------------------------------------------
+# Ledgerly Worker # --------------------------------------------------------------------------------------------------------------
 
-  ledgerly-cron:
-    build: ./cron
-    image: ledgerly-cron:latest
-    container_name: ledgerly-cron
+  # The jobs and the syncs (rewrite plan R1): the image of `ledgerly`, another command. Its own
+  # scheduler and the queue `job_queue` in the database; no port, no Traefik. One worker only.
+  # `ledgerly` applies the migrations as it starts: the worker starts after it is healthy.
+  ledgerly-worker:
+    image: ledgerly:latest
+    container_name: ledgerly-worker
+    command: ["node", "/app/worker.mjs"]
     user: "1000:1000"
     depends_on:
       ledgerly:
         condition: service_healthy
     env_file:
       - .env.homelab
+    environment:
+      # Its own pool of connections, named in `pg_stat_activity`.
+      PGAPPNAME: ledgerly-worker
     restart: unless-stopped
-    mem_limit: 128m
-    cpus: "0.25"
+    # What a stop waits for the tasks running (25 s in `apps/worker/src/main.ts`), and a margin.
+    stop_grace_period: 30s
+    mem_limit: 1g
+    cpus: "1.0"
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD-SHELL", "pgrep supercronic > /dev/null"]
+      test: ["CMD", "node", "/app/worker.mjs", "--health"]
       interval: 30s
-      timeout: 5s
+      timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 30s
     labels:
       - "autoheal=true"
+    # The database, the mail, the plugins; `ledgerly_plugins` is also its way to the providers
+    # on the internet (Wallet, Trek, the exchanges, the ECB).
     networks:
       - db_internal
+      - mail_internal
+      - ledgerly_plugins
 
 # Ledgerly Plugin Enable Banking # --------------------------------------------------------------------------------------------------------------
 

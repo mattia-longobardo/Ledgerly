@@ -4,7 +4,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import { z } from "zod";
 import { AccountError } from "@ledgerly/domain/accounts";
 import { parseAmount } from "@ledgerly/domain/platform/format";
@@ -34,7 +35,7 @@ import {
   disconnectProvider,
   replaceKey,
   SyncError,
-  syncNow,
+  checkSyncNow,
   verifyKey,
 } from "@ledgerly/domain/investments";
 
@@ -311,7 +312,7 @@ export async function connectProviderAction(
       credentials,
       target,
       new Date(),
-      (work) => after(work),
+      (connectionId, accountId) => enqueue(tasks.firstFlows(ctx.userId, connectionId, accountId)),
     );
     revalidate(accountId);
     revalidatePath("/settings/integrations");
@@ -321,12 +322,13 @@ export async function connectProviderAction(
   }
 }
 
-export async function syncNowAction(accountId: string): Promise<ActionResult & { outcome?: string }> {
+/** "Sync now" (§4.3): checked here, run by the worker; the answer does not wait for the provider. */
+export async function syncNowAction(accountId: string): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    const outcome = await syncNow(ctx, accountId, new Date(), (work) => after(work));
-    revalidate(accountId);
-    return outcome === "answered" ? { ok: true, outcome } : { ok: false, error: `sync_${outcome}` };
+    const { connection } = await checkSyncNow(ctx, accountId);
+    await enqueue(tasks.updateConnection(ctx.userId, connection.id, null));
+    return { ok: true };
   } catch (error) {
     return failed(error);
   }

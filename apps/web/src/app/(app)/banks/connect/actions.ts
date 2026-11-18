@@ -8,7 +8,8 @@ import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { getOptionalSession } from "@/platform/auth/session";
-import { runAfterSync } from "@/platform/jobs/after-sync";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import { listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import { instanceKeyOf, institutionOf } from "@ledgerly/domain/platform/plugins";
 import {
@@ -122,7 +123,7 @@ export async function importBankAccountsAction(
   try {
     await chooseAccounts(session.ctx, { ...target, decisions }, bankSink);
     const outcome = await readBank(session.ctx, { ...target, presence: await requestPresence() }, bankSink);
-    if (outcome.ok && outcome.created + outcome.updated > 0) await runAfterSync("manual");
+    if (outcome.ok && outcome.created + outcome.updated > 0) await enqueue(tasks.afterSync("manual"));
   } catch (error) {
     return refusal(error);
   }
@@ -139,7 +140,7 @@ export async function retryBankReadingAction(connectionId: string): Promise<{ ok
       { pluginId: BANK_PLUGIN_ID, connectionId, presence: await requestPresence() },
       bankSink,
     );
-    if (outcome.ok && outcome.created + outcome.updated > 0) await runAfterSync("manual");
+    if (outcome.ok && outcome.created + outcome.updated > 0) await enqueue(tasks.afterSync("manual"));
   } catch (error) {
     return refusal(error);
   }

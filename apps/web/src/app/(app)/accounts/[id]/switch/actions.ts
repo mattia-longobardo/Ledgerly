@@ -6,7 +6,8 @@
 import { revalidatePath } from "next/cache";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { runAfterSync } from "@/platform/jobs/after-sync";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import { requestPresence } from "../../../banks/presence";
 import {
   applySwitch,
@@ -56,7 +57,7 @@ export async function applySwitchAction(
   const ctx = await requireSession();
   try {
     const outcome = await applySwitch(ctx, accountId, target, await requestPresence());
-    await runAfterSync("manual");
+    await enqueue(tasks.afterSync("manual"));
     revalidate(accountId);
     return { ok: true, ...outcome };
   } catch (error) {
@@ -69,7 +70,7 @@ export async function undoSwitchAction(accountId: string): Promise<{ ok: true } 
   const ctx = await requireSession();
   try {
     await undoSwitch(ctx, accountId);
-    await runAfterSync("manual");
+    await enqueue(tasks.afterSync("manual"));
     revalidate(accountId);
     return { ok: true };
   } catch (error) {

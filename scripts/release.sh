@@ -7,12 +7,15 @@
 #
 # The steps of docs/RELEASE.md §2-§4, in the one order that keeps a way back:
 #   1. the lock, a clean tree, HEAD = origin/main;
-#   2. the image `pre-<id>` (and `ledgerly-cron:pre-<id>` with `--cron`, the image of a plugin
-#      with `--plugin <id>`; a service deployed for the first time has no image to keep);
+#   2. the image `pre-<id>` (and `ledgerly-cron:pre-<id>` with `--cron`: the cron sidecar is gone
+#      since R1, its image is kept for a rollback to before it; the image of a plugin with
+#      `--plugin <id>`; a service deployed for the first time has no image to keep);
 #   3. the release's folder and its dump (`scripts/release-dump.sh`; `--no-dump`: the folder only);
 #   4. the numbers snapshot "before" (`npm run numbers`), with its checksum verified;
-#   5. the build and the start, waiting for the health check. The application is not built again
-#      when the image of the preview was built from the same commit (`preview-on-test.sh build`);
+#   5. the build and the start, waiting for the health check, then the worker on the same image
+#      (and the containers compose no longer names, such as the cron sidecar, removed). The
+#      application is not built again when the image of the preview was built from the same commit
+#      (`preview-on-test.sh build`);
 #   6. the health of the site, the numbers "after" at the same instant, and their comparison;
 #   7. the `@smoke` tests on the site (docs/testing.md).
 #
@@ -46,11 +49,12 @@ release=${1:?usage: release.sh <release-id> [--no-dump] [--cron] [--plugin <id>]
 shift
 dump_mode=""
 services="ledgerly"
+kept=""
 before_from="$PWD"
 while [ $# -gt 0 ]; do
   case "$1" in
     --no-dump) dump_mode="--no-dump" ;;
-    --cron) services="$services ledgerly-cron" ;;
+    --cron) kept="ledgerly-cron" ;;
     --plugin)
       shift
       case "${1:-}" in
@@ -88,7 +92,7 @@ node --input-type=module -e 'import { chromium } from "@playwright/test"; await 
   > /dev/null 2>&1 || stop "the browser of the E2E tests does not start: prepare it, then start again"
 
 # ——— 2. The image to go back to ———————————————————————————————————————————————————————————————
-for service in $services; do
+for service in $services $kept; do
   # A service deployed for the first time has no image yet: its way back is to stop it.
   if docker image inspect "$service:latest" > /dev/null 2>&1; then
     docker tag "$service:latest" "$service:pre-$release" || stop "docker tag $service:pre-$release failed"
@@ -123,7 +127,7 @@ echo "before: numbers-before.json, as of $instant"
 # ——— 5. Build and start ———————————————————————————————————————————————————————————————————————
 failed() {
   echo "release $release FAILED after the build started: $1" >&2
-  echo "Rollback: docker tag ledgerly:pre-$release ledgerly:latest && docker compose up -d --no-build ledgerly" >&2
+  echo "Rollback: docker tag ledgerly:pre-$release ledgerly:latest && docker compose up -d --no-build ledgerly ledgerly-worker" >&2
   exit 1
 }
 # The image of the preview, when it was built from this commit and from a clean tree
@@ -147,6 +151,10 @@ if [ -n "${to_build# }" ]; then
 fi
 # shellcheck disable=SC2086
 docker compose up -d --wait $services || failed "the containers did not become healthy"
+# The worker runs the image `ledgerly` just started (rewrite plan R1); it starts after the
+# migrations, which `ledgerly` applies as it starts.
+docker compose up -d --wait --no-build --remove-orphans ledgerly-worker ||
+  failed "the worker did not become healthy"
 
 # ——— 6. Health and the numbers "after" ————————————————————————————————————————————————————————
 url=${LEDGERLY_HEALTH_URL:-https://dash.longobardo.me/api/health}

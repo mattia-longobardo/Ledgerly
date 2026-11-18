@@ -1,10 +1,8 @@
 import { desc, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
-import { POST } from "@/app/api/jobs/tick/route";
 import { GET as getMetrics } from "@/app/api/metrics/route";
 import { getDb } from "@domain/platform/db/client";
-import { heartbeatAgeMs } from "./heartbeat";
 import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "@domain/platform/jobs/schema";
@@ -32,7 +30,7 @@ describe("jobs", () => {
   beforeEach(resetDatabase);
   afterAll(closeDatabase);
 
-  it("records success and failure independently and touches the heartbeat", async () => {
+  it("records success and failure independently", async () => {
     const outcomes = await runTier("hourly", [
       job("ok", async () => ({ processed: 3 })),
       job("broken", async () => {
@@ -48,10 +46,9 @@ describe("jobs", () => {
       ["broken", "failed", "provider down"],
       ["ok", "success", null],
     ]);
-    expect(await heartbeatAgeMs()).toBeLessThan(5000);
   });
 
-  it("strips NUL bytes from a stored error so later jobs and the heartbeat still run", async () => {
+  it("strips NUL bytes from a stored error so later jobs still run", async () => {
     const outcomes = await runTier("hourly", [
       job("poison", async () => {
         throw new Error("bad\u0000byte");
@@ -67,7 +64,6 @@ describe("jobs", () => {
     expect(poisoned.error).toBe("badbyte");
     const [after] = await getDb().select().from(jobRuns).where(eq(jobRuns.job, "after"));
     expect(after.status).toBe("success");
-    expect(await heartbeatAgeMs()).toBeLessThan(5000);
   });
 
   it("skips a job that is already running elsewhere", async () => {
@@ -84,19 +80,8 @@ describe("jobs", () => {
     expect(run.status).toBe("skipped");
   });
 
-  it("answers 404 to a wrong secret or tier and runs a tier with the right one", async () => {
-    const call = (tier: string, secret: string) =>
-      POST(
-        new Request(`http://localhost/api/jobs/tick?tier=${tier}`, {
-          method: "POST",
-          headers: { "x-cron-secret": secret },
-        }),
-      );
-    expect((await call("daily", "wrong-secret-wrong")).status).toBe(404);
-    expect((await call("weekly", "integration-cron-secret-integration")).status).toBe(404);
-    const ok = await call("daily", "integration-cron-secret-integration");
-    expect(ok.status).toBe(200);
-    expect(await ok.json()).toMatchObject({
+  it("runs the daily tier of the registry, each job recorded on its own", async () => {
+    expect({ tier: "daily", outcomes: await runTier("daily") }).toMatchObject({
       tier: "daily",
       outcomes: [
         { job: "housekeeping", status: "success" },

@@ -1,23 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LEAVE_DAY_KINDS, goesToTrek } from "@domain/modules/timeoff/rules";
+import { tasks } from "@/platform/jobs/queue";
 import { removeLeaveAction, saveLeaveRangeAction, undoLeaveAction } from "./actions";
 
-const { requireSession, saveLeaveRange, removeLeave, restoreLeave, syncTrekNow, revalidatePath } = vi.hoisted(
+const { requireSession, saveLeaveRange, removeLeave, restoreLeave, enqueue, revalidatePath } = vi.hoisted(
   () => ({
     requireSession: vi.fn(),
     saveLeaveRange: vi.fn(),
     removeLeave: vi.fn(),
     restoreLeave: vi.fn(),
-    syncTrekNow: vi.fn(),
+    enqueue: vi.fn(),
     revalidatePath: vi.fn(),
   }),
 );
+/** The pass the worker makes is a task in its queue: what the action asks for is that task. */
+const TREK_ID = "0190f0c0-0000-7000-8000-000000000001";
 
 vi.mock("@/platform/auth/session", () => ({ requireSession }));
 vi.mock("next/cache", () => ({ revalidatePath }));
-// `after()` runs its callback once the response has gone out; here that is at once.
-vi.mock("next/server", () => ({ after: (callback: () => unknown) => void callback() }));
-vi.mock("@domain/platform/integrations/trek/sync", () => ({ syncTrekNow }));
+vi.mock("@domain/platform/integrations/trek/sync", () => ({ trekConnection: async () => ({ id: TREK_ID }) }));
+vi.mock("@domain/platform/jobs/queue", () => ({ enqueue }));
 vi.mock("@domain/modules/timeoff/service", async (actual) => ({
   ...(await actual<typeof import("@domain/modules/timeoff/service")>()),
   saveLeaveRange,
@@ -41,7 +43,7 @@ beforeEach(() => {
       trek: goesToTrek(input.kind),
     }),
   );
-  syncTrekNow.mockResolvedValue(null);
+  enqueue.mockResolvedValue(true);
 });
 
 const fields = (kind: string) => ({ from: "2026-06-16", to: "2026-06-16", kind, fraction: "1", note: "" });
@@ -50,12 +52,14 @@ describe("the Trek pass after a save (decision ST-23)", () => {
   it.each(LEAVE_DAY_KINDS)("starts for %s exactly when that kind reaches Trek", async (kind) => {
     const result = await saveLeaveRangeAction(fields(kind));
     expect(result).toEqual({ ok: true, undo: UNDO, days: 1, removed: 0, pending: 0 });
-    await vi.waitFor(() => expect(syncTrekNow).toHaveBeenCalledTimes(goesToTrek(kind) ? 1 : 0));
+    await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(goesToTrek(kind) ? 1 : 0));
   });
 
   it("starts for a ROL day as it does for a vacation day, without waiting for the next sync", async () => {
     await saveLeaveRangeAction(fields("rol"));
-    await vi.waitFor(() => expect(syncTrekNow).toHaveBeenCalledWith(CTX));
+    await vi.waitFor(() =>
+      expect(enqueue).toHaveBeenCalledWith(tasks.updateConnection(CTX.userId, TREK_ID, null)),
+    );
   });
 });
 
@@ -101,11 +105,11 @@ describe("the leave actions", () => {
       removed: 1,
       pending: 0,
     });
-    expect(syncTrekNow).not.toHaveBeenCalled();
+    expect(enqueue).not.toHaveBeenCalled();
 
     removeLeave.mockResolvedValueOnce({ deleted: 0, pending: 1, undo: UNDO });
     await removeLeaveAction({ id: "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b" });
-    await vi.waitFor(() => expect(syncTrekNow).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(1));
   });
 
   it("refuse a removal that names neither a row nor a date", async () => {
@@ -117,6 +121,6 @@ describe("the leave actions", () => {
     restoreLeave.mockResolvedValueOnce({ trek: true });
     expect(await undoLeaveAction(UNDO)).toEqual({ ok: true });
     expect(restoreLeave).toHaveBeenCalledWith(CTX, UNDO);
-    await vi.waitFor(() => expect(syncTrekNow).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(enqueue).toHaveBeenCalledTimes(1));
   });
 });

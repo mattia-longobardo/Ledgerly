@@ -25,6 +25,7 @@ export default defineConfig({
           environment: "node",
           include: [
             "apps/web/src/**/*.test.ts",
+            "apps/worker/src/**/*.test.ts",
             "tools/**/*.test.ts",
             "packages/*/src/**/*.test.ts",
             "plugins/**/*.test.ts",
@@ -50,7 +51,12 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
-          include: ["apps/web/src/**/*.itest.ts", "tools/**/*.itest.ts", "packages/*/src/**/*.itest.ts"],
+          include: [
+            "apps/web/src/**/*.itest.ts",
+            "apps/worker/src/**/*.itest.ts",
+            "tools/**/*.itest.ts",
+            "packages/*/src/**/*.itest.ts",
+          ],
           fileParallelism: false,
           testTimeout: 30_000,
           hookTimeout: 60_000,
@@ -77,7 +83,6 @@ export default defineConfig({
             S3_KEY_PREFIX: process.env.TEST_S3_KEY_PREFIX ?? "tests/",
             APP_ENCRYPTION_KEY: "k1:gBubFxNEhi1CSofEa9MtLb5lSXHXROI4WupEIGMhsZU=",
             CRON_SECRET: "integration-cron-secret-integration",
-            HEARTBEAT_FILE: "/tmp/ledgerly-heartbeat-test",
             METRICS_TOKEN: "integration-metrics-token-integration-metrics-token",
             // One plugin, never contacted: the tests of the plugin runtime answer in its place.
             PLUGIN_URLS: "enablebanking=http://plugin.invalid:8787",

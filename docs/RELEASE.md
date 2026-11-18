@@ -88,7 +88,7 @@ checkout (the release in production): a release with a migration needs it. Statu
 with numbers that differ. The commands below are what the script runs.
 
 ```bash
-docker tag ledgerly:latest ledgerly:pre-<id>          # and ledgerly-cron, if `cron/` changed
+docker tag ledgerly:latest ledgerly:pre-<id>          # the worker runs this image too
 folder=$(sh scripts/release-dump.sh <id> | tail -n 1) # add --no-dump for a release with no migration
 npm run numbers -- "$folder" before                   # prints the instant: keep it for step 4
 ```
@@ -118,8 +118,9 @@ are in the history of the repository, before the commit that removed them.
 ## 3. Build and start
 
 ```bash
-docker compose build ledgerly ledgerly-cron
-docker compose up -d ledgerly ledgerly-cron
+docker compose build ledgerly
+docker compose up -d --wait ledgerly
+docker compose up -d --wait --no-build --remove-orphans ledgerly-worker
 ```
 
 `scripts/release.sh` does not build the application when the image `ledgerly:preview` carries the
@@ -141,8 +142,8 @@ docker logs --tail 40 ledgerly
 container will not serve a half-configured app.
 
 > §13 step 3 — a production `docker-compose.yml` with new service names — **has no object**:
-> `docker-compose.yml` in this repository *is* the production one, with `ledgerly` and
-> `ledgerly-cron` on `proxy_public`, `db_internal` and `mail_internal`.
+> `docker-compose.yml` in this repository *is* the production one, with `ledgerly` on
+> `proxy_public`, `db_internal` and `mail_internal` (and, from R1, `ledgerly-worker`).
 >
 > §13 step 4 — adding the Better Auth callback URI in Authentik — **has no object**: the
 > `ledgerly` provider and application already exist there, with the `Ledgerly` group deciding who

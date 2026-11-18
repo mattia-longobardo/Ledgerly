@@ -25,7 +25,7 @@ import { bringUpToDate } from "@ledgerly/domain/interests";
  * twice. Then the settlements of the rules that publish are posted to Wallet (spec §7.6), with no
  * transaction open while Wallet is called; that too only in a pass that had a rule to accrue.
  *
- * The hourly tick is Europe/Rome (cron/crontab): the hour a zone skips when it springs forward has
+ * The hourly tick is Europe/Rome (`SCHEDULE` of the jobs registry): the hour a zone skips when it springs forward has
  * no pass of its own, and the hour it repeats when it falls back has two — harmless, being
  * idempotent.
  *

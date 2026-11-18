@@ -2,8 +2,9 @@
 // revalidate. Amounts and hours arrive as typed, in the person's own number format.
 "use server";
 
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
 import { parseAmount } from "@ledgerly/domain/platform/format";
 import { ImportError } from "@ledgerly/domain/imports";
 import { MAX_DOCUMENT_BYTES } from "@ledgerly/domain/imports";
@@ -17,7 +18,6 @@ import {
   decideField,
   deletePayslip,
   PayrollError,
-  processPayslip,
   rejectPayslip,
   renamePayslip,
   reopenPayslip,
@@ -50,15 +50,12 @@ function revalidate(documentId?: string): void {
   if (documentId) revalidatePath(`/payroll/${documentId}`);
 }
 
-/** Reads a document after the response: the upload answers at once (spec §7.8 "subito dopo"). */
-function readLater(ctx: Ctx, documentId: string): void {
-  after(async () => {
-    try {
-      await processPayslip(ctx, documentId);
-    } catch {
-      // Left `extracting`: the hourly sweep reads it again (spec §10.2).
-    }
-  });
+/**
+ * Reads a document in the worker: the upload answers at once (spec §7.8 "subito dopo"). A reading
+ * that fails leaves it `extracting`, and `documents-sweep` reads it again (spec §10.2).
+ */
+async function readLater(ctx: Ctx, documentId: string): Promise<void> {
+  await enqueue(tasks.readDocument(ctx.userId, documentId));
 }
 
 /** Steps 1–2 of spec §9.3 for each file; the reading of each new one starts right after. */
@@ -79,7 +76,7 @@ export async function uploadPayslipsAction(data: FormData): Promise<UploadResult
         bytes: new Uint8Array(await file.arrayBuffer()),
       });
       result.uploaded.push({ id: document.id, name: document.fileName, duplicate });
-      if (!duplicate) readLater(ctx, document.id);
+      if (!duplicate) await readLater(ctx, document.id);
     } catch (error) {
       if (!(error instanceof ImportError)) throw error;
       result.refused.push({ name: file.name, error: error.code });

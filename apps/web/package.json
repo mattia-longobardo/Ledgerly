@@ -1,8 +1,11 @@
 {
   "name": "@ledgerly/web",
-  "version": "0.35.3",
+  "version": "0.36.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./jobs": "./src/app/worker.ts"
+  },
   "scripts": {
     "prebuild": "node ../../scripts/copy-pdfjs.mjs public/pdfjs",
     "build": "next build"

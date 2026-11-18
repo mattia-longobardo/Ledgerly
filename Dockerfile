@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 # The workspaces (R0): the install links each one by its `package.json`.
 COPY apps/web/package.json ./apps/web/
+COPY apps/worker/package.json ./apps/worker/
 COPY packages/api-contract/package.json ./packages/api-contract/
 COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
@@ -26,6 +27,13 @@ RUN ./node_modules/.bin/esbuild scripts/migrate.ts --bundle --platform=node --fo
       --external:pg-native \
       --banner:js="import{createRequire}from'node:module';const require=createRequire(import.meta.url);" \
       --outfile=migrate.mjs
+# The worker (rewrite plan R1): the jobs of `apps/web` and its own loop, in one file. `ccxt` and the
+# native `argon2` stay outside: Next has traced them into the standalone `node_modules` it runs on.
+RUN ./node_modules/.bin/esbuild apps/worker/src/main.ts --bundle --platform=node --format=esm --target=node26 \
+      --external:pg-native --external:ccxt --external:@node-rs/argon2 \
+      --alias:server-only=./test/server-only.ts \
+      --banner:js="import{createRequire}from'node:module';const require=createRequire(import.meta.url);" \
+      --outfile=worker.mjs
 
 FROM node:26-alpine AS runner
 # `wget` for the healthcheck; `postgresql18-client` for the daily backup (spec §10.2), which runs
@@ -40,6 +48,7 @@ COPY --from=builder --chown=1000:1000 /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=1000:1000 /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=1000:1000 /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=1000:1000 /app/migrate.mjs ./migrate.mjs
+COPY --from=builder --chown=1000:1000 /app/worker.mjs ./worker.mjs
 COPY --chown=1000:1000 drizzle ./drizzle
 COPY --chown=1000:1000 entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh && mkdir -p apps/web/.next/cache && chown -R 1000:1000 apps/web/.next

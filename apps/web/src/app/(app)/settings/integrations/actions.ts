@@ -10,7 +10,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
-import { runAfterSync } from "@/platform/jobs/after-sync";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { isKnownProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
 import { BACKFILL_CHOICES } from "@ledgerly/domain/platform/integrations/wallet";
@@ -167,7 +168,7 @@ async function syncWalletNowAction(): Promise<IntegrationActionResult> {
   try {
     await syncWalletNow(ctx, connection.id);
     // The same checks as after a scheduled pass (docs/scheduler.md), only if the movements changed.
-    await runAfterSync("manual");
+    await enqueue(tasks.afterSync("manual"));
     revalidatePath("/subscriptions");
     revalidatePath("/funds");
   } catch (error) {

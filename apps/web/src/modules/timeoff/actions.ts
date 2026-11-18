@@ -4,9 +4,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
+import { trekConnection } from "@ledgerly/domain/platform/integrations/trek";
 import { z } from "zod";
-import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { LEAVE_DAY_KINDS, type LeaveUndo } from "@ledgerly/domain/timeoff";
@@ -41,20 +42,14 @@ function revalidate(): void {
 }
 
 /**
- * Starts a Trek pass once the response has gone out (`after()`), so the screen never waits on a
- * provider. A user with no Trek link does nothing at all; a pass already running is not an error
- * to show anybody, and a pass that fails has already written its own `sync_runs` row — §3.4.11
- * says an hourly condition is not worth interrupting somebody over.
+ * Asks the worker for a Trek pass, so the screen never waits on a provider. A user with no Trek
+ * link does nothing at all; a pass already running is not an error to show anybody, and a pass that
+ * fails has already written its own `sync_runs` row — §3.4.11 says an hourly condition is not worth
+ * interrupting somebody over.
  */
-function nudgeTrek(ctx: Ctx): void {
-  after(async () => {
-    try {
-      const { syncTrekNow } = await import("@ledgerly/domain/platform/integrations/trek");
-      await syncTrekNow(ctx);
-    } catch (error) {
-      console.error("[timeoff] the Trek pass after a save did not finish", redactForLog(error));
-    }
-  });
+async function nudgeTrek(ctx: Ctx): Promise<void> {
+  const connection = await trekConnection(ctx);
+  if (connection) await enqueue(tasks.updateConnection(ctx.userId, connection.id, null));
 }
 
 /** The allowance modal: days as typed, an empty field being nothing stated. */
@@ -133,7 +128,7 @@ export async function saveLeaveRangeAction(input: LeaveFormInput): Promise<Leave
     });
     revalidate();
     // The service knows whether the next pass has work: one list says what reaches Trek.
-    if (result.trek) nudgeTrek(ctx);
+    if (result.trek) await nudgeTrek(ctx);
     return { ok: true, undo: result.undo, days: result.totalDays, removed: 0, pending: 0 };
   } catch (error) {
     return failed(error);
@@ -154,7 +149,7 @@ export async function removeLeaveAction(
     const removed = await removeLeave(ctx, removalSchema.parse(target));
     revalidate();
     // Only a removal Trek has to be told about is worth a pass; a day it never had is just gone.
-    if (removed.pending > 0) nudgeTrek(ctx);
+    if (removed.pending > 0) await nudgeTrek(ctx);
     return {
       ok: true,
       undo: removed.undo,
@@ -182,7 +177,7 @@ export async function removeLeaveRangeAction(range: {
       return { ok: true, undo: { dates: [range.from], rows: [] }, days: 0, removed: 0, pending: 0 };
     }
     revalidate();
-    if (removed.pending > 0) nudgeTrek(ctx);
+    if (removed.pending > 0) await nudgeTrek(ctx);
     return {
       ok: true,
       undo: removed.undo,
@@ -201,7 +196,7 @@ export async function undoLeaveAction(undo: LeaveUndo): Promise<ActionResult> {
   try {
     const restored = await restoreLeave(ctx, undo);
     revalidate();
-    if (restored.trek) nudgeTrek(ctx);
+    if (restored.trek) await nudgeTrek(ctx);
     return { ok: true };
   } catch (error) {
     return failed(error);

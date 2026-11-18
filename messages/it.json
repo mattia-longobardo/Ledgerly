@@ -1313,8 +1313,7 @@
         "disconnect": "Scollega"
       },
       "toasts": {
-        "updated": "Aggiornamento completato",
-        "updatedNew": "Aggiornamento completato: {count, plural, one {# movimento nuovo} other {# movimenti nuovi}}",
+        "started": "Aggiornamento avviato: i dati arrivano tra pochi istanti",
         "resumed": "Aggiornamento automatico riattivato",
         "enabled": "{provider} attivato",
         "tested": "{name} ha risposto: il collegamento funziona",
@@ -4614,7 +4613,7 @@
       "zeroConfirmed": "Zero confermato",
       "urlSaved": "Link salvato",
       "connected": "{name} collegato",
-      "synced": "Sincronizzato",
+      "synced": "Sincronizzazione avviata: i valori arrivano tra pochi istanti",
       "verified": "La chiave è in sola lettura",
       "keyReplaced": "Chiave sostituita",
       "disconnected": "{name} scollegato: ora il conto è manuale",

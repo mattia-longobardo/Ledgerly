@@ -24,7 +24,7 @@ For a dry run against the test database, see `scripts/preview-on-test.sh` and §
 | `src/ui`          | Design system.                                         |
 | `messages/`       | Interface text, in `en.json` and `it.json`.            |
 | `drizzle/`        | Database migrations.                                   |
-| `cron/`           | The cron sidecar image.                                |
+| `apps/worker`     | The worker: scheduler and queue of the jobs (R1).      |
 | `tests/`          | End-to-end tests and test fixtures.                    |
 
 ## Rules for the code

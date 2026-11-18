@@ -39,7 +39,7 @@ import { estimateHistoryOf, syncFlows } from "./history";
 import { linkedOf, todayLookup } from "./quantities";
 import { insertKeyCheck, statusOf, writeCoverage, writeReading } from "./readings";
 import { settleCutoff } from "./settle";
-import { SyncError, codeOf, sourceOf, takeKeyAttempt, type Defer } from "./sources";
+import { SyncError, codeOf, sourceOf, takeKeyAttempt } from "./sources";
 
 // ——— Connecting (§4.2, §5.1) ————————————————————————————————————————————————————————————————
 
@@ -120,8 +120,11 @@ export async function connectInvestmentProvider(
   credentials: Readonly<Record<string, string>>,
   input: ConnectTarget,
   now: Date = new Date(),
-  /** The first flows after the answer (Binance reads 24 months: minutes, §3.2); inline by default. */
-  defer?: Defer,
+  /**
+   * Puts the first flows in the worker's queue instead of reading them here (Binance reads 24
+   * months: minutes, §3.2); inline by default. The worker reads them with {@link readFirstFlows}.
+   */
+  queueFlows?: (connectionId: string, accountId: string) => Promise<unknown>,
 ): Promise<{ accountId: string; ipRestricted: boolean | null }> {
   const provider = connectableProvider(providerId);
   if (!provider) throw new SyncError("unknown_provider");
@@ -132,7 +135,7 @@ export async function connectInvestmentProvider(
   if (!parsedTarget.success) throw new SyncError("not_eligible");
   if (await connectionOf(ctx, provider.id)) throw new SyncError("already_connected");
   const target = await targetOf(ctx, provider, parsedTarget.data);
-  takeKeyAttempt(ctx, provider.id, now);
+  await takeKeyAttempt(ctx, provider.id, now);
 
   // The network, outside any transaction: the check, the test reading, the history.
   const source = sourceOf(provider.id);
@@ -262,29 +265,39 @@ export async function connectInvestmentProvider(
       return investment.accountId;
     });
     // The first flows now, so the page has its history at once; a failure waits for the next pass.
-    const firstFlows = () =>
-      withJobLock(`investments-sync:${connection.id}`, async () => {
-        await syncFlows(ctx, connection, accountId, now);
-        // The reconstructed history and the 12 months settled at once (PERS-100, PERS-145); a
-        // failure waits for the next pass.
-        const linked = await linkedOf(ctx, connection);
-        if (linked) {
-          await estimateHistoryOf(ctx, linked, now).catch((error: unknown) => {
-            console.error("[investments] history not rebuilt", sourceErrorLog(provider.id, error));
-          });
-          await settleCutoff(ctx, accountId).catch((error: unknown) => {
-            console.error("[investments] cut-off not settled", sourceErrorLog(provider.id, error));
-          });
-        }
-      }).catch((error: unknown) => {
-        console.error("[investments] first flows not read", sourceErrorLog(provider.id, error));
-      });
-    if (defer) defer(firstFlows);
-    else await firstFlows();
+    if (queueFlows) await queueFlows(connection.id, accountId);
+    else await readFirstFlows(ctx, connection, accountId, now);
     return { accountId, ipRestricted: check.ipRestricted };
   } catch (error) {
     // Nothing half done: without its account a key stays nowhere.
     await deleteConnection(ctx, connection.id).catch(() => undefined);
     throw error;
   }
+}
+
+/**
+ * The first flows of a service just connected, the history rebuilt from them and the 12 months
+ * settled (PERS-100, PERS-145), under the connection's lock. Never throws: a failure waits for the
+ * next pass.
+ */
+export async function readFirstFlows(
+  ctx: Ctx,
+  connection: Connection,
+  accountId: string,
+  now: Date,
+): Promise<void> {
+  await withJobLock(`investments-sync:${connection.id}`, async () => {
+    await syncFlows(ctx, connection, accountId, now);
+    const linked = await linkedOf(ctx, connection);
+    if (linked) {
+      await estimateHistoryOf(ctx, linked, now).catch((error: unknown) => {
+        console.error("[investments] history not rebuilt", sourceErrorLog(connection.provider, error));
+      });
+      await settleCutoff(ctx, accountId).catch((error: unknown) => {
+        console.error("[investments] cut-off not settled", sourceErrorLog(connection.provider, error));
+      });
+    }
+  }).catch((error: unknown) => {
+    console.error("[investments] first flows not read", sourceErrorLog(connection.provider, error));
+  });
 }

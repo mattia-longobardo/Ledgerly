@@ -145,7 +145,7 @@ function configOf(bag: Record<string, string>): TrekConfig {
   };
 }
 
-async function trekConnection(ctx: Pick<Ctx, "userId">): Promise<Connection | null> {
+export async function trekConnection(ctx: Pick<Ctx, "userId">): Promise<Connection | null> {
   return (await listConnections(ctx)).find((one) => one.provider === TREK_PROVIDER) ?? null;
 }
 

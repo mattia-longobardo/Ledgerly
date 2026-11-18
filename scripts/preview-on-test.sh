@@ -66,12 +66,18 @@ case "${1:-}" in
     environment | docker run -d --name "$name" --network db_internal --user 1000:1000 \
       --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL \
       -p "127.0.0.1:$port:3000" "$2"
+    # The worker of the preview (rewrite plan R1): the tasks the screens put in the queue, on the same
+    # database. No scheduler: as before R1, no tier runs by itself in a preview. It restarts until
+    # the app has applied the migrations of the queue.
+    environment | docker run -d --name "$name-worker" --restart unless-stopped --network db_internal --user 1000:1000 \
+      --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL \
+      "$2" node /app/worker.mjs --no-schedule
     ;;
   seed)
     script scripts/migrate.ts
     script scripts/seed-e2e.ts seed
     ;;
   remove) script scripts/seed-e2e.ts remove ;;
-  down) docker rm -f "$name" ;;
+  down) docker rm -f "$name" "$name-worker" ;;
   *) echo "usage: preview-on-test.sh build [<image>] | up <image> | seed | remove | down" >&2; exit 1 ;;
 esac

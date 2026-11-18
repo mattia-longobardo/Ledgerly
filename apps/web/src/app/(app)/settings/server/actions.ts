@@ -5,12 +5,12 @@
 import { revalidatePath } from "next/cache";
 // "Run now" can start the sync of every connection: the plugins' passes have to be registered.
 import "@/app/plugin-wiring";
-import { after } from "next/server";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireAdmin } from "@/platform/auth/session";
 import { BackupError, type BackupErrorCode, backupNow } from "@/platform/backup/service";
 import { JOBS } from "@/platform/jobs/registry";
-import { runJobByHand } from "@/platform/jobs/tick";
 import type { LlmProbeResult } from "@ledgerly/domain/platform/settings";
 import type { OidcInput } from "@ledgerly/domain/platform/settings";
 import type { OidcProbeOutcome } from "@ledgerly/domain/platform/settings";
@@ -140,20 +140,12 @@ export async function backupNowAction(): Promise<
 }
 
 /**
- * Starts one job because an admin asked (spec §10.3). It answers as soon as the job has been
- * *started*, not when it finishes: "Export all data" gathers everybody's documents and a Server
- * Action that waited for it would time out. How it went is in `job_runs`, which is the record of
- * every run whoever asked for it.
+ * Puts one job in the worker's queue because an admin asked (spec §10.3). It answers at once: how
+ * it went is in `job_runs`, which is the record of every run whoever asked for it.
  */
 export async function runJobAction(name: string): Promise<ServerActionResult> {
   await requireAdmin();
   if (!JOBS.some((job) => job.name === name)) return { ok: false, error: "invalid" };
-  after(async () => {
-    try {
-      await runJobByHand(name);
-    } catch (error) {
-      console.error(`[settings] the ${name} job failed`, redactForLog(error));
-    }
-  });
+  await enqueue(tasks.job(name));
   return { ok: true };
 }
