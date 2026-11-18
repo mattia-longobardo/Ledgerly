@@ -75,37 +75,37 @@
     "GET /accounts": {
       "medianMs": 6,
       "p95Ms": 6.5,
-      "queries": 5
+      "queries": 6
     },
     "GET /accounts/:id/balances": {
       "medianMs": 2.5,
       "p95Ms": 2.8,
-      "queries": 5
+      "queries": 6
     },
     "POST /accounts/:id/balances": {
       "medianMs": 2.7,
       "p95Ms": 3.2,
-      "queries": 7
+      "queries": 8
     },
     "GET /transactions": {
       "medianMs": 9.6,
       "p95Ms": 11.6,
-      "queries": 7
+      "queries": 8
     },
     "GET /summary": {
       "medianMs": 36.4,
       "p95Ms": 36.9,
-      "queries": 9
+      "queries": 10
     },
     "GET /investments": {
       "medianMs": 21.9,
       "p95Ms": 24.3,
-      "queries": 73
+      "queries": 74
     },
     "GET /investments/:accountId/holdings": {
       "medianMs": 4.9,
       "p95Ms": 5.4,
-      "queries": 16
+      "queries": 17
     }
   },
   "production": {
