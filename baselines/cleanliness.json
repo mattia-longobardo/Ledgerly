@@ -203,7 +203,7 @@
     "packages/domain/src/platform/integrations/wallet/send.ts": 1,
     "packages/domain/src/platform/integrations/wallet/sync.ts": 3,
     "packages/domain/src/platform/plugins/rules.ts": 2,
-    "packages/domain/src/platform/settings/service.ts": 3,
+    "packages/domain/src/platform/settings/service.ts": 1,
     "packages/plugin-contract/src/kit.ts": 1,
     "packages/plugin-host/src/service.ts": 2,
     "packages/plugin-host/src/sync.ts": 3,

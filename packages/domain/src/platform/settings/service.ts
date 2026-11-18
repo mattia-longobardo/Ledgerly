@@ -57,6 +57,33 @@ const API_KEY = z
   .trim()
   .regex(/^sk-[A-Za-z0-9_-]{20,200}$/);
 
+/* The three sealed settings (AI service, sign-in provider, mail transport) share one way to keep a
+   secret and to write their row (audit PLT-5). */
+
+type SettingRow = { sealed: Buffer | null; value: Record<string, unknown> | null } | null | undefined;
+
+/** A secret of a form: empty keeps the sealed one and its hint; typed is sealed, its hint its last four. */
+function keepOrSeal(typed: string, current: SettingRow, field: string, hintKey: string) {
+  if (typed === "") return { sealed: current?.sealed ?? null, hint: String(current?.value?.[hintKey] ?? "") };
+  return { sealed: sealJson(keyRing(), { [field]: typed }), hint: typed.slice(-4) };
+}
+
+/** Writes one key of the settings, with its sealed part. */
+async function writeSetting(
+  key: string,
+  value: Record<string, unknown>,
+  sealed: Buffer | null,
+  updatedBy: string,
+) {
+  await getDb()
+    .insert(appSettings)
+    .values({ key, value, sealed, updatedBy })
+    .onConflictDoUpdate({
+      target: appSettings.key,
+      set: { value, sealed, updatedBy, updatedAt: new Date() },
+    });
+}
+
 export async function llmFallbackView(ctx: Pick<Ctx, "role">): Promise<LlmFallbackView | null> {
   requireAdminCtx(ctx, () => new SettingsError("forbidden"));
   const [row] = await getDb().select().from(appSettings).where(eq(appSettings.key, LLM_FALLBACK));
@@ -87,16 +114,8 @@ export async function saveLlmFallback(
   if (typed === "" && !current?.sealed) throw new SettingsError("invalid");
   const key = typed === "" ? null : API_KEY.safeParse(typed);
   if (key && !key.success) throw new SettingsError("invalid");
-  const sealed = key?.success ? sealJson(keyRing(), { apiKey: key.data }) : current!.sealed!;
-  const keyHint = key?.success ? key.data.slice(-4) : String(current?.value?.keyHint ?? "");
-  const value = { provider, model: model.data, keyHint };
-  await getDb()
-    .insert(appSettings)
-    .values({ key: LLM_FALLBACK, value, sealed, updatedBy: ctx.userId })
-    .onConflictDoUpdate({
-      target: appSettings.key,
-      set: { value, sealed, updatedBy: ctx.userId, updatedAt: new Date() },
-    });
+  const { sealed, hint } = keepOrSeal(key?.success ? key.data : "", current, "apiKey", "keyHint");
+  await writeSetting(LLM_FALLBACK, { provider, model: model.data, keyHint: hint }, sealed, ctx.userId);
 }
 
 export async function removeLlmFallback(ctx: Pick<Ctx, "role">): Promise<void> {
@@ -203,8 +222,7 @@ export async function saveOidc(
   const current = await readSetting(OIDC_PROVIDER);
   const typed = parsed.data.clientSecret.trim();
   if (typed === "" && !current?.sealed) throw new SettingsError("invalid");
-  const sealed = typed === "" ? current!.sealed! : sealJson(keyRing(), { clientSecret: typed });
-  const secretHint = typed === "" ? String(current?.value?.secretHint ?? "") : typed.slice(-4);
+  const { sealed, hint: secretHint } = keepOrSeal(typed, current, "clientSecret", "secretHint");
   const savedName = typeof current?.value?.displayName === "string" ? current.value.displayName : null;
   const value = {
     issuer: parsed.data.issuer.trim(),
@@ -215,13 +233,7 @@ export async function saveOidc(
   };
   const before = typeof current?.value?.issuer === "string" ? String(current.value.issuer) : null;
   const signedEveryoneOut = issuerChanged(before, value.issuer);
-  await getDb()
-    .insert(appSettings)
-    .values({ key: OIDC_PROVIDER, value, sealed, updatedBy: ctx.userId })
-    .onConflictDoUpdate({
-      target: appSettings.key,
-      set: { value, sealed, updatedBy: ctx.userId, updatedAt: new Date() },
-    });
+  await writeSetting(OIDC_PROVIDER, value, sealed, ctx.userId);
   if (signedEveryoneOut) await getDb().delete(sessions);
   invalidateAuth();
   return { signedEveryoneOut };
@@ -297,25 +309,19 @@ export async function saveSmtp(ctx: Pick<Ctx, "role" | "userId">, input: unknown
   // A username with no password at all is refused only when none was ever stored: an admin who
   // leaves the field empty is keeping the sealed one, which is the whole point of the hint.
   if (parsed.data.user !== "" && typed === "" && !current?.sealed) throw new SettingsError("invalid");
-  const sealed = typed === "" ? (current?.sealed ?? null) : sealJson(keyRing(), { password: typed });
+  const { sealed, hint: passwordHint } = keepOrSeal(typed, current, "password", "passwordHint");
   const value = {
     host: parsed.data.host,
     port: parsed.data.port,
     encryption: parsed.data.encryption,
     user: parsed.data.user,
-    passwordHint: typed === "" ? String(current?.value?.passwordHint ?? "") : typed.slice(-4),
+    passwordHint,
     from: parsed.data.from,
     invitations: parsed.data.invitations,
     syncAlerts: parsed.data.syncAlerts,
     monthlySummary: parsed.data.monthlySummary,
   };
-  await getDb()
-    .insert(appSettings)
-    .values({ key: SMTP_TRANSPORT, value, sealed, updatedBy: ctx.userId })
-    .onConflictDoUpdate({
-      target: appSettings.key,
-      set: { value, sealed, updatedBy: ctx.userId, updatedAt: new Date() },
-    });
+  await writeSetting(SMTP_TRANSPORT, value, sealed, ctx.userId);
   invalidateMailTransport();
 }
 
