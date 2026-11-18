@@ -62,12 +62,13 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
     await expect(page.getByRole("row").filter({ hasText: "Esselunga" })).toHaveCount(1);
   });
 
-  await test.step("a category set by hand sticks to the movement", async () => {
+  // N3.3 (categories-and-rules.md §3.2, QC2): the sign decides between Income and Expenses.
+  await test.step("money in is offered no category of Expenses", async () => {
     const row = page.getByRole("row").filter({ hasText: "Stipendio" });
     await row.getByRole("button", { name: "Edit category" }).first().click();
     await page.getByRole("combobox", { name: "Search categories…" }).fill("spe");
-    await page.getByRole("option", { name: "Spesa" }).click();
-    await expect(page.getByRole("row").filter({ hasText: "Stipendio" })).toContainText("Spesa");
+    await expect(page.getByRole("option", { name: "Spesa" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
   });
 
   await test.step("hiding a movement takes it out of the totals, and Show hidden brings it back", async () => {

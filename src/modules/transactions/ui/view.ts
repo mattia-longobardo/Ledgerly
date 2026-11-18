@@ -7,7 +7,7 @@
 import type { RowBadge } from "./display";
 import type { Tone } from "@/ui/tone";
 import type { CategoryOption } from "@/ui/category-picker";
-import type { TransactionType } from "../rules";
+import type { CategoryType, TransactionType } from "../rules";
 import type { ManualFieldsView } from "./manual-types";
 
 export type { CategoryOption };
@@ -38,6 +38,10 @@ export interface RowView {
   /** The signed amount, formatted. */
   amount: string;
   amountTone: Tone;
+  /** The macros its category may be chosen in (§3.2, QC2): the picker offers only those. */
+  macros?: readonly CategoryType[];
+  /** A leg of a pair: the picker says it is a transfer between the person's accounts. */
+  paired?: boolean;
   badges: readonly RowBadge[];
   /** Whether the row is out of the totals, which decides between "Hide" and "Restore" (§7.2). */
   hidden: boolean;

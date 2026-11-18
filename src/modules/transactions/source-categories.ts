@@ -20,6 +20,8 @@ import {
   type SourceCategoryUndo,
   transactions,
 } from "./schema";
+import { retypeMovements } from "./macro";
+import type { CategoryType } from "./rules";
 import {
   choiceOf,
   pickSourceCategory,
@@ -324,6 +326,8 @@ export interface SourceCategoryChange {
   moved: number;
   /** What "Undo" is asked with; `null` when nothing changed. */
   undoId: string | null;
+  /** The macro the movements counted in and count in now, when the change moves them (§2.4). */
+  macro: { from: CategoryType; to: CategoryType } | null;
 }
 
 async function ownRow(ctx: Who, id: string, tx: Tx): Promise<Row> {
@@ -350,6 +354,8 @@ async function moveMovements(ctx: Who, id: string, categoryId: string, tx: Tx): 
       ),
     )
     .returning({ id: transactions.id });
+  // A match to a category of another macro changes how they count (categories-and-rules.md §2.4).
+  if (moved.length > 0) await retypeMovements(tx, ctx);
   return moved.length;
 }
 
@@ -406,7 +412,9 @@ export async function chooseSourceCategory(
   const targetId = parsed.data.categoryId ?? row.addedCategoryId;
   if (targetId === null) throw new SourceCategoryError("invalid");
 
-  const wanted = [...new Set([targetId, row.addedCategoryId].filter((id): id is string => id !== null))];
+  const wanted = [
+    ...new Set([targetId, row.addedCategoryId, row.categoryId].filter((id): id is string => id !== null)),
+  ];
   const held = await tx
     .select()
     .from(categories)
@@ -416,8 +424,10 @@ export async function chooseSourceCategory(
   const added = held.find((one) => one.id === row.addedCategoryId);
   if (!target) throw new SourceCategoryError("not_found");
   const matching = targetId !== row.addedCategoryId;
-  // A match is to a category in use, of the kind the source's own is.
-  if (matching && (target.archivedAt !== null || (added !== undefined && added.type !== target.type))) {
+  // A match is to a category in use, of the kind the source's own is, or of Transfers: its
+  // movements count as transfers then (categories-and-rules.md §2.4).
+  const kind = added === undefined || added.type === target.type || target.type === "transfer";
+  if (matching && (target.archivedAt !== null || !kind)) {
     throw new SourceCategoryError("invalid");
   }
   const unchanged: SourceCategoryChange = {
@@ -426,6 +436,7 @@ export async function chooseSourceCategory(
     choice: matching ? "matched" : "added",
     moved: 0,
     undoId: null,
+    macro: null,
   };
   if (row.categoryId === targetId) {
     if (row.seenAt === null) await markSeen(ctx, [row.id], tx);
@@ -462,7 +473,9 @@ export async function chooseSourceCategory(
     .insert(sourceCategoryUndos)
     .values(userScoped(ctx).stamp({ sourceCategoryId: row.id, before }))
     .returning({ id: sourceCategoryUndos.id });
-  return { ...unchanged, moved, undoId: undo.id };
+  const from = held.find((one) => one.id === row.categoryId)?.type;
+  const macro = from !== undefined && from !== target.type ? { from, to: target.type } : null;
+  return { ...unchanged, moved, undoId: undo.id, macro };
 }
 
 /**

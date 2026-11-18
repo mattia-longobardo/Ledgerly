@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, gte, inArray, isNull, lt, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, lte } from "drizzle-orm";
 import { getAccount } from "@/modules/accounts/queries";
 import { getCategory, TaxonomyError } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
@@ -367,4 +367,48 @@ export async function moveLimitsAccount(
     if (hasPgError(error, UNIQUE_VIOLATION)) throw new BudgetError("conflict");
     throw error;
   }
+}
+
+/**
+ * Stops the budgets of some categories from `month` on, inside the caller's transaction: a
+ * category moved to Transfers spends nothing any more (categories-and-rules.md QC8). The months
+ * before stay in the history. Read `limitsSnapshot` first for "Undo". Returns the scopes stopped.
+ */
+export async function stopLimitsOf(
+  ctx: Pick<Ctx, "userId">,
+  categoryIds: readonly string[],
+  month: MonthKey,
+  tx: Tx,
+): Promise<number> {
+  if (categoryIds.length === 0) return 0;
+  const ofCategories = and(
+    userScoped(ctx).owns(budgetLimits),
+    inArray(budgetLimits.categoryId, [...categoryIds]),
+  );
+  await tx.delete(budgetLimits).where(and(ofCategories, gte(budgetLimits.fromMonth, month)));
+  const earlier = await tx
+    .select()
+    .from(budgetLimits)
+    .where(and(ofCategories, lt(budgetLimits.fromMonth, month)))
+    .orderBy(desc(budgetLimits.fromMonth), asc(budgetLimits.id));
+  // The latest version of each scope: one still in force carries on unless a stop is written.
+  const latest = new Map<string, (typeof earlier)[number]>();
+  for (const row of earlier) {
+    const key = `${row.categoryId}|${row.accountId ?? ""}`;
+    if (!latest.has(key)) latest.set(key, row);
+  }
+  const running = [...latest.values()].filter((row) => !row.stopped);
+  if (running.length === 0) return 0;
+  await tx.insert(budgetLimits).values(
+    running.map((row) =>
+      userScoped(ctx).stamp({
+        categoryId: row.categoryId,
+        accountId: row.accountId,
+        fromMonth: month,
+        amountCents: null,
+        stopped: true,
+      }),
+    ),
+  );
+  return running.length;
 }

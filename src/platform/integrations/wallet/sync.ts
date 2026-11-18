@@ -657,6 +657,8 @@ async function syncTransactions(
   covered: ReadonlySet<string> | undefined,
   categoryWriter: WalletCategoryWriter | null,
 ): Promise<Record<string, number>> {
+  // The clock, not `now`: what this pass creates is stamped by the database (CR8).
+  const passStart = new Date();
   const job = await readSyncJob(ctx, connectionId, "transactions");
   const day = today(ctx.timeZone, now);
   const { windows, judge, deep } = windowsFor(job?.cursor ?? null, day);
@@ -770,7 +772,7 @@ async function syncTransactions(
   // is filed under one is the only thing that can say whether it is income, expense or a transfer
   // (owner, 2026-09-20). It runs after the import, never before, or it would judge on last hour's
   // evidence.
-  counts[RETYPED] = await alignCategoryTypesToMovements(ctx);
+  counts[RETYPED] = await alignCategoryTypesToMovements(ctx, passStart);
 
   return counts;
 }

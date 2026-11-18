@@ -11,6 +11,7 @@ import type { Ctx } from "@/platform/context";
 import { today } from "@/platform/dates";
 import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
+import { retypeMovements } from "./macro";
 import { isAfterToday, manualColumns, manualMovementSchema } from "./manual-rules";
 import { type Transaction, getTransaction } from "./queries";
 import { transactions } from "./schema";
@@ -77,7 +78,10 @@ export async function createManualTransaction(
     // Two requests with one key that passed the read above together: the second writes nothing.
     .onConflictDoNothing()
     .returning({ id: transactions.id });
-  if (row) return { transaction: await requireTransaction(ctx, row.id), created: true };
+  if (row) {
+    await retypeMovements(getDb(), ctx);
+    return { transaction: await requireTransaction(ctx, row.id), created: true };
+  }
   const sent = idempotencyKey === undefined ? null : await byKey(ctx, idempotencyKey);
   if (!sent) throw new TransactionError("invalid");
   return { transaction: sent, created: false };
@@ -116,6 +120,7 @@ export async function updateManualTransaction(
         userScoped(ctx).owns(transactions),
       ),
     );
+  await retypeMovements(getDb(), ctx);
   return { transaction: await requireTransaction(ctx, current.id), previousAccountId: current.accountId };
 }
 

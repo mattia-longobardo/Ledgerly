@@ -32,6 +32,7 @@ type ChangeResult =
       name: string;
       categoryName: string;
       choice: "added" | "matched";
+      macro?: { from: "income" | "expense" | "transfer"; to: "income" | "expense" | "transfer" } | null;
       moved: number;
       undoId: string | null;
     }
@@ -90,10 +91,15 @@ export function SourceCategories({
       if (!result.ok) setFailed(row.id);
       else if (result.undoId !== null) {
         const undoId = result.undoId;
+        // A match to another macro says how the movements count now (categories-and-rules.md §2.4).
+        const macro =
+          result.macro && result.moved > 0
+            ? ` · ${t("toasts.macro", { count: result.moved, from: t(`toasts.fromWord.${result.macro.from}`) })}`
+            : "";
         notify(
-          result.choice === "matched"
+          (result.choice === "matched"
             ? t("toasts.linked", { name: result.name, category: result.categoryName, count: result.moved })
-            : t("toasts.added", { name: result.name, count: result.moved }),
+            : t("toasts.added", { name: result.name, count: result.moved })) + macro,
           "success",
           { label: t("undo"), onClick: () => void undo(undoId) },
         );

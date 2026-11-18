@@ -2,10 +2,10 @@
 // `service.ts` because they are their own use case: Settings › Data edits them by hand, while the
 // Wallet sync adopts them by name (§9.1). Both entry points come through here.
 import "server-only";
-import { and, asc, count, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { EntityType } from "@/platform/integrations/rules";
 import { WALLET_PROVIDER } from "@/platform/integrations/rules";
@@ -25,6 +25,7 @@ import {
   NAME_MAX,
   treeOrder,
 } from "./rules";
+import { retypeMovements } from "./macro";
 import { categories, labels, transactionLabels, transactions } from "./schema";
 
 export type Category = typeof categories.$inferSelect;
@@ -223,7 +224,9 @@ export function typeFromMovements(counts: Readonly<Record<CategoryType, number>>
 }
 
 /**
- * Moves each category to the type its own movements say it is (spec §7.2).
+ * Moves each category created since `createdSince` to the type its own movements say it is
+ * (spec §7.2). Since N3.3 the macro is the person's choice (categories-and-rules.md CR8): only a
+ * category a source brought in this pass is aligned, once, at its creation.
  *
  * Wallet publishes no type on a category — the OpenAPI has none — so every category adopted from
  * it was born an expense, salary and interest included. The movements know better: they carry
@@ -239,7 +242,10 @@ export function typeFromMovements(counts: Readonly<Record<CategoryType, number>>
  * A group that moves takes with it the children that have no evidence of their own, because a
  * category in a group is of the group's type (F2.5) and those children have nothing else to say.
  */
-export async function alignCategoryTypesToMovements(ctx: Pick<Ctx, "userId">): Promise<number> {
+export async function alignCategoryTypesToMovements(
+  ctx: Pick<Ctx, "userId">,
+  createdSince: Date,
+): Promise<number> {
   const rows = await getDb()
     .select({
       id: categories.id,
@@ -248,7 +254,7 @@ export async function alignCategoryTypesToMovements(ctx: Pick<Ctx, "userId">): P
       locallyEdited: categories.locallyEdited,
     })
     .from(categories)
-    .where(userScoped(ctx).owns(categories));
+    .where(and(userScoped(ctx).owns(categories), gte(categories.createdAt, createdSince)));
   if (rows.length === 0) return 0;
 
   const tally = await getDb()
@@ -299,6 +305,7 @@ export async function alignCategoryTypesToMovements(ctx: Pick<Ctx, "userId">): P
         .set({ type })
         .where(and(eq(categories.id, id), userScoped(ctx).owns(categories)));
     }
+    await retypeMovements(tx, ctx);
   });
   return moves.size;
 }
@@ -394,6 +401,8 @@ export async function getCategory(ctx: Pick<Ctx, "userId">, id: string): Promise
 export async function createCategory(ctx: Pick<Ctx, "userId">, input: unknown): Promise<Category> {
   const values = parsed(categoryInputSchema, input);
   const parent = await parentFor(ctx, values.parentId, null);
+  // Transfers has categories and no groups (categories-and-rules.md CR2).
+  if (parent?.type === "transfer") throw new TaxonomyError("invalid");
   try {
     const [row] = await getDb()
       .insert(categories)
@@ -460,6 +469,8 @@ export async function updateCategory(
             ),
           );
       }
+      // Another macro changes how its movements count (CR3).
+      if (type !== current.type) await retypeMovements(tx, ctx);
       return updated;
     });
   } catch (error) {
@@ -542,7 +553,9 @@ export async function moveCategory(
   const current = await getCategory(ctx, id);
   if (current.parentId === null) throw new TaxonomyError("invalid_parent");
   const target = await categoryById(ctx, parsed(idSchema, parentId));
-  if (!target || target.type !== current.type) throw new TaxonomyError("invalid_parent");
+  if (!target || target.type !== current.type || target.type === "transfer") {
+    throw new TaxonomyError("invalid_parent");
+  }
   await updateCategory(ctx, current.id, {
     name: current.name,
     parentId: target.id,
@@ -550,6 +563,131 @@ export async function moveCategory(
     color: current.color,
   });
   return { fromId: current.parentId };
+}
+
+/** Where a category is in the tree: what "Move to another section" changes and "Undo" puts back. */
+export interface MacroPlace {
+  type: CategoryType;
+  parentId: string | null;
+}
+
+const macroPlaceSchema = z.object({ type: z.enum(CATEGORY_TYPES), parentId: parentSchema });
+
+/**
+ * Whether "Move to another section" is offered for a category (categories-and-rules.md §5.6): a
+ * group of Income or Expenses, or a category of Transfers. A category in a group moves with it.
+ */
+export function movesBetweenMacros(category: Pick<Category, "type" | "parentId">): boolean {
+  return category.parentId === null || category.type === "transfer";
+}
+
+/**
+ * The category and its sub-categories, with what "Move to another section" would change: how many
+ * movements and their total by the type they count as now, and the first year they are in.
+ */
+export async function macroMoveFacts(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+): Promise<{
+  ids: string[];
+  movementIds: string[];
+  byType: Partial<Record<string, bigint>>;
+  countByType: Partial<Record<string, number>>;
+  firstYear: number | null;
+}> {
+  const current = await getCategory(ctx, id);
+  const children = await getDb()
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.parentId, current.id), userScoped(ctx).owns(categories)));
+  const ids = [current.id, ...children.map((child) => child.id)];
+  const rows = await getDb()
+    .select({
+      id: transactions.id,
+      type: transactions.type,
+      amountCents: transactions.amountCents,
+      occurredAt: transactions.occurredAt,
+    })
+    .from(transactions)
+    .where(
+      and(
+        inArray(transactions.categoryId, ids),
+        isNull(transactions.hiddenAt),
+        userScoped(ctx).owns(transactions),
+      ),
+    )
+    .orderBy(asc(transactions.occurredAt), asc(transactions.id));
+  const byType: Partial<Record<string, bigint>> = {};
+  const countByType: Partial<Record<string, number>> = {};
+  for (const row of rows) {
+    byType[row.type] = (byType[row.type] ?? 0n) + row.amountCents;
+    countByType[row.type] = (countByType[row.type] ?? 0) + 1;
+  }
+  return {
+    ids,
+    movementIds: rows.map((row) => row.id),
+    byType,
+    countByType,
+    firstYear: rows[0]?.occurredAt.getUTCFullYear() ?? null,
+  };
+}
+
+/**
+ * "Move to another section" (categories-and-rules.md §5.6): a group, with its categories, or a
+ * category of Transfers goes to another macro — under a group of it, or as a group of its own. Its
+ * movements count as the new macro says (CR3), in the caller's transaction. Returns the place it
+ * left, for "Undo", which calls this again with it and `restoring`: a category of an old group of
+ * Transfers (a source's, §2.2) goes back under it.
+ */
+export async function moveCategoryToMacro(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  input: unknown,
+  tx: Tx,
+  options: { restoring?: boolean } = {},
+): Promise<MacroPlace> {
+  const place = parsed(macroPlaceSchema, input);
+  const [current] = await tx
+    .select()
+    .from(categories)
+    .where(and(eq(categories.id, parsed(idSchema, id)), userScoped(ctx).owns(categories)))
+    .for("update");
+  if (!current) throw new TaxonomyError("not_found");
+  if (!movesBetweenMacros(current) || place.type === current.type) throw new TaxonomyError("invalid");
+  let parentId: string | null = null;
+  if (place.parentId !== null) {
+    const [parent] = await tx
+      .select()
+      .from(categories)
+      .where(and(eq(categories.id, place.parentId), userScoped(ctx).owns(categories)));
+    const [child] = await tx
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.parentId, current.id), userScoped(ctx).owns(categories)))
+      .limit(1);
+    // A group of the macro of arrival, never one of Transfers (CR2), and no third level.
+    const refused =
+      options.restoring !== true && (parent?.type === "transfer" || parent?.archivedAt !== null);
+    if (!parent || parent.parentId !== null || parent.type !== place.type || refused || child) {
+      throw new TaxonomyError("invalid_parent");
+    }
+    parentId = parent.id;
+  }
+  await tx
+    .update(categories)
+    .set({
+      type: place.type,
+      parentId,
+      parentSetLocally: current.parentSetLocally || current.parentId !== parentId,
+      locallyEdited: markCategoryEdited(current.locallyEdited, ["type"]),
+    })
+    .where(and(eq(categories.id, current.id), userScoped(ctx).owns(categories)));
+  await tx
+    .update(categories)
+    .set({ type: place.type })
+    .where(and(eq(categories.parentId, current.id), userScoped(ctx).owns(categories)));
+  await retypeMovements(tx, ctx);
+  return { type: current.type, parentId: current.parentId };
 }
 
 /** What a deletion took with it, so the screen can say it rather than guess. */
@@ -614,6 +752,8 @@ export async function deleteCategory(ctx: Pick<Ctx, "userId">, id: string): Prom
       );
     }
     await tx.delete(categories).where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)));
+    // Its movements have no category now: the sign decides (CR3).
+    await retypeMovements(tx, ctx);
   });
 
   // The links outlive their rows — `provider_links` points at an id, with no key to cascade — so

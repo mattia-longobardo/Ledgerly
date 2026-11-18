@@ -124,6 +124,20 @@ test("a person builds groups, moves, merges and archives with Undo, opens a cate
     await expect(groupRow(page, first).getByRole("link", { name: b, exact: true })).toBeVisible();
   });
 
+  // N3.3 (categories-and-rules.md §5.6): the macro decides how the movements count.
+  await test.step("a group moves to Transfers with its categories, and Undo puts it back", async () => {
+    await act(page, first, "Move to another section…");
+    const dialog = page.getByRole("dialog", { name: `Move “${first}” to another section` });
+    await expect(dialog).toContainText("No transaction counts differently.");
+    await dialog.getByRole("button", { name: "Transfers", exact: true }).click();
+    await expect(dialog).toContainText("Its 2 categories go to Transfers too.");
+    await dialog.getByRole("button", { name: "Move", exact: true }).click();
+    await expect(page.getByText(`“${first}” moved to Transfers`)).toBeVisible();
+    await expect(page.getByRole("button", { name: first, exact: true })).toHaveCount(0);
+    await undo(page);
+    await expect(groupRow(page, first).getByRole("link", { name: a, exact: true })).toBeVisible();
+  });
+
   await test.step("a category opens on its own page, with the period of the list", async () => {
     await groupRow(page, first).getByRole("link", { name: a, exact: true }).click();
     await expect(page).toHaveURL(/\/expenses\/categories\/[0-9a-f-]{36}/);

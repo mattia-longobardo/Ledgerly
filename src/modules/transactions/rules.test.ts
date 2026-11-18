@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  macrosFor,
+  type TypedMovement,
+  typeByMacro,
+  typeMarkerByMacro,
   autoCategoryColor,
   CATEGORY_COLORS,
   categoryColor,
@@ -806,5 +810,71 @@ describe("categoryColor", () => {
   it("derives the group's colour from the parent's id when it was not handed one", () => {
     const child = { id: "c1", parentId: "g1", color: "#ef4444" };
     expect(categoryColor(child)).toBe(autoCategoryColor("g1"));
+  });
+});
+
+/* The macro decides how a movement counts (categories-and-rules.md §3.2, CR3) */
+
+describe("typeByMacro", () => {
+  const movement = (over: Partial<TypedMovement> = {}): TypedMovement => ({
+    type: "expense",
+    amountCents: -1_000n,
+    origin: "provider",
+    transferGroupId: null,
+    categoryType: "expense",
+    locallyEdited: [],
+    ...over,
+  });
+
+  it("keeps the type of a leg of a pair, whatever its category", () => {
+    expect(typeByMacro(movement({ type: "transfer", transferGroupId: "g", categoryType: "expense" }))).toBe(
+      "transfer",
+    );
+    expect(
+      typeMarkerByMacro(
+        movement({ transferGroupId: "g", categoryType: "transfer", locallyEdited: ["note"] }),
+      ),
+    ).toEqual(["note"]);
+  });
+
+  it("makes a transfer of a movement with a category of Transfers, with the type marker", () => {
+    const row = movement({ categoryType: "transfer", locallyEdited: ["categoryId"] });
+    expect(typeByMacro(row)).toBe("transfer");
+    expect(typeMarkerByMacro(row)).toEqual(["categoryId", "type"]);
+    expect(typeByMacro(movement({ amountCents: 500n, type: "income", categoryType: "transfer" }))).toBe(
+      "transfer",
+    );
+  });
+
+  it("lets the sign decide under Income, Expenses or no category (QC2)", () => {
+    expect(typeByMacro(movement({ amountCents: 500n, type: "expense", categoryType: "expense" }))).toBe(
+      "income",
+    );
+    expect(typeByMacro(movement({ amountCents: -500n, type: "income", categoryType: null }))).toBe("expense");
+    // A transfer this rule wrote goes back to the sign, and its marker goes.
+    const back = movement({
+      type: "transfer",
+      categoryType: "expense",
+      locallyEdited: ["categoryId", "type"],
+    });
+    expect(typeByMacro(back)).toBe("expense");
+    expect(typeMarkerByMacro(back)).toEqual(["categoryId"]);
+  });
+
+  it("keeps a source's own transfer (Wallet) and a zero's type", () => {
+    expect(typeByMacro(movement({ type: "transfer", categoryType: "expense" }))).toBe("transfer");
+    expect(typeByMacro(movement({ type: "transfer", categoryType: null, origin: "manual" }))).toBe("expense");
+    expect(typeByMacro(movement({ amountCents: 0n, type: "expense" }))).toBe("expense");
+    expect(typeByMacro(movement({ amountCents: 0n, type: "transfer", locallyEdited: ["type"] }))).toBe(
+      "income",
+    );
+  });
+});
+
+describe("macrosFor", () => {
+  it("offers Transfers only on a leg of a pair, and the sign's macro with Transfers elsewhere", () => {
+    expect(macrosFor({ amountCents: -1n, transferGroupId: "g" })).toEqual(["transfer"]);
+    expect(macrosFor({ amountCents: -1n, transferGroupId: null })).toEqual(["expense", "transfer"]);
+    expect(macrosFor({ amountCents: 1n, transferGroupId: null })).toEqual(["income", "transfer"]);
   });
 });

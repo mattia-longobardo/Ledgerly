@@ -49,6 +49,7 @@ import {
   planUserEdit,
   toNewTransaction,
 } from "./rules";
+import { retypeMovements } from "./macro";
 import { type Transaction, getTransaction, transactionsByIds, transactionsInWindow } from "./queries";
 import { categories, labels, transactionLabels, transactions } from "./schema";
 import { pendingSendByKey, settleSent } from "./sending";
@@ -577,7 +578,8 @@ export async function upsertFromProvider(
     assignments.length === 0 &&
     removals.removed.length === 0 &&
     removals.restored.length === 0 &&
-    restore.length === 0
+    restore.length === 0 &&
+    outcome.created === 0
   ) {
     return outcome;
   }
@@ -634,6 +636,8 @@ export async function upsertFromProvider(
           ),
         );
     }
+    // A category of the source that counts under Transfers makes the movement a transfer (CR3).
+    await retypeMovements(tx, ctx);
   });
 
   return outcome;
@@ -677,6 +681,8 @@ export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number
         .set({ transferGroupId: assignment.transferGroupId })
         .where(and(eq(transactions.id, assignment.id), userScoped(ctx).owns(transactions)));
     }
+    // A leg that left its pair counts by its category again (CR3).
+    await retypeMovements(tx, ctx);
   });
   return assignments.length;
 }
@@ -768,6 +774,7 @@ export async function updateTransaction(
 
   await getDb().transaction(async (tx) => {
     await applyPatch(tx, ctx, transactionId, plan.patch, plan.locallyEdited);
+    await retypeMovements(tx, ctx);
   });
   return requireTransaction(ctx, transactionId);
 }
@@ -790,6 +797,8 @@ export async function releaseLocalEdits(
     .update(transactions)
     .set({ locallyEdited: kept })
     .where(and(eq(transactions.id, current.id), userScoped(ctx).owns(transactions)));
+  // The `type` marker of a category of Transfers is the rule's, not the person's: it comes back.
+  await retypeMovements(getDb(), ctx);
 }
 
 /**
@@ -815,6 +824,7 @@ export async function setCategory(
 
   await getDb().transaction(async (tx) => {
     for (const { id, plan } of plans) await applyPatch(tx, ctx, id, plan.patch, plan.locallyEdited);
+    await retypeMovements(tx, ctx);
   });
   return plans.length;
 }

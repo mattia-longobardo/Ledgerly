@@ -148,6 +148,27 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
+    // Release N3.3 (categories-and-rules.md §5.6): what the move changes, said before it.
+    name: "the move to another section dialog",
+    session: "review",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/expenses/categories?preset=last3Months");
+      await settled(page);
+      await page
+        .locator("main")
+        .getByRole("button", { name: /^Actions for / })
+        .first()
+        .click();
+      await page.getByRole("menuitem", { name: "Move to another section…" }).click();
+      await settledDialog(page);
+      await page
+        .getByRole("dialog")
+        .getByText(/no longer count|counts differently/)
+        .waitFor();
+    },
+  },
+  {
     name: "the merge categories dialog",
     session: "review",
     roots: ['[role="dialog"]'],

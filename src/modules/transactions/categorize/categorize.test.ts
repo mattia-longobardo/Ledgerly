@@ -156,10 +156,17 @@ describe("the static tables", () => {
     expect(structureOf(null)).toBeNull();
   });
 
-  it("has twelve default groups, each with a name and examples in both languages", () => {
-    expect(DEFAULT_GROUPS).toHaveLength(12);
+  // QC7 (categories-and-rules.md §11): 11 of Expenses, 2 of Income, 2 categories of Transfers.
+  it("has fifteen default groups, each with a name and examples in both languages", () => {
+    expect(DEFAULT_GROUPS).toHaveLength(15);
+    expect(DEFAULT_GROUPS.filter((group) => group.type === "expense")).toHaveLength(11);
     expect(DEFAULT_GROUPS.filter((group) => group.type === "income").map((group) => group.key)).toEqual([
       "income",
+      "other_income",
+    ]);
+    expect(DEFAULT_GROUPS.filter((group) => group.type === "transfer").map((group) => group.key)).toEqual([
+      "savings",
+      "credit_card",
     ]);
     for (const group of DEFAULT_GROUPS) {
       expect([group.en, group.it, group.examples.en, group.examples.it].every((one) => one.length > 0)).toBe(

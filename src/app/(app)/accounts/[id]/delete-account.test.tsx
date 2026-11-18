@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -31,6 +31,16 @@ function renderButton(source: string | null = null) {
 }
 
 const confirm = () => screen.getByRole("button", { name: T.confirm });
+
+/**
+ * A control of the list once the reading is over: the rows can show while the transition that read
+ * them is still pending, and a disabled `<select>` drops the choice (seen under load, nightly 18/11).
+ */
+async function usable<E extends HTMLElement>(found: Promise<E> | E): Promise<E> {
+  const element = await found;
+  await waitFor(() => expect(element).toBeEnabled());
+  return element;
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -72,7 +82,7 @@ describe("DeleteAccount (PERS-419)", () => {
     await userEvent.click(screen.getByRole("button", { name: T.remove }));
 
     const pocket = T.dependents.pocket.replace("{name}", "Trip");
-    const select = await screen.findByLabelText(pocket);
+    const select = await usable(screen.findByLabelText(pocket));
     expect(screen.getByLabelText("Interest rule from 1 Jan 2026")).toBeInTheDocument();
     expect(screen.getByLabelText(T.dependents.budgetAccount)).toBeInTheDocument();
     expect(confirm()).toBeDisabled();
@@ -99,7 +109,10 @@ describe("DeleteAccount (PERS-419)", () => {
     move.mockResolvedValueOnce({ ok: false, error: "not_synced" });
     renderButton();
     await userEvent.click(screen.getByRole("button", { name: T.remove }));
-    await userEvent.selectOptions(await screen.findByLabelText("Interest rule from 1 Jan 2026"), NEXT);
+    await userEvent.selectOptions(
+      await usable(screen.findByLabelText("Interest rule from 1 Jan 2026")),
+      NEXT,
+    );
     await userEvent.click(screen.getByRole("button", { name: T.dependents.move }));
     expect(await screen.findByText(T.errors.notSynced)).toBeInTheDocument();
   });

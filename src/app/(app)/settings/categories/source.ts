@@ -93,7 +93,8 @@ export async function sourceCategoryRows(
           row.choice === "matched" && counted
             ? { id: counted.id, name: counted.name, color: colorOfCategory(counted, byId) }
             : null,
-        options: matchable.filter((option) => option.type === type),
+        // Its own macro, or Transfers: a source's category may count as transfers (§2.4).
+        options: matchable.filter((option) => option.type === type || option.type === "transfer"),
       };
     }),
   };

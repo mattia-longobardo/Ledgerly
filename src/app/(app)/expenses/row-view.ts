@@ -3,7 +3,7 @@
 // "To review", which shows its single movements in the same table. What only one source can do
 // with a row is added by the page that knows that source.
 import type { TransactionRow } from "@/modules/transactions/queries";
-import { displayPayee, isHidden } from "@/modules/transactions/rules";
+import { displayPayee, isHidden, macrosFor } from "@/modules/transactions/rules";
 import { amountToneOf, badgesOf } from "@/modules/transactions/ui/display";
 import type { RowView } from "@/modules/transactions/ui/view";
 import type { Ctx } from "@/platform/context";
@@ -41,6 +41,8 @@ export function rowViewOf(
     suggestion: suggested ? { id: suggested.id, name: suggested.name, color: suggested.color } : null,
     amount: money(row.amountCents),
     amountTone: amountToneOf(row),
+    macros: macrosFor(row),
+    paired: row.transferGroupId !== null,
     badges: badgesOf(row),
     hidden: isHidden(row),
     note: row.note,

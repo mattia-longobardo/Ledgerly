@@ -294,3 +294,25 @@ export async function moveSubscriptionAccount(
     .returning({ id: subscriptions.id });
   if (moved.length === 0) throw new SubscriptionError("not_found");
 }
+
+/** How many of some movements are charges of a subscription (categories-and-rules.md §3.5). */
+export async function chargesAmong(
+  ctx: Pick<Ctx, "userId">,
+  transactionIds: readonly string[],
+): Promise<number> {
+  let found = 0;
+  // In slices: a list of ids is one parameter each, and Postgres takes 65535 of them at most.
+  for (let start = 0; start < transactionIds.length; start += 5000) {
+    const rows = await getDb()
+      .select({ id: subscriptionCharges.id })
+      .from(subscriptionCharges)
+      .where(
+        and(
+          userScoped(ctx).owns(subscriptionCharges),
+          inArray(subscriptionCharges.transactionId, transactionIds.slice(start, start + 5000)),
+        ),
+      );
+    found += rows.length;
+  }
+  return found;
+}

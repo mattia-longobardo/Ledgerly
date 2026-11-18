@@ -534,7 +534,13 @@
         "undo": "Annulla",
         "toasts": {
           "linked": "{name} ora corrisponde a {category}: {count, plural, one {# movimento} other {# movimenti}}",
-          "added": "{name} aggiunta come categoria: {count, plural, one {# movimento} other {# movimenti}}"
+          "added": "{name} aggiunta come categoria: {count, plural, one {# movimento} other {# movimenti}}",
+          "macro": "{count, plural, one {# movimento non conta} other {# movimenti non contano}} più come {from}.",
+          "fromWord": {
+            "income": "entrate",
+            "expense": "uscite",
+            "transfer": "trasferimenti"
+          }
         },
         "failed": "Non è stato possibile salvare. Riprova."
       },
@@ -1513,7 +1519,8 @@
       "noCategoryMatch": "Nessuna categoria trovata",
       "noPayee": "Senza beneficiario",
       "save": "Salva",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "paired": "È un giroconto tra i tuoi conti."
     },
     "badges": {
       "manual": "A mano",
@@ -1901,6 +1908,32 @@
         "openInExpenses": "Apri in Spese",
         "noMovements": "Nessun movimento in questo periodo",
         "archived": "Archiviata"
+      },
+      "macroMove": {
+        "open": "Sposta in un'altra macro…",
+        "title": "Sposta «{name}» in un'altra macro",
+        "to": "Macro di arrivo",
+        "group": "Gruppo",
+        "ownGroup": "Nessuno: diventa un gruppo",
+        "loading": "Calcolo…",
+        "effect": "{count, plural, =0 {Nessun movimento conta in modo diverso.} one {# movimento non conta più come {from}: {amount} dal {year}.} other {# movimenti non contano più come {from}: {amount} dal {year}.}}",
+        "children": "{count, plural, one {Anche la sua # categoria va in {macro}.} other {Anche le sue # categorie vanno in {macro}.}}",
+        "linked": "{count, plural, one {# movimento è collegato} other {# movimenti sono collegati}} a {where}: lì non contano più.",
+        "where": {
+          "subscriptions": "Abbonamenti",
+          "pockets": "Pocket",
+          "interests": "Interessi"
+        },
+        "budget": "Il budget si ferma da questo mese: i mesi passati restano in Budgets.",
+        "sources": "I movimenti di {provider} con questa categoria si spostano con lei.",
+        "action": "Sposta",
+        "done": "«{name}» spostata in {macro}",
+        "failed": "Non è stato possibile calcolare lo spostamento. Riprova."
+      },
+      "fromWord": {
+        "income": "entrate",
+        "expense": "uscite",
+        "transfer": "trasferimenti"
       }
     },
     "tabs": {

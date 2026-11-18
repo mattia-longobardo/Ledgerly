@@ -19,6 +19,8 @@ import {
   updateLabel,
 } from "@/modules/transactions/taxonomy";
 import { requireSession } from "@/platform/auth/session";
+import { formatMoney } from "@/platform/format";
+import { type MacroMoveUndo, type MacroMoveView, macroMoveView, moveToMacro, undoMoveToMacro } from "./macro";
 import { mergeTwoCategories, undoMergeOfTwo } from "./merge";
 import {
   deleteWalletCategories,
@@ -219,6 +221,50 @@ export async function undoMergeAction(
   } catch (error) {
     if (error instanceof TransactionError || error instanceof z.ZodError)
       return { ok: false, error: "failed" };
+    throw error;
+  }
+}
+
+/** What the dialog of "Move to another section" says before the move, the amount formatted here. */
+export type MacroMoveFacts = Omit<MacroMoveView, "amountCents"> & { amount: string };
+
+export async function macroMoveFactsAction(
+  id: string,
+): Promise<{ ok: true; facts: MacroMoveFacts } | { ok: false; error: string }> {
+  const ctx = await requireSession();
+  try {
+    const { amountCents, ...rest } = await macroMoveView(ctx, id);
+    return { ok: true, facts: { ...rest, amount: formatMoney(amountCents, ctx.numberFormat) } };
+  } catch (error) {
+    if (error instanceof TaxonomyError || error instanceof TransactionError)
+      return { ok: false, error: error.code };
+    throw error;
+  }
+}
+
+/** "Move to another section" (§5.6): the numbers change (§3.7); `undo` is what "Undo" sends back. */
+export async function moveToMacroAction(
+  id: string,
+  place: { type: string; parentId: string | null },
+): Promise<{ ok: true; undo: MacroMoveUndo } | { ok: false; error: string }> {
+  const ctx = await requireSession();
+  let undo: MacroMoveUndo | null = null;
+  const result = await run(async () => {
+    undo = await moveToMacro(ctx, id, place);
+  });
+  return result.ok && undo ? { ok: true, undo } : result.ok ? { ok: false, error: "failed" } : result;
+}
+
+export async function undoMoveToMacroAction(undo: unknown): Promise<TaxonomyActionResult> {
+  const ctx = await requireSession();
+  try {
+    await undoMoveToMacro(ctx, undo);
+    revalidate();
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof TaxonomyError || error instanceof TransactionError)
+      return { ok: false, error: error.code };
+    if (error instanceof z.ZodError) return { ok: false, error: "invalid" };
     throw error;
   }
 }

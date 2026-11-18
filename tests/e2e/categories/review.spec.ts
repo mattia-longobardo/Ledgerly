@@ -173,8 +173,8 @@ test.describe("the guided review of a person with no category", () => {
   test("starts from the default groups, then the categories, and can be finished later", async ({ page }) => {
     await page.goto(`${REVIEW}?guide=1&bank=Zeta%20Bank`);
     await expect(page.getByRole("group", { name: "Choose the groups for your spending" })).toBeVisible();
-    await expect(page.getByRole("checkbox")).toHaveCount(12);
-    await page.getByRole("button", { name: "Create 12 groups" }).click();
+    await expect(page.getByRole("checkbox")).toHaveCount(15);
+    await page.getByRole("button", { name: "Create 15 groups" }).click();
 
     // The cascade reads the movements again with the groups: the brand it knows gets its category.
     await expect(page.getByText("First reading of Zeta Bank")).toBeVisible({ timeout: 30_000 });

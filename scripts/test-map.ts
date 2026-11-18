@@ -51,7 +51,7 @@ export const FLOWS: Flow[] = [
     specs: ["expenses", "manual-movement", "manual-send", "wide"],
     screens: CROSS_CUTTING,
   },
-  { id: "categories", specs: ["categories", "review", "source-categories"], screens: ["a11y"] },
+  { id: "categories", specs: ["categories", "review", "source-categories"], screens: ["a11y", "keyboard"] },
   { id: "budgets", specs: ["budgets"], screens: ["a11y", "mobile"] },
   { id: "pockets", specs: ["pockets"], screens: ["a11y", "mobile"] },
   { id: "subscriptions", specs: ["subscriptions"], screens: ["a11y", "mobile"] },
@@ -158,8 +158,9 @@ export const MODULES: Module[] = [
     files: [page("settings/categories")],
     integration: ["src/app/(app)/settings/categories"],
     flows: ["categories"],
-    // A source's categories are drawn on the source's page (rewrite plan N7.2).
-    usedBy: ["e2e:connections"],
+    // A source's categories are drawn on the source's page (rewrite plan N7.2); the page of the
+    // categories in Expenses calls its Server Actions (N3.2, N3.3).
+    usedBy: ["e2e:connections", "e2e:transactions"],
   },
   {
     id: "budgets",
@@ -175,6 +176,7 @@ export const MODULES: Module[] = [
       "e2e:categories",
       "e2e:pockets",
       "e2e:accounts",
+      "e2e:transactions",
     ],
   },
   {
@@ -182,21 +184,34 @@ export const MODULES: Module[] = [
     files: ["src/modules/pockets/**", page("pockets")],
     integration: ["src/modules/pockets"],
     flows: ["pockets"],
-    usedBy: ["export", "jobs", "accounts", "e2e:accounts", "e2e:shell"],
+    // "Move to another section" counts the expenses a pocket uses (N3.3).
+    usedBy: ["export", "jobs", "accounts", "categories", "e2e:accounts", "e2e:shell", "e2e:categories"],
   },
   {
     id: "subscriptions",
     files: ["src/modules/subscriptions/**", page("subscriptions")],
     integration: ["src/modules/subscriptions"],
     flows: ["subscriptions"],
-    usedBy: ["export", "jobs", "accounts", "e2e:accounts", "e2e:shell"],
+    // "Move to another section" counts the charges of a subscription (N3.3).
+    usedBy: ["export", "jobs", "accounts", "categories", "e2e:accounts", "e2e:shell", "e2e:categories"],
   },
   {
     id: "interests",
     files: ["src/modules/interests/**", page("interests")],
     integration: ["src/modules/interests"],
     flows: ["interests"],
-    usedBy: ["pockets", "funds", "export", "jobs", "accounts", "e2e:accounts", "e2e:connections"],
+    // "Move to another section" asks whether a rule posts under the category (N3.3).
+    usedBy: [
+      "pockets",
+      "funds",
+      "export",
+      "jobs",
+      "accounts",
+      "categories",
+      "e2e:accounts",
+      "e2e:connections",
+      "e2e:categories",
+    ],
   },
   {
     id: "funds",
@@ -373,7 +388,11 @@ export const MODULES: Module[] = [
       "e2e:auth",
     ],
   },
-  { id: "queries", files: ["src/**/queries.ts", "src/**/*-queries.ts"], usedBy: ["perf", "e2e:connections"] },
+  {
+    id: "queries",
+    files: ["src/**/queries.ts", "src/**/*-queries.ts"],
+    usedBy: ["perf", "e2e:connections", "e2e:transactions"],
+  },
   {
     id: "shared-domain",
     files: [

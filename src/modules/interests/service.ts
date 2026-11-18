@@ -447,3 +447,19 @@ export async function moveRuleAccount(
     .set({ accountId })
     .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
 }
+
+/** Whether an interest rule files its settlements under one of some categories (§3.5). */
+export async function postsUnderAny(
+  ctx: Pick<Ctx, "userId">,
+  categoryIds: readonly string[],
+): Promise<boolean> {
+  if (categoryIds.length === 0) return false;
+  const [row] = await getDb()
+    .select({ id: interestRules.id })
+    .from(interestRules)
+    .where(
+      and(userScoped(ctx).owns(interestRules), inArray(interestRules.postingCategoryId, [...categoryIds])),
+    )
+    .limit(1);
+  return row !== undefined;
+}

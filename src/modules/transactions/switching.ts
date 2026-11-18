@@ -12,6 +12,7 @@ import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { providerLinks } from "@/platform/integrations/schema";
 import { linkExternal } from "@/platform/integrations/service";
+import { retypeMovements } from "./macro";
 import { markLocallyEdited } from "./rules";
 import { chosenBy } from "./service";
 import {
@@ -194,6 +195,8 @@ export async function undoTransferPairs(
     .update(switchTransferPairs)
     .set({ undoneAt: now })
     .where(and(eq(switchTransferPairs.switchId, switchId), isNull(switchTransferPairs.undoneAt)));
+  // A leg out of its pair counts by its category (CR3).
+  await retypeMovements(tx, ctx);
   return pairs.length;
 }
 
@@ -463,6 +466,7 @@ export async function joinDoubles(
       }),
     );
   }
+  await retypeMovements(tx, ctx);
   return moved;
 }
 
@@ -545,5 +549,6 @@ export async function undoJoinedDoubles(
     .update(switchMergedMovements)
     .set({ undoneAt: now })
     .where(and(eq(switchMergedMovements.switchId, input.switchId), isNull(switchMergedMovements.undoneAt)));
+  await retypeMovements(tx, ctx);
   return records.length;
 }
