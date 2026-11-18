@@ -60,7 +60,7 @@ function cents(text: string, format: NumberFormat): Cents | null {
  * dialog for a voluntary payment, a contribution of the payslip written as the fund reports it, and
  * the operations that are not a contribution — joining, a transfer in, a change of compartment, an exit.
  */
-export function ContributionDialog({
+function ContributionDialog({
   setup,
   initial,
   locked = false,

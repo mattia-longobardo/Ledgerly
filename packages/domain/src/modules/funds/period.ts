@@ -24,9 +24,9 @@ import { monthlyRhythm } from "./rules";
  */
 
 /** A person's or a document's reading. `system` and `derived` are copies, never a valuation. */
-export const DOCUMENTED_SOURCES: readonly string[] = ["manual", "import"];
+const DOCUMENTED_SOURCES: readonly string[] = ["manual", "import"];
 
-export interface EntryLike {
+interface EntryLike {
   on: CivilDate;
   balanceCents: Cents;
   source: string;

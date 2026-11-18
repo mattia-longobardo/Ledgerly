@@ -31,7 +31,6 @@ export const ORIGINS = ["manual", "synced"] as const;
 export type AccountOrigin = (typeof ORIGINS)[number];
 
 export const PERIOD_REASONS = ["opening", "migration", "handover", "conversion"] as const;
-export type PeriodReason = (typeof PERIOD_REASONS)[number];
 
 export const ASSET_CLASSES = [
   "stock",
@@ -48,7 +47,7 @@ export type AssetClass = (typeof ASSET_CLASSES)[number];
 export const PRICE_SOURCES = ["manual", "provider", "market"] as const;
 
 export const HOLDING_ORIGINS = ["manual", "provider"] as const;
-export type HoldingOrigin = (typeof HOLDING_ORIGINS)[number];
+type HoldingOrigin = (typeof HOLDING_ORIGINS)[number];
 
 /** `other:<label>` is the escape hatch for a sub-account the list does not name (A1). */
 export const PRODUCTS = ["spot", "funding", "earn", "staking", "custody"] as const;
@@ -104,11 +103,10 @@ export const READING_STATUSES = [
 export type ReadingStatus = (typeof READING_STATUSES)[number];
 
 export const RECONCILIATION_KINDS = ["covered_by_provider", "outside_scope", "partial", "reopened"] as const;
-export type ReconciliationKind = (typeof RECONCILIATION_KINDS)[number];
+type ReconciliationKind = (typeof RECONCILIATION_KINDS)[number];
 
 /** §1.2: what a key check can conclude; `error` is a check the provider did not answer. */
 export const KEY_CHECK_RESULTS = ["read-only", "write", "unknown-flag", "unverifiable", "error"] as const;
-export type KeyCheckOutcome = (typeof KEY_CHECK_RESULTS)[number];
 /** Why a check ran: the connection, a replacement of the key, a pass, or "Verify". */
 export const KEY_CHECK_ORIGINS = ["connect", "replace", "pass", "verify"] as const;
 export type KeyCheckOrigin = (typeof KEY_CHECK_ORIGINS)[number];
@@ -177,7 +175,7 @@ export function unitPriceOf(cents: Cents, quantity: bigint): bigint {
 
 // ——— The book of one account ———————————————————————————————————————————————————————————————
 
-export interface PeriodLike {
+interface PeriodLike {
   fromOn: CivilDate;
   /** Where the period starts inside its first day: events ordered before it belong to the one before. */
   startsAt: Date;
@@ -241,7 +239,7 @@ export interface ReadingLike {
   scopes: readonly { product: string; complete: boolean }[];
 }
 
-export interface ReconciliationLike {
+interface ReconciliationLike {
   holdingId: string;
   effectiveOn: CivilDate;
   kind: ReconciliationKind;
@@ -274,7 +272,7 @@ export interface AccountBalanceLike {
 }
 
 /** The last row of `balances` on or before `on`; `null` before the first. */
-export function balanceAt(balances: readonly AccountBalanceLike[], on: CivilDate): AccountBalanceLike | null {
+function balanceAt(balances: readonly AccountBalanceLike[], on: CivilDate): AccountBalanceLike | null {
   let found: AccountBalanceLike | null = null;
   for (const one of balances) {
     if (one.on > on) break;
@@ -517,7 +515,7 @@ export function holdingStates(book: Book, on: CivilDate, rates: RateTable): Map<
 
 // ——— The value of a day ————————————————————————————————————————————————————————————————————
 
-export interface Conflict {
+interface Conflict {
   holdingId: string;
   readingId: string;
   /** What the provider's positions of the same asset and product are worth (C, R4). */
@@ -786,7 +784,7 @@ export function valueOn(book: Book, on: CivilDate, rates: RateTable): DayValue {
 
 // ——— Points ————————————————————————————————————————————————————————————————————————————————
 
-export interface Point {
+interface Point {
   on: CivilDate;
   cents: Cents;
 }
@@ -840,7 +838,7 @@ export function oldestDay(...days: readonly (CivilDate | null | undefined)[]): C
 
 // ——— Money in and out (§2.4) ——————————————————————————————————————————————————————————————
 
-export interface Flows {
+interface Flows {
   /** What the first period opened with: opening cash, positions, or the handover valuation. */
   openingCents: Cents;
   depositedCents: Cents;
@@ -955,7 +953,7 @@ export interface TransferLeg {
   transferGroupId: string | null;
 }
 
-export interface TransferProposal {
+interface TransferProposal {
   withdrawal: TransferLeg;
   deposit: TransferLeg;
 }
@@ -1061,7 +1059,7 @@ export function accountPnl(book: Book, on: CivilDate, valueCents: Cents | null):
 // ——— Empty readings (R5) ————————————————————————————————————————————————————————————————————
 
 /** Below this a vanished balance is believable without asking (R5): 50 €, in cents. */
-export const ZERO_THRESHOLD_CENTS = 5_000n;
+const ZERO_THRESHOLD_CENTS = 5_000n;
 
 /**
  * A valid, complete, empty answer (R5): it counts (`confirmed_zero`) when the reading before was

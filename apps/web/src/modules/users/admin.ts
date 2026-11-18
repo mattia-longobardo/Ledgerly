@@ -48,7 +48,7 @@ export type SignInMethod = "password" | "sso" | "both" | "none" | "invited";
 
 export type PersonStatus = "active" | "blocked" | "pending" | "expired";
 
-export interface PersonRow {
+interface PersonRow {
   /** A row of the `users` table, or an invitation still waiting to be accepted. */
   kind: "user" | "invitation";
   id: string;

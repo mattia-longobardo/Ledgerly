@@ -13,14 +13,14 @@ import { Modal } from "@/ui/modal";
 import { ProgressBar } from "@/ui/progress-bar";
 
 /** One movement of the report, as the server gives it. */
-export interface SwitchRow {
+interface SwitchRow {
   day: CivilDate;
   text: string;
   cents: string;
 }
 
 /** The report of the dry run (ux/n4-account-switch.md §6); the page computes nothing of it. */
-export interface SwitchReportView {
+interface SwitchReportView {
   fingerprint: string;
   bank: string;
   cutDate: CivilDate;
@@ -66,7 +66,7 @@ export interface SwitchReportView {
 
 type Refusal = { ok: false; error: string; retryAt: string | null };
 
-export interface SwitchCommands {
+interface SwitchCommands {
   check(): Promise<{ ok: true; report: SwitchReportView } | Refusal>;
   apply(fingerprint: string): Promise<{ ok: true } | Refusal>;
 }

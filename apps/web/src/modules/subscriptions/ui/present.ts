@@ -106,7 +106,7 @@ const WEEKDAY_LOCALE: Record<UiLocale, string> = { en: "en-US", it: "it-IT" };
  * The weekday is built from a fixed UTC Sunday plus the index, so no local `Date` is involved and
  * no civil date is parsed twice.
  */
-export function presentDue(row: SubscriptionRow, t: T, format: Format): string {
+function presentDue(row: SubscriptionRow, t: T, format: Format): string {
   const moment = dueMoment(row.subscription.cycle, row.nextChargeOn);
   switch (moment.kind) {
     case "day":

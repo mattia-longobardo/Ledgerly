@@ -16,13 +16,13 @@ const TIMEOUT_MS = 30_000;
 const amount = z.object({ currency: z.string(), amount: z.string() });
 const party = z.object({ name: z.string().nullish() }).nullish();
 
-export const applicationSchema = z.object({
+const applicationSchema = z.object({
   active: z.boolean(),
   environment: z.string().nullish(),
   services: z.array(z.string()).nullish(),
 });
 
-export const aspspsSchema = z.object({
+const aspspsSchema = z.object({
   aspsps: z.array(
     z.object({
       name: z.string(),
@@ -34,9 +34,9 @@ export const aspspsSchema = z.object({
   ),
 });
 
-export const startSchema = z.object({ url: z.string() });
+const startSchema = z.object({ url: z.string() });
 
-export const sessionSchema = z.object({
+const sessionSchema = z.object({
   session_id: z.string(),
   accounts: z.array(
     z.object({
@@ -54,7 +54,7 @@ export const sessionSchema = z.object({
   access: z.object({ valid_until: z.string().nullish() }).nullish(),
 });
 
-export const balancesSchema = z.object({
+const balancesSchema = z.object({
   balances: z.array(
     z.object({
       balance_amount: amount,

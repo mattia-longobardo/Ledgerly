@@ -14,7 +14,7 @@ import { requireSession } from "@/platform/auth/session";
 
 export type ApiClientMinted = MintedClient;
 
-export type ApiClientActionResult =
+type ApiClientActionResult =
   { ok: true; client: ApiClientMinted } | { ok: false; error: "invalid" | "failed" };
 
 /** Creates a Client API and hands its secret back **once**: only its hash is kept. */

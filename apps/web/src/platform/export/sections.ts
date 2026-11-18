@@ -12,7 +12,7 @@ export interface Section {
   rows: readonly Row[];
 }
 
-export type Cell = string | number | boolean | null;
+type Cell = string | number | boolean | null;
 export type Row = Record<string, Cell>;
 
 /** Money in an export is a canonical decimal string, never a locale's: a file is read by machines. */

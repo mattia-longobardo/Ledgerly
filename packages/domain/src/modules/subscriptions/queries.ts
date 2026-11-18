@@ -42,7 +42,7 @@ export interface SubscriptionRow {
   lastMatch: { on: CivilDate; cents: Cents } | null;
 }
 
-export interface Alert {
+interface Alert {
   subscriptionId: string;
   name: string;
   charge: SubscriptionCharge;
@@ -50,7 +50,7 @@ export interface Alert {
   payeeMatch: string | null;
 }
 
-export interface Projection {
+interface Projection {
   accountId: string | null;
   accountName: string | null;
   count: number;
@@ -59,7 +59,7 @@ export interface Projection {
   projectedCents: Cents | null;
 }
 
-export interface SubscriptionsView {
+interface SubscriptionsView {
   /** Active ones first by name; the paused and the cancelled follow in their own list. */
   rows: SubscriptionRow[];
   inactive: SubscriptionRow[];

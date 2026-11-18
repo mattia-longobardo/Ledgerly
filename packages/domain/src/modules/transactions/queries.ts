@@ -50,7 +50,7 @@ import { type Label, listCategories, listLabels, type TreeCategory } from "./tax
 const WAITING_FOR_CATEGORY = sql`${transactions.categoryId} is null and ${transactions.categoryKey} is not null and ${transactions.type} <> 'transfer' and ${transactions.hiddenAt} is null and ${transactions.removedUpstreamAt} is null`;
 
 /** The stored row on its own; `Transaction` adds the label ids the rules reason about. */
-export type TransactionRecord = typeof transactions.$inferSelect;
+type TransactionRecord = typeof transactions.$inferSelect;
 
 /**
  * A movement as the service hands it to `rules.ts`: the row plus its labels, which live in a join
@@ -60,7 +60,7 @@ export interface Transaction extends TransactionRecord {
   labelIds: string[];
 }
 
-export interface TransactionLabel {
+interface TransactionLabel {
   id: string;
   name: string;
   color: string | null;
@@ -118,8 +118,8 @@ export interface TransactionRow {
   edited: boolean;
 }
 
-export type TransactionSort = "date" | "amount" | "payee" | "account" | "category";
-export type SortDirection = "asc" | "desc";
+type TransactionSort = "date" | "amount" | "payee" | "account" | "category";
+type SortDirection = "asc" | "desc";
 
 /**
  * What the Expenses controls narrow the list down to (spec §7.2). Every field is optional: an
@@ -129,7 +129,7 @@ export type SortDirection = "asc" | "desc";
  * carry `null`, which is the "Uncategorised" chip — a real choice, not a missing value.
  * `labelIds` matches a movement carrying **any** of them.
  */
-export interface TransactionFilters {
+interface TransactionFilters {
   from?: CivilDate;
   to?: CivilDate;
   accountIds?: readonly string[];
@@ -151,7 +151,7 @@ export interface TransactionFilters {
  * both here cancel out, and a leg whose other side is elsewhere — or that Wallet filed under
  * another type — moved money all the same. `count` is every row, because it describes the list.
  */
-export interface TransactionsSummary {
+interface TransactionsSummary {
   count: number;
   incomeCents: Cents;
   expenseCents: Cents;
@@ -171,7 +171,7 @@ export interface MonthTotal {
 }
 
 /** One slice of the "By category" card: `null` everywhere is the uncategorised slice. */
-export interface CategoryTotal {
+interface CategoryTotal {
   categoryId: string | null;
   name: string | null;
   color: string | null;
@@ -190,7 +190,7 @@ export interface CategoryTotal {
  * its own filter dropped, the way a facet works: picking one account still shows how many the
  * others hold, so a chip never claims zero for something that is only hidden by itself.
  */
-export interface Facets {
+interface Facets {
   accounts: { accountId: string; count: number }[];
   categories: { categoryId: string | null; count: number }[];
   types: { type: TransactionType; count: number }[];
@@ -204,7 +204,7 @@ export interface Facets {
  * back. So `rows.length` may be less than `count`, and that difference is the truth the page has
  * to tell rather than hide: the header's amount is the month's, not the page's.
  */
-export interface MonthGroup {
+interface MonthGroup {
   month: MonthKey;
   /** The movements the range holds for this month, hidden rows left out (spec §7.2). */
   count: number;
@@ -214,7 +214,7 @@ export interface MonthGroup {
   rows: TransactionRow[];
 }
 
-export interface ExpensesView {
+interface ExpensesView {
   rows: TransactionRow[];
   months: MonthGroup[];
   /** The card, over the whole filtered range rather than the page (transfers left out). */
@@ -424,7 +424,7 @@ function cents(value: string | null): Cents {
 }
 
 /** The label ids of each movement, for the rules; ordered so the array never churns. */
-export async function labelIdsFor(
+async function labelIdsFor(
   ctx: Pick<Ctx, "userId">,
   transactionIds: readonly string[],
 ): Promise<Map<string, string[]>> {
@@ -445,7 +445,7 @@ export async function labelIdsFor(
 }
 
 /** The labels of each movement with their names and colours, for the table's chips. */
-export async function labelsFor(
+async function labelsFor(
   ctx: Pick<Ctx, "userId">,
   transactionIds: readonly string[],
 ): Promise<Map<string, TransactionLabel[]>> {
@@ -621,7 +621,7 @@ export async function manualMovementsByAccount(
 }
 
 /** A movement of an account as Investments counts it: money in (> 0) or out (< 0) of the account. */
-export interface AccountMovement {
+interface AccountMovement {
   id: string;
   on: CivilDate;
   occurredAt: Date;
@@ -713,7 +713,7 @@ export async function monthSpending(
 }
 
 /** A movement as the subscription check sees it (spec §7.5): a positive amount, on a civil day. */
-export interface ChargeCandidate {
+interface ChargeCandidate {
   id: string;
   accountId: string;
   on: CivilDate;
@@ -894,7 +894,7 @@ export async function payeeSamples(
   );
 }
 
-export type RecurringPattern = typeof recurringPatterns.$inferSelect;
+type RecurringPattern = typeof recurringPatterns.$inferSelect;
 
 /** The recurring patterns `refreshRecurrences` last stored (spec §7.2), soonest expected first. */
 export async function listRecurringPatterns(ctx: Pick<Ctx, "userId">): Promise<RecurringPattern[]> {
@@ -906,7 +906,7 @@ export async function listRecurringPatterns(ctx: Pick<Ctx, "userId">): Promise<R
 }
 
 /** The movements of a range that wait for a category: how many, how many with a suggestion, their sum. */
-export interface WaitingForCategory {
+interface WaitingForCategory {
   count: number;
   suggested: number;
   cents: Cents;
@@ -918,7 +918,7 @@ export interface WaitingForCategory {
  * partial index on the waiting movements, so the notice of Expenses costs the screen no read of
  * its own. The range and the accounts narrow it; the other filters are about the list.
  */
-export async function countAllAndWaiting(
+async function countAllAndWaiting(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
 ): Promise<{ total: number; review: WaitingForCategory }> {
@@ -958,7 +958,7 @@ export async function countAllTransactions(ctx: Pick<Ctx, "userId">): Promise<nu
  * follows "Show hidden", because it is what the page compares its rows against to know whether
  * `limit` cut anything off.
  */
-export async function countTransactions(
+async function countTransactions(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
 ): Promise<number> {
@@ -1209,7 +1209,7 @@ export async function categoryMacroTotals(
 }
 
 /** What one group of categories spent in one day or month (F2.5): the Expenses chart's unit. */
-export interface SpendingPoint {
+interface SpendingPoint {
   /** The day, or the first of the month, in the user's own zone. */
   bucket: CivilDate;
   /** The group — a sub-category counts in its parent — or `null` for the uncategorised. */

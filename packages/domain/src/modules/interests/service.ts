@@ -30,7 +30,7 @@ export type InterestRule = typeof interestRules.$inferSelect;
 export type InterestEntry = typeof interestEntries.$inferSelect;
 export type InterestAccrual = typeof interestAccruals.$inferSelect;
 
-export type InterestErrorCode =
+type InterestErrorCode =
   "not_found" | "invalid_account" | "invalid_tiers" | "not_synced" | "invalid_category";
 
 export class InterestError extends Error {
@@ -46,7 +46,7 @@ const fraction = z
   .regex(/^\d+(\.\d{1,6})?$/)
   .refine((value) => fixedFromDecimal(value) <= FIXED_SCALE, "Above 1");
 
-export const ruleInputSchema = z
+const ruleInputSchema = z
   .object({
     accountId: z.uuid(),
     taxRate: fraction,
@@ -228,7 +228,7 @@ export async function bringUpToDate(
  * The remainder is read strictly before each day, and used only when the day before was accrued.
  * Reads first, then one transaction; no network.
  */
-export async function accrueRule(
+async function accrueRule(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   id: string,
   through: CivilDate,
@@ -291,7 +291,7 @@ function grossCents(values: readonly string[]): Cents {
  * accrued becomes one `interest_entries` row with the period's nets added up, and its days point
  * at it. Idempotent (one settlement per rule and period).
  */
-export async function settleDue(
+async function settleDue(
   ctx: Pick<Ctx, "userId">,
   todayOn: CivilDate,
   ruleIds?: readonly string[],

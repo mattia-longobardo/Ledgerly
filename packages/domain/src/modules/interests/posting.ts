@@ -20,7 +20,7 @@ import { InterestError, tiersOf } from "./service";
 export type PostingClient = Pick<WalletClient, "recordsWithNote" | "createRecord">;
 
 /** The marker a published settlement carries in its Wallet note: one per settlement. */
-export function postingMarker(entryId: string): string {
+function postingMarker(entryId: string): string {
   return `ledgerly-interest:${entryId}`;
 }
 

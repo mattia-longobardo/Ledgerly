@@ -1,6 +1,6 @@
 export const THEME_COOKIE = "theme";
 export type ThemePreference = "system" | "light" | "dark";
-export type ResolvedTheme = "light" | "dark";
+type ResolvedTheme = "light" | "dark";
 
 export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
 

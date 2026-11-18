@@ -8,13 +8,12 @@
 import { z } from "zod";
 
 /** The contract versions this core accepts: the current one and, when there is one, the one before. */
-export const CONTRACT_VERSIONS = ["1"] as const;
+const CONTRACT_VERSIONS = ["1"] as const;
 
 export const PLUGIN_ID = /^[a-z][a-z0-9-]{1,30}$/;
 
 /** A text in the two languages of the app. */
-export const localizedSchema = z.object({ en: z.string().min(1).max(600), it: z.string().min(1).max(600) });
-export type Localized = z.infer<typeof localizedSchema>;
+const localizedSchema = z.object({ en: z.string().min(1).max(600), it: z.string().min(1).max(600) });
 
 const FIELD_NAME = /^[a-z][a-zA-Z0-9]{0,39}$/;
 
@@ -22,7 +21,7 @@ const FIELD_NAME = /^[a-z][a-zA-Z0-9]{0,39}$/;
  * One field a person fills in: a credential (`userSettings`) or a choice made when a connection
  * starts (`connectionFields`). `writeOnly` fields are never sent back to a browser once saved.
  */
-export const fieldSchema = z.object({
+const fieldSchema = z.object({
   name: z.string().regex(FIELD_NAME),
   type: z.enum(["text", "secret", "multiline", "choice"]),
   required: z.boolean(),
@@ -32,28 +31,25 @@ export const fieldSchema = z.object({
   /** The values of a `choice`, in the order to show them. */
   options: z.array(z.object({ value: z.string().min(1).max(60), label: localizedSchema })).optional(),
 });
-export type PluginField = z.infer<typeof fieldSchema>;
 
 /**
  * The capabilities the core knows today. The vocabulary is open: a value that is not in this list
  * is kept in the manifest and ignored by the core, never refused (§4.1).
  */
-export const KNOWN_CAPABILITIES = [
-  "provider.write",
-  "categories",
-  "editRecord",
+type Capability =
+  | "provider.write"
+  | "categories"
+  | "editRecord"
   // The provider creates on its side a movement written in the core: its accounts are "read and
   // write" (rewrite plan, 12-account-modes.md §12.1).
-  "createRecord",
-  "deleteCategory",
-  "ledgerPosting",
-  "dailyRates",
-  "windowedHistory",
-  "totalOnlyHistory",
-  "costMethod",
-  "documents.read",
-] as const;
-export type Capability = (typeof KNOWN_CAPABILITIES)[number];
+  | "createRecord"
+  | "deleteCategory"
+  | "ledgerPosting"
+  | "dailyRates"
+  | "windowedHistory"
+  | "totalOnlyHistory"
+  | "costMethod"
+  | "documents.read";
 
 export const manifestSchema = z.object({
   id: z.string().regex(PLUGIN_ID),

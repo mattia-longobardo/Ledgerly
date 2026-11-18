@@ -33,7 +33,7 @@ export const AFTER_SYNC_JOBS: readonly JobDefinition[] = [
 const BUSY_WAIT_MS = 60_000;
 const BUSY_POLL_MS = 2_000;
 
-export interface AfterSyncOptions {
+interface AfterSyncOptions {
   jobs?: readonly JobDefinition[];
   /** Injected in tests so the wait for a job in use is not actually waited through. */
   sleep?: (ms: number) => Promise<void>;

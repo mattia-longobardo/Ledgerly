@@ -48,7 +48,7 @@ export function removeHidden(ids: readonly string[]): Promise<CommandResult> {
 }
 
 /** One row at a time, and no count to report: what the details panel saves. */
-export type FieldResult = ActionResult;
+type FieldResult = ActionResult;
 
 /** Spec §7.2: the note is the user's. An empty one is stored as no note at all (§4.3). */
 export function setNote(id: string, note: string): Promise<FieldResult> {

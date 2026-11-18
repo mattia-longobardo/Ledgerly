@@ -16,7 +16,7 @@ import { addDays, type CivilDate, dayOfWeek } from "../dates";
 export const HOLIDAY_SOURCES = ["openholidays", "nager"] as const;
 export type HolidaySource = (typeof HOLIDAY_SOURCES)[number];
 
-export type HolidayKey =
+type HolidayKey =
   | "newYear"
   | "epiphany"
   | "easter"
@@ -31,7 +31,7 @@ export type HolidayKey =
   | "stStephen"
   | "patronSaint";
 
-export interface Holiday {
+interface Holiday {
   date: CivilDate;
   key: HolidayKey;
 }

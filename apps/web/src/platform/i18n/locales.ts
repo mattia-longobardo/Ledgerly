@@ -1,10 +1,10 @@
 import type { Ctx } from "@ledgerly/domain/platform/context";
 
 export const LOCALES = ["en", "it"] as const;
-export const DEFAULT_LOCALE = "en";
+const DEFAULT_LOCALE = "en";
 export const LOCALE_COOKIE = "locale";
 /** The time zone of pages seen before sign-in (the default preference). */
-export const DEFAULT_TIME_ZONE = "Europe/Rome";
+const DEFAULT_TIME_ZONE = "Europe/Rome";
 
 /**
  * The language and time zone a request renders in: the signed-in user's saved preferences,

@@ -25,7 +25,7 @@ import {
 import type { Params } from "@/ui/url";
 
 /** The window these screens open on: the one Expenses opens on. */
-export const DEFAULT_PERIOD_PRESET: RangePreset = "thisMonth";
+const DEFAULT_PERIOD_PRESET: RangePreset = "thisMonth";
 
 export interface PeriodQuery {
   /** `null` when the address carries an explicit `from`/`to`, which wins over the presets. */

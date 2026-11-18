@@ -27,13 +27,11 @@ import type {
 
 const ETORO = "etoro";
 /** eToro's trading account is in dollars: positions, trades and their P/L are USD. */
-export const TRADING_CURRENCY = "USD";
+const TRADING_CURRENCY = "USD";
 /** The `minDate` of the trade history and the start of every flows window (spike: 2020-01-01). */
 export const FLOWS_FROM: CivilDate = "2020-01-01";
 /** `balances/history` refuses more than 365 days and anything past 12 months (E4, D11). */
-export const HISTORY_DAYS = 360;
-/** The currencies `displayCurrency` accepts (E8): the dialog offers only these. */
-export const ETORO_CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
+const HISTORY_DAYS = 360;
 
 /** E1: read only means every scope ends with `:read`; anything else is treated as a write. */
 export function keyCheckOf(me: EtoroMe): KeyCheck {

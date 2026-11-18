@@ -123,11 +123,11 @@ const STABLECOINS: Record<string, string> = {
   AEUR: "EUR",
 };
 /** The quotes `fetchMyTrades` tries for every discovered asset (B3), plus the account's currency. */
-export const TRADE_QUOTES = ["EUR", "USDT", "USDC", "BTC"] as const;
+const TRADE_QUOTES = ["EUR", "USDT", "USDC", "BTC"] as const;
 
 export const isFiat = (asset: string) => FIAT.has(asset);
 
-export function assetRefOf(asset: string, currency: string): AssetRef {
+function assetRefOf(asset: string, currency: string): AssetRef {
   if (isFiat(asset)) return { externalId: asset, class: "cash", name: asset, symbol: asset, currency: asset };
   const tracked = STABLECOINS[asset];
   if (tracked)
@@ -138,7 +138,7 @@ export function assetRefOf(asset: string, currency: string): AssetRef {
 // ——— The key (§5.2, B1) ——————————————————————————————————————————————————————————————————————
 
 /** The flags of trading, withdrawal and transfer Binance knows today: all must be `false`. */
-export const WRITE_FLAGS = [
+const WRITE_FLAGS = [
   "enableSpotAndMarginTrading",
   "enableWithdrawals",
   "enableFutures",
@@ -150,7 +150,7 @@ export const WRITE_FLAGS = [
   "enableFixApiTrade",
 ] as const;
 /** Permissions that only read: `enableReading` must be on, `enableFixReadOnly` may be. */
-export const READ_FLAGS = ["enableReading", "enableFixReadOnly"] as const;
+const READ_FLAGS = ["enableReading", "enableFixReadOnly"] as const;
 const FLAG = /^(enable|permits)[A-Za-z]+$/;
 
 const restrictionsSchema = z.looseObject({ ipRestrict: z.boolean() });
@@ -192,7 +192,7 @@ export interface Quote {
 }
 
 /** How one unit of an asset becomes the account's currency, as a reading position records it. */
-export interface PricePath {
+interface PricePath {
   /** The asset in `priceCurrency`, 18 decimals. */
   price: bigint;
   priceCurrency: string;
@@ -1067,7 +1067,7 @@ export function closesOf(raw: unknown): Map<CivilDate, bigint> {
 }
 
 /** The closes of the markets a pass fetched, as a lookup of a coin's value on a day (§1.8). */
-export interface DailyPrices {
+interface DailyPrices {
   /** `symbol` → closes by day. */
   closes: ReadonlyMap<string, ReadonlyMap<CivilDate, bigint>>;
   markets: ReadonlySet<string>;
@@ -1187,7 +1187,7 @@ export const HISTORY_DAYS = 365;
 /** A7: each pass reads again the last 24 hours of every stream. */
 export const OVERLAP_MS = DAY_MS;
 /** The day Binance opened: where the history before the 12 months, the opening, starts. */
-export const BINANCE_SINCE = new Date("2017-07-14T00:00:00Z");
+const BINANCE_SINCE = new Date("2017-07-14T00:00:00Z");
 
 /** `[from, until]` cut in windows of at most `days` days (B7: 90 for deposits, 30 for Convert). */
 export function windowsOf(from: number, until: number, days: number): { since: number; until: number }[] {

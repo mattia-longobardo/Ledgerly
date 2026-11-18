@@ -72,7 +72,7 @@ const MAX_DETAIL_CHARS = 4_000;
 /** The only two fractions Trek represents. */
 export type TrekFraction = 0.5 | 1;
 /** The only two kinds Trek knows (spec §9.2): ROL is never named in a request. */
-export type TrekKind = "vacation" | "comp";
+type TrekKind = "vacation" | "comp";
 
 export interface TrekEntry {
   id: number;
@@ -99,7 +99,7 @@ export interface TrekYearStats {
 
 /* Errors */
 
-export type TrekErrorKind =
+type TrekErrorKind =
   /** The bearer token was refused by `/mcp`: expired or revoked, decided before any tool ran. */
   | "token_rejected"
   /** The machine client itself was refused by the token endpoint: no token was ever issued. */
@@ -152,8 +152,8 @@ export interface DesiredDay {
   kind: TrekKind;
 }
 
-export type ToggleOp = "insert" | "update" | "delete";
-export type ToggleAction = "added" | "updated" | "removed";
+type ToggleOp = "insert" | "update" | "delete";
+type ToggleAction = "added" | "updated" | "removed";
 
 export interface TogglePlanStep {
   date: CivilDate;
@@ -169,7 +169,7 @@ export interface TogglePlanStep {
   from: { fraction: TrekFraction; kind: TrekKind } | null;
 }
 
-export interface TogglePlan {
+interface TogglePlan {
   steps: TogglePlanStep[];
   /** Days Trek already agrees with. Toggling these would **delete** them. */
   unchanged: CivilDate[];
@@ -307,7 +307,7 @@ const toggleSchema = z.object({
 /* The transport */
 
 /** The scopes a leave sync needs, and no others: this client reads and writes days off. */
-export const TREK_SCOPES = ["vacay:read", "vacay:write"] as const;
+const TREK_SCOPES = ["vacay:read", "vacay:write"] as const;
 
 /** The machine client as Settings stores it. The secret never leaves this module's arguments. */
 export interface TrekConfig {
@@ -356,7 +356,7 @@ export interface TrekClient {
   toggleEntry(step: TogglePlanStep): Promise<ToggleResult>;
 }
 
-export type ToggleOutcome =
+type ToggleOutcome =
   | "applied"
   /** Trek refuses to book that date at all. */
   | "weekend_blocked"
@@ -379,7 +379,7 @@ const defaultSleep = (ms: number): Promise<void> =>
   });
 
 /** 1 s doubling to an 8 s ceiling, plus up to 25 % jitter so retries do not march in step. */
-export function backoffDelayMs(attempt: number, jitter: number): number {
+function backoffDelayMs(attempt: number, jitter: number): number {
   const exponential = Math.min(BASE_DELAY_MS * 2 ** (attempt - 1), MAX_DELAY_MS);
   return exponential + Math.floor(jitter * exponential * JITTER_FRACTION);
 }

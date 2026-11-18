@@ -33,7 +33,7 @@ import {
 type Who = Pick<Ctx, "userId">;
 type Row = typeof sourceCategories.$inferSelect;
 
-export type SourceCategoryErrorCode = "not_found" | "invalid";
+type SourceCategoryErrorCode = "not_found" | "invalid";
 
 export class SourceCategoryError extends Error {
   constructor(readonly code: SourceCategoryErrorCode) {

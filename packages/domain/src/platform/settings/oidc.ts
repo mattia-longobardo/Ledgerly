@@ -11,7 +11,7 @@ import { z } from "zod";
  */
 
 /** Where an OpenID provider publishes its metadata, relative to the issuer (RFC 8414 §3). */
-export const DISCOVERY_PATH = ".well-known/openid-configuration";
+const DISCOVERY_PATH = ".well-known/openid-configuration";
 
 /** An issuer with the trailing slash `new URL(path, base)` needs to keep the last path segment. */
 function withTrailingSlash(issuer: string): string {
@@ -60,7 +60,7 @@ export function issuerOrigin(issuer: string): string | null {
   }
 }
 
-export const MAX_OIDC_FIELD = 200;
+const MAX_OIDC_FIELD = 200;
 
 /**
  * What the Authentik card accepts. The client secret is optional exactly like the LLM key: an

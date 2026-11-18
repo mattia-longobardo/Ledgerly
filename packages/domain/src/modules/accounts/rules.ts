@@ -42,10 +42,10 @@ export const TRENDS = ["hold", "interpolate"] as const;
 export const SNAPSHOT_STATES = ["success", "warning", "failed"] as const;
 
 export type AccountType = (typeof ACCOUNT_TYPES)[number];
-export type AccountState = (typeof ACCOUNT_STATES)[number];
+type AccountState = (typeof ACCOUNT_STATES)[number];
 export type ConnectionChannel = (typeof CONNECTION_CHANNELS)[number];
-export type AccountOrigin = (typeof ACCOUNT_ORIGINS)[number];
-export type BalanceSource = (typeof BALANCE_SOURCES)[number];
+type AccountOrigin = (typeof ACCOUNT_ORIGINS)[number];
+type BalanceSource = (typeof BALANCE_SOURCES)[number];
 
 /**
  * Same day, more than one source: which one counts, first to last (spec §7.1; investments.md §1.7).
@@ -72,8 +72,7 @@ export const MOVEMENT_SOURCE = "movement";
 /** Every value the `source` of a balance row takes: the sources, and the balance after them. */
 export const ENTRY_SOURCES = [...BALANCE_SOURCES, MOVEMENT_SOURCE] as const;
 export type EntrySource = (typeof ENTRY_SOURCES)[number];
-export type Reminder = (typeof REMINDERS)[number];
-export type Trend = (typeof TRENDS)[number];
+type Trend = (typeof TRENDS)[number];
 
 /** The one obsolescence constant (spec §7.1): a synced account older than this is stale. */
 export const DEFAULT_STALE_AFTER_HOURS = 36;
@@ -191,7 +190,7 @@ export interface BalancePoint {
 }
 
 /** One day's net of an account's movements, as `dailyNetByAccount` gives it. */
-export interface DailyNet {
+interface DailyNet {
   on: CivilDate;
   cents: Cents;
 }
@@ -383,7 +382,7 @@ export function totalSeries(
   return Array.from({ length }, (_, i) => sumCents(series.map((one) => one[i] ?? null)));
 }
 
-export type AlertKind = "low_balance" | "stale_sync";
+type AlertKind = "low_balance" | "stale_sync";
 
 export interface AccountAlert {
   accountId: string;
@@ -453,7 +452,7 @@ export interface RemoteAccount {
   iban?: string | null;
 }
 
-export type ReconcileStep =
+type ReconcileStep =
   | { action: "create"; remote: RemoteAccount }
   | { action: "iban"; id: string; iban: string }
   /** A new account of the source whose IBAN an account here already has: not created (H39). */
@@ -557,8 +556,7 @@ export function parseAmount(input: string, format: NumberFormat): Cents {
  * How an account with movements is kept (§12.1): by hand, by a source that reads and is written
  * to, or by a source that only reads. Derived, never stored, and never from a provider's name.
  */
-export const ACCOUNT_MODES = ["manual", "two_way", "read_only"] as const;
-export type AccountMode = (typeof ACCOUNT_MODES)[number];
+export type AccountMode = "manual" | "two_way" | "read_only";
 
 /** The types whose value is a portfolio's, not a list of movements: they have no mode. */
 const TYPES_WITHOUT_MODE: readonly AccountType[] = ["investment", "pension", "crypto"];
@@ -582,7 +580,7 @@ function asHolder(account: LocalAccount): IbanHolder[] {
 }
 
 /** Why an IBAN cannot be written on an account, and which account already has it. */
-export type IbanConflict = { kind: "exists" | "archived"; accountId: string; name: string };
+type IbanConflict = { kind: "exists" | "archived"; accountId: string; name: string };
 
 /**
  * The rule "one IBAN, one account" (H39), with no provider in it: the account of the person that

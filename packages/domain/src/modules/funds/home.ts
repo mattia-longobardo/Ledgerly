@@ -33,11 +33,11 @@ export function isFutureYear(period: string | undefined, todayOn: CivilDate): bo
 }
 
 /** A value older than this asks to be updated (decision 7 of §9). */
-export const STALE_DAYS = 31;
+const STALE_DAYS = 31;
 /** Past this spread between the dates of the values, a percentage of the portfolio means nothing (§5.3). */
-export const AGGREGATE_RATE_DAYS = 45;
+const AGGREGATE_RATE_DAYS = 45;
 /** Up to a quarter, a custom period draws the stretches between the values (§6). */
-export const STRETCH_DAYS = 92;
+const STRETCH_DAYS = 92;
 
 /** One month of a payslip's contributions: money accrued, not yet in the fund. */
 export interface AccruedLine {
@@ -88,7 +88,7 @@ export function firstDataOn(funds: readonly HomeFund[]): CivilDate | null {
   return days.length === 0 ? null : days.sort()[0];
 }
 
-export type LineStatus = "measured" | "no_value_in_period" | "never_valued";
+type LineStatus = "measured" | "no_value_in_period" | "never_valued";
 
 export interface FundLine {
   fund: HomeFund;
@@ -97,7 +97,7 @@ export interface FundLine {
   accruedCents: Cents;
 }
 
-export type HomeState =
+type HomeState =
   /** The period ends before the first data there is. */
   | "before_first"
   /** Every fund in the period has its gain. */
@@ -310,7 +310,7 @@ export function staleFunds(
     .sort((a, b) => (a.lastOn < b.lastOn ? -1 : a.lastOn > b.lastOn ? 1 : 0));
 }
 
-export interface YearRow {
+interface YearRow {
   year: number;
   summary: HomeSummary;
 }
@@ -333,7 +333,7 @@ export function yearRows(
 // ——— The chart (§6) ——————————————————————————————————————————————————————————————————————————
 
 /** What one fund did between two readings: never split, never spread over the months it spans. */
-export interface Stretch {
+interface Stretch {
   fundId: string;
   from: CivilDate;
   to: CivilDate;
@@ -367,7 +367,7 @@ export function stretchesOf(line: FundLine): Stretch[] {
 
 export type GainGrain = "month" | "year" | "stretch";
 
-export interface GainBar {
+interface GainBar {
   from: CivilDate;
   to: CivilDate;
   /** Per fund; a fund with no reading in the bar is absent, never a zero. */
@@ -438,7 +438,7 @@ export function gainBars(
   return bars;
 }
 
-export interface ValuePointRow {
+interface ValuePointRow {
   on: CivilDate;
   valueCents: Cents;
   /** The money each fund's own last reading could see: so the gap is always a documented gain. */

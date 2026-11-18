@@ -330,6 +330,16 @@
     "reason": "monorepo: a path of the tree is read wherever its package keeps the file; the paths and assertions are the same (the path before the app moved to apps/web)"
   },
   {
+    "file": "tests/e2e/transactions/wide.spec.ts",
+    "decision": "R0",
+    "reason": "Q9: a helper's parameter that nothing reads is named `_page`; the assertions are the same"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/rules.test.ts",
+    "decision": "R0",
+    "reason": "Q9, audit INTG-8 (05-refactor.md §5.3): `isDue` had no use outside its own test and is removed with it; the other assertions are the same"
+  },
+  {
     "file": "apps/web/src/platform/integrations/jobs.itest.ts",
     "decision": "R0",
     "reason": "monorepo: the path of a migration from the app's folder changed"

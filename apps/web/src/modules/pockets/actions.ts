@@ -20,7 +20,7 @@ import {
 } from "@ledgerly/domain/pockets";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
+type CreateResult = { ok: true; id: string } | { ok: false; error: string };
 
 function failed(error: unknown): { ok: false; error: string } {
   if (error instanceof PocketError) return { ok: false, error: error.code };
@@ -34,7 +34,7 @@ function revalidate(): void {
 }
 
 /** The pocket dialog: amounts as typed, an empty one being no amount at all. */
-export interface PocketFormInput {
+interface PocketFormInput {
   name: string;
   color: string | null;
   backingAccountId: string | null;

@@ -33,7 +33,7 @@ import { bankSink } from "../../banks/sink";
 import { coreConnectionAction } from "./actions";
 import { recommendedSchedule } from "./recommended-schedule";
 
-export type ConnectionActionResult = { ok: true; toast: string | null } | { ok: false; message: string };
+type ConnectionActionResult = { ok: true; toast: string | null } | { ok: false; message: string };
 
 /** The kinds this action does itself; the others are a page or a dialog of the row's parent. */
 type Kind = "update" | "resume" | "enable" | "test" | "history";

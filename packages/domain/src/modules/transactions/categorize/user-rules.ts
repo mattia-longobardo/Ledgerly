@@ -37,7 +37,7 @@ const words = z.string().trim().min(1).max(100);
 /** A positive amount in cents: a number, for JSON; no amount reaches 2^53. */
 const cents = z.number().int().min(0).max(1e13);
 
-export const conditionSchema = z.discriminatedUnion("field", [
+const conditionSchema = z.discriminatedUnion("field", [
   z.object({ field: z.literal("text"), op: z.enum(TEXT_OPS), value: words }),
   z.object({ field: z.literal("counterparty"), op: z.enum(COUNTERPARTY_OPS), value: words }),
   z.object({ field: z.literal("ownAccount") }),

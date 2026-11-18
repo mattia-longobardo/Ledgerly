@@ -73,9 +73,9 @@ export async function deactivationCounts(
 }
 
 /** How long the last reading before turning off may take (§3.2, step 1). */
-export const FINAL_READ_MS = 30_000;
+const FINAL_READ_MS = 30_000;
 
-export interface DeactivateDeps {
+interface DeactivateDeps {
   /** One last reading of a connection, which also sends what waits; its failure does not stop. */
   finalRead(connectionId: string): Promise<unknown>;
   plugin?: PluginDeps;

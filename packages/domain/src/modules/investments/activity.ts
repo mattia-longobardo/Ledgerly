@@ -63,7 +63,7 @@ export interface DescribedEvent {
 
 export type ActivityT = (key: string, values?: Record<string, string>) => string;
 
-export interface Description {
+interface Description {
   /** What the event is, for the Type column and the chips: "Bought", "Deposit", "Staking". */
   label: string;
   /** The rest of the sentence: "6.87 SpaceX at $202.94"; `null` when the label says it all. */

@@ -24,7 +24,7 @@ export type LeaveDayKind = (typeof LEAVE_DAY_KINDS)[number];
 
 /** The kinds Trek's own rows can be in, and therefore the only ones a toggle may ever name. */
 export const TREK_KINDS = ["vacation", "comp"] as const;
-export type TrekKind = (typeof TREK_KINDS)[number];
+type TrekKind = (typeof TREK_KINDS)[number];
 
 /**
  * The kinds that reach Trek at all — the leave that spends the year's allowance.
@@ -34,7 +34,7 @@ export type TrekKind = (typeof TREK_KINDS)[number];
  * Trek reads to a colleague as a day at work. Sickness and "other" stay here: they are absences
  * of a different kind, not leave anybody books.
  */
-export const KINDS_FOR_TREK = ["vacation", "rol", "comp"] as const;
+const KINDS_FOR_TREK = ["vacation", "rol", "comp"] as const;
 
 export function goesToTrek(kind: LeaveDayKind): boolean {
   return (KINDS_FOR_TREK as readonly string[]).includes(kind);
@@ -57,11 +57,10 @@ export function asTrekKind(kind: LeaveDayKind): TrekKind {
  * state (plan F7 §3.6.1). Those appear in the table as month rows, read-only, from their own read.
  */
 export const LEAVE_ORIGINS = ["manual", "trek"] as const;
-export type LeaveOrigin = (typeof LEAVE_ORIGINS)[number];
 
 /** What the next Trek pass owes this row. `none` means the two agendas agree. */
 export const PENDING_STATES = ["none", "upsert", "delete"] as const;
-export type PendingState = (typeof PENDING_STATES)[number];
+type PendingState = (typeof PENDING_STATES)[number];
 
 /**
  * Whether a stored row is still leave its owner means to take. A row removed here that Trek holds
@@ -74,10 +73,10 @@ export function stillBooked(row: { pending: PendingState }): boolean {
 }
 
 /** The only two sizes a day off comes in. */
-export const DAY_FRACTIONS = [0.5, 1] as const;
+const DAY_FRACTIONS = [0.5, 1] as const;
 
 /** A day is `taken` once a payslip has counted it, `planned` until then (N2). */
-export type DayStatus = "taken" | "planned";
+type DayStatus = "taken" | "planned";
 
 /* Conversions (plan F7 §3.4.4) */
 
@@ -95,7 +94,7 @@ export function daysToMinutes(days: number, minutesPerDay: number): number {
 
 /* Bookability (spec §7.9) */
 
-export type Bookable = { ok: true } | { ok: false; reason: "weekend" | "holiday" };
+type Bookable = { ok: true } | { ok: false; reason: "weekend" | "holiday" };
 
 /**
  * Whether a leave day may be booked on a date: not a weekend, and not one of this person's public
@@ -155,7 +154,7 @@ export function minuteWeight(day: LeaveDayView, minutesPerDay: number): number {
 /** Which of the two formulas produced a residual — the interface always says which. */
 export type ResidualBasis = "payslip" | "allowance" | "unknown";
 
-export interface ResidualSnapshot {
+interface ResidualSnapshot {
   /** The month of the payslip that printed it. */
   period: MonthKey;
   /** What the payslip printed as RES., in hours. */
@@ -510,7 +509,7 @@ export function datesBetween(from: CivilDate, to: CivilDate): CivilDate[] {
 /* The kinds as a list (anticipation AN1 of the rewrite plan) */
 
 /** The kinds that spend a yearly allowance, and so have a residual to show. */
-export const BALANCE_KINDS = ["vacation", "rol"] as const;
+const BALANCE_KINDS = ["vacation", "rol"] as const;
 
 /**
  * One kind of leave as a screen is handed it: an entry of a list, not a name written in a component.
@@ -545,7 +544,7 @@ export function otherHalfOf(kind: LeaveDayKind): LeaveDayKind {
 /* What a range would write, before anything is written (rewrite plan N5) */
 
 /** The fields of the leave panel, as the rules read them. */
-export interface LeaveRangeInput {
+interface LeaveRangeInput {
   from: CivilDate;
   to: CivilDate;
   kind: LeaveDayKind;
@@ -575,7 +574,7 @@ export function rangeParts(input: Pick<LeaveRangeInput, "kind" | "fraction" | "o
       ];
 }
 
-export interface LeaveRangeContext {
+interface LeaveRangeContext {
   /** The rows already booked: at least every row of the range. */
   days: readonly LeaveDayView[];
   holidays: ReadonlySet<CivilDate>;
@@ -586,18 +585,18 @@ export interface LeaveRangeContext {
 }
 
 /** A row the range changes on its way: taken away, or kept with another size. */
-export interface ReplacedRow extends LeaveDayView {
+interface ReplacedRow extends LeaveDayView {
   change: "removed" | "resized";
 }
 
-export interface BalanceChange {
+interface BalanceChange {
   kind: LeaveDayKind;
   /** `null` when nobody can compute the residual: no payslip and no allowance. */
   beforeMinutes: number | null;
   afterMinutes: number | null;
 }
 
-export interface LeaveRangePreview {
+interface LeaveRangePreview {
   /** The days that get a row, ascending. */
   written: CivilDate[];
   /** The days of the range nobody can book, with the reason. */
@@ -727,7 +726,7 @@ export interface UnrecordedLeave {
 }
 
 /** A payslip's leave event, as `payroll` reports it. */
-export interface PayrollLeave {
+interface PayrollLeave {
   kind: "vacation" | "rol" | "permit";
   hours: number;
   usagePeriod: MonthKey;

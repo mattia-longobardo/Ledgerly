@@ -39,7 +39,7 @@ import { FRESH_READING_MS, isFreshReading } from "./rules";
 export type StaleReason = "no_connection" | "revoked" | "sync_failed" | "sync_busy" | "not_read";
 
 /** What one account's balance is worth to an accrual about to start. */
-export interface BalanceReading {
+interface BalanceReading {
   /** `manual`: nothing to synchronise. `fresh`: accrue. `stale`: do not accrue. */
   state: "manual" | "fresh" | "stale";
   reason: StaleReason | null;

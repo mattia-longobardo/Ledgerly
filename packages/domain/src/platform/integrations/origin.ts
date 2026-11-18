@@ -6,7 +6,7 @@
  */
 import { AsyncLocalStorage } from "node:async_hooks";
 
-export type RunOrigin = "auto" | "manual";
+type RunOrigin = "auto" | "manual";
 
 const origin = new AsyncLocalStorage<RunOrigin>();
 

@@ -423,7 +423,7 @@ export interface Presence {
 }
 
 /** What the provider put on the return address. */
-export interface ReturnQuery {
+interface ReturnQuery {
   state: string | null;
   code: string | null;
   error: string | null;
@@ -624,7 +624,7 @@ export async function completeAccess(
 }
 
 /** What a page may know of a bank's connection: no access, no account number in full. */
-export interface ConnectionSummary {
+interface ConnectionSummary {
   /** The accounts the bank exposes with this access. */
   accounts: number;
   /** Whether the person has chosen what each account is here. */

@@ -42,7 +42,7 @@ const YEAR = 60 * 60 * 24 * 365;
  * inside a transition with no error boundary, so a Zod or provider error must not crash the page.
  * `error` is a catalogued message key under the calling component's own `next-intl` namespace.
  */
-export type ActionResult = { ok: true } | { ok: false; error: string };
+type ActionResult = { ok: true } | { ok: false; error: string };
 
 /** The saved preference is what every page renders with; the cookie only serves anonymous pages. */
 export async function saveTheme(theme: ThemePreference): Promise<void> {
@@ -134,7 +134,7 @@ function revocationFailed(error: unknown): ActionResult {
  * namespace; `outcome` is the service's own answer for the actions that have more than one way
  * of succeeding (an invitation whose email the SMTP switches held back, for instance).
  */
-export type AdminActionResult<T = never> = { ok: true; outcome: T } | { ok: false; error: AdminErrorCode };
+type AdminActionResult<T = never> = { ok: true; outcome: T } | { ok: false; error: AdminErrorCode };
 
 /** The answer of an action that either works or explains why not. */
 const DONE = { ok: true, outcome: undefined } as AdminActionResult<undefined>;

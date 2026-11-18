@@ -44,7 +44,7 @@ const AUTOMATIC = ["memory", "model", "table", "rule"] as const;
 /** The reason of a movement whose rule was deleted (§4.5). */
 const RULE_DELETED = "rule_deleted";
 
-export interface Rule {
+interface Rule {
   id: string;
   name: string;
   position: number;
@@ -55,7 +55,7 @@ export interface Rule {
   note: string | null;
 }
 
-export interface RuleRow extends Rule {
+interface RuleRow extends Rule {
   /** The movements that carry the rule's category today (§4.2). */
   count: number;
   /** The rule's category is archived: the rule is off by itself (§4.5). */
@@ -283,7 +283,7 @@ async function workingRules(ctx: Who): Promise<Rule[]> {
 }
 
 /** What a rule reads of a movement, from its columns. */
-export function ruleMovementOf(
+function ruleMovementOf(
   row: {
     payee: string | null;
     note: string | null;
@@ -339,7 +339,7 @@ async function existingLabels(ctx: Who, rules: readonly Rule[]): Promise<Set<str
 }
 
 /** A movement the cascade is about to read: no category, no origin, on an account it may write. */
-export interface NewMovement {
+interface NewMovement {
   id: string;
   payee: string | null;
   note: string | null;

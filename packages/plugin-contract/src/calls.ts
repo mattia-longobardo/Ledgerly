@@ -24,7 +24,7 @@ export const PLUGIN_PATHS = {
 export const SECRET_HEADER = "x-plugin-secret";
 
 /** A flat bag of strings: the same shape the core seals (`sealJson`). */
-export const credentialsSchema = z.record(z.string().min(1).max(40), z.string().min(1).max(8192));
+const credentialsSchema = z.record(z.string().min(1).max(40), z.string().min(1).max(8192));
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const isoInstant = z.iso.datetime({ offset: true });
@@ -34,7 +34,6 @@ const decimal = z.string().regex(/^-?\d{1,15}(\.\d{1,8})?$/);
 const currency = z.string().regex(/^[A-Z]{3}$/);
 
 const institutionRef = z.object({ name: z.string().min(1).max(200), country });
-export type InstitutionRef = z.infer<typeof institutionRef>;
 
 /* verify */
 
@@ -123,9 +122,8 @@ export const syncRequestSchema = z.object({
     .object({ ip: z.string().max(64).nullable(), userAgent: z.string().max(400).nullable() })
     .nullable(),
 });
-export type SyncRequest = z.infer<typeof syncRequestSchema>;
 
-export const balanceSchema = z.object({
+const balanceSchema = z.object({
   /** The provider's own code of the balance (e.g. `CLBD`, `ITAV`). */
   type: z.string().min(1).max(40),
   amount: decimal,
@@ -133,7 +131,7 @@ export const balanceSchema = z.object({
   date: isoDate.nullable(),
 });
 
-export const transactionSchema = z.object({
+const transactionSchema = z.object({
   accountExternalId: z.string().min(1).max(200),
   /** The provider's id of the movement; `null` when it gives none. */
   externalId: z.string().min(1).max(200).nullable(),

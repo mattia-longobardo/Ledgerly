@@ -8,12 +8,12 @@ import { SOURCE_KINDS, type SourceKind } from "./sources";
 import data from "./templates.json";
 
 /** A source of a template: its kind, and the fields that differ from a new source's. */
-export type TemplateSource = Partial<Omit<SourceForm, "id" | "kind" | "state" | "customDue">> & {
+type TemplateSource = Partial<Omit<SourceForm, "id" | "kind" | "state" | "customDue">> & {
   kind: SourceKind;
 };
 
 /** A fee of a template. Its `scope` names a source by `#<index>` in the template's own `sources`. */
-export type TemplateFee = Partial<Omit<FeeForm, "id">> & Pick<FeeForm, "label" | "basis">;
+type TemplateFee = Partial<Omit<FeeForm, "id">> & Pick<FeeForm, "label" | "basis">;
 
 export interface FundTemplate {
   id: string;

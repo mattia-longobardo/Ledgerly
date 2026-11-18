@@ -937,7 +937,6 @@ async function requireLinkable(
 /** The legs of an operation the person typed, checked against the book of its day. */
 async function legsOf(
   ctx: Pick<Ctx, "userId">,
-  tx: Tx,
   book: LoadedBook,
   input: z.output<typeof operationInputSchema>,
   account: { currency: string },
@@ -1060,7 +1059,7 @@ export async function recordOperation(
     const investment = await lockInvestmentAccount(ctx, accountId, tx);
     refuseValueChange(investment);
     const book = await loadBook(ctx, investment, account.currency, tx);
-    const { legs, transactionId } = await legsOf(ctx, tx, book, parsed, account);
+    const { legs, transactionId } = await legsOf(ctx, book, parsed, account);
     const event = await insertEvent(ctx, tx, investment.id, {
       on: parsed.on,
       occurredAt: new Date(),
@@ -1148,7 +1147,7 @@ export async function updateOperation(ctx: WriteCtx, eventId: string, input: Ope
       .delete(investmentOperations)
       .where(and(eq(investmentOperations.eventId, eventId), userScoped(ctx).owns(investmentOperations)));
     const book = await loadBook(ctx, investment, account.currency, tx);
-    const { legs, transactionId } = await legsOf(ctx, tx, book, parsed, account);
+    const { legs, transactionId } = await legsOf(ctx, book, parsed, account);
     await translated(
       tx
         .update(investmentEvents)

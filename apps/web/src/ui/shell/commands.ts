@@ -34,7 +34,7 @@ export interface PaletteOption {
 }
 
 /** Where a payee leads: the Expenses screen already reads its search from `q` (spec §7.2). */
-export function payeeHref(payee: string): Route {
+function payeeHref(payee: string): Route {
   return `/expenses?q=${encodeURIComponent(payee)}` as Route;
 }
 

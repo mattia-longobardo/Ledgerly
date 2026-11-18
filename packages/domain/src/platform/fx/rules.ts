@@ -6,13 +6,12 @@ import { addDays, type CivilDate } from "../dates";
  * reference rate, read through Frankfurter (api.frankfurter.dev): free, no key, every working day.
  */
 export const FX_SOURCES = ["ecb"] as const;
-export type FxSource = (typeof FX_SOURCES)[number];
 
 /** The first ECB reference rate: there is nothing to fetch before it. */
 export const ECB_FIRST_DAY: CivilDate = "1999-01-04";
 
 /** The scale of `fx_rates.eur_per_unit` (`numeric(20,10)`). */
-export const EUR_PER_UNIT_SCALE = 10;
+const EUR_PER_UNIT_SCALE = 10;
 
 export interface FxRate {
   on: CivilDate;
@@ -79,7 +78,7 @@ function minDay(a: CivilDate, b: CivilDate): CivilDate {
  * `/currencies`, 28/10/2026). BGN left the list when Bulgaria adopted the euro (01/01/2026): its old
  * rates stay in `fx_rates`, but a display currency has to have a rate for today.
  */
-export const ECB_CURRENCIES = [
+const ECB_CURRENCIES = [
   "AUD",
   "BRL",
   "CAD",
@@ -123,7 +122,7 @@ export function isDisplayCurrency(value: string): value is DisplayCurrency {
 const SCALE = 10n ** BigInt(EUR_PER_UNIT_SCALE);
 
 /** One stored rate as integer units of 10⁻¹⁰ EUR, so a conversion never meets a float. */
-export interface ScaledRate {
+interface ScaledRate {
   on: CivilDate;
   eurPerUnit: bigint;
 }

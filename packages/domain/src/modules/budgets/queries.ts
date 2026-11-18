@@ -19,14 +19,14 @@ import {
 } from "./rules";
 import { budgetAlerts, budgetLimits } from "./schema";
 
-export interface BudgetOption {
+interface BudgetOption {
   id: string;
   name: string;
   color: string;
   depth: 0 | 1;
 }
 
-export interface BudgetsView {
+interface BudgetsView {
   month: MonthKey;
   rows: BudgetRow[];
   totals: { limitCents: Cents; spentCents: Cents };
@@ -128,13 +128,13 @@ export async function alertSettings(ctx: Pick<Ctx, "userId">): Promise<Map<strin
 }
 
 /** One month of a budget's history: the limit in force (`null` with none) and what was spent. */
-export interface BudgetMonth {
+interface BudgetMonth {
   month: MonthKey;
   limitCents: Cents | null;
   spentCents: Cents;
 }
 
-export interface BudgetDetail {
+interface BudgetDetail {
   /** This month's row, as the Budgets table shows it. */
   row: BudgetRow;
   /** The months before it, newest first, `HISTORY_MONTHS` of them. */
@@ -142,7 +142,7 @@ export interface BudgetDetail {
   alerts: AlertSettings;
 }
 
-export const HISTORY_MONTHS = 6;
+const HISTORY_MONTHS = 6;
 
 /**
  * One budget's own page: `month`'s row, the months before it and when it emails. `null` when the

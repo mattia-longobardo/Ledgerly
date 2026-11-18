@@ -39,10 +39,10 @@ const LINK_WINDOW_DAYS = 120;
  * from the account's accruals (F4), none because the account has no interest rule or no positive
  * balance, or none because a standalone pocket rests on no account at all.
  */
-export type InterestReason = "estimate" | "no_interest_data" | "standalone";
+type InterestReason = "estimate" | "no_interest_data" | "standalone";
 
 /** An expense counted against a pocket, as its page lists it. */
-export interface PocketExpense {
+interface PocketExpense {
   /** The transaction's id; a spend recorded by hand before expenses were linked has the movement's. */
   id: string;
   on: CivilDate;
@@ -57,7 +57,7 @@ export interface PocketExpense {
   manual: boolean;
 }
 
-export interface PlannedExpense {
+interface PlannedExpense {
   id: string;
   description: string;
   cents: Cents;
@@ -96,7 +96,7 @@ export interface PocketView {
   interestReason: InterestReason;
 }
 
-export interface PocketsView {
+interface PocketsView {
   months: MonthKey[];
   pockets: PocketView[];
   archived: Pocket[];

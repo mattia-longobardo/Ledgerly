@@ -50,7 +50,7 @@ import { closePendingDeletes } from "@ledgerly/domain/timeoff";
  * Why an action refused, as one of the `settings.integrations.errors.*` keys. A code, not a
  * sentence: the card turns it into a catalogued message, so no English text is built here.
  */
-export type IntegrationActionError =
+type IntegrationActionError =
   "rejected" | "unreachable" | "provider" | "empty" | "notConnected" | "busy" | "failed" | "schedule";
 
 /**
@@ -134,7 +134,7 @@ export async function connectWalletAction(token: string): Promise<IntegrationAct
  * This is the one place in the route that opens the credential, and it opens it into a local
  * binding that goes straight into the client. It is not logged, not returned and not stored.
  */
-export async function testWalletAction(): Promise<IntegrationActionResult> {
+async function testWalletAction(): Promise<IntegrationActionResult> {
   const ctx = await requireSession();
   const connection = await walletConnection(ctx);
   if (!connection) return { ok: false, error: "notConnected" };
@@ -159,7 +159,7 @@ export async function testWalletAction(): Promise<IntegrationActionResult> {
  *
  * Running any job as an admin is a different button on a different card, and not F2's.
  */
-export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
+async function syncWalletNowAction(): Promise<IntegrationActionResult> {
   const ctx = await requireSession();
   const connection = await walletConnection(ctx);
   if (!connection) return { ok: false, error: "notConnected" };
@@ -193,7 +193,7 @@ export async function syncWalletNowAction(): Promise<IntegrationActionResult> {
  * cost anything already here; if the hourly job holds the connection, the request stays in the
  * cursor and that job's next pass is the backfill.
  */
-export async function redownloadWalletHistoryAction(months: number): Promise<IntegrationActionResult> {
+async function redownloadWalletHistoryAction(months: number): Promise<IntegrationActionResult> {
   const ctx = await requireSession();
   if (!BACKFILL_CHOICES.some((choice) => choice === months)) return { ok: false, error: "failed" };
   const connection = await walletConnection(ctx);
@@ -336,7 +336,7 @@ export async function connectTrekAction(
 }
 
 /** Asks Trek for this year, which proves the token without writing anything. */
-export async function testTrekAction(): Promise<IntegrationActionResult> {
+async function testTrekAction(): Promise<IntegrationActionResult> {
   const ctx = await requireSession();
   const connection = await trekConnectionOf(ctx);
   if (!connection) return { ok: false, error: "notConnected" };
@@ -360,7 +360,7 @@ export async function testTrekAction(): Promise<IntegrationActionResult> {
 }
 
 /** "Sync now" for Trek (spec §10.3). A pass already running is reported, never doubled. */
-export async function syncTrekNowAction(): Promise<IntegrationActionResult> {
+async function syncTrekNowAction(): Promise<IntegrationActionResult> {
   const ctx = await requireSession();
   const connection = await trekConnectionOf(ctx);
   if (!connection) return { ok: false, error: "notConnected" };

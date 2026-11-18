@@ -45,7 +45,7 @@ export interface YearSummary {
 
 
 
-export interface RegisterView {
+interface RegisterView {
   years: YearSummary[];
   /** Documents with no payslip to show yet: being read, waiting for OCR, failed, unreadable. */
   inbox: Document[];
@@ -145,7 +145,7 @@ export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterVi
   };
 }
 
-export interface ReviewView extends Recomputed {
+interface ReviewView extends Recomputed {
   document: Document;
   evidence: Evidence[];
   blocking: boolean;

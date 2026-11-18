@@ -1,28 +1,13 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export { fundSummary, hypothesesOnly, isFundId } from "./detail";
-export {
-  FEE_BASES,
-  FEE_PERIODS,
-  arrangeFees,
-  assetsCost,
-  contributionFee,
-  feeModes,
-  feeValidOn,
-  needsPeriod,
-  periodFees,
-} from "./fees";
-export type { FeeBasis, FeePeriod } from "./fees";
+export { assetsCost, contributionFee, feeValidOn, periodFees } from "./fees";
 export {
   contributionFormOf,
   contributionInputOf,
   feeFormOf,
   feeInputOf,
-  fractionOfPercent,
   fundInputOf,
   newContributionForm,
-  newFeeForm,
-  newSourceForm,
-  parseScope,
   sourceFormOf,
   sourceInputOf,
 } from "./forms";
@@ -81,26 +66,8 @@ export {
   updateSource,
   updateValuation,
 } from "./service";
-export {
-  ACCRUAL_PERIODS,
-  INTERVAL_UNITS,
-  PAYROLL_COMPONENTS,
-  SOURCE_KINDS,
-  competencePeriod,
-  hasDueDates,
-  nextDueDates,
-  periodStart,
-  periodsPerYear,
-} from "./sources";
-export type {
-  AccrualPeriod,
-  DebitStatus,
-  DueCalendar,
-  DueEntry,
-  IntervalUnit,
-  PayrollComponent,
-  SourceKind,
-} from "./sources";
+export { competencePeriod, hasDueDates, nextDueDates, periodStart, periodsPerYear } from "./sources";
+export type { AccrualPeriod, DebitStatus, PayrollComponent, SourceKind } from "./sources";
 export {
   bestAndWorst,
   closesPeriodBefore,
@@ -113,5 +80,4 @@ export {
   valuationLines,
 } from "./tabs";
 export type { ValuationLine } from "./tabs";
-export { FUND_TEMPLATES, applyTemplate } from "./templates";
-export type { FundTemplate } from "./templates";
+export { FUND_TEMPLATES } from "./templates";

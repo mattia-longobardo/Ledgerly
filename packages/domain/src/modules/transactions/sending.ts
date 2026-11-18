@@ -19,7 +19,7 @@ import { transactions } from "./schema";
 type Who = Pick<Ctx, "userId">;
 
 /** A manual movement that waits for its source. */
-export interface PendingSend {
+interface PendingSend {
   id: string;
   accountId: string;
   /** The key the source is asked with: the same key asked twice is one movement there. */
@@ -35,7 +35,7 @@ export interface PendingSend {
 }
 
 /** How many movements one update sends: the rest go with the next one. */
-export const MAX_SENDS_PER_PASS = 20;
+const MAX_SENDS_PER_PASS = 20;
 
 /** The key of a movement on its way: the one its dialog made, or the row's own id. */
 function keyOf(row: { id: string; idempotencyKey: string | null }): string {
@@ -100,7 +100,7 @@ export async function markNotSent(ctx: Who, id: string, askedOn?: CivilDate): Pr
     );
 }
 
-export interface SentAs {
+interface SentAs {
   provider: string;
   /** The source's own id of the movement it made. */
   externalId: string;

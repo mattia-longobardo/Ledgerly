@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 
-export const PLUGIN_ERROR_CODES = [
+const PLUGIN_ERROR_CODES = [
   /** The shared secret of the core is missing or wrong. */
   "unauthorized",
   /** The body is not what the contract says. */

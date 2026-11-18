@@ -7,9 +7,9 @@ import { type HolidaySource, type PatronSaint, italianHolidays } from "./rules";
 import { holidayCalendars, holidayDays } from "./schema";
 import { type HolidayFetchOptions, fetchHolidays } from "./sources";
 
-export type HolidayCalendar = typeof holidayCalendars.$inferSelect;
+type HolidayCalendar = typeof holidayCalendars.$inferSelect;
 
-export type HolidayServiceErrorCode = "not_found" | "invalid_input" | "duplicate" | "too_many";
+type HolidayServiceErrorCode = "not_found" | "invalid_input" | "duplicate" | "too_many";
 
 /** Nobody keeps a hundred calendars, and an unbounded list is an unbounded daily job. */
 export const MAX_CALENDARS = 10;
@@ -29,7 +29,7 @@ export async function listCalendars(ctx: Pick<Ctx, "userId">): Promise<HolidayCa
     .orderBy(asc(holidayCalendars.label), asc(holidayCalendars.id));
 }
 
-export interface CalendarInput {
+interface CalendarInput {
   source: HolidaySource;
   country: string;
   subdivision: string | null;

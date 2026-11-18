@@ -47,7 +47,7 @@ const WAITING = and(
   isNull(transactions.removedUpstreamAt),
 );
 
-export interface ReviewFilters {
+interface ReviewFilters {
   from?: CivilDate;
   to?: CivilDate;
   accountIds?: readonly string[];
@@ -278,7 +278,7 @@ export async function undoChange(ctx: Who, undoId: string): Promise<number> {
 }
 
 /** A movement similar to one a person just filed, as the dialog lists it. */
-export interface SimilarRow {
+interface SimilarRow {
   id: string;
   on: CivilDate;
   amountCents: bigint;

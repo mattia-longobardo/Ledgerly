@@ -7,8 +7,7 @@ import { SimilarDialog, type SimilarRowView } from "./similar-dialog";
 import type { CategoryOption } from "./view";
 
 /** What an action on the category of several movements answers: how many changed, and how to undo. */
-export type CategoryChangeResult =
-  { ok: true; count: number; undoId: string | null } | { ok: false; error: string };
+type CategoryChangeResult = { ok: true; count: number; undoId: string | null } | { ok: false; error: string };
 
 /**
  * The writes and the read of the automatic categories, handed in by the page: Server Actions, so

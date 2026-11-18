@@ -31,7 +31,7 @@ export const DEPENDENT_KINDS = [
   "fund",
   "fundSource",
 ] as const;
-export type DependentKind = (typeof DEPENDENT_KINDS)[number];
+type DependentKind = (typeof DEPENDENT_KINDS)[number];
 
 /**
  * One thing that rests on an account. `label` is what the dialog names it by — a pocket's name, a

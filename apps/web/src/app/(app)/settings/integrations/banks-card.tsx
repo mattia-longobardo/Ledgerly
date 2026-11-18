@@ -22,7 +22,7 @@ import {
  * Everything the browser is told about the section (ux/n1-plugin-bank.md §3.1). **Never a value of
  * the credentials** (§1.3): that they are saved, since when, and whether the provider refuses them.
  */
-export interface BanksCardProps {
+interface BanksCardProps {
   pluginId: string;
   credentials: { saved: boolean; savedAt: string | null; invalid: boolean };
   returnAddress: string;

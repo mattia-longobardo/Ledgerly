@@ -8,7 +8,7 @@ import type { Exit, HoldingPnl, ServicePnl } from "./pnl";
 
 const abs = (value: bigint) => (value < 0n ? -value : value);
 
-export interface ContributionRow {
+interface ContributionRow {
   key: string;
   holdingId: string | null;
   assetId: string | null;
@@ -27,7 +27,7 @@ export interface ContributionRow {
   bar: number;
 }
 
-export interface Contributions {
+interface Contributions {
   rows: ContributionRow[];
   incomeCents: Cents;
   feesCents: Cents;

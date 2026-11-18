@@ -35,13 +35,13 @@ const formSchema = z.object({
   payee: z.string().max(255),
   note: z.string().max(2000),
 });
-export type ManualFormInput = z.input<typeof formSchema>;
+type ManualFormInput = z.input<typeof formSchema>;
 
 /** `error` is a key under `expenses.manual.errors`. */
-export type ManualResult =
+type ManualResult =
   | { ok: true; created: boolean; id: string; on: CivilDate; date: string; accountId: string }
   | { ok: false; error: "amount" | "date" | "account" | "notFound" | "failed" };
-export type ManualCount = { ok: true; count: number } | { ok: false; error: string };
+type ManualCount = { ok: true; count: number } | { ok: false; error: string };
 
 type Refusal = Extract<ManualResult, { ok: false }>;
 
@@ -180,7 +180,7 @@ export async function manualFormAction(): Promise<{ accounts: ManualAccount[]; t
 }
 
 /** The line under the dialog's account: every number already formatted, none worked out there. */
-export type ManualPreview =
+type ManualPreview =
   | { kind: "change"; account: string; before: string; after: string }
   | { kind: "unchanged"; account: string; date: string }
   | null;

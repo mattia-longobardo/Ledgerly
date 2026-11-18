@@ -11,5 +11,3 @@ export {
   updateProfilePreferences,
   updateTimeOffPreferences,
 } from "./service";
-export { normalizeTotp, recoveryCodesFile, totpSecretOf, twoFactorErrorKey } from "./two-factor";
-export type { TwoFactorErrorKey } from "./two-factor";

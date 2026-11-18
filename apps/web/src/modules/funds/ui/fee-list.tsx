@@ -35,7 +35,7 @@ const isLink = (text: string) => /^https?:\/\/\S+$/.test(text.trim());
  * them (48rem of its own, not of the window: in the form that creates a fund it sits in a 560 px
  * column), and three lines per fee below that, with the same two buttons.
  */
-export function FeeList({ fees, scopes, todayOn, format, locale, currency, onEdit, onRemove }: FeeListProps) {
+function FeeList({ fees, scopes, todayOn, format, locale, currency, onEdit, onRemove }: FeeListProps) {
   const t = useTranslations("funds.fees");
   const { current, expired } = arrangeFees(
     fees.map((fee, index) => ({
@@ -150,7 +150,7 @@ export function FeeList({ fees, scopes, todayOn, format, locale, currency, onEdi
   );
 }
 
-export interface FeeManagerProps extends Omit<FeeListProps, "onEdit" | "onRemove"> {
+interface FeeManagerProps extends Omit<FeeListProps, "onEdit" | "onRemove"> {
   /**
    * Keeps a fee: a new one (`index` is `null`) or the one at `index`. Answers `null` when it is
    * kept, or the message the dialog shows.

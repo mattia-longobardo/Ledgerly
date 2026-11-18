@@ -198,7 +198,7 @@ export async function decisionsOf(
   return byFund;
 }
 
-export interface DecisionInput {
+interface DecisionInput {
   year: number;
   quarter: number;
   component: Component;

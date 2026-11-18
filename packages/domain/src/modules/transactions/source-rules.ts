@@ -32,7 +32,7 @@ export function choiceOf(
   return row.categoryId !== null && row.categoryId !== row.addedCategoryId ? "matched" : "added";
 }
 
-export interface SourceCategoryPlan {
+interface SourceCategoryPlan {
   /** The category the source's movements count under after this reading. */
   categoryId: string;
   /** A row to write, for a category seen for the first time: it is "added", and "New". */
@@ -74,7 +74,7 @@ export function planSourceCategory(
 }
 
 /** A category of a source that counts under the category a movement was written with. */
-export interface SourceCategoryCandidate {
+interface SourceCategoryCandidate {
   externalId: string;
   name: string;
   /** How many movements of the source carry it. */

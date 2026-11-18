@@ -61,7 +61,7 @@ import {
 import { WALLET_TRANSFER_CATEGORY, type WalletCategory } from "./mapping";
 
 /** `PatchCategoryRequest.name` and `CreateSubcategoryRequest.name` both stop at 80 characters. */
-export const WALLET_CATEGORY_NAME_MAX = 80;
+const WALLET_CATEGORY_NAME_MAX = 80;
 /** `PATCH /categories` takes at most ten items per request. */
 export const RENAME_BATCH = 10;
 /** `DELETE /{type}` takes at most ten ids per request (`DeleteRequest.ids`, maxItems 10). */
@@ -73,7 +73,7 @@ export const DELETE_BATCH = 10;
  * repeating its own beginning.
  */
 export const MAX_RENAMES_PER_PASS = 30;
-export const MAX_CREATES_PER_PASS = 10;
+const MAX_CREATES_PER_PASS = 10;
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -346,7 +346,7 @@ export function createWalletCategoryWriter(
  * category can carry movements, so a disappearance on either side is reported and left alone
  * (spec §7.2).
  */
-export type CategoryCaseKind =
+type CategoryCaseKind =
   /** Renamed on both sides since they last agreed: the local name won and went to Wallet. */
   | "conflict"
   /** Linked here, no longer in Wallet's list. Never deleted here. */
@@ -376,7 +376,7 @@ export interface CategoryCase {
   detail?: string;
 }
 
-export interface CategoryPlan {
+interface CategoryPlan {
   /** Wallet renamed it and nothing here disagreed: the local row follows. */
   adopt: { categoryId: string; name: string }[];
   /** Renamed here: Wallet is told, in batches. */
@@ -670,7 +670,7 @@ const databaseStore: CategoryStore = {
   adopt: adoptProviderCategory,
 };
 
-export interface CategorySyncOptions {
+interface CategorySyncOptions {
   /** Wallet's whole category list, as the movements pass has just read it. */
   remote: readonly WalletCategory[];
   /** `null` runs the Wallet → here half only, which is what a read-only pass can still do. */

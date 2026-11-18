@@ -12,7 +12,7 @@ export interface Confirmation {
 }
 
 /** How many confirmations in a row a text needs before it is remembered. */
-export const MEMORY_STREAK = 3;
+const MEMORY_STREAK = 3;
 
 /**
  * The texts the memory holds: key → category, for every key whose last `MEMORY_STREAK`

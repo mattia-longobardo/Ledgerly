@@ -40,7 +40,7 @@ export interface SourceSetup {
   currency: string;
 }
 
-export interface SourceDialogProps extends SourceSetup {
+interface SourceDialogProps extends SourceSetup {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The source the dialog starts from: a new one (`id` is `null`) or the one being edited. */

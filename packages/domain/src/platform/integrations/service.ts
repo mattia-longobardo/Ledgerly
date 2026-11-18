@@ -51,7 +51,7 @@ export type { ProviderLink, SyncKind } from "./rules";
 export type { Tx } from "../db/client";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
-export type IntegrationErrorCode =
+type IntegrationErrorCode =
   | "not_found"
   | "unknown_provider"
   | "invalid_credentials"
@@ -117,7 +117,7 @@ const CONNECTION_COLUMNS = {
 };
 
 export type SyncRun = typeof syncRuns.$inferSelect;
-export type SyncJob = typeof syncJobs.$inferSelect;
+type SyncJob = typeof syncJobs.$inferSelect;
 
 let ring: KeyRing | undefined;
 

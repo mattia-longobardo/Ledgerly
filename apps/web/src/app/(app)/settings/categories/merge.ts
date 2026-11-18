@@ -28,7 +28,7 @@ import { getDb } from "@ledgerly/domain/platform/db";
 type Who = Pick<Ctx, "userId" | "timeZone">;
 
 /** A proposal with what the dialog has to say before the merge: whether two budgets are summed. */
-export interface MergeProposalView extends MergeProposal {
+interface MergeProposalView extends MergeProposal {
   sumsBudgets: boolean;
 }
 

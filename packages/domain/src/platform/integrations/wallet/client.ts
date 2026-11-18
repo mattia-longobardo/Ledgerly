@@ -35,17 +35,7 @@ import {
   type WalletTransaction,
 } from "./mapping";
 
-export type {
-  DateWindow,
-  WalletAccount,
-  WalletAccountPayload,
-  WalletBalance,
-  WalletCategory,
-  WalletCategoryPayload,
-  WalletRecordPayload,
-  WalletRecordsPage,
-  WalletTransaction,
-} from "./mapping";
+export type { WalletAccount, WalletCategory, WalletTransaction } from "./mapping";
 
 /** The base URL of spec §9.1. `WalletClientOptions.baseUrl` overrides it; nothing else may. */
 export const WALLET_API_URL = "https://rest.budgetbakers.com/wallet/v1/api";
@@ -80,8 +70,7 @@ const MAX_DETAIL_CHARS = 4_000;
  * Integrations reports "token rejected" and the sync marks the connection, instead of retrying a
  * credential that will keep being refused.
  */
-export type WalletErrorKind =
-  "token_rejected" | "http" | "network" | "timeout" | "payload" | "page_truncated";
+type WalletErrorKind = "token_rejected" | "http" | "network" | "timeout" | "payload" | "page_truncated";
 
 /** Every failure this client raises. The token is never part of a message or a detail. */
 export class WalletError extends Error {
@@ -223,7 +212,7 @@ export interface WalletRecordPatch {
 }
 
 /** A record found by the duplicate check: enough to tell whether it is the one we would post. */
-export interface WalletNoteRecord {
+interface WalletNoteRecord {
   id: string;
   amountCents: Cents;
   note: string | null;
@@ -504,7 +493,7 @@ function recordView(raw: WalletRecordPayload): WalletRecordView {
 }
 
 /** The body of a one-item `PATCH /records`, with the amount written as its exact decimal. */
-export function walletRecordPatchBody(patch: WalletRecordPatch): string {
+function walletRecordPatchBody(patch: WalletRecordPatch): string {
   const fields: string[] = [`"id":${JSON.stringify(patch.id)}`];
   if (patch.amountCents !== undefined) {
     if (patch.amountCents === 0n) throw new RangeError("Wallet refuses a zero amount");

@@ -15,7 +15,6 @@ import { isDisplayCurrency } from "../../platform/fx/rules";
 import type { Cents } from "../../platform/money";
 import { carriesKey, type Detection, recurrenceKeyOf, summarise } from "./detect";
 import { contributionFee, FEE_BASES, FEE_PERIODS, feeModes, needsPeriod } from "./fees";
-import { type ManualClass, MANUAL_CLASSES } from "./pension/rules";
 import {
   fundContributionSources,
   fundDepositRules,
@@ -39,9 +38,9 @@ export type Fund = typeof funds.$inferSelect;
 export type FundSource = typeof fundContributionSources.$inferSelect;
 export type FundFee = typeof fundFees.$inferSelect;
 export type FundOperation = typeof fundOperations.$inferSelect;
-export type FundValuation = typeof fundValuations.$inferSelect;
+type FundValuation = typeof fundValuations.$inferSelect;
 
-export type FundErrorCode =
+type FundErrorCode =
   | "not_found"
   | "invalid"
   | "invalid_account"
@@ -88,7 +87,7 @@ const optionalText = (max: number) =>
     .nullable()
     .default(null);
 
-export const fundInputSchema = z.object({
+const fundInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   provider: optionalText(80),
   compartment: optionalText(80),
@@ -130,7 +129,7 @@ const bankDebitSourceSchema = z.object({
 
 const manualSourceSchema = z.object({ kind: z.literal("manual") });
 
-export const sourceInputSchema = z.discriminatedUnion("kind", [
+const sourceInputSchema = z.discriminatedUnion("kind", [
   payrollSourceSchema,
   bankDebitSourceSchema,
   manualSourceSchema,
@@ -138,7 +137,7 @@ export const sourceInputSchema = z.discriminatedUnion("kind", [
 export type SourceInput = z.input<typeof sourceInputSchema>;
 type ParsedSource = z.output<typeof sourceInputSchema>;
 
-export const feeInputSchema = z
+const feeInputSchema = z
   .object({
     label: z.string().trim().min(1).max(80),
     basis: z.enum(FEE_BASES),
@@ -169,7 +168,7 @@ export type FeeInput = z.input<typeof feeInputSchema>;
 type ParsedFee = z.output<typeof feeInputSchema>;
 
 /** A new fund, as the four steps of the form hand it over: nothing is written before this. */
-export interface NewFundInput {
+interface NewFundInput {
   fund: FundInput;
   /** The currency of the account that holds the value; the display currency when left out. */
   currency?: string | null;
@@ -600,7 +599,7 @@ export function contributionsBySource(
   return counts;
 }
 
-export interface RemovedSource {
+interface RemovedSource {
   source: FundSource;
   /** The fees that applied to it alone: they go with it, and come back with it. */
   fees: FundFee[];
@@ -733,7 +732,7 @@ export async function removeFee(ctx: Pick<Ctx, "userId">, feeId: string): Promis
 
 // ——— Valuations —————————————————————————————————————————————————————————————————————————————
 
-export interface ValuationInput {
+interface ValuationInput {
   on: string;
   cents: Cents;
   units?: string | null;
@@ -857,7 +856,7 @@ const periodOfSource = z
  * for a period). The other operations are not contributions: joining, a transfer in from another
  * fund, a change of compartment, an exit. `feeCents: null` is a fee nobody knows yet.
  */
-export const contributionSchema = z.discriminatedUnion("kind", [
+const contributionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("voluntary"),
     on: civilDate,
@@ -889,10 +888,6 @@ export const contributionSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 export type ContributionInput = z.input<typeof contributionSchema>;
-
-/** The class an operation written by hand has, for the form that edits it. */
-export const isManualClass = (value: string): value is ManualClass =>
-  (MANUAL_CLASSES as readonly string[]).includes(value);
 
 /** The columns of an operation, from what a person wrote. */
 async function operationValues(ctx: Pick<Ctx, "userId" | "timeZone">, fund: Fund, input: ContributionInput) {

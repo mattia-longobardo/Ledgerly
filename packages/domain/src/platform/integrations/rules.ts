@@ -175,11 +175,6 @@ export function nextRunAt(from: Date, intervalHours: number = SYNC_INTERVAL_HOUR
   return new Date(from.getTime() + intervalHours * 3_600_000);
 }
 
-/** A job that has never run is due at once; the hourly tick decides the rest (spec §10.2). */
-export function isDue(job: { nextRunAt: Date | null }, now: Date = new Date()): boolean {
-  return job.nextRunAt === null || job.nextRunAt.getTime() <= now.getTime();
-}
-
 /** A finished run either carries an error or it does not: there is no partial success. */
 export function outcomeState(outcome: { error?: string | null }): Extract<SyncState, "success" | "failed"> {
   return outcome.error === null || outcome.error === undefined ? "success" : "failed";

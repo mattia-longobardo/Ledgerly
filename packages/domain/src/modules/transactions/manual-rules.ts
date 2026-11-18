@@ -12,8 +12,8 @@ import type { TransactionType } from "./rules";
 export const MANUAL_KINDS = ["expense", "income"] as const satisfies readonly TransactionType[];
 export type ManualKind = (typeof MANUAL_KINDS)[number];
 
-export const MANUAL_PAYEE_MAX = 255;
-export const MANUAL_NOTE_MAX = 2000;
+const MANUAL_PAYEE_MAX = 255;
+const MANUAL_NOTE_MAX = 2000;
 
 /** Trimmed, and an empty text is no text at all (spec §4.3). */
 const optionalText = (max: number) =>
@@ -36,7 +36,7 @@ export const manualMovementSchema = z.object({
   payee: optionalText(MANUAL_PAYEE_MAX),
   note: optionalText(MANUAL_NOTE_MAX),
 });
-export type ManualMovementInput = z.infer<typeof manualMovementSchema>;
+type ManualMovementInput = z.infer<typeof manualMovementSchema>;
 
 /** A person writes what has happened: no movement of a day that has not come. */
 export function isAfterToday(on: CivilDate, today: CivilDate): boolean {

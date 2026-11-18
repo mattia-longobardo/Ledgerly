@@ -2,7 +2,7 @@
 export { searchSubscriptions, subscriptionsOnAccount, subscriptionsView, suggestions } from "./queries";
 export type { SubscriptionRow } from "./queries";
 export { CYCLES, dueMoment, toleranceParts } from "./rules";
-export type { Cycle, SubscriptionState, Suggestion } from "./rules";
+export type { Suggestion } from "./rules";
 export {
   SubscriptionError,
   chargesAmong,
@@ -11,7 +11,6 @@ export {
   deleteSubscription,
   moveSubscriptionAccount,
   setSubscriptionState,
-  setUtility,
   subscriptionsToMove,
   updateSubscription,
 } from "./service";

@@ -12,7 +12,7 @@ import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { removeSmtpAction, saveSmtpAction, sendTestEmailAction } from "./actions";
 import { FIELD_GRID } from "@/ui/section";
 
-export interface SmtpCardProps {
+interface SmtpCardProps {
   host: string;
   port: number;
   encryption: Encryption;

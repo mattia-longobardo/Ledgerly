@@ -9,16 +9,9 @@ export {
   providerOf,
 } from "./catalog";
 export { managedSinceOf, serviceAccountIds, syncedServicesOf } from "./managed";
-export {
-  PERIOD_KEYS,
-  SECTION_PRESETS,
-  legacyPeriodQuery,
-  periodSpan,
-  sectionPeriod,
-  yearQuery,
-} from "./period";
+export { SECTION_PRESETS, legacyPeriodQuery, periodSpan, sectionPeriod, yearQuery } from "./period";
 export type { Query } from "./period";
-export type { HoldingPnl, PeriodParams, PnlParts, PnlPeriod, PositionAt, ServicePnl } from "./pnl";
+export type { HoldingPnl, PeriodParams, PnlParts, PositionAt, ServicePnl } from "./pnl";
 export { closedGroups, contributionsOf, onCostOf, periodReturnOf } from "./positions";
 export type { ClosedGroup } from "./positions";
 export {
@@ -56,7 +49,6 @@ export {
   plainDecimal,
   unitPriceOf,
 } from "./rules";
-export type { AdjustmentClass, AssetClass, InvestmentCategory } from "./rules";
 export {
   InvestmentError,
   confirmZeroReading,

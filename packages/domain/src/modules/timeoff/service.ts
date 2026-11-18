@@ -30,7 +30,7 @@ import { leaveDays, timeoffAllowances } from "./schema";
 export type Allowance = typeof timeoffAllowances.$inferSelect;
 export type LeaveDay = typeof leaveDays.$inferSelect;
 
-export type TimeOffErrorCode =
+type TimeOffErrorCode =
   | "not_found"
   | "invalid_input"
   /** The date is a weekend or a public holiday: the reason travels with the error. */
@@ -103,7 +103,7 @@ export async function saveAllowance(
 
 /* Leave days (spec §7.9) */
 
-export interface LeaveWindow {
+interface LeaveWindow {
   from: CivilDate;
   to: CivilDate;
 }
@@ -516,7 +516,7 @@ async function rowsOn(
     .for("update");
 }
 
-export interface LeaveRangeResult {
+interface LeaveRangeResult {
   /** The rows written, one per working day of the range. */
   days: LeaveDay[];
   /** What the range comes to, in days. */

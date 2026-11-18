@@ -3,7 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { cn } from "./cn";
 
-export interface Step {
+interface Step {
   id: string;
   label: string;
   /** Where a step already done leads back to. */

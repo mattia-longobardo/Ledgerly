@@ -43,7 +43,7 @@ import { Switch } from "@/ui/switch";
 import { notify } from "@/ui/toast";
 
 /** A rule as the list draws it: what the service answers, plus its category's path. */
-export interface RuleView {
+interface RuleView {
   id: string;
   name: string;
   active: boolean;

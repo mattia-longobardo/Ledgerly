@@ -134,7 +134,7 @@ export async function deleteExpiredInvitations(cutoff: Date): Promise<number> {
   return deleted.length;
 }
 
-export type SsoInvitationOutcome = "accepted" | "invalid" | "email_mismatch";
+type SsoInvitationOutcome = "accepted" | "invalid" | "email_mismatch";
 
 /**
  * The Authentik alternative to `acceptInvitation`: the invitee has just signed in through the

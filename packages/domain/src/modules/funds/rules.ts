@@ -4,11 +4,8 @@ import type { Cents } from "../../platform/money";
 export const FUND_STATES = ["active", "archived"] as const;
 export const VALUATION_SOURCES = ["manual", "import"] as const;
 
-export type FundState = (typeof FUND_STATES)[number];
-export type ValuationSource = (typeof VALUATION_SOURCES)[number];
-
 /** One payment into a fund, as the projection and the stretches read it. */
-export interface DepositLike {
+interface DepositLike {
   on: CivilDate;
   chargedCents: Cents;
   /** `null` while the fee is unknown. */
@@ -30,16 +27,16 @@ function ratio(part: Cents, whole: Cents): number {
 export const FORECAST_RATES = [0.02, 0.04, 0.06] as const;
 
 /** How far ahead the table looks, in years. */
-export const FORECAST_YEARS = [1, 3, 5, 10] as const;
+const FORECAST_YEARS = [1, 3, 5, 10] as const;
 
 /**
  * The least history that may be brought to a year. Annualising a good quarter into "+241 % a year"
  * is how a projection starts lying; under this much, the rate is `null` and the page says so
  * instead of guessing ({@link annualisedOverPeriods}).
  */
-export const MONTHS_TO_ANNUALISE = 12;
+const MONTHS_TO_ANNUALISE = 12;
 
-export interface ForecastRow {
+interface ForecastRow {
   years: number;
   /** What will have been paid in, if the present rhythm holds. Needs no rate and no value. */
   paidInCents: Cents;
@@ -146,7 +143,7 @@ export function fundForecast(input: {
  * Dietz asks (spec §7.7), and the stretch keeps its own dates: three months and one month are not
  * comparable as "months", and the page says which is which rather than pretending.
  */
-export interface PeriodReturn {
+interface PeriodReturn {
   from: CivilDate;
   to: CivilDate;
   days: number;

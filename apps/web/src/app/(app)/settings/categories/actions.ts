@@ -31,9 +31,9 @@ import {
  * The cards call these inside a transition with no error boundary, so a refusal comes back as a
  * `TaxonomyError` code the caller turns into one of its own catalogued messages.
  */
-export type TaxonomyActionResult = { ok: true } | { ok: false; error: string };
+type TaxonomyActionResult = { ok: true } | { ok: false; error: string };
 
-export interface CategoryFormInput {
+interface CategoryFormInput {
   name: string;
   /** The group's id, `""` for none (F2.5). */
   parentId: string;
@@ -41,7 +41,7 @@ export interface CategoryFormInput {
   color: string | null;
 }
 
-export interface LabelFormInput {
+interface LabelFormInput {
   name: string;
   color: string | null;
 }
@@ -80,11 +80,6 @@ export async function saveCategoryAction(
 ): Promise<TaxonomyActionResult> {
   const ctx = await requireSession();
   return run(() => updateCategory(ctx, id, input));
-}
-
-export async function archiveCategoryAction(id: string): Promise<TaxonomyActionResult> {
-  const ctx = await requireSession();
-  return run(() => archiveCategory(ctx, id));
 }
 
 export async function restoreCategoryAction(id: string): Promise<TaxonomyActionResult> {

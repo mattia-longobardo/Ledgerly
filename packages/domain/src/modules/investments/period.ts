@@ -24,7 +24,7 @@ import type { PnlPeriod } from "./pnl";
 export type Query = Record<string, string | string[] | undefined>;
 
 /** The parameters of the period (§1.2): what a link carries from one page or tab to the next. */
-export type PeriodQuery = { preset?: string; from?: string; to?: string; off?: string };
+type PeriodQuery = { preset?: string; from?: string; to?: string; off?: string };
 
 /** The names of those parameters: the only ones a tab carries to the next. */
 export const PERIOD_KEYS = ["preset", "from", "to", "off"] as const;
@@ -34,12 +34,12 @@ export const PERIOD_KEYS = ["preset", "from", "to", "off"] as const;
  * a P&L needs and a month of spending does not.
  */
 export const SECTION_PRESETS = [...RANGE_PRESETS, "all"] as const;
-export type SectionPreset = (typeof SECTION_PRESETS)[number];
+type SectionPreset = (typeof SECTION_PRESETS)[number];
 
 /** These sections open on the year running: a fund has too few values for a month to say much. */
-export const DEFAULT_SECTION_PRESET: SectionPreset = "ytd";
+const DEFAULT_SECTION_PRESET: SectionPreset = "ytd";
 
-export interface SectionPeriod {
+interface SectionPeriod {
   /** `null` when the address carries an explicit `from`/`to`, which wins over the presets. */
   preset: SectionPreset | null;
   /** How many periods back the stepper moved. Always 0 under "All". */
@@ -199,9 +199,9 @@ export interface Interval {
 }
 
 /** A quarter: up to 92 days the chart goes by week (P&L) and by day (value) (§2.2). */
-export const SHORT_DAYS = 92;
+const SHORT_DAYS = 92;
 /** Up to a leap year it goes by month; past it, the P&L bars go by year. */
-export const YEAR_DAYS = 366;
+const YEAR_DAYS = 366;
 
 /**
  * The bars of the P&L chart (§2.2): by week up to 92 days (Monday to Sunday, the ends cut to the

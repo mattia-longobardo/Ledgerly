@@ -24,7 +24,7 @@ import {
 } from "@ledgerly/domain/transactions";
 
 type Session = Awaited<ReturnType<typeof requireSession>>;
-export type RuleResult = { ok: true } | { ok: false; error: string };
+type RuleResult = { ok: true } | { ok: false; error: string };
 
 function failed(error: unknown): { ok: false; error: string } {
   if (error instanceof TransactionError) return { ok: false, error: error.code };

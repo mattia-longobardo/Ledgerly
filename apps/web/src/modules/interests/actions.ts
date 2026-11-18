@@ -31,7 +31,7 @@ function rate(text: string, ctx: Ctx): string {
   return percentToFraction(readRate(text, ctx.numberFormat));
 }
 
-export interface RuleFormInput {
+interface RuleFormInput {
   accountId: string;
   validFrom: string;
   validTo: string;
@@ -101,7 +101,7 @@ export async function setRuleStateAction(id: string, state: "active" | "paused")
   }
 }
 
-export type PostingResult = { ok: true; state: string } | { ok: false; error: string };
+type PostingResult = { ok: true; state: string } | { ok: false; error: string };
 
 /** "Post now" (from not posted) or "Retry" (from unsure): the protocol of `postEntry`. */
 export async function postEntryAction(

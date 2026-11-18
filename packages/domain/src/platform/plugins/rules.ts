@@ -47,16 +47,8 @@ export function maskIdentifier(identifier: string | null): string | null {
 }
 
 /** Why a reading of a bank did nothing, as the runtime says it: the closed list of a plugin's codes. */
-export const READING_ERRORS = [
-  "auth",
-  "consent_expired",
-  "rate_limited",
-  "provider_down",
-  "invalid_data",
-  "plugin_down",
-  "failed",
-] as const;
-export type ReadingError = (typeof READING_ERRORS)[number];
+export type ReadingError =
+  "auth" | "consent_expired" | "rate_limited" | "provider_down" | "invalid_data" | "plugin_down" | "failed";
 
 /** How long the automatic readings wait after a bank said it accepts no more (04-now.md §4.2). */
 export const RATE_LIMIT_WAIT_HOURS = 6;
@@ -197,7 +189,7 @@ export function pickBalance<T extends { type: string }>(balances: readonly T[]):
 }
 
 /** Why the return from the provider's site did not end with a connection (§6.3). */
-export const RETURN_ERRORS = [
+const RETURN_ERRORS = [
   "denied",
   "expired",
   "session",

@@ -40,7 +40,7 @@ import { type BookedLeave, type LeavePanelEntry, LeavePanel } from "./leave-pane
 import { type DayRange, YearCalendar } from "./year-calendar";
 
 /** What the page reads once on the server and hands to everything that books leave. */
-export interface LeaveBoardProps {
+interface LeaveBoardProps {
   year: number;
   today: string;
   minutesPerDay: number;

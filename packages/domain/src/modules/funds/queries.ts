@@ -79,7 +79,7 @@ import {
 } from "./sources";
 
 /** One month of the "Accrued in payslips" table (design), with the state of its period. */
-export interface MonthRow {
+interface MonthRow {
   competence: Competence;
   quarter: QuarterStatus | null;
 }
@@ -88,10 +88,10 @@ export interface MonthRow {
  * Which payslip codes feed each fund component, by the role the person's own code map gives them
  * (design Settings "Source: payslips"): read-only here — the map itself lives in Settings › Data.
  */
-export type FundCodes = Record<string, string[]>;
+type FundCodes = Record<string, string[]>;
 
 /** The payslip side of a fund, as its payslip source configures it. */
-export interface PayrollPlan {
+interface PayrollPlan {
   source: FundSource;
   period: AccrualPeriod;
   calendar: DueCalendar;
@@ -99,7 +99,7 @@ export interface PayrollPlan {
 }
 
 /** A recurring debit of a fund, with the state of its running period. */
-export interface DebitRow {
+interface DebitRow {
   source: FundSource;
   plan: DebitPlan;
   status: DebitStatus;
@@ -187,7 +187,7 @@ export function calendarOf(source: FundSource): DueCalendar {
 }
 
 /** The plan of a recurring debit: its frequency, its day and its dates, from the fund's start. */
-export function debitPlanOf(source: FundSource, fund: Pick<Fund, "startOn">): DebitPlan {
+function debitPlanOf(source: FundSource, fund: Pick<Fund, "startOn">): DebitPlan {
   return {
     frequency: { count: source.intervalCount ?? 1, unit: source.intervalUnit ?? "month" },
     day: source.debitDay,

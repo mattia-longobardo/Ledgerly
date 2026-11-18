@@ -95,7 +95,7 @@ export async function interestsView(
   });
 }
 
-export interface SettlementRow {
+interface SettlementRow {
   entry: InterestEntry;
   accruedDays: number;
   skippedDays: number;
@@ -110,13 +110,13 @@ export interface SettlementRow {
  * leaving the person to wonder why the days stopped. Read here rather than stored: the moment a
  * pass brings a reading, the warning is gone and the next tick catches the days up.
  */
-export interface BalanceState {
+interface BalanceState {
   synced: boolean;
   lastSyncedAt: Date | null;
   stale: boolean;
 }
 
-export interface RuleDetail {
+interface RuleDetail {
   rule: InterestRule;
   tiers: Tier[];
   accountName: string;

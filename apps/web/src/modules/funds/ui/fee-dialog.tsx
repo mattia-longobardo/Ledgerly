@@ -19,7 +19,7 @@ import {
 import type { FeeForm } from "@ledgerly/domain/funds/client";
 import { cleanFee, feeModeOf, type FeeProblems, feeProblems, type FeeScopeOption } from "./fee-text";
 
-export interface FeeDialogProps {
+interface FeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** The fee the dialog starts from: a new one, or the one being edited (`id` set, or `editing`). */

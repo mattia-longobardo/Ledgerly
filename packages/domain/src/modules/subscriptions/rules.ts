@@ -16,14 +16,14 @@ export const CHARGE_STATES = ["paid", "amount_differs", "due", "not_found"] as c
 
 export type Cycle = (typeof CYCLES)[number];
 export type SubscriptionState = (typeof SUBSCRIPTION_STATES)[number];
-export type ChargeState = (typeof CHARGE_STATES)[number];
+type ChargeState = (typeof CHARGE_STATES)[number];
 
 /** Utility at or below this is "low" (spec §7.5). */
 export const LOW_UTILITY = 5;
 /** A charge not found yet is `due` from this many days before its date (spec §7.5). */
-export const DUE_WITHIN_DAYS = 7;
+const DUE_WITHIN_DAYS = 7;
 /** How many periods back the check keeps, at most. */
-export const MAX_CHECKED_PERIODS = 24;
+const MAX_CHECKED_PERIODS = 24;
 /** Half the span of a weekly charge's window, in days: a week split around its date. */
 const WEEKLY_REACH = 3;
 
@@ -135,7 +135,7 @@ const PARTS_PER_UNIT = 1_000_000n;
  * one is "September". A weekly one is a weekday. The exact date is still there — the cell carries
  * it as its title — but the column says the thing a person is actually scanning for.
  */
-export type DueMoment =
+type DueMoment =
   | { kind: "weekday"; weekday: number }
   | { kind: "day"; day: number }
   | { kind: "quarter"; quarter: 1 | 2 | 3 | 4 }
@@ -182,7 +182,7 @@ export interface CheckedSubscription {
   expected: ReadonlyMap<CivilDate, Cents>;
 }
 
-export interface Candidate {
+interface Candidate {
   id: string;
   accountId: string;
   on: CivilDate;
@@ -197,7 +197,7 @@ export interface Candidate {
   note: string | null;
 }
 
-export interface PlannedCharge {
+interface PlannedCharge {
   subscriptionId: string;
   dueOn: CivilDate;
   periodFrom: CivilDate;

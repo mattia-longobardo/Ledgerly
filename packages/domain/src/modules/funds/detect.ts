@@ -15,9 +15,9 @@ import type { Cents } from "../../platform/money";
  * matched on before this existed.
  */
 
-export type KeyKind = "creditor" | "mandate" | "payee";
+type KeyKind = "creditor" | "mandate" | "payee";
 
-export interface RecurrenceKey {
+interface RecurrenceKey {
   kind: KeyKind;
   /** The text a rule matches on, as it is printed. */
   text: string;
@@ -84,7 +84,7 @@ export function carriesKey(
   return compact(`${movement.payee ?? ""} ${movement.note ?? ""}`).includes(key.text);
 }
 
-export interface DetectedCharge {
+interface DetectedCharge {
   on: CivilDate;
   cents: Cents;
 }

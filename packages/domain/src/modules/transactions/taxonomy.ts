@@ -27,20 +27,20 @@ import {
 import { retypeMovements } from "./macro";
 import { categories, labels, transactionLabels, transactions } from "./schema";
 
-export type Category = typeof categories.$inferSelect;
+type Category = typeof categories.$inferSelect;
 export type Label = typeof labels.$inferSelect;
 
 /** A category as the lists hand it out (F2.5): in tree order, with how deep a list indents it. */
 export type TreeCategory = Category & { depth: 0 | 1 };
 
 /** A row of the Settings › Data tables: the record plus how many movements point at it. */
-export interface CategoryWithUsage {
+interface CategoryWithUsage {
   category: Category;
   usage: number;
   depth: 0 | 1;
 }
 
-export interface LabelWithUsage {
+interface LabelWithUsage {
   label: Label;
   usage: number;
 }
@@ -50,7 +50,7 @@ export interface LabelWithUsage {
  * `invalid_parent` (F2.5): a parent that is missing, archived, somebody else's, itself a
  * sub-category or the category itself — or a parent for a group that has sub-categories.
  */
-export type TaxonomyErrorCode = "not_found" | "duplicate" | "invalid" | "invalid_parent";
+type TaxonomyErrorCode = "not_found" | "duplicate" | "invalid" | "invalid_parent";
 
 export class TaxonomyError extends Error {
   constructor(readonly code: TaxonomyErrorCode) {
@@ -89,9 +89,6 @@ const categoryInputSchema = z.object({
 
 const labelInputSchema = z.object({ name: nameSchema, color: colourSchema });
 
-export type CategoryInput = z.input<typeof categoryInputSchema>;
-export type LabelInput = z.input<typeof labelInputSchema>;
-
 const idSchema = z.uuid();
 
 /** The entity type `provider_links` files a category under (`platform/integrations/rules.ts`). */
@@ -103,7 +100,7 @@ const GROUP_ENTITY: EntityType = "category_group";
  * A provider's own reference to one of its categories. Optional everywhere, because a person
  * creating a category by hand has none; when it is there, it is what §9.1 looks up first.
  */
-export interface ExternalCategoryRef {
+interface ExternalCategoryRef {
   provider: string;
   externalId: string;
 }
@@ -200,9 +197,9 @@ export async function categoryOptions(
 /* What a category is for, learned from what is filed under it (owner, 2026-09-20) */
 
 /** A category with fewer than this many movements has not said anything yet. */
-export const TYPE_EVIDENCE_MIN = 3;
+const TYPE_EVIDENCE_MIN = 3;
 /** How much of the evidence has to agree before the type is moved. */
-export const TYPE_EVIDENCE_SHARE = 0.8;
+const TYPE_EVIDENCE_SHARE = 0.8;
 
 /**
  * The verdict of the movements filed under one category: the type that carries enough of them, or
@@ -690,7 +687,7 @@ export async function moveCategoryToMacro(
 }
 
 /** What a deletion took with it, so the screen can say it rather than guess. */
-export interface CategoryDeletion {
+interface CategoryDeletion {
   /** The category asked for, and its sub-categories: all of them go together. */
   removed: { id: string; name: string; parentId: string | null }[];
   /** The provider's own ids for those categories, for whoever propagates the deletion. */
@@ -1007,7 +1004,7 @@ async function labelByName(ctx: Pick<Ctx, "userId">, name: string): Promise<Labe
   return row;
 }
 
-export async function getLabel(ctx: Pick<Ctx, "userId">, id: string): Promise<Label> {
+async function getLabel(ctx: Pick<Ctx, "userId">, id: string): Promise<Label> {
   const [row] = await getDb()
     .select()
     .from(labels)

@@ -21,7 +21,7 @@ import { codeMapOf } from "@ledgerly/domain/payroll";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 
-export type ActionResult =
+type ActionResult =
   { ok: true; id?: string; count?: number } | { ok: false; error: string; detail?: string | null };
 
 function failed(error: unknown): { ok: false; error: string; detail?: string | null } {

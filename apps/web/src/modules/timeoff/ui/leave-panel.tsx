@@ -40,7 +40,7 @@ export interface BookedLeave {
 }
 
 /** Everything the panel works from. The page hands it over; the panel reads nothing itself. */
-export interface LeavePanelData {
+interface LeavePanelData {
   year: number;
   minutesPerDay: number;
   /** Every booked row of the year shown. */

@@ -63,10 +63,10 @@ import {
 } from "./schema";
 
 export type Payslip = typeof payslips.$inferSelect;
-export type CodeMapEntry = typeof payrollCodeMap.$inferSelect;
+type CodeMapEntry = typeof payrollCodeMap.$inferSelect;
 type RawLineRow = typeof payrollRawLines.$inferSelect;
 
-export type PayrollErrorCode =
+type PayrollErrorCode =
   | "not_found"
   | "invalid_state"
   | "invalid_value"
@@ -252,7 +252,7 @@ async function linesOf(ctx: Pick<Ctx, "userId">, documentId: string, executor: T
 }
 
 /** Stored lines back as the parser's lines, with the role the code map gives them today. */
-export function withRoles(rows: readonly RawLineRow[], codeMap: ReadonlyMap<string, CodeRole>): RawLine[] {
+function withRoles(rows: readonly RawLineRow[], codeMap: ReadonlyMap<string, CodeRole>): RawLine[] {
   return rows.map((row) => ({
     position: row.position,
     code: row.code,
@@ -270,12 +270,12 @@ export function withRoles(rows: readonly RawLineRow[], codeMap: ReadonlyMap<stri
   }));
 }
 
-export interface Identity extends PayslipIdentity {
+interface Identity extends PayslipIdentity {
   employerKey: string;
   employeeKey: string;
 }
 
-export function identityOf(values: Values): Identity | null {
+function identityOf(values: Values): Identity | null {
   const period = values.periodLabel ? parsePeriodLabel(values.periodLabel) : null;
   if (!period || !values.employerKey || !values.employeeKey) return null;
   return { ...period, employerKey: values.employerKey, employeeKey: values.employeeKey };
@@ -456,7 +456,7 @@ async function activeWithKey(ctx: Pick<Ctx, "userId">, identity: Identity, tx: T
 // ——— Review (spec §7.8, §9.3 step 4) ———
 
 /** A typed value in its canonical form, or an error: amounts and hours to two decimals. */
-export function canonicalValue(field: FieldName, value: string): string {
+function canonicalValue(field: FieldName, value: string): string {
   const unit = FIELDS[field].unit;
   const text = value.trim();
   if (unit === "eur" || unit === "hours") {
@@ -764,7 +764,7 @@ export async function payslipsOf(ctx: Pick<Ctx, "userId">, documentIds?: readonl
  * A leave balance as one applied payslip printed it. `timeoff` reads these through this function
  * rather than the table: the dependency runs one way, and payroll does not know time off exists.
  */
-export interface LeaveSnapshot {
+interface LeaveSnapshot {
   kind: LeaveKind;
   /** The payslip's own month. */
   period: string;
@@ -775,7 +775,7 @@ export interface LeaveSnapshot {
 }
 
 /** Leave taken, as an applied payslip accounted for it, in the month it was used. */
-export interface LeaveEvent {
+interface LeaveEvent {
   kind: LeaveKind;
   hours: number;
   /** The payslip's own month. */

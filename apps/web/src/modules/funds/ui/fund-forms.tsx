@@ -17,7 +17,7 @@ import {
 } from "../actions";
 
 /** The errors a form of Funds has a sentence for; any other reads as "not saved". */
-export const KNOWN_ERRORS: readonly string[] = [
+const KNOWN_ERRORS: readonly string[] = [
   "invalid",
   "not_found",
   "duplicate_name",
@@ -61,7 +61,7 @@ export function ErrorLine({ error }: { error: string | null }) {
  * Where a valuation command sits, and so which button it is: the page header's call to action, a
  * card header beside the other command of that card, or a table row.
  */
-export type TriggerPlace = "page" | "card" | "row";
+type TriggerPlace = "page" | "card" | "row";
 
 /** One trigger, so "Record valuation" carries the same weight wherever it is offered. */
 function Trigger({

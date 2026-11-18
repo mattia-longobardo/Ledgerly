@@ -24,7 +24,7 @@ const BASE =
 type Variant = keyof typeof VARIANT;
 type Size = keyof typeof SIZE;
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   ref?: Ref<HTMLButtonElement>;
   variant?: Variant;
   size?: Size;
@@ -48,7 +48,7 @@ export function Button({
   );
 }
 
-export interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
+interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
   href: Route;
   variant?: Variant;
   size?: Size;
@@ -70,7 +70,7 @@ export function ButtonLink({
   return <Link href={href} className={cn(buttonClassName(variant, size), className)} {...props} />;
 }
 
-export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> {
+interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label"> {
   label: string;
   size?: 28 | 32;
   bordered?: boolean;

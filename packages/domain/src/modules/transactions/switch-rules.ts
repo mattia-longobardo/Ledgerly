@@ -23,19 +23,19 @@ export interface SwitchMovement {
 }
 
 /** A movement of the account and the bank's movement that is the same one. */
-export interface SwitchMatch {
+interface SwitchMatch {
   localId: string;
   bankId: string;
 }
 
 /** One amount whose movements are in different numbers on the two sides: nothing of it is tied. */
-export interface SwitchToCheck {
+interface SwitchToCheck {
   amountCents: Cents;
   localIds: string[];
   bankIds: string[];
 }
 
-export interface SwitchComparison {
+interface SwitchComparison {
   matched: SwitchMatch[];
   toCheck: SwitchToCheck[];
   /** Movements of the source that the bank has not got in the period. */
@@ -47,7 +47,7 @@ export interface SwitchComparison {
 const DAY_MS = 86_400_000;
 
 /** Whole days from one civil date to another. */
-export function daysBetween(a: CivilDate, b: CivilDate): number {
+function daysBetween(a: CivilDate, b: CivilDate): number {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS);
 }
 
@@ -168,7 +168,7 @@ function tieGroup(
 }
 
 /** The first day the comparison reads: ten days before the last day the source read (04-now.md §4.6). */
-export const SWITCH_OVERLAP_DAYS = 10;
+const SWITCH_OVERLAP_DAYS = 10;
 
 export function comparisonFrom(cutDate: CivilDate): CivilDate {
   return addDays(cutDate, -SWITCH_OVERLAP_DAYS);
@@ -180,7 +180,7 @@ export interface DoubleMatch {
   keptId: string;
 }
 
-export interface DoubleComparison {
+interface DoubleComparison {
   matched: DoubleMatch[];
   /** Movements of the account already here that the switched account has not got: no "Apply". */
   unmatched: string[];
@@ -252,7 +252,7 @@ export interface TransferPair {
   currency: string;
 }
 
-export interface TransferPlan {
+interface TransferPlan {
   pairs: TransferPair[];
   /** Groups left alone because their two sides have different counts or are too far apart. */
   ambiguous: number;
@@ -356,7 +356,7 @@ function byDayThenIdOf(a: TransferCandidate, b: TransferCandidate): number {
 }
 
 /** What a movement holds of the person's choices, as a join reads it. */
-export interface MovementChoices {
+interface MovementChoices {
   categoryId: string | null;
   categoryOrigin: string | null;
   note: string | null;

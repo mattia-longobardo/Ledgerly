@@ -12,7 +12,7 @@ import { z, type ZodType } from "zod";
 import { SourceError } from "../investments/source";
 
 export const ETORO_API_URL = "https://public-api.etoro.com";
-export const ETORO = "etoro";
+const ETORO = "etoro";
 
 const TIMEOUT_MS = 20_000;
 /** `trade/history` and the cash transactions both page by 500 at most (spike, E4 and E5). */
@@ -22,7 +22,7 @@ const MAX_PAGES = 200;
 const INSTRUMENT_BATCH = 50;
 const PATH_ID = /^[A-Za-z0-9-]{1,64}$/;
 
-export interface EtoroCredentials {
+interface EtoroCredentials {
   apiKey: string;
   userKey: string;
 }
@@ -100,7 +100,7 @@ export const portfolioSchema = z.object({
 });
 export type EtoroPortfolio = z.infer<typeof portfolioSchema>;
 
-export const instrumentsSchema = z.object({
+const instrumentsSchema = z.object({
   instrumentDisplayDatas: z
     .array(
       z.object({

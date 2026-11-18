@@ -18,26 +18,26 @@ export interface MacroCategory {
   archived: boolean;
 }
 
-export interface Amount {
+interface Amount {
   count: number;
   totalCents: bigint;
   inCents: bigint;
   outCents: bigint;
 }
 
-export interface CategoryLine extends Amount {
+interface CategoryLine extends Amount {
   category: MacroCategory;
   /** Percentage of the macro, one decimal: `0` under Transfers, which has no whole (§5.2). */
   share: number;
 }
 
-export interface GroupLine extends CategoryLine {
+interface GroupLine extends CategoryLine {
   /** The movements filed on the group itself: the line "Only “{group}”". `null` when none. */
   only: Amount | null;
   children: CategoryLine[];
 }
 
-export interface MacroView extends Amount {
+interface MacroView extends Amount {
   macro: Macro;
   /** Under Transfers each line is a category with no children (CR2). */
   groups: GroupLine[];

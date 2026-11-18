@@ -31,7 +31,7 @@ import {
 } from "@ledgerly/domain/platform/ranges";
 
 /** The range the screen opens on. */
-export const DEFAULT_PRESET: RangePreset = "thisMonth";
+const DEFAULT_PRESET: RangePreset = "thisMonth";
 
 /** What the spending chart adds up per point: days, or months (F2.5). */
 export type ChartGrain = "day" | "month";
@@ -40,12 +40,12 @@ export type ChartGrain = "day" | "month";
 export const DAY_GRAIN_MAX_DAYS = 62;
 
 /** The five sortable columns of the design, matching `TransactionSort` in `queries.ts`. */
-export const SORT_KEYS = ["date", "payee", "account", "category", "amount"] as const;
+const SORT_KEYS = ["date", "payee", "account", "category", "amount"] as const;
 
 export type SortKey = (typeof SORT_KEYS)[number];
 export type SortDirection = "asc" | "desc";
 
-export const DEFAULT_SORT: SortKey = "date";
+const DEFAULT_SORT: SortKey = "date";
 
 /**
  * The direction a column starts in, and the same table `queries.ts` keeps: a date and an amount
@@ -67,7 +67,7 @@ export const DEFAULT_DIRECTION: Record<SortKey, SortDirection> = {
 export const UNCATEGORISED = "none";
 
 /** Search parameters as a page receives them, before anything is known about them. */
-export type RawParams = Record<string, string | string[] | undefined>;
+type RawParams = Record<string, string | string[] | undefined>;
 
 function one(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
@@ -105,7 +105,7 @@ function uuid(value: string): string | null {
  * An absent field is not a filter at all, which is how the read model reads it: `categoryIds`
  * left out means every category, and `null` inside it is the "Uncategorised" choice.
  */
-export interface ReadFilters {
+interface ReadFilters {
   from: CivilDate;
   to: CivilDate;
   accountIds?: readonly string[];

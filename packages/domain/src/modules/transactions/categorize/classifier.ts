@@ -31,7 +31,7 @@ export interface Model {
 
 /** The fewest confirmed labels a model is trained from, and the fewest a category needs to be in it. */
 export const MIN_EXAMPLES = 50;
-export const MIN_PER_CLASS = 3;
+const MIN_PER_CLASS = 3;
 
 const EPOCHS = 12;
 const LEARNING_RATE = 0.5;
@@ -199,7 +199,7 @@ export function trainInTurns(examples: readonly Example[]): Promise<Model | null
 }
 
 /** What the model says about one movement: its best category, and how sure it is (0 to 1). */
-export interface Prediction {
+interface Prediction {
   categoryId: string;
   confidence: number;
 }

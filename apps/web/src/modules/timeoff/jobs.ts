@@ -14,7 +14,7 @@ import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { isTrekBusy, syncTrekNow } from "@ledgerly/domain/platform/integrations/trek";
 
 /** What became of one Trek pass, as the integrations dispatcher counts it. */
-export type TrekPassOutcome = "answered" | "failed" | "refused" | "busy" | "absent";
+type TrekPassOutcome = "answered" | "failed" | "refused" | "busy" | "absent";
 
 /**
  * One Trek pass for one person, when the connection's own schedule says it is due (D7). Called by

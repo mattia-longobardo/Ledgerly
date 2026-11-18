@@ -64,7 +64,7 @@ const PRESENT_BUDGET_MS = 30_000;
 const AUTOMATIC_BUDGET_MS = 240_000;
 
 /** What one account the bank exposes is for the person, on the step "choose the accounts". */
-export interface ExposedAccount {
+interface ExposedAccount {
   providerAccountId: string;
   name: string | null;
   identifier: string | null;
@@ -212,7 +212,7 @@ export async function tieBack(
 }
 
 /** What a reading did, or why it did nothing. */
-export type ReadingOutcome =
+type ReadingOutcome =
   | { ok: true; created: number; updated: number; accountErrors: number; complete: boolean }
   | { ok: false; error: ReadingError | "busy" | "not_active" | "not_chosen"; retryAt: Date | null };
 
@@ -495,7 +495,7 @@ export async function runBankPass(
 }
 
 /** What the bank says of one account it shares, read for the dry run of a switch (rewrite plan N4). */
-export interface AccountPreview {
+interface AccountPreview {
   /** The balance Ledgerly compares, chosen by the domain's order of the bank's codes (H43). */
   balance: { kind: string; amount: string; on: CivilDate } | null;
   movements: ReadingMovement[];
@@ -504,7 +504,7 @@ export interface AccountPreview {
   currency: string;
 }
 
-export type PreviewOutcome =
+type PreviewOutcome =
   | { ok: true; preview: AccountPreview }
   | {
       ok: false;

@@ -30,7 +30,7 @@ import {
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-export interface UploadResult {
+interface UploadResult {
   ok: true;
   uploaded: { id: string; name: string; duplicate: boolean }[];
   refused: { name: string; error: string }[];

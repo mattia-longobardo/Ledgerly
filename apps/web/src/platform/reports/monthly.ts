@@ -14,7 +14,7 @@ import type { Cents } from "@ledgerly/domain/platform/money";
  * summary email (the month just ended). They read the very queries the screens are drawn from, so
  * a card, an email and Overview can never quote three different net worths (D5).
  */
-export interface MonthlyFigures {
+interface MonthlyFigures {
   month: MonthKey;
   /**
    * The display currency the account totals (net worth, previous net worth, cash) are in (§1.8,

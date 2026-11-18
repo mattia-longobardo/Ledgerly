@@ -9,12 +9,10 @@ import { type MovementText, memoryKey, shownText } from "./text";
 import type { Thresholds } from "./thresholds";
 
 /** Why a category was given or suggested: a closed list, a fixed sentence for each (ux §2.2). */
-export const REASONS = ["memory", "similar", "merchant_type", "brand", "salary", "fee"] as const;
-export type Reason = (typeof REASONS)[number];
+type Reason = "memory" | "similar" | "merchant_type" | "brand" | "salary" | "fee";
 
 /** Which level of the cascade gave an automatic category. */
-export const AUTOMATIC_ORIGINS = ["memory", "model", "table"] as const;
-export type AutomaticOrigin = (typeof AUTOMATIC_ORIGINS)[number];
+type AutomaticOrigin = "memory" | "model" | "table";
 
 /** A movement as the cascade reads it. */
 export interface CascadeMovement extends MovementText {

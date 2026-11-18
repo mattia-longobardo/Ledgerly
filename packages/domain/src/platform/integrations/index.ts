@@ -14,19 +14,8 @@ export {
   pluginProvider,
 } from "./rules";
 export type { SyncKind } from "./rules";
-export {
-  DEFAULT_SYNC_SCHEDULE,
-  LAST_DAY,
-  MAX_RULES,
-  MAX_TIMES,
-  MIN_SYNC_GAP_MINUTES,
-  minutesOf,
-  nextSyncTimes,
-  scheduleProblems,
-  syncRuleSchema,
-  syncScheduleSchema,
-} from "./schedule";
-export type { RuleKind, ScheduleProblem, SyncDays, SyncRule, SyncSchedule } from "./schedule";
+export { DEFAULT_SYNC_SCHEDULE } from "./schedule";
+export type { SyncSchedule } from "./schedule";
 export {
   IntegrationError,
   SYNC_RUN_RETENTION_DAYS,
@@ -39,7 +28,6 @@ export {
   deleteOldSyncRuns,
   deletedSourceAccounts,
   dueConnections,
-  externalIdsOf,
   findConnection,
   finishRun,
   forgetSource,

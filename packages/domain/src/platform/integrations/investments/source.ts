@@ -12,7 +12,7 @@ import type { CivilDate } from "../../dates";
 import type { Cents } from "../../money";
 
 /** The outcome of a key check (§5.2): an allowlist, so anything not known to be read only is refused. */
-export type KeyCheckResult = "read-only" | "write" | "unknown-flag" | "unverifiable";
+type KeyCheckResult = "read-only" | "write" | "unknown-flag" | "unverifiable";
 
 export interface KeyCheck {
   result: KeyCheckResult;
@@ -97,7 +97,7 @@ export interface ProviderEvent {
   legs: ProviderLeg[];
 }
 
-export type CoverageStatus = "complete" | "partial" | "gap";
+type CoverageStatus = "complete" | "partial" | "gap";
 
 export interface CoverageWindow {
   stream: string;
@@ -136,7 +136,7 @@ export interface FlowsRead {
 /** Account units per unit of `from` on a day, from the ECB rates the module keeps (§1.8). */
 export type FxLookup = (from: string, to: string, on: CivilDate) => string | null;
 
-export interface FlowsOptions {
+interface FlowsOptions {
   /** The account's currency. */
   currency: string;
   cursor: FlowCursor | null;
@@ -148,7 +148,7 @@ export interface FlowsOptions {
   since?: Date;
 }
 
-export interface HistoryRead {
+interface HistoryRead {
   /** One total per day, in the account's currency (§3.3, D10). */
   points: { on: CivilDate; totalCents: Cents }[];
   coverage: CoverageWindow[];
@@ -193,7 +193,7 @@ export interface InvestmentSource {
  * status are all that is ever stored or printed: never the message, the URL, the body, nor a
  * schema's issues.
  */
-export const SOURCE_ERROR_CLASSES = [
+const SOURCE_ERROR_CLASSES = [
   "auth",
   "permission",
   "rate_limited",

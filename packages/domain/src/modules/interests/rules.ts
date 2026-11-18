@@ -8,12 +8,9 @@ export const RULE_MODES = ["analyze_only", "post_to_provider"] as const;
 export const RULE_STATES = ["active", "paused"] as const;
 export const ACCRUAL_STATUSES = ["accrued", "negative_balance", "no_balance"] as const;
 export const POSTING_STATES = ["none", "claimed", "posted", "indeterminate"] as const;
-
-export type DayBasis = (typeof DAY_BASES)[number];
-export type Settlement = (typeof SETTLEMENTS)[number];
+type Settlement = (typeof SETTLEMENTS)[number];
 export type RuleMode = (typeof RULE_MODES)[number];
-export type RuleState = (typeof RULE_STATES)[number];
-export type AccrualStatus = (typeof ACCRUAL_STATUSES)[number];
+type AccrualStatus = (typeof ACCRUAL_STATUSES)[number];
 export type PostingState = (typeof POSTING_STATES)[number];
 
 /**
@@ -72,7 +69,7 @@ export function roundToCents(value: Fixed): Cents {
   return value >= 0n ? (value + half) / FIXED_SCALE : -((-value + half) / FIXED_SCALE);
 }
 
-export interface DayAccrual {
+interface DayAccrual {
   status: AccrualStatus;
   grossFixed: Fixed;
   netCents: Cents;
@@ -245,7 +242,7 @@ export function reconcile(input: {
 }
 
 /** At most this many tiers per rule. */
-export const MAX_TIERS = 10;
+const MAX_TIERS = 10;
 
 /**
  * Tiers the engine can run (spec §7.6: unsupported settings refused, never accepted and ignored):
@@ -370,7 +367,7 @@ function trimmed(value: Fixed, maxDecimals = DIGITS): string {
 /** A rate as a percentage: the fraction times a hundred. */
 const asPercent = (rate: Fixed, maxDecimals?: number) => trimmed(rate * 100n, maxDecimals);
 
-export interface SettlementNoteInput {
+interface SettlementNoteInput {
   /** The rule's tiers, in order. One tier is one rate the rule promises; several are not. */
   tiers: readonly Tier[];
   /** The rule's tax rate as its column stores it ("0.26"). */

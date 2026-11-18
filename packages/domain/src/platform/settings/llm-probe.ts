@@ -23,7 +23,7 @@ export const LLM_PROBE_TIMEOUT_MS = 8_000;
  * What the probe found, as a `settings.llm.test.*` message key. A code, not a sentence: the card
  * turns it into a catalogued message, so no English text is built on the server.
  */
-export type LlmProbeOutcome =
+type LlmProbeOutcome =
   "ok" | "keyRejected" | "modelMissing" | "rateLimited" | "notConfigured" | "unreachable";
 
 /**

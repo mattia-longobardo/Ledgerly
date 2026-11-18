@@ -14,10 +14,10 @@ import { type Params, withParams } from "./url";
 import { useWeekStart, type WeekStart } from "./week-start";
 
 /** What the picker picks: whole days, or whole months (spec §8.3, F2.5). */
-export type RangeGrain = "day" | "month";
+type RangeGrain = "day" | "month";
 
 /** The picker's words, already translated: `src/ui` knows no message catalogue. */
-export interface DateRangeLabels {
+interface DateRangeLabels {
   /** The control's own name, as its tooltip: the visible text is the range itself. */
   label: string;
   from: string;

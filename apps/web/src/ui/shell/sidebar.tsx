@@ -17,7 +17,7 @@ import { useSignOut } from "./sign-out";
 const GROUPS = ["finance", "work", "system"] as const;
 
 /** A sidebar item's look; the Components page shows its states from the same classes. */
-export function navItemClassName(active: boolean): string {
+function navItemClassName(active: boolean): string {
   return cn(
     "focus-ring-inset flex h-8 items-center gap-2.5 rounded-ctl px-2 text-muted hover:bg-hover hover:text-fg",
     active && "bg-hover font-medium text-fg",

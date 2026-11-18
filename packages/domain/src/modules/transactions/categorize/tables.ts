@@ -14,7 +14,7 @@ import { normalise } from "./text";
 export type GroupKey = string;
 
 /** One of the default groups a new person starts from (decision K4; ux/n3-categories-manual.md §7.2). */
-export interface DefaultGroup {
+interface DefaultGroup {
   key: GroupKey;
   /** QC7 (categories-and-rules.md): two groups of Income, and two categories of Transfers. */
   type: "expense" | "income" | "transfer";
@@ -26,7 +26,7 @@ export interface DefaultGroup {
 export const DEFAULT_GROUPS: readonly DefaultGroup[] = groups as DefaultGroup[];
 
 /** What a table says about a movement: the group, and whether the entry stands for one thing only. */
-export interface TableAnswer {
+interface TableAnswer {
   group: GroupKey;
   ambiguous: boolean;
 }
@@ -79,7 +79,7 @@ export function brandGroup(text: string): (TableAnswer & { brand: string }) | nu
 }
 
 /** What the bank's own code says the movement is, when it says it: a salary, or a fee. */
-export type Structure = "salary" | "fee";
+type Structure = "salary" | "fee";
 
 /** The group each structure belongs to. */
 export const STRUCTURE_GROUP: Record<Structure, GroupKey> = { salary: "income", fee: "taxes_fees" };

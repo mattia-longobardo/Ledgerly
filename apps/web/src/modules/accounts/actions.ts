@@ -31,7 +31,7 @@ import {
  * message key under the calling component's own namespace instead of throwing (as in users).
  */
 export type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
-export type CreateResult = { ok: true; id: string } | { ok: false; error: string; other?: string };
+type CreateResult = { ok: true; id: string } | { ok: false; error: string; other?: string };
 
 function amount(value: string, ctx: Ctx): bigint {
   return parseAmount(value, ctx.numberFormat);
@@ -49,7 +49,7 @@ function failed(error: unknown): { ok: false; error: string; other?: string } {
   throw error;
 }
 
-export interface NewAccountInput {
+interface NewAccountInput {
   name: string;
   type: string;
   currency: string;
@@ -79,7 +79,7 @@ export async function createAccountAction(input: NewAccountInput): Promise<Creat
   }
 }
 
-export interface AccountSettingsFormInput {
+interface AccountSettingsFormInput {
   name: string;
   type: string;
   currency: string;

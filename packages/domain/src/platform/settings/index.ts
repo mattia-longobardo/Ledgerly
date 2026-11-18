@@ -22,5 +22,4 @@ export {
   testOidc,
 } from "./service";
 export type { MailProbeResult } from "./service";
-export { ENCRYPTIONS } from "./smtp";
-export type { Encryption, MailCategory, MailPolicy, SmtpInput } from "./smtp";
+export type { MailCategory, SmtpInput } from "./smtp";

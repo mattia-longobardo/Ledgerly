@@ -38,7 +38,7 @@ function requireAdminCtx(ctx: Pick<Ctx, "role">): void {
 }
 
 /** What Admin › Server shows of the fallback: never the key, only its last four characters. */
-export interface LlmFallbackView {
+interface LlmFallbackView {
   model: string;
   keyHint: string;
   updatedAt: Date;
@@ -136,7 +136,7 @@ export async function llmFallbackAvailable(): Promise<boolean> {
 /* Authentik (spec §5.1, design row 884) */
 
 /** What the card shows: every field except the secret, which is only ever four characters of hint. */
-export interface OidcView {
+interface OidcView {
   issuer: string;
   clientId: string;
   adminGroup: string;
@@ -247,7 +247,7 @@ export async function testOidc(
 
 /* Outgoing mail (spec §9.4, design row 885) */
 
-export interface SmtpView {
+interface SmtpView {
   host: string;
   port: number;
   encryption: "ssl" | "starttls" | "none";

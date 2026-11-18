@@ -90,7 +90,7 @@ export function newSourceForm(kind: SourceKind, defaults: { payeeMatch?: string 
 }
 
 /** The columns of a source the forms read: the row of the table, with nothing of the database in it. */
-export interface SourceRow {
+interface SourceRow {
   id: string;
   kind: SourceKind;
   state: SourceState;
@@ -178,7 +178,7 @@ export function sourceInputOf(form: SourceForm, format: NumberFormat): SourceInp
  * source's key and a component (`<key>:tfr`). The key is the source's id, or `#<index>` in the form
  * that creates a fund, where a source has no id yet.
  */
-export type FeeScope = string;
+type FeeScope = string;
 
 export interface FeeForm {
   id: string | null;
@@ -207,7 +207,7 @@ export const newFeeForm = (): FeeForm => ({
   note: "",
 });
 
-export interface FeeRow {
+interface FeeRow {
   id: string;
   label: string;
   basis: FeeBasis;
@@ -222,7 +222,7 @@ export interface FeeRow {
 }
 
 /** A percentage as text in the person's format, from the stored fraction. */
-export function percentInput(rate: string, format: NumberFormat): string {
+function percentInput(rate: string, format: NumberFormat): string {
   return fractionToPercent(rate).replace(".", numberSeparators(format).decimal);
 }
 
@@ -333,7 +333,7 @@ export const newContributionForm = (
   note: "",
 });
 
-export interface OperationRow {
+interface OperationRow {
   id: string;
   classification: string;
   operationDate: string;

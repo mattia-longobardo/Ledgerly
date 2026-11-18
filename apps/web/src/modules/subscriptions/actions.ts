@@ -12,7 +12,6 @@ import {
   createSubscription,
   deleteSubscription,
   setSubscriptionState,
-  setUtility,
   SubscriptionError,
   updateSubscription,
 } from "@ledgerly/domain/subscriptions";
@@ -30,7 +29,7 @@ function revalidate(): void {
   revalidatePath("/");
 }
 
-export interface SubscriptionFormInput {
+interface SubscriptionFormInput {
   name: string;
   categoryId: string | null;
   paymentAccountId: string | null;
@@ -85,17 +84,6 @@ export async function updateSubscriptionAction(
   const ctx = await requireSession();
   try {
     await updateSubscription(ctx, id, toInput(input, ctx));
-    revalidate();
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export async function setUtilityAction(id: string, utility: number): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await setUtility(ctx, id, utility);
     revalidate();
     return { ok: true };
   } catch (error) {

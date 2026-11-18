@@ -12,7 +12,7 @@ import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { removeOidcAction, saveOidcAction, testOidcAction } from "./actions";
 import { FIELD_GRID } from "@/ui/section";
 
-export interface OidcCardProps {
+interface OidcCardProps {
   issuer: string;
   clientId: string;
   adminGroup: string;

@@ -25,7 +25,7 @@ export function frequencyText(t: SourcesT, count: number, unit: IntervalUnit): s
 }
 
 /** "My contribution, employer, TFR": the first name as it is written, the others in running text. */
-export function componentsText(t: SourcesT, components: readonly PayrollComponent[]): string {
+function componentsText(t: SourcesT, components: readonly PayrollComponent[]): string {
   return PAYROLL_COMPONENTS.filter((component) => components.includes(component))
     .map((component, index) => {
       const name = t(`components.${component}`);
@@ -128,7 +128,7 @@ export function sourceSummary(
 }
 
 /** The fields of a source a message can sit under, in the order of the form. */
-export const SOURCE_FIELDS = [
+const SOURCE_FIELDS = [
   "components",
   "dueDay",
   "toleranceDays",
@@ -141,7 +141,7 @@ export const SOURCE_FIELDS = [
 export type SourceField = (typeof SOURCE_FIELDS)[number];
 
 /** A message of `funds.sources.errors`, by the field it belongs under. */
-export type SourceProblems = Partial<
+type SourceProblems = Partial<
   Record<
     SourceField,
     "component" | "dueDay" | "tolerance" | "amount" | "frequency" | "debitDay" | "dates" | "match"

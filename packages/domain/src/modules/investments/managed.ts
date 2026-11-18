@@ -13,7 +13,7 @@ import { investmentAccounts, investmentReadings } from "./schema";
  * keeps its balance, so it is not here. Its own file with no import of another module, so Accounts
  * can ask without a cycle.
  */
-export async function managedSince(
+async function managedSince(
   ctx: Pick<Ctx, "userId">,
   accountIds: readonly string[],
 ): Promise<Map<string, CivilDate>> {

@@ -13,10 +13,10 @@ import { EmptyState } from "@/ui/states";
 import { type BankChoice, listBanksAction, startBankAccessAction } from "./actions";
 
 /** Why the person is back on this step, from the return route (ux/n1-plugin-bank.md §6.3). */
-export type BankStepError =
+type BankStepError =
   "denied" | "expired" | "session" | "no_accounts" | "unreachable" | "unreadable" | "bank_unavailable";
 
-export interface BankStepProps {
+interface BankStepProps {
   countries: { code: string; name: string }[];
   defaultCountry: string;
   /** Set when the person came back from the bank without a connection. */

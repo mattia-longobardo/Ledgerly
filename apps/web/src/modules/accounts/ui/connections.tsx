@@ -31,7 +31,7 @@ const FORM_ID = "connection-form";
 const NAME_MAX = 60;
 const NOTE_MAX = 120;
 
-export const groupBy = (rows: readonly ConnectionRow[], channel: ConnectionChannel) =>
+const groupBy = (rows: readonly ConnectionRow[], channel: ConnectionChannel) =>
   rows.filter((row) => row.channel === channel);
 
 /**

@@ -77,7 +77,7 @@ export function monthlyRate(
 }
 
 /** The balance a forecast starts from. */
-export interface ForecastOpening {
+interface ForecastOpening {
   /** `payslip`: the RES. of the last applied payslip. `year`: an empty first of January. */
   source: "payslip" | "year";
   minutes: number;
@@ -188,7 +188,7 @@ export function accrualView(input: ForecastInput, year: number, basis: ResidualB
 }
 
 /** What a range of the panel does to the forecast of one kind, on the day the absence starts. */
-export interface ForecastChange {
+interface ForecastChange {
   beforeMinutes: number;
   afterMinutes: number;
 }
@@ -233,7 +233,7 @@ export interface Overdrawn {
   onDate: CivilDate | null;
 }
 
-export interface OverdrawnInput {
+interface OverdrawnInput {
   /** The residual the card shows, which decides whether there is anything to warn about. */
   view: ResidualView;
   /** The same forecast the card and the panel use: one rate on the whole page (decision D5). */

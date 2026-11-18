@@ -261,7 +261,7 @@ export async function changeVisibility(
 }
 
 /** What the dialog asks about before it saves. */
-export interface ManualPreviewInput {
+interface ManualPreviewInput {
   accountId: string;
   kind: ManualKind;
   amountCents: Cents;

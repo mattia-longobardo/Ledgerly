@@ -5,7 +5,7 @@ import { type FundLine, firstDataOn, type HomeFund, type HomeSummary, homeSummar
 import type { FundPeriod } from "./period";
 import type { FundForecast } from "./rules";
 
-export interface FundSummary {
+interface FundSummary {
   firstOn: CivilDate | null;
   summary: HomeSummary;
   /** Always there: the home leaves out a fund with nothing to say, and here it is the whole page. */

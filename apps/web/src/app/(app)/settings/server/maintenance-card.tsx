@@ -7,7 +7,7 @@ import { Button } from "@/ui/button";
 import { notify } from "@/ui/toast";
 import { backupNowAction, runJobAction } from "./actions";
 
-export interface MaintenanceProps {
+interface MaintenanceProps {
   /** Everything already formatted for the reader; null when it has never happened. */
   lastBackup: { at: string; size: string } | null;
   lastExport: { at: string; users: number; size: string } | null;

@@ -11,7 +11,7 @@ import { PLUGIN_PATHS, SECRET_HEADER } from "./calls";
 import { errorBodySchema, PLUGIN_ERROR_STATUS } from "./errors";
 import { acceptsContract, manifestSchema } from "./manifest";
 
-export interface KitTarget {
+interface KitTarget {
   /** Where the plugin listens, with no path. */
   origin: string;
   /** The secret the plugin was started with. */

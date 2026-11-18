@@ -9,15 +9,8 @@ import type { PeriodFees } from "../fees";
  */
 
 /** The classes a person can write by hand: a contribution, and the operations that are not one. */
-export const MANUAL_CLASSES = [
-  "voluntary",
-  "contribution",
-  "enrollment",
-  "transfer_in",
-  "switch",
-  "withdrawal",
-] as const;
-export type ManualClass = (typeof MANUAL_CLASSES)[number];
+export type ManualClass =
+  "voluntary" | "contribution" | "enrollment" | "transfer_in" | "switch" | "withdrawal";
 
 /**
  * What an operation is, as interpreted beside the provider's own description (GC §8.4, §10):
@@ -49,7 +42,7 @@ export const DECISIONS = ["accepted_difference", "pending"] as const;
 export type Decision = (typeof DECISIONS)[number];
 
 /** A quarter of a year, as a payslip states it. A source that accrues by month counts 1 to 12. */
-export type Quarter = 1 | 2 | 3 | 4;
+type Quarter = 1 | 2 | 3 | 4;
 
 /**
  * The fees the fund takes off a payslip period (GC §6.1), as its list of fees estimates them
@@ -82,10 +75,6 @@ export function netOfFees(
 
 /** How long after a due date a missing credit is still shown as on its way (design; GC §11). */
 export const DEFAULT_TOLERANCE_DAYS = 15;
-
-export function isQuarter(value: number): value is Quarter {
-  return value === 1 || value === 2 || value === 3 || value === 4;
-}
 
 /** The quarter of a month ("2026-05" → 2). */
 export function quarterOfMonth(month: MonthKey | CivilDate): Quarter {

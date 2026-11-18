@@ -8,11 +8,6 @@
 import { revalidatePath } from "next/cache";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { runAfterSync } from "@/platform/jobs/after-sync";
-import { readBank } from "@ledgerly/plugin-host";
-import { requestPresence } from "../../banks/presence";
-import { bankSink } from "../../banks/sink";
-import { formatInstant } from "./format-instant";
 import {
   disconnectBank,
   type PluginActionCode,
@@ -81,37 +76,4 @@ export async function disconnectBankAction(
 ): Promise<PluginActionResult> {
   const ctx = await requireSession();
   return attempt(() => disconnectBank(ctx, { pluginId, connectionId }));
-}
-
-/** What "Sync now" answers: how many movements are new, or why nothing was read and until when. */
-export type SyncNowResult =
-  { ok: true; created: number } | { ok: false; error: string; retryAt: string | null };
-
-/**
- * "Sync now" for one bank (§5.2): a reading the person asked for, so the bank is told they are
- * there. The jobs that read the movements run after it, as after any sync that changed them.
- */
-export async function syncBankNowAction(pluginId: string, connectionId: string): Promise<SyncNowResult> {
-  const ctx = await requireSession();
-  try {
-    const outcome = await readBank(
-      ctx,
-      { pluginId, connectionId, presence: await requestPresence() },
-      bankSink,
-    );
-    revalidatePath("/settings/integrations", "layout");
-    if (!outcome.ok) {
-      return {
-        ok: false,
-        error: outcome.error,
-        retryAt: outcome.retryAt ? formatInstant(outcome.retryAt, ctx) : null,
-      };
-    }
-    if (outcome.created + outcome.updated > 0) await runAfterSync("manual");
-    return { ok: true, created: outcome.created };
-  } catch (error) {
-    if (error instanceof PluginActionError) return { ok: false, error: error.code, retryAt: null };
-    console.error("[plugins] a reading failed", redactForLog(error));
-    return { ok: false, error: "failed", retryAt: null };
-  }
 }

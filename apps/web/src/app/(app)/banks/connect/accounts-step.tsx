@@ -14,7 +14,7 @@ import type { AccountDecision } from "@ledgerly/plugin-host";
 import { cancelBankConnectionAction, importBankAccountsAction } from "./actions";
 
 /** An account the bank exposes and the person has not chosen anything for yet. */
-export interface AccountToChoose {
+interface AccountToChoose {
   providerAccountId: string;
   /** What the legend says: the bank's name of it, the masked number, the currency. */
   legend: string;

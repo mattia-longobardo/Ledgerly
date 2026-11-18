@@ -15,7 +15,7 @@ async function openAt(page: Page, width: number, sidebar: keyof typeof SIDEBAR, 
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeAttached();
 }
 
-async function box(page: Page, locator: ReturnType<Page["locator"]>) {
+async function box(_page: Page, locator: ReturnType<Page["locator"]>) {
   const found = await locator.boundingBox();
   if (!found) throw new Error("not laid out");
   return found;

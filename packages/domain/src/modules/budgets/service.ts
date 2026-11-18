@@ -16,7 +16,7 @@ import {
 } from "./rules";
 import { budgetAlerts, budgetLimits } from "./schema";
 
-export type BudgetErrorCode = "not_found" | "invalid" | "conflict";
+type BudgetErrorCode = "not_found" | "invalid" | "conflict";
 
 export class BudgetError extends Error {
   constructor(readonly code: BudgetErrorCode) {

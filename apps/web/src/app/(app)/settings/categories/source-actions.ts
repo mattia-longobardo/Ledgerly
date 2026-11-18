@@ -16,7 +16,7 @@ function revalidate(): void {
   revalidatePath("/");
 }
 
-export type SourceCategoryResult =
+type SourceCategoryResult =
   | {
       ok: true;
       name: string;

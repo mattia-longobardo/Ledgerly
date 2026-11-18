@@ -19,7 +19,7 @@ import { subscriptionCharges, subscriptions } from "./schema";
 export type Subscription = typeof subscriptions.$inferSelect;
 export type SubscriptionCharge = typeof subscriptionCharges.$inferSelect;
 
-export type SubscriptionErrorCode = "not_found" | "invalid_account" | "invalid_category" | "not_cancelled";
+type SubscriptionErrorCode = "not_found" | "invalid_account" | "invalid_category" | "not_cancelled";
 
 export class SubscriptionError extends Error {
   constructor(readonly code: SubscriptionErrorCode) {

@@ -6,7 +6,7 @@
  * quoting rule for the whole application is one place to be wrong in, rather than several.
  */
 
-export const CSV_SEPARATOR = ";";
+const CSV_SEPARATOR = ";";
 
 /** One field, quoted when it holds a separator, a quote or a line break (RFC 4180). */
 export function csvField(value: string | number | null | undefined): string {

@@ -27,7 +27,7 @@ import {
 } from "@ledgerly/domain/platform/holidays";
 import { HOLIDAY_SOURCES, type HolidaySource } from "@ledgerly/domain/platform/holidays";
 
-export type HolidayActionError = "unreachable" | "duplicate" | "tooMany" | "notFound" | "invalid" | "failed";
+type HolidayActionError = "unreachable" | "duplicate" | "tooMany" | "notFound" | "invalid" | "failed";
 
 export type HolidayActionResult = { ok: true } | { ok: false; error: HolidayActionError };
 

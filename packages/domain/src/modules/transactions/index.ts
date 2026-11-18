@@ -33,18 +33,7 @@ export {
   updateRule,
 } from "./categorize/user-rules-service";
 export type { RulePreview } from "./categorize/user-rules-service";
-export {
-  AMOUNT_OPS,
-  COUNTERPARTY_OPS,
-  DIRECTIONS,
-  MAX_CONDITIONS,
-  MAX_TEXT_CONDITIONS,
-  NOTE_MAX,
-  RULE_FIELDS,
-  RULE_SOURCES,
-  TEXT_OPS,
-} from "./categorize/user-rules";
-export type { RuleCondition, RuleField } from "./categorize/user-rules";
+export type { RuleCondition } from "./categorize/user-rules";
 export { MANUAL_KINDS, signedAmount } from "./manual-rules";
 export type { ManualKind } from "./manual-rules";
 export { createManualTransaction, deleteManualTransaction, updateManualTransaction } from "./manual";
@@ -67,23 +56,14 @@ export {
 } from "./queries";
 export type { CategoryMacroTotal, Transaction, TransactionRow } from "./queries";
 export {
-  CATEGORY_COLORS,
   CATEGORY_TYPES,
-  NAME_MAX,
   TRANSACTION_TYPES,
   detectRecurrences,
   displayPayee,
   isHidden,
   macrosFor,
 } from "./rules";
-export type {
-  CategoryType,
-  IncomingTransaction,
-  RecurrenceInput,
-  TransactionOrigin,
-  TransactionState,
-  TransactionType,
-} from "./rules";
+export type { CategoryType, IncomingTransaction, RecurrenceInput, TransactionType } from "./rules";
 export { recurringPatterns, transactions } from "./schema";
 export { forgetSends, pendingSends } from "./sending";
 export {
@@ -92,7 +72,6 @@ export {
   deleteHiddenTransactions,
   hideTransactions,
   linkOwnTransfers,
-  releaseLocalEdits,
   restoreTransactions,
   setCategory,
   updateTransaction,

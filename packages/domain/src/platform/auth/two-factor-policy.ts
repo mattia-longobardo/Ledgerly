@@ -2,7 +2,6 @@
 export type TwoFactorPolicy = "required" | "optional";
 
 export const TWO_FACTOR_SETUP_PATH = "/sign-in/two-factor/setup";
-export const TWO_FACTOR_CHALLENGE_PATH = "/sign-in/two-factor";
 
 /**
  * Whether a signed-in person has to set up TOTP before the app opens. Only a password account

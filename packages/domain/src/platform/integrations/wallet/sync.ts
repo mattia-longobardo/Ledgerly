@@ -88,7 +88,7 @@ export interface WalletSyncResult {
   refused: "revoked" | null;
 }
 
-export interface WalletSyncOptions {
+interface WalletSyncOptions {
   now?: Date;
   /** Injected in tests: there is no Wallet token to call the real API with (spec §10, owner's). */
   client?: WalletClient;
@@ -176,7 +176,7 @@ export function isSyncBusy(error: unknown): boolean {
 export const MAX_WINDOW_REMOVAL_SHARE = 0.5;
 
 /** Why one window's answer is not allowed to declare anything gone. */
-export type RemovalDoubt = "empty_answer" | "over_removal_ceiling";
+type RemovalDoubt = "empty_answer" | "over_removal_ceiling";
 
 /**
  * Whether an answer may be used as the window's verdict, from the two counts alone: how many
@@ -318,7 +318,7 @@ export function walletTransactionState(providerState: string | null): Transactio
  * to another month in the interface and — worse — out of the window Wallet filters on, where it
  * would be declared gone every hour (spec §7.2).
  */
-export function occurredAtOf(
+function occurredAtOf(
   movement: Pick<WalletTransaction, "occurredAt" | "occurredOn">,
   timeZone: string,
 ): Date {
@@ -552,7 +552,7 @@ export async function requestWalletBackfill(
 /* The choice of the accounts (PERS-419) */
 
 /** One Wallet account on the choice of Settings › Integrations. */
-export interface WalletAccountChoice {
+interface WalletAccountChoice {
   externalId: string;
   name: string;
   /** The account here it arrives in; `null` when Ledgerly does not have it. */

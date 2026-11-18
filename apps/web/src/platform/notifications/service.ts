@@ -7,7 +7,7 @@ import { mailAllowed } from "@ledgerly/domain/platform/settings";
 import type { MailCategory } from "@ledgerly/domain/platform/settings";
 import { notificationsLog } from "@ledgerly/domain/platform/notifications";
 
-export interface Notification {
+interface Notification {
   userId: string;
   kind: string;
   /** What the notification is about — an account id, a document id — unique within its kind. */

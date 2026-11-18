@@ -6,13 +6,13 @@
 import type { Trial } from "./classifier";
 
 /** The precision an automatic category has to have: of 20 given, 19 right (decision K2). */
-export const AUTOMATIC_PRECISION = 0.95;
+const AUTOMATIC_PRECISION = 0.95;
 /** The precision asked when a person corrected more than one automatic category in ten. */
-export const STRICT_PRECISION = 0.98;
+const STRICT_PRECISION = 0.98;
 /** The share of recent automatic categories corrected, past which the threshold rises. */
-export const CORRECTIONS_LIMIT = 0.1;
+const CORRECTIONS_LIMIT = 0.1;
 /** A suggestion is a help, not a count: right two times in three is worth showing. */
-export const SUGGESTION_PRECISION = 0.66;
+const SUGGESTION_PRECISION = 0.66;
 /** Fewer predictions than this above a threshold prove nothing about its precision. */
 export const MIN_SUPPORT = 20;
 /** No category is given or suggested by a model that prefers it to the others by less than this. */

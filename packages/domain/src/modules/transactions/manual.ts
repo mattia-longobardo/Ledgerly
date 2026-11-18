@@ -43,7 +43,7 @@ async function byKey(ctx: ManualCtx, idempotencyKey: string): Promise<Transactio
 }
 
 /** What the caller knows about the account and this module does not. */
-export interface ManualOptions {
+interface ManualOptions {
   /** The account's source takes the movements written here: this one waits for the next update. */
   toSend?: boolean;
 }

@@ -5,7 +5,7 @@ import type { CivilDate } from "../../platform/dates";
 import type { Cents } from "../../platform/money";
 
 /** A dated amount seen from the person: money put in is negative, money taken out positive. */
-export interface DatedFlow {
+interface DatedFlow {
   on: CivilDate;
   cents: Cents;
 }
@@ -14,8 +14,8 @@ export interface DatedFlow {
 export type Xirr = { status: "ok"; rate: number } | { status: "none" } | { status: "multiple" };
 
 /** The interval a rate is looked for in (§2.4): −99 % to +1000 % a year. */
-export const XIRR_MIN = -0.99;
-export const XIRR_MAX = 10;
+const XIRR_MIN = -0.99;
+const XIRR_MAX = 10;
 
 /** Points of the scan for sign changes, evenly spaced in log(1 + r). */
 const STEPS = 4000;

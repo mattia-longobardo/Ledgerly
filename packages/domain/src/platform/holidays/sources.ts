@@ -31,13 +31,13 @@ export interface HolidaySubdivision {
   path: string;
 }
 
-export interface FetchedHoliday {
+interface FetchedHoliday {
   on: CivilDate;
   name: string;
   nationwide: boolean;
 }
 
-export type HolidayErrorKind = "network" | "timeout" | "http" | "payload" | "unsupported";
+type HolidayErrorKind = "network" | "timeout" | "http" | "payload" | "unsupported";
 
 export class HolidayError extends Error {
   constructor(

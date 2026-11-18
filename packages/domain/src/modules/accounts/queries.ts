@@ -28,18 +28,17 @@ import {
   SOURCE_PRECEDENCE,
   totalSeries,
 } from "./rules";
-import { accountGroups, accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
+import { accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
 
 export type Account = typeof accounts.$inferSelect;
 export type BalanceEntry = typeof balanceEntries.$inferSelect;
-export type SnapshotRun = typeof snapshotRuns.$inferSelect;
-export type AccountGroup = typeof accountGroups.$inferSelect;
+type SnapshotRun = typeof snapshotRuns.$inferSelect;
 
 /**
  * Same day, more than one source: the order of `SOURCE_PRECEDENCE` (spec §7.1) — every source is
  * named, so a new one cannot fall into a tie by accident.
  */
-export const SOURCE_RANK = sql`case ${balanceEntries.source} ${sql.raw(
+const SOURCE_RANK = sql`case ${balanceEntries.source} ${sql.raw(
   [MOVEMENT_SOURCE, ...SOURCE_PRECEDENCE].map((source, rank) => `when '${source}' then ${rank}`).join(" "),
 )} else ${SOURCE_PRECEDENCE.length + 1} end`;
 
@@ -55,7 +54,7 @@ const NOT_A_READING = [...NOT_OBSERVED, "movement"] as const;
 const MONTH_OF = sql`date_trunc('month', ${balanceEntries.on})`;
 
 /** How many months the Overview and Accounts charts look back over. */
-export const WINDOW_MONTHS = 24;
+const WINDOW_MONTHS = 24;
 
 /**
  * The balance of each account on a day: its latest entry on or before it.
@@ -99,7 +98,7 @@ export async function balancesOn(
  * Months before the window are kept on purpose — the most recent one is a series' starting value
  * (spec §7.1), so a chart does not begin at `null` for an account that simply has not moved.
  */
-export async function monthlyPoints(
+async function monthlyPoints(
   ctx: Pick<Ctx, "userId">,
   through: CivilDate,
 ): Promise<Map<string, BalancePoint[]>> {
@@ -168,7 +167,7 @@ export async function observedDays(
 }
 
 /** What the balance after the manual movements is worked out from (`movementBalances`). */
-export interface MovementBasis {
+interface MovementBasis {
   /** One reading per day: the best source's value, and the latest moment any of them was taken. */
   readings: BalanceReading[];
   /** The days the app copied or rebuilt a balance on. */
@@ -320,7 +319,7 @@ export async function listSnapshotRuns(ctx: Pick<Ctx, "userId">, limit = 24): Pr
     .limit(limit);
 }
 
-export interface AccountRow {
+interface AccountRow {
   account: Account;
   /** The latest known balance, `null` while the account has none. */
   balance: Cents | null;
@@ -346,9 +345,9 @@ export interface AccountRow {
   stale: boolean;
 }
 
-export type BucketTotals = Record<Bucket, { total: Cents | null; partial: boolean; count: number }>;
+type BucketTotals = Record<Bucket, { total: Cents | null; partial: boolean; count: number }>;
 
-export interface AccountsView {
+interface AccountsView {
   /** What every total below is in: the user's display currency. Each row's own fields are not. */
   currency: DisplayCurrency;
   months: MonthKey[];

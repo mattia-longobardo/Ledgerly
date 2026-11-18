@@ -13,7 +13,7 @@ import type { ConfiguredPlugin } from "@ledgerly/domain/platform/plugin-config";
  * Why a call failed: a code of the contract, or `plugin_down` when the plugin itself did not
  * answer as the contract says (not reachable, a refused secret, a body that is not the contract's).
  */
-export type PluginCallCode = Exclude<PluginErrorCode, "unauthorized"> | "plugin_down";
+type PluginCallCode = Exclude<PluginErrorCode, "unauthorized"> | "plugin_down";
 
 export class PluginCallError extends Error {
   constructor(
@@ -27,7 +27,7 @@ export class PluginCallError extends Error {
 
 export type Fetch = typeof fetch;
 
-export interface CallOptions {
+interface CallOptions {
   /** Left out for a `GET`. */
   body?: object;
   timeoutMs?: number;

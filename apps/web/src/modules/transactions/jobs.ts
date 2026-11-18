@@ -135,7 +135,7 @@ type SyncOutcome =
   | "refused";
 
 /** What became of one Wallet pass, as the integrations dispatcher counts it. */
-export type WalletPassOutcome = SyncOutcome | "busy";
+type WalletPassOutcome = SyncOutcome | "busy";
 
 /** How far back the Wallet history is read: the depths a person can ask for, and the one a cursor holds. */
 export const WALLET_HISTORY = { choices: BACKFILL_CHOICES, depthOf: backfillDepth };

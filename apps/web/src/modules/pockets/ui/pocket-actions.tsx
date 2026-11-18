@@ -86,7 +86,7 @@ function ErrorLine({ error }: { error: string | null }) {
 }
 
 /** New pocket, or edit one (design modal "New pocket" / "Edit pocket"). */
-export function PocketDialog({
+function PocketDialog({
   open,
   onOpenChange,
   pocket,
@@ -211,7 +211,7 @@ export function PocketDialog({
 }
 
 /** "Add to <pocket>" (design Move modal): a deposit, with what is free and what the pocket becomes. */
-export function AddToPocketDialog({
+function AddToPocketDialog({
   open,
   onOpenChange,
   pocket,
@@ -309,7 +309,7 @@ export function AddToPocketDialog({
 }
 
 /** "Plan an expense": one expected on a day to come, which only lowers what the pocket would have left. */
-export function PlannedExpenseDialog({
+function PlannedExpenseDialog({
   open,
   onOpenChange,
   pocket,
@@ -393,7 +393,7 @@ export function PlannedExpenseDialog({
 }
 
 /** "Link an expense": files one of the recent expenses under a standalone pocket. */
-export function LinkExpenseDialog({
+function LinkExpenseDialog({
   open,
   onOpenChange,
   pocket,

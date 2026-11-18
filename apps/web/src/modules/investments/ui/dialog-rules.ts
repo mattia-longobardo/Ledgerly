@@ -21,7 +21,7 @@ export interface AssetChoice {
   currency: string;
 }
 
-export interface AssetDialogDefaults {
+interface AssetDialogDefaults {
   /** The class the search starts on; `""` is every class. */
   classFilter: AssetClass | "";
   /** The quote currency the search starts on; `""` is every currency. */
@@ -69,7 +69,7 @@ export function assetMatches(
 }
 
 /** How many days a bank movement may be from the operation and still be its candidate (§3.5). */
-export const LINK_DAYS = 3;
+const LINK_DAYS = 3;
 
 /** How far a bank movement is from the date being typed; a half-typed date is no date. */
 function daysApart(choice: string, on: string): number {

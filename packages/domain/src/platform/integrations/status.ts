@@ -18,7 +18,7 @@ export const SYNC_ERROR_CODES = [
   "provider_down",
   "invalid_data",
 ] as const;
-export type SyncErrorCode = (typeof SYNC_ERROR_CODES)[number];
+type SyncErrorCode = (typeof SYNC_ERROR_CODES)[number];
 
 export function isSyncErrorCode(value: unknown): value is SyncErrorCode {
   return typeof value === "string" && (SYNC_ERROR_CODES as readonly string[]).includes(value);
@@ -89,7 +89,7 @@ export function classifyFailure(cause: unknown): { code: SyncErrorCode | null; h
 /* The streak of failures */
 
 /** A finished reading, as the streak needs it. */
-export interface StreakRun {
+interface StreakRun {
   kind: string;
   state: string;
   errorCode: string | null;
@@ -135,8 +135,7 @@ export function failureStreak(runs: readonly StreakRun[]): { failures: number; e
 
 /* The five values */
 
-export const STATUS_VALUES = ["ok", "running", "late", "action", "paused"] as const;
-export type StatusValue = (typeof STATUS_VALUES)[number];
+export type StatusValue = "ok" | "running" | "late" | "action" | "paused";
 
 /** Which sentence a state shows (ux §2.3): the page gives it its words. */
 export type StatusText =
@@ -183,7 +182,7 @@ export interface SyncStatus {
  * of the plan: a connection is late when the reading its own schedule owed did not happen, and
  * its schedule is the only interval it has.
  */
-export const OVERDUE_GRACE_MINUTES = 15;
+const OVERDUE_GRACE_MINUTES = 15;
 
 /**
  * The state of one connection: the first rule that holds, in the order of ux §2.2.
@@ -220,13 +219,13 @@ export function syncStatus(facts: StatusFacts, now: Date): SyncStatus {
 /* The warnings (ux §6) */
 
 /** The failures in a row after which a person is told (ux §6.1). */
-export const FAILURES_BEFORE_WARNING = 3;
+const FAILURES_BEFORE_WARNING = 3;
 
 /** The one obsolescence constant (spec §7.1): past this many hours with no good reading, a source is stale. */
 export const STALE_AFTER_HOURS = 36;
 
 /** The days before the end of an access at which a person is told, the nearer one last. */
-export const EXPIRY_WARNING_DAYS = [14, 3] as const;
+type ExpiryWarningDays = 14 | 3;
 
 /**
  * The whole days left before an access ends, in the person's zone: 0 on the day itself. `null`
@@ -238,14 +237,14 @@ export function daysToExpiry(expiresAt: Date | null, now: Date, timeZone: string
 }
 
 /** The warning a number of days left belongs to: 3 from the third day, 14 from the fourteenth. */
-export function expiryWarning(days: number | null): (typeof EXPIRY_WARNING_DAYS)[number] | null {
+export function expiryWarning(days: number | null): ExpiryWarningDays | null {
   if (days === null) return null;
   if (days <= 3) return 3;
   return days <= 14 ? 14 : null;
 }
 
 /** Which warning a connection is owed after a reading, if any (ux §6.1, §6.5). */
-export type Warning = { kind: "failed"; todo: "renew" | "replaceKey" | null } | { kind: "stale" } | null;
+type Warning = { kind: "failed"; todo: "renew" | "replaceKey" | null } | { kind: "stale" } | null;
 
 export function warningFor(status: SyncStatus, facts: StatusFacts, now: Date): Warning {
   // A plugin turned off, a schedule turned off, accounts not chosen: the person already knows.
@@ -268,7 +267,7 @@ export function clock(instant: Date, timeZone: string): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
-export type RelativePast =
+type RelativePast =
   | { key: "now" }
   | { key: "minutes"; count: number }
   | { key: "hours"; count: number }
@@ -287,7 +286,7 @@ export function relativePast(at: Date, now: Date, timeZone: string): RelativePas
   return day === addDays(today, -1) ? { key: "yesterday", time } : { key: "date", date: day, time };
 }
 
-export type RelativeNext =
+type RelativeNext =
   | { key: "soon" }
   | { key: "today"; time: string }
   | { key: "tomorrow"; time: string }
@@ -306,7 +305,7 @@ export function relativeNext(at: Date | null, now: Date, timeZone: string): Rela
 /* The history (ux §4) */
 
 /** A run of `sync_runs`, as the history and the log read it. */
-export interface HistoryRun {
+interface HistoryRun {
   kind: string;
   state: string;
   origin: string | null;
@@ -333,9 +332,9 @@ const NEWS: Record<string, readonly { key: string; from: readonly string[] }[]> 
   flows: [{ key: "operationsNew", from: ["created"] }],
 };
 
-export type HistoryOutcome = "ok" | "failed" | "running" | "skipped";
+type HistoryOutcome = "ok" | "failed" | "running" | "skipped";
 
-export interface HistoryEntry {
+interface HistoryEntry {
   at: Date;
   outcome: HistoryOutcome;
   /** For a failed reading: its code, or null for one with none (a run older than the codes). */

@@ -4,7 +4,7 @@ import type { CivilDate } from "@ledgerly/domain/platform/dates";
 import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
 
 /** The words of the period: the server's `getTranslations` or the client's `useTranslations`. */
-export type PeriodT = ReturnType<typeof useTranslations<"investments.period">>;
+type PeriodT = ReturnType<typeof useTranslations<"investments.period">>;
 type T = PeriodT;
 
 /** The period in words (§2.1): "2026 · year to date", "2025", "since 28 Oct 2024", or the days. */

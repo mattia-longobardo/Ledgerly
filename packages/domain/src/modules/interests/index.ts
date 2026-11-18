@@ -4,16 +4,8 @@ export type { FreshnessOptions, StaleReason } from "./freshness";
 export { lookUpUnsure, markPosted, postEntry, postPending, retryPosting } from "./posting";
 export { interestsView, publishingRulesOn, ruleDetail, rulesOnAccount } from "./queries";
 export type { RuleRow } from "./queries";
-export {
-  CATEGORY_NOT_LINKED,
-  DEFAULT_RUN_HOUR,
-  RUN_HOURS,
-  formatRunHour,
-  fractionToPercent,
-  percentToFraction,
-  runsAt,
-} from "./rules";
-export type { PostingState, Tier } from "./rules";
+export { fractionToPercent, percentToFraction, runsAt } from "./rules";
+export type { Tier } from "./rules";
 export { interestRules } from "./schema";
 export {
   InterestError,

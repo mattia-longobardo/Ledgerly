@@ -23,7 +23,7 @@ export function yearsToRefresh(current: number): number[] {
   return [current, current + 1];
 }
 
-export function createHolidaysRefreshJob(options: HolidayFetchOptions = {}): JobDefinition {
+function createHolidaysRefreshJob(options: HolidayFetchOptions = {}): JobDefinition {
   return {
     name: "holidays-refresh",
     tier: "daily",

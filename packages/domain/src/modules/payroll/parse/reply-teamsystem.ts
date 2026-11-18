@@ -34,7 +34,7 @@ const PRINTED = 0.95;
 const SUMMED = 0.9;
 const BLANK = 0.9;
 
-export interface FieldEvidence extends EvidenceInput {
+interface FieldEvidence extends EvidenceInput {
   field: FieldName;
 }
 

@@ -6,7 +6,7 @@ import { getDb } from "@ledgerly/domain/platform/db";
 import type { JobDefinition, RecordedTier } from "./registry";
 import { jobRuns } from "@ledgerly/domain/platform/jobs";
 
-export type Status = "success" | "failed" | "skipped";
+type Status = "success" | "failed" | "skipped";
 export type Outcome = { job: string; status: Status };
 
 const MAX_ERROR_LENGTH = 2000;

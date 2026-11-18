@@ -31,7 +31,7 @@ export const AUTHORIZE_PATH = `${AUTH_BASE_PATH}/oauth2/authorize`;
 export const CONSENT_PAGE = "/oauth/consent";
 export const LOGIN_PAGE = "/sign-in";
 
-export function originOf(baseUrl: string): string {
+function originOf(baseUrl: string): string {
   return new URL(baseUrl).origin;
 }
 
@@ -109,7 +109,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
  * (Claude Code, MCP Inspector). Anything else is refused at registration (PERS-49 SEC-01): an
  * attacker's client could otherwise send the authorization code to a host of its own choosing.
  */
-export const DCR_REDIRECT_ALLOWLIST: readonly string[] = [
+const DCR_REDIRECT_ALLOWLIST: readonly string[] = [
   "https://claude.ai/api/mcp/auth_callback",
   "https://claude.com/api/mcp/auth_callback",
 ];

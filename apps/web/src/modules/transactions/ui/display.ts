@@ -50,17 +50,9 @@ export function categoryColors(
  * `transfer` on a giroconto with no other leg here (F2.5): it is still not spending, but it usually
  * means the other account is not linked.
  */
-export const ROW_BADGES = [
-  "manual",
-  "hidden",
-  "removedUpstream",
-  "edited",
-  "transfer",
-  "unpaired",
-  "pending",
-] as const;
 
-export type RowBadge = (typeof ROW_BADGES)[number];
+export type RowBadge =
+  "manual" | "hidden" | "removedUpstream" | "edited" | "transfer" | "unpaired" | "pending";
 
 export interface BadgeSource {
   hiddenAt: Date | null;
@@ -108,7 +100,7 @@ export function amountToneOf(row: { type: TransactionType; amountCents: Cents })
   return row.type === "transfer" ? "muted" : toneOfSign(row.amountCents);
 }
 
-export interface BreakdownInput {
+interface BreakdownInput {
   id: string;
   name: string;
   color: string;
@@ -123,7 +115,7 @@ export interface BreakdownBar extends BreakdownInput {
 }
 
 /** The "By category" card as it is drawn: the rows, and the total those rows come to. */
-export interface Breakdown {
+interface Breakdown {
   bars: BreakdownBar[];
   /**
    * What the rows of the card add up to, measured the way the card measures them: by size. It is
@@ -162,7 +154,7 @@ export function categoryBreakdown(items: readonly BreakdownInput[]): Breakdown {
 }
 
 /** A slice of the card with its group (F2.5), colours already decided by the page. */
-export interface BreakdownSlice extends BreakdownInput {
+interface BreakdownSlice extends BreakdownInput {
   parentId: string | null;
   parentName: string | null;
   parentColor: string | null;

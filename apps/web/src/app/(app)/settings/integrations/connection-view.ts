@@ -52,7 +52,7 @@ export interface Capabilities {
 /** A provider whose row sits in a card with its own dialogs: key, test, disconnect. */
 export const OWN_DIALOGS: Capabilities = { update: true, replaceKey: "own", test: true, disconnect: true };
 
-export interface ConnectionFacts {
+interface ConnectionFacts {
   connection: Connection;
   label: ConnectionLabel;
   detail: string | null;
@@ -75,7 +75,7 @@ export interface ConnectionFacts {
 }
 
 /** The readings a row shows, and how many runs are read to make them. */
-export const HISTORY_ITEMS = 10;
+const HISTORY_ITEMS = 10;
 export const RUNS_PER_CONNECTION = 40;
 
 const ADVANCED = "/settings/integrations/advanced";

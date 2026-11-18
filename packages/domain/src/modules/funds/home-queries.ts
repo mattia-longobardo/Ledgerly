@@ -13,7 +13,7 @@ import { type Fund, requireFund } from "./service";
 import { competencePeriod, type DebitStatus } from "./sources";
 import { competenceOn } from "./tabs";
 
-export interface HomeFundRow {
+interface HomeFundRow {
   home: HomeFund;
   fund: Fund;
   color: string | null;

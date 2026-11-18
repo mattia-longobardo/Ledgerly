@@ -26,20 +26,17 @@ import {
  */
 export const MIN_SYNC_GAP_MINUTES = 15;
 /** The longest interval a rule may repeat at: a rule restarts every day at its `from`. */
-export const MAX_INTERVAL_MINUTES = 24 * 60;
+const MAX_INTERVAL_MINUTES = 24 * 60;
 export const MAX_RULES = 8;
 /** One rule's times: as many as the gap allows in a day. */
 export const MAX_TIMES = (24 * 60) / MIN_SYNC_GAP_MINUTES;
 /** How far ahead a schedule is looked at: a cron that names 29 February runs once in four years. */
-export const HORIZON_DAYS = 4 * 366 + 7;
+const HORIZON_DAYS = 4 * 366 + 7;
 /** How far ahead the gap between passes is checked: every weekday of every kind of month. */
-export const GAP_CHECK_DAYS = 400;
+const GAP_CHECK_DAYS = 400;
 
 const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
 const timeOfDay = z.string().regex(TIME_OF_DAY);
-
-/** ISO weekdays: 1 = Monday … 7 = Sunday. `-1` as a day of the month is its last day. */
-export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 export const LAST_DAY = -1;
 
 const sortedUnique = <T extends number | string>(values: T[]): T[] =>
@@ -67,7 +64,7 @@ const daysSchema = z.discriminatedUnion("kind", [
 ]);
 export type SyncDays = z.output<typeof daysSchema>;
 
-export const intervalRuleSchema = z
+const intervalRuleSchema = z
   .object({
     kind: z.literal("interval"),
     everyMinutes: z.number().int().min(MIN_SYNC_GAP_MINUTES).max(MAX_INTERVAL_MINUTES),
@@ -77,13 +74,13 @@ export const intervalRuleSchema = z
   })
   .refine((rule) => rule.until >= rule.from, { path: ["until"] });
 
-export const timesRuleSchema = z.object({
+const timesRuleSchema = z.object({
   kind: z.literal("times"),
   times: z.array(timeOfDay).min(1).max(MAX_TIMES).transform(sortedUnique),
   days: daysSchema,
 });
 
-export const cronRuleSchema = z.object({
+const cronRuleSchema = z.object({
   kind: z.literal("cron"),
   expression: z
     .string()
@@ -95,9 +92,6 @@ export const cronRuleSchema = z.object({
 
 export const syncRuleSchema = z.union([intervalRuleSchema, timesRuleSchema, cronRuleSchema]);
 export type SyncRule = z.output<typeof syncRuleSchema>;
-export type IntervalRule = Extract<SyncRule, { kind: "interval" }>;
-export type TimesRule = Extract<SyncRule, { kind: "times" }>;
-export type CronRule = Extract<SyncRule, { kind: "cron" }>;
 export type RuleKind = SyncRule["kind"];
 
 /** The shape a stored or submitted schedule must have. `rules: []` is "manual". */
@@ -149,13 +143,13 @@ export function minutesOf(time: string): number {
   return hours * 60 + minutes;
 }
 
-export function timeOf(minutes: number): string {
+function timeOf(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
 /* A five-field cron expression: minute hour day-of-month month day-of-week */
 
-export interface CronFields {
+interface CronFields {
   minutes: Set<number>;
   hours: Set<number>;
   monthDays: Set<number>;
@@ -281,7 +275,7 @@ export function ruleMinutesOn(rule: SyncRule, day: CivilDate): number[] {
 }
 
 /** The wall-clock minutes of one civil day at which the schedule runs: every rule's, merged. */
-export function scheduleMinutesOn(schedule: SyncSchedule, day: CivilDate): number[] {
+function scheduleMinutesOn(schedule: SyncSchedule, day: CivilDate): number[] {
   if (schedule.rules.length === 1) return ruleMinutesOn(schedule.rules[0], day);
   return sortedUnique(schedule.rules.flatMap((rule) => ruleMinutesOn(rule, day)));
 }

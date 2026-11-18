@@ -10,7 +10,7 @@ export const DOCUMENT_KINDS = ["payslip", "cometa_operations", "cometa_position"
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 /** The kinds the app reads and stores. */
-export const READ_KINDS = ["payslip"] as const;
+const READ_KINDS = ["payslip"] as const;
 export type ReadKind = (typeof READ_KINDS)[number];
 
 export const isReadKind = (kind: DocumentKind): kind is ReadKind =>
@@ -38,7 +38,6 @@ export const EVIDENCE_UNITS = ["eur", "hours", "text", "date"] as const;
 export type EvidenceUnit = (typeof EVIDENCE_UNITS)[number];
 
 export const VERIFICATION_STATES = ["unverified", "confirmed", "corrected"] as const;
-export type VerificationState = (typeof VERIFICATION_STATES)[number];
 
 /**
  * The transitions of spec §7.8, the only ones a service may ask the database for. `extracting` is
@@ -80,9 +79,9 @@ export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 export const MIN_TEXT_CHARS = 200;
 
 /** How long an original is kept by default (spec §7.8); an admin setting from F8. */
-export const RETENTION_YEARS = 10;
+const RETENTION_YEARS = 10;
 
-export type SniffedFormat = "pdf" | "xls_html" | "xls" | "xlsx";
+type SniffedFormat = "pdf" | "xls_html" | "xls" | "xlsx";
 
 const startsWith = (bytes: Uint8Array, signature: readonly number[], at = 0) =>
   signature.every((byte, index) => bytes[at + index] === byte);

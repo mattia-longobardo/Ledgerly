@@ -3,7 +3,7 @@ import { type MonthKey, isCivilDate } from "../../platform/dates";
 import type { Cents } from "../../platform/money";
 
 /** How close to the limit a budget turns "Near limit" (spec §7.3): spent ≥ 85 % of it. */
-export const NEAR_LIMIT_PERCENT = 85n;
+const NEAR_LIMIT_PERCENT = 85n;
 
 export type BudgetStatus = "over" | "near" | "on_track";
 
@@ -44,7 +44,7 @@ export function percentOf(spent: Cents, limit: Cents): number {
 }
 
 /** A category as the budgets see it: the tree, and the colour a sub-category borrows. */
-export interface BudgetCategory {
+interface BudgetCategory {
   id: string;
   parentId: string | null;
   name: string;
@@ -63,7 +63,7 @@ export function scopeKey(scope: BudgetScope): string {
 }
 
 /** One month's spending of one category on one account, positive. */
-export interface Spending {
+interface Spending {
   categoryId: string | null;
   accountId: string;
   cents: Cents;
@@ -86,7 +86,7 @@ export interface BudgetRow extends BudgetScope {
   percent: number;
 }
 
-export interface BudgetRowsResult {
+interface BudgetRowsResult {
   rows: BudgetRow[];
   /**
    * The limit of the budgets no other budget contains, and what the budgets cover: each movement
@@ -213,7 +213,7 @@ export const stopLimitSchema = z
  * The alert thresholds a budget starts with when nobody has chosen any: the "Near limit" of
  * {@link budgetStatus} and the moment it turns "Over".
  */
-export const DEFAULT_ALERT_THRESHOLDS: readonly number[] = [Number(NEAR_LIMIT_PERCENT), 100];
+const DEFAULT_ALERT_THRESHOLDS: readonly number[] = [Number(NEAR_LIMIT_PERCENT), 100];
 
 /** The thresholds the alert form offers as one-click choices; any other whole percent may be typed. */
 export const ALERT_PRESETS: readonly number[] = [50, 75, 85, 90, 100];

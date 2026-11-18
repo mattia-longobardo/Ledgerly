@@ -14,7 +14,7 @@ import { pocketExpenseLinks, pocketMovements, pocketPlannedExpenses, pockets } f
 export type Pocket = typeof pockets.$inferSelect;
 export type PocketMovement = typeof pocketMovements.$inferSelect;
 
-export type PocketErrorCode =
+type PocketErrorCode =
   | "not_found"
   | "invalid_account"
   | "duplicate_name"

@@ -12,16 +12,13 @@ export {
 export type { Account } from "./queries";
 export {
   ACCOUNT_TYPES,
-  CONNECTION_CHANNELS,
   MANUAL_MOVEMENT_MODES,
-  REMINDERS,
-  TRENDS,
   accountMode,
   hasIbanField,
   movementEffect,
   parseAmount,
 } from "./rules";
-export type { AccountMode, AccountType, ConnectionChannel, EntrySource, MovementEffect } from "./rules";
+export type { AccountMode, MovementEffect } from "./rules";
 export {
   AccountError,
   accountDailyBalances,

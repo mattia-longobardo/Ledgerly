@@ -26,7 +26,7 @@ import { xirr, type Xirr } from "./xirr";
 
 // ——— The period (§1.2, §2.1) ————————————————————————————————————————————————————————————————
 
-export type PeriodKind = "year" | "all" | "custom";
+type PeriodKind = "year" | "all" | "custom";
 
 export interface PnlPeriod {
   kind: PeriodKind;
@@ -98,7 +98,7 @@ export interface PnlService {
 }
 
 /** The display currency and the rates that convert every service into it (§4.5). */
-export interface Display {
+interface Display {
   currency: string;
   rates: RateTable;
 }
@@ -122,7 +122,7 @@ export interface Exit {
 }
 
 /** A leg of an asset moved in or out (§4.9): the value it moved at and the history it carried. */
-export interface TransferRecord {
+interface TransferRecord {
   eventId: string;
   on: CivilDate;
   holdingId: string;
@@ -133,7 +133,7 @@ export interface TransferRecord {
   transferGroupId: string | null;
 }
 
-export interface CostState {
+interface CostState {
   quantity: bigint | null;
   costCents: Cents;
   /** A by-value position (no quantity): its value at the last valuation, moved by buys and sells. */
@@ -146,12 +146,12 @@ export interface CostState {
  * Where a period's replay starts (PERS-145): the end of `on` (s⁻), each holding open then with its
  * quantity and, as its cost, its value that day — the basis of the period (§4.4).
  */
-export interface ReplayStart {
+interface ReplayStart {
   on: CivilDate;
   states: ReadonlyMap<string, CostState>;
 }
 
-export interface Replay {
+interface Replay {
   exits: Exit[];
   transfers: TransferRecord[];
   /** The cost of every holding at the end of `through`, in the period in force then. */
@@ -403,9 +403,9 @@ export interface PnlParts {
 }
 
 /** `stale`: a price or a rate of the first or the last day is an old one (§4.6). */
-export type PnlStatus = "verified" | "stale" | "undetermined";
+type PnlStatus = "verified" | "stale" | "undetermined";
 
-export type PnlReason =
+type PnlReason =
   /** The value at the start or the end used a saved rate or misses a price. */
   | "stale_price"
   /** The flows are not covered for the whole period: it starts later (`partial`) or not at all. */
@@ -417,7 +417,7 @@ export type PnlReason =
   /** A rate to the display currency is missing. */
   | "no_rate";
 
-export interface PeriodReturn {
+interface PeriodReturn {
   /**
    * The period's return (§4.3): Modified Dietz; when it has no average capital to divide by — the
    * money went in and out inside the period, profit included (eToro 2026) — the P&L on the money
@@ -433,7 +433,7 @@ export interface PeriodReturn {
 }
 
 /** A flow of the period, signed (in positive), in the account's currency and the display one. */
-export interface PeriodFlow {
+interface PeriodFlow {
   on: CivilDate;
   cents: Cents;
   displayCents: Cents | null;
@@ -495,8 +495,8 @@ export interface ServicePnl {
 }
 
 /** Below this, an average capital is "almost nothing" (§4.3): 1 €, or 1 % of the gross capital. */
-export const MIN_CAPITAL_CENTS = 100n;
-export const MIN_CAPITAL_SHARE = 0.01;
+const MIN_CAPITAL_CENTS = 100n;
+const MIN_CAPITAL_SHARE = 0.01;
 
 /**
  * The first day `t` of the stretch ending on `end` in which no money can have moved although the
@@ -504,7 +504,7 @@ export const MIN_CAPITAL_SHARE = 0.01;
  * always the same, and the book has no event in `[t, end]` — a deposit or a withdrawal would have
  * moved the value, and one in and out on the same day changes no P&L. `end + 1` when there is none.
  */
-export function flatSince(book: Book, end: CivilDate): CivilDate {
+function flatSince(book: Book, end: CivilDate): CivilDate {
   const totals = new Map<CivilDate, Cents>();
   for (const reading of book.readings) {
     if (reading.status === "pending_zero") continue;
@@ -556,7 +556,7 @@ const DATA_RESULT: ReadonlySet<AdjustmentClass> = new Set(["data", "result"]);
  * moves only with its quantity. `period`: the basis of a period (PERS-145), its value at s⁻ or what
  * it cost when bought in the period.
  */
-export type CostSource = "events" | "provider" | "inferred" | "period";
+type CostSource = "events" | "provider" | "inferred" | "period";
 
 export interface PositionAt {
   /** The holding's id; a provider position no event ever touched is `asset:<assetId>:<product>`. */
@@ -577,7 +577,7 @@ export interface PositionAt {
   unrealizedCents: Cents | null;
 }
 
-export interface PositionsAt {
+interface PositionsAt {
   /**
    * `total`: a manual account kept by value only, which has no positions; `none`: no period yet;
    * `unknown`: the reading in force says a total and nothing of what it holds (a day of eToro's
@@ -839,7 +839,7 @@ function returnOf(
 const signed = (entry: FlowEntry): Cents => (entry.kind === "withdrawal" ? -entry.cents : entry.cents);
 
 /** Under this value a provider's position is dust (PERS-145): no open position, no unrealized. */
-export const OPEN_MIN_CENTS = 100n;
+const OPEN_MIN_CENTS = 100n;
 
 const sumOf = (map: ReadonlyMap<string, Cents>): Cents =>
   [...map.values()].reduce((sum, one) => sum + one, 0n);
@@ -849,7 +849,7 @@ const sumOf = (map: ReadonlyMap<string, Cents>): Cents =>
  * provider's opening is booked on that day — what it held then, at that day's close, is a flow in.
  * `null` for a manual service, or a synced one with no such opening.
  */
-export function cutoffOf(book: Book): CivilDate | null {
+function cutoffOf(book: Book): CivilDate | null {
   const first = sortedPeriods(book)[0];
   if (!first || first.origin === "manual") return null;
   const opened = book.events.some(
@@ -1323,7 +1323,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
 
 // ——— The portfolio (§4.6, §4.8, §4.9) ——————————————————————————————————————————————————————
 
-export interface Contribution {
+interface Contribution {
   accountId: string;
   cents: Cents;
   /** The divergent bar (§4.8): −1…1, scaled on the largest |P&L| of the rows. */

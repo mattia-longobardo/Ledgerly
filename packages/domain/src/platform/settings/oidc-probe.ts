@@ -11,7 +11,7 @@
  * Nothing the provider sends comes back: the verdict is a message key, never its body (spec §5.4).
  */
 
-export const OIDC_PROBE_TIMEOUT_MS = 8_000;
+const OIDC_PROBE_TIMEOUT_MS = 8_000;
 
 export type OidcProbeOutcome =
   | "ok"

@@ -75,7 +75,7 @@ export class SwitchFailure extends Error {
 }
 
 /** One movement of the report, ready for a page: no id of a provider, money as text. */
-export interface ReportMovement {
+interface ReportMovement {
   day: CivilDate;
   text: string;
   /** Cents, signed, as text. */
@@ -479,7 +479,7 @@ async function compare(
 }
 
 /** A join takes an account whose every movement is found here, and none written by hand. */
-export function joinReady(join: SwitchReport["join"]): boolean {
+function joinReady(join: SwitchReport["join"]): boolean {
   return join === null || (join.unmatched.length === 0 && join.manual === 0);
 }
 

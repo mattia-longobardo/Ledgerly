@@ -20,8 +20,8 @@ import {
   saveLeaveRange,
 } from "@ledgerly/domain/timeoff";
 
-export type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
-export interface RefusedDate {
+type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
+interface RefusedDate {
   on: string;
   reason: "weekend" | "holiday";
 }
@@ -58,7 +58,7 @@ function nudgeTrek(ctx: Ctx): void {
 }
 
 /** The allowance modal: days as typed, an empty field being nothing stated. */
-export interface AllowanceFormInput {
+interface AllowanceFormInput {
   year: string;
   vacationDays: string;
   rolDays: string;

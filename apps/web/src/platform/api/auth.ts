@@ -14,7 +14,7 @@ import { MAX_PER_WINDOW, takeSlot } from "./rate-limit";
  * Who called: an OAuth access token with `aud` = `/api/v1`, the only credential accepted since the
  * personal access tokens were removed (docs/auth-design.md T5).
  */
-export interface ApiIdentity {
+interface ApiIdentity {
   kind: "oauth";
   ctx: Ctx;
   scopes: Scope[];

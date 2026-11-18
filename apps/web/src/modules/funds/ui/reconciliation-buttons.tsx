@@ -11,7 +11,7 @@ import { notify } from "@/ui/toast";
 import { clearDecisionAction, decideDifferenceAction } from "../actions";
 import { ErrorLine, useResult } from "./fund-forms";
 
-export interface DifferenceTarget {
+interface DifferenceTarget {
   year: number;
   quarter: number;
   component: string;

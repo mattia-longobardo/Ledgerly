@@ -2,10 +2,10 @@ import { type CivilDate, isCivilDate } from "./dates";
 import { type Cents, centsToDecimal } from "./money";
 
 /** The saved `number_format` preference: the locale whose conventions a number starts from. */
-export type NumberFormatName = "it-IT" | "en-US" | "fr-FR";
-export type DecimalSeparator = "." | ",";
+type NumberFormatName = "it-IT" | "en-US" | "fr-FR";
+type DecimalSeparator = "." | ",";
 /** Where the euro sign goes: `€ 1.234,56` or `1.234,56 €`. */
-export type CurrencyPosition = "before" | "after";
+type CurrencyPosition = "before" | "after";
 
 /**
  * A number format plus the two explicit overrides a user can set (Settings › Profile):

@@ -17,7 +17,7 @@ import {
   undoSwitch,
 } from "./switch";
 
-export type SwitchRefusal = { ok: false; error: SwitchError; retryAt: string | null };
+type SwitchRefusal = { ok: false; error: SwitchError; retryAt: string | null };
 
 function refusal(error: unknown): SwitchRefusal {
   if (error instanceof SwitchFailure) {

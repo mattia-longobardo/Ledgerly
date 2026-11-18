@@ -26,7 +26,7 @@ import { Button } from "./button";
 type Value = string | boolean;
 
 /** What a form's controls show, in order; buttons and hidden fields are not something one edits. */
-export function readForm(form: HTMLFormElement): Value[] {
+function readForm(form: HTMLFormElement): Value[] {
   return Array.from(form.elements).flatMap((element): Value[] => {
     if (element instanceof HTMLInputElement) {
       if (element.type === "checkbox" || element.type === "radio") return [element.checked];
@@ -44,7 +44,7 @@ export function readForm(form: HTMLFormElement): Value[] {
  * listens to, so a controlled field's state follows; a checkbox is clicked, which is how React
  * hears it change.
  */
-export function writeForm(form: HTMLFormElement, values: readonly Value[]): void {
+function writeForm(form: HTMLFormElement, values: readonly Value[]): void {
   let index = 0;
   for (const element of Array.from(form.elements)) {
     if (element instanceof HTMLInputElement) {

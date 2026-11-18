@@ -16,7 +16,7 @@ import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink
  * (spec §9.4), so neither this component nor the page that renders it can leak one. Replacing the
  * link means stating both again, which is the honest cost of never sending them to the browser.
  */
-export interface TrekCardProps {
+interface TrekCardProps {
   row: ConnectionRowProps;
   connected: boolean;
   /** Days still waiting to reach Trek: the one number that says the two calendars disagree. */

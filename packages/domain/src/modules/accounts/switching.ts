@@ -15,7 +15,7 @@ import { accounts, accountSwitches, balanceEntries } from "./schema";
 
 type Who = Pick<Ctx, "userId">;
 
-export type AccountSwitch = typeof accountSwitches.$inferSelect;
+type AccountSwitch = typeof accountSwitches.$inferSelect;
 
 /** The open switch of an account, `null` when it has none (one at most: `account_switches_open_uq`). */
 export async function openSwitchOf(ctx: Who, accountId: string): Promise<AccountSwitch | null> {
@@ -65,7 +65,7 @@ export async function lastSourceBalance(
   return row ? { on: row.on as CivilDate, cents: row.cents } : null;
 }
 
-export interface SwitchRecord {
+interface SwitchRecord {
   accountId: string;
   toProvider: string;
   toProviderAccountId: string;

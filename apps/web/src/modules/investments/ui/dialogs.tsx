@@ -344,7 +344,7 @@ function NumberField({
 
 // ——— Catalog: the manual account —————————————————————————————————————————————————————————
 
-export interface ExistingChoice {
+interface ExistingChoice {
   id: string;
   name: string;
   currency: string;
@@ -1172,7 +1172,7 @@ function ConnectDialog({
 }
 
 /** "Sync now" (§4.3): a minute apart at least, which the service enforces (SEC-09). */
-export function SyncNowButton({
+function SyncNowButton({
   accountId,
   size = "sm",
   variant = "primary",

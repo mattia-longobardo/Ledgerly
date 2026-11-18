@@ -31,7 +31,7 @@ export const STATE_TONE: Record<DocumentState, "pos" | "warn" | "neg" | "accent"
 };
 
 /** A stored value as the person reads it: money, hours, a date, or the text itself. */
-export function displayValue(field: FieldName, value: string | null, format: Format): string {
+function displayValue(field: FieldName, value: string | null, format: Format): string {
   if (value === null) return NULL_DISPLAY;
   const unit = FIELDS[field].unit;
   if (unit === "eur") return /^-?\d+(\.\d{1,2})?$/.test(value) ? formatMoney(parseCents(value), format.numberFormat) : value;
@@ -41,7 +41,7 @@ export function displayValue(field: FieldName, value: string | null, format: For
 }
 
 /** A stored value as the person would type it into the correction field. */
-export function inputValue(field: FieldName, value: string | null, format: Format): string {
+function inputValue(field: FieldName, value: string | null, format: Format): string {
   if (value === null) return "";
   const unit = FIELDS[field].unit;
   return unit === "eur" || unit === "hours" ? formatAmountInput(parseCents(value), format.numberFormat) : value;
@@ -93,7 +93,7 @@ export function fieldGroups(evidence: readonly Evidence[], format: Format): { gr
   })).filter((group) => group.fields.length > 0);
 }
 
-export interface RegisterCells {
+interface RegisterCells {
   id: string;
   href: string;
   month: string;

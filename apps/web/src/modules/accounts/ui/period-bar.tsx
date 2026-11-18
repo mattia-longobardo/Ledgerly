@@ -8,10 +8,10 @@ import type { Params } from "@/ui/url";
 import { LinkTabs, PeriodStepper } from "./controls";
 
 /** The words of the control: the server's `getTranslations` or the client's `useTranslations`. */
-export type PeriodBarT = ReturnType<typeof useTranslations<"expenses.filters">>;
+type PeriodBarT = ReturnType<typeof useTranslations<"expenses.filters">>;
 
 /** What the control draws of a period: Accounts' `PeriodQuery`, or the one of Funds and Investments. */
-export interface PeriodBarPeriod {
+interface PeriodBarPeriod {
   preset: string | null;
   offset: number;
   /** `null` for a preset with no window of its own ("All"): the control then shows `whole`. */

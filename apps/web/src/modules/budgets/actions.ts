@@ -9,7 +9,7 @@ import { requireSession } from "@/platform/auth/session";
 import { type AlertSettings, budgetSlug, type BudgetScope } from "@ledgerly/domain/budgets";
 import { BudgetError, saveAlerts, setLimit, stopLimit } from "@ledgerly/domain/budgets";
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+type ActionResult = { ok: true } | { ok: false; error: string };
 
 function failed(error: unknown): { ok: false; error: string } {
   if (error instanceof BudgetError) return { ok: false, error: error.code };

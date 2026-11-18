@@ -49,8 +49,8 @@ import {
 } from "./source-text";
 import { FIELD_GRID } from "@/ui/section";
 
-export const WIZARD_STEPS = ["fund", "sources", "fees", "review"] as const;
-export type WizardStep = (typeof WIZARD_STEPS)[number];
+const WIZARD_STEPS = ["fund", "sources", "fees", "review"] as const;
+type WizardStep = (typeof WIZARD_STEPS)[number];
 
 const HOME = "/funds" as Route;
 const stepHref = (step: WizardStep) => `/funds/new?step=${step}` as Route;

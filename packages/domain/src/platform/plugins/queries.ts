@@ -129,7 +129,7 @@ export async function listPluginConnections(
 }
 
 /** A plugin as one person sees it in Settings › Integrations (§2.2). */
-export interface UserPlugin {
+interface UserPlugin {
   id: string;
   name: string;
   description: string;
@@ -191,7 +191,7 @@ export async function isPluginActive(ctx: Pick<Ctx, "userId">, pluginId: string)
 }
 
 /** What a page may know about a person's credentials: that they are saved, since when, and if refused. */
-export interface CredentialsStatus {
+interface CredentialsStatus {
   saved: boolean;
   savedAt: Date | null;
   invalid: boolean;

@@ -13,7 +13,7 @@ import {
 import { feeModes, needsPeriod } from "@ledgerly/domain/funds/client";
 import { type FeeForm, fractionOfPercent } from "@ledgerly/domain/funds/client";
 
-export type FeesT = ReturnType<typeof useTranslations<"funds.fees">>;
+type FeesT = ReturnType<typeof useTranslations<"funds.fees">>;
 
 /** One choice of "Applies to": a source, or a component of a payslip source. */
 export interface FeeScopeOption {

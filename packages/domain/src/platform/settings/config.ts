@@ -34,7 +34,7 @@ export function keyRing(): KeyRing {
   return ring;
 }
 
-export interface SettingsRow {
+interface SettingsRow {
   value: Record<string, unknown> | null;
   sealed: Buffer | null;
   updatedAt: Date;
@@ -138,7 +138,7 @@ export async function oidcConfig(): Promise<OidcConfig> {
 
 /* Outgoing mail (spec §9.4) */
 
-export interface SmtpConfig {
+interface SmtpConfig {
   host: string;
   port: number;
   encryption: Encryption;
@@ -148,7 +148,7 @@ export interface SmtpConfig {
   updatedAt: Date | null;
 }
 
-export function smtpFromEnv(): SmtpConfig {
+function smtpFromEnv(): SmtpConfig {
   const env = readEnv();
   return {
     host: env.SMTP_HOST,

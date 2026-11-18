@@ -47,7 +47,7 @@ export function cashImpact(op: OperationLike): Cents {
 }
 
 /** The holdings a provider keeps open at the end of each event (trades in and out, A6). */
-function openAfter(events: readonly EventLike[], providerHoldings: ReadonlySet<string>) {
+function openAfter(providerHoldings: ReadonlySet<string>) {
   const quantities = new Map<string, bigint>();
   const signs: Partial<Record<OperationLike["kind"], 1n | -1n>> = {
     opening_position: 1n,
@@ -74,12 +74,12 @@ function openAfter(events: readonly EventLike[], providerHoldings: ReadonlySet<s
  * The cash of each day read, when it is known: the provider's own figure, or — for a day of history
  * with a total only (eToro) — the whole total, when its trades leave no position open that day.
  */
-export function cashByDay(book: Book): Map<CivilDate, Cents | null> {
+function cashByDay(book: Book): Map<CivilDate, Cents | null> {
   const providerHoldings = new Set(
     book.holdings.filter((holding) => holding.origin === "provider").map((one) => one.id),
   );
   const events = [...book.events].sort(compareEvents);
-  const step = openAfter(events, providerHoldings);
+  const step = openAfter(providerHoldings);
   let next = 0;
   let open = false;
   const result = new Map<CivilDate, Cents | null>();
@@ -106,7 +106,7 @@ function cashOf(reading: ReadingLike, open: boolean): Cents | null {
 }
 
 /** A stretch of days whose cash moved by more, or less, than its entries say (PERS-145). */
-export interface CashGap {
+interface CashGap {
   /** The first day of the stretch (the day after the last cash known before it). */
   from: CivilDate;
   /** The last day: the entry is booked on it. */

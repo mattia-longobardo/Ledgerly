@@ -12,7 +12,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** Seconds of clock drift tolerated on `exp`/`nbf`/`iat`: the issuer is this very process. */
 const CLOCK_TOLERANCE_SECONDS = 5;
 
-export interface AccessTokenClaims {
+interface AccessTokenClaims {
   sub: string;
   clientId: string;
   scopes: string[];
@@ -48,7 +48,7 @@ export async function verifyAccessJwt(
   return { sub: payload.sub, clientId, scopes: scope.split(" ").filter(Boolean) };
 }
 
-export interface ClientRow {
+interface ClientRow {
   clientId: string;
   userId: string | null;
   disabled: boolean | null;

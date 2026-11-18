@@ -29,22 +29,20 @@ import {
  * reads the rows and today's date.
  */
 
-export const STATUSES = [
-  "accrued_not_due",
-  "transferred",
-  "to_verify",
-  "present",
-  "invested",
-  "reconciled",
-  "discrepancy",
-  "incomplete",
-] as const;
-export type Status = (typeof STATUSES)[number];
+export type Status =
+  | "accrued_not_due"
+  | "transferred"
+  | "to_verify"
+  | "present"
+  | "invested"
+  | "reconciled"
+  | "discrepancy"
+  | "incomplete";
 
 /** Why a quarter's data is incomplete: a payslip of its own is missing, or the export is older
  * than the deadline it would have to cover. "No export at all" is not one of them: a fund fed by
  * the payslips alone is complete, and its quarters read `transferred` once their deadline is past. */
-export type IncompleteReason = "missing_payslip" | "stale_export";
+type IncompleteReason = "missing_payslip" | "stale_export";
 
 export interface CompetenceLike {
   id: string;
@@ -78,7 +76,7 @@ export interface OperationLike {
   feesUnknown?: boolean;
 }
 
-export interface DecisionLike {
+interface DecisionLike {
   year: number;
   quarter: number;
   component: Component;

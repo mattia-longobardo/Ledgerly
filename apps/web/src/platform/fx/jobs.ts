@@ -49,7 +49,7 @@ export async function refreshFxRates(
   return { ranges: ranges.length, fetched, inserted, earliest: after.earliest, latest: after.latest };
 }
 
-export function createFxRatesRefreshJob(options: FxFetchOptions = {}): JobDefinition {
+function createFxRatesRefreshJob(options: FxFetchOptions = {}): JobDefinition {
   return { name: "fx-rates-refresh", tier: "daily", run: () => refreshFxRates(options) };
 }
 

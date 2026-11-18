@@ -79,7 +79,7 @@ export interface KindView {
   carriedMinutes: number;
 }
 
-export interface TimeOffView {
+interface TimeOffView {
   year: number;
   today: CivilDate;
   minutesPerDay: number;
@@ -360,7 +360,7 @@ function byDateThenKind(a: LeaveRow, b: LeaveRow): number {
  * year the user has stated an allowance for. Not a bare range around today — a year nobody has
  * put anything in is a year with nothing to show.
  */
-export function yearsOffered(shown: number, stated: readonly number[]): number[] {
+function yearsOffered(shown: number, stated: readonly number[]): number[] {
   const current = Number(new Date().toISOString().slice(0, 4));
   return [...new Set([current, shown, ...stated])].sort((a, b) => a - b);
 }

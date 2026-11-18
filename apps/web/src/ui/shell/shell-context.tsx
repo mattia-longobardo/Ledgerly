@@ -6,7 +6,7 @@ import { SIDEBAR_COOKIE, type SidebarState } from "./sidebar-state";
 
 const WIDE_QUERY = "(min-width: 1280px)";
 
-export interface ShellLabels {
+interface ShellLabels {
   product: string;
   primary: string;
   groups: { finance: string; work: string; system: string };

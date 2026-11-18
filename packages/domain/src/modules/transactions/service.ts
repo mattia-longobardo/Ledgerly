@@ -57,7 +57,7 @@ import { type ProviderGroupRef, TaxonomyError, adoptOrCreateCategory, adoptOrCre
 
 // What the pass of a source needs of the files beside this one: a platform file reaches a module
 // through the entries it already has (`baselines/modularity.json`).
-export { MAX_SENDS_PER_PASS, markNotSent, type PendingSend, pendingSends, settleSent } from "./sending";
+export { markNotSent, pendingSends, settleSent } from "./sending";
 export { recordSourceCategories, sourceCategoryFor } from "./source-categories";
 
 /**
@@ -65,7 +65,7 @@ export { recordSourceCategories, sourceCategoryFor } from "./source-categories";
  * amount and date belong to Wallet and no local edit may claim them. `invalid_reference` is a
  * category or label that is not this user's — the isolation of §4.4 seen from the write side.
  */
-export type TransactionErrorCode =
+type TransactionErrorCode =
   | "not_found"
   | "provider_owned"
   | "invalid_reference"
@@ -105,7 +105,7 @@ function parseIds(ids: readonly string[]): string[] {
  * created, changed, or already right — and `removed`/`restored` report what the re-read window
  * said about the rows the provider did not send back.
  */
-export interface UpsertOutcome {
+interface UpsertOutcome {
   created: number;
   updated: number;
   skipped: number;
@@ -113,7 +113,7 @@ export interface UpsertOutcome {
   restored: number;
 }
 
-export interface UpsertOptions {
+interface UpsertOptions {
   /** Which provider these movements came from; Wallet is the only one F2 speaks to (§9.1). */
   provider?: string;
   now?: Date;

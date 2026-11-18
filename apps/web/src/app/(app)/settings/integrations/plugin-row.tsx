@@ -15,7 +15,7 @@ import { setPluginActiveAction } from "./plugin-actions";
  * from the manifest, in the person's language, and what it is for this person. Nothing of the
  * plugin's own state, and nothing of any other person.
  */
-export interface PluginRowProps {
+interface PluginRowProps {
   id: string;
   name: string;
   description: string;

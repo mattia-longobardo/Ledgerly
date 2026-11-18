@@ -18,12 +18,12 @@ import {
   similarTo,
   undoChange,
 } from "@ledgerly/domain/transactions";
-import { categorise, isPreparing } from "@ledgerly/domain/transactions";
+import { categorise } from "@ledgerly/domain/transactions";
 
 type Session = Awaited<ReturnType<typeof requireSession>>;
 
-export type ChangeResult = { ok: true; count: number; undoId: string | null } | { ok: false; error: string };
-export type PlainResult = { ok: true; count: number } | { ok: false; error: string };
+type ChangeResult = { ok: true; count: number; undoId: string | null } | { ok: false; error: string };
+type PlainResult = { ok: true; count: number } | { ok: false; error: string };
 
 function failed(error: unknown): { ok: false; error: string } {
   if (error instanceof TransactionError) return { ok: false, error: error.code };
@@ -91,7 +91,7 @@ export async function undoCategoriesAction(undoId: string): Promise<PlainResult>
 }
 
 /** A movement similar to the one just filed, as the dialog lists it: every text already formatted. */
-export interface SimilarView {
+interface SimilarView {
   id: string;
   date: string;
   amount: string;
@@ -163,9 +163,4 @@ export async function createDefaultGroupsAction(keys: string[]): Promise<PlainRe
   } catch (error) {
     return failed(error);
   }
-}
-
-/** Whether a pass of the cascade is running for the person. */
-export async function categoriesPreparingAction(): Promise<boolean> {
-  return isPreparing(await requireSession());
 }

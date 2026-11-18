@@ -63,7 +63,7 @@ const REVOKED_REASON = "the Trek token has been rejected; reconnect Trek in Sett
  * A pass that did not happen because one was already running for this user. Not a failure and not
  * a `sync_runs` row: nothing was attempted, so nothing is logged.
  */
-export class TrekBusyError extends Error {
+class TrekBusyError extends Error {
   readonly code = "busy";
 
   constructor(message = "a Trek pass is already running for this user") {
@@ -78,7 +78,7 @@ export function isTrekBusy(error: unknown): boolean {
   return error instanceof TrekBusyError || (error instanceof Error && error.name === "TrekBusyError");
 }
 
-export interface TrekSyncResult {
+interface TrekSyncResult {
   /** The years the pass covered. */
   years: number[];
   counts: Record<string, number>;
@@ -94,7 +94,7 @@ export interface TrekSyncResult {
   conflicts: CivilDate[];
 }
 
-export interface TrekSyncOptions {
+interface TrekSyncOptions {
   now?: Date;
   /** Injected in tests, so a pass can run against the fake MCP server. */
   client?: TrekClient;
@@ -145,7 +145,7 @@ function configOf(bag: Record<string, string>): TrekConfig {
   };
 }
 
-export async function trekConnection(ctx: Pick<Ctx, "userId">): Promise<Connection | null> {
+async function trekConnection(ctx: Pick<Ctx, "userId">): Promise<Connection | null> {
   return (await listConnections(ctx)).find((one) => one.provider === TREK_PROVIDER) ?? null;
 }
 

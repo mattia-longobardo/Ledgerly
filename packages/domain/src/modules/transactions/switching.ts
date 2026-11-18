@@ -273,21 +273,6 @@ export async function retireBankRows(
   return retired.length;
 }
 
-/** The pairs of a switch still in force, for its page and its count. */
-export async function openPairsOf(ctx: Pick<Ctx, "userId">, switchId: string): Promise<number> {
-  const [row] = await getDb()
-    .select({ count: sql<number>`count(*)::int` })
-    .from(switchTransferPairs)
-    .where(
-      and(
-        eq(switchTransferPairs.switchId, switchId),
-        isNull(switchTransferPairs.undoneAt),
-        userScoped(ctx).owns(switchTransferPairs),
-      ),
-    );
-  return row?.count ?? 0;
-}
-
 /**
  * The movements of an account of the bank already here, as a switch that joins it reads them (H39
  * for already imported accounts): every row that still counts for its source, hidden or not.

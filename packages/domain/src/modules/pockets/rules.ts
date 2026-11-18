@@ -4,11 +4,9 @@ import type { Cents } from "../../platform/money";
 
 export const POCKET_STATES = ["active", "paused", "archived"] as const;
 export const MOVEMENT_KINDS = ["accrual", "deposit", "withdrawal", "adjustment"] as const;
+type MovementKind = (typeof MOVEMENT_KINDS)[number];
 
-export type PocketState = (typeof POCKET_STATES)[number];
-export type MovementKind = (typeof MOVEMENT_KINDS)[number];
-
-export interface MovementLike {
+interface MovementLike {
   kind: MovementKind;
   amountCents: Cents;
   on: CivilDate;
@@ -18,7 +16,7 @@ export interface MovementLike {
  * An expense counted against a pocket: every `expense` of its backing account since the start
  * month, or the expenses linked to a standalone one by hand. The amount is positive.
  */
-export interface PocketSpend {
+interface PocketSpend {
   on: CivilDate;
   cents: Cents;
 }

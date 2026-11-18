@@ -3,14 +3,13 @@ export { alertSettings, budgetDetail, budgetsView } from "./queries";
 export {
   ALERT_PRESETS,
   DEFAULT_ALERT_SETTINGS,
-  MAX_ALERT_THRESHOLDS,
   budgetSlug,
   parseBudgetSlug,
   percentOf,
   reachedThreshold,
   thresholdReached,
 } from "./rules";
-export type { AlertSettings, BudgetRow, BudgetScope, BudgetStatus } from "./rules";
+export type { AlertSettings, BudgetRow, BudgetScope } from "./rules";
 export {
   BudgetError,
   categoriesWithLimit,

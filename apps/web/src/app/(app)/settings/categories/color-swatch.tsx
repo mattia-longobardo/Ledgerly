@@ -9,7 +9,7 @@ import { cn } from "@/ui/cn";
  * colour are always the same family. The hex values are data, not interface text, so they are also
  * the accessible name of each swatch — nothing here needs a message.
  */
-export const SWATCHES = CATEGORY_COLORS;
+const SWATCHES = CATEGORY_COLORS;
 
 /** The dot in front of a name in the lists; an uncoloured row keeps the dot's space empty. */
 export function ColorDot({ color }: { color: string | null }) {

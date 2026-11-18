@@ -45,7 +45,7 @@ export function colorField(
   return { value: colorFor(account, index), automatic: account.color === null };
 }
 
-export interface Change {
+interface Change {
   cents: Cents | null;
   /** The change as a fraction of the earlier value; `null` when there is nothing to compare to. */
   fraction: number | null;
@@ -135,7 +135,7 @@ export function dayLabels(days: readonly CivilDate[], locale: UiLocale, count = 
   );
 }
 
-export type Since = { unit: "never" } | { unit: "minutes" | "hours" | "days"; count: number };
+type Since = { unit: "never" } | { unit: "minutes" | "hours" | "days"; count: number };
 
 /** How long ago an instant was, in the coarse steps the design's "Last synced" column uses. */
 export function since(instant: Date | null, now: Date): Since {

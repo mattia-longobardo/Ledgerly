@@ -24,9 +24,9 @@ import { deleteObject, listFolder, putObject } from "@ledgerly/domain/platform/s
 
 export const BACKUP_FOLDER = "backups";
 export const BACKUPS_KEPT = 30;
-export const MAX_BACKUP_BYTES = 256 * 1024 * 1024;
+const MAX_BACKUP_BYTES = 256 * 1024 * 1024;
 /** A dump that has not finished by then is not going to: an admin is waiting on the button. */
-export const DUMP_TIMEOUT_MS = 10 * 60_000;
+const DUMP_TIMEOUT_MS = 10 * 60_000;
 
 export type BackupErrorCode = "forbidden" | "dump_failed" | "too_large" | "upload_failed";
 
@@ -37,13 +37,13 @@ export class BackupError extends Error {
   }
 }
 
-export interface BackupResult {
+interface BackupResult {
   key: string;
   bytes: number;
   at: Date;
 }
 
-export type Dump = () => Promise<Uint8Array>;
+type Dump = () => Promise<Uint8Array>;
 
 /**
  * The connection as `pg_dump` wants it, in the **environment** and never on the command line: an

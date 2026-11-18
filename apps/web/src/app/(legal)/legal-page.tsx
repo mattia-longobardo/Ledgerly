@@ -7,7 +7,7 @@ import { readEnv } from "@ledgerly/domain/platform/env";
 import { BrandLockup } from "@/ui/shell/brand";
 import { type LegalLocale, legalLocale } from "./language";
 
-export type LegalDocument = "privacy" | "terms";
+type LegalDocument = "privacy" | "terms";
 
 /** The sections of each document, in reading order: `legal.<document>.<section>.{title,body}`. */
 const SECTIONS = {

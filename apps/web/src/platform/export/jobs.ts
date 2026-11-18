@@ -21,7 +21,7 @@ import { exportUserBytes } from "./service";
  * `forEachUser` isolates each person, so one unreadable document does not cost everyone else
  * their export.
  */
-export const EXPORT_FOLDER = "exports";
+const EXPORT_FOLDER = "exports";
 
 export const exportAllJob: JobDefinition = {
   name: "export-all",
@@ -58,7 +58,7 @@ export const exportAllJob: JobDefinition = {
   },
 };
 
-export interface LastExport {
+interface LastExport {
   at: Date;
   users: number;
   bytes: number;

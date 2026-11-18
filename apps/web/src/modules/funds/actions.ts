@@ -158,7 +158,7 @@ export async function setSourceStateAction(
 }
 
 /** What "Undo" needs to put a removed source back: its fields and the fees that went with it. */
-export interface RemovedSourceForm {
+interface RemovedSourceForm {
   source: SourceForm;
   /** The explicit due dates the removal answered with: the form does not hold them. */
   dueEntries?: unknown;
@@ -267,7 +267,7 @@ export async function proposeDebitMatchAction(
 
 // ——— The reviewer's word on a difference —————————————————————————————————————————————————————
 
-export interface DecisionFormInput {
+interface DecisionFormInput {
   year: number;
   quarter: number;
   component: string;

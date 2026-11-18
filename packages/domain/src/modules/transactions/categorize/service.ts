@@ -10,7 +10,6 @@ import { and, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { AUTOMATIC_CATEGORY_ORIGINS } from "../rules";
 import { categories, categoryGroupMarks, categoryMemory, categoryModels, transactions } from "../schema";
 import { type CascadeMovement, type Decision, decide, groupCategories, type Knowledge } from "./cascade";
 import {
@@ -33,7 +32,7 @@ type Who = Pick<Ctx, "userId">;
 /** The most confirmed labels a model is trained from: the newest ones, enough for any history. */
 const MAX_EXAMPLES = 20_000;
 /** What is left on a row when a person replaces an automatic category: the threshold counts them. */
-export const CORRECTED = "corrected";
+const CORRECTED = "corrected";
 const CORRECTIONS_WINDOW_DAYS = 30;
 /** Fewer automatic categories than this in the window say nothing about how often they are wrong. */
 const MIN_CORRECTIONS_BASE = 20;
@@ -141,7 +140,7 @@ export async function isPreparing(ctx: Who): Promise<boolean> {
  * What is known about the person without learning anything new: the stored memory, the stored
  * model and its thresholds. What a suggestion for one movement is made from.
  */
-export async function storedKnowledge(ctx: Who): Promise<Knowledge> {
+async function storedKnowledge(ctx: Who): Promise<Knowledge> {
   const [own, row, memory] = await Promise.all([
     categoriesOf(ctx),
     modelRow(ctx),
@@ -256,7 +255,7 @@ function columnsFor(decision: Decision, version: number) {
   };
 }
 
-export interface CategoriseOutcome {
+interface CategoriseOutcome {
   /** Whether the model was trained again in this pass. */
   trained: boolean;
   /** How many confirmed labels there were to learn from. */
@@ -372,6 +371,3 @@ export async function suggestFor(
   const decision = decide(movement, await storedKnowledge(ctx));
   return decision.kind === "none" ? null : { categoryId: decision.categoryId, reason: decision.reason };
 }
-
-/** The origins the cascade writes, for the queries that tell an automatic category from a chosen one. */
-export const AUTOMATIC_ORIGINS_SQL = AUTOMATIC_CATEGORY_ORIGINS;

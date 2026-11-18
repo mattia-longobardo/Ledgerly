@@ -38,7 +38,7 @@ import { bringUpToDate } from "@ledgerly/domain/interests";
  * nothing to synchronise and accrues as it always did.
  */
 /** What one user's pass did, so the job can add the users up and a test can drive one of them. */
-export interface AccrualPass {
+interface AccrualPass {
   /** Rules brought up to date. */
   rules: number;
   /** Settlements published to Wallet. */

@@ -1,7 +1,7 @@
 import { ChartHover, type HoverPoint } from "./chart-hover";
 import { cn } from "./cn";
 
-export interface Series {
+interface Series {
   /** One value per step; `null` is a gap, never a zero. */
   values: readonly (number | null)[];
   color?: string;
@@ -69,7 +69,7 @@ export function segmentsOf(
 }
 
 /** The same run, drawn flat until the next point and then straight up to it. */
-export function stepped(run: readonly { x: number; y: number }[]): { x: number; y: number }[] {
+function stepped(run: readonly { x: number; y: number }[]): { x: number; y: number }[] {
   const out: { x: number; y: number }[] = [];
   run.forEach((point, index) => {
     if (index > 0) out.push({ x: point.x, y: run[index - 1].y });
@@ -79,7 +79,7 @@ export function stepped(run: readonly { x: number; y: number }[]): { x: number; 
 }
 
 /** A piece of a line drawn in one style: solid, or dashed where the values are estimates. */
-export interface Stroke {
+interface Stroke {
   points: { x: number; y: number }[];
   dashed: boolean;
 }
@@ -243,7 +243,7 @@ export function AreaLine({
 }
 
 /** One band of a stacked chart: where it starts and where it ends at each step. */
-export interface Band {
+interface Band {
   lower: (number | null)[];
   upper: (number | null)[];
 }

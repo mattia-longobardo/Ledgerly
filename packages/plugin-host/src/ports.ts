@@ -10,7 +10,7 @@ import type { CivilDate } from "@ledgerly/domain/platform/dates";
 type Who = Pick<Ctx, "userId" | "timeZone">;
 
 /** An account of the person that a bank's account may be tied to. */
-export interface OpenAccount {
+interface OpenAccount {
   id: string;
   name: string;
   currency: string;
@@ -27,7 +27,7 @@ export interface AccountChoice {
 }
 
 /** The account of the person that already has an IBAN (rewrite plan N4, H39). Never the IBAN. */
-export interface IbanOwner {
+interface IbanOwner {
   id: string;
   name: string;
   /** Kept by hand (it can be the target of "Use an existing account") or tied to a source. */
@@ -53,7 +53,7 @@ export interface ReadingMovement {
   };
 }
 
-export interface MovementsWritten {
+interface MovementsWritten {
   created: number;
   updated: number;
   skipped: number;

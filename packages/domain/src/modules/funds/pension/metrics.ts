@@ -39,7 +39,7 @@ export interface DatedValue {
 
 export type { PendingQuarter };
 
-export type GainReason = "no_value" | "nothing_paid" | "outflows_unknown";
+type GainReason = "no_value" | "nothing_paid" | "outflows_unknown";
 
 export interface PensionMetrics {
   value: DatedValue | null;
@@ -116,7 +116,7 @@ function fromMicro(value: bigint, decimals: number): string {
 }
 
 /** How many decimals a unit count is printed with, by the provider and by the twins. */
-export const UNIT_DECIMALS = 3;
+const UNIT_DECIMALS = 3;
 
 /**
  * Units added up without inventing precision (GC §13): as many decimals as the most precise value

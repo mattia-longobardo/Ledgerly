@@ -286,7 +286,7 @@ export function ralEstimate(payslips: readonly RegisterPayslip[]): RalEstimate |
   };
 }
 
-export interface YearGroup<P extends RegisterPayslip> {
+interface YearGroup<P extends RegisterPayslip> {
   year: number;
   payslips: P[];
 }

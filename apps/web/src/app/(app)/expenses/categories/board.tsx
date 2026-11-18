@@ -69,7 +69,7 @@ export interface BoardLine {
   source: { text: string; href: Route | null } | null;
 }
 
-export interface BoardGroup extends BoardLine {
+interface BoardGroup extends BoardLine {
   only: { total: string; count: number; href: Route } | null;
   children: BoardLine[];
 }

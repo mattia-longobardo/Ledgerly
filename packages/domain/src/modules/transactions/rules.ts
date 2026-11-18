@@ -39,9 +39,9 @@ export type TransactionOrigin = (typeof TRANSACTION_ORIGINS)[number];
  * confirmed one.
  */
 export const CATEGORY_ORIGINS = ["user", "provider", "memory", "model", "table", "rule"] as const;
-export type CategoryOrigin = (typeof CATEGORY_ORIGINS)[number];
+type CategoryOrigin = (typeof CATEGORY_ORIGINS)[number];
 /** The origins of an automatic category. */
-export const AUTOMATIC_CATEGORY_ORIGINS: readonly CategoryOrigin[] = ["memory", "model", "table", "rule"];
+const AUTOMATIC_CATEGORY_ORIGINS: readonly CategoryOrigin[] = ["memory", "model", "table", "rule"];
 
 export type CategoryState = "chosen" | "automatic" | "suggestion" | "none";
 
@@ -74,9 +74,8 @@ export type CategoryType = (typeof CATEGORY_TYPES)[number];
 export const NAME_MAX = 60;
 
 /** The fields a user can own locally; everything else belongs to the provider (spec §7.2). */
-export const EDITABLE_FIELDS = ["categoryId", "note", "labels"] as const;
 
-export type EditableField = (typeof EDITABLE_FIELDS)[number];
+type EditableField = "categoryId" | "note" | "labels";
 
 /** Recurrence interval bands, in days (spec §7.2). */
 export const RECURRENCE_BANDS = [
@@ -87,13 +86,13 @@ export const RECURRENCE_BANDS = [
   { cadence: "yearly", min: 350, max: 380 },
 ] as const;
 
-export type Cadence = (typeof RECURRENCE_BANDS)[number]["cadence"];
+type Cadence = (typeof RECURRENCE_BANDS)[number]["cadence"];
 
 /** At least this many occurrences before a payee counts as recurring (spec §7.2). */
-export const RECURRENCE_MIN_OCCURRENCES = 3;
+const RECURRENCE_MIN_OCCURRENCES = 3;
 
 /** How far each amount may sit from the median and still belong to the pattern (spec §7.2). */
-export const RECURRENCE_AMOUNT_TOLERANCE = 0.1;
+const RECURRENCE_AMOUNT_TOLERANCE = 0.1;
 
 /**
  * The fields a provider owns: the sync writes them, the interface never offers them (spec §7.2).
@@ -110,7 +109,7 @@ export const PROVIDER_OWNED_FIELDS = [
   "payee",
 ] as const;
 
-export type ProviderOwnedField = (typeof PROVIDER_OWNED_FIELDS)[number];
+type ProviderOwnedField = (typeof PROVIDER_OWNED_FIELDS)[number];
 
 /** A field name as it appears in `locally_edited`. */
 export type MergeableField = ProviderOwnedField | EditableField;
@@ -193,7 +192,7 @@ export interface StoredTransaction {
 }
 
 /** The columns a row is created with; the id, the user and the timestamps are the database's. */
-export interface NewTransaction {
+interface NewTransaction {
   accountId: string;
   occurredAt: Date;
   amountCents: Cents;
@@ -241,7 +240,7 @@ export function payeeKeyOf(payee: string | null): string | null {
 /* Visibility */
 
 /** The two columns that decide whether a row counts (spec §7.2). */
-export interface Visibility {
+interface Visibility {
   hiddenAt: Date | null;
   removedUpstreamAt: Date | null;
 }
@@ -358,7 +357,7 @@ export interface TransferLeg {
   transferGroupId: string | null;
 }
 
-export interface TransferAssignment {
+interface TransferAssignment {
   id: string;
   transferGroupId: string;
 }
@@ -419,7 +418,7 @@ export function pairTransfers(legs: readonly TransferLeg[]): TransferAssignment[
 /* Giroconti by IBAN */
 
 /** The longest gap between the two legs of a giroconto found by IBAN: a bank transfer's clearing. */
-export const IBAN_TRANSFER_MAX_DAYS = 5;
+const IBAN_TRANSFER_MAX_DAYS = 5;
 
 /** Spaces and dashes out, upper case: the form an IBAN is compared in. */
 function compact(text: string): string {
@@ -449,7 +448,7 @@ export interface IbanRuleRow {
 }
 
 /** A change of pairing the IBAN rule decides: the row's new group, or `null` to leave a pair. */
-export interface IbanPairing {
+interface IbanPairing {
   id: string;
   transferGroupId: string | null;
 }
@@ -580,7 +579,7 @@ function sameLabels(current: readonly string[], incoming: readonly string[]): bo
   return incoming.every((id) => mine.has(id));
 }
 
-export interface ProviderMergePlan {
+interface ProviderMergePlan {
   /** Only the fields that change, and only those the user has not claimed. */
   patch: TransactionPatch;
   changed: boolean;
@@ -651,7 +650,7 @@ export interface UserEdit {
   labelIds?: readonly string[];
 }
 
-export interface UserEditPlan {
+interface UserEditPlan {
   patch: TransactionPatch;
   changed: boolean;
   /** The new `locally_edited`: the markers already there plus the fields this edit changes. */
@@ -705,8 +704,7 @@ export function markLocallyEdited(
  * because from then on the two agree. `type` is never dropped: Wallet has no income/expense/
  * transfer of its own to disagree with, so a type chosen here is local for good (spec §9.1).
  */
-export const CATEGORY_EDITABLE_FIELDS = ["name", "type"] as const;
-export type CategoryEditableField = (typeof CATEGORY_EDITABLE_FIELDS)[number];
+type CategoryEditableField = "name" | "type";
 
 /** `locally_edited` for a category, with `edited` added: a set, sorted, never losing a marker. */
 export function markCategoryEdited(
@@ -738,7 +736,7 @@ export interface WindowRow {
   removedUpstreamAt: Date | null;
 }
 
-export interface UpstreamRemovalPlan {
+interface UpstreamRemovalPlan {
   /** Rows to stamp with `removed_upstream_at`: inside the window, and no longer returned. */
   removed: string[];
   /** Rows to clear it on: the provider is sending them again. */
@@ -789,7 +787,7 @@ export interface RecurrenceInput {
 }
 
 /** One detected pattern, in the shape `recurring_patterns` stores (spec §7.2). */
-export interface DetectedRecurrence {
+interface DetectedRecurrence {
   payeeKey: string;
   /** The payee as last written by the provider, for display; `payeeKey` is the identity. */
   payee: string;

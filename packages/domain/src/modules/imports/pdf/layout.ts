@@ -10,7 +10,7 @@ import type { TextItem } from "./text";
 export type Token = TextItem;
 
 /** Items at most this size are a form's printed labels; larger ones are the values filled in. */
-export const LABEL_MAX_SIZE = 7;
+const LABEL_MAX_SIZE = 7;
 
 /** How far apart two baselines may be and still be one row. */
 const ROW_TOLERANCE = 1.5;
@@ -103,7 +103,7 @@ export function labelRows(items: readonly TextItem[]): LabelRow[] {
   return rows;
 }
 
-export interface ValueRow {
+interface ValueRow {
   page: number;
   baseline: number;
   /** Left to right. */
@@ -142,7 +142,7 @@ export function labelFor(labels: readonly Label[], token: Token): Label | null {
 }
 
 /** The label row a value row fills: the one just above it, a value line's height away. */
-export function labelRowAbove(rows: readonly LabelRow[], values: ValueRow): LabelRow | null {
+function labelRowAbove(rows: readonly LabelRow[], values: ValueRow): LabelRow | null {
   const candidates = rows.filter(
     (row) =>
       row.page === values.page &&
@@ -153,7 +153,7 @@ export function labelRowAbove(rows: readonly LabelRow[], values: ValueRow): Labe
 }
 
 /** A value found under a label, with every token it is made of. */
-export interface Cell {
+interface Cell {
   label: Label;
   tokens: Token[];
 }

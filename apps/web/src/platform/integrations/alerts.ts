@@ -48,7 +48,7 @@ function squeeze(text: string): string {
 }
 
 /** The facts of a connection the dispatcher has just passed: its provider is on and it is complete. */
-export function factsOf(connection: Connection, extra: { running?: boolean } = {}): StatusFacts {
+function factsOf(connection: Connection, extra: { running?: boolean } = {}): StatusFacts {
   return {
     state: connection.state,
     errorCode: connection.errorCode,

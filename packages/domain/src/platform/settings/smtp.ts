@@ -56,7 +56,7 @@ export function mailPolicyFrom(value: Record<string, unknown> | null | undefined
   };
 }
 
-export const MAX_SMTP_FIELD = 200;
+const MAX_SMTP_FIELD = 200;
 
 /**
  * What the SMTP card accepts. The password is optional like every other sealed secret: empty keeps

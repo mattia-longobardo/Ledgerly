@@ -31,7 +31,7 @@ import { FIRST_LINK_MONTHS } from "./depth";
 const wireAmount = z.union([z.string(), z.number()]);
 
 /** An account as `/accounts` returns it. Field names are Wallet's, and live only in this file. */
-export const walletAccountSchema = z.object({
+const walletAccountSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   currencyCode: z.string(),
@@ -53,7 +53,7 @@ export type WalletAccountPayload = z.infer<typeof walletAccountSchema>;
  * arrives here as the digits Wallet sent even though it is nested one object down — the place
  * §4.3's guard is easiest to lose.
  */
-export const walletRecordAmountSchema = z.object({
+const walletRecordAmountSchema = z.object({
   value: wireAmount,
   currencyCode: z.string(),
 });
@@ -62,7 +62,7 @@ export const walletRecordAmountSchema = z.object({
  * The category Wallet embeds in a movement. The *name* travels with the record, so the name §9.1
  * adopts by does not have to be looked up in the `/categories` list any more.
  */
-export const walletRecordCategorySchema = z.object({
+const walletRecordCategorySchema = z.object({
   id: z.string().min(1),
   name: z.string().nullish(),
   // An object `{ id, name }`, the same shape `/categories` publishes — not a string.
@@ -87,7 +87,7 @@ export const walletRecordCategorySchema = z.object({
  * that leg has no counterpart to pair on, and inventing one from the group id is not this file's
  * call.
  */
-export const walletTransferSchema = z.object({
+const walletTransferSchema = z.object({
   type: z.string().nullish(),
   transferId: z.string().nullish(),
   /**
@@ -136,7 +136,7 @@ export type WalletRecordPayload = z.infer<typeof walletRecordSchema>;
  * the reason, so it hid the cause. `/categories` is read before `/records`, so this alone stopped
  * every transactions pass.
  */
-export const walletCategorySchema = z.object({
+const walletCategorySchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   group: z.object({ id: z.string().nullish(), name: z.string().nullish() }).nullish(),
@@ -155,7 +155,7 @@ export const walletCategorySchema = z.object({
   parentId: z.string().nullish(),
   archived: z.boolean().nullish(),
 });
-export type WalletCategoryPayload = z.infer<typeof walletCategorySchema>;
+type WalletCategoryPayload = z.infer<typeof walletCategorySchema>;
 
 /**
  * `/accounts` and `/categories` come wrapped (`{ accounts: [...] }`, `{ categories, limit, offset }`).
@@ -191,7 +191,6 @@ export const walletRecordsPayloadSchema = z.object({
   records: z.array(walletRecordSchema),
   appliedRecordDateFilters: z.array(z.string()),
 });
-export type WalletRecordsPage = z.infer<typeof walletRecordsPayloadSchema>;
 
 /** A Wallet account, in this app's vocabulary. */
 export interface WalletAccount {
@@ -507,7 +506,7 @@ export interface DateWindow {
 /** The first link fetches twelve months (spec §9.1); the constant lives in `depth.ts` since F2.5. */
 export { FIRST_LINK_MONTHS };
 /** The hourly pass re-reads the last seven days (spec §9.1); the schedule itself is the job's. */
-export const REREAD_DAYS = 7;
+const REREAD_DAYS = 7;
 /**
  * The widest window this file will measure or split. It bounds the loop in {@link windowDays} and
  * the recursion depth of the splitter, and it is comfortably above the year the first link asks

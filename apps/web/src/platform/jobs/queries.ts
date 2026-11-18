@@ -6,7 +6,7 @@ import { JOBS, type Tier } from "./registry";
 import { jobRuns } from "@ledgerly/domain/platform/jobs";
 
 /** The jobs card of Admin › Server (spec §10.3): admins only. */
-export interface JobStatus {
+interface JobStatus {
   name: string;
   tier: Tier;
   lastRun: {

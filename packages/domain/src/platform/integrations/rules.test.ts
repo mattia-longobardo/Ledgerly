@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   connectionStateAfter,
   credentialsSchema,
-  isDue,
   isKnownProvider,
   nextRunAt,
   normalizeCounts,
@@ -16,7 +15,6 @@ import {
 
 const ENTITY = "01930000-0000-7000-8000-000000000001";
 const NOW = new Date("2026-03-10T08:00:00Z");
-const hoursAgo = (hours: number) => new Date(NOW.getTime() - hours * 3_600_000);
 
 describe("isKnownProvider", () => {
   it("accepts the providers the app speaks to and nothing else", () => {
@@ -72,17 +70,10 @@ describe("providerLinkSchema", () => {
   });
 });
 
-describe("nextRunAt and isDue", () => {
+describe("nextRunAt", () => {
   it("schedules the next pass one interval away", () => {
     expect(nextRunAt(NOW)).toEqual(new Date("2026-03-10T09:00:00Z"));
     expect(nextRunAt(NOW, 6)).toEqual(new Date("2026-03-10T14:00:00Z"));
-  });
-
-  it("treats a job that has never run as due, and one scheduled ahead as not", () => {
-    expect(isDue({ nextRunAt: null }, NOW)).toBe(true);
-    expect(isDue({ nextRunAt: NOW }, NOW)).toBe(true);
-    expect(isDue({ nextRunAt: hoursAgo(1) }, NOW)).toBe(true);
-    expect(isDue({ nextRunAt: nextRunAt(NOW) }, NOW)).toBe(false);
   });
 });
 

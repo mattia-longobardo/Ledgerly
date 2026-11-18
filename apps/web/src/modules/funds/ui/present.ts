@@ -39,7 +39,7 @@ export function monthPill(
 }
 
 /** Where a line of the register came from, as its badge says it. */
-export type OperationOrigin = "payroll" | "rule" | "manual" | "import";
+type OperationOrigin = "payroll" | "rule" | "manual" | "import";
 
 const ORIGIN_OF_KIND: Record<SourceKind, OperationOrigin> = {
   payroll: "payroll",
@@ -81,7 +81,7 @@ export function voluntaryCents(operations: readonly Amounts[]): Cents {
     .reduce<Cents>((sum, operation) => sum + operation.workerCents, 0n);
 }
 
-export type OriginPart = "you" | "employer" | "tfr" | "voluntary" | "other";
+type OriginPart = "you" | "employer" | "tfr" | "voluntary" | "other";
 
 /**
  * Of whom the money is, one part per line and the empty ones left out. The voluntary payments are

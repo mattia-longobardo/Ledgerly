@@ -19,7 +19,7 @@ export interface MergeSide {
   canKeepOther: boolean;
 }
 
-export interface MergeProposalRow {
+interface MergeProposalRow {
   first: MergeSide;
   second: MergeSide;
   sumsBudgets: boolean;

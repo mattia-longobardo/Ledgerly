@@ -12,7 +12,7 @@ import { deleteSubscriptionAction } from "../actions";
 import type { Cycle } from "@ledgerly/domain/subscriptions/client";
 import { type DialogOptions, SubscriptionDialog, type SubscriptionDraft } from "./subscription-dialog";
 
-export type PaidStatus = "paid" | "amount_differs" | "due" | "not_found" | "not_due" | "unchecked";
+type PaidStatus = "paid" | "amount_differs" | "due" | "not_found" | "not_due" | "unchecked";
 
 /** One subscription as the table draws it: text formatted by the server, sort keys as numbers. */
 export interface SubscriptionView {

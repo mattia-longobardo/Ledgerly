@@ -6,7 +6,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
  * caller is a script, so a code it can branch on is worth more than a sentence, and a sentence
  * would have to exist in two languages (`messages/*.json`) for no reader.
  */
-export type ApiErrorCode =
+type ApiErrorCode =
   | "unauthorized"
   | "forbidden"
   | "not_found"

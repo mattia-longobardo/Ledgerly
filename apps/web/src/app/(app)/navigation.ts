@@ -2,7 +2,7 @@ import type { Route } from "next";
 import type { Role } from "@ledgerly/domain/platform/context";
 import type { NavLink } from "@/ui/shell/nav-types";
 
-export interface NavItem extends Omit<NavLink, "label"> {
+interface NavItem extends Omit<NavLink, "label"> {
   labelKey:
     | "overview"
     | "accounts"
@@ -20,7 +20,7 @@ export interface NavItem extends Omit<NavLink, "label"> {
 }
 
 /** The single navigation list: sidebar, mobile tabs and command palette all derive from it. */
-export const NAV_ITEMS: readonly NavItem[] = [
+const NAV_ITEMS: readonly NavItem[] = [
   {
     id: "overview",
     href: "/" as Route,

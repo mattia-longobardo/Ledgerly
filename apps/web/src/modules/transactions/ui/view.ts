@@ -13,7 +13,7 @@ import type { ManualFieldsView } from "./manual-types";
 export type { CategoryOption };
 
 /** The state of a movement's category, as the cell draws it. */
-export type CategoryStateView = "chosen" | "automatic" | "suggestion" | "none";
+type CategoryStateView = "chosen" | "automatic" | "suggestion" | "none";
 
 /** One movement, as the table and the mobile list draw it. */
 export interface RowView {
@@ -68,7 +68,7 @@ export interface RowView {
 }
 
 /** What the panel prefills for a Wallet movement. */
-export interface WalletFieldsView {
+interface WalletFieldsView {
   type: TransactionType;
   /** The size of the amount, in the user's number format, ready to be typed over. */
   amount: string;

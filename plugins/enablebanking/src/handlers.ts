@@ -118,7 +118,7 @@ export async function authStart(body: unknown, deps: Deps = {}): Promise<AuthSta
  * it is longer than the contract allows. A bank fills these fields as it likes — a real bank gave
  * accounts with an empty hash — and an answer must not fail for a field that is only missing.
  */
-export function textOrNull(value: string | null | undefined, max: number): string | null {
+function textOrNull(value: string | null | undefined, max: number): string | null {
   const text = (value ?? "").trim();
   return text === "" ? null : text.slice(0, max);
 }

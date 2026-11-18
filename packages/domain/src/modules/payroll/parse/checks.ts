@@ -4,19 +4,7 @@ import { medianCents, type PayslipType } from "../rules";
 import { hundredthsOf, moneyOf, type Values } from "./derive";
 import type { RawLine } from "./reply-teamsystem";
 
-export const CHECK_IDS = [
-  "irpef",
-  "net",
-  "body_deductions",
-  "total_deductions",
-  "substitute_tax",
-  "leave_vacation",
-  "leave_rol",
-  "leave_permit",
-  "plausibility_net",
-  "plausibility_gross",
-] as const;
-export type CheckId = (typeof CHECK_IDS)[number];
+type CheckId = "irpef" | "net" | "body_deductions" | "total_deductions" | "substitute_tax" | "leave_vacation" | "leave_rol" | "leave_permit" | "plausibility_net" | "plausibility_gross";
 
 /**
  * One control of spec §7.8 and the owner's spec (L115, L175, L224–235). `error` checks that fail
@@ -33,18 +21,7 @@ export interface CheckResult {
   reason?: string;
 }
 
-export const WARNING_CODES = [
-  "unknown_code",
-  "tfr_both_differ",
-  "tfr_partial_month",
-  "employer_fund_adjustment_only",
-  "permit_unclassified",
-  "extra_month_leave",
-  "rectification",
-  "missing_identity",
-  "unknown_layout",
-] as const;
-export type WarningCode = (typeof WARNING_CODES)[number];
+type WarningCode = "unknown_code" | "tfr_both_differ" | "tfr_partial_month" | "employer_fund_adjustment_only" | "permit_unclassified" | "extra_month_leave" | "rectification" | "missing_identity" | "unknown_layout";
 
 /** Something a person must look at, even when every check passes (owner's spec L254). */
 export interface Warning {
@@ -60,7 +37,7 @@ export interface HistoryPoint {
   gross: Cents | null;
 }
 
-export interface CheckInput {
+interface CheckInput {
   type: PayslipType;
   period: string | null;
   values: Values;
@@ -70,7 +47,7 @@ export interface CheckInput {
 }
 
 /** How far net or gross may move from the median of the last six before a warning: 30 %. */
-export const PLAUSIBILITY_RATIO = 0.3;
+const PLAUSIBILITY_RATIO = 0.3;
 const PLAUSIBILITY_WINDOW = 6;
 
 const decimal = (cents: Cents) => centsToDecimal(cents);

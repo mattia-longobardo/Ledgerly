@@ -26,7 +26,7 @@ import type { SourceCategoryRow } from "./source-categories";
 type Who = Pick<Ctx, "userId" | "timeZone">;
 
 /** The categories of one source, under the name a person reads for it. */
-export interface SourceCategoriesSection {
+interface SourceCategoriesSection {
   provider: string;
   name: string;
   rows: SourceCategoryView[];

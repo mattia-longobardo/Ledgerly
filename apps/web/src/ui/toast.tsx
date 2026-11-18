@@ -3,13 +3,13 @@
 import { Toast } from "@base-ui/react/toast";
 import { Check, CircleAlert, X } from "lucide-react";
 
-export type ToastTone = "success" | "error";
+type ToastTone = "success" | "error";
 
 /** One manager for the whole app, so a toast can be raised after a Server Action returns. */
-export const toastManager = Toast.createToastManager();
+const toastManager = Toast.createToastManager();
 
 /** What a toast can offer beside its message: one thing to do about it, such as "Undo". */
-export interface ToastAction {
+interface ToastAction {
   label: string;
   onClick: () => void;
 }

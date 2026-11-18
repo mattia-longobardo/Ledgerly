@@ -37,7 +37,7 @@ import {
   verifyKey,
 } from "@ledgerly/domain/investments";
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+type ActionResult = { ok: true } | { ok: false; error: string };
 
 function failed(error: unknown): { ok: false; error: string } {
   if (error instanceof InvestmentError) return { ok: false, error: error.code };
@@ -111,7 +111,7 @@ export async function updateServiceValueAction(
   }
 }
 
-export interface OperationFormInput {
+interface OperationFormInput {
   kind:
     "deposit" | "withdrawal" | "account_valuation" | "valuation" | "sell" | "close" | "income" | "adjustment";
   on: string;
@@ -225,7 +225,7 @@ export async function deleteOperationAction(accountId: string, eventId: string):
   }
 }
 
-export interface ReconcileFormInput {
+interface ReconcileFormInput {
   holdingId: string;
   kind: "covered_by_provider" | "partial" | "outside_scope" | "reopened";
   effectiveOn: string;

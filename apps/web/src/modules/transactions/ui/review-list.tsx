@@ -14,7 +14,7 @@ import { useCategoryActions } from "./category-actions";
 import type { CategoryOption } from "./view";
 
 /** One movement of a group, with its day, its account and its amount already formatted. */
-export interface ReviewRowView {
+interface ReviewRowView {
   id: string;
   date: string;
   account: string;
@@ -227,7 +227,7 @@ function ReviewGroupCard({
 }
 
 /** What the guided review says in the summary card: how far the person is. */
-export interface GuideProgress {
+interface GuideProgress {
   /** Movements of the bank that already have a category. */
   categorised: number;
 }

@@ -15,7 +15,7 @@ const CONTROL =
   "h-8 w-full rounded-ctl border border-border bg-card px-2.5 text-base text-fg placeholder:text-faint " +
   `${FIELD_FOCUS} disabled:bg-hover disabled:text-faint`;
 
-export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean;
   warning?: boolean;
   numeric?: boolean;

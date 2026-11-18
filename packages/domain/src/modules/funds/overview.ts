@@ -16,7 +16,7 @@ import { feesOf, type Fund, type FundFee, type FundSource, sourcesOf } from "./s
 import { competencePeriod, dueOn } from "./sources";
 
 /** One open fund as another module lists it: what it is worth, what went in, what it gained. */
-export interface FundOverviewRow {
+interface FundOverviewRow {
   fund: Fund;
   /** The last documented value, with its own day: never "as of today". */
   valueCents: Cents | null;
@@ -27,7 +27,7 @@ export interface FundOverviewRow {
   gainCents: Cents | null;
 }
 
-export interface FundsOverview {
+interface FundsOverview {
   rows: FundOverviewRow[];
   archived: Fund[];
 }
@@ -193,7 +193,7 @@ export async function fundsOverview(
 }
 
 /** A fund's sources and fees with the names an export needs: the fund's, the account's, the source's kind. */
-export interface FundsConfiguration {
+interface FundsConfiguration {
   sources: (FundSource & { fundName: string; accountName: string | null })[];
   fees: (FundFee & { fundName: string; sourceKind: FundSource["kind"] | null })[];
 }

@@ -9,7 +9,7 @@
  * caller can put one in — and a field added to a table tomorrow does not enter by itself.
  */
 
-export interface ReportConnection {
+interface ReportConnection {
   name: string;
   /** The provider's id, as the connection stores it. */
   provider: string;
@@ -21,7 +21,7 @@ export interface ReportConnection {
   schedule: string;
 }
 
-export interface ReportRun {
+interface ReportRun {
   startedAt: Date;
   connection: string;
   kind: string;

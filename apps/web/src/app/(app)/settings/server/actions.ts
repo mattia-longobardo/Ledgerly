@@ -29,7 +29,7 @@ import {
 } from "@ledgerly/domain/platform/settings";
 import type { SmtpInput } from "@ledgerly/domain/platform/settings";
 
-export type ServerActionResult = { ok: true } | { ok: false; error: "invalid" | "forbidden" };
+type ServerActionResult = { ok: true } | { ok: false; error: "invalid" | "forbidden" };
 
 export async function saveLlmFallbackAction(model: string, apiKey: string): Promise<ServerActionResult> {
   const ctx = await requireAdmin();
@@ -62,7 +62,7 @@ export async function removeLlmFallbackAction(): Promise<ServerActionResult> {
 
 /* Authentik and SMTP (spec §5.1, §9.4) — plan F8 P0. */
 
-export type OidcSaveResult =
+type OidcSaveResult =
   { ok: true; signedEveryoneOut: boolean } | { ok: false; error: "invalid" | "forbidden" };
 
 export async function saveOidcAction(input: OidcInput): Promise<OidcSaveResult> {

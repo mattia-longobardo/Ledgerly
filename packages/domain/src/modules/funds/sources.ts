@@ -32,20 +32,9 @@ export type AccrualPeriod = (typeof ACCRUAL_PERIODS)[number];
 export const INTERVAL_UNITS = ["week", "month", "year"] as const;
 export type IntervalUnit = (typeof INTERVAL_UNITS)[number];
 
-export interface Frequency {
+interface Frequency {
   count: number;
   unit: IntervalUnit;
-}
-
-export const MONTHLY: Frequency = { count: 1, unit: "month" };
-
-export function isFrequency(value: { count: number; unit: string }): value is Frequency {
-  return (
-    Number.isInteger(value.count) &&
-    value.count >= 1 &&
-    value.count <= 120 &&
-    INTERVAL_UNITS.includes(value.unit as IntervalUnit)
-  );
 }
 
 // ——— The accrual periods of a payroll source ——————————————————————————————————————————————————
@@ -90,7 +79,7 @@ export function competencePeriod(
  * that comes `offsetMonths` after the period's last month. `0` is the last month itself. The day is
  * held back to the month's length.
  */
-export interface DueRule {
+interface DueRule {
   day: number;
   offsetMonths: number;
 }
@@ -204,7 +193,7 @@ export function nextDueDates(
 // ——— The periods of a recurring debit ——————————————————————————————————————————————————————————
 
 /** Days after the expected day before a missing debit is worth saying. */
-export const DEBIT_GRACE_DAYS = 3;
+const DEBIT_GRACE_DAYS = 3;
 
 export interface DebitPlan {
   frequency: Frequency;
@@ -216,7 +205,7 @@ export interface DebitPlan {
   endOn: CivilDate | null;
 }
 
-export interface DebitPeriod {
+interface DebitPeriod {
   /** First and last day of the period, both included. */
   from: CivilDate;
   to: CivilDate;

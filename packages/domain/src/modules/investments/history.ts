@@ -38,7 +38,7 @@ export interface HistoryLeg {
 }
 
 /** What a day changes: per coin, and the cash in the account's currency. */
-export interface HistoryMove {
+interface HistoryMove {
   on: CivilDate;
   symbol: string | null;
   /** A coin's quantity, or cents of cash when `symbol` is `null`. */
@@ -76,7 +76,7 @@ export function historyMoves(legs: readonly HistoryLeg[], currency: string): His
   return moves;
 }
 
-export interface HistoryAnchor {
+interface HistoryAnchor {
   /** The day of the first reading: every day before it is estimated, back to the first day asked. */
   on: CivilDate;
   /** The coins it reported, summed over products. */
@@ -85,7 +85,7 @@ export interface HistoryAnchor {
   cashCents: Cents;
 }
 
-export interface EstimatedDay {
+interface EstimatedDay {
   on: CivilDate;
   totalCents: Cents;
   /** Coins held that day, over dust, with no rate on that day nor any day before it. */

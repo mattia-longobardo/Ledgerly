@@ -96,7 +96,7 @@ export function isFieldName(value: string): value is FieldName {
 
 type SpecOf<F extends FieldName> = (typeof FIELDS)[F];
 export type MoneyField = { [F in FieldName]: SpecOf<F>["unit"] extends "eur" ? F : never }[FieldName];
-export type HoursField = { [F in FieldName]: SpecOf<F>["unit"] extends "hours" ? F : never }[FieldName];
+type HoursField = { [F in FieldName]: SpecOf<F>["unit"] extends "hours" ? F : never }[FieldName];
 
 export const MONEY_FIELDS = FIELD_NAMES.filter((name) => FIELDS[name].unit === "eur") as MoneyField[];
 export function isDerived(field: FieldName): boolean {
