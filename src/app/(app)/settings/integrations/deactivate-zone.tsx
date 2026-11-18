@@ -91,46 +91,48 @@ export function DeactivateZone({ slug, provider }: { slug: string; provider: str
         {t("deactivate.open", { provider })}
       </Button>
 
-      <Modal
-        open={counts !== null}
-        onOpenChange={(next) => {
-          if (!next && !pending) setCounts(null);
-        }}
-        title={t("deactivate.title", { provider })}
-        description={t("deactivate.body", { provider })}
-        width={460}
-        finalFocus={opener}
-        footer={
-          <>
-            <Button size="sm" disabled={pending} onClick={() => setCounts(null)}>
-              {t("deactivate.cancel")}
-            </Button>
-            <Button variant="danger" size="sm" disabled={pending} aria-busy={pending} onClick={confirm}>
-              {pending ? t("deactivate.busy") : t("deactivate.confirm", { provider })}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-2 text-sm">
-          <p className="font-semibold" id="deactivate-what">
-            {t("deactivate.what")}
-          </p>
-          <ul
-            className="flex list-disc flex-col gap-1 pl-5"
-            aria-labelledby="deactivate-what"
-            data-testid="deactivate-lines"
-          >
-            {lines.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
-          {failed && (
-            <p role="alert" className="text-neg">
-              {t("deactivate.failed")}
+      {counts !== null && (
+        <Modal
+          open
+          onOpenChange={(next) => {
+            if (!next && !pending) setCounts(null);
+          }}
+          title={t("deactivate.title", { provider })}
+          description={t("deactivate.body", { provider })}
+          width={460}
+          finalFocus={opener}
+          footer={
+            <>
+              <Button size="sm" disabled={pending} onClick={() => setCounts(null)}>
+                {t("deactivate.cancel")}
+              </Button>
+              <Button variant="danger" size="sm" disabled={pending} aria-busy={pending} onClick={confirm}>
+                {pending ? t("deactivate.busy") : t("deactivate.confirm", { provider })}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-2 text-sm">
+            <p className="font-semibold" id="deactivate-what">
+              {t("deactivate.what")}
             </p>
-          )}
-        </div>
-      </Modal>
+            <ul
+              className="flex list-disc flex-col gap-1 pl-5"
+              aria-labelledby="deactivate-what"
+              data-testid="deactivate-lines"
+            >
+              {lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+            {failed && (
+              <p role="alert" className="text-neg">
+                {t("deactivate.failed")}
+              </p>
+            )}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
