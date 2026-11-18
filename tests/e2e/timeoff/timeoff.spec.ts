@@ -392,6 +392,12 @@ test("time off counts the year, says where each number comes from, and refuses a
     // The total is not an allowance of its own: ROL is still its 4 granted days less the half
     // day planned.
     await expect(page.getByTestId("rol-card")).toContainText("3.5");
+
+    // As the step found the year: no total stated, so the next run reads the seed's year.
+    await tabs.getByRole("link", { name: "Settings" }).click();
+    await form.getByLabel("Days granted in total").fill("");
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Allowance saved")).toBeVisible();
   });
 
   await test.step("the year picker moves the whole screen, and the URL with it", async () => {

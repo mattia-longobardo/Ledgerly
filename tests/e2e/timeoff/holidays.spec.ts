@@ -7,11 +7,11 @@ import { expect, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
 import { THIS_YEAR } from "../_shared/helpers";
 
-// The tests of this file change the data of one user, each from what the one before left: they run
-// in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
+// The tests of this file change the data of their own user and each puts back what it changed, so a
+// second run finds what the seed made (no data left by the run before).
 test.describe.configure({ mode: "default" });
 
-test.use({ storageState: sessionState("timeoff") });
+test.use({ storageState: sessionState("timeoffHolidays") });
 
 const YEAR = THIS_YEAR;
 
@@ -77,6 +77,9 @@ test("the patron saint and the working day are saved on their own, on Time off â
 }) => {
   await page.goto("/timeoff/settings");
   const patron = page.getByLabel("Patron saint holiday");
+  // What the seed left, put back at the end.
+  const patronBefore = await patron.inputValue();
+  const hoursBefore = await page.getByLabel("Hours in a working day").inputValue();
   await patron.selectOption({ label: "December" });
   await page.getByLabel("Day", { exact: true }).selectOption("7");
   await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
@@ -95,4 +98,13 @@ test("the patron saint and the working day are saved on their own, on Time off â
   await page.goto("/settings/profile");
   await expect(page.getByLabel("Patron saint holiday")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Time off â€º Settings" })).toBeVisible();
+
+  // As the test found the user: the patron saint and the working day of the seed.
+  await page.goto("/timeoff/settings");
+  await page.getByLabel("Patron saint holiday").selectOption(patronBefore);
+  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Patron saint saved")).toBeVisible();
+  await page.getByLabel("Hours in a working day").fill(hoursBefore);
+  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Working hours saved")).toBeVisible();
 });

@@ -75,6 +75,13 @@ export const USERS = {
     password: "timeoff-phone-password-123",
     name: "Timeoff Phone",
   },
+  // The holiday calendars and the working day (tests/e2e/timeoff/holidays.spec.ts): they change how
+  // a day is counted, so not on the user whose days `timeoff.spec.ts` counts beside them.
+  timeoffHolidays: {
+    email: "timeoff-holidays@example.test",
+    password: "timeoff-holidays-password-123",
+    name: "Timeoff Holidays",
+  },
   // F8: the admin journey. Its own user rather than a promoted `owner`, so every spec that signs
   // in as an ordinary one keeps meaning what it says.
   admin: { email: "admin@example.test", password: "admin-password-123", name: "Admin" },
@@ -200,6 +207,7 @@ export const SESSIONS = {
   fundsSetup: { user: "fundsSetup", file: "funds-setup-session.json" },
   timeoff: { user: "timeoff", file: "timeoff-session.json" },
   timeoffPhone: { user: "timeoffPhone", file: "timeoff-phone-session.json" },
+  timeoffHolidays: { user: "timeoffHolidays", file: "timeoff-holidays-session.json" },
   // The seed promotes this one, so Admin › Users and Admin › Server have a journey (F8).
   admin: { user: "admin", file: "admin-session.json" },
   categories: { user: "categories", file: "categories-session.json" },
