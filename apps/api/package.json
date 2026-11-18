@@ -9,6 +9,6 @@
   "dependencies": {
     "@ledgerly/api-contract": "*",
     "@ledgerly/domain": "*",
-    "hono": "4.13.14"
+    "hono": "4.13.19"
   }
 }
