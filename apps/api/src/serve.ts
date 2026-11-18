@@ -119,6 +119,8 @@ export function serve<R extends RouteContract>(
       query: context.req.query(),
       body: route.body ? await readBody(context) : undefined,
     };
+    // `admin` is the second gate, never the first: the role is checked at every call (plan F8 §3.4.8).
+    if (route.scope === "admin" && input.ctx.role !== "admin") return fail(context, "forbidden");
     if (!fitsContract(route, input)) return fail(context, "invalid");
     let answer: unknown;
     try {

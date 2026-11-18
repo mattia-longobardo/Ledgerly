@@ -436,6 +436,24 @@ describe("users and settings: categories and labels", () => {
   });
 });
 
+describe("the routes of the scopes security and admin", () => {
+  it("answer 403 or 404 to every token, until the change of the authorization server grants them", async () => {
+    const { SETTINGS_ROUTES } = await import("@ledgerly/api-contract");
+    const guarded = SETTINGS_ROUTES.filter((route) => route.scope === "security" || route.scope === "admin");
+    expect(guarded).toHaveLength(27);
+    const every = await tokenFor(alice, ["read", "write", "imports", "investments:read"]);
+    for (const route of guarded) {
+      const path = route.path.replace(/\{\w+\}/g, alice.userId);
+      const response = await call(path, every, {
+        method: route.method,
+        headers: { "content-type": "application/json" },
+        body: route.method === "GET" || route.method === "DELETE" ? undefined : "{}",
+      });
+      expect([403, 404], `${route.method} ${route.path}`).toContain(response.status);
+    }
+  });
+});
+
 describe("a deleted Client API", () => {
   it("stops its token on every route at once", async () => {
     await deleteApiClient(alice, clientOf.get(aliceToken)!);
