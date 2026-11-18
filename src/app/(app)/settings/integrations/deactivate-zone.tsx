@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Button } from "@/ui/button";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
@@ -23,8 +23,11 @@ export function DeactivateZone({ slug, provider }: { slug: string; provider: str
   const [failed, setFailed] = useState(false);
   const [opening, startOpening] = useTransition();
   const [pending, startTransition] = useTransition();
+  // The focus goes back here on closing: the dialog is opened by an action, not by a trigger.
+  const opener = useRef<HTMLButtonElement>(null);
 
   function open() {
+    if (opening) return;
     setFailed(false);
     startOpening(async () => {
       try {
@@ -78,10 +81,10 @@ export function DeactivateZone({ slug, provider }: { slug: string; provider: str
         </p>
       )}
       <Button
+        ref={opener}
         variant="danger"
         size="sm"
         className="w-full self-end md:w-auto"
-        disabled={opening}
         aria-busy={opening}
         onClick={open}
       >
@@ -96,6 +99,7 @@ export function DeactivateZone({ slug, provider }: { slug: string; provider: str
         title={t("deactivate.title", { provider })}
         description={t("deactivate.body", { provider })}
         width={460}
+        finalFocus={opener}
         footer={
           <>
             <Button size="sm" disabled={pending} onClick={() => setCounts(null)}>
