@@ -223,7 +223,15 @@ export async function changeCategories(
       );
     const [undo] = await tx
       .insert(categoryUndos)
-      .values(userScoped(ctx).stamp({ rows: before }))
+      .values(
+        userScoped(ctx).stamp({
+          rows: before.map((row) => ({
+            ...row,
+            appliedCategoryId:
+              change.kind === "set" ? change.categoryId : (row.categoryId ?? row.suggestedCategoryId),
+          })),
+        }),
+      )
       .returning({ id: categoryUndos.id });
     await retypeMovements(tx, ctx);
     return { count: before.length, undoId: undo.id };
@@ -231,8 +239,10 @@ export async function changeCategories(
 }
 
 /**
- * Puts back what an action changed: category, state and reason of every movement, as they were.
- * A movement back to automatic or to a suggestion is no longer a confirmed label. Once only.
+ * Puts back what an action changed: category, state and reason of every movement, as they were —
+ * on the movements that still carry what the action wrote (the person's choice of that category).
+ * A choice the person made since stays, as in "Undo" of a rule's "Apply". A movement back to
+ * automatic or to a suggestion is no longer a confirmed label. Once only. Answers how many went back.
  */
 export async function undoChange(ctx: Who, undoId: string): Promise<number> {
   if (!z.uuid().safeParse(undoId).success) throw new TransactionError("invalid");
@@ -242,14 +252,29 @@ export async function undoChange(ctx: Who, undoId: string): Promise<number> {
       .where(and(eq(categoryUndos.id, undoId), userScoped(ctx).owns(categoryUndos)))
       .returning({ rows: categoryUndos.rows });
     if (!undo) throw new TransactionError("not_found");
-    for (const { id, ...values } of undo.rows) {
-      await tx
+    let restored = 0;
+    for (const { id, appliedCategoryId, ...values } of undo.rows) {
+      const back = await tx
         .update(transactions)
         .set({ ...values, categoryOrigin: values.categoryOrigin as (typeof AUTOMATIC)[number] | null })
-        .where(and(eq(transactions.id, id), userScoped(ctx).owns(transactions)));
+        .where(
+          and(
+            eq(transactions.id, id),
+            userScoped(ctx).owns(transactions),
+            eq(transactions.categoryOrigin, "user"),
+            // A row written before this guard has no category to compare: the origin alone decides.
+            appliedCategoryId === undefined
+              ? undefined
+              : appliedCategoryId === null
+                ? isNull(transactions.categoryId)
+                : eq(transactions.categoryId, appliedCategoryId),
+          ),
+        )
+        .returning({ id: transactions.id });
+      restored += back.length;
     }
     await retypeMovements(tx, ctx);
-    return undo.rows.length;
+    return restored;
   });
 }
 

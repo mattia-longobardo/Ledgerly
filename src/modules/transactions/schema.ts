@@ -537,6 +537,8 @@ export interface CategoryUndoRow {
   /** Absent on the rows written before the rules (N3.4). */
   categoryRuleId?: string | null;
   locallyEdited: string[];
+  /** The category the action wrote: "Undo" puts back only a movement that still carries it. Absent on older rows. */
+  appliedCategoryId?: string | null;
 }
 
 /**

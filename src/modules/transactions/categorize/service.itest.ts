@@ -409,6 +409,23 @@ describe("the actions on several movements", () => {
     await expect(undoChange(ctx, done.undoId!)).rejects.toMatchObject({ code: "not_found" });
   });
 
+  it("undoes only the movements that still carry what the action wrote", async () => {
+    const ctx = await newContext();
+    await waiting(ctx);
+    const target = await createCategory(ctx, { name: "Target" });
+    const later = await createCategory(ctx, { name: "Later" });
+    const ids = (await reviewOf(ctx)).suggested[0].rows.map((row) => row.id);
+    const done = await changeCategories(ctx, ids, { kind: "set", categoryId: target.id });
+    expect(done.count).toBe(2);
+
+    // A choice the person made after "Apply to similar": "Undo" must not take it away.
+    await setCategory(ctx, [ids[0]], later.id);
+
+    expect(await undoChange(ctx, done.undoId!)).toBe(1);
+    expect(await getTransaction(ctx, ids[0])).toMatchObject({ categoryId: later.id, categoryOrigin: "user" });
+    expect(await getTransaction(ctx, ids[1])).toMatchObject({ categoryId: null, categoryOrigin: null });
+  });
+
   it("sets a category on a group and leaves alone what a person or a source already chose", async () => {
     const ctx = await newContext();
     await waiting(ctx);
