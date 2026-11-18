@@ -7,9 +7,11 @@
 // is not part of the token API: it is reached by a browser, with the session cookie, and the
 // return is accepted only for the session that started it.
 import { type NextRequest, NextResponse } from "next/server";
+import { restoreSourceAccounts } from "@/modules/accounts/service";
 import { redactForLog } from "@/platform/auth/logger";
 import { getOptionalSession } from "@/platform/auth/session";
 import { readEnv } from "@/platform/env";
+import { pluginProvider } from "@/platform/integrations/rules";
 import { PLUGIN_ID } from "@/platform/plugins/contract/manifest";
 import { completeAccess, type ReturnOutcome } from "@/platform/plugins/service";
 import { exposedAccounts, readBank, tieBack } from "@/platform/plugins/sync";
@@ -30,12 +32,14 @@ function param(url: URL, name: string): string | null {
  * Back to the procedure, with nothing of the provider in the address: a step, the connection's
  * id, or a code of error and the name of the bank (§6.3).
  */
-function back(outcome: ReturnOutcome, step: "accounts" | "done" = "accounts"): NextResponse {
+function back(outcome: ReturnOutcome, step: "accounts" | "done" = "accounts", tiedBack = 0): NextResponse {
   const target = new URL("/banks/connect", readEnv().BETTER_AUTH_URL);
   if (outcome.ok) {
     target.searchParams.set("step", step);
     target.searchParams.set("c", outcome.connectionId);
     if (step === "done" && outcome.renewed) target.searchParams.set("renewed", "1");
+    // How many accounts of a plugin turned on again came back to it (plugin-settings.md §3.4).
+    if (step === "done" && tiedBack > 0) target.searchParams.set("back", String(tiedBack));
   } else {
     target.searchParams.set("step", "bank");
     target.searchParams.set("error", outcome.error);
@@ -70,6 +74,8 @@ export async function GET(
     // person has not been asked about yet (§6.7).
     if (!outcome.ok) return back(outcome);
     const target = { pluginId: plugin, connectionId: outcome.connectionId };
+    // A plugin turned on again: its accounts kept by hand are tied to it again first (§3.4).
+    const tiedBack = outcome.renewed ? 0 : await restoreSourceAccounts(session.ctx, pluginProvider(plugin));
     if (!outcome.renewed && !(await tieBack(session.ctx, target, bankSink))) return back(outcome);
     const exposed = await exposedAccounts(session.ctx, target, bankSink);
     const unasked = exposed.accounts.some(
@@ -77,7 +83,7 @@ export async function GET(
     );
     if (unasked) return back(outcome);
     await readBank(session.ctx, { ...target, presence }, bankSink);
-    return back(outcome, "done");
+    return back(outcome, "done", tiedBack);
   } catch (error) {
     console.error("[plugins] a return could not be completed", redactForLog(error));
     return back({ ok: false, error: "unreachable", bank: null });

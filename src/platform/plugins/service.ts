@@ -13,7 +13,7 @@ import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "@/platform/context";
 import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { readEnv } from "@/platform/env";
 import { pluginProvider } from "@/platform/integrations/rules";
@@ -685,6 +685,59 @@ export async function disconnectBank(
   // The accounts left out stay left out when the same bank is connected again (H55, point 4).
   await changeSourceSkippedIds(ctx, connection.provider, { add: skipped });
   await deleteConnection(ctx, connection.id);
+}
+
+/* "Turn off" a plugin (plugin-settings.md §3, decision H55) */
+
+/**
+ * The closing of every bank access of the person, read now and run later (§3.2, step 3): the
+ * credentials and the accesses are read before the conversion deletes them, and closed after it,
+ * when nothing can undo the conversion any more. A provider that does not answer is not waited
+ * for: an access ends by itself. Nothing to close for a plugin the instance no longer has.
+ */
+export async function prepareAccessClosing(
+  ctx: Pick<Ctx, "userId">,
+  pluginId: string,
+  deps: Deps = {},
+): Promise<() => Promise<void>> {
+  const plugin = await findInstancePlugin(pluginId);
+  const credentials = await readUserCredentials(ctx, pluginId);
+  if (plugin === null || credentials === null) return async () => {};
+  const sessions: string[] = [];
+  for (const connection of await listPluginConnections(ctx, pluginId)) {
+    const { sessionId } = readBag(await readCredentials(ctx, connection.id));
+    if (sessionId !== "") sessions.push(sessionId);
+  }
+  return async () => {
+    for (const sessionId of sessions) await revokeQuietly(plugin, credentials, sessionId, deps);
+  };
+}
+
+/**
+ * The plugin's own part of "Turn off", inside the caller's transaction: the person's credentials
+ * and pending accesses go, and the plugin is off. Turning it on again starts from an empty page:
+ * the person enters the credentials again (Q1). The connections are the platform's to delete.
+ */
+export async function forgetPlugin(
+  tx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  pluginId: string,
+  now: Date = new Date(),
+): Promise<void> {
+  await tx
+    .delete(pluginUserCredentials)
+    .where(and(userScoped(ctx).owns(pluginUserCredentials), eq(pluginUserCredentials.pluginId, pluginId)));
+  await tx
+    .delete(pluginAuthStates)
+    .where(and(userScoped(ctx).owns(pluginAuthStates), eq(pluginAuthStates.pluginId, pluginId)));
+  const off = { active: false, deactivatedAt: now };
+  await tx
+    .insert(pluginActivations)
+    .values(userScoped(ctx).stamp({ pluginId, ...off }))
+    .onConflictDoUpdate({
+      target: [pluginActivations.userId, pluginActivations.pluginId],
+      set: { ...off, updatedAt: now },
+    });
 }
 
 /** Drops the pending accesses nobody came back for. Called when one is started: no job of its own. */

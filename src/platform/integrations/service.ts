@@ -999,10 +999,114 @@ export async function skipSourceAccount(
   ctx: Pick<Ctx, "userId">,
   provider: string,
   providerAccountId: string,
+  /** The account's name here, for "Bring back" on the source's page (plugin-settings.md §3.4). */
+  name: string | null = null,
 ): Promise<boolean> {
   if (!isKnownProvider(provider) && !isPluginProvider(provider)) return false;
-  await changeSourceSkippedIds(ctx, provider, { add: [providerAccountId] });
+  const deleted = { reason: "deleted" as const, name };
+  await getDb()
+    .insert(sourceSkippedAccounts)
+    .values(userScoped(ctx).stamp({ provider, externalId: providerAccountId, ...deleted }))
+    .onConflictDoUpdate({
+      target: [
+        sourceSkippedAccounts.userId,
+        sourceSkippedAccounts.provider,
+        sourceSkippedAccounts.externalId,
+      ],
+      set: deleted,
+    });
   return true;
+}
+
+/** The accounts of a source deleted here, for "Deleted in Ledgerly · Bring back" (§3.4), by name. */
+export async function deletedSourceAccounts(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+): Promise<{ externalId: string; name: string | null }[]> {
+  return getDb()
+    .select({ externalId: sourceSkippedAccounts.externalId, name: sourceSkippedAccounts.name })
+    .from(sourceSkippedAccounts)
+    .where(
+      and(
+        userScoped(ctx).owns(sourceSkippedAccounts),
+        eq(sourceSkippedAccounts.provider, provider),
+        eq(sourceSkippedAccounts.reason, "deleted"),
+      ),
+    )
+    .orderBy(asc(sourceSkippedAccounts.name), asc(sourceSkippedAccounts.externalId));
+}
+
+/**
+ * The source's ids of every entity of one type it gave, mapped to the local entity
+ * (`external_id` → `entity_id`): what "Turn on" again ties back (plugin-settings.md §3.4).
+ */
+export async function linksOf(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  entityType: string,
+): Promise<Map<string, string>> {
+  const type = entityTypeSchema.safeParse(entityType);
+  if (!type.success) throw new IntegrationError("invalid_link");
+  const rows = await getDb()
+    .select({ externalId: providerLinks.externalId, entityId: providerLinks.entityId })
+    .from(providerLinks)
+    .where(
+      and(
+        userScoped(ctx).owns(providerLinks),
+        eq(providerLinks.provider, provider),
+        eq(providerLinks.entityType, type.data),
+      ),
+    )
+    .orderBy(asc(providerLinks.externalId));
+  return new Map(rows.map((row) => [row.externalId, row.entityId]));
+}
+
+/** Every source's id of one local entity: a converted account keeps them here (§3.2). */
+export async function linksOfEntity(
+  ctx: Pick<Ctx, "userId">,
+  entityType: string,
+  entityId: string,
+): Promise<{ provider: string; externalId: string }[]> {
+  const type = entityTypeSchema.safeParse(entityType);
+  if (!type.success) throw new IntegrationError("invalid_link");
+  return getDb()
+    .select({ provider: providerLinks.provider, externalId: providerLinks.externalId })
+    .from(providerLinks)
+    .where(
+      and(
+        userScoped(ctx).owns(providerLinks),
+        eq(providerLinks.entityType, type.data),
+        eq(providerLinks.entityId, entityId),
+      ),
+    )
+    .orderBy(asc(providerLinks.provider), asc(providerLinks.externalId));
+}
+
+/**
+ * "Turn off" a source (plugin-settings.md §3.2), the part of this platform, inside the caller's
+ * transaction: every connection of the source goes, with its sync jobs and its log (`on delete
+ * cascade`), and so do the settings a "Disconnect" kept and the accounts the person left out. The
+ * accounts deleted here stay left out (§3.4), and `provider_links` stays: nobody sees it, and it
+ * is what keeps a source turned on again from bringing doubles. Returns how many connections went.
+ */
+export async function forgetSource(tx: Tx, ctx: Pick<Ctx, "userId">, provider: string): Promise<number> {
+  const gone = await tx
+    .delete(integrationConnections)
+    .where(and(userScoped(ctx).owns(integrationConnections), eq(integrationConnections.provider, provider)))
+    .returning({ id: integrationConnections.id });
+  await tx
+    .delete(sourceSettings)
+    .where(and(userScoped(ctx).owns(sourceSettings), eq(sourceSettings.provider, provider)));
+  await tx
+    .delete(sourceSkippedAccounts)
+    .where(
+      and(
+        userScoped(ctx).owns(sourceSkippedAccounts),
+        eq(sourceSkippedAccounts.provider, provider),
+        eq(sourceSkippedAccounts.reason, "excluded"),
+      ),
+    );
+  return gone.length;
 }
 
 /**

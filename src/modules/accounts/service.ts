@@ -18,7 +18,12 @@ import { userScoped } from "@/platform/db/scope";
 import { convertCents } from "@/platform/fx/rules";
 import { ratesOn } from "@/platform/fx/service";
 import { syncsTransactions } from "@/platform/integrations/rules";
-import { unlinkEntitiesOfEveryProvider } from "@/platform/integrations/service";
+import {
+  linkExternal,
+  linksOf,
+  linksOfEntity,
+  unlinkEntitiesOfEveryProvider,
+} from "@/platform/integrations/service";
 import { normalizeIban } from "@/platform/iban";
 import { type Cents, sumCents } from "@/platform/money";
 import { managedSinceOf, serviceAccountIds } from "@/modules/investments/managed";
@@ -296,8 +301,12 @@ export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Prom
 
 /** The source an account came from, as a deletion leaves it for the caller to tell that source. */
 export interface DeletedAccount {
-  /** The sources that brought it here: its own, and the one it was switched away from, if any. */
+  /**
+   * The sources that brought it here: its own, the one it was switched away from, and the one it
+   * was converted from when its source was turned off (plugin-settings.md §4.3).
+   */
   sources: { provider: string; providerAccountId: string }[];
+  name: string;
 }
 
 /**
@@ -324,6 +333,8 @@ export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promi
   // Left behind they would hold the entity unique key of rows nothing can resolve, and a source
   // chosen again would take its movements for known ones and never import them back.
   const movementIds = await transactionIdsOfAccount(ctx, id);
+  // An account of a source turned off is kept by hand and keeps the source's id as a link only.
+  const converted = await linksOfEntity(ctx, "account", id);
   // A switch goes with the account (`on delete cascade`): without it, the source the account left
   // would no longer know that id is read elsewhere, and would bring the account back.
   const switched = await getDb()
@@ -352,11 +363,101 @@ export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promi
   // orphan: the next sync would not recognise the movement and would import it a second time,
   // which is wrong money in every total. This way the failure mode is the one we already have.
   await unlinkEntitiesOfEveryProvider(ctx, "transaction", movementIds);
+  await unlinkEntitiesOfEveryProvider(ctx, "account", [id]);
   const own =
     account.provider !== null && account.providerAccountId !== null
       ? [{ provider: account.provider, providerAccountId: account.providerAccountId }]
       : [];
-  return { sources: [...own, ...switched] };
+  const linked = converted.map((one) => ({ provider: one.provider, providerAccountId: one.externalId }));
+  return { sources: [...own, ...switched, ...linked], name: account.name };
+}
+
+/**
+ * "Turn off" a source (plugin-settings.md §3.2), the accounts' part, inside the caller's
+ * transaction: every account of the source becomes an account kept by hand, with the same name,
+ * group, IBAN, balances and movements — the readings stay, so the balance of today is the last one
+ * read. The source's id of each stays as a link of the core, never shown, so turning the source on
+ * again ties the same account back (§3.4) instead of making a second one. Returns the accounts.
+ */
+export async function releaseSourceAccounts(
+  tx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  now: Date = new Date(),
+): Promise<{ id: string; providerAccountId: string }[]> {
+  const rows = await tx
+    .select({ id: accounts.id, providerAccountId: accounts.providerAccountId })
+    .from(accounts)
+    .where(and(eq(accounts.provider, provider), userScoped(ctx).owns(accounts)))
+    .orderBy(asc(accounts.id))
+    .for("update");
+  const released = rows.flatMap((row) =>
+    row.providerAccountId === null ? [] : [{ id: row.id, providerAccountId: row.providerAccountId }],
+  );
+  for (const one of released) {
+    await linkExternal(
+      ctx,
+      {
+        provider,
+        entityType: "account",
+        entityId: one.id,
+        externalId: one.providerAccountId,
+        metadata: null,
+      },
+      now,
+      tx,
+    );
+  }
+  if (rows.length > 0) {
+    // The IBAN stays, now the person's to change: no source writes it any more.
+    await tx
+      .update(accounts)
+      .set({
+        origin: "manual",
+        provider: null,
+        providerAccountId: null,
+        ibanFromSource: false,
+        updatedAt: now,
+      })
+      .where(and(eq(accounts.provider, provider), userScoped(ctx).owns(accounts)));
+  }
+  return released;
+}
+
+/**
+ * The first connection of a source turned on again (plugin-settings.md §3.4): each account kept by
+ * hand that the source's link names is tied back to the source, so its next reading finds it and
+ * brings no double. A movement written by hand meanwhile stays one. An account that has a source
+ * again, or that another account of the source took, is left alone. Returns how many came back.
+ */
+export async function restoreSourceAccounts(
+  ctx: Pick<Ctx, "userId">,
+  provider: string,
+  now: Date = new Date(),
+): Promise<number> {
+  const links = await linksOf(ctx, provider, "account");
+  if (links.size === 0) return 0;
+  let restored = 0;
+  await getDb().transaction(async (tx) => {
+    const taken = new Set(
+      (
+        await tx
+          .select({ id: accounts.providerAccountId })
+          .from(accounts)
+          .where(and(eq(accounts.provider, provider), userScoped(ctx).owns(accounts)))
+      ).map((row) => row.id),
+    );
+    for (const [externalId, accountId] of links) {
+      if (taken.has(externalId)) continue;
+      const back = await tx
+        .update(accounts)
+        .set({ origin: "synced", provider, providerAccountId: externalId, updatedAt: now })
+        .where(and(eq(accounts.id, accountId), isNull(accounts.provider), userScoped(ctx).owns(accounts)))
+        .returning({ id: accounts.id });
+      restored += back.length;
+    }
+  });
+  return restored;
 }
 
 /**

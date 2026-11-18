@@ -544,3 +544,28 @@ export async function keepSourceCategory(ctx: Who, id: string): Promise<void> {
   if (!z.uuid().safeParse(id).success) throw new SourceCategoryError("invalid");
   await markSeen(ctx, [id], getDb());
 }
+
+/* "Turn off" a source (plugin-settings.md §3.2) */
+
+/** How many categories of a source the person has: what the dialog of "Turn off" counts (§3.3). */
+export async function sourceCategoryCount(ctx: Who, provider: string): Promise<number> {
+  const [row] = await getDb()
+    .select({ n: count() })
+    .from(sourceCategories)
+    .where(and(userScoped(ctx).owns(sourceCategories), eq(sourceCategories.provider, provider)));
+  return row?.n ?? 0;
+}
+
+/**
+ * Forgets the categories of a source and their match, inside the caller's transaction. Each
+ * movement keeps the category it counts under here (`transactions.category_id` is written), and a
+ * category added for one stays a category of Ledgerly: no number moves. The movements lose only
+ * the source's category (`on delete set null`), and "Undo" of a match goes with it (cascade).
+ */
+export async function forgetSourceCategories(tx: Tx, ctx: Who, provider: string): Promise<number> {
+  const rows = await tx
+    .delete(sourceCategories)
+    .where(and(userScoped(ctx).owns(sourceCategories), eq(sourceCategories.provider, provider)))
+    .returning({ id: sourceCategories.id });
+  return rows.length;
+}

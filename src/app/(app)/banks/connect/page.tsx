@@ -184,6 +184,14 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
               ? t("done.renewed", { bank })
               : t("done.heading", { bank })}
         </h1>
+        {Number(one(params.back)) > 0 && (
+          <p role="status" className="text-sm text-muted">
+            {(await getTranslations("settings.plugin"))("reactivate.back", {
+              count: Math.min(Number(one(params.back)), 999),
+              provider: bank,
+            })}
+          </p>
+        )}
         <ul className="flex flex-col divide-y divide-border">
           {linked.map(([providerAccountId, account]) => {
             const span = spans.get(account.id);

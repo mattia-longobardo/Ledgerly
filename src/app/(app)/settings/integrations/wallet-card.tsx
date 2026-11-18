@@ -47,6 +47,7 @@ const FORM_ID = "wallet-token-form";
  */
 export function WalletCard({ row, connected, leave, deactivateHref }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
+  const plugin = useTranslations("settings.plugin");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +65,10 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
   }
 
   /** Runs one action, reporting a refusal in place and announcing a success as a toast. */
-  function run(work: () => Promise<{ ok: true } | { ok: false; error: string }>, success: string) {
+  function run(
+    work: () => Promise<{ ok: true; back?: number } | { ok: false; error: string }>,
+    success: string,
+  ) {
     startTransition(async () => {
       try {
         const result = await work();
@@ -75,7 +79,11 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
         setError(null);
         setConnecting(false);
         setDisconnecting(false);
-        notify(success);
+        notify(
+          result.back
+            ? plugin("reactivate.back", { count: result.back, provider: t("providers.wallet.name") })
+            : success,
+        );
       } catch {
         setError(t("errors.failed"));
       }

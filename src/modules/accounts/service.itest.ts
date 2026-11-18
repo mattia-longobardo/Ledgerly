@@ -493,7 +493,7 @@ describe("removeAccount", () => {
       ...CHECKING,
       openingBalance: { on: "2026-01-10", cents: 1n },
     });
-    expect(await removeAccount(ctx, account.id)).toEqual({ sources: [] });
+    expect(await removeAccount(ctx, account.id)).toEqual({ sources: [], name: CHECKING.name });
     expect((await accountsView(ctx)).rows).toEqual([]);
     expect(await listBalanceEntries(ctx, account.id)).toEqual([]);
   });
@@ -541,6 +541,7 @@ describe("removeAccount", () => {
     const [row] = (await accountsView(ctx)).rows;
     expect(await removeAccount(ctx, row.account.id)).toEqual({
       sources: [{ provider: "wallet", providerAccountId: "r1" }],
+      name: "Revolut",
     });
     expect(await getAccount(ctx, row.account.id)).toBeNull();
     await expect(removeAccount(ctx, row.account.id)).rejects.toMatchObject({ code: "not_found" });

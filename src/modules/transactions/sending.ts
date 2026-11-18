@@ -10,7 +10,7 @@ import "server-only";
 import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import type { Ctx } from "@/platform/context";
 import { type CivilDate, civilDateIn } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import { linkExternal } from "@/platform/integrations/service";
 import type { Cents } from "@/platform/money";
@@ -189,4 +189,25 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isUuid(value: string): boolean {
   return UUID.test(value);
+}
+
+/**
+ * "Turn off" a source (plugin-settings.md §3.2), inside the caller's transaction: the movements
+ * that waited for it are plain manual movements of an account kept by hand. The balance already
+ * holds them, so no number moves. Returns how many there were.
+ */
+export async function forgetSends(tx: Tx, ctx: Who, accountIds: readonly string[]): Promise<number> {
+  if (accountIds.length === 0) return 0;
+  const rows = await tx
+    .update(transactions)
+    .set({ sendState: null, sendAskedOn: null })
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        inArray(transactions.accountId, [...accountIds]),
+        isNotNull(transactions.sendState),
+      ),
+    )
+    .returning({ id: transactions.id });
+  return rows.length;
 }

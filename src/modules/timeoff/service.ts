@@ -4,7 +4,7 @@ import { getPreferences } from "@/modules/users/service";
 import { holidaysFor } from "@/platform/holidays/service";
 import type { Ctx } from "@/platform/context";
 import type { CivilDate } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import {
   type AllowanceInput,
@@ -418,6 +418,25 @@ export async function closePendingDeletes(ctx: Pick<Ctx, "userId">): Promise<num
     .where(and(userScoped(ctx).owns(leaveDays), eq(leaveDays.pending, "delete")))
     .returning({ id: leaveDays.id });
   return removed.length;
+}
+
+/**
+ * "Turn off" the source of the days (plugin-settings.md §3.2), inside the caller's transaction: a
+ * removal still waiting goes for real (as `closePendingDeletes`), and a change still waiting stays
+ * as it is here, never sent. The days stay days of Ledgerly, so the residual does not move.
+ * Returns how many changes will not reach the source.
+ */
+export async function forgetPendingDays(tx: Tx, ctx: Pick<Ctx, "userId">): Promise<number> {
+  const removed = await tx
+    .delete(leaveDays)
+    .where(and(userScoped(ctx).owns(leaveDays), eq(leaveDays.pending, "delete")))
+    .returning({ id: leaveDays.id });
+  const kept = await tx
+    .update(leaveDays)
+    .set({ pending: "none", updatedAt: new Date() })
+    .where(and(userScoped(ctx).owns(leaveDays), ne(leaveDays.pending, "none")))
+    .returning({ id: leaveDays.id });
+  return removed.length + kept.length;
 }
 
 /* A whole day, and a whole range (rewrite plan N5) */

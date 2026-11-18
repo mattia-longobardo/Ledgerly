@@ -13,6 +13,9 @@ export const CONNECTION_STATES = ["active", "error", "revoked"] as const;
  */
 export const SYNC_KINDS = ["accounts", "transactions", "leave", "documents", "holdings", "flows"] as const;
 export const SYNC_STATES = ["running", "success", "failed", "skipped"] as const;
+/** Why an account of a source does not come here: left out by the person, or deleted here. */
+export const SKIP_REASONS = ["excluded", "deleted"] as const;
+export type SkipReason = (typeof SKIP_REASONS)[number];
 /**
  * `category_group` is a Wallet category group, filed as the local parent category (F2.5);
  * `investment_event` and `investment_holding` are the provider ids of Investments (docs/design/
