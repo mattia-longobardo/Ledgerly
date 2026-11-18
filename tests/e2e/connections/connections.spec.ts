@@ -363,47 +363,27 @@ test.describe("the rows of the connections", () => {
     await expect(status).toContainText(UPDATED_TWO_HOURS_AGO);
   });
 
-  test("a plugin turned off keeps its connections in sight, paused, with the way to turn it on", async ({
+  test("Turn off: the dialog says what changes, opens on Cancel, and Esc changes nothing", async ({
     page,
   }) => {
+    // plugin-settings.md §3.3, §5. Not confirmed here: the last reading would call the bank.
     await page.goto(BANKS);
-    const plugin = page.locator('[data-testid="plugin-row"][data-plugin="enablebanking"]');
-    await plugin.getByRole("button", { name: "Enable Banking" }).click();
-    await page.getByRole("menuitem", { name: "Turn off" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Turn off" }).click();
-    await expect(page.getByText("Enable Banking turned off")).toBeVisible();
-    // A plugin that is not on has no page: its address leads to the list (plugin-settings.md §2.1).
-    await page.goto(BANKS);
-    await expect(page).toHaveURL(/\/settings\/integrations#source-enablebanking$/);
-    await expect(plugin).toHaveAttribute("data-state", "paused");
-
-    // Every connection of the plugin is "Paused": no warning, no reading, the history still there.
-    const rows = page.getByTestId("connection-row").filter({ hasText: "Enable Banking is not active." });
-    await expect(rows).toHaveCount(6);
-    for (const one of await rows.all()) {
-      await expect(one).toHaveAttribute("data-status", "paused");
-      await expect(one.getByRole("button", { name: "Turn on", exact: true })).toBeVisible();
-      await expect(one.getByRole("status")).toHaveCount(0);
-    }
-    await row(page, "Gamma Bank").getByRole("button", { name: "Gamma Bank" }).click();
-    await expect(page.getByRole("menuitem")).toHaveText(["Advanced"]);
+    const zone = page.getByRole("region", { name: "Turn off Enable Banking" });
+    const open = zone.getByRole("button", { name: "Turn off Enable Banking" });
+    await hydrated(open);
+    await open.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "Turn off Enable Banking?" });
+    await expect(dialog).toContainText("Your numbers do not change.");
+    const lines = dialog.getByTestId("deactivate-lines").getByRole("listitem");
+    await expect(lines.first()).toHaveText(/^\d+ accounts? becomes? “manual”, with the same balance\.$/);
+    await expect(lines.last()).toHaveText(
+      "The credentials are deleted: to turn it on again, enter them again.",
+    );
+    await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
     await page.keyboard.press("Escape");
-
-    // The account's page says the same thing (decision Q3).
-    await page.goto("/accounts");
-    await page
-      .getByRole("link", { name: /Alfa Bank current account/ })
-      .first()
-      .click();
-    const status = page.getByTestId("connection-status");
-    await expect(status).toHaveAttribute("data-status", "paused");
-    await expect(status).toContainText("Enable Banking is not active.");
-
-    // Turned on again from the plugin's own entry, which starts no reading by itself.
-    await page.goto(INTEGRATIONS);
-    await plugin.getByRole("button", { name: "Turn on" }).click();
-    await expect(page.getByTestId("source-row").filter({ hasText: "Enable Banking" })).toBeVisible();
-    await page.goto(BANKS);
+    await expect(dialog).toBeHidden();
+    await expect(open).toBeFocused();
     await expect(page.getByRole("region", { name: "Connection" }).getByTestId("bank-row")).toHaveCount(6);
   });
 
@@ -431,6 +411,33 @@ test.describe("the rows of the connections", () => {
     await expect(page.getByText("Disconnected from Enable Banking", { exact: true })).toHaveCount(2);
     await expect(page.getByText("Manual", { exact: true })).toHaveCount(0);
     await expect(page.getByTestId("connection-status")).toHaveCount(0);
+  });
+
+  test("Trek turned off: its page starts empty, with no connection and no setting", async ({ page }) => {
+    // Disconnected first, so the last reading of §3.2 calls nobody.
+    await page.goto(TREK);
+    const trek = page.getByTestId("connection-row").first();
+    await hydrated(trek.getByRole("button").first());
+    await trek.getByRole("button", { name: /Trek/ }).first().click();
+    await page.getByRole("menuitem", { name: "Disconnect" }).click();
+    const disconnect = page.getByRole("dialog", { name: "Disconnect Trek?" });
+    await disconnect.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await expect(disconnect).toBeHidden();
+
+    await page.getByRole("button", { name: "Turn off Trek" }).click();
+    const dialog = page.getByRole("dialog", { name: "Turn off Trek?" });
+    await expect(dialog.getByTestId("deactivate-lines").getByRole("listitem")).toHaveText([
+      "The credentials are deleted: to turn it on again, enter them again.",
+    ]);
+    await dialog.getByRole("button", { name: "Turn off Trek" }).click();
+    await expect(page.getByText("Trek turned off: 0 accounts are now “manual”")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`${INTEGRATIONS}$`));
+
+    await page.goto(TREK);
+    for (const name of ["Schedule", "Advanced", "Writing to Trek"]) {
+      await expect(page.getByRole("region", { name, exact: true })).toHaveCount(0);
+    }
+    await expect(page.getByRole("region", { name: "Turn off Trek" })).toBeVisible();
   });
 });
 

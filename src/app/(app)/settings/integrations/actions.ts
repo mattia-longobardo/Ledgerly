@@ -43,6 +43,7 @@ import {
   TrekError,
 } from "@/platform/integrations/trek/client";
 import { isTrekBusy, syncTrekNow } from "@/platform/integrations/trek/sync";
+import { restoreSourceAccounts } from "@/modules/accounts/service";
 import { closePendingDeletes } from "@/modules/timeoff/service";
 
 /**
@@ -56,7 +57,9 @@ export type IntegrationActionError =
  * What the card gets back. Deliberately this narrow: there is no field a token could travel in,
  * so no future edit can leak one by accident (spec §9.4, and the card never asks for it back).
  */
-export type IntegrationActionResult = { ok: true } | { ok: false; error: IntegrationActionError };
+export type IntegrationActionResult =
+  /** `back`: the accounts a source turned on again tied back (plugin-settings.md §3.4). */
+  { ok: true; back?: number } | { ok: false; error: IntegrationActionError };
 
 function revalidate(): void {
   revalidatePath("/settings/integrations", "layout");
@@ -108,6 +111,9 @@ export async function connectWalletAction(token: string): Promise<IntegrationAct
   // which is how a token in clear reaches `sync_runs.error`, `last_error` and this very card.
   // "Wallet rejected that token" is the honest sentence: it is the token that is wrong.
   if (!isUsableToken(secret)) return { ok: false, error: "rejected" };
+  // Wallet turned on again: its accounts kept by hand come back to it before the connection can
+  // be read, so no reading makes them a second time (plugin-settings.md §3.4).
+  const back = await restoreSourceAccounts(ctx, WALLET_PROVIDER);
   try {
     await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: secret } });
   } catch (error) {
@@ -117,7 +123,7 @@ export async function connectWalletAction(token: string): Promise<IntegrationAct
     throw error;
   }
   revalidate();
-  return { ok: true };
+  return back > 0 ? { ok: true, back } : { ok: true };
 }
 
 /**

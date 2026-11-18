@@ -6,7 +6,7 @@ import { dailyBalancesOf } from "@/modules/accounts/service";
 import { listCategories } from "@/modules/transactions/taxonomy";
 import type { Ctx } from "@/platform/context";
 import { addDays, type CivilDate, isCivilDate, today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+import { getDb, type Tx } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
 import {
@@ -462,4 +462,48 @@ export async function postsUnderAny(
     )
     .limit(1);
   return row !== undefined;
+}
+
+/** The rules that publish to the source of these accounts: what "Turn off" stops (§3.3). */
+export async function publishingRuleCount(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<number> {
+  if (accountIds.length === 0) return 0;
+  const rows = await getDb()
+    .select({ id: interestRules.id })
+    .from(interestRules)
+    .where(
+      and(
+        userScoped(ctx).owns(interestRules),
+        inArray(interestRules.accountId, [...accountIds]),
+        eq(interestRules.mode, "post_to_provider"),
+      ),
+    );
+  return rows.length;
+}
+
+/**
+ * "Turn off" a source (plugin-settings.md §3.2), inside the caller's transaction: a rule that
+ * published to it only computes from now on. Its accruals and settlements stay, a settlement not
+ * published yet stays "not published", and turning the source on again does not publish (Q6).
+ */
+export async function stopPublishing(
+  tx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<number> {
+  if (accountIds.length === 0) return 0;
+  const rows = await tx
+    .update(interestRules)
+    .set({ mode: "analyze_only" })
+    .where(
+      and(
+        userScoped(ctx).owns(interestRules),
+        inArray(interestRules.accountId, [...accountIds]),
+        eq(interestRules.mode, "post_to_provider"),
+      ),
+    )
+    .returning({ id: interestRules.id });
+  return rows.length;
 }

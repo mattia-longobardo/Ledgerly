@@ -12,7 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { users } from "../auth/schema";
-import { CONNECTION_STATES, ENTITY_TYPES, SYNC_KINDS, SYNC_STATES } from "./rules";
+import { CONNECTION_STATES, ENTITY_TYPES, SKIP_REASONS, SYNC_KINDS, SYNC_STATES } from "./rules";
 import { DEFAULT_SYNC_SCHEDULE, type SyncSchedule } from "./schedule";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
@@ -156,10 +156,11 @@ export const syncJobs = pgTable(
 );
 
 /**
- * The accounts of a source that do not come here: the ones the person left out, and the ones they
- * deleted here (rewrite plan H55, point 5). A memory of the core, apart from any connection: it
- * outlives "Disconnect", so connecting the same source again brings none of them back. The
- * source's ids only, never a name.
+ * The accounts of a source that do not come here: the ones the person left out (`excluded`), and
+ * the ones they deleted here (`deleted`, rewrite plan H55, point 5). A memory of the core, apart
+ * from any connection: it outlives "Disconnect", so connecting the same source again brings none of
+ * them back. "Turn off" forgets the `excluded` ones only (plugin-settings.md §3.2). `name` is the
+ * account's name here when it was deleted, for "Bring back" (§3.4); `null` for the others.
  */
 export const sourceSkippedAccounts = pgTable(
   "source_skipped_accounts",
@@ -172,10 +173,13 @@ export const sourceSkippedAccounts = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     provider: text("provider").notNull(),
     externalId: text("external_id").notNull(),
+    reason: text("reason", { enum: SKIP_REASONS }).notNull().default("excluded"),
+    name: text("name"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     unique("source_skipped_accounts_uq").on(table.userId, table.provider, table.externalId),
+    check("source_skipped_accounts_reason_ck", sql`${table.reason} in (${sql.raw(inList(SKIP_REASONS))})`),
     check(
       "source_skipped_accounts_external_id_ck",
       sql`length(btrim(${table.externalId})) between 1 and 200`,

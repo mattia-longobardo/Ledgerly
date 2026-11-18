@@ -157,6 +157,6 @@ export async function deleteAccount(ctx: Pick<Ctx, "userId">, accountId: string)
     throw error;
   }
   for (const source of deleted.sources) {
-    await skipSourceAccount(ctx, source.provider, source.providerAccountId);
+    await skipSourceAccount(ctx, source.provider, source.providerAccountId, deleted.name);
   }
 }

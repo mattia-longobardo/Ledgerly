@@ -1136,12 +1136,20 @@
         "writes": "Scrittura su {provider}",
         "writesHint": "Cosa Ledgerly scrive su {provider}. Si cambia dove nasce: nella regola, nel movimento, nel giorno.",
         "advanced": "Avanzate",
-        "advancedHint": "Il registro delle letture, per capire un problema."
+        "advancedHint": "Il registro delle letture, per capire un problema.",
+        "deactivate": "Disattiva {provider}",
+        "deactivateHint": "Smetti di usare {provider}. I conti restano, «a mano», con lo stesso saldo."
       },
       "accounts": {
         "choose": "Scegli i conti",
         "chooseFor": "Scegli i conti di {name}",
-        "chooseHint": "Ledgerly legge l'elenco dei conti quando lo apri."
+        "chooseHint": "Ledgerly legge l'elenco dei conti quando lo apri.",
+        "deleted": "Eliminati in Ledgerly",
+        "resume": "Riprendi",
+        "resumeFor": "Riprendi {name}",
+        "unnamed": "Conto senza nome",
+        "resumed": "{name} torna alla prossima lettura.",
+        "resumeFailed": "Non è stato possibile riprendere il conto. Riprova."
       },
       "writes": {
         "none": "Niente da scrivere adesso.",
@@ -1159,6 +1167,27 @@
       "movedHint": "Il collegamento a {provider} e la sua pianificazione sono nella pagina di {provider}.",
       "disconnect": {
         "toDeactivate": "Vuoi smettere di usare {provider}? Disattivalo"
+      },
+      "deactivate": {
+        "title": "Disattivare {provider}?",
+        "body": "{provider} smette di aggiornare Ledgerly e le sue impostazioni si cancellano. I tuoi numeri non cambiano.",
+        "what": "Cosa succede",
+        "accounts": "{count, plural, one {# conto diventa “a mano”, con lo stesso saldo.} other {# conti diventano “a mano”, con lo stesso saldo.}}",
+        "categories": "{count, plural, one {# categoria di {provider} resta come categoria di Ledgerly.} other {# categorie di {provider} restano come categorie di Ledgerly.}}",
+        "rules": "{count, plural, one {# regola di interessi smette di pubblicare su {provider}.} other {# regole di interessi smettono di pubblicare su {provider}.}}",
+        "unsent": "{count, plural, one {# movimento non ancora inviato resta solo in Ledgerly.} other {# movimenti non ancora inviati restano solo in Ledgerly.}}",
+        "pendingDays": "{count, plural, one {# modifica ai giorni non arriva su {provider}.} other {# modifiche ai giorni non arrivano su {provider}.}}",
+        "credentials": "Le credenziali si cancellano: per riattivare le inserisci di nuovo.",
+        "zone": "I conti diventano «a mano», con lo stesso saldo. Le categorie, le regole e i giorni restano in Ledgerly. Le credenziali e le impostazioni di {provider} si cancellano.",
+        "open": "Disattiva {provider}",
+        "confirm": "Disattiva {provider}",
+        "cancel": "Annulla",
+        "busy": "Disattivazione in corso…",
+        "done": "{provider} disattivato: {count, plural, one {# conto ora è “a mano”} other {# conti ora sono “a mano”}}",
+        "failed": "Non è stato possibile disattivare. Non è cambiato niente. Riprova."
+      },
+      "reactivate": {
+        "back": "{count, plural, one {# conto torna da {provider}} other {# conti tornano da {provider}}}"
       }
     },
     "banks": {

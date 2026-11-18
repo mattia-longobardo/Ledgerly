@@ -1136,12 +1136,20 @@
         "writes": "Writing to {provider}",
         "writesHint": "What Ledgerly writes to {provider}. Change it where it starts: in the rule, the transaction, the day.",
         "advanced": "Advanced",
-        "advancedHint": "The log of the readings, to understand a problem."
+        "advancedHint": "The log of the readings, to understand a problem.",
+        "deactivate": "Turn off {provider}",
+        "deactivateHint": "Stop using {provider}. The accounts stay, “manual”, with the same balance."
       },
       "accounts": {
         "choose": "Choose accounts",
         "chooseFor": "Choose accounts of {name}",
-        "chooseHint": "Ledgerly reads the list of accounts when you open it."
+        "chooseHint": "Ledgerly reads the list of accounts when you open it.",
+        "deleted": "Deleted in Ledgerly",
+        "resume": "Bring back",
+        "resumeFor": "Bring back {name}",
+        "unnamed": "Unnamed account",
+        "resumed": "{name} comes back with the next reading.",
+        "resumeFailed": "Could not bring the account back. Try again."
       },
       "writes": {
         "none": "Nothing to write now.",
@@ -1159,6 +1167,27 @@
       "movedHint": "The {provider} connection and its schedule are on the {provider} page.",
       "disconnect": {
         "toDeactivate": "Want to stop using {provider}? Turn it off"
+      },
+      "deactivate": {
+        "title": "Turn off {provider}?",
+        "body": "{provider} stops updating Ledgerly and its settings are deleted. Your numbers do not change.",
+        "what": "What happens",
+        "accounts": "{count, plural, one {# account becomes “manual”, with the same balance.} other {# accounts become “manual”, with the same balance.}}",
+        "categories": "{count, plural, one {# {provider} category stays as a Ledgerly category.} other {# {provider} categories stay as Ledgerly categories.}}",
+        "rules": "{count, plural, one {# interest rule stops posting to {provider}.} other {# interest rules stop posting to {provider}.}}",
+        "unsent": "{count, plural, one {# transaction not sent yet stays only in Ledgerly.} other {# transactions not sent yet stay only in Ledgerly.}}",
+        "pendingDays": "{count, plural, one {# change to your days does not reach {provider}.} other {# changes to your days do not reach {provider}.}}",
+        "credentials": "The credentials are deleted: to turn it on again, enter them again.",
+        "zone": "The accounts become “manual”, with the same balance. Categories, rules and days stay in Ledgerly. The {provider} credentials and settings are deleted.",
+        "open": "Turn off {provider}",
+        "confirm": "Turn off {provider}",
+        "cancel": "Cancel",
+        "busy": "Turning off…",
+        "done": "{provider} turned off: {count, plural, one {# account is now “manual”} other {# accounts are now “manual”}}",
+        "failed": "Could not turn it off. Nothing changed. Try again."
+      },
+      "reactivate": {
+        "back": "{count, plural, one {# account comes back from {provider}} other {# accounts come back from {provider}}}"
       }
     },
     "banks": {

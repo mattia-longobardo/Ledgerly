@@ -13,6 +13,7 @@ import {
   listConnections,
   readSyncJob,
   recentRuns,
+  deletedSourceAccounts,
   sourceSkippedIds,
   SYNC_RUN_RETENTION_DAYS,
 } from "@/platform/integrations/service";
@@ -45,6 +46,8 @@ import {
   OWN_DIALOGS,
   RUNS_PER_CONNECTION,
 } from "./connection-view";
+import { DeactivateZone } from "./deactivate-zone";
+import { DeletedAccounts } from "./deleted-accounts";
 import { PluginRow } from "./plugin-row";
 import { ScheduleCell } from "./schedule-cell";
 import { TrekCard } from "./trek-card";
@@ -242,7 +245,12 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       own = wallet.connection ? [{ connection: wallet.connection, row: wallet.row }] : [];
       status = wallet.row.status.value;
       if (wallet.connection) {
-        accountsSection = <WalletAccounts />;
+        accountsSection = (
+          <>
+            <WalletAccounts />
+            <DeletedAccounts slug={source} rows={await deletedSourceAccounts(ctx, WALLET_PROVIDER)} />
+          </>
+        );
         // What Ledgerly writes to Wallet: the interest rules that publish, the movements waiting.
         const sourceAccounts = accounts.filter((account) => account.provider === WALLET_PROVIDER);
         const ids = new Set(sourceAccounts.map((account) => account.id));
@@ -308,19 +316,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       status = worst(banks.map((bank) => bank.row.status.value));
       connection = (
         <>
-          {/* The plugin's own switch, as on the list until "Disattiva" moves to the end (N7.3). */}
-          <div id="deactivate" className="scroll-mt-4">
-            <PluginRow
-              id={sourcePlugin.id}
-              name={sourcePlugin.name}
-              description={sourcePlugin.description}
-              state={sourcePlugin.state}
-              pausedSince={null}
-              hasCredentials={sourcePlugin.hasCredentials}
-              connections={sourcePlugin.connections}
-            />
-          </div>
-          <div className="border-t border-border">
+          <div>
             <BanksCard
               pluginId={sourcePlugin.id}
               credentials={{
@@ -339,23 +335,26 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       );
       if (banks.length > 0) {
         accountsSection = (
-          <ul className="flex flex-col">
-            {banks.map((bank) => (
-              <li
-                key={bank.connection.id}
-                className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3.5 first:border-t-0"
-              >
-                <span className="min-w-0 font-semibold break-words">{bank.row.name}</span>
-                <ButtonLink
-                  href={`/banks/connect?step=accounts&c=${bank.connection.id}&all=1` as Route}
-                  size="sm"
-                  aria-label={plugin("accounts.chooseFor", { name: bank.row.name })}
+          <>
+            <ul className="flex flex-col">
+              {banks.map((bank) => (
+                <li
+                  key={bank.connection.id}
+                  className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3.5 first:border-t-0"
                 >
-                  {plugin("accounts.choose")}
-                </ButtonLink>
-              </li>
-            ))}
-          </ul>
+                  <span className="min-w-0 font-semibold break-words">{bank.row.name}</span>
+                  <ButtonLink
+                    href={`/banks/connect?step=accounts&c=${bank.connection.id}&all=1` as Route}
+                    size="sm"
+                    aria-label={plugin("accounts.chooseFor", { name: bank.row.name })}
+                  >
+                    {plugin("accounts.choose")}
+                  </ButtonLink>
+                </li>
+              ))}
+            </ul>
+            <DeletedAccounts slug={source} rows={await deletedSourceAccounts(ctx, provider)} />
+          </>
         );
       }
     }
@@ -495,6 +494,16 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
             </ul>
           </SettingsSection>
         )}
+
+        <div id="deactivate" className="scroll-mt-4">
+          <SettingsSection
+            title={plugin("sections.deactivate", { provider: name })}
+            description={plugin("sections.deactivateHint", { provider: name })}
+            padded={false}
+          >
+            <DeactivateZone slug={source} provider={name} />
+          </SettingsSection>
+        </div>
       </SettingsGrid>
     );
   }
