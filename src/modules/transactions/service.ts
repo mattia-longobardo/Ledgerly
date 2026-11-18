@@ -71,6 +71,8 @@ export type TransactionErrorCode =
   | "provider_owned"
   | "invalid_reference"
   | "invalid"
+  /** A person has as many rules as allowed (categories-and-rules.md §4.8). */
+  | "limit"
   /** A manual movement dated after today, or one of the manual writes asked of a provider's row. */
   | "future_date"
   | "not_manual"
@@ -246,6 +248,7 @@ export function chosenBy(origin: "user" | "provider" | null) {
     suggestedCategoryId: null,
     categoryReason: null,
     categoryReasonParams: null,
+    categoryRuleId: null,
   };
 }
 
@@ -256,7 +259,30 @@ export function chosenBy(origin: "user" | "provider" | null) {
  * rules — so the movements of one that does are never read, and never recategorised.
  */
 export async function categorisableAccountIds(ctx: Pick<Ctx, "userId">): Promise<string[]> {
+  return categorisableOf(await listAccounts(ctx, { includeArchived: true }));
+}
+
+/**
+ * What the rules of a person read beyond a movement (categories-and-rules.md §4.3): the accounts
+ * the rules may write on, the accounts no source reads (kept by hand), and the person's IBANs.
+ */
+export async function ruleAccountFacts(ctx: Pick<Ctx, "userId">): Promise<{
+  categorisable: string[];
+  manualAccountIds: string[];
+  ownIbans: OwnIban[];
+}> {
   const accounts = await listAccounts(ctx, { includeArchived: true });
+  return {
+    categorisable: await categorisableOf(accounts),
+    manualAccountIds: accounts.filter((account) => account.provider === null).map((account) => account.id),
+    ownIbans: accounts.flatMap((account) => {
+      const iban = normalizeIban(account.iban);
+      return iban === null ? [] : [{ accountId: account.id, iban }];
+    }),
+  };
+}
+
+async function categorisableOf(accounts: Awaited<ReturnType<typeof listAccounts>>): Promise<string[]> {
   const fromPlugin = accounts.some(
     (account) => account.provider !== null && isPluginProvider(account.provider),
   );

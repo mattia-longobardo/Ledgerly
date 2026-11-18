@@ -25,8 +25,11 @@ interface CategoryActionsApi {
   commands: CategoryCommands;
   /** Confirms the automatic category or the suggestion of some rows, and says so. */
   confirm(ids: readonly string[]): Promise<boolean>;
-  /** After a person chose `categoryId` for one row: asks whether the similar ones follow (K3). */
-  afterChoice(id: string, categoryId: string): void;
+  /**
+   * After a person chose `categoryId` for one row: asks whether the similar ones follow (K3).
+   * `rule` is the rule that had given the row its category, which stays as it is (§4.5).
+   */
+  afterChoice(id: string, categoryId: string, rule?: { id: string; name: string } | null): void;
   /** A toast for an action on several rows, with its "Undo". */
   changed(result: Extract<CategoryChangeResult, { ok: true }>): void;
 }
@@ -53,9 +56,11 @@ export function CategoryActions({
 }) {
   const t = useTranslations("expenses");
   const [similar, setSimilar] = useState<{
+    id: string;
     categoryId: string;
     text: string;
     rows: SimilarRowView[];
+    rule: { id: string; name: string } | null;
   } | null>(null);
 
   const changed = useCallback(
@@ -96,11 +101,11 @@ export function CategoryActions({
           return false;
         }
       },
-      afterChoice(id, categoryId) {
+      afterChoice(id, categoryId, rule = null) {
         commands
           .similar(id, categoryId)
           .then((answer) => {
-            if (answer.rows.length > 0) setSimilar({ categoryId, ...answer });
+            if (answer.rows.length > 0) setSimilar({ id, categoryId, rule, ...answer });
           })
           // The first choice is saved whatever happens here: no question is asked, that is all.
           .catch(() => undefined);
@@ -118,6 +123,8 @@ export function CategoryActions({
           category={categories.find((category) => category.id === similar.categoryId) ?? null}
           rows={similar.rows}
           categories={categories}
+          createRuleHref={`/settings/rules?from=${similar.id}&category=${similar.categoryId}`}
+          rule={similar.rule}
           onClose={() => setSimilar(null)}
           onApply={async () => {
             const result = await commands.choose(

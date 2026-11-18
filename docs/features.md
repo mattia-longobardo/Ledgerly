@@ -118,6 +118,17 @@ has its own page with the tabs Overview, Transactions, Balance entries and Setti
   section and Transfers. "Move to another section…" moves a group, or a category of Transfers, with
   the numbers said first (subscriptions, pockets, interest and the budget that stops) and "Undo". A
   source's category may count under Transfers; its movements keep the source's category.
+- **Rules** (N3.4, **Settings → Rules**). A rule is conditions, all true — text, counterparty,
+  counterparty is one of your accounts, amount, direction, account, source, currency — and a
+  category (its section comes with it), with labels and a note if asked. On every reading the first
+  active rule that matches gives its category to a movement with none, before the automatic
+  categories; the row shows the mark "automatic" with "Rule “name”". A rule never changes a
+  person's choice, a movement of a source that gives its own categories (Wallet) or a leg of a pair,
+  and a category given by a rule never teaches the model. The editor shows how many movements match
+  today; "Apply to existing transactions…" says what changes first and offers "Undo". The list is
+  ordered by drag or by "Move up/down"; a rule on an archived category is off. "Create a rule…" is
+  in the row's menu of Expenses and in the question about similar movements; a category's page lists
+  its rules. The export has the rules. At most 200 rules.
 - **Labels**, the proposals to merge and the default groups are in **Settings → Categories**.
 
 ## Budgets

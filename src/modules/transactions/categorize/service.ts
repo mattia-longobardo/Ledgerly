@@ -25,6 +25,7 @@ import {
 } from "./classifier";
 import { type Confirmation, strictMemory } from "./memory";
 import { DEFAULT_GROUPS } from "./tables";
+import { applyRulesToNew } from "./user-rules-service";
 import { memoryKey } from "./text";
 import { type Thresholds, thresholdsFor } from "./thresholds";
 
@@ -306,6 +307,9 @@ export async function categorise(
         type: transactions.type,
         merchantCategoryCode: transactions.merchantCategoryCode,
         bankTransactionCode: transactions.bankTransactionCode,
+        currency: transactions.currency,
+        origin: transactions.origin,
+        transferGroupId: transactions.transferGroupId,
       })
       .from(transactions)
       .where(
@@ -320,14 +324,19 @@ export async function categorise(
       )
       .orderBy(transactions.id);
 
-    const writes = candidates.map((row) => {
-      const movement: CascadeMovement = { ...row, kind: row.type === "income" ? "income" : "expense" };
-      const decision = decide(movement, knowledge);
-      if (decision.kind === "automatic") outcome.automatic += 1;
-      else if (decision.kind === "suggestion") outcome.suggested += 1;
-      else outcome.open += 1;
-      return { id: row.id, values: { ...columnsFor(decision, version), categoryKey: memoryKey(movement) } };
-    });
+    // The person's rules come first (categories-and-rules.md §4.5): the movements one decided are done.
+    const byRule = await applyRulesToNew(ctx, candidates);
+    outcome.automatic += byRule.size;
+    const writes = candidates
+      .filter((row) => !byRule.has(row.id))
+      .map((row) => {
+        const movement: CascadeMovement = { ...row, kind: row.type === "income" ? "income" : "expense" };
+        const decision = decide(movement, knowledge);
+        if (decision.kind === "automatic") outcome.automatic += 1;
+        else if (decision.kind === "suggestion") outcome.suggested += 1;
+        else outcome.open += 1;
+        return { id: row.id, values: { ...columnsFor(decision, version), categoryKey: memoryKey(movement) } };
+      });
     for (let at = 0; at < writes.length; at += WRITE_CHUNK) {
       await getDb().transaction(async (tx) => {
         for (const write of writes.slice(at, at + WRITE_CHUNK)) {

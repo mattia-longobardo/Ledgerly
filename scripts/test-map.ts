@@ -51,7 +51,11 @@ export const FLOWS: Flow[] = [
     specs: ["expenses", "manual-movement", "manual-send", "wide"],
     screens: CROSS_CUTTING,
   },
-  { id: "categories", specs: ["categories", "review", "source-categories"], screens: ["a11y", "keyboard"] },
+  {
+    id: "categories",
+    specs: ["categories", "review", "source-categories", "rules"],
+    screens: ["a11y", "keyboard"],
+  },
   { id: "budgets", specs: ["budgets"], screens: ["a11y", "mobile"] },
   { id: "pockets", specs: ["pockets"], screens: ["a11y", "mobile"] },
   { id: "subscriptions", specs: ["subscriptions"], screens: ["a11y", "mobile"] },
@@ -155,7 +159,7 @@ export const MODULES: Module[] = [
   },
   {
     id: "categories",
-    files: [page("settings/categories")],
+    files: [page("settings/categories"), page("settings/rules")],
     integration: ["src/app/(app)/settings/categories"],
     flows: ["categories"],
     // A source's categories are drawn on the source's page (rewrite plan N7.2); the page of the
@@ -622,6 +626,7 @@ export const MESSAGES: Record<string, string> = {
   "settings.tabs": "interface",
   "settings.categories": "categories",
   "settings.labels": "categories",
+  "settings.rules": "categories",
   "settings.integrations": "connections",
   "settings.plugins": "connections",
   "settings.plugin": "connections",

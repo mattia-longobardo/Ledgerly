@@ -77,9 +77,40 @@ const PAGES: Screen[] = [
       await page.waitForURL(/\/expenses\/categories\/[0-9a-f-]{36}/);
     },
   },
+
+  // Release N3.4 (categories-and-rules.md §4): the `rules` user has two rules, one off; the
+  // `layout` user has none.
+  { name: "/settings/rules", session: "rules", open: go("/settings/rules") },
+  { name: "/settings/rules (no rule)", session: "layout", open: go("/settings/rules") },
 ];
 
 const OVERLAYS: Screen[] = [
+  {
+    name: "the editor of a rule, with its preview",
+    session: "rules",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/rules");
+      await settled(page);
+      await page.getByRole("button", { name: "Actions for Newsstand" }).click();
+      await page.getByRole("menuitem", { name: "Edit" }).click();
+      await settledDialog(page);
+      await page.getByTestId("rule-preview").getByText("1 transaction matches.").waitFor();
+    },
+  },
+  {
+    name: "the dialog Apply of a rule",
+    session: "rules",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/rules");
+      await settled(page);
+      await page.getByRole("button", { name: "Actions for Newsstand" }).click();
+      await page.getByRole("menuitem", { name: "Apply to existing transactions…" }).click();
+      await settledDialog(page);
+      await page.getByTestId("rule-apply").getByText("1 transaction moves").waitFor();
+    },
+  },
   {
     // Release N3.1: the chooser of a source's category, open on its list.
     name: "the category chooser of a source's category",

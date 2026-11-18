@@ -12,6 +12,7 @@ import {
   similarMovementsAction,
   undoCategoriesAction,
 } from "@/modules/transactions/categorize/actions";
+import { rulesForCategory } from "@/modules/transactions/categorize/user-rules-service";
 import { categoryMacroTotals, listTransactions, spendingOverTime } from "@/modules/transactions/queries";
 import { getCategory, listCategories, listLabels, TaxonomyError } from "@/modules/transactions/taxonomy";
 import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
@@ -81,7 +82,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
   const previous = shiftRange(query.range, -1);
   const end = monthKey(periodEnd(query.range, todayOn));
 
-  const [all, labels, totals, before, rows, spending, budget, notes] = await Promise.all([
+  const [all, labels, totals, before, rows, spending, budget, notes, rules] = await Promise.all([
     listCategories(ctx, { includeArchived: true }),
     listLabels(ctx),
     categoryMacroTotals(ctx, { ...scope, from: query.range.from, to: query.range.to }),
@@ -95,6 +96,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
     ),
     category.type === "expense" ? budgetDetail(ctx, { categoryId: category.id, accountId: null }, end) : null,
     sourceNotes(ctx),
+    rulesForCategory(ctx, category.id),
   ]);
 
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
@@ -353,17 +355,50 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           </Card>
         )}
 
-        <section aria-labelledby="category-movements" className="flex min-w-0 flex-col gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 id="category-movements" className="text-lg font-semibold">
-              {t("categories.detail.movements")}
+        <div className="grid grid-cols-1 items-start gap-4 @4xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <section aria-labelledby="category-movements" className="flex min-w-0 flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="category-movements" className="text-lg font-semibold">
+                {t("categories.detail.movements")}
+              </h2>
+              <ButtonLink size="sm" href={withParams("/expenses", carry, { cat: category.id }) as Route}>
+                {t("categories.detail.openInExpenses")}
+              </ButtonLink>
+            </div>
+            {table}
+          </section>
+          {/* The rules that give this category (categories-and-rules.md §5.4). */}
+          <Card className="flex min-w-0 flex-col gap-2">
+            <h2 id="category-rules" className="text-lg font-semibold">
+              {t("categories.detail.rules")}
             </h2>
-            <ButtonLink size="sm" href={withParams("/expenses", carry, { cat: category.id }) as Route}>
-              {t("categories.detail.openInExpenses")}
-            </ButtonLink>
-          </div>
-          {table}
-        </section>
+            {rules.length === 0 ? (
+              <p className="text-sm text-muted">{t("categories.detail.noRules")}</p>
+            ) : (
+              <ul aria-labelledby="category-rules" className="flex flex-col gap-1">
+                {rules.map((rule) => (
+                  <li key={rule.id} className="flex items-center gap-2">
+                    <Link
+                      href={`/settings/rules#rule-${rule.id}` as Route}
+                      className="focus-ring inline-flex min-h-6 min-w-0 items-center truncate rounded-[2px] hover:underline"
+                    >
+                      «{rule.name}» → {category.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {category.archivedAt === null && (
+              <ButtonLink
+                size="sm"
+                className="self-start"
+                href={`/settings/rules?category=${category.id}` as Route}
+              >
+                ＋ {t("categories.detail.newRule")}
+              </ButtonLink>
+            )}
+          </Card>
+        </div>
       </Page>
     </CategoryActions>
   );

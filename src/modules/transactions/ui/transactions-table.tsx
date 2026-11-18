@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Fragment, type MouseEvent, useEffect, useMemo, useState, useTransition } from "react";
@@ -222,7 +223,16 @@ export function TransactionsTable({
         // One movement, one category: the similar ones may follow (decision K3). Never after a
         // choice on several rows, where the person already said which ones.
         if (result.ok && result.count > 0 && ids.length === 1 && categoryId !== null) {
-          automatic?.afterChoice(ids[0], categoryId);
+          const reason = groups
+            .flatMap((group) => group.rows)
+            .find((row) => row.id === ids[0])?.categoryReason;
+          automatic?.afterChoice(
+            ids[0],
+            categoryId,
+            reason?.code === "rule" && reason.params.ruleId
+              ? { id: reason.params.ruleId, name: reason.params.name ?? "" }
+              : null,
+          );
         }
         return result;
       },
@@ -308,6 +318,14 @@ export function TransactionsTable({
           label={t("row.menu")}
           items={[
             { label: t("row.editCategory"), onSelect: () => setEditing(`${variant}:${row.id}`) },
+            ...(automatic
+              ? [
+                  {
+                    label: t("row.createRule"),
+                    onSelect: () => router.push(`/settings/rules?from=${row.id}` as Route),
+                  },
+                ]
+              : []),
             { label: t("manual.row.edit"), onSelect: () => manual.openEdit(row) },
             ...(row.send?.state === "not_sent" && manual.retrySend
               ? [{ label: t("manual.row.retrySend"), onSelect: () => manual.retrySend?.(row) }]
@@ -326,6 +344,14 @@ export function TransactionsTable({
         label={t("row.menu")}
         items={[
           { label: t("row.editCategory"), onSelect: () => setEditing(`${variant}:${row.id}`) },
+          ...(automatic
+            ? [
+                {
+                  label: t("row.createRule"),
+                  onSelect: () => router.push(`/settings/rules?from=${row.id}` as Route),
+                },
+              ]
+            : []),
           { label: t("row.edit"), onSelect: () => setDetailsFor(row.id) },
           {
             label: row.hidden ? t("selection.restore") : t("selection.hide"),

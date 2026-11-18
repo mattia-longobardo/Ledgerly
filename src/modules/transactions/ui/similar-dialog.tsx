@@ -1,6 +1,8 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/ui/button";
@@ -32,6 +34,8 @@ export function SimilarDialog({
   categories,
   onApply,
   onClose,
+  createRuleHref,
+  rule = null,
 }: {
   /** The text of the movement the person filed. */
   text: string;
@@ -41,6 +45,10 @@ export function SimilarDialog({
   /** Applies the category to every row; `false` when it could not. */
   onApply: () => Promise<boolean>;
   onClose: () => void;
+  /** "Create a rule": the editor of the rules, filled from the movement (categories-and-rules.md §4.7). */
+  createRuleHref?: string;
+  /** The rule that had given the movement its category: it stays as it is (§4.5). */
+  rule?: { id: string; name: string } | null;
 }) {
   const t = useTranslations("expenses");
   const [all, setAll] = useState(false);
@@ -66,6 +74,14 @@ export function SimilarDialog({
       title={t("similar.title", { count })}
       footer={
         <div className="flex w-full justify-end gap-2 max-sm:flex-col-reverse">
+          {createRuleHref && (
+            <Link
+              href={createRuleHref as Route}
+              className="focus-ring mr-auto inline-flex min-h-6 items-center self-center rounded-[2px] text-sm text-accent hover:underline max-sm:mr-0"
+            >
+              {t("similar.createRule")}
+            </Link>
+          )}
           <Button size="sm" onClick={onClose} disabled={saving}>
             {t("similar.skip")}
           </Button>
@@ -84,6 +100,17 @@ export function SimilarDialog({
         <p className="text-sm break-words">
           {t("similar.chosen", { text, category: category?.name ?? "" })} {t("similar.body", { count })}
         </p>
+        {rule && (
+          <p className="text-sm break-words text-muted">
+            {t("similar.ruleStays", { name: rule.name })}{" "}
+            <Link
+              href={`/settings/rules#rule-${rule.id}` as Route}
+              className="focus-ring rounded-[2px] text-accent hover:underline"
+            >
+              {t("similar.editRule")}
+            </Link>
+          </p>
+        )}
         <ul className={cn("flex flex-col text-sm", all && "max-h-60 overflow-y-auto")}>
           {(all ? rows : rows.slice(0, SHOWN)).map((row) => {
             const current = nameOf(row.categoryId);

@@ -220,6 +220,7 @@
       "security": "Sicurezza",
       "integrations": "Integrazioni",
       "categories": "Categorie",
+      "rules": "Regole",
       "data": "Dati",
       "users": "Utenti",
       "server": "Server"
@@ -1415,6 +1416,125 @@
       "version": "v{version} · contratto v{contract}",
       "empty": "Nessun plugin in questa istanza.",
       "unavailable": "Stato non disponibile. Ricarica la pagina."
+    },
+    "rules": {
+      "title": "Regole",
+      "intro": "Ledgerly applica le regole ai movimenti nuovi, dall'alto in basso. La prima regola che corrisponde decide. Le tue scelte a mano vincono sempre.",
+      "new": "Nuova regola",
+      "edit": "Modifica la regola",
+      "name": "Nome",
+      "if": "Se",
+      "then": "Allora",
+      "addCondition": "Aggiungi una condizione",
+      "removeCondition": "Togli la condizione {n}",
+      "conditionField": "Campo della condizione {n}",
+      "operator": "Operatore",
+      "value": "Valore",
+      "valueTo": "Fino a",
+      "field": {
+        "text": "Testo",
+        "counterparty": "Controparte",
+        "ownAccount": "Controparte è un tuo conto",
+        "amount": "Importo",
+        "direction": "Direzione",
+        "account": "Conto",
+        "source": "Sorgente",
+        "currency": "Valuta"
+      },
+      "op": {
+        "contains": "contiene",
+        "notContains": "non contiene",
+        "equals": "è uguale a",
+        "startsWith": "inizia con",
+        "gt": "è maggiore di",
+        "lt": "è minore di",
+        "between": "è tra",
+        "oneOf": "è uno di",
+        "is": "è"
+      },
+      "direction": {
+        "in": "entrata",
+        "out": "uscita"
+      },
+      "source": {
+        "bank": "Banca",
+        "manual": "A mano"
+      },
+      "ownAccountYes": "sì",
+      "action": {
+        "category": "Categoria",
+        "labels": "Etichette",
+        "note": "Nota"
+      },
+      "chooseCategory": "Scegli una categoria",
+      "searchCategory": "Cerca una categoria",
+      "noCategoryMatch": "Nessuna categoria trovata",
+      "active": "Attiva",
+      "activeName": "Attiva {name}",
+      "off": "Spenta",
+      "archivedCategory": "Categoria archiviata",
+      "count": "{count, plural, one {# movimento} other {# movimenti}}",
+      "preview": {
+        "match": "{count, plural, =0 {Nessun movimento corrisponde oggi.} one {# movimento corrisponde.} other {# movimenti corrispondono.}}",
+        "kept": "{count, plural, one {# ha una tua scelta e non cambia.} other {# hanno una tua scelta e non cambiano.}}",
+        "busy": "Calcolo…",
+        "error": "Anteprima non disponibile. Puoi salvare lo stesso.",
+        "see": "Vedi",
+        "hide": "Nascondi",
+        "invalid": "Completa la regola per vedere l'anteprima."
+      },
+      "saved": "Regola salvata",
+      "applyExisting": "Applica a {count, plural, one {# movimento esistente} other {# movimenti esistenti}}…",
+      "applyMenu": "Applica ai movimenti esistenti…",
+      "apply": {
+        "title": "Applica «{name}»",
+        "body": "{count, plural, one {# movimento passa} other {# movimenti passano}} a {category}.",
+        "effect": "{count, plural, one {Non conta più} other {Non contano più}} come {from}: {amount} dal {year}.",
+        "effectJoin": "{count, plural, one {Torna a contare} other {Tornano a contare}}: {amount} dal {year}.",
+        "kept": "{count, plural, one {# movimento ha una tua scelta e non cambia.} other {# movimenti hanno una tua scelta e non cambiano.}}",
+        "show": "Mostra i {count} movimenti",
+        "hide": "Nascondi i movimenti",
+        "confirm": "Applica",
+        "nothing": "Nessun movimento da cambiare.",
+        "done": "{count, plural, one {# movimento aggiornato} other {# movimenti aggiornati}}",
+        "failed": "Non è stato possibile applicare la regola. Riprova."
+      },
+      "fromExpense": "uscite",
+      "fromIncome": "entrate",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "moved": "{name} ora è la regola {n}",
+      "drag": "Trascina {name}",
+      "duplicate": "Duplica",
+      "copyName": "{name} (copia)",
+      "delete": {
+        "action": "Elimina",
+        "title": "Eliminare la regola «{name}»?",
+        "body": "{count, plural, one {Il movimento tiene} other {I # movimenti tengono}} la sua categoria.",
+        "confirm": "Elimina"
+      },
+      "deleted": "Regola eliminata",
+      "undo": "Annulla",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio…",
+      "limit": "Hai raggiunto 200 regole. Elimina una regola per aggiungerne un'altra.",
+      "empty": {
+        "title": "Ancora nessuna regola",
+        "body": "Una regola dà da sola categoria e macro ai movimenti nuovi. Esempio: ogni movimento con «ricarica» va in Trasferimenti."
+      },
+      "fromTransaction": "Crea una regola…",
+      "reason": "Regola «{name}»",
+      "reasonDeleted": "Regola eliminata",
+      "openRule": "Apri la regola",
+      "actions": "Azioni per {name}",
+      "error": "Non è stato possibile salvare la regola. Riprova.",
+      "loadError": "Non è stato possibile caricare le regole.",
+      "summary": {
+        "and": " · ",
+        "to": "→ {category}"
+      },
+      "noteHint": "Scritta solo se il movimento non ha una nota."
     }
   },
   "errors": {
@@ -1520,7 +1640,8 @@
       "noPayee": "Senza beneficiario",
       "save": "Salva",
       "cancel": "Annulla",
-      "paired": "È un giroconto tra i tuoi conti."
+      "paired": "È un giroconto tra i tuoi conti.",
+      "createRule": "Crea una regola…"
     },
     "badges": {
       "manual": "A mano",
@@ -1701,11 +1822,14 @@
         "brand": "«{brand}» è un marchio noto di questa categoria.",
         "salary": "La banca indica questo movimento come stipendio.",
         "fee": "La banca indica questo movimento come commissione.",
-        "other": "Ledgerly ha scelto questa categoria dai dati del movimento."
+        "other": "Ledgerly ha scelto questa categoria dai dati del movimento.",
+        "rule": "Regola «{name}»",
+        "rule_deleted": "Regola eliminata"
       },
       "selection": {
         "confirm": "Conferma i suggerimenti ({count})"
-      }
+      },
+      "openRule": "Apri la regola"
     },
     "review": {
       "title": "Da rivedere",
@@ -1806,7 +1930,10 @@
       "skip": "No, solo questo",
       "applied": "{count, plural, one {# movimento aggiornato} other {# movimenti aggiornati}}",
       "undo": "Annulla",
-      "failed": "Non è stato possibile applicare la categoria. Il primo movimento è salvato. Riprova."
+      "failed": "Non è stato possibile applicare la categoria. Il primo movimento è salvato. Riprova.",
+      "createRule": "Crea una regola",
+      "ruleStays": "La regola «{name}» resta uguale.",
+      "editRule": "Modifica la regola"
     },
     "categories": {
       "title": "Categorie",
@@ -1907,7 +2034,10 @@
         "movements": "Movimenti",
         "openInExpenses": "Apri in Spese",
         "noMovements": "Nessun movimento in questo periodo",
-        "archived": "Archiviata"
+        "archived": "Archiviata",
+        "rules": "Regole",
+        "newRule": "Nuova regola",
+        "noRules": "Nessuna regola dà questa categoria."
       },
       "macroMove": {
         "open": "Sposta in un'altra macro…",

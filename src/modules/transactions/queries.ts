@@ -36,7 +36,15 @@ import { getDb } from "@/platform/db/client";
 import { userScoped } from "@/platform/db/scope";
 import type { Cents } from "@/platform/money";
 import { type CategoryState, categoryStateOf, isHidden, type TransactionType } from "./rules";
-import { categories, labels, recurringPatterns, transactionLabels, transactions } from "./schema";
+import type { RuleCondition } from "./categorize/user-rules";
+import {
+  categories,
+  categoryRules,
+  labels,
+  recurringPatterns,
+  transactionLabels,
+  transactions,
+} from "./schema";
 import { type Label, listCategories, listLabels, type TreeCategory } from "./taxonomy";
 
 /** A movement the cascade has read and that still has no category: what "To review" lists. */
@@ -1446,4 +1454,45 @@ export async function movementSpanByAccount(
     .groupBy(transactions.accountId)
     .orderBy(asc(transactions.accountId));
   return new Map(rows.map((row) => [row.accountId, { count: row.count, first: row.first }]));
+}
+
+/**
+ * The person's rules as the export writes them (categories-and-rules.md §4.8): order, name, state,
+ * conditions and action, with names in place of ids. A rule deleted for "Undo" is not exported.
+ */
+export async function rulesForExport(ctx: Pick<Ctx, "userId">): Promise<
+  {
+    position: number;
+    name: string;
+    active: boolean;
+    conditions: RuleCondition[];
+    category: string;
+    labels: string[];
+    note: string | null;
+  }[]
+> {
+  const [rows, own] = await Promise.all([
+    getDb()
+      .select({
+        name: categoryRules.name,
+        active: categoryRules.active,
+        conditions: categoryRules.conditions,
+        labelIds: categoryRules.labelIds,
+        note: categoryRules.note,
+        category: categories.name,
+        archivedAt: categories.archivedAt,
+      })
+      .from(categoryRules)
+      .innerJoin(categories, eq(categories.id, categoryRules.categoryId))
+      .where(and(userScoped(ctx).owns(categoryRules), isNull(categoryRules.deletedAt)))
+      .orderBy(asc(categoryRules.position), asc(categoryRules.id)),
+    listLabels(ctx),
+  ]);
+  const labelName = new Map(own.map((label) => [label.id, label.name]));
+  return rows.map(({ labelIds, archivedAt, active, ...rule }, index) => ({
+    ...rule,
+    position: index + 1,
+    active: active && archivedAt === null,
+    labels: labelIds.flatMap((id) => labelName.get(id) ?? []),
+  }));
 }

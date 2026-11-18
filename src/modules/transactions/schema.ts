@@ -30,6 +30,7 @@ import {
   TRANSACTION_TYPES,
   type TransactionType,
 } from "./rules";
+import type { RuleCondition } from "./categorize/user-rules";
 
 const inList = (values: readonly string[]) => values.map((value) => `'${value}'`).join(", ");
 
@@ -214,6 +215,44 @@ export const sourceCategoryUndos = pgTable(
 );
 
 /**
+ * A rule of the person's (categories-and-rules.md §4): conditions, all true, give a category, and
+ * may add labels and a note. Ordered by `position`; the first active rule that matches decides
+ * (QC5). A rule deleted from the interface keeps its row for a while (`deletedAt`), so "Undo"
+ * finds it with every movement still tied to it.
+ */
+export const categoryRules = pgTable(
+  "category_rules",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: integer("position").notNull(),
+    active: boolean("active").notNull().default(true),
+    // Validated by `ruleInputSchema` (`categorize/user-rules.ts`) on every write and every read.
+    conditions: jsonb("conditions").$type<RuleCondition[]>().notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    labelIds: jsonb("label_ids").$type<string[]>().notNull().default([]),
+    note: text("note"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("category_rules_user_idx").on(table.userId, table.position),
+    index("category_rules_category_idx").on(table.categoryId),
+  ],
+);
+
+/**
  * One movement (spec §6, §7.2). The provider owns `payee`, `amountCents` and `occurredAt`; the
  * user owns category, labels, note and visibility, and every field they touch is appended to
  * `locallyEdited` so the next sync leaves it alone.
@@ -260,6 +299,8 @@ export const transactions = pgTable(
     // Why the category was given or suggested: a code of a closed list, and what its sentence names.
     categoryReason: text("category_reason"),
     categoryReasonParams: jsonb("category_reason_params").$type<Record<string, string>>(),
+    // The rule that gave the category, while `categoryOrigin` is `rule` (categories-and-rules.md §4.5).
+    categoryRuleId: uuid("category_rule_id").references(() => categoryRules.id, { onDelete: "set null" }),
     // The key of the movement's text (`memoryKey`), written when the cascade reads the movement:
     // what "similar movements" and the groups of "To review" are found by. `null` on a movement
     // the cascade never reads — one of a source that gives its own categories.
@@ -493,6 +534,8 @@ export interface CategoryUndoRow {
   suggestedCategoryId: string | null;
   categoryReason: string | null;
   categoryReasonParams: Record<string, string> | null;
+  /** Absent on the rows written before the rules (N3.4). */
+  categoryRuleId?: string | null;
   locallyEdited: string[];
 }
 
@@ -514,6 +557,37 @@ export const categoryUndos = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("category_undos_user_idx").on(table.userId, table.createdAt)],
+);
+
+/** What a movement was before "Apply to existing transactions" of a rule (categories-and-rules.md §4.6). */
+export interface RuleUndoRow extends CategoryUndoRow {
+  /** The rule "Apply" wrote: "Undo" puts back only a movement that still carries it. */
+  appliedRuleId: string;
+  categoryKey: string | null;
+  type: TransactionType;
+  /** The note before, put back only when the rule wrote one. */
+  note: string | null;
+  wroteNote: boolean;
+  /** The note the rule wrote, when it wrote one. */
+  appliedNote: string | null;
+  /** The labels the rule added: "Undo" takes these off and no other. */
+  addedLabelIds: string[];
+}
+
+/** The state before "Apply" of a rule, for its "Undo"; old rows are removed when a new one is written. */
+export const categoryRuleUndos = pgTable(
+  "category_rule_undos",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rows: jsonb("rows").$type<RuleUndoRow[]>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("category_rule_undos_user_idx").on(table.userId, table.createdAt)],
 );
 
 /** What a movement was before a switch made it a leg of a transfer (rewrite plan N4, H40). */
