@@ -37,6 +37,8 @@ type Parsed<S> = S extends z.ZodType ? z.output<S> : undefined;
 /** What a handler gets: the person, and the input already checked against the contract. */
 interface RouteInput<R extends RouteContract> {
   ctx: Ctx;
+  /** The headers of the request: who is asking, for a reading a bank is owed (`Psu-*`). */
+  headers: Headers;
   params: Parsed<R["params"]>;
   query: Parsed<R["query"]>;
   body: Parsed<R["body"]>;
@@ -78,6 +80,7 @@ async function readBody(context: Context): Promise<unknown> {
 
 interface RawInput {
   ctx: Ctx;
+  headers: Headers;
   params: unknown;
   query: unknown;
   body: unknown;
@@ -115,6 +118,7 @@ export function serve<R extends RouteContract>(
   app.on(route.method, honoPath(route.path), guard(route.scope), async (context) => {
     const input: RawInput = {
       ctx: context.get("ctx"),
+      headers: context.req.raw.headers,
       params: context.req.param(),
       query: context.req.query(),
       body: route.body ? await readBody(context) : undefined,

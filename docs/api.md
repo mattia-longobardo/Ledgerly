@@ -50,6 +50,8 @@ curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/sum
 | `PATCH /preferences`, `PATCH /profile`     | `write`            |
 | `GET /categories`, `/labels`, `/source-categories`, `/categories/{id}/macro-move` | `read` |
 | the writes of categories, labels and source categories ([changelog](api-changelog.md)) | `write` |
+| `GET /connections`, `/banks`, `/sources/{slug}/deactivation` | `read` |
+| the actions of connections, banks, sources and plugins ([changelog](api-changelog.md)) | `write` |
 | `GET /accounts`                            | `read`             |
 | `GET /accounts/{id}/balances`              | `read`             |
 | `GET /transactions`                        | `read`             |

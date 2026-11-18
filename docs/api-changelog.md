@@ -23,6 +23,16 @@ written before it keeps working.
   `PUT /source-categories/{id}`, `POST /source-categories/undo/{undoId}`,
   `POST /source-categories/{id}/keep`. A refusal of the taxonomy answers `409`
   (`reason: "duplicate"`) or `400` with its code in `reason`; an `undo` goes back as it came.
+- Connections, banks, sources and plugins: `GET /connections` (`read`), `POST /connections/{id}/sync`
+  (`202`), `/test`, `/history`, `/resume`, `/enable`, `PUT /connections/{id}/schedule`,
+  `DELETE /connections/{id}`, `GET`/`PUT /connections/{id}/accounts`, `POST /connections/{id}/read`,
+  `GET /banks?country=`, `GET /sources/{slug}/deactivation`, `POST /sources/{slug}/deactivate`,
+  `POST /sources/{slug}/accounts/{externalId}/resume`, `PATCH /plugins/{pluginId}`,
+  `PUT`/`DELETE /plugins/{pluginId}/credentials` (`write` for the changes). A provider of the core
+  answers `409` with `reason: "core_provider"` to what only its card on the web does (connect,
+  test, history, its accounts, disconnect) until it is a plugin; `capabilities` says what a
+  connection offers through the API. `POST /connections` refuses every provider for now. The start
+  and the renewal of a bank's access are not served yet.
 
 ## 2026-11-14 · one pension fund model (release N6)
 

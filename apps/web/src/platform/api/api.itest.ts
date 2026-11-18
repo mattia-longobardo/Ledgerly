@@ -8,6 +8,7 @@ import { authAccounts } from "@domain/platform/auth/schema";
 import type { Ctx } from "@domain/platform/context";
 import { getDb } from "@domain/platform/db/client";
 import { deleteFolder, listFolder } from "@domain/platform/storage";
+import { saveConnection } from "@domain/platform/integrations/service/connections";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
@@ -15,7 +16,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
-const { api } = await import("./app");
+const { api } = await import("@/app/api/v1/[[...route]]/composition");
 const { resetRateLimits, MAX_PER_WINDOW } = await import("./rate-limit");
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClientWith, deleteApiClient } = await import("@/platform/auth/api-clients");
@@ -451,6 +452,49 @@ describe("the routes of the scopes security and admin", () => {
       });
       expect([403, 404], `${route.method} ${route.path}`).toContain(response.status);
     }
+  });
+});
+
+describe("users and settings: connections", () => {
+  const send = (method: string, body?: unknown): RequestInit => ({
+    method,
+    headers: { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+  it("lists a connection of the core, refuses what only its card does, and keeps it to its person", async () => {
+    expect(await (await call("/connections", aliceToken)).json()).toEqual({ connections: [] });
+    const { id } = await saveConnection(alice, { provider: "wallet", credentials: { token: "test-token" } });
+    const [row] = (await (await call("/connections", aliceToken)).json()).connections;
+    expect(row).toMatchObject({ id, provider: "wallet", state: "active", providerActive: true, runs: [] });
+    expect(row.capabilities).toEqual({
+      sync: true,
+      test: false,
+      disconnect: false,
+      chooseAccounts: false,
+      renew: false,
+      historyMonths: [],
+    });
+    for (const [path, init] of [
+      ["/connections", send("POST", { provider: "wallet", credentials: { token: "x" } })],
+      [`/connections/${id}`, send("DELETE")],
+      [`/connections/${id}/test`, send("POST")],
+      [`/connections/${id}/accounts`, undefined],
+    ] as const) {
+      const response = await call(path, aliceToken, init);
+      expect(response.status, path).toBe(409);
+      expect(await response.json(), path).toEqual({ error: "conflict", reason: "core_provider" });
+    }
+    const schedule = { rules: [{ kind: "times", times: ["07:30"], days: { kind: "every" } }] };
+    expect((await call(`/connections/${id}/schedule`, aliceToken, send("PUT", schedule))).status).toBe(204);
+    expect((await call(`/connections/${id}/schedule`, bobToken, send("PUT", schedule))).status).toBe(404);
+    expect((await call(`/connections/${id}/sync`, aliceToken, send("POST"))).status).toBe(202);
+  });
+
+  it("answers not found for a source or a plugin the person does not have", async () => {
+    expect((await call("/sources/nothing/deactivation", aliceToken)).status).toBe(404);
+    expect((await call("/plugins/nothing", aliceToken, send("PATCH", { active: true }))).status).toBe(404);
+    expect((await call("/banks?country=it", aliceToken)).status).toBe(400);
   });
 });
 

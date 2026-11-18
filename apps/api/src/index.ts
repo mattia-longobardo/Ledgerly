@@ -1,6 +1,7 @@
 // The entry of `apps/api` (rule M7): the router the web process mounts until R4.
 export { apiRoutes } from "./app";
 export type { ApiEnv } from "./serve";
+export type { ConnectionCases } from "./settings/connections";
 export { deleteCategoryEverywhere } from "./settings/categories";
 export {
   macroMoveView,

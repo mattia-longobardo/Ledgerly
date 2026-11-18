@@ -5,6 +5,7 @@ import { metaApi } from "./meta";
 import type { ApiEnv, Guard } from "./serve";
 import { serveTaxonomy } from "./settings/categories";
 import { serveCategoryMoves } from "./settings/category-moves";
+import { type ConnectionCases, serveConnections } from "./settings/connections";
 import { serveProfile } from "./settings/profile";
 import type { SourceName } from "./settings/taxonomy";
 
@@ -15,15 +16,18 @@ import type { SourceName } from "./settings/taxonomy";
 interface Adapters {
   guard: Guard;
   sourceName: SourceName;
+  /** The use cases of the connections and the banks, until E5 and R4. */
+  connections: ConnectionCases;
 }
 
 /** Every module's routes, served behind the guard; `/meta` lists their capabilities. */
-export function apiRoutes({ guard, sourceName }: Adapters): Hono<ApiEnv> {
+export function apiRoutes({ guard, sourceName, connections }: Adapters): Hono<ApiEnv> {
   const app = new Hono<ApiEnv>();
   const served = [
     ...serveProfile(app, guard),
     ...serveTaxonomy(app, guard),
     ...serveCategoryMoves(app, guard, sourceName),
+    ...serveConnections(app, guard, connections),
   ];
   app.route("/", metaApi(served));
   return app;

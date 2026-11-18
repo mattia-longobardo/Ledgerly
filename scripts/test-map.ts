@@ -369,6 +369,7 @@ export const MODULES: Module[] = [
     flows: ["connections"],
     usedBy: [
       "api",
+      "e2e:api",
       "accounts",
       "transactions",
       "jobs",

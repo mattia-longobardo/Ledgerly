@@ -132,6 +132,14 @@ const EXCLUDED: Record<string, string> = {
   revokeOtherSessionsAction: "web cookie: «the other sessions» are the ones that are not the cookie's",
   acceptInviteAction: "web cookie: it creates the account and signs it in, before any token exists",
   coreConnectionAction: "a dispatcher by kind: its kinds are the routes of runConnectionAction",
+  // The providers of the core keep their cards on the web until they are plugins (R5c): moving
+  // their use cases out of the web would name them in a new file (rule M12).
+  connectWalletAction: "Wallet until R5c",
+  walletAccountsAction: "Wallet until R5c",
+  chooseWalletAccountsAction: "Wallet until R5c",
+  disconnectWalletAction: "Wallet until R5c",
+  connectTrekAction: "Trek until R5c",
+  disconnectTrekAction: "Trek until R5c",
 };
 
 describe("the Server Actions of users and settings", () => {

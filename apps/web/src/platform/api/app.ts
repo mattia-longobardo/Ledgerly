@@ -1,13 +1,11 @@
 import "server-only";
 import { Hono } from "hono";
-import { apiRoutes } from "@ledgerly/api";
 import { accountsApi } from "@/modules/accounts/api";
 import { importsApi } from "@/modules/imports/api";
 import { investmentsApi } from "@/modules/investments/api";
 import { transactionsApi } from "@/modules/transactions/api";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
-import { sourceNameOf } from "@/platform/integrations/registry";
-import { type ApiEnv, withToken } from "./auth";
+import type { ApiEnv } from "./auth";
 import { fail } from "./errors";
 import { summaryApi } from "./summary";
 
@@ -24,7 +22,6 @@ export const api = new Hono<ApiEnv>().basePath("/api/v1");
 api.route("/", accountsApi);
 api.route("/", transactionsApi);
 api.route("/", summaryApi);
-api.route("/", apiRoutes({ guard: withToken, sourceName: sourceNameOf }));
 api.route("/", importsApi);
 api.route("/", investmentsApi);
 

@@ -147,7 +147,8 @@ export const connect = defineRoute({
   capability: "connections",
   summary:
     "Connects a provider that takes credentials. The fields of `credentials` are the ones the provider's descriptor names.",
-  actions: ["connectWalletAction", "connectTrekAction"],
+  // The providers of the core connect on their cards of the web until R5c: `409`, reason `core_provider`.
+  actions: [],
   body: z.object({ provider: z.string().min(1), credentials: z.record(z.string(), z.string()) }).strict(),
   response: z.object({
     id: id(),
@@ -170,12 +171,7 @@ export const disconnect = defineRoute({
   capability: "connections",
   summary:
     "Disconnects: the credentials go, the accounts and movements stay. Also cancels a bank connection not finished.",
-  actions: [
-    "disconnectWalletAction",
-    "disconnectTrekAction",
-    "disconnectBankAction",
-    "cancelBankConnectionAction",
-  ],
+  actions: ["disconnectBankAction", "cancelBankConnectionAction"],
   params: byId,
   response: null,
   status: 204,
@@ -205,7 +201,7 @@ export const testConnection = defineRoute({
   scope: "write",
   capability: "connections",
   summary: "Tries the saved credentials against the provider and records the verdict.",
-  actions: ["runConnectionAction:test", "coreConnectionAction:test"],
+  actions: ["runConnectionAction:test"],
   params: byId,
   response: null,
   status: 204,
@@ -220,7 +216,7 @@ export const rereadHistory = defineRoute({
   scope: "write",
   capability: "connections",
   summary: "Reads the history again, `months` back: one of `capabilities.historyMonths`.",
-  actions: ["runConnectionAction:history", "coreConnectionAction:history"],
+  actions: ["runConnectionAction:history"],
   params: byId,
   body: z.object({ months: z.number().int().min(1) }).strict(),
   response: null,
@@ -294,7 +290,7 @@ export const listConnectionAccounts = defineRoute({
   scope: "read",
   capability: "connections",
   summary: "The accounts the provider exposes now, and which of them the person chose.",
-  actions: ["walletAccountsAction"],
+  actions: [],
   params: byId,
   response: z.object({ accounts: z.array(exposedAccount) }),
   errors: CONNECTION_ERRORS,
@@ -315,7 +311,7 @@ export const chooseConnectionAccounts = defineRoute({
   scope: "write",
   capability: "connections",
   summary: "Chooses the accounts of a connection: a new account, an account here, or left out.",
-  actions: ["chooseWalletAccountsAction", "importBankAccountsAction"],
+  actions: ["importBankAccountsAction"],
   params: byId,
   body: z
     .object({

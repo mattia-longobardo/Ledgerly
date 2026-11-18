@@ -1,6 +1,7 @@
 {
   "apps/api/src/index.ts": [
     "ApiEnv",
+    "ConnectionCases",
     "MacroMoveUndo",
     "MacroMoveView",
     "apiRoutes",
