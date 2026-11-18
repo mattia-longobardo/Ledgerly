@@ -26,8 +26,8 @@ import {
 import { codeKey } from "@ledgerly/domain/platform/integrations";
 import { runAfterSync } from "@/platform/jobs/after-sync";
 import { BANK_SCHEDULE } from "@ledgerly/domain/platform/plugins";
-import { PluginActionError, setPluginActive } from "@/platform/plugins/service";
-import { readBank } from "@/platform/plugins/sync";
+import { PluginActionError, setPluginActive } from "@ledgerly/plugin-host";
+import { readBank } from "@ledgerly/plugin-host";
 import { requestPresence } from "../../banks/presence";
 import { bankSink } from "../../banks/sink";
 import { coreConnectionAction } from "./actions";

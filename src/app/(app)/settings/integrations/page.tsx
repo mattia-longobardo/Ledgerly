@@ -18,7 +18,7 @@ import {
   SYNC_RUN_RETENTION_DAYS,
 } from "@ledgerly/domain/platform/integrations";
 import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
-import { connectionSummary, keepManifestsFresh, returnAddress } from "@/platform/plugins/service";
+import { connectionSummary, keepManifestsFresh, returnAddress } from "@ledgerly/plugin-host";
 import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { listAccounts } from "@ledgerly/domain/accounts";
 import { interestsView } from "@ledgerly/domain/interests";

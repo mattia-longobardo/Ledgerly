@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
+COPY packages/plugin-host/package.json ./packages/plugin-host/
 COPY plugins/enablebanking/package.json ./plugins/enablebanking/
 RUN npm ci --ignore-scripts
 

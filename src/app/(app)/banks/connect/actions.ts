@@ -17,8 +17,8 @@ import {
   type PluginActionCode,
   PluginActionError,
   startAccess,
-} from "@/platform/plugins/service";
-import { type AccountDecision, chooseAccounts, readBank } from "@/platform/plugins/sync";
+} from "@ledgerly/plugin-host";
+import { type AccountDecision, chooseAccounts, readBank } from "@ledgerly/plugin-host";
 import { BANK_PLUGIN_ID } from "../plugin";
 import { requestPresence } from "../presence";
 import { bankSink } from "../sink";

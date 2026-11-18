@@ -11,7 +11,7 @@ import type { Ctx } from "@domain/platform/context";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
 import { passFor } from "@/platform/integrations/registry";
 import { dueConnections, listRuns, readSyncJob } from "@domain/platform/integrations/service";
-import type { Fetch } from "@/platform/plugins/client";
+import type { Fetch } from "@plugin-host/client";
 import {
   PLUGIN_PATHS,
   type PluginAccount,
@@ -29,7 +29,7 @@ import {
   saveUserCredentials,
   setPluginActive,
   startAccess,
-} from "@/platform/plugins/service";
+} from "@plugin-host/service";
 import {
   type AccountDecision,
   chooseAccounts,
@@ -37,7 +37,7 @@ import {
   readBank,
   runBankPass,
   tieBack,
-} from "@/platform/plugins/sync";
+} from "@plugin-host/sync";
 import "@/app/plugin-wiring";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";

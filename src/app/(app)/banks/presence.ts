@@ -4,7 +4,7 @@
 import "server-only";
 import { headers } from "next/headers";
 import { z } from "zod";
-import type { Presence } from "@/platform/plugins/service";
+import type { Presence } from "@ledgerly/plugin-host";
 
 const address = z.union([z.ipv4(), z.ipv6()]);
 

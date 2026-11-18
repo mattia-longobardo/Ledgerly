@@ -25,10 +25,10 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type CivilDate, civilDateIn, wallClockIn } from "@ledgerly/domain/platform/dates";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { isPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
-import { connectionSharing } from "@/platform/plugins/service";
-import { exposedAccounts } from "@/platform/plugins/sync";
+import { connectionSharing } from "@ledgerly/plugin-host";
+import { exposedAccounts } from "@ledgerly/plugin-host";
 import { parseCents } from "@ledgerly/domain/platform/money";
-import { type BankSink, type ReadingMovement, SinkRefusal } from "@/platform/plugins/ports";
+import { type BankSink, type ReadingMovement, SinkRefusal } from "@ledgerly/plugin-host";
 
 type AccountType = (typeof ACCOUNT_TYPES)[number];
 

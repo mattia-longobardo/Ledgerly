@@ -12,7 +12,7 @@ import { saveConnection, savePluginConnection, saveSchedule } from "@domain/plat
 import { findInstancePlugin } from "@domain/platform/plugins/queries";
 import { BANK_SCHEDULE } from "@domain/platform/plugins/rules";
 import { pluginUserCredentials } from "@domain/platform/plugins/schema";
-import { connectionBag, setPluginActive } from "../../src/platform/plugins/service";
+import { connectionBag, setPluginActive } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf } from "./common";
 import { seedBinance, seedEtoro } from "./investments";

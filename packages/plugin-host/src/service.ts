@@ -7,7 +7,6 @@
  * route are thin wrappers around these. No call to a plugin happens inside a database
  * transaction, and no error carries what a plugin or a provider said: only a code.
  */
-import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";

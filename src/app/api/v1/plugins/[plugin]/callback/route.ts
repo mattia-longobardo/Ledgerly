@@ -13,8 +13,8 @@ import { getOptionalSession } from "@/platform/auth/session";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { PLUGIN_ID } from "@ledgerly/plugin-contract";
-import { completeAccess, type ReturnOutcome } from "@/platform/plugins/service";
-import { exposedAccounts, readBank, tieBack } from "@/platform/plugins/sync";
+import { completeAccess, type ReturnOutcome } from "@ledgerly/plugin-host";
+import { exposedAccounts, readBank, tieBack } from "@ledgerly/plugin-host";
 import { presenceOf } from "@/app/(app)/banks/presence";
 import { bankSink } from "@/app/(app)/banks/sink";
 

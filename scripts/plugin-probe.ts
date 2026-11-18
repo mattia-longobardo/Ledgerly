@@ -14,7 +14,7 @@ import { civilDateIn } from "@domain/platform/dates";
 import { getDb, getPool } from "@domain/platform/db/client";
 import { readEnv } from "@domain/platform/env";
 import { integrationConnections } from "@domain/platform/integrations/schema";
-import { callPlugin, PluginCallError } from "../src/platform/plugins/client";
+import { callPlugin, PluginCallError } from "@plugin-host/client";
 import { accountSchema, PLUGIN_PATHS, type SyncResponse, syncResponseSchema } from "@plugin-contract/calls";
 import { configuredPlugin } from "@domain/platform/plugins/queries";
 import { measureReading } from "@domain/platform/plugins/rules";

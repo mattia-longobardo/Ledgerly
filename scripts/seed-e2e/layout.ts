@@ -24,7 +24,7 @@ import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
 import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
 import { saveConnection, saveSchedule } from "@domain/platform/integrations/service";
 import { findInstancePlugin } from "@domain/platform/plugins/queries";
-import { setPluginActive } from "../../src/platform/plugins/service";
+import { setPluginActive } from "@plugin-host/service";
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../../test/fixtures/payroll/samples";
 import { twinPdf } from "../../test/fixtures/payroll/twin";
 import { addDeposit, debitFund, importedOperation, importedPosition, payrollFund } from "../../test/funds";

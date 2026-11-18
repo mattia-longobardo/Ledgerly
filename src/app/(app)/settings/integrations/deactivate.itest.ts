@@ -36,7 +36,7 @@ import {
 } from "@domain/platform/integrations/service";
 import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
 import { chooseWalletAccounts, syncWalletNow } from "@domain/platform/integrations/wallet/sync";
-import type { Fetch } from "@/platform/plugins/client";
+import type { Fetch } from "@plugin-host/client";
 import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@plugin-contract/calls";
 import type { PluginManifest } from "@plugin-contract/manifest";
 import { credentialsStatus, isPluginActive } from "@domain/platform/plugins/queries";
@@ -46,8 +46,8 @@ import {
   saveUserCredentials,
   setPluginActive,
   startAccess,
-} from "@/platform/plugins/service";
-import { chooseAccounts, readBank, tieBack } from "@/platform/plugins/sync";
+} from "@plugin-host/service";
+import { chooseAccounts, readBank, tieBack } from "@plugin-host/sync";
 import "@/app/plugin-wiring";
 import { numbersSnapshot } from "../../../../../scripts/numbers-snapshot";
 import { differences } from "../../../../../scripts/snapshot-format";

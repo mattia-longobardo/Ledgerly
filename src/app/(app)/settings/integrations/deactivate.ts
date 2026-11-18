@@ -16,7 +16,7 @@ import { isKnownProvider, KINDS_OF, pluginProvider } from "@ledgerly/domain/plat
 import { forgetSource, listConnections, runningReadings } from "@ledgerly/domain/platform/integrations";
 import { PLUGIN_ID } from "@ledgerly/plugin-contract";
 import { isPluginActive } from "@ledgerly/domain/platform/plugins";
-import { type Deps as PluginDeps, forgetPlugin, prepareAccessClosing } from "@/platform/plugins/service";
+import { type Deps as PluginDeps, forgetPlugin, prepareAccessClosing } from "@ledgerly/plugin-host";
 
 /** A source the person can turn off: a provider of the core with a page, or a plugin they have on. */
 export interface Source {

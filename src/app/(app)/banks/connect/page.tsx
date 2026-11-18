@@ -29,7 +29,7 @@ import {
   isReturnError,
   maskIdentifier,
 } from "@ledgerly/domain/platform/plugins";
-import { exposedAccounts } from "@/platform/plugins/sync";
+import { exposedAccounts } from "@ledgerly/plugin-host";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/shell/page";

@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100146,
+    "lines": 100143,
     "duplicatedLines": 18942,
     "percent": 18.91,
     "blocks": 1340
@@ -113,9 +113,9 @@
       "blocks": 2
     },
     "platform/auth": {
-      "lines": 1506,
+      "lines": 1503,
       "duplicatedLines": 364,
-      "percent": 24.17,
+      "percent": 24.22,
       "blocks": 21
     },
     "platform/backup": {

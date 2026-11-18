@@ -7,7 +7,6 @@
  * schema (`callPlugin`); the writes go through the port (`ports.ts`), which the application
  * fills with the modules' own services. A failure is a code of a closed list, never a message.
  */
-import "server-only";
 import { z } from "zod";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/platform/dates";

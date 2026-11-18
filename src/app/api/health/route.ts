@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { HEARTBEAT_MAX_AGE_MS, heartbeatAgeMs } from "@/platform/jobs/heartbeat";
-import { keepManifestsFresh } from "@/platform/plugins/service";
+import { keepManifestsFresh } from "@ledgerly/plugin-host";
 
 export const dynamic = "force-dynamic";
 

@@ -12,7 +12,7 @@ import { integrationConnections } from "@domain/platform/integrations/schema";
 import { savePluginConnection } from "@domain/platform/integrations/service";
 import { findInstancePlugin } from "@domain/platform/plugins/queries";
 import { pluginUserCredentials } from "@domain/platform/plugins/schema";
-import { connectionBag, setPluginActive } from "../../src/platform/plugins/service";
+import { connectionBag, setPluginActive } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount } from "./common";
 

@@ -10,7 +10,7 @@ import { Field } from "@/ui/field";
 import { Input, Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { ProgressBar } from "@/ui/progress-bar";
-import type { AccountDecision } from "@/platform/plugins/sync";
+import type { AccountDecision } from "@ledgerly/plugin-host";
 import { cancelBankConnectionAction, importBankAccountsAction } from "./actions";
 
 /** An account the bank exposes and the person has not chosen anything for yet. */

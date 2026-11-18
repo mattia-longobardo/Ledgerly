@@ -13,7 +13,7 @@ import {
   listConnections,
   readSyncJob,
 } from "@ledgerly/domain/platform/integrations";
-import { connectionSharing } from "@/platform/plugins/service";
+import { connectionSharing } from "@ledgerly/plugin-host";
 import { runConnectionAction } from "./connection-actions";
 import {
   DeactivateError,

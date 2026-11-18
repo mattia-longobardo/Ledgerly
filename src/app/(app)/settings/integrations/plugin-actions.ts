@@ -9,7 +9,7 @@ import { revalidatePath } from "next/cache";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import { runAfterSync } from "@/platform/jobs/after-sync";
-import { readBank } from "@/platform/plugins/sync";
+import { readBank } from "@ledgerly/plugin-host";
 import { requestPresence } from "../../banks/presence";
 import { bankSink } from "../../banks/sink";
 import { formatInstant } from "./format-instant";
@@ -20,7 +20,7 @@ import {
   removeUserCredentials,
   saveUserCredentials,
   setPluginActive,
-} from "@/platform/plugins/service";
+} from "@ledgerly/plugin-host";
 
 export type PluginActionResult = { ok: true } | { ok: false; error: PluginActionCode };
 

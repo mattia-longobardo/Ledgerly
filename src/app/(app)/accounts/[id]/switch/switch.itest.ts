@@ -13,7 +13,7 @@ import { upsertFromProvider } from "@domain/modules/transactions/service";
 import type { Ctx } from "@domain/platform/context";
 import { getPool } from "@domain/platform/db/client";
 import { PROVIDERS } from "@domain/platform/integrations/rules";
-import type { Fetch } from "@/platform/plugins/client";
+import type { Fetch } from "@plugin-host/client";
 import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@plugin-contract/calls";
 import type { PluginManifest } from "@plugin-contract/manifest";
 import {
@@ -23,8 +23,8 @@ import {
   saveUserCredentials,
   setPluginActive,
   startAccess,
-} from "@/platform/plugins/service";
-import { chooseAccounts, readBank, tieBack } from "@/platform/plugins/sync";
+} from "@plugin-host/service";
+import { chooseAccounts, readBank, tieBack } from "@plugin-host/sync";
 import "@/app/plugin-wiring";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { createTestUser } from "../../../../../../test/users";

@@ -9,7 +9,7 @@ import { registerPass } from "@/platform/integrations/registry";
 import { PLUGIN_KINDS } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin } from "@ledgerly/domain/platform/plugins";
 import { institutionOf } from "@ledgerly/domain/platform/plugins";
-import { runBankPass } from "@/platform/plugins/sync";
+import { runBankPass } from "@ledgerly/plugin-host";
 import { bankSink } from "./(app)/banks/sink";
 
 registerPass({

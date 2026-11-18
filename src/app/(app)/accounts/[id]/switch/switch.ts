@@ -44,8 +44,8 @@ import { withJobLock } from "@ledgerly/domain/platform/jobs";
 import { parseCents } from "@ledgerly/domain/platform/money";
 import { listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import { bankAccountNames, type BankAccountType, institutionOf } from "@ledgerly/domain/platform/plugins";
-import type { Deps, Presence } from "@/platform/plugins/service";
-import { exposedAccounts, previewBankAccount, readBank } from "@/platform/plugins/sync";
+import type { Deps, Presence } from "@ledgerly/plugin-host";
+import { exposedAccounts, previewBankAccount, readBank } from "@ledgerly/plugin-host";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
 import { bankSink } from "../../../banks/sink";
 

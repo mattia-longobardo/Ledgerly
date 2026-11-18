@@ -15,7 +15,7 @@ import {
   SYNC_RUN_RETENTION_DAYS,
 } from "@ledgerly/domain/platform/integrations";
 import { credentialsStatus, isPluginActive } from "@ledgerly/domain/platform/plugins";
-import { connectionSharing } from "@/platform/plugins/service";
+import { connectionSharing } from "@ledgerly/plugin-host";
 import type { ConnectionRowProps } from "../../settings/integrations/connection-row";
 import {
   type Capabilities,
