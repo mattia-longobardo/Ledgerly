@@ -220,6 +220,7 @@
       "security": "Security",
       "integrations": "Integrations",
       "categories": "Categories",
+      "rules": "Rules",
       "data": "Data",
       "users": "Users",
       "server": "Server"
@@ -1415,6 +1416,125 @@
       "version": "v{version} · contract v{contract}",
       "empty": "No plugins in this instance.",
       "unavailable": "State not available. Reload the page."
+    },
+    "rules": {
+      "title": "Rules",
+      "intro": "Ledgerly applies rules to new transactions, from top to bottom. The first rule that matches decides. Your manual choices always win.",
+      "new": "New rule",
+      "edit": "Edit rule",
+      "name": "Name",
+      "if": "If",
+      "then": "Then",
+      "addCondition": "Add a condition",
+      "removeCondition": "Remove condition {n}",
+      "conditionField": "Field of condition {n}",
+      "operator": "Operator",
+      "value": "Value",
+      "valueTo": "Up to",
+      "field": {
+        "text": "Text",
+        "counterparty": "Counterparty",
+        "ownAccount": "Counterparty is one of your accounts",
+        "amount": "Amount",
+        "direction": "Direction",
+        "account": "Account",
+        "source": "Source",
+        "currency": "Currency"
+      },
+      "op": {
+        "contains": "contains",
+        "notContains": "does not contain",
+        "equals": "is",
+        "startsWith": "starts with",
+        "gt": "is more than",
+        "lt": "is less than",
+        "between": "is between",
+        "oneOf": "is one of",
+        "is": "is"
+      },
+      "direction": {
+        "in": "money in",
+        "out": "money out"
+      },
+      "source": {
+        "bank": "Bank",
+        "manual": "By hand"
+      },
+      "ownAccountYes": "yes",
+      "action": {
+        "category": "Category",
+        "labels": "Labels",
+        "note": "Note"
+      },
+      "chooseCategory": "Choose a category",
+      "searchCategory": "Search a category",
+      "noCategoryMatch": "No category found",
+      "active": "Active",
+      "activeName": "Active {name}",
+      "off": "Off",
+      "archivedCategory": "Archived category",
+      "count": "{count, plural, one {# transaction} other {# transactions}}",
+      "preview": {
+        "match": "{count, plural, =0 {No transaction matches today.} one {# transaction matches.} other {# transactions match.}}",
+        "kept": "{count, plural, one {# has your own choice and does not change.} other {# have your own choice and do not change.}}",
+        "busy": "Calculating…",
+        "error": "Preview not available. You can still save.",
+        "see": "See",
+        "hide": "Hide",
+        "invalid": "Complete the rule to see the preview."
+      },
+      "saved": "Rule saved",
+      "applyExisting": "Apply to {count, plural, one {# existing transaction} other {# existing transactions}}…",
+      "applyMenu": "Apply to existing transactions…",
+      "apply": {
+        "title": "Apply “{name}”",
+        "body": "{count, plural, one {# transaction moves} other {# transactions move}} to {category}.",
+        "effect": "{count, plural, one {It no longer counts} other {They no longer count}} as {from}: {amount} since {year}.",
+        "effectJoin": "{count, plural, one {It counts again} other {They count again}}: {amount} since {year}.",
+        "kept": "{count, plural, one {# transaction has your own choice and does not change.} other {# transactions have your own choice and do not change.}}",
+        "show": "Show the {count} transactions",
+        "hide": "Hide the transactions",
+        "confirm": "Apply",
+        "nothing": "No transaction to change.",
+        "done": "{count, plural, one {# transaction updated} other {# transactions updated}}",
+        "failed": "The rule could not be applied. Try again."
+      },
+      "fromExpense": "expenses",
+      "fromIncome": "income",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "moved": "{name} is now rule {n}",
+      "drag": "Drag {name}",
+      "duplicate": "Duplicate",
+      "copyName": "{name} (copy)",
+      "delete": {
+        "action": "Delete",
+        "title": "Delete rule “{name}”?",
+        "body": "{count, plural, one {The transaction keeps} other {The # transactions keep}} its category.",
+        "confirm": "Delete"
+      },
+      "deleted": "Rule deleted",
+      "undo": "Undo",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "limit": "You have reached 200 rules. Delete a rule to add another one.",
+      "empty": {
+        "title": "No rules yet",
+        "body": "A rule gives new transactions their category and section by itself. Example: every transaction with “top-up” goes to Transfers."
+      },
+      "fromTransaction": "Create a rule…",
+      "reason": "Rule “{name}”",
+      "reasonDeleted": "Deleted rule",
+      "openRule": "Open rule",
+      "actions": "Actions for {name}",
+      "error": "The rule could not be saved. Try again.",
+      "loadError": "The rules could not be loaded.",
+      "summary": {
+        "and": " · ",
+        "to": "→ {category}"
+      },
+      "noteHint": "Written only when the transaction has no note."
     }
   },
   "errors": {
@@ -1520,7 +1640,8 @@
       "noPayee": "No payee",
       "save": "Save",
       "cancel": "Cancel",
-      "paired": "It is a transfer between your accounts."
+      "paired": "It is a transfer between your accounts.",
+      "createRule": "Create a rule…"
     },
     "badges": {
       "manual": "Manual",
@@ -1701,11 +1822,14 @@
         "brand": "“{brand}” is a known brand in this category.",
         "salary": "The bank marks this transaction as a salary.",
         "fee": "The bank marks this transaction as a fee.",
-        "other": "Ledgerly chose this category from the transaction data."
+        "other": "Ledgerly chose this category from the transaction data.",
+        "rule": "Rule “{name}”",
+        "rule_deleted": "Deleted rule"
       },
       "selection": {
         "confirm": "Confirm suggestions ({count})"
-      }
+      },
+      "openRule": "Open rule"
     },
     "review": {
       "title": "To review",
@@ -1806,7 +1930,10 @@
       "skip": "No, only this one",
       "applied": "{count, plural, one {# transaction updated} other {# transactions updated}}",
       "undo": "Undo",
-      "failed": "Couldn't apply the category. The first transaction is saved. Try again."
+      "failed": "Couldn't apply the category. The first transaction is saved. Try again.",
+      "createRule": "Create a rule",
+      "ruleStays": "The rule “{name}” stays the same.",
+      "editRule": "Edit the rule"
     },
     "categories": {
       "title": "Categories",
@@ -1907,7 +2034,10 @@
         "movements": "Transactions",
         "openInExpenses": "Open in Expenses",
         "noMovements": "No transactions in this period",
-        "archived": "Archived"
+        "archived": "Archived",
+        "rules": "Rules",
+        "newRule": "New rule",
+        "noRules": "No rule gives this category."
       },
       "macroMove": {
         "open": "Move to another section…",

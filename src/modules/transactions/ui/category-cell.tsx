@@ -2,6 +2,8 @@
 
 import { Popover } from "@base-ui/react/popover";
 import { Sparkles } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/ui/button";
@@ -13,7 +15,16 @@ import type { CategoryOption, RowView } from "./view";
 export const CHIP = "focus-ring inline-flex h-6 items-center gap-1.5 rounded-[4px] px-1.5 text-sm";
 
 /** The reasons the interface has a sentence for; any other code reads the fallback (ux §2.2). */
-const REASONS = ["memory", "similar", "merchant_type", "brand", "salary", "fee"] as const;
+const REASONS = [
+  "memory",
+  "similar",
+  "merchant_type",
+  "brand",
+  "salary",
+  "fee",
+  "rule",
+  "rule_deleted",
+] as const;
 
 /** What the cell of a category needs of a row. */
 type CellRow = Pick<
@@ -70,7 +81,11 @@ export function CategoryCell({
     const reason = row.categoryReason;
     const code = REASONS.find((one) => one === reason?.code);
     if (!reason || code === undefined) return t("auto.reason.other");
-    return t(`auto.reason.${code}`, { text: reason.params.text ?? "", brand: reason.params.brand ?? "" });
+    return t(`auto.reason.${code}`, {
+      text: reason.params.text ?? "",
+      brand: reason.params.brand ?? "",
+      name: reason.params.name ?? "",
+    });
   }
 
   function confirm() {
@@ -105,6 +120,14 @@ export function CategoryCell({
               {reasonText()}
               {state === "suggestion" && ` ${t("auto.suggestion.notCounted")}`}
             </p>
+            {row.categoryReason?.code === "rule" && row.categoryReason.params.ruleId && (
+              <Link
+                href={`/settings/rules#rule-${row.categoryReason.params.ruleId}` as Route}
+                className="focus-ring inline-flex min-h-6 items-center self-start rounded-[2px] text-sm text-accent hover:underline"
+              >
+                {t("auto.openRule")}
+              </Link>
+            )}
             <div className="flex justify-end gap-2">
               <Button
                 size="sm"

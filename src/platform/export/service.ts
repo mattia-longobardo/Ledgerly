@@ -10,7 +10,7 @@ import { pocketsView } from "@/modules/pockets/queries";
 import { registerView } from "@/modules/payroll/queries";
 import { subscriptionsView } from "@/modules/subscriptions/queries";
 import { listAllowances, listLeaveDays } from "@/modules/timeoff/service";
-import { listTransactions, MAX_LIMIT } from "@/modules/transactions/queries";
+import { listTransactions, MAX_LIMIT, rulesForExport } from "@/modules/transactions/queries";
 import { getPreferences } from "@/modules/users/service";
 import { redactForLog } from "@/platform/auth/logger";
 import type { Ctx } from "@/platform/context";
@@ -104,6 +104,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     payroll,
     investments,
     investmentOperations,
+    rules,
   ] = await Promise.all([
     allTransactions(ctx),
     subscriptionsView(ctx, now),
@@ -117,6 +118,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     registerView(ctx),
     investmentServices(ctx),
     investmentOperationsExport(ctx),
+    rulesForExport(ctx),
   ]);
 
   return [
@@ -157,6 +159,16 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         "hidden",
       ],
       rows: transactions,
+    },
+    {
+      // The person's rules (categories-and-rules.md §4.8): the conditions as JSON, as they are kept.
+      name: "rules",
+      columns: ["position", "name", "active", "conditions", "category", "labels", "note"],
+      rows: rules.map((rule) => ({
+        ...rule,
+        conditions: JSON.stringify(rule.conditions),
+        labels: rule.labels.join(", "),
+      })),
     },
     {
       name: "budgets",

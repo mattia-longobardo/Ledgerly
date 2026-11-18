@@ -28,7 +28,7 @@ import {
 import { totpCode } from "../tests/e2e/_shared/totp";
 import { seedCurrency, seedSwitching } from "./seed-e2e/accounts";
 import { seedBudgets } from "./seed-e2e/budgets";
-import { seedReview, seedReviewNew } from "./seed-e2e/categories";
+import { seedReview, seedReviewNew, seedRules } from "./seed-e2e/categories";
 import { seedPreviewRates } from "./seed-e2e/common";
 import { seedConnections, seedSchedule } from "./seed-e2e/connections";
 import {
@@ -237,6 +237,10 @@ await seedReview(USERS.reviewJourney.email);
 await seedReview(USERS.categories.email);
 
 await seedReviewNew(USERS.reviewNewJourney.email);
+
+// Settings › Rules (N3.4): `rules` for the screen check, `rulesJourney` for the journey that writes.
+await seedRules(USERS.rules.email);
+await seedRules(USERS.rulesJourney.email);
 
 await seedManual(USERS.manualJourney.email);
 

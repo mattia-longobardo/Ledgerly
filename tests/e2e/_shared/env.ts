@@ -153,6 +153,14 @@ export const USERS = {
     password: "connections-journey-password-123",
     name: "Connections Journey",
   },
+  // Release N3.4: Settings › Rules (categories-and-rules.md §4). `rules` is measured by the screen
+  // check; `rulesJourney`, a copy, is the one the journey writes on.
+  rules: { email: "rules@example.test", password: "rules-password-123", name: "Rules" },
+  rulesJourney: {
+    email: "rules-journey@example.test",
+    password: "rules-journey-password-123",
+    name: "Rules Journey",
+  },
   // The sync schedule editor (tests/e2e/connections/schedule.spec.ts): a Trek link and two services.
   schedule: { email: "schedule@example.test", password: "schedule-password-123", name: "Schedule" },
   // F8: the one user Admin › Users is allowed to change the role of, block and finally remove.
@@ -234,6 +242,9 @@ export const SESSIONS = {
   switchJourney: { user: "switchJourney", file: "switch-journey-session.json" },
   connectionsJourney: { user: "connectionsJourney", file: "connections-journey-session.json" },
   schedule: { user: "schedule", file: "schedule-session.json" },
+  // Release N3.4: Settings › Rules (tests/e2e/categories/rules.spec.ts).
+  rules: { user: "rules", file: "rules-session.json" },
+  rulesJourney: { user: "rulesJourney", file: "rules-journey-session.json" },
   // TOTP: sessions of users who still have to set it up, so they land on the setup page.
   enroll: { user: "enroll", file: "enroll-session.json" },
   pending: { user: "pending", file: "pending-session.json" },

@@ -33,13 +33,15 @@ export type TransactionOrigin = (typeof TRANSACTION_ORIGINS)[number];
  * Who chose the category of a movement (rewrite plan, 04-now.md §4.4). `user` and `provider` are
  * confirmed labels: a person or a source gave them, and the classifier learns from them. `memory`,
  * `model` and `table` are the levels of the cascade that gave it by itself: an automatic category,
- * which counts like any other and is never learnt from. `null` on a row with no category, and on a
- * row written by an image that knew no origin — there the category is a confirmed one.
+ * which counts like any other and is never learnt from. `rule` is a rule of the person's
+ * (categories-and-rules.md §4, CR6): automatic too, and never learnt from either. `null` on a row
+ * with no category, and on a row written by an image that knew no origin — there the category is a
+ * confirmed one.
  */
-export const CATEGORY_ORIGINS = ["user", "provider", "memory", "model", "table"] as const;
+export const CATEGORY_ORIGINS = ["user", "provider", "memory", "model", "table", "rule"] as const;
 export type CategoryOrigin = (typeof CATEGORY_ORIGINS)[number];
 /** The origins of an automatic category. */
-export const AUTOMATIC_CATEGORY_ORIGINS: readonly CategoryOrigin[] = ["memory", "model", "table"];
+export const AUTOMATIC_CATEGORY_ORIGINS: readonly CategoryOrigin[] = ["memory", "model", "table", "rule"];
 
 export type CategoryState = "chosen" | "automatic" | "suggestion" | "none";
 

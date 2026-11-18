@@ -1,6 +1,7 @@
 // scripts/seed-e2e/categories.ts — the users and the data of the flow `categories` (tests/e2e/categories/).
 import { createAccount } from "../../src/modules/accounts/service";
 import { createDefaultGroups } from "../../src/modules/transactions/categorize/review";
+import { createRule } from "../../src/modules/transactions/categorize/user-rules-service";
 import { categorise } from "../../src/modules/transactions/categorize/service";
 import { DEFAULT_GROUPS } from "../../src/modules/transactions/categorize/tables";
 import { createManualTransaction } from "../../src/modules/transactions/manual";
@@ -76,4 +77,30 @@ export async function seedReviewNew(email: string = USERS.reviewNew.email): Prom
     });
   }
   await categorise(ctx, await categorisableAccountIds(ctx));
+}
+
+/**
+ * Release N3.4 (categories-and-rules.md §4): the user of `seedReview` and two rules, the second one
+ * off. The rules come after the cascade's pass: no movement has a category from a rule yet, so
+ * "Apply" has something to change.
+ */
+export async function seedRules(email: string): Promise<void> {
+  await seedReview(email);
+  const ctx = await contextOf(email);
+  const newsstand = await createCategory(ctx, { name: "Newsstand", type: "expense" });
+  const shop = await createCategory(ctx, { name: "Corner shop", type: "expense" });
+  await createRule(ctx, {
+    name: "Newsstand",
+    conditions: [
+      { field: "text", op: "contains", value: "edicola" },
+      { field: "direction", value: "out" },
+    ],
+    categoryId: newsstand.id,
+  });
+  await createRule(ctx, {
+    name: "Corner shop",
+    active: false,
+    conditions: [{ field: "counterparty", op: "contains", value: "bottega verdi" }],
+    categoryId: shop.id,
+  });
 }

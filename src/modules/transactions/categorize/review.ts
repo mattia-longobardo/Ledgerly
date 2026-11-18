@@ -35,7 +35,7 @@ import { shownText } from "./text";
 type Who = Pick<Ctx, "userId">;
 
 const idsSchema = z.array(z.uuid()).min(1).max(5000);
-const AUTOMATIC = ["memory", "model", "table"] as const;
+const AUTOMATIC = ["memory", "model", "table", "rule"] as const;
 /** How long the state before an action is kept for "Undo". */
 const UNDO_DAYS = 7;
 
@@ -145,6 +145,7 @@ const UNDO_COLUMNS = {
   suggestedCategoryId: transactions.suggestedCategoryId,
   categoryReason: transactions.categoryReason,
   categoryReasonParams: transactions.categoryReasonParams,
+  categoryRuleId: transactions.categoryRuleId,
   locallyEdited: transactions.locallyEdited,
 };
 
@@ -202,7 +203,11 @@ export async function changeCategories(
           categoryId,
           // An automatic category replaced by another one is a correction the threshold counts.
           categoryReason:
-            row.categoryId !== null && row.categoryId !== categoryId && row.categoryOrigin !== null
+            row.categoryId !== null &&
+            row.categoryId !== categoryId &&
+            row.categoryOrigin !== null &&
+            // A rule is the person's own: replacing its category says nothing about the model.
+            row.categoryOrigin !== "rule"
               ? "corrected"
               : null,
         })
