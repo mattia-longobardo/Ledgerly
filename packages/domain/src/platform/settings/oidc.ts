@@ -71,6 +71,9 @@ export const oidcInputSchema = z.object({
   clientId: z.string().trim().min(1).max(MAX_OIDC_FIELD),
   clientSecret: z.string().max(MAX_OIDC_FIELD),
   adminGroup: z.string().trim().min(1).max(MAX_OIDC_FIELD),
+  // E8 (10-modularity.md §10.11): what the sign-in says the provider is called. Left out keeps the
+  // saved one; null clears it, and the text of today applies.
+  displayName: z.string().trim().min(1).max(60).nullable().optional(),
 });
 
 export type OidcInput = z.infer<typeof oidcInputSchema>;

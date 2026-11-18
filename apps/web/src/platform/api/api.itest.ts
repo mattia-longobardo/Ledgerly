@@ -16,7 +16,8 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
-const { api, reads } = await import("@/app/api/v1/[[...route]]/composition");
+const { api, reads, adapters } = await import("@/app/api/v1/[[...route]]/composition");
+const { apiRoutes } = await import("@ledgerly/api");
 const { resetRateLimits, MAX_PER_WINDOW } = await import("./rate-limit");
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClientWith, deleteApiClient } = await import("@/platform/auth/api-clients");
@@ -524,6 +525,52 @@ describe("parity of users and settings: route = MCP tool", () => {
       const route = await (await call(paths[tool.name], aliceToken)).json();
       expect(await tool.run(alice, {}), tool.name).toEqual(route);
     }
+  });
+});
+
+describe("the routes of security, people and server, behind a guard that lets the person through", () => {
+  // No token has the scopes yet (git-policy §6 #4): the handlers are proved with a guard of the test.
+  const as = (ctx: Ctx) =>
+    apiRoutes({
+      ...adapters,
+      guard: () => async (context, next) => {
+        context.set("ctx", ctx);
+        await next();
+      },
+    });
+  const send = (app: ReturnType<typeof as>, method: string, path: string, body?: unknown) =>
+    app.request(path, {
+      method,
+      headers: { "content-type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+  it("lists and ends the person's own sessions, and lists the people to an admin only", async () => {
+    const app = as({ ...alice, role: "admin" });
+    const sessions = (await (await send(app, "GET", "/sessions")).json()).sessions;
+    expect(sessions.length).toBeGreaterThan(0);
+    expect((await send(as(bob), "DELETE", `/sessions/${sessions[0].id}`)).status).toBe(204);
+    expect((await (await send(app, "GET", "/sessions")).json()).sessions).toHaveLength(sessions.length);
+    expect((await send(app, "DELETE", `/sessions/${sessions[0].id}`)).status).toBe(204);
+    expect((await (await send(app, "GET", "/sessions")).json()).sessions).toHaveLength(sessions.length - 1);
+    const people = (await (await send(app, "GET", "/people")).json()).people;
+    expect(people.map((one: { id: string }) => one.id)).toEqual(
+      expect.arrayContaining([alice.userId, bob.userId]),
+    );
+    expect((await send(as(bob), "GET", "/people")).status).toBe(403);
+  });
+
+  it("refuses to remove the admin who asks, and reads the settings of the server", async () => {
+    const app = as({ ...alice, role: "admin" });
+    const self = await send(app, "DELETE", `/people/${alice.userId}`);
+    expect(self.status).toBe(409);
+    const settings = await (await send(app, "GET", "/server/settings")).json();
+    expect(settings).toMatchObject({
+      llm: null,
+      oidc: { displayName: null },
+      maintenance: { backupsKept: 30 },
+    });
+    expect((await send(app, "POST", "/server/jobs/nothing/run")).status).toBe(404);
   });
 });
 
