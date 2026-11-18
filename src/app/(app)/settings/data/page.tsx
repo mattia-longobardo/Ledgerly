@@ -67,7 +67,7 @@ export default async function SettingsDataPage() {
       <SettingsSection title={mine("title")} description={mine("description")}>
         {/* A plain link and not a button: the response *is* the file, so the browser downloads it
             without a round trip through a Server Action that would have to buffer it first. */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col items-start gap-2">
           <a href="/settings/data/export.zip" download className={buttonClassName("secondary", "md")}>
             {mine("download")}
           </a>

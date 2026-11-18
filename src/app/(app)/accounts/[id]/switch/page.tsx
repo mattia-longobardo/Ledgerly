@@ -63,9 +63,9 @@ export default async function SwitchAccountPage({
     )
   ).name;
 
-  const frame = (current: "account" | "check" | "done", body: React.ReactNode, wide = false) => (
+  const frame = (current: "account" | "check" | "done", body: React.ReactNode) => (
     <Page title={t("title", { account: account.name })} parent={{ href: settings, label: account.name }}>
-      <div className={`flex w-full flex-col gap-3 ${wide ? "max-w-[880px]" : "max-w-[560px]"}`}>
+      <div className="flex w-full flex-col gap-3">
         <StepIndicator
           label={t("steps.label")}
           steps={[
@@ -145,7 +145,6 @@ export default async function SwitchAccountPage({
         leaveHref={settings}
         doneHref={`${here}?step=done` as Route}
       />,
-      true,
     );
   }
 

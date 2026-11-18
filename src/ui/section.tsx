@@ -2,6 +2,14 @@ import type { ReactNode } from "react";
 import { Card } from "./card";
 
 /**
+ * The fields of a form on a page: as many columns of at least 14 rem as the card holds, so a wide
+ * screen puts more fields on a row instead of stretching two of them across it, and a narrow one
+ * stacks them. A field that needs the whole row (a note, a line of text, a footer) is `col-span-full`.
+ * In a dialog of 520 px that is two columns, as before.
+ */
+export const FIELD_GRID = "grid grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))] gap-x-4 gap-y-3";
+
+/**
  * The sections of a Settings page, one under the other, each taking the whole width.
  *
  * They were paired two by two for a while; putting two sections side by side halves the room each
@@ -20,6 +28,7 @@ export function SettingsGrid({ children }: { children: ReactNode }) {
  *
  * `action` is the button the design puts under the description rather than inside the card —
  * "Invite user", "New token" — the one thing a section offers that is not about a row of it.
+ * A section that is only that button has no card: an empty card the width of the page says nothing.
  */
 export function SettingsSection({
   title,
@@ -32,7 +41,7 @@ export function SettingsSection({
   description: string;
   action?: ReactNode;
   padded?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     // `aria-label`: a <section> is a landmark only once it has a name, and a named one is how
@@ -45,9 +54,11 @@ export function SettingsSection({
           <p className="text-muted">{description}</p>
           {action && <div className="mt-1 flex">{action}</div>}
         </div>
-        <Card padded={padded} className={padded ? "flex flex-col gap-3.5" : "overflow-hidden"}>
-          {children}
-        </Card>
+        {children !== undefined && (
+          <Card padded={padded} className={padded ? "flex flex-col gap-3.5" : "overflow-hidden"}>
+            {children}
+          </Card>
+        )}
       </div>
     </section>
   );

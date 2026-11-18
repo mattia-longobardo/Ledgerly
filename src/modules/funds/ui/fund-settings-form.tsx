@@ -9,6 +9,7 @@ import { notify } from "@/ui/toast";
 import { updateFundAction } from "../actions";
 import type { FundForm } from "../forms";
 import { ErrorLine, errorKey } from "./fund-forms";
+import { FIELD_GRID } from "@/ui/section";
 
 /**
  * Settings › General (docs/design/rewrite-plan/ux/n6-pension-fund.md §6.1): one form for every fund.
@@ -55,7 +56,7 @@ export function FundSettingsForm({
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <fieldset disabled={readOnly} className="grid min-w-0 grid-cols-2 gap-3 max-sm:grid-cols-1">
+      <fieldset disabled={readOnly} className={`min-w-0 ${FIELD_GRID}`}>
         <legend className="sr-only">{t("settings.general.title")}</legend>
         <div className="col-span-full">
           <Field
@@ -105,7 +106,7 @@ export function FundSettingsForm({
           <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-sm font-medium text-muted hover:text-fg">
             {t("settings.general.advanced")}
           </summary>
-          <div className="grid grid-cols-2 gap-3 pt-3 max-sm:grid-cols-1">
+          <div className={`pt-3 ${FIELD_GRID}`}>
             <Field
               label={t("settings.general.code")}
               htmlFor={`${id}-code`}

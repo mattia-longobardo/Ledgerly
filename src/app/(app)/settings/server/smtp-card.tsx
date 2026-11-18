@@ -10,6 +10,7 @@ import { Checkbox, Input, Select } from "@/ui/input";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { removeSmtpAction, saveSmtpAction, sendTestEmailAction } from "./actions";
+import { FIELD_GRID } from "@/ui/section";
 
 export interface SmtpCardProps {
   host: string;
@@ -101,7 +102,7 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
           {t("fromEnv")}
         </p>
       )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4">
+      <div className={FIELD_GRID}>
         <Field label={t("host")} htmlFor={`${id}-host`}>
           <Input id={`${id}-host`} name="host" defaultValue={host} autoComplete="off" required />
         </Field>
@@ -144,7 +145,7 @@ export function SmtpCard({ host, port, encryption, user, passwordHint, from, pol
             placeholder={passwordHint ? `•••• ${passwordHint}` : undefined}
           />
         </Field>
-        <div className="sm:col-span-2">
+        <div className="col-span-full">
           <Field label={t("from")} htmlFor={`${id}-from`}>
             <Input id={`${id}-from`} name="from" defaultValue={from} autoComplete="off" required />
           </Field>

@@ -132,13 +132,15 @@ export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/
               <PatronSaintForm patronSaint={preferences.patronSaint} />
             </div>
           </SettingsSection>
-          <SettingsSection title={trekName} description={plugin("movedHint", { provider: trekName })}>
-            <div>
+          <SettingsSection
+            title={trekName}
+            description={plugin("movedHint", { provider: trekName })}
+            action={
               <ButtonLink href={trekHref as Route} size="sm">
                 {plugin("settingsOf", { provider: trekName })}
               </ButtonLink>
-            </div>
-          </SettingsSection>
+            }
+          />
         </SettingsGrid>
       </UnsavedChangesProvider>
     </Page>

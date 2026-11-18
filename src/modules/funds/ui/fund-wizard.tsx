@@ -47,6 +47,7 @@ import {
   sourceSummary,
   type TakenComponents,
 } from "./source-text";
+import { FIELD_GRID } from "@/ui/section";
 
 export const WIZARD_STEPS = ["fund", "sources", "fees", "review"] as const;
 export type WizardStep = (typeof WIZARD_STEPS)[number];
@@ -512,7 +513,7 @@ export function FundWizard({
         noValidate
         autoComplete="off"
         data-testid="fund-wizard"
-        className="flex w-full max-w-[560px] flex-col gap-4"
+        className="flex w-full flex-col gap-4"
       >
         <StepIndicator
           label={t("steps.label")}
@@ -524,8 +525,8 @@ export function FundWizard({
         {section(
           "fund",
           t("fund.intro"),
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
-            <div className="sm:col-span-2">
+          <div className={FIELD_GRID}>
+            <div className="col-span-full">
               <Field label={t("fund.name")} htmlFor={`${id}-name`} error={fundErrors.name}>
                 <Input
                   id={`${id}-name`}
@@ -582,7 +583,7 @@ export function FundWizard({
               </Field>
             )}
             {templates.length > 0 && (
-              <div className="flex flex-col gap-2 sm:col-span-2">
+              <div className="flex flex-col gap-2 col-span-full">
                 <Field label={t("fund.template")} htmlFor={`${id}-template`} hint={t("fund.templateHint")}>
                   <Select
                     id={`${id}-template`}
@@ -618,11 +619,11 @@ export function FundWizard({
                 )}
               </div>
             )}
-            <details className="sm:col-span-2">
+            <details className="col-span-full">
               <summary className="focus-ring inline-flex min-h-6 cursor-default items-center rounded-[4px] text-sm font-medium text-muted">
                 {t("fund.advanced")}
               </summary>
-              <div className="mt-2 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              <div className={`mt-2 ${FIELD_GRID}`}>
                 <Field label={t("fund.currency")} htmlFor={`${id}-currency`} hint={t("fund.currencyFixed")}>
                   <Select
                     id={`${id}-currency`}

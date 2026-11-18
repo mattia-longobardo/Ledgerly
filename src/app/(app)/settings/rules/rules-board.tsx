@@ -343,7 +343,7 @@ export function RulesBoard({
   }
 
   return (
-    <section aria-labelledby="rules-title" className="flex max-w-[960px] flex-col gap-4">
+    <section aria-labelledby="rules-title" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex max-w-[640px] flex-col gap-1">
           <h2 id="rules-title" className="text-lg font-semibold">

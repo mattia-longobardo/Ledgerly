@@ -13,6 +13,7 @@ import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
+import { FIELD_GRID } from "@/ui/section";
 
 const PASSWORD_BOUNDS = { min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH };
 
@@ -52,16 +53,15 @@ export function PasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className={FIELD_GRID}>
       {error && (
-        <p role="alert" className="text-sm text-neg sm:col-span-2">
+        <p role="alert" className="text-sm text-neg col-span-full">
           {error}
         </p>
       )}
       <Field label={t("current")} htmlFor="current">
         <Input id="current" name="current" type="password" autoComplete="current-password" required />
       </Field>
-      <div className="max-sm:hidden" />
       <Field label={t("new")} htmlFor="new">
         <Input
           id="new"

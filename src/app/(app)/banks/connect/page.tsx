@@ -78,7 +78,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
   ];
   const frame = (current: "bank" | "accounts" | "done", body: React.ReactNode) => (
     <Page title={t("title")} parent={{ href: SETTINGS, label: t("parent") }}>
-      <div className="flex w-full max-w-[560px] flex-col gap-3">
+      <div className="flex w-full flex-col gap-3">
         <StepIndicator
           label={t("steps.label")}
           // A step already done is not a place to go back to: the access was given once.

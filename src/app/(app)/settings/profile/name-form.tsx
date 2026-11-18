@@ -11,6 +11,7 @@ import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
+import { FIELD_GRID } from "@/ui/section";
 
 export function NameForm({
   name,
@@ -49,13 +50,13 @@ export function NameForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+    <form ref={formRef} onSubmit={onSubmit} className={FIELD_GRID}>
       {error && (
-        <p role="alert" className="text-sm text-neg sm:col-span-2">
+        <p role="alert" className="text-sm text-neg col-span-full">
           {error}
         </p>
       )}
-      <div className="sm:col-span-2">
+      <div className="col-span-full">
         <Avatar name={name} size={40} decorative />
       </div>
       <Field label={t("name")} htmlFor="name">

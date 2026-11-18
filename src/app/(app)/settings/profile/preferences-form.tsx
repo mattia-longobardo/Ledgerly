@@ -12,6 +12,7 @@ import { Checkbox, Select } from "@/ui/input";
 import { useTheme } from "@/ui/theme-provider";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
+import { FIELD_GRID } from "@/ui/section";
 
 /**
  * Starts from the saved preferences; the page re-mounts it (keyed by them) whenever they change
@@ -61,9 +62,9 @@ export function PreferencesForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+    <form ref={formRef} onSubmit={onSubmit} className={FIELD_GRID}>
       {error && (
-        <p role="alert" className="text-sm text-neg sm:col-span-2">
+        <p role="alert" className="text-sm text-neg col-span-full">
           {error}
         </p>
       )}
@@ -158,7 +159,7 @@ export function PreferencesForm({
         </Select>
       </Field>
       {/* Only leave reads these, so they live with it (PERS-158); this says where they went. */}
-      <p className="text-sm text-muted sm:col-span-2">
+      <p className="text-sm text-muted col-span-full">
         {t.rich("timeOffMoved", {
           link: (chunks) => (
             <Link href="/timeoff/settings" className="focus-ring rounded-[4px] text-accent underline">

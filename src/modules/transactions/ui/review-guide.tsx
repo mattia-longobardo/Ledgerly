@@ -34,7 +34,7 @@ export function PreparingCard({ count }: { count: number }) {
   }, [router, slow]);
 
   return (
-    <Card className="flex max-w-[560px] flex-col gap-2">
+    <Card className="flex flex-col gap-2">
       <div role="status" className="flex flex-col gap-2">
         {slow ? (
           <p>{t("preparing.slow")}</p>
@@ -86,7 +86,7 @@ export function GroupsStep({
     router.refresh();
   };
   return (
-    <Card className="max-w-[560px]">
+    <Card>
       <DefaultGroupsForm
         groups={groups}
         onCreate={async (keys) => {

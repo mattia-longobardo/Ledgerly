@@ -12,6 +12,7 @@ import { createAccountAction } from "../actions";
 import { colorField } from "./display";
 import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "../rules";
 import { ibanErrorText } from "./iban-field";
+import { FIELD_GRID } from "@/ui/section";
 
 /**
  * A new manual account, with the optional opening balance of spec §7.1. The amount stays text all
@@ -68,9 +69,9 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+    <form onSubmit={onSubmit} className={FIELD_GRID}>
       {error && (
-        <p role="alert" className="text-sm text-neg sm:col-span-2">
+        <p role="alert" className="text-sm text-neg col-span-full">
           {error}
         </p>
       )}

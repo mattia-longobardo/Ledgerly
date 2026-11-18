@@ -6,7 +6,7 @@ import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
-import { SettingsSection } from "@/ui/section";
+import { SettingsSection, FIELD_GRID } from "@/ui/section";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
@@ -149,7 +149,7 @@ export function AccountSettingsForm({
       )}
 
       <SettingsSection title={t("general.title")} description={t("general.description")}>
-        <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+        <div className={FIELD_GRID}>
           <Field label={t("general.name")} htmlFor="name">
             <Input id="name" name="name" defaultValue={account.name} maxLength={80} required />
           </Field>
@@ -242,11 +242,11 @@ export function AccountSettingsForm({
       </SettingsSection>
 
       <SettingsSection title={t("source.title")} description={t("source.description")}>
-        <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
-          <p className="text-sm text-muted sm:col-span-2">
+        <div className={FIELD_GRID}>
+          <p className="text-sm text-muted col-span-full">
             {synced ? t("source.syncedNote", { provider: account.provider ?? "" }) : t("source.manualNote")}
           </p>
-          {sourceExtra && <div className="flex flex-col gap-2 sm:col-span-2">{sourceExtra}</div>}
+          {sourceExtra && <div className="flex flex-col gap-2 col-span-full">{sourceExtra}</div>}
           <Field label={t("source.reminder")} htmlFor="reminder">
             <Select id="reminder" name="reminder" defaultValue={account.reminder}>
               {REMINDERS.map((value) => (

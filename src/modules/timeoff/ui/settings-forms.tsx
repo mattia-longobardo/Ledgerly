@@ -12,6 +12,7 @@ import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { saveAllowanceAction } from "../actions";
 import type { AllowanceSummary } from "./leave-actions";
+import { FIELD_GRID } from "@/ui/section";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 // A non-leap-year probe (matches the server's own patron-saint validation): Feb has 28 days here.
@@ -106,7 +107,7 @@ export function AllowanceForm({
         <span className="text-sm font-medium">{t("header.yearLabel")}</span>
         {stepper}
       </div>
-      <div className="grid grid-cols-1 gap-x-4 gap-y-3 @lg:grid-cols-3">
+      <div className={FIELD_GRID}>
         <Field label={t("allowance.vacationDays")} htmlFor={`${id}-vac`}>
           {number(`${id}-vac`, vacationDays, setVacationDays)}
         </Field>
@@ -117,15 +118,15 @@ export function AllowanceForm({
         <Field label={t("allowance.totalDays")} htmlFor={`${id}-total`}>
           {number(`${id}-total`, totalDays, setTotalDays)}
         </Field>
+        <Field label={t("dialog.note")} htmlFor={`${id}-note`}>
+          <Input
+            id={`${id}-note`}
+            maxLength={200}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </Field>
       </div>
-      <Field label={t("dialog.note")} htmlFor={`${id}-note`}>
-        <Input
-          id={`${id}-note`}
-          maxLength={200}
-          value={note}
-          onChange={(event) => setNote(event.target.value)}
-        />
-      </Field>
       <ErrorLine error={error} />
       {previous && (
         <CardFooter>
@@ -161,7 +162,7 @@ export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
 
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3">
-      <div className="max-w-56">
+      <div className={FIELD_GRID}>
         <Field label={t("settings.hours.label")} htmlFor={`${id}-hours`} hint={t("settings.hours.hint")}>
           <Input
             id={`${id}-hours`}
@@ -202,39 +203,41 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
 
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3 border-t border-border pt-3">
-      <Field label={t("settings.patron.label")} htmlFor={`${id}-month`} hint={t("settings.patron.hint")}>
-        <div className="flex gap-2">
-          <Select
-            id={`${id}-month`}
-            value={patron?.month ?? ""}
-            onChange={(event) => {
-              const month = event.target.value ? Number(event.target.value) : null;
-              setPatron(month ? { month, day: Math.min(patron?.day ?? 1, daysInMonth(month)) } : null);
-            }}
-          >
-            <option value="">{t("settings.patron.none")}</option>
-            {MONTHS.map((m) => (
-              <option key={m} value={m}>
-                {monthLabel(m)}
-              </option>
-            ))}
-          </Select>
-          <Select
-            aria-label={t("settings.patron.day")}
-            disabled={!patron}
-            value={patron?.day ?? ""}
-            onChange={(event) =>
-              patron && setPatron({ month: patron.month, day: Number(event.target.value) })
-            }
-          >
-            {days.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </Field>
+      <div className={FIELD_GRID}>
+        <Field label={t("settings.patron.label")} htmlFor={`${id}-month`} hint={t("settings.patron.hint")}>
+          <div className="flex gap-2">
+            <Select
+              id={`${id}-month`}
+              value={patron?.month ?? ""}
+              onChange={(event) => {
+                const month = event.target.value ? Number(event.target.value) : null;
+                setPatron(month ? { month, day: Math.min(patron?.day ?? 1, daysInMonth(month)) } : null);
+              }}
+            >
+              <option value="">{t("settings.patron.none")}</option>
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {monthLabel(m)}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label={t("settings.patron.day")}
+              disabled={!patron}
+              value={patron?.day ?? ""}
+              onChange={(event) =>
+                patron && setPatron({ month: patron.month, day: Number(event.target.value) })
+              }
+            >
+              {days.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </Field>
+      </div>
       <ErrorLine error={error} />
     </form>
   );

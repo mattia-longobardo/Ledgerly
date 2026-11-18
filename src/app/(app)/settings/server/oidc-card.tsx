@@ -10,6 +10,7 @@ import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { removeOidcAction, saveOidcAction, testOidcAction } from "./actions";
+import { FIELD_GRID } from "@/ui/section";
 
 export interface OidcCardProps {
   issuer: string;
@@ -97,8 +98,8 @@ export function OidcCard({
           {t("fromEnv")}
         </p>
       )}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-x-4">
-        <div className="sm:col-span-2">
+      <div className={FIELD_GRID}>
+        <div className="col-span-full">
           <Field label={t("issuer")} htmlFor={`${id}-issuer`} hint={t("issuerHint")}>
             <Input
               id={`${id}-issuer`}
@@ -126,7 +127,7 @@ export function OidcCard({
             placeholder={secretHint ? `•••• ${secretHint}` : undefined}
           />
         </Field>
-        <div className="sm:col-span-2">
+        <div className="col-span-full">
           <Field label={t("adminGroup")} htmlFor={`${id}-group`} hint={t("adminGroupHint")}>
             <Input
               id={`${id}-group`}

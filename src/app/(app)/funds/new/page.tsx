@@ -56,7 +56,7 @@ async function Wizard({ ctx }: { ctx: Ctx }) {
 /** The shape of the procedure while it reads (§3.6): the steps and a card with four rows. */
 function WizardSkeleton() {
   return (
-    <div data-testid="fund-wizard-loading" className="flex w-full max-w-[560px] flex-col gap-4">
+    <div data-testid="fund-wizard-loading" className="flex w-full flex-col gap-4">
       <Skeleton className="h-6 w-72 max-w-full" />
       <Card className="flex flex-col gap-4">
         <Skeleton className="h-6 w-32" />

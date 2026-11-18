@@ -19,6 +19,7 @@ import {
   type PayrollComponent,
 } from "../sources";
 import { calendarOfForm, dueDatesText, type SourceField, type TakenComponents } from "./source-text";
+import { FIELD_GRID } from "@/ui/section";
 
 export interface SourceFieldsProps {
   form: SourceForm;
@@ -158,7 +159,7 @@ function PayrollFields({
 
       <div id={`${own}-due`} className="flex flex-col gap-3.5">
         {form.hasDue && (
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+          <div className={FIELD_GRID}>
             <Field label={t("due.day")} htmlFor={id("dueDay")} error={errors.dueDay}>
               <Input
                 id={id("dueDay")}
@@ -183,7 +184,7 @@ function PayrollFields({
                 ))}
               </Select>
             </Field>
-            <div className="sm:col-span-2">
+            <div className="col-span-full">
               <Field
                 label={t("due.tolerance")}
                 htmlFor={id("toleranceDays")}
@@ -238,7 +239,7 @@ function DebitFields({ form, onChange, accounts, errors, idPrefix, afterPayee }:
   const unknownAccount = form.accountId !== "" && !accounts.some((account) => account.id === form.accountId);
 
   return (
-    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+    <div className={FIELD_GRID}>
       <Field label={t("debit.amount")} htmlFor={id("amount")} error={errors.amount}>
         <Input
           id={id("amount")}
@@ -323,7 +324,7 @@ function DebitFields({ form, onChange, accounts, errors, idPrefix, afterPayee }:
           onChange={(event) => set({ validTo: event.currentTarget.value })}
         />
       </Field>
-      <div className="flex flex-col gap-1.5 sm:col-span-2">
+      <div className="flex flex-col gap-1.5 col-span-full">
         <Field
           label={t("debit.match")}
           htmlFor={id("payeeMatch")}

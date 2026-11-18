@@ -234,7 +234,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
       <Page title={title} parent={parent}>
         {heading}
         {indicator}
-        <Card className="flex max-w-[560px] flex-col gap-2">
+        <Card className="flex flex-col gap-2">
           <h2 tabIndex={-1} className="flex items-center gap-2 text-lg font-semibold">
             <Check aria-hidden className="size-4 text-pos" />
             {t("review.guide.done.title")}
