@@ -342,6 +342,20 @@ Le dimensioni e le migrazioni sono stime **[DEV]**. Rilascio **N7**, nella fase 
 | **N7.2 · Pagina del plugin** | `/settings/integrations/[source]` con le sezioni di §2.2; elenco a righe; «Categorie di {provider}» spostata; credenziali di Trek tolte da Time Off; opzione di pubblicazione condizionata. Nessun cambio di comportamento | Nessuna | Nessuno atteso | `main` | M |
 | **N7.3 · «Disattiva» con conversione** | §3 per Wallet, Trek, Enable Banking: dialogo con conteggi, conversione in una transazione, riattivazione con riconoscimento dei conti (§3.4). Wallet e Trek ricevono «Disattiva» come Enable Banking (oggi hanno solo «Scollega») | Possibile colonna di stato del plugin per le sorgenti del core; nessuna rimozione | #1 (job che scrive dati), #8 (chiude accessi su servizi esterni) | Branch + PR | M |
 
+Scelte di sviluppo di N7.3 (le voci **[DEV]** di §3):
+
+- Ordine: 1) lettura finale di ogni collegamento (30 s; un errore non ferma, una lettura ancora in corso dopo 30 s
+  sì: «Non è cambiato niente», perché scriverebbe conti e movimenti durante la conversione); 2) e 4) in una sola
+  transazione (conversione e cancellazione delle impostazioni); 3) chiusura degli accessi alla banca dopo la
+  transazione, con le credenziali lette prima. Un errore nella transazione annulla tutto.
+- Nessuna colonna di stato per Wallet e Trek: «attiva» = ha un collegamento. Dopo «Disattiva» la pagina parte vuota
+  («Collega Wallet»), come §2.3 «Attiva, nessun collegamento».
+- Conto convertito: `origin = manual`, `provider` e `provider_account_id` vuoti; l'id della sorgente resta in
+  `provider_links` (`entity_type = account`). Il primo collegamento dopo la riattivazione (`connectWalletAction`,
+  ritorno della banca) rilega i conti (`restoreSourceAccounts`).
+- `source_skipped_accounts.reason`: `excluded` (si cancella alla disattivazione) o `deleted` (resta, con il nome del
+  conto, per «Riprendi»).
+
 Test attesi (per `test-policy`): integration «scollega → ricollega = stessi conti, stessa scelta, stessa pianificazione»;
 «elimina con sorgente scollegata → ricollega: il conto non torna»; «disattiva → fotografia dei numeri uguale» per ogni
 sorgente; «disattiva → riattiva: nessun doppione di conti e movimenti»; conversione annullata se un passo fallisce;

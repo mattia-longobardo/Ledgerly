@@ -84,6 +84,18 @@ const PAGES: Screen[] = [
 
 const OVERLAYS: Screen[] = [
   {
+    // Release N7.3 (plugin-settings.md §3.3): "Turn off" with its counts, on the six banks.
+    name: "the turn-off dialog",
+    session: "connections",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/settings/integrations/enablebanking");
+      await settled(page);
+      await page.getByRole("button", { name: /^(Turn off|Disattiva) Enable Banking$/ }).click();
+      await settledDialog(page);
+    },
+  },
+  {
     // Release N1: the credentials of the bank plugin, on the layout user (plugin on, nothing saved).
     name: "the bank credentials dialog",
     session: "layout",
