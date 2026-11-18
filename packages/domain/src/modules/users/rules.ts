@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Ctx, Role } from "../../platform/context";
+import type { Ctx } from "../../platform/context";
 import { DEFAULT_DISPLAY_CURRENCY, DISPLAY_CURRENCIES } from "../../platform/fx/rules";
 import { numberStyle } from "../../platform/format";
 
@@ -91,33 +91,9 @@ export function describeUserAgent(ua: string | null): { browser: string | null; 
   return { browser, os };
 }
 
-/* Admin › Users (spec §7.10) — the two refusals that keep an instance governable. */
-
-export type PersonAction = "demote" | "block" | "remove";
-
-export type PersonRefusal = "self" | "last_admin";
-
-/**
- * Why an admin action on a person must be refused, or null when it may go ahead.
- *
- * 1. **The last admin is untouchable.** Removing their role, blocking them or deleting them leaves
- *    an instance nobody can administer, and the only repair is a shell in the container. A screen
- *    that lets someone wall themselves out is a defect, not a feature (plan F8 §3.4.1).
- * 2. **Nobody blocks or removes themselves.** Both are one-way doors taken by accident; a second
- *    admin can always do it on their behalf, which is exactly the review that makes it safe.
- *
- * Demoting *yourself* is allowed while another admin remains: it is reversible by that admin, and
- * an admin who no longer wants the role should not have to ask someone else for it.
- */
-export function personActionRefusal(
-  action: PersonAction,
-  input: { actorId: string; targetId: string; targetRole: Role; adminCount: number },
-): PersonRefusal | null {
-  const { actorId, targetId, targetRole, adminCount } = input;
-  if (targetRole === "admin" && adminCount <= 1) return "last_admin";
-  if (actorId === targetId && action !== "demote") return "self";
-  return null;
-}
+// The refusals of Admin › Users are platform/auth's, with the people they protect.
+export { personActionRefusal } from "../../platform/auth/people-rules";
+export type { PersonAction, PersonRefusal } from "../../platform/auth/people-rules";
 
 /**
  * The two letters of the round badge in Admin › Users (design row 874). A name gives its first

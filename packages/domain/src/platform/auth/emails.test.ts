@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { RESET_PASSWORD_TOKEN_TTL_SECONDS } from "./auth";
 import { invitationEmail, passwordResetEmail } from "./emails";
-import { INVITATION_TTL_DAYS } from "../../../../../apps/web/src/platform/auth/invitations";
+import { INVITATION_TTL_DAYS } from "./invitations";
 
 const RESET_HOURS = RESET_PASSWORD_TOKEN_TTL_SECONDS / 3600;
 
