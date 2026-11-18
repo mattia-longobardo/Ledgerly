@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { check, customType, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, customType, jsonb, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../auth/schema";
 
 /** `bytea` as a Node `Buffer`: `seal`/`open` (spec §9.4) speak Buffer, and pg returns one. */
@@ -19,11 +20,8 @@ export const appSettings = pgTable(
     value: jsonb("value").$type<Record<string, unknown>>(),
     sealed: bytea("sealed"),
     updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [check("app_settings_key_ck", sql`${table.key} ~ '^[a-z][a-z0-9_.]{0,63}$'`)],
 );

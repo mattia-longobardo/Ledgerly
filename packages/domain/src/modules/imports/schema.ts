@@ -9,10 +9,10 @@ import {
   pgTable,
   smallint,
   text,
-  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import {
   DOCUMENT_KINDS,
@@ -32,9 +32,7 @@ import { inList } from "../../platform/db/checks";
 export const documents = pgTable(
   "documents",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -48,15 +46,12 @@ export const documents = pgTable(
     parserVersion: text("parser_version"),
     error: text("error"),
     retainUntil: date("retain_until").notNull(),
-    originalDeletedAt: timestamp("original_deleted_at", { withTimezone: true }),
-    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
-    extractedAt: timestamp("extracted_at", { withTimezone: true }),
-    stateChangedAt: timestamp("state_changed_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    originalDeletedAt: moment("original_deleted_at"),
+    receivedAt: moment("received_at").notNull().defaultNow(),
+    extractedAt: moment("extracted_at"),
+    stateChangedAt: moment("state_changed_at").notNull().defaultNow(),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("documents_user_sha_uq").on(table.userId, table.sha256),
@@ -84,9 +79,7 @@ export const documents = pgTable(
 export const documentEvidence = pgTable(
   "document_evidence",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -106,12 +99,9 @@ export const documentEvidence = pgTable(
     verification: text("verification", { enum: VERIFICATION_STATES }).notNull().default("unverified"),
     correctedValue: text("corrected_value"),
     correctedBy: uuid("corrected_by").references(() => users.id, { onDelete: "set null" }),
-    correctedAt: timestamp("corrected_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    correctedAt: moment("corrected_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("document_evidence_field_uq").on(table.documentId, table.field),

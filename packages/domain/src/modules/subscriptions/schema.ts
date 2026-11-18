@@ -8,10 +8,10 @@ import {
   pgTable,
   smallint,
   text,
-  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories, transactions } from "../transactions/schema";
@@ -28,9 +28,7 @@ import { inList } from "../../platform/db/checks";
 export const subscriptions = pgTable(
   "subscriptions",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -45,12 +43,9 @@ export const subscriptions = pgTable(
     payeeMatch: text("payee_match"),
     tolerance: numeric("tolerance", { precision: 10, scale: 6 }).notNull().default("0.05"),
     state: text("state", { enum: SUBSCRIPTION_STATES }).notNull().default("active"),
-    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    cancelledAt: moment("cancelled_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("subscriptions_user_idx").on(table.userId, table.name, table.id),
@@ -81,9 +76,7 @@ export const subscriptions = pgTable(
 export const subscriptionCharges = pgTable(
   "subscription_charges",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -97,11 +90,8 @@ export const subscriptionCharges = pgTable(
     expectedCents: bigint("expected_cents", { mode: "bigint" }).notNull(),
     actualCents: bigint("actual_cents", { mode: "bigint" }),
     state: text("state", { enum: CHARGE_STATES }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("subscription_charges_due_uq").on(table.subscriptionId, table.dueOn),

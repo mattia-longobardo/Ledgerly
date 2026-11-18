@@ -8,10 +8,10 @@ import {
   jsonb,
   pgTable,
   text,
-  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../../platform/db/columns";
 import { users } from "../../../platform/auth/schema";
 import { CATEGORY_TYPES } from "../rules";
 import type { RuleCondition } from "../categorize/user-rules";
@@ -34,9 +34,7 @@ import { inList } from "../../../platform/db/checks";
 export const categories = pgTable(
   "categories",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -75,12 +73,9 @@ export const categories = pgTable(
     providerName: text("provider_name"),
     type: text("type", { enum: CATEGORY_TYPES }).notNull().default("expense"),
     color: text("color"),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    archivedAt: moment("archived_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("categories_id_root_uq").on(table.id, table.isRoot),
@@ -101,19 +96,14 @@ export const categories = pgTable(
 export const labels = pgTable(
   "labels",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     color: text("color"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("labels_user_name_uq").on(table.userId, table.name),
@@ -133,9 +123,7 @@ export const labels = pgTable(
 export const sourceCategories = pgTable(
   "source_categories",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -146,12 +134,9 @@ export const sourceCategories = pgTable(
     groupName: text("group_name"),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
     addedCategoryId: uuid("added_category_id").references(() => categories.id, { onDelete: "set null" }),
-    seenAt: timestamp("seen_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    seenAt: moment("seen_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("source_categories_external_uq").on(table.userId, table.provider, table.externalId),
@@ -182,9 +167,7 @@ export interface SourceCategoryUndo {
 export const sourceCategoryUndos = pgTable(
   "source_category_undos",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -192,7 +175,7 @@ export const sourceCategoryUndos = pgTable(
       .notNull()
       .references(() => sourceCategories.id, { onDelete: "cascade" }),
     before: jsonb("before").$type<SourceCategoryUndo>().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [index("source_category_undos_user_idx").on(table.userId, table.createdAt)],
 );
@@ -206,9 +189,7 @@ export const sourceCategoryUndos = pgTable(
 export const categoryRules = pgTable(
   "category_rules",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -222,12 +203,9 @@ export const categoryRules = pgTable(
       .references(() => categories.id, { onDelete: "cascade" }),
     labelIds: jsonb("label_ids").$type<string[]>().notNull().default([]),
     note: text("note"),
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    deletedAt: moment("deleted_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("category_rules_user_idx").on(table.userId, table.position),

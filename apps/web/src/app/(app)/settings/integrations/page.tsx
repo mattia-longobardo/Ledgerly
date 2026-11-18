@@ -29,6 +29,7 @@ import { pendingSends } from "@ledgerly/domain/transactions";
 import { ButtonLink } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { sourceCategoryRows } from "../categories/source";
+import { bankWait, ibanConflictNames } from "./connection-list";
 import {
   keepSourceCategoryAction,
   setSourceCategoryAction,
@@ -129,16 +130,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   const accounts = await listAccounts(ctx);
   // The names of the accounts a source could not add an account beside (rewrite plan N4, case 5).
   // Read only when a connection has one: no query more for the page otherwise (G9).
-  const accountNames = new Map(
-    connections.some((connection) => (connection.ibanConflicts ?? []).length > 0)
-      ? (await listAccounts(ctx, { includeArchived: true })).map((account) => [account.id, account.name])
-      : [],
-  );
-  const ibanConflicts = (connection: Connection) =>
-    (connection.ibanConflicts ?? []).flatMap((id) => {
-      const name = accountNames.get(id);
-      return name === undefined ? [] : [name];
-    });
+  const ibanConflicts = await ibanConflictNames(ctx, connections);
   const runsOf = (connection: Connection) => runs.filter((run) => run.connectionId === connection.id);
   const hrefOf = (slug: string) => `${INTEGRATIONS}/${slug}`;
 
@@ -173,8 +165,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
         .map(async (connection) => {
           const summary = await connectionSummary(ctx, connection.id);
           // The wait a bank asked for after "no more calls for now": the next attempt is its end.
-          const until = (await readSyncJob(ctx, connection.id, "transactions"))?.cursor?.retryAfter;
-          const wait = until && new Date(until).getTime() > now.getTime() ? new Date(until) : null;
+          const wait = await bankWait(ctx, connection.id, now);
           const detail = text("detail.accounts", { count: summary.accounts });
           const capabilities: Capabilities = active
             ? {

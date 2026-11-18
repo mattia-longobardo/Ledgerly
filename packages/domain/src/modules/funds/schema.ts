@@ -10,11 +10,11 @@ import {
   pgTable,
   smallint,
   text,
-  timestamp,
   unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { accounts, balanceEntries } from "../accounts/schema";
 import { documents } from "../imports/schema";
@@ -51,9 +51,7 @@ const LEGACY_RULE_KINDS = ["contribution", "payment_schedule"] as const;
 export const funds = pgTable(
   "funds",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -76,12 +74,9 @@ export const funds = pgTable(
     state: text("state", { enum: FUND_STATES }).notNull().default("active"),
     /** The pension fund the payslips' competences go to (plan F6 §3.6.2): one per person. */
     receivesPayroll: boolean("receives_payroll").notNull().default(false),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    archivedAt: moment("archived_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("funds_valuation_account_uq").on(table.valuationAccountId),
@@ -112,9 +107,7 @@ export const funds = pgTable(
 export const fundValuations = pgTable(
   "fund_valuations",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -127,11 +120,8 @@ export const fundValuations = pgTable(
     units: numeric("units", { precision: 18, scale: 6 }),
     note: text("note"),
     source: text("source", { enum: VALUATION_SOURCES }).notNull().default("manual"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("fund_valuations_entry_uq").on(table.balanceEntryId),
@@ -145,9 +135,7 @@ export const fundValuations = pgTable(
 export const fundDeposits = pgTable(
   "fund_deposits",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -163,11 +151,8 @@ export const fundDeposits = pgTable(
     transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
     source: text("source", { enum: LEGACY_DEPOSIT_SOURCES }).notNull().default("manual"),
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("fund_deposits_transaction_uq").on(table.transactionId),
@@ -185,9 +170,7 @@ export const fundDeposits = pgTable(
 export const fundDepositRules = pgTable(
   "fund_deposit_rules",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -197,11 +180,8 @@ export const fundDepositRules = pgTable(
     payeeMatch: text("payee_match").notNull(),
     accountId: uuid("account_id").references(() => accounts.id, { onDelete: "no action" }),
     active: boolean("active").notNull().default(true),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("fund_deposit_rules_fund_uq").on(table.fundId),
@@ -212,11 +192,8 @@ export const fundDepositRules = pgTable(
 
 const money = (name: string) => bigint(name, { mode: "bigint" });
 const timestamps = {
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  createdAt: createdAtColumn(),
+  updatedAt: updatedAtColumn(),
 };
 
 /**
@@ -227,9 +204,7 @@ const timestamps = {
 export const pensionRules = pgTable(
   "pension_rules",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -293,9 +268,7 @@ export const pensionRules = pgTable(
 export const pensionCompetences = pgTable(
   "pension_competences",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -340,9 +313,7 @@ export const pensionCompetences = pgTable(
 export const fundContributionSources = pgTable(
   "fund_contribution_sources",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -374,11 +345,8 @@ export const fundContributionSources = pgTable(
     validFrom: date("valid_from"),
     validTo: date("valid_to"),
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("fund_contribution_sources_fund_idx").on(table.fundId, table.kind),
@@ -427,9 +395,7 @@ export const fundContributionSources = pgTable(
 export const fundFees = pgTable(
   "fund_fees",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -446,11 +412,8 @@ export const fundFees = pgTable(
     validFrom: date("valid_from"),
     validTo: date("valid_to"),
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("fund_fees_fund_idx").on(table.fundId),
@@ -486,9 +449,7 @@ export const fundFees = pgTable(
 export const fundOperations = pgTable(
   "fund_operations",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -558,9 +519,7 @@ export const fundOperations = pgTable(
 export const unitMovements = pgTable(
   "unit_movements",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -588,9 +547,7 @@ export const unitMovements = pgTable(
 export const positionSnapshots = pgTable(
   "position_snapshots",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -630,9 +587,7 @@ export const positionSnapshots = pgTable(
 export const reconciliationLinks = pgTable(
   "reconciliation_links",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -656,7 +611,7 @@ export const reconciliationLinks = pgTable(
     decision: text("decision", { enum: DECISIONS }).notNull(),
     note: text("note").notNull(),
     decidedBy: uuid("decided_by").references(() => users.id, { onDelete: "set null" }),
-    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull(),
+    decidedAt: moment("decided_at").notNull(),
     ...timestamps,
   },
   (table) => [
@@ -672,9 +627,7 @@ export const reconciliationLinks = pgTable(
 export const fundFeeTariffs = pgTable(
   "fund_fee_tariffs",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     provider: text("provider").notNull(),
     validFrom: date("valid_from").notNull(),
     validTo: date("valid_to"),

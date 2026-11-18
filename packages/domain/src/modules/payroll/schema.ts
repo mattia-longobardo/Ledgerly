@@ -1,22 +1,6 @@
 import { sql } from "drizzle-orm";
-import {
-  type AnyPgColumn,
-  bigint,
-  boolean,
-  check,
-  date,
-  doublePrecision,
-  index,
-  jsonb,
-  numeric,
-  pgTable,
-  smallint,
-  text,
-  timestamp,
-  unique,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { type AnyPgColumn, bigint, boolean, check, date, doublePrecision, index, jsonb, numeric, pgTable, smallint, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { documents } from "../imports/schema";
 import { LEAVE_KINDS } from "./fields";
@@ -34,9 +18,7 @@ const hours = (name: string) => numeric(name, { precision: 8, scale: 2 });
 export const payrollRawLines = pgTable(
   "payroll_raw_lines",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -55,7 +37,7 @@ export const payrollRawLines = pgTable(
     page: smallint("page").notNull(),
     bbox: doublePrecision("bbox").array().notNull(),
     rawText: text("raw_text").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("payroll_raw_lines_position_uq").on(table.documentId, table.position),
@@ -77,9 +59,7 @@ export const payrollRawLines = pgTable(
 export const payslips = pgTable(
   "payslips",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -94,7 +74,7 @@ export const payslips = pgTable(
     printedOn: date("printed_on"),
     paidOn: date("paid_on"),
     active: boolean("active").notNull().default(false),
-    appliedAt: timestamp("applied_at", { withTimezone: true }),
+    appliedAt: moment("applied_at"),
     supersededBy: uuid("superseded_by").references((): AnyPgColumn => payslips.id, {
       onDelete: "set null",
     }),
@@ -145,11 +125,8 @@ export const payslips = pgTable(
     roundingCurrent: money("rounding_current"),
     netPay: money("net_pay"),
 
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("payslips_document_uq").on(table.documentId),
@@ -191,9 +168,7 @@ export const payslips = pgTable(
 export const payrollCodeMap = pgTable(
   "payroll_code_map",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -201,11 +176,8 @@ export const payrollCodeMap = pgTable(
     code: text("code").notNull(),
     role: text("role", { enum: CODE_ROLES }).notNull(),
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("payroll_code_map_code_uq").on(table.userId, table.profile, table.code),
@@ -222,9 +194,7 @@ export const payrollCodeMap = pgTable(
 export const leaveBalanceSnapshots = pgTable(
   "leave_balance_snapshots",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -239,7 +209,7 @@ export const leaveBalanceSnapshots = pgTable(
     remaining: hours("remaining"),
     unit: text("unit").notNull().default("hours"),
     unitEvidence: text("unit_evidence").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("leave_balance_snapshots_kind_uq").on(table.payslipId, table.kind),
@@ -256,9 +226,7 @@ export const leaveBalanceSnapshots = pgTable(
 export const payrollLeaveEvents = pgTable(
   "payroll_leave_events",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -270,7 +238,7 @@ export const payrollLeaveEvents = pgTable(
     payrollPeriod: date("payroll_period").notNull(),
     usagePeriod: date("usage_period").notNull(),
     sourceLineIds: uuid("source_line_ids").array().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     index("payroll_leave_events_user_usage_idx").on(table.userId, table.usagePeriod),

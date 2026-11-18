@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { check, date, numeric, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { check, date, numeric, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { moment } from "../../platform/db/columns";
 import { FX_SOURCES } from "./rules";
 import { inList } from "../db/checks";
 
@@ -18,7 +19,7 @@ export const fxRates = pgTable(
     currency: text("currency").notNull(),
     eurPerUnit: numeric("eur_per_unit", { precision: 20, scale: 10 }).notNull(),
     source: text("source", { enum: FX_SOURCES }).notNull().default("ecb"),
-    fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
+    fetchedAt: moment("fetched_at").notNull().defaultNow(),
   },
   (table) => [
     primaryKey({ name: "fx_rates_pk", columns: [table.on, table.currency] }),

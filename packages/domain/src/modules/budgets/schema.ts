@@ -1,16 +1,6 @@
 import { sql } from "drizzle-orm";
-import {
-  bigint,
-  boolean,
-  check,
-  date,
-  index,
-  integer,
-  pgTable,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { bigint, boolean, check, date, index, integer, pgTable, unique, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories } from "../transactions/schema";
@@ -28,9 +18,7 @@ import { categories } from "../transactions/schema";
 export const budgetLimits = pgTable(
   "budget_limits",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -43,11 +31,8 @@ export const budgetLimits = pgTable(
     fromMonth: date("from_month").notNull(),
     amountCents: bigint("amount_cents", { mode: "bigint" }),
     stopped: boolean("stopped").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("budget_limits_scope_month_uq")
@@ -75,9 +60,7 @@ export const budgetLimits = pgTable(
 export const budgetAlerts = pgTable(
   "budget_alerts",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -85,11 +68,8 @@ export const budgetAlerts = pgTable(
     accountId: uuid("account_id").references(() => accounts.id, { onDelete: "cascade" }),
     enabled: boolean("enabled").notNull().default(true),
     thresholds: integer("thresholds").array().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("budget_alerts_scope_uq").on(table.userId, table.categoryId, table.accountId).nullsNotDistinct(),

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { idColumn, moment } from "../../db/columns";
 import { sessions, users } from "../schema";
 
 // The tables of `@better-auth/oauth-provider` 1.7.14 and of the `jwt` plugin it signs with
@@ -7,9 +8,9 @@ import { sessions, users } from "../schema";
 // the export keys are the `modelName`s `auth.ts` maps each model to. Arrays are `text[]` and `json`
 // is `jsonb`, which is what the Drizzle adapter writes for Postgres.
 
-const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
+const createdAt = () => moment("created_at").notNull().defaultNow();
 const updatedAt = () =>
-  timestamp("updated_at", { withTimezone: true })
+  moment("updated_at")
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date());
@@ -22,9 +23,7 @@ const updatedAt = () =>
 export const oauthClients = pgTable(
   "oauth_clients",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     clientId: text("client_id").notNull().unique(),
     clientSecret: text("client_secret"),
     clientDiscoveryId: text("client_discovery_id"),
@@ -66,9 +65,7 @@ export const oauthClients = pgTable(
 
 /** The protected resources (RFC 8707): one row per audience a token may carry. */
 export const oauthResources = pgTable("oauth_resources", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuidv7()`),
+  id: idColumn(),
   identifier: text("identifier").notNull().unique(),
   name: text("name").notNull(),
   accessTokenTtl: integer("access_token_ttl"),
@@ -88,9 +85,7 @@ export const oauthResources = pgTable("oauth_resources", {
 export const oauthClientResources = pgTable(
   "oauth_client_resources",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     clientId: text("client_id")
       .notNull()
       .references(() => oauthClients.clientId, { onDelete: "cascade" }),
@@ -109,9 +104,7 @@ export const oauthClientResources = pgTable(
 export const oauthRefreshTokens = pgTable(
   "oauth_refresh_tokens",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     token: text("token").notNull().unique(),
     clientId: text("client_id")
       .notNull()
@@ -124,13 +117,13 @@ export const oauthRefreshTokens = pgTable(
     authorizationCodeId: text("authorization_code_id"),
     resources: text("resources").array(),
     requestedUserInfoClaims: text("requested_user_info_claims").array(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    expiresAt: moment("expires_at").notNull(),
     createdAt: createdAt(),
-    revoked: timestamp("revoked", { withTimezone: true }),
-    rotatedAt: timestamp("rotated_at", { withTimezone: true }),
+    revoked: moment("revoked"),
+    rotatedAt: moment("rotated_at"),
     rotationReplayResponse: text("rotation_replay_response"),
-    rotationReplayExpiresAt: timestamp("rotation_replay_expires_at", { withTimezone: true }),
-    authTime: timestamp("auth_time", { withTimezone: true }),
+    rotationReplayExpiresAt: moment("rotation_replay_expires_at"),
+    authTime: moment("auth_time"),
     confirmation: jsonb("confirmation"),
     scopes: text("scopes").array().notNull(),
   },
@@ -146,9 +139,7 @@ export const oauthRefreshTokens = pgTable(
 export const oauthAccessTokens = pgTable(
   "oauth_access_tokens",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     token: text("token").unique(),
     clientId: text("client_id")
       .notNull()
@@ -160,9 +151,9 @@ export const oauthAccessTokens = pgTable(
     resources: text("resources").array(),
     requestedUserInfoClaims: text("requested_user_info_claims").array(),
     refreshId: uuid("refresh_id").references(() => oauthRefreshTokens.id, { onDelete: "cascade" }),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    expiresAt: moment("expires_at").notNull(),
     createdAt: createdAt(),
-    revoked: timestamp("revoked", { withTimezone: true }),
+    revoked: moment("revoked"),
     confirmation: jsonb("confirmation"),
     scopes: text("scopes").array().notNull(),
   },
@@ -178,9 +169,7 @@ export const oauthAccessTokens = pgTable(
 export const oauthConsents = pgTable(
   "oauth_consents",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     clientId: text("client_id")
       .notNull()
       .references(() => oauthClients.clientId, { onDelete: "cascade" }),
@@ -206,18 +195,16 @@ export const oauthClientAssertions = pgTable("oauth_client_assertions", {
   id: text("id")
     .primaryKey()
     .default(sql`uuidv7()::text`),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  expiresAt: moment("expires_at").notNull(),
 });
 
 /** The signing keys of the `jwt` plugin. The private half is encrypted with BETTER_AUTH_SECRET. */
 export const jwks = pgTable("jwks", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuidv7()`),
+  id: idColumn(),
   publicKey: text("public_key").notNull(),
   privateKey: text("private_key").notNull(),
   createdAt: createdAt(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  expiresAt: moment("expires_at"),
   alg: text("alg"),
   crv: text("crv"),
 });

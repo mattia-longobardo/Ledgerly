@@ -1,16 +1,6 @@
 import { sql } from "drizzle-orm";
-import {
-  bigint,
-  check,
-  date,
-  index,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { bigint, check, date, index, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { transactions } from "../transactions/schema";
@@ -28,9 +18,7 @@ import { inList } from "../../platform/db/checks";
 export const pockets = pgTable(
   "pockets",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -41,12 +29,9 @@ export const pockets = pgTable(
     monthlyCents: bigint("monthly_cents", { mode: "bigint" }),
     startMonth: date("start_month").notNull(),
     state: text("state", { enum: POCKET_STATES }).notNull().default("active"),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    archivedAt: moment("archived_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("pockets_user_name_uq").on(table.userId, table.name),
@@ -68,9 +53,7 @@ export const pockets = pgTable(
 export const pocketMovements = pgTable(
   "pocket_movements",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -81,11 +64,8 @@ export const pocketMovements = pgTable(
     amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
     on: date("on").notNull(),
     reason: text("reason"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("pocket_movements_pocket_on_idx").on(table.pocketId, table.on),
@@ -117,9 +97,7 @@ export const pocketMovements = pgTable(
 export const pocketExpenseLinks = pgTable(
   "pocket_expense_links",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -129,7 +107,7 @@ export const pocketExpenseLinks = pgTable(
     transactionId: uuid("transaction_id")
       .notNull()
       .references(() => transactions.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("pocket_expense_links_transaction_uq").on(table.transactionId),
@@ -145,9 +123,7 @@ export const pocketExpenseLinks = pgTable(
 export const pocketPlannedExpenses = pgTable(
   "pocket_planned_expenses",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -157,11 +133,8 @@ export const pocketPlannedExpenses = pgTable(
     description: text("description").notNull(),
     amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
     dueOn: date("due_on").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("pocket_planned_expenses_pocket_due_idx").on(table.pocketId, table.dueOn),

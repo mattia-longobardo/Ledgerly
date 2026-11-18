@@ -1,16 +1,6 @@
 import { sql } from "drizzle-orm";
-import {
-  check,
-  customType,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { check, customType, index, integer, jsonb, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../db/columns";
 import { users } from "../auth/schema";
 import { CONNECTION_STATES, ENTITY_TYPES, SKIP_REASONS, SYNC_KINDS, SYNC_STATES } from "./rules";
 import { DEFAULT_SYNC_SCHEDULE, type SyncSchedule } from "./schedule";
@@ -28,9 +18,7 @@ const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 export const integrationConnections = pgTable(
   "integration_connections",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -41,9 +29,9 @@ export const integrationConnections = pgTable(
     instanceKey: text("instance_key").notNull().default(""),
     credentials: bytea("credentials").notNull(),
     // When the access the person gave ends, for a provider whose access has an end.
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    expiresAt: moment("expires_at"),
     state: text("state", { enum: CONNECTION_STATES }).notNull().default("active"),
-    lastOkAt: timestamp("last_ok_at", { withTimezone: true }),
+    lastOkAt: moment("last_ok_at"),
     lastError: text("last_error"),
     // Why the last reading failed, as a code of the closed list (`status.ts`); null when the
     // connection works or the failure has no code. Never what a provider said.
@@ -54,15 +42,12 @@ export const integrationConnections = pgTable(
     // `syncScheduleSchema` and, as a list, by the constraint below; `next_sync_at` is null when
     // there is no rule (manual only).
     schedule: jsonb("schedule").$type<SyncSchedule>().notNull().default(DEFAULT_SYNC_SCHEDULE),
-    nextSyncAt: timestamp("next_sync_at", { withTimezone: true }),
+    nextSyncAt: moment("next_sync_at"),
     // The accounts here whose IBAN a new account of the source carries, at the last reading: the
     // source's account was not added (rewrite plan N4, H39, case 5). Ids only, never an IBAN.
     ibanConflicts: jsonb("iban_conflicts").$type<string[]>(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     // One connection per provider and instance: a person has as many banks as they connect. The
@@ -96,9 +81,7 @@ export const integrationConnections = pgTable(
 export const providerLinks = pgTable(
   "provider_links",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -107,14 +90,11 @@ export const providerLinks = pgTable(
     entityId: uuid("entity_id").notNull(),
     externalId: text("external_id").notNull(),
     metadata: jsonb("metadata").$type<Record<string, string>>(),
-    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).notNull().defaultNow(),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
-    missingSince: timestamp("missing_since", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    firstSeenAt: moment("first_seen_at").notNull().defaultNow(),
+    lastSeenAt: moment("last_seen_at").notNull().defaultNow(),
+    missingSince: moment("missing_since"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("provider_links_external_uq").on(table.userId, table.provider, table.entityType, table.externalId),
@@ -129,9 +109,7 @@ export const providerLinks = pgTable(
 export const syncJobs = pgTable(
   "sync_jobs",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -140,13 +118,10 @@ export const syncJobs = pgTable(
       .references(() => integrationConnections.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: SYNC_KINDS }).notNull(),
     cursor: jsonb("cursor").$type<Record<string, string>>(),
-    nextRunAt: timestamp("next_run_at", { withTimezone: true }),
-    lastRunAt: timestamp("last_run_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    nextRunAt: moment("next_run_at"),
+    lastRunAt: moment("last_run_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("sync_jobs_connection_kind_uq").on(table.connectionId, table.kind),
@@ -164,9 +139,7 @@ export const syncJobs = pgTable(
 export const sourceSkippedAccounts = pgTable(
   "source_skipped_accounts",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -174,7 +147,7 @@ export const sourceSkippedAccounts = pgTable(
     externalId: text("external_id").notNull(),
     reason: text("reason", { enum: SKIP_REASONS }).notNull().default("excluded"),
     name: text("name"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("source_skipped_accounts_uq").on(table.userId, table.provider, table.externalId),
@@ -194,9 +167,7 @@ export const sourceSkippedAccounts = pgTable(
 export const sourceSettings = pgTable(
   "source_settings",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -204,7 +175,7 @@ export const sourceSettings = pgTable(
     instanceKey: text("instance_key").notNull().default(""),
     schedule: jsonb("schedule").$type<SyncSchedule>().notNull(),
     cursors: jsonb("cursors").$type<Record<string, Record<string, string>>>().notNull().default({}),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [unique("source_settings_uq").on(table.userId, table.provider, table.instanceKey)],
 );
@@ -213,9 +184,7 @@ export const sourceSettings = pgTable(
 export const syncRuns = pgTable(
   "sync_runs",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -224,8 +193,8 @@ export const syncRuns = pgTable(
       .references(() => integrationConnections.id, { onDelete: "cascade" }),
     kind: text("kind", { enum: SYNC_KINDS }).notNull(),
     state: text("state", { enum: SYNC_STATES }).notNull().default("running"),
-    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
-    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    startedAt: moment("started_at").notNull().defaultNow(),
+    finishedAt: moment("finished_at"),
     counts: jsonb("counts").$type<Record<string, number>>(),
     error: text("error"),
     // Who started the reading: the schedule (`auto`) or the person (`manual`).
@@ -235,11 +204,8 @@ export const syncRuns = pgTable(
     errorCode: text("error_code"),
     httpStatus: integer("http_status"),
     appVersion: text("app_version"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("sync_runs_connection_started_idx").on(table.connectionId, table.startedAt.desc()),

@@ -12,11 +12,11 @@ import {
   real,
   smallint,
   text,
-  timestamp,
   unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../../platform/db/columns";
 import { accounts } from "../../accounts/schema";
 import { users } from "../../../platform/auth/schema";
 import {
@@ -40,16 +40,14 @@ import { inList } from "../../../platform/db/checks";
 export const transactions = pgTable(
   "transactions",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    occurredAt: moment("occurred_at").notNull(),
     amountCents: bigint("amount_cents", { mode: "bigint" }).notNull(),
     currency: text("currency").notNull().default("EUR"),
     type: text("type", { enum: TRANSACTION_TYPES }).notNull(),
@@ -99,17 +97,14 @@ export const transactions = pgTable(
     sourceCategoryId: uuid("source_category_id").references(() => sourceCategories.id, {
       onDelete: "set null",
     }),
-    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
-    removedUpstreamAt: timestamp("removed_upstream_at", { withTimezone: true }),
+    hiddenAt: moment("hidden_at"),
+    removedUpstreamAt: moment("removed_upstream_at"),
     locallyEdited: text("locally_edited")
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("transactions_user_occurred_idx").on(table.userId, table.occurredAt.desc(), table.id),
@@ -169,7 +164,7 @@ export const transactionLabels = pgTable(
     labelId: uuid("label_id")
       .notNull()
       .references(() => labels.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     primaryKey({ name: "transaction_labels_pk", columns: [table.transactionId, table.labelId] }),
@@ -185,9 +180,7 @@ export const transactionLabels = pgTable(
 export const recurringPatterns = pgTable(
   "recurring_patterns",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -199,11 +192,8 @@ export const recurringPatterns = pgTable(
     nextExpectedOn: date("next_expected_on").notNull(),
     occurrences: integer("occurrences").notNull(),
     lastSeenOn: date("last_seen_on").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("recurring_patterns_key_uq").on(table.userId, table.payeeKey, table.currency, table.sign),

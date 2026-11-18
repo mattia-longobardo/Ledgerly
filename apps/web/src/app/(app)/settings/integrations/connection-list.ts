@@ -50,6 +50,25 @@ const NONE: Capabilities = {
   historyMonths: [],
 };
 
+/** The end of a wait a bank asked for after "no more calls for now", while it lasts: the next attempt. */
+export async function bankWait(ctx: Ctx, connectionId: string, now: Date): Promise<Date | null> {
+  const until = (await readSyncJob(ctx, connectionId, "transactions"))?.cursor?.retryAfter;
+  return until && new Date(until).getTime() > now.getTime() ? new Date(until) : null;
+}
+
+/**
+ * The names of the accounts here whose IBAN a new account of a source carries (rewrite plan N4,
+ * case 5), by connection. The accounts are read only when a connection has one: no query more otherwise (G9).
+ */
+export async function ibanConflictNames(ctx: Ctx, connections: readonly Connection[]) {
+  const names = new Map(
+    connections.some((connection) => (connection.ibanConflicts ?? []).length > 0)
+      ? (await listAccounts(ctx, { includeArchived: true })).map((account) => [account.id, account.name])
+      : [],
+  );
+  return (connection: Connection) => (connection.ibanConflicts ?? []).flatMap((id) => names.get(id) ?? []);
+}
+
 /** A plugin's connection: its plugin's state, its accounts chosen, the wait a bank asked for. */
 async function bankFacts(
   ctx: Ctx,
@@ -58,8 +77,7 @@ async function bankFacts(
   now: Date,
 ): Promise<Facts> {
   const summary = await connectionSummary(ctx, connection.id);
-  const until = (await readSyncJob(ctx, connection.id, "transactions"))?.cursor?.retryAfter;
-  const wait = until && new Date(until).getTime() > now.getTime() ? new Date(until) : null;
+  const wait = await bankWait(ctx, connection.id, now);
   return {
     providerActive: plugin.active,
     accountsChosen: summary.chosen,
@@ -78,7 +96,7 @@ async function rowOf(
   ctx: Ctx,
   connection: Connection,
   facts: Facts,
-  known: { runs: readonly RecentRun[]; accountNames: ReadonlyMap<string, string> },
+  known: { runs: readonly RecentRun[]; ibanConflicts: (connection: Connection) => string[] },
 ) {
   return {
     id: connection.id,
@@ -93,7 +111,7 @@ async function rowOf(
     schedule: connection.schedule,
     ...facts,
     nextAttempt: instant(facts.nextAttempt),
-    ibanConflicts: (connection.ibanConflicts ?? []).flatMap((id) => known.accountNames.get(id) ?? []),
+    ibanConflicts: known.ibanConflicts(connection),
     runs: known.runs
       .filter((run) => run.connectionId === connection.id)
       .map(({ kind, state, origin, errorCode, counts, startedAt }) => ({
@@ -115,11 +133,7 @@ export async function connectionList(ctx: Ctx, now: Date = new Date()) {
     listUserPlugins(ctx),
     listInvestmentAccounts(ctx),
   ]);
-  const accountNames = new Map(
-    connections.some((connection) => (connection.ibanConflicts ?? []).length > 0)
-      ? (await listAccounts(ctx, { includeArchived: true })).map((account) => [account.id, account.name])
-      : [],
-  );
+  const ibanConflicts = await ibanConflictNames(ctx, connections);
   const refused = new Map<string, boolean>();
   const keyRefused = async (pluginId: string) => {
     if (!refused.has(pluginId)) refused.set(pluginId, (await credentialsStatus(ctx, pluginId)).invalid);
@@ -145,7 +159,7 @@ export async function connectionList(ctx: Ctx, now: Date = new Date()) {
       const active = plugins.some((one) => one.id === pluginId && one.state === "active");
       facts = await bankFacts(ctx, connection, { active, keyRefused: await keyRefused(pluginId) }, now);
     }
-    rows.push(await rowOf(ctx, connection, facts, { runs, accountNames }));
+    rows.push(await rowOf(ctx, connection, facts, { runs, ibanConflicts }));
   }
   return rows;
 }

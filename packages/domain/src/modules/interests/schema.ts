@@ -8,12 +8,12 @@ import {
   pgTable,
   smallint,
   text,
-  timestamp,
   unique,
   uniqueIndex,
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories } from "../transactions/schema";
@@ -29,9 +29,7 @@ import { inList } from "../../platform/db/checks";
 export const interestRules = pgTable(
   "interest_rules",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -65,11 +63,8 @@ export const interestRules = pgTable(
     }),
     state: text("state", { enum: RULE_STATES }).notNull().default("active"),
     payeeMatch: text("payee_match"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("interest_rules_account_idx").on(table.accountId),
@@ -98,9 +93,7 @@ export const interestRules = pgTable(
 export const interestRuleTiers = pgTable(
   "interest_rule_tiers",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -110,11 +103,8 @@ export const interestRuleTiers = pgTable(
     position: smallint("position").notNull(),
     upToCents: bigint("up_to_cents", { mode: "bigint" }),
     annualRate: numeric("annual_rate", { precision: 10, scale: 6 }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("interest_rule_tiers_position_uq").on(table.ruleId, table.position),
@@ -135,9 +125,7 @@ export const interestRuleTiers = pgTable(
 export const interestEntries = pgTable(
   "interest_entries",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -151,13 +139,10 @@ export const interestEntries = pgTable(
     taxCents: bigint("tax_cents", { mode: "bigint" }).notNull(),
     netCents: bigint("net_cents", { mode: "bigint" }).notNull(),
     posting: text("posting", { enum: POSTING_STATES }).notNull().default("none"),
-    postedAt: timestamp("posted_at", { withTimezone: true }),
+    postedAt: moment("posted_at"),
     postingError: text("posting_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("interest_entries_period_uq").on(table.ruleId, table.periodFrom),
@@ -182,9 +167,7 @@ export const interestEntries = pgTable(
 export const interestAccruals = pgTable(
   "interest_accruals",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -198,11 +181,8 @@ export const interestAccruals = pgTable(
     carry: numeric("carry", { precision: 24, scale: 12 }).notNull(),
     status: text("status", { enum: ACCRUAL_STATUSES }).notNull(),
     entryId: uuid("entry_id").references((): AnyPgColumn => interestEntries.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("interest_accruals_day_uq").on(table.ruleId, table.on),

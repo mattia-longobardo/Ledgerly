@@ -1,4 +1,5 @@
-import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, text } from "drizzle-orm/pg-core";
+import { moment } from "../../platform/db/columns";
 
 /**
  * Fixed windows of the limits every process shares (rewrite plan R1): the API's requests per token
@@ -7,5 +8,5 @@ import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 export const rateLimitCounters = pgTable("rate_limit_counters", {
   key: text("key").primaryKey(),
   count: integer("count").notNull(),
-  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+  resetAt: moment("reset_at").notNull(),
 });

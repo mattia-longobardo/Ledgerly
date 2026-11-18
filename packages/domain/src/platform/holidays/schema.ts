@@ -7,11 +7,11 @@ import {
   pgTable,
   smallint,
   text,
-  timestamp,
   unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../auth/schema";
 import { HOLIDAY_SOURCES } from "./rules";
 import { inList } from "../db/checks";
@@ -27,9 +27,7 @@ import { inList } from "../db/checks";
 export const holidayCalendars = pgTable(
   "holiday_calendars",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -40,13 +38,10 @@ export const holidayCalendars = pgTable(
     subdivision: text("subdivision"),
     /** What to call it on screen, in the language it was picked in. */
     label: text("label").notNull(),
-    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastSyncedAt: moment("last_synced_at"),
     lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     // One subscription per place: `coalesce` because two nulls are not equal to each other, and
@@ -78,9 +73,7 @@ export const holidayCalendars = pgTable(
 export const holidayDays = pgTable(
   "holiday_days",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -92,7 +85,7 @@ export const holidayDays = pgTable(
     name: text("name").notNull(),
     /** Whether the source calls it national; a local one is the interesting case. */
     nationwide: boolean("nationwide").notNull().default(true),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("holiday_days_entry_uq").on(table.calendarId, table.on, table.name),

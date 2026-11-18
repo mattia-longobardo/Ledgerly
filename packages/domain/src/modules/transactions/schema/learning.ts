@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -8,10 +7,10 @@ import {
   primaryKey,
   real,
   text,
-  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../../platform/db/columns";
 import { users } from "../../../platform/auth/schema";
 import { type TransactionType } from "../rules";
 import { categories } from "./categories";
@@ -33,7 +32,7 @@ export const categoryMemory = pgTable(
     categoryId: uuid("category_id")
       .notNull()
       .references(() => categories.id, { onDelete: "cascade" }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: moment("updated_at").notNull().defaultNow(),
   },
   (table) => [primaryKey({ name: "category_memory_pk", columns: [table.userId, table.key] })],
 );
@@ -50,16 +49,13 @@ export const categoryModels = pgTable("category_models", {
   version: integer("version").notNull().default(0),
   /** How many confirmed labels the model was trained from, and the newest of them. */
   examples: integer("examples").notNull().default(0),
-  labelledThrough: timestamp("labelled_through", { withTimezone: true }),
+  labelledThrough: moment("labelled_through"),
   automaticThreshold: real("automatic_threshold"),
   suggestionThreshold: real("suggestion_threshold"),
   model: jsonb("model"),
   preparing: boolean("preparing").notNull().default(false),
-  trainedAt: timestamp("trained_at", { withTimezone: true }),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  trainedAt: moment("trained_at"),
+  updatedAt: updatedAtColumn(),
 });
 
 /** The category a person made from a default group: what a static table points at for them. */
@@ -73,7 +69,7 @@ export const categoryGroupMarks = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     groupKey: text("group_key").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [unique("category_group_marks_user_group_uq").on(table.userId, table.groupKey)],
 );
@@ -92,7 +88,7 @@ export const categoryMergeDismissals = pgTable(
     secondId: uuid("second_id")
       .notNull()
       .references(() => categories.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     primaryKey({
@@ -127,14 +123,12 @@ export interface CategoryUndoRow {
 export const categoryUndos = pgTable(
   "category_undos",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     rows: jsonb("rows").$type<CategoryUndoRow[]>().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [index("category_undos_user_idx").on(table.userId, table.createdAt)],
 );
@@ -158,14 +152,12 @@ export interface RuleUndoRow extends CategoryUndoRow {
 export const categoryRuleUndos = pgTable(
   "category_rule_undos",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     rows: jsonb("rows").$type<RuleUndoRow[]>().notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [index("category_rule_undos_user_idx").on(table.userId, table.createdAt)],
 );

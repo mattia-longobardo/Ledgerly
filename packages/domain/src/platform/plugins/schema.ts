@@ -8,10 +8,10 @@ import {
   pgTable,
   primaryKey,
   text,
-  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../auth/schema";
 import type { PluginManifest } from "@ledgerly/plugin-contract";
 
@@ -37,14 +37,11 @@ export const plugins = pgTable(
     state: text("state").notNull().default("ready"),
     /** Whether the plugin is of the official catalog. Every plugin is (decision H28). */
     verified: boolean("verified").notNull().default(true),
-    manifestReadAt: timestamp("manifest_read_at", { withTimezone: true }).notNull().defaultNow(),
+    manifestReadAt: moment("manifest_read_at").notNull().defaultNow(),
     /** Since when the plugin has not answered, in the current series of failed checks. */
-    unreachableSince: timestamp("unreachable_since", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    unreachableSince: moment("unreachable_since"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     check("plugins_id_ck", sql`${table.id} ~ '^[a-z][a-z0-9-]{1,30}$'`),
@@ -65,13 +62,10 @@ export const pluginActivations = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     pluginId: text("plugin_id").notNull(),
     active: boolean("active").notNull(),
-    activatedAt: timestamp("activated_at", { withTimezone: true }),
-    deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    activatedAt: moment("activated_at"),
+    deactivatedAt: moment("deactivated_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [primaryKey({ name: "plugin_activations_pk", columns: [table.userId, table.pluginId] })],
 );
@@ -84,21 +78,16 @@ export const pluginActivations = pgTable(
 export const pluginUserCredentials = pgTable(
   "plugin_user_credentials",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     pluginId: text("plugin_id").notNull(),
     credentials: bytea("credentials").notNull(),
-    savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
-    invalidAt: timestamp("invalid_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    savedAt: moment("saved_at").notNull().defaultNow(),
+    invalidAt: moment("invalid_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [unique("plugin_user_credentials_user_plugin_uq").on(table.userId, table.pluginId)],
 );
@@ -111,9 +100,7 @@ export const pluginUserCredentials = pgTable(
 export const pluginAuthStates = pgTable(
   "plugin_auth_states",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -122,9 +109,9 @@ export const pluginAuthStates = pgTable(
     sessionId: text("session_id").notNull(),
     /** What the person chose: the institution, and the connection to renew when there is one. */
     payload: jsonb("payload").$type<Record<string, string>>().notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    consumedAt: timestamp("consumed_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: moment("expires_at").notNull(),
+    consumedAt: moment("consumed_at"),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("plugin_auth_states_hash_uq").on(table.stateHash),

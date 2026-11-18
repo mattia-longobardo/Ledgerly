@@ -10,11 +10,11 @@ import {
   numeric,
   pgTable,
   text,
-  timestamp,
   unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { integrationConnections } from "../../platform/integrations/schema";
 import { accounts } from "../accounts/schema";
@@ -58,9 +58,7 @@ const currencyCheck = (name: string, column: unknown) => check(name, sql`${colum
 export const investmentAccounts = pgTable(
   "investment_accounts",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -73,11 +71,8 @@ export const investmentAccounts = pgTable(
     url: text("url"),
     openedOn: date("opened_on"),
     closedOn: date("closed_on"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("investment_accounts_account_uq").on(table.accountId),
@@ -102,9 +97,7 @@ export const investmentAccounts = pgTable(
 export const investmentAccountPeriods = pgTable(
   "investment_account_periods",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -112,11 +105,11 @@ export const investmentAccountPeriods = pgTable(
       .notNull()
       .references(() => investmentAccounts.id, { onDelete: "cascade" }),
     fromOn: date("from_on").notNull(),
-    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    startsAt: moment("starts_at").notNull(),
     mode: text("mode", { enum: MODES }).notNull(),
     origin: text("origin", { enum: ORIGINS }).notNull(),
     reason: text("reason", { enum: PERIOD_REASONS }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("investment_account_periods_start_uq").on(table.investmentAccountId, table.startsAt),
@@ -134,9 +127,7 @@ export const investmentAccountPeriods = pgTable(
 export const investmentAssets = pgTable(
   "investment_assets",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -147,12 +138,9 @@ export const investmentAssets = pgTable(
     mic: text("mic"),
     currency: text("currency").notNull(),
     priceSource: text("price_source", { enum: PRICE_SOURCES }).notNull().default("manual"),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    archivedAt: moment("archived_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     uniqueIndex("investment_assets_isin_uq")
@@ -187,9 +175,7 @@ export const investmentAssets = pgTable(
 export const investmentHoldings = pgTable(
   "investment_holdings",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -202,7 +188,7 @@ export const investmentHoldings = pgTable(
     origin: text("origin", { enum: HOLDING_ORIGINS }).notNull(),
     product: text("product").notNull(),
     openedOn: date("opened_on").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     unique("investment_holdings_uq").on(
@@ -221,27 +207,22 @@ export const investmentHoldings = pgTable(
 export const investmentEvents = pgTable(
   "investment_events",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     investmentAccountId: uuid("investment_account_id")
       .notNull()
       .references(() => investmentAccounts.id, { onDelete: "cascade" }),
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    occurredAt: moment("occurred_at").notNull(),
     on: date("on").notNull(),
     seq: bigint("seq", { mode: "bigint" }).notNull().generatedAlwaysAsIdentity(),
     origin: text("origin", { enum: EVENT_ORIGINS }).notNull(),
     transferGroupId: uuid("transfer_group_id"),
     transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("investment_events_transaction_uq").on(table.transactionId),
@@ -259,9 +240,7 @@ export const investmentEvents = pgTable(
 export const investmentOperations = pgTable(
   "investment_operations",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -319,9 +298,7 @@ export const investmentOperations = pgTable(
 export const investmentOperationRevisions = pgTable(
   "investment_operation_revisions",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -331,7 +308,7 @@ export const investmentOperationRevisions = pgTable(
     // Deliberately no foreign keys: a revision outlives the operation it remembers.
     eventId: uuid("event_id").notNull(),
     operationId: uuid("operation_id"),
-    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+    changedAt: moment("changed_at").notNull().defaultNow(),
     before: jsonb("before").$type<Record<string, unknown>>().notNull(),
     reason: text("reason").notNull(),
   },
@@ -346,9 +323,7 @@ export const investmentOperationRevisions = pgTable(
 export const investmentReadings = pgTable(
   "investment_readings",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -356,7 +331,7 @@ export const investmentReadings = pgTable(
       .notNull()
       .references(() => investmentAccounts.id, { onDelete: "cascade" }),
     on: date("on").notNull(),
-    observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+    observedAt: moment("observed_at").notNull(),
     status: text("status", { enum: READING_STATUSES }).notNull(),
     totalCents: bigint("total_cents", { mode: "bigint" }).notNull(),
     cashCents: bigint("cash_cents", { mode: "bigint" }),
@@ -377,9 +352,7 @@ export const investmentReadings = pgTable(
 export const investmentReadingPositions = pgTable(
   "investment_reading_positions",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -393,7 +366,7 @@ export const investmentReadingPositions = pgTable(
     quantity: quantity("quantity").notNull(),
     price: price("price"),
     priceCurrency: text("price_currency"),
-    priceAt: timestamp("price_at", { withTimezone: true }),
+    priceAt: moment("price_at"),
     priceSource: text("price_source"),
     fxRate: rate("fx_rate"),
     fxSource: text("fx_source"),
@@ -415,9 +388,7 @@ export const investmentReadingPositions = pgTable(
 export const investmentReadingScopes = pgTable(
   "investment_reading_scopes",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -439,9 +410,7 @@ export const investmentReadingScopes = pgTable(
 export const investmentReconciliations = pgTable(
   "investment_reconciliations",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -452,7 +421,7 @@ export const investmentReconciliations = pgTable(
     kind: text("kind", { enum: RECONCILIATION_KINDS }).notNull(),
     quantity: quantity("quantity"),
     readingId: uuid("reading_id").references(() => investmentReadings.id, { onDelete: "set null" }),
-    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedAt: moment("decided_at").notNull().defaultNow(),
     note: text("note"),
   },
   (table) => [
@@ -476,9 +445,7 @@ export const investmentReconciliations = pgTable(
 export const investmentSupersededEntries = pgTable(
   "investment_superseded_entries",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -491,8 +458,8 @@ export const investmentSupersededEntries = pgTable(
     availableCents: bigint("available_cents", { mode: "bigint" }),
     source: text("source").notNull(),
     note: text("note"),
-    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull(),
-    supersededAt: timestamp("superseded_at", { withTimezone: true }).notNull().defaultNow(),
+    capturedAt: moment("captured_at").notNull(),
+    supersededAt: moment("superseded_at").notNull().defaultNow(),
     reason: text("reason").notNull(),
   },
   (table) => [
@@ -511,9 +478,7 @@ export const investmentSupersededEntries = pgTable(
 export const investmentKeyChecks = pgTable(
   "investment_key_checks",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -523,15 +488,15 @@ export const investmentKeyChecks = pgTable(
     connectionId: uuid("connection_id").references(() => integrationConnections.id, { onDelete: "set null" }),
     provider: text("provider").notNull(),
     origin: text("origin", { enum: KEY_CHECK_ORIGINS }).notNull(),
-    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
+    checkedAt: moment("checked_at").notNull().defaultNow(),
     result: text("result", { enum: KEY_CHECK_RESULTS }).notNull(),
     permissions: jsonb("permissions").$type<Record<string, boolean>>().notNull().default({}),
     ipRestricted: boolean("ip_restricted"),
-    attestedReadOnlyAt: timestamp("attested_read_only_at", { withTimezone: true }),
-    attestedIpAt: timestamp("attested_ip_at", { withTimezone: true }),
+    attestedReadOnlyAt: moment("attested_read_only_at"),
+    attestedIpAt: moment("attested_ip_at"),
     attestationTextVersion: text("attestation_text_version"),
-    retiredAt: timestamp("retired_at", { withTimezone: true }),
-    revokedAtProviderAt: timestamp("revoked_at_provider_at", { withTimezone: true }),
+    retiredAt: moment("retired_at"),
+    revokedAtProviderAt: moment("revoked_at_provider_at"),
   },
   (table) => [
     index("investment_key_checks_account_idx").on(table.investmentAccountId, table.checkedAt),
@@ -549,9 +514,7 @@ export const investmentKeyChecks = pgTable(
 export const investmentSyncCoverage = pgTable(
   "investment_sync_coverage",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -560,8 +523,8 @@ export const investmentSyncCoverage = pgTable(
       .references(() => integrationConnections.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
     stream: text("stream").notNull(),
-    fromAt: timestamp("from_at", { withTimezone: true }).notNull(),
-    toAt: timestamp("to_at", { withTimezone: true }).notNull(),
+    fromAt: moment("from_at").notNull(),
+    toAt: moment("to_at").notNull(),
     status: text("status", { enum: COVERAGE_STATUSES }).notNull(),
     reason: text("reason"),
   },

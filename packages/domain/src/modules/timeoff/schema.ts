@@ -1,16 +1,6 @@
 import { sql } from "drizzle-orm";
-import {
-  check,
-  date,
-  index,
-  numeric,
-  pgTable,
-  smallint,
-  text,
-  timestamp,
-  unique,
-  uuid,
-} from "drizzle-orm/pg-core";
+import { check, date, index, numeric, pgTable, smallint, text, unique, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { LEAVE_DAY_KINDS, LEAVE_ORIGINS, PENDING_STATES, TREK_KINDS } from "./rules";
 import { inList } from "../../platform/db/checks";
@@ -26,9 +16,7 @@ import { inList } from "../../platform/db/checks";
 export const timeoffAllowances = pgTable(
   "timeoff_allowances",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -43,11 +31,8 @@ export const timeoffAllowances = pgTable(
      */
     totalDays: numeric("total_days", { precision: 5, scale: 2 }),
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("timeoff_allowances_user_year_uq").on(table.userId, table.year),
@@ -82,9 +67,7 @@ export const timeoffAllowances = pgTable(
 export const leaveDays = pgTable(
   "leave_days",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -95,14 +78,11 @@ export const leaveDays = pgTable(
     note: text("note"),
     origin: text("origin", { enum: LEAVE_ORIGINS }).notNull().default("manual"),
     pending: text("pending", { enum: PENDING_STATES }).notNull().default("none"),
-    syncedAt: timestamp("synced_at", { withTimezone: true }),
+    syncedAt: moment("synced_at"),
     trekFraction: numeric("trek_fraction", { precision: 2, scale: 1 }),
     trekKind: text("trek_kind", { enum: TREK_KINDS }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("leave_days_user_on_kind_uq").on(table.userId, table.on, table.kind),

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment } from "../../../platform/db/columns";
 import { accountSwitches } from "../../accounts/schema";
 import { users } from "../../../platform/auth/schema";
 import { type TransactionType } from "../rules";
@@ -19,9 +20,7 @@ export interface SwitchLegBefore {
 export const switchTransferPairs = pgTable(
   "switch_transfer_pairs",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -36,8 +35,8 @@ export const switchTransferPairs = pgTable(
       .references(() => transactions.id, { onDelete: "cascade" }),
     outBefore: jsonb("out_before").$type<SwitchLegBefore>().notNull(),
     inBefore: jsonb("in_before").$type<SwitchLegBefore>().notNull(),
-    undoneAt: timestamp("undone_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    undoneAt: moment("undone_at"),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     index("switch_transfer_pairs_switch_idx").on(table.switchId),
@@ -69,9 +68,7 @@ export interface MergedMovementBefore {
 export const switchMergedMovements = pgTable(
   "switch_merged_movements",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -90,8 +87,8 @@ export const switchMergedMovements = pgTable(
     externalId: text("external_id"),
     /** The movement kept before it took the double's choices; `null` when nothing was taken. */
     keptBefore: jsonb("kept_before").$type<MergedMovementBefore>(),
-    undoneAt: timestamp("undone_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    undoneAt: moment("undone_at"),
+    createdAt: createdAtColumn(),
   },
   (table) => [index("switch_merged_movements_switch_idx").on(table.switchId)],
 );

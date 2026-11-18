@@ -10,11 +10,11 @@ import {
   pgTable,
   smallint,
   text,
-  timestamp,
   unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import {
   ACCOUNT_ORIGINS,
@@ -31,20 +31,15 @@ import { inList } from "../../platform/db/checks";
 export const accountGroups = pgTable(
   "account_groups",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     color: text("color"),
     sortOrder: integer("sort_order").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [unique("account_groups_user_name_uq").on(table.userId, table.name)],
 );
@@ -52,9 +47,7 @@ export const accountGroups = pgTable(
 export const accounts = pgTable(
   "accounts",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -87,14 +80,11 @@ export const accounts = pgTable(
     renamedLocally: boolean("renamed_locally").notNull().default(false),
     /** The provider's type is followed until the type is changed here, like the name. */
     retypedLocally: boolean("retyped_locally").notNull().default(false),
-    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastSyncedAt: moment("last_synced_at"),
     notes: text("notes"),
-    archivedAt: timestamp("archived_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    archivedAt: moment("archived_at"),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     index("accounts_user_sort_idx").on(table.userId, table.sortOrder, table.id),
@@ -126,9 +116,7 @@ export const accounts = pgTable(
 export const balanceEntries = pgTable(
   "balance_entries",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -140,12 +128,9 @@ export const balanceEntries = pgTable(
     availableCents: bigint("available_cents", { mode: "bigint" }),
     source: text("source", { enum: ENTRY_SOURCES }).notNull(),
     note: text("note"),
-    capturedAt: timestamp("captured_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    capturedAt: moment("captured_at").notNull().defaultNow(),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("balance_entries_account_on_source_uq").on(table.accountId, table.on, table.source),
@@ -171,7 +156,7 @@ export const manualMovementAccounts = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: createdAtColumn(),
   },
   (table) => [index("manual_movement_accounts_user_idx").on(table.userId)],
 );
@@ -179,9 +164,7 @@ export const manualMovementAccounts = pgTable(
 export const snapshotRuns = pgTable(
   "snapshot_runs",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -194,12 +177,9 @@ export const snapshotRuns = pgTable(
     // never converted again when the preference changes.
     totalCurrency: text("total_currency").notNull().default("EUR"),
     warnings: jsonb("warnings").$type<string[]>(),
-    ranAt: timestamp("ran_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    ranAt: moment("ran_at").notNull().defaultNow(),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     unique("snapshot_runs_user_month_uq").on(table.userId, table.month),
@@ -223,9 +203,7 @@ export const snapshotRuns = pgTable(
 export const accountConnections = pgTable(
   "account_connections",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -235,11 +213,8 @@ export const accountConnections = pgTable(
     channel: text("channel", { enum: CONNECTION_CHANNELS }).notNull(),
     name: text("name").notNull(),
     note: text("note"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [
     uniqueIndex("account_connections_uq").on(table.accountId, table.channel, sql`lower(${table.name})`),
@@ -261,9 +236,7 @@ export const accountConnections = pgTable(
 export const accountSwitches = pgTable(
   "account_switches",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -290,9 +263,9 @@ export const accountSwitches = pgTable(
     mergedAccountId: uuid("merged_account_id").references(() => accounts.id, { onDelete: "set null" }),
     /** The state the joined account had before (`active` or `unavailable`), for "Undo switch". */
     mergedState: text("merged_state"),
-    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
-    undoneAt: timestamp("undone_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    appliedAt: moment("applied_at").notNull().defaultNow(),
+    undoneAt: moment("undone_at"),
+    createdAt: createdAtColumn(),
   },
   (table) => [
     uniqueIndex("account_switches_open_uq")

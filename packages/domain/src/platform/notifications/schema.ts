@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../auth/schema";
 
 /**
@@ -10,20 +10,15 @@ import { users } from "../auth/schema";
 export const notificationsLog = pgTable(
   "notifications_log",
   {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`uuidv7()`),
+    id: idColumn(),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     kind: text("kind").notNull(),
     key: text("key").notNull(),
-    sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
+    sentAt: moment("sent_at").notNull().defaultNow(),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
   },
   (table) => [unique("notifications_log_user_kind_key_uq").on(table.userId, table.kind, table.key)],
 );
