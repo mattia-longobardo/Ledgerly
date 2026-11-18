@@ -4,7 +4,8 @@ import { type AccessIdentity, authenticateAccessToken } from "@/platform/auth/ac
 import { bearerChallenge, looksLikeJwt } from "@/platform/auth/access-token-rules";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { resourceMetadataUrl } from "@ledgerly/domain/platform/auth";
-import type { Scope } from "@ledgerly/domain/platform/auth";
+import type { ContractScope } from "@ledgerly/api-contract";
+import type { ApiEnv } from "@ledgerly/api";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { fail } from "./errors";
@@ -17,14 +18,12 @@ import { MAX_PER_WINDOW, takeSlot } from "./rate-limit";
 interface ApiIdentity {
   kind: "oauth";
   ctx: Ctx;
-  scopes: Scope[];
+  scopes: readonly string[];
   clientId: string;
 }
 
 /** What every `/api/v1` handler can read off the context once the token has been accepted. */
-export interface ApiEnv {
-  Variables: { identity: ApiIdentity; ctx: Ctx };
-}
+export type { ApiEnv };
 
 const BEARER = /^Bearer\s+(\S+)$/i;
 
@@ -53,7 +52,7 @@ async function identify(value: string): Promise<ApiIdentity | null> {
  * A 401 carries `WWW-Authenticate` with the RFC 9728 metadata URL, so a client can discover where
  * to get a token; a 403 says `insufficient_scope` and names the scope the route needs.
  */
-export function withToken(scope: Scope): MiddlewareHandler<ApiEnv> {
+export function withToken(scope: ContractScope): MiddlewareHandler<ApiEnv> {
   return async (c, next) => {
     const match = BEARER.exec(c.req.header("authorization") ?? "");
     if (!match) {
@@ -80,12 +79,12 @@ export function withToken(scope: Scope): MiddlewareHandler<ApiEnv> {
       c.header("Retry-After", String(verdict.retryAfter));
       return fail(c, "rate_limited");
     }
-    if (!identity.scopes.includes(scope)) {
+    // `security` and `admin` are scopes of the contract no token is granted yet (git-policy §6 #4).
+    if (!identity.scopes.some((granted) => granted === scope)) {
       challenge(c, { error: "insufficient_scope", scope });
       return fail(c, "forbidden");
     }
 
-    c.set("identity", identity);
     c.set("ctx", identity.ctx);
     await next();
   };

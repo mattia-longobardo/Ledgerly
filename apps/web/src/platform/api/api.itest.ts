@@ -345,6 +345,38 @@ describe("POST /imports", () => {
   });
 });
 
+describe("users and settings: profile and preferences", () => {
+  const json = (body: unknown): RequestInit => ({
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  it("reads and changes some preferences, the rest stays", async () => {
+    const before = await (await call("/preferences", aliceToken)).json();
+    const response = await call("/preferences", aliceToken, json({ theme: "dark", minutesPerDay: 450 }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ...before, theme: "dark", minutesPerDay: 450 });
+    expect((await (await call("/preferences", bobToken)).json()).theme).toBe(before.theme);
+  });
+
+  it("refuses an unknown field, an unknown zone and a token without write", async () => {
+    expect((await call("/preferences", aliceToken, json({ colour: "red" }))).status).toBe(400);
+    expect((await call("/preferences", aliceToken, json({ timeZone: "Nowhere/Town" }))).status).toBe(400);
+    const readOnly = await tokenFor(alice, ["read"]);
+    expect((await call("/preferences", readOnly, json({ theme: "dark" }))).status).toBe(403);
+  });
+
+  it("reads and renames the person of the token", async () => {
+    const profile = await (await call("/profile", aliceToken)).json();
+    expect(profile).toMatchObject({ id: alice.userId, name: "API", managedByProvider: false });
+    const renamed = await call("/profile", aliceToken, json({ name: "  Alex  " }));
+    expect(renamed.status).toBe(200);
+    expect(await renamed.json()).toMatchObject({ id: alice.userId, name: "Alex" });
+    expect((await (await call("/profile", bobToken)).json()).name).toBe("API");
+  });
+});
+
 describe("a deleted Client API", () => {
   it("stops its token on every route at once", async () => {
     await deleteApiClient(alice, clientOf.get(aliceToken)!);

@@ -46,6 +46,8 @@ curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/sum
 | Route                                      | Scope              |
 | ------------------------------------------ | ------------------ |
 | `GET /meta`                                | none               |
+| `GET /preferences`, `GET /profile`         | `read`             |
+| `PATCH /preferences`, `PATCH /profile`     | `write`            |
 | `GET /accounts`                            | `read`             |
 | `GET /accounts/{id}/balances`              | `read`             |
 | `GET /transactions`                        | `read`             |

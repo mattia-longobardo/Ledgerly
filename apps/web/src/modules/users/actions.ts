@@ -5,10 +5,8 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { rescheduleConnections } from "@ledgerly/domain/platform/integrations";
-import { hasSsoAccount } from "@ledgerly/domain/platform/auth";
-import { getAuth } from "@ledgerly/domain/platform/auth";
+import { getAuth, ProfileError, renameProfile } from "@ledgerly/domain/platform/auth";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
-import { nameSchema } from "@ledgerly/domain/platform/auth";
 import { requireAdmin, requireSession } from "@/platform/auth/session";
 import type { Role } from "@ledgerly/domain/platform/context";
 import { LOCALE_COOKIE } from "@/platform/i18n/locales";
@@ -87,10 +85,16 @@ export async function saveTimeOffPreferencesAction(input: TimeOffPreferences): P
 /** With Authentik linked, name and email are managed by the provider (spec §5.1): refused here, not only in the UI. */
 export async function updateNameAction(name: string): Promise<ActionResult> {
   const ctx = await requireSession();
-  if (await hasSsoAccount(ctx.userId)) return { ok: false, error: "sso" };
-  const parsed = nameSchema.safeParse(name);
-  if (!parsed.success) return { ok: false, error: "invalid" };
-  await (await getAuth()).api.updateUser({ body: { name: parsed.data }, headers: await headers() });
+  try {
+    const auth = await getAuth();
+    const requestHeaders = await headers();
+    await renameProfile(ctx, name, (valid) =>
+      auth.api.updateUser({ body: { name: valid }, headers: requestHeaders }),
+    );
+  } catch (error) {
+    if (error instanceof ProfileError) return { ok: false, error: error.code };
+    throw error;
+  }
   revalidatePath("/", "layout");
   return { ok: true };
 }

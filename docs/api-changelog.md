@@ -11,6 +11,10 @@ written before it keeps working.
 - The OpenAPI document of the contract is generated into `docs/openapi.json`. It already describes
   the routes of users and settings that later steps serve: `capabilities` of `GET /meta` says what
   an instance serves, and each route gets its own entry here when it is served.
+- New `GET /api/v1/preferences` (`read`) and `PATCH /api/v1/preferences` (`write`): the person's
+  preferences; a field left out of the `PATCH` keeps its value, a new `timeZone` moves the times of
+  the connections. New `GET /api/v1/profile` (`read`) and `PATCH /api/v1/profile` (`write`, `name`
+  only; `409` with `reason: "sso"` when the identity provider manages the name).
 
 ## 2026-11-14 · one pension fund model (release N6)
 

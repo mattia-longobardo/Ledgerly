@@ -11,6 +11,18 @@ import * as profile from "./settings/profile";
 import * as security from "./settings/security";
 import * as server from "./settings/server";
 
+/** The routes of users and settings by area, for `apps/api` to serve each one by name. */
+export const SETTINGS = {
+  profile,
+  security,
+  people,
+  server,
+  categories,
+  labels,
+  connections,
+  banks,
+} as const;
+
 /** Users and settings, the first module of R2 (05-refactor.md §5.2). */
 export const SETTINGS_ROUTES: readonly RouteContract[] = [
   ...Object.values(profile),

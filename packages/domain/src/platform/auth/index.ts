@@ -27,9 +27,9 @@ export {
 export type { ApiScope, ResourceKey } from "./oauth";
 export { oauthClients } from "./oauth/schema";
 export { isPasswordLengthValid } from "./password-policy";
+export { ProfileError, profileOf, renameProfile } from "./profile";
 export { roles } from "./permissions";
 export { OIDC_PROVIDER_ID, identityProviderUrl } from "./provider";
 export { authAccounts, invitations, sessions, twoFactors, users, verifications } from "./schema";
 export { MAX_CLIENT_NAME, parseScopes } from "./scopes";
-export type { Scope } from "./scopes";
 export { TWO_FACTOR_SETUP_PATH, twoFactorSetupRequired } from "./two-factor-policy";

@@ -64,22 +64,41 @@ export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown
   return fromRow(row);
 }
 
+/** What the Profile form may change: the fields it sends of Time off are dropped, not saved. */
+const profileFormSchema = preferencesInputSchema.omit({
+  minutesPerDay: true,
+  patronSaint: true,
+  defaultRange: true,
+});
+
+/** A change of some preferences: a field left out keeps its value. */
+const preferencesPatchSchema = preferencesInputSchema.partial().strict();
+
+/**
+ * The one way to change preferences (audit USR-6): a partial change over the saved row, for every
+ * form and for `PATCH /api/v1/preferences`. `timeZoneChanged` tells the caller to move what follows
+ * the zone (the schedules of the connections, D7): that composition is the app's.
+ */
+export async function changePreferences(
+  ctx: Pick<Ctx, "userId">,
+  patch: unknown,
+): Promise<{ preferences: Preferences; timeZoneChanged: boolean }> {
+  const change = preferencesPatchSchema.parse(patch);
+  const current = await getPreferences(ctx);
+  const preferences = await updatePreferences(ctx, { ...current, ...change });
+  return { preferences, timeZoneChanged: preferences.timeZone !== current.timeZone };
+}
+
 /**
  * What the Profile form saves. Hours and patron saint are not its to write any more (PERS-158): they
- * are read back from the row, so a form loaded before a change on Time off › Settings cannot put the
- * old values back. `defaultRange` has no control left and nothing reads it: it just stays as it is.
+ * are left out, so a form loaded before a change on Time off › Settings cannot put the old values
+ * back. `defaultRange` has no control left and nothing reads it: it just stays as it is.
  */
 export async function updateProfilePreferences(
   ctx: Pick<Ctx, "userId">,
   input: unknown,
 ): Promise<Preferences> {
-  const current = await getPreferences(ctx);
-  return updatePreferences(ctx, {
-    ...(input as object),
-    minutesPerDay: current.minutesPerDay,
-    patronSaint: current.patronSaint,
-    defaultRange: current.defaultRange,
-  });
+  return (await changePreferences(ctx, profileFormSchema.parse(input))).preferences;
 }
 
 /** What Time off › Settings saves: only the fields it names, the rest of the row stays. */
@@ -87,8 +106,7 @@ export async function updateTimeOffPreferences(
   ctx: Pick<Ctx, "userId">,
   input: unknown,
 ): Promise<Preferences> {
-  const patch = timeOffPreferencesSchema.parse(input);
-  return updatePreferences(ctx, { ...(await getPreferences(ctx)), ...patch });
+  return (await changePreferences(ctx, timeOffPreferencesSchema.parse(input))).preferences;
 }
 
 /**

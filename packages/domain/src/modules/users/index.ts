@@ -5,6 +5,7 @@ export { describeUserAgent, initialsOf, personActionRefusal } from "./rules";
 export { buildCtx } from "./rules";
 export type { PersonAction, PersonRefusal, Preferences, TimeOffPreferences } from "./rules";
 export {
+  changePreferences,
   findSessionToken,
   getPreferences,
   listOwnSessions,
