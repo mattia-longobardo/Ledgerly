@@ -1,15 +1,15 @@
 import "server-only";
 import { createTranslator } from "use-intl/core";
-import { forEachUser } from "@/modules/users/jobs";
-import { today } from "@/platform/dates";
-import { formatMoney, type UiLocale } from "@/platform/format";
+import { forEachUser } from "@ledgerly/domain/users";
+import { today } from "@ledgerly/domain/platform/dates";
+import { formatMoney, type UiLocale } from "@ledgerly/domain/platform/format";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { clearNotification, notifyOnce } from "@/platform/notifications/service";
 import en from "../../../messages/en.json";
 import it from "../../../messages/it.json";
-import { accountsView } from "./queries";
-import { runSnapshot, snapshotMonthFor } from "./service";
+import { accountsView } from "@ledgerly/domain/accounts";
+import { runSnapshot, snapshotMonthFor } from "@ledgerly/domain/accounts";
 
 const CATALOGUES = { en, it } as const;
 

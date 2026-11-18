@@ -1,5 +1,5 @@
 import { toNextJsHandler } from "better-auth/next-js";
-import { getAuth } from "@/platform/auth/auth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
 
 export const dynamic = "force-dynamic";
 

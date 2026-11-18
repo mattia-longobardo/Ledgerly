@@ -6,20 +6,20 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import {
   feeInputOf,
   fundInputOf,
   type SourceForm,
   sourceInputOf,
   type WizardForm,
-} from "@/modules/funds/forms";
-import { replaceCompetences } from "@/modules/funds/pension/service";
-import { addSource, createFund, FundError, updateSource } from "@/modules/funds/service";
-import { appliedCompetences } from "@/modules/payroll/pension";
-import { codeMapOf } from "@/modules/payroll/service";
+} from "@ledgerly/domain/funds";
+import { replaceCompetences } from "@ledgerly/domain/funds";
+import { addSource, createFund, FundError, updateSource } from "@ledgerly/domain/funds";
+import { appliedCompetences } from "@ledgerly/domain/payroll";
+import { codeMapOf } from "@ledgerly/domain/payroll";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 
 export type ActionResult =
   { ok: true; id?: string; count?: number } | { ok: false; error: string; detail?: string | null };

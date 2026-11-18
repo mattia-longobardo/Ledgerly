@@ -2,11 +2,11 @@ import "server-only";
 import type { Context, MiddlewareHandler } from "hono";
 import { type AccessIdentity, authenticateAccessToken } from "@/platform/auth/access-token";
 import { bearerChallenge, looksLikeJwt } from "@/platform/auth/access-token-rules";
-import { redactForLog } from "@/platform/auth/logger";
-import { resourceMetadataUrl } from "@/platform/auth/oauth";
-import type { Scope } from "@/platform/auth/scopes";
-import type { Ctx } from "@/platform/context";
-import { readEnv } from "@/platform/env";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { resourceMetadataUrl } from "@ledgerly/domain/platform/auth";
+import type { Scope } from "@ledgerly/domain/platform/auth";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { readEnv } from "@ledgerly/domain/platform/env";
 import { fail } from "./errors";
 import { MAX_PER_WINDOW, takeSlot } from "./rate-limit";
 

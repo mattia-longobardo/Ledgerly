@@ -4,15 +4,15 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, type RefObject, useId, useState, useTransition } from "react";
 import { saveSourceAction } from "@/app/(app)/funds/fund-setup";
-import type { CivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@/platform/format";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
 import { Button, LinkButton } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
 import { proposeDebitMatchAction } from "../actions";
-import type { SourceForm } from "../forms";
+import type { SourceForm } from "@ledgerly/domain/funds/client";
 import { sourceFieldId, SourceFields } from "./source-fields";
 import {
   cleanSource,

@@ -14,10 +14,10 @@ import {
   staleFunds,
   valueToday,
   yearRows,
-} from "@/modules/funds/home";
-import { fundsHomeRows } from "@/modules/funds/home-queries";
-import { hasPayrollCalendar } from "@/modules/funds/queries";
-import { closesPeriodBefore, inPeriod } from "@/modules/funds/tabs";
+} from "@ledgerly/domain/funds";
+import { fundsHomeRows } from "@ledgerly/domain/funds";
+import { hasPayrollCalendar } from "@ledgerly/domain/funds";
+import { closesPeriodBefore, inPeriod } from "@ledgerly/domain/funds";
 import { FundChart } from "@/modules/funds/ui/fund-chart";
 import { FundStateButton, ValuationButton } from "@/modules/funds/ui/fund-forms";
 import { Kpi } from "@/modules/funds/ui/fund-kpi";
@@ -30,14 +30,14 @@ import {
   sectionPeriod,
   type Query,
   yearQuery,
-} from "@/modules/investments/period";
+} from "@ledgerly/domain/investments";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { type CivilDate, today } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

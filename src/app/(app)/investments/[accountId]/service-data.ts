@@ -1,14 +1,14 @@
 import "server-only";
 import { cache } from "react";
-import { accountTypeOf, connectableProvider } from "@/modules/investments/catalog";
-import { type ServiceDetail, serviceDetail } from "@/modules/investments/queries";
-import { ensureAssetSeed } from "@/modules/investments/service";
+import { accountTypeOf, connectableProvider } from "@ledgerly/domain/investments";
+import { type ServiceDetail, serviceDetail } from "@ledgerly/domain/investments";
+import { ensureAssetSeed } from "@ledgerly/domain/investments";
 import type { ConnectableProvider, OperationSummary, ServiceContext } from "@/modules/investments/ui/dialogs";
-import type { ActivityRow } from "@/modules/investments/queries";
+import type { ActivityRow } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { civilDateIn, type CivilDate, today } from "@/platform/dates";
-import { formatDate } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { civilDateIn, type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import { formatDate } from "@ledgerly/domain/platform/format";
 
 /**
  * The service as its layout and its tabs read it, once per request: the layout and the page of a

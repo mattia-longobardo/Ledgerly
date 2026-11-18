@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { getDb } from "@/platform/db/client";
+import { getDb } from "@domain/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { anAccount, contextFor, newContext } from "../../../test/fixtures";
-import { authAccounts } from "../auth/schema";
+import { authAccounts } from "@domain/platform/auth/schema";
 
 // The MCP server (docs/auth-design.md D6) against the real plugin and database: the RFC 9728
 // challenge, the audience, the scope, the protocol round trip and — above all — that a token
@@ -13,10 +13,10 @@ let requestHeaders = new Headers();
 vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
 vi.mock("next/server", () => ({ after: () => {} }));
 
-const { getAuth, invalidateAuth } = await import("../auth/auth");
+const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClient } = await import("../auth/api-clients");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
-const { saveBalanceEntry } = await import("@/modules/accounts/service");
+const { saveBalanceEntry } = await import("@domain/modules/accounts/service");
 const { handleMcp } = await import("./handler");
 
 const ORIGIN = "http://127.0.0.1:3000";
@@ -210,7 +210,7 @@ describe("MCP tools", () => {
     requestHeaders = person.headers;
     const ctx = contextFor(person.userId);
     const iban = "IT60X0542811101000000123456";
-    const { createAccount } = await import("@/modules/accounts/service");
+    const { createAccount } = await import("@domain/modules/accounts/service");
     await createAccount(ctx, {
       name: "Savings box",
       type: "savings",

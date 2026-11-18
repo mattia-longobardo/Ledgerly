@@ -8,7 +8,7 @@ import { Field } from "@/ui/field";
 import { Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import type { HolidayCountry, HolidaySubdivision } from "@/platform/holidays/sources";
+import type { HolidayCountry, HolidaySubdivision } from "@ledgerly/domain/platform/holidays/client";
 import {
   type HolidayActionResult,
   addHolidayCalendarAction,

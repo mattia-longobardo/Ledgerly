@@ -1,12 +1,12 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { pocketsView } from "@/modules/pockets/queries";
+import { pocketsView } from "@ledgerly/domain/pockets";
 import { type DialogContext, PocketActions, RestorePocket } from "@/modules/pockets/ui/pocket-actions";
-import { percentOf } from "@/modules/budgets/rules";
+import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
-import { monthKey, today } from "@/platform/dates";
-import { formatDate, formatMoney, formatWholePercent } from "@/platform/format";
+import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatWholePercent } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { cn } from "@/ui/cn";
 import { KpiTile } from "@/ui/kpi-tile";

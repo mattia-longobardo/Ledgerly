@@ -2,8 +2,8 @@ import { Check, ChevronDown, Landmark, Search, Tag as TagIcon } from "lucide-rea
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { LinkTabs, type Params, PeriodStepper, withParams } from "@/modules/accounts/ui/controls";
-import { TRANSACTION_TYPES, type TransactionType } from "@/modules/transactions/rules";
-import type { UiLocale } from "@/platform/format";
+import { TRANSACTION_TYPES, type TransactionType } from "@ledgerly/domain/transactions";
+import type { UiLocale } from "@ledgerly/domain/platform/format";
 import { IconButton } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { DismissableDetails } from "@/ui/dismissable-details";

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import type { ApiScope } from "@/platform/auth/oauth";
+import type { ApiScope } from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@/ui/button";
 import { Modal } from "@/ui/modal";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";

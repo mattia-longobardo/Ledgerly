@@ -2,14 +2,14 @@
 // "sync failed or out of date" condition, and the connection reports it
 // (`modules/transactions/jobs.ts`), not one email per account of the same dead link.
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { Ctx } from "@/platform/context";
-import { WALLET_PROVIDER } from "@/platform/integrations/rules";
+import type { Ctx } from "@domain/platform/context";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { accountAlertsJob } from "./jobs";
-import { accountsView } from "./queries";
-import type { RemoteAccount } from "./rules";
-import { applyProviderAccounts } from "./service";
+import { accountsView } from "@domain/modules/accounts/queries";
+import type { RemoteAccount } from "@domain/modules/accounts/rules";
+import { applyProviderAccounts } from "@domain/modules/accounts/service";
 
 const REMOTE: RemoteAccount = {
   provider: WALLET_PROVIDER,

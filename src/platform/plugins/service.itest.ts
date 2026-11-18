@@ -1,11 +1,16 @@
 import { generateKeyPairSync, randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { pluginProvider, TREK_PROVIDER } from "@/platform/integrations/rules";
-import { integrationConnections } from "@/platform/integrations/schema";
-import { type Connection, listConnections, listRuns, saveConnection } from "@/platform/integrations/service";
+import type { Ctx } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
+import { pluginProvider, TREK_PROVIDER } from "@domain/platform/integrations/rules";
+import { integrationConnections } from "@domain/platform/integrations/schema";
+import {
+  type Connection,
+  listConnections,
+  listRuns,
+  saveConnection,
+} from "@domain/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import type { Fetch } from "./client";
@@ -17,9 +22,14 @@ import {
   listPluginConnections,
   listUserPlugins,
   pluginDiagnostics,
-} from "./queries";
-import { hashState } from "./rules";
-import { pluginActivations, pluginAuthStates, plugins, pluginUserCredentials } from "./schema";
+} from "@domain/platform/plugins/queries";
+import { hashState } from "@domain/platform/plugins/rules";
+import {
+  pluginActivations,
+  pluginAuthStates,
+  plugins,
+  pluginUserCredentials,
+} from "@domain/platform/plugins/schema";
 import {
   completeAccess,
   connectionSummary,

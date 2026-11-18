@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_PREFERENCES } from "./rules";
+import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
 import { revokeOtherSessionsAction, revokeSessionAction, saveTheme, updateNameAction } from "./actions";
 
 const {
@@ -25,17 +25,17 @@ const {
 }));
 
 vi.mock("@/platform/auth/session", () => ({ requireSession }));
-vi.mock("@/platform/auth/accounts", () => ({ hasSsoAccount }));
-vi.mock("@/platform/auth/auth", () => ({
+vi.mock("@domain/platform/auth/accounts", () => ({ hasSsoAccount }));
+vi.mock("@domain/platform/auth/auth", () => ({
   getAuth: () => ({ api: { updateUser, revokeSession, revokeOtherSessions } }),
 }));
-vi.mock("./service", () => ({ findSessionToken, getPreferences, updatePreferences }));
+vi.mock("@domain/modules/users/service", () => ({ findSessionToken, getPreferences, updatePreferences }));
 vi.mock("next/headers", () => ({
   headers: async () => new Headers(),
   cookies: async () => ({ set: vi.fn() }),
 }));
 vi.mock("next/cache", () => ({ revalidatePath }));
-vi.mock("@/platform/integrations/service", () => ({ rescheduleConnections: vi.fn(async () => 0) }));
+vi.mock("@domain/platform/integrations/service", () => ({ rescheduleConnections: vi.fn(async () => 0) }));
 
 const CTX = {
   userId: "alice",

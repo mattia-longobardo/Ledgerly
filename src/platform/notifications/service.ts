@@ -1,11 +1,11 @@
 import "server-only";
 import { and, eq, lt } from "drizzle-orm";
-import { redactForLog } from "@/platform/auth/logger";
-import { getDb } from "@/platform/db/client";
-import { type Mail, sendMail } from "@/platform/mail";
-import { mailAllowed } from "@/platform/settings/config";
-import type { MailCategory } from "@/platform/settings/smtp";
-import { notificationsLog } from "./schema";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { type Mail, sendMail } from "@ledgerly/domain/platform/mail";
+import { mailAllowed } from "@ledgerly/domain/platform/settings";
+import type { MailCategory } from "@ledgerly/domain/platform/settings";
+import { notificationsLog } from "@ledgerly/domain/platform/notifications";
 
 export interface Notification {
   userId: string;

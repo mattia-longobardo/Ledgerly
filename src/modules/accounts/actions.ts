@@ -5,10 +5,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
-import { linkOwnTransfers } from "@/modules/transactions/service";
-import { parseAmount } from "./rules";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { linkOwnTransfers } from "@ledgerly/domain/transactions";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import {
   AccountError,
   addConnection,
@@ -24,7 +24,7 @@ import {
   updateAccountSettings,
   updateBalanceEntry,
   updateConnection,
-} from "./service";
+} from "@ledgerly/domain/accounts";
 
 /**
  * Forms call these inside a transition with no error boundary, so a rejected input comes back as a

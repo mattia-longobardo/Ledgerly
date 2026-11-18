@@ -2,15 +2,15 @@
 // the budgets of the two categories, and its "Undo". The rules of the match itself are tested in
 // the transactions module; this is what only the application joins.
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { listAccounts } from "@/modules/accounts/queries";
-import { applyProviderAccounts } from "@/modules/accounts/service";
-import { setLimit } from "@/modules/budgets/service";
-import type { IncomingTransaction } from "@/modules/transactions/rules";
-import { upsertFromProvider } from "@/modules/transactions/service";
-import { listCategories } from "@/modules/transactions/taxonomy";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
-import { getPool } from "@/platform/db/client";
+import { listAccounts } from "@domain/modules/accounts/queries";
+import { applyProviderAccounts } from "@domain/modules/accounts/service";
+import { setLimit } from "@domain/modules/budgets/service";
+import type { IncomingTransaction } from "@domain/modules/transactions/rules";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { listCategories } from "@domain/modules/transactions/taxonomy";
+import type { Ctx } from "@domain/platform/context";
+import { monthKey, today } from "@domain/platform/dates";
+import { getPool } from "@domain/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import {

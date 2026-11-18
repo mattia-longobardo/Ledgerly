@@ -1,9 +1,9 @@
 import "server-only";
 import { desc, sql } from "drizzle-orm";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
 import { JOBS, type Tier } from "./registry";
-import { jobRuns } from "./schema";
+import { jobRuns } from "@ledgerly/domain/platform/jobs";
 
 /** The jobs card of Admin › Server (spec §10.3): admins only. */
 export interface JobStatus {

@@ -1,6 +1,6 @@
-import { formatDate, type UiLocale } from "@/platform/format";
-import type { Status } from "../pension/reconcile";
-import { type AccrualPeriod, periodStart } from "../sources";
+import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
+import type { Status } from "@ledgerly/domain/funds";
+import { type AccrualPeriod, periodStart } from "@ledgerly/domain/funds";
 
 /** How each reconciliation state reads (design, GC §11): a colour never carries it alone. */
 export const STATUS_TONE: Record<Status, "pos" | "neg" | "warn" | "accent" | "neutral"> = {

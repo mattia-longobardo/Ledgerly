@@ -5,16 +5,16 @@ import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
 import { createFundAction } from "@/app/(app)/funds/fund-setup";
-import { parseAmount } from "@/modules/accounts/rules";
-import { type CivilDate, isCivilDate } from "@/platform/dates";
+import { parseAmount } from "@ledgerly/domain/accounts/client";
+import { type CivilDate, isCivilDate } from "@ledgerly/domain/platform/dates";
 import {
   formatDate,
   formatMoney,
   type NumberFormat,
   numberSeparators,
   type UiLocale,
-} from "@/platform/format";
-import { DISPLAY_CURRENCIES } from "@/platform/fx/rules";
+} from "@ledgerly/domain/platform/format";
+import { DISPLAY_CURRENCIES } from "@ledgerly/domain/platform/fx/client";
 import { Button, ButtonLink, LinkButton } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { Field } from "@/ui/field";
@@ -31,9 +31,9 @@ import {
   parseScope,
   type SourceForm,
   type WizardForm,
-} from "../forms";
-import { SOURCE_KINDS, type SourceKind } from "../sources";
-import { applyTemplate, type FundTemplate } from "../templates";
+} from "@ledgerly/domain/funds/client";
+import { SOURCE_KINDS, type SourceKind } from "@ledgerly/domain/funds/client";
+import { applyTemplate, type FundTemplate } from "@ledgerly/domain/funds/client";
 import { FeeManager } from "./fee-list";
 import { feeAmountText, type FeeScopeOption } from "./fee-text";
 import { sourceFieldId, SourceFields } from "./source-fields";

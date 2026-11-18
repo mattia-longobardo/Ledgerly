@@ -6,7 +6,7 @@ import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { notify } from "@/ui/toast";
 import { markPostedAction, postEntryAction } from "../actions";
-import { CATEGORY_NOT_LINKED, type PostingState } from "../rules";
+import { CATEGORY_NOT_LINKED, type PostingState } from "@ledgerly/domain/interests/client";
 
 const TONE: Record<PostingState, string> = {
   none: "bg-hover text-muted",

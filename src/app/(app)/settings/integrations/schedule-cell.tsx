@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import { isPluginProvider } from "@/platform/integrations/rules";
-import type { Connection } from "@/platform/integrations/service";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
+import type { Connection } from "@ledgerly/domain/platform/integrations";
 import { formatInstant } from "./format-instant";
 import { recommendedSchedule } from "./recommended-schedule";
 import { ScheduleControl } from "./schedule-control";

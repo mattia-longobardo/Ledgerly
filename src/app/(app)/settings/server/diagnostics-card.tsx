@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import { type PluginDiagnostic, pluginDiagnostics } from "@/platform/plugins/queries";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { type PluginDiagnostic, pluginDiagnostics } from "@ledgerly/domain/platform/plugins";
 import { cn } from "@/ui/cn";
 import { type Tone, TONE_TEXT } from "@/ui/tone";
 

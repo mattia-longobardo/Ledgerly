@@ -5,7 +5,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts/client";
 import {
   AMOUNT_OPS,
   COUNTERPARTY_OPS,
@@ -18,7 +18,7 @@ import {
   type RuleCondition,
   type RuleField,
   TEXT_OPS,
-} from "@/modules/transactions/categorize/user-rules";
+} from "@ledgerly/domain/transactions/client";
 import {
   applyRuleAction,
   deleteRuleAction,
@@ -30,7 +30,7 @@ import {
   setRuleActiveAction,
   undoRuleApplyAction,
 } from "@/modules/transactions/categorize/user-rules-actions";
-import { formatAmountInput, type NumberFormat } from "@/platform/format";
+import { formatAmountInput, type NumberFormat } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";

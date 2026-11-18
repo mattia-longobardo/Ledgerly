@@ -3,19 +3,19 @@ import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import type { Account } from "@/modules/accounts/queries";
-import { openSwitchOf } from "@/modules/accounts/switching";
+import type { Account } from "@ledgerly/domain/accounts";
+import { openSwitchOf } from "@ledgerly/domain/accounts";
 import { UndoSwitch } from "@/modules/accounts/ui/switch/undo-switch";
-import { type CivilDate, civilDateIn } from "@/platform/dates";
+import { type CivilDate, civilDateIn } from "@ledgerly/domain/platform/dates";
 import { labelOf } from "@/platform/integrations/registry";
-import { listConnections } from "@/platform/integrations/service";
-import { findInstancePlugin, isPluginActive, listPluginConnections } from "@/platform/plugins/queries";
+import { listConnections } from "@ledgerly/domain/platform/integrations";
+import { findInstancePlugin, isPluginActive, listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import { ButtonLink } from "@/ui/button";
 import { BANK_PLUGIN_ID } from "../../banks/plugin";
 import { undoSwitchAction } from "./switch/actions";
 import { switchable } from "./switch/switch";
-import { accountsView, listBalanceEntries } from "@/modules/accounts/queries";
-import { hasIbanField } from "@/modules/accounts/rules";
+import { accountsView, listBalanceEntries } from "@ledgerly/domain/accounts";
+import { hasIbanField } from "@ledgerly/domain/accounts";
 import {
   asNumbers,
   axisLabels,
@@ -40,21 +40,27 @@ import { accountConnectionRow } from "./connection-status";
 import { DeleteAccount } from "./delete-account";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
-import { accountDailyBalances, connectionsOf } from "@/modules/accounts/service";
+import { accountDailyBalances, connectionsOf } from "@ledgerly/domain/accounts";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { periodEnd, periodMonths, parsePeriodQuery, type PeriodQuery } from "@/modules/accounts/ui/period";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
-import { pocketsOnAccount } from "@/modules/pockets/queries";
-import { subscriptionsOnAccount } from "@/modules/subscriptions/queries";
-import { rulesOnAccount } from "@/modules/interests/queries";
+import { pocketsOnAccount } from "@ledgerly/domain/pockets";
+import { subscriptionsOnAccount } from "@ledgerly/domain/subscriptions";
+import { rulesOnAccount } from "@ledgerly/domain/interests";
 import { tierChips } from "@/modules/interests/ui/present";
 import { requireSession } from "@/platform/auth/session";
-import { getAccount } from "@/modules/accounts/queries";
-import { managedSinceOf, serviceAccountIds, syncedServicesOf } from "@/modules/investments/managed";
-import { today } from "@/platform/dates";
-import { groupIban } from "@/platform/iban";
-import { centsToDecimal } from "@/platform/money";
-import { formatAmountInput, formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { getAccount } from "@ledgerly/domain/accounts";
+import { managedSinceOf, serviceAccountIds, syncedServicesOf } from "@ledgerly/domain/investments";
+import { today } from "@ledgerly/domain/platform/dates";
+import { groupIban } from "@ledgerly/domain/platform/iban";
+import { centsToDecimal } from "@ledgerly/domain/platform/money";
+import {
+  formatAmountInput,
+  formatDate,
+  formatMoney,
+  formatPercent,
+  NULL_DISPLAY,
+} from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";
 import { AreaLine, Bars } from "@/ui/chart";

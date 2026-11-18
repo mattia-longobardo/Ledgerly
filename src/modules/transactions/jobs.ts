@@ -12,19 +12,19 @@
  */
 import "server-only";
 import { and, asc, eq, isNull, isNotNull, ne } from "drizzle-orm";
-import { forEachUser, type Person } from "@/modules/users/jobs";
-import { redactForLog } from "@/platform/auth/logger";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { userScoped } from "@/platform/db/scope";
-import type { Connection } from "@/platform/integrations/service";
-import { BACKFILL_CHOICES, backfillDepth } from "@/platform/integrations/wallet/depth";
-import { isSyncBusy, syncWalletNow } from "@/platform/integrations/wallet/sync";
+import { forEachUser, type Person } from "@ledgerly/domain/users";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { userScoped } from "@ledgerly/domain/platform/db";
+import type { Connection } from "@ledgerly/domain/platform/integrations";
+import { BACKFILL_CHOICES, backfillDepth } from "@ledgerly/domain/platform/integrations/wallet";
+import { isSyncBusy, syncWalletNow } from "@ledgerly/domain/platform/integrations/wallet";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { type RecurrenceInput, detectRecurrences } from "./rules";
-import { recurringPatterns, transactions } from "./schema";
-import { linkOwnTransfers } from "./service";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { type RecurrenceInput, detectRecurrences } from "@ledgerly/domain/transactions";
+import { recurringPatterns, transactions } from "@ledgerly/domain/transactions";
+import { linkOwnTransfers } from "@ledgerly/domain/transactions";
 
 /* Recurrences (spec §7.2) */
 

@@ -4,18 +4,18 @@
 // its own rows, all of them in one transaction. No provider is named here (rule M12): a source is a
 // provider id, and what it syncs says which parts apply.
 import "server-only";
-import { listAccounts } from "@/modules/accounts/queries";
-import { releaseSourceAccounts } from "@/modules/accounts/service";
-import { publishingRuleCount, stopPublishingOnAccounts } from "@/modules/interests/service";
-import { forgetPendingDays, pendingCount } from "@/modules/timeoff/service";
-import { forgetSends, pendingSends } from "@/modules/transactions/sending";
-import { forgetSourceCategories, sourceCategoryCount } from "@/modules/transactions/source-categories";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { isKnownProvider, KINDS_OF, pluginProvider } from "@/platform/integrations/rules";
-import { forgetSource, listConnections, runningReadings } from "@/platform/integrations/service";
+import { listAccounts } from "@ledgerly/domain/accounts";
+import { releaseSourceAccounts } from "@ledgerly/domain/accounts";
+import { publishingRuleCount, stopPublishingOnAccounts } from "@ledgerly/domain/interests";
+import { forgetPendingDays, pendingCount } from "@ledgerly/domain/timeoff";
+import { forgetSends, pendingSends } from "@ledgerly/domain/transactions";
+import { forgetSourceCategories, sourceCategoryCount } from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { isKnownProvider, KINDS_OF, pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { forgetSource, listConnections, runningReadings } from "@ledgerly/domain/platform/integrations";
 import { PLUGIN_ID } from "@ledgerly/plugin-contract";
-import { isPluginActive } from "@/platform/plugins/queries";
+import { isPluginActive } from "@ledgerly/domain/platform/plugins";
 import { type Deps as PluginDeps, forgetPlugin, prepareAccessClosing } from "@/platform/plugins/service";
 
 /** A source the person can turn off: a provider of the core with a page, or a plugin they have on. */

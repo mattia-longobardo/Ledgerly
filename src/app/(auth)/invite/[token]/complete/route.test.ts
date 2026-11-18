@@ -4,7 +4,7 @@ import { GET } from "./route";
 const getSession = vi.hoisted(() => vi.fn());
 const completeInvitationWithSso = vi.hoisted(() => vi.fn());
 
-vi.mock("@/platform/auth/auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
+vi.mock("@domain/platform/auth/auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
 vi.mock("@/platform/auth/invitations", () => ({ completeInvitationWithSso }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { accountsView, listAccounts } from "@/modules/accounts/queries";
+import { accountsView, listAccounts } from "@ledgerly/domain/accounts";
 import {
   asNumbers,
   changeBetween,
@@ -14,10 +14,10 @@ import { ToggleLink } from "@/modules/accounts/ui/controls";
 import { parsePeriodQuery, periodMonths } from "@/modules/accounts/ui/period";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
-import { syncedServicesOf } from "@/modules/investments/managed";
+import { syncedServicesOf } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { ButtonLink } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";

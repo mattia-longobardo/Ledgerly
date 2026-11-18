@@ -13,10 +13,10 @@ import {
   useState,
   useTransition,
 } from "react";
-import type { MonthKey } from "@/platform/dates";
-import { type UiLocale, formatDate } from "@/platform/format";
+import type { MonthKey } from "@ledgerly/domain/platform/dates";
+import { type UiLocale, formatDate } from "@ledgerly/domain/platform/format";
 import { notify } from "@/ui/toast";
-import type { ForecastInput } from "../accrual";
+import type { ForecastInput } from "@ledgerly/domain/timeoff/client";
 import {
   type LeaveActionResult,
   type LeaveFormInput,
@@ -34,7 +34,7 @@ import {
   calendar,
   previewLeaveRange,
   stillBooked,
-} from "../rules";
+} from "@ledgerly/domain/timeoff/client";
 import type { LeaveTypeOption } from "./kinds";
 import { type BookedLeave, type LeavePanelEntry, LeavePanel } from "./leave-panel";
 import { type DayRange, YearCalendar } from "./year-calendar";

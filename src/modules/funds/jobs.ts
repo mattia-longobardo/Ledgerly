@@ -1,8 +1,8 @@
 import "server-only";
-import { forEachUser } from "@/modules/users/jobs";
+import { forEachUser } from "@ledgerly/domain/users";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { matchDebits } from "./service";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { matchDebits } from "@ledgerly/domain/funds";
 
 /**
  * After a sync that changed the movements (`runAfterSync`): the movements the pass brought in that

@@ -4,9 +4,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   addPlannedExpense,
   addToPocket,
@@ -17,7 +17,7 @@ import {
   setPocketState,
   unlinkExpense,
   updatePocket,
-} from "./service";
+} from "@ledgerly/domain/pockets";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type CreateResult = { ok: true; id: string } | { ok: false; error: string };

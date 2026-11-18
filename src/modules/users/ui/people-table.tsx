@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import type { Role } from "@/platform/context";
+import type { Role } from "@ledgerly/domain/platform/context";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Modal } from "@/ui/modal";

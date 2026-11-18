@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { TransactionError } from "@/modules/transactions/service";
+import { TransactionError } from "@ledgerly/domain/transactions";
 import {
   archiveCategory,
   createCategory,
@@ -17,15 +17,15 @@ import {
   TaxonomyError,
   updateCategory,
   updateLabel,
-} from "@/modules/transactions/taxonomy";
+} from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
-import { formatMoney } from "@/platform/format";
+import { formatMoney } from "@ledgerly/domain/platform/format";
 import { type MacroMoveUndo, type MacroMoveView, macroMoveView, moveToMacro, undoMoveToMacro } from "./macro";
 import { mergeTwoCategories, undoMergeOfTwo } from "./merge";
 import {
   deleteWalletCategories,
   type WalletDeletionOutcome,
-} from "@/platform/integrations/wallet/categories";
+} from "@ledgerly/domain/platform/integrations/wallet";
 
 /**
  * The cards call these inside a transition with no error boundary, so a refusal comes back as a

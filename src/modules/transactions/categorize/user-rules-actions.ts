@@ -6,9 +6,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@/platform/dates";
-import { formatDate, formatMoney } from "@/platform/format";
-import { TransactionError } from "../service";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
+import { TransactionError } from "@ledgerly/domain/transactions";
 import {
   applyRule,
   createRule,
@@ -21,7 +21,7 @@ import {
   setRuleActive,
   undoRuleApply,
   updateRule,
-} from "./user-rules-service";
+} from "@ledgerly/domain/transactions";
 
 type Session = Awaited<ReturnType<typeof requireSession>>;
 export type RuleResult = { ok: true } | { ok: false; error: string };

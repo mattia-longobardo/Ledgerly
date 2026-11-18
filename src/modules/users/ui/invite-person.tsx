@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import type { Role } from "@/platform/context";
+import type { Role } from "@ledgerly/domain/platform/context";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, Select } from "@/ui/input";

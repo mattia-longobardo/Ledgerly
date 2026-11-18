@@ -1,10 +1,10 @@
 import { verifyOAuthQueryParams } from "@better-auth/oauth-provider";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { API_SCOPES, type ApiScope } from "@/platform/auth/oauth";
-import { consentClient } from "@/platform/auth/oauth-grants";
+import { API_SCOPES, type ApiScope } from "@ledgerly/domain/platform/auth";
+import { consentClient } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { readEnv } from "@/platform/env";
+import { readEnv } from "@ledgerly/domain/platform/env";
 import { AuthCard } from "../../auth-card";
 import { ConsentForm } from "./consent-form";
 

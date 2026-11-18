@@ -22,21 +22,21 @@
 // value: the names may go in a comment, the file never leaves the server.
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { accountsView } from "../src/modules/accounts/queries";
-import { budgetsView } from "../src/modules/budgets/queries";
-import { fundSummary } from "../src/modules/funds/detail";
-import { firstDataOn, homeSummary, valueToday } from "../src/modules/funds/home";
-import { fundsHomeRows } from "../src/modules/funds/home-queries";
-import { interestsView, ruleDetail } from "../src/modules/interests/queries";
-import { periodOf } from "../src/modules/investments/pnl";
-import { investmentsHome, investmentsPnl, investmentsPnlView } from "../src/modules/investments/queries";
-import { registerView } from "../src/modules/payroll/queries";
-import { pocketsView } from "../src/modules/pockets/queries";
-import { subscriptionsView } from "../src/modules/subscriptions/queries";
-import { timeOffView } from "../src/modules/timeoff/queries";
-import { expensesView } from "../src/modules/transactions/queries";
-import type { Ctx } from "../src/platform/context";
-import { lastDayOfMonth, today } from "../src/platform/dates";
+import { accountsView } from "@domain/modules/accounts/queries";
+import { budgetsView } from "@domain/modules/budgets/queries";
+import { fundSummary } from "@domain/modules/funds/detail";
+import { firstDataOn, homeSummary, valueToday } from "@domain/modules/funds/home";
+import { fundsHomeRows } from "@domain/modules/funds/home-queries";
+import { interestsView, ruleDetail } from "@domain/modules/interests/queries";
+import { periodOf } from "@domain/modules/investments/pnl";
+import { investmentsHome, investmentsPnl, investmentsPnlView } from "@domain/modules/investments/queries";
+import { registerView } from "@domain/modules/payroll/queries";
+import { pocketsView } from "@domain/modules/pockets/queries";
+import { subscriptionsView } from "@domain/modules/subscriptions/queries";
+import { timeOffView } from "@domain/modules/timeoff/queries";
+import { expensesView } from "@domain/modules/transactions/queries";
+import type { Ctx } from "@domain/platform/context";
+import { lastDayOfMonth, today } from "@domain/platform/dates";
 import { monthlyFigures } from "../src/platform/reports/monthly";
 import { canonical, differences, project, namesIn, sha256, type Json } from "./snapshot-format";
 
@@ -235,7 +235,7 @@ async function write(): Promise<void> {
   if (Number.isNaN(now.getTime())) throw new Error("--as-of is not an instant");
 
   const { Pool } = await import("pg");
-  const { readEnv } = await import("../src/platform/env");
+  const { readEnv } = await import("@domain/platform/env");
   const pool = new Pool({ connectionString: readEnv().DATABASE_URL, max: 1, idleTimeoutMillis: 0 });
   (globalThis as unknown as { ledgerlyPool?: unknown }).ledgerlyPool = pool;
   const client = await pool.connect();
@@ -248,7 +248,7 @@ async function write(): Promise<void> {
   await send("begin transaction isolation level repeatable read read only");
   client.release();
 
-  const { getPreferences } = await import("../src/modules/users/service");
+  const { getPreferences } = await import("@domain/modules/users/service");
   const people = await pool.query<{ id: string }>(
     "select id from users where email not like '%@example.test' order by id",
   );

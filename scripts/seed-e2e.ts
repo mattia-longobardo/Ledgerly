@@ -8,11 +8,11 @@
 // data are never read or written here.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { and, eq, isNull, like } from "drizzle-orm";
-import { createAuth } from "../src/platform/auth/auth";
-import { oauthClients } from "../src/platform/auth/oauth/schema";
-import { rateLimits, users } from "../src/platform/auth/schema";
-import { getDb } from "../src/platform/db/client";
-import { deleteFolder } from "../src/platform/storage";
+import { createAuth } from "@domain/platform/auth/auth";
+import { oauthClients } from "@domain/platform/auth/oauth/schema";
+import { rateLimits, users } from "@domain/platform/auth/schema";
+import { getDb } from "@domain/platform/db/client";
+import { deleteFolder } from "@domain/platform/storage";
 import {
   BASE_URL,
   E2E_MCP_CLIENT_NAME,

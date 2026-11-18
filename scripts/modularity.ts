@@ -14,7 +14,7 @@ import {
   importEdges,
   readProductSources,
   reciprocalPairs,
-  sourceFiles,
+  treeFiles,
   unitGraph,
 } from "./source-graph";
 
@@ -57,6 +57,8 @@ const OWN_FOLDER: Partial<Record<(typeof FORBIDDEN_NAMES)[number], string>> = {
 export function forbiddenNamesIn(files: ReadonlyMap<string, string>): string[] {
   const found: string[] = [];
   for (const [rel, content] of files) {
+    // An `index.ts` only repeats the names of its unit's files (R0): the file that defines one is listed.
+    if (rel.endsWith("/index.ts")) continue;
     const text = content.toLowerCase();
     for (const name of FORBIDDEN_NAMES) {
       const own = OWN_FOLDER[name];
@@ -77,12 +79,12 @@ export function forbiddenNameKeys(catalog: unknown, path = ""): string[] {
   });
 }
 
-export function measureModularity(src: string): ModularityBaseline {
-  const sources = readProductSources(src);
+export function measureModularity(repo: string): ModularityBaseline {
+  const sources = readProductSources(repo);
   const edges = importEdges(sources);
   const named = forbiddenNamesIn(sources);
   const namedKeys = forbiddenNameKeys(
-    JSON.parse(readFileSync(join(src, "..", "messages", "en.json"), "utf8")),
+    JSON.parse(readFileSync(join(repo, "messages", "en.json"), "utf8")),
   ).sort();
   const graph = unitGraph(edges);
   const modulesOnly = new Map(
@@ -102,7 +104,8 @@ export function measureModularity(src: string): ModularityBaseline {
     counts: {
       crossModuleImports: cross.length,
       // No module has an `index.ts`, so every import between modules is a deep one (M3).
-      moduleIndexFiles: sourceFiles(src).filter((rel) => /^modules\/[^/]+\/index\.ts$/.test(rel)).length,
+      moduleIndexFiles: [...treeFiles(repo).keys()].filter((rel) => /^modules\/[^/]+\/index\.ts$/.test(rel))
+        .length,
       reciprocalModulePairs: pairs.filter((pair) =>
         pair.split(" ↔ ").every((unit) => unit.startsWith("modules/")),
       ).length,
@@ -123,7 +126,7 @@ export function measureModularity(src: string): ModularityBaseline {
 }
 
 if (process.argv[1]?.endsWith("modularity.ts")) {
-  const baseline = measureModularity(join(process.cwd(), "src"));
+  const baseline = measureModularity(process.cwd());
   writeFileSync(join(process.cwd(), "baselines/modularity.json"), `${JSON.stringify(baseline, null, 2)}\n`);
   console.log(JSON.stringify(baseline.counts, null, 2));
 }

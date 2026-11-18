@@ -1,6 +1,6 @@
 // test/integration-setup.ts — runs once before the integration project.
 import { Pool } from "pg";
-import { runMigrations } from "../src/platform/db/migrate";
+import { runMigrations } from "@domain/platform/db/migrate";
 
 /**
  * Drops and recreates the `public` and `drizzle` schemas before every integration run, so

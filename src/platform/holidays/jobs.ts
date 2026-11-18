@@ -10,13 +10,13 @@
  * a good one: `refreshCalendar` only writes what it actually received.
  */
 import "server-only";
-import { forEachUser } from "@/modules/users/jobs";
-import { redactForLog } from "@/platform/auth/logger";
-import { today } from "@/platform/dates";
+import { forEachUser } from "@ledgerly/domain/users";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { today } from "@ledgerly/domain/platform/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { listCalendars, markCalendarFailed, refreshCalendar } from "./service";
-import type { HolidayFetchOptions } from "./sources";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { listCalendars, markCalendarFailed, refreshCalendar } from "@ledgerly/domain/platform/holidays";
+import type { HolidayFetchOptions } from "@ledgerly/domain/platform/holidays";
 
 /** This year and the next: leave is booked ahead of itself. */
 export function yearsToRefresh(current: number): number[] {

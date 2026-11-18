@@ -12,14 +12,14 @@ import { budgetAlertsJob } from "@/modules/budgets/jobs";
 import { fundsDepositsJob } from "@/modules/funds/jobs";
 import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
 import { recurrencesRefreshJob } from "@/modules/transactions/jobs";
-import { redactForLog } from "@/platform/auth/logger";
-import { lastMovementChangeAt } from "@/platform/integrations/service";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { lastMovementChangeAt } from "@ledgerly/domain/platform/integrations";
 import { and, eq, inArray, max } from "drizzle-orm";
-import { getDb } from "@/platform/db/client";
-import { withJobLock } from "./lock";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { withJobLock } from "@ledgerly/domain/platform/jobs";
 import type { JobDefinition, RecordedTier } from "./registry";
 import { type Outcome, recordSkipped, runAndRecord } from "./run";
-import { jobRuns } from "./schema";
+import { jobRuns } from "@ledgerly/domain/platform/jobs";
 
 /** In this order: own transfers and recurrences first, as the others read the result. */
 export const AFTER_SYNC_JOBS: readonly JobDefinition[] = [

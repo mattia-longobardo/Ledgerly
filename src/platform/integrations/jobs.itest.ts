@@ -1,17 +1,17 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq, sql } from "drizzle-orm";
-import { users } from "@/platform/auth/schema";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
+import { users } from "@domain/platform/auth/schema";
+import type { Ctx } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
-import { jobRuns } from "@/platform/jobs/schema";
+import { jobRuns } from "@domain/platform/jobs/schema";
 import { runTier } from "@/platform/jobs/tick";
 import { dispatchDueConnections, integrationsSyncJob } from "./jobs";
-import { TREK_PROVIDER } from "./rules";
-import { nextSyncTimes, type SyncSchedule } from "./schedule";
-import { integrationConnections } from "./schema";
+import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
+import { nextSyncTimes, type SyncSchedule } from "@domain/platform/integrations/schedule";
+import { integrationConnections } from "@domain/platform/integrations/schema";
 import {
   anyConnectionDue,
   dueConnections,
@@ -21,7 +21,7 @@ import {
   rescheduleConnections,
   saveConnection,
   saveSchedule,
-} from "./service";
+} from "@domain/platform/integrations/service";
 
 // A Trek pass that answers without calling Trek: the pass is real to the dispatcher, its content
 // beside the point.

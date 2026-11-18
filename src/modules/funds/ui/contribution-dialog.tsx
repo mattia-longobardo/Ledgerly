@@ -2,9 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, type RefObject, useId, useRef, useState, useTransition } from "react";
-import { parseAmount } from "@/modules/accounts/rules";
-import { formatMoney, type NumberFormat, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { parseAmount } from "@ledgerly/domain/accounts/client";
+import { formatMoney, type NumberFormat, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
@@ -12,7 +12,7 @@ import { Modal } from "@/ui/modal";
 import { Segmented } from "@/ui/segmented";
 import { notify } from "@/ui/toast";
 import { deleteContributionAction, saveContributionAction } from "../actions";
-import type { ContributionForm } from "../forms";
+import type { ContributionForm } from "@ledgerly/domain/funds/client";
 import { ErrorLine, errorKey } from "./fund-forms";
 
 type Kind = ContributionForm["kind"];

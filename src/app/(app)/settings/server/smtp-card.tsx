@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useRef, useState, useTransition } from "react";
-import { ENCRYPTIONS, type Encryption, type MailPolicy } from "@/platform/settings/smtp";
+import { ENCRYPTIONS, type Encryption, type MailPolicy } from "@ledgerly/domain/platform/settings/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";

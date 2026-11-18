@@ -8,7 +8,7 @@ import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
-import type { LlmProbeResult } from "@/platform/settings/llm-probe";
+import type { LlmProbeResult } from "@ledgerly/domain/platform/settings/client";
 import { removeLlmFallbackAction, saveLlmFallbackAction, testLlmFallbackAction } from "./actions";
 
 /**

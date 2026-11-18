@@ -6,12 +6,12 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
-import { AccountError } from "@/modules/accounts/service";
-import { parseAmount } from "@/modules/accounts/rules";
+import { AccountError } from "@ledgerly/domain/accounts";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import { numberSeparators, type NumberFormat } from "@/platform/format";
-import type { Cents } from "@/platform/money";
-import { parseDecimal, plainDecimal, PRICE_SCALE, QUANTITY_SCALE } from "./rules";
+import { numberSeparators, type NumberFormat } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
+import { parseDecimal, plainDecimal, PRICE_SCALE, QUANTITY_SCALE } from "@ledgerly/domain/investments";
 import {
   confirmZeroReading,
   createManualService,
@@ -25,7 +25,7 @@ import {
   unlinkTransfer,
   updateServiceUrl,
   updateServiceValue,
-} from "./service";
+} from "@ledgerly/domain/investments";
 import {
   type ConnectTarget,
   confirmKeyRevoked,
@@ -35,7 +35,7 @@ import {
   SyncError,
   syncNow,
   verifyKey,
-} from "./sync";
+} from "@ledgerly/domain/investments";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 

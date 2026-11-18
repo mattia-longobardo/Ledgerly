@@ -14,7 +14,7 @@ import {
   useSyncExternalStore,
   useTransition,
 } from "react";
-import { type CategoryType, NAME_MAX } from "@/modules/transactions/rules";
+import { type CategoryType, NAME_MAX } from "@ledgerly/domain/transactions/client";
 import { Badge } from "@/ui/badge";
 import { Button, ButtonLink, LinkButton } from "@/ui/button";
 import { Card } from "@/ui/card";

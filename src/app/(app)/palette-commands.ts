@@ -5,7 +5,7 @@
 // (docs/testing.md).
 import type { Route } from "next";
 import type { getTranslations } from "next-intl/server";
-import type { Role } from "@/platform/context";
+import type { Role } from "@ledgerly/domain/platform/context";
 import type { NavLink } from "@/ui/shell/nav-types";
 
 /** The translator of the whole catalogue, as the layout has it: `getTranslations()` with no namespace. */

@@ -11,7 +11,7 @@ import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
 import { createLabelAction, deleteLabelAction, saveLabelAction } from "./actions";
 import { ColorDot, ColorSwatchPicker } from "./color-swatch";
-import { NAME_MAX } from "@/modules/transactions/rules";
+import { NAME_MAX } from "@ledgerly/domain/transactions/client";
 
 /** What the browser gets per label: the row itself plus how many movements carry it. */
 export interface LabelRow {

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "../../../../messages/en.json";
-import { type FeeForm, newFeeForm } from "../forms";
+import { type FeeForm, newFeeForm } from "@domain/modules/funds/forms";
 import { FeeDialog } from "./fee-dialog";
 
 const SCOPES = [

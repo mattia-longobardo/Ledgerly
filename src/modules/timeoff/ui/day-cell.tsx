@@ -1,5 +1,5 @@
 import { cn } from "@/ui/cn";
-import type { CalendarCell } from "../rules";
+import type { CalendarCell } from "@ledgerly/domain/timeoff/client";
 import { KIND_BORDER, KIND_CLASS, KIND_TEXT } from "./kinds";
 
 /** Where a day stands in the range being picked: one of its two ends, inside it, or outside. */

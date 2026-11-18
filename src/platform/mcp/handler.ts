@@ -3,9 +3,9 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { MAX_PER_WINDOW, takeSlot } from "@/platform/api/rate-limit";
 import { type AccessIdentity, authenticateAccessToken } from "@/platform/auth/access-token";
 import { bearerChallenge, looksLikeJwt } from "@/platform/auth/access-token-rules";
-import { redactForLog } from "@/platform/auth/logger";
-import { resourceMetadataUrl } from "@/platform/auth/oauth";
-import { readEnv } from "@/platform/env";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { resourceMetadataUrl } from "@ledgerly/domain/platform/auth";
+import { readEnv } from "@ledgerly/domain/platform/env";
 import { buildMcpServer } from "./tools";
 
 /**

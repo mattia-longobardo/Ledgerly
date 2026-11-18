@@ -1,8 +1,8 @@
 import "server-only";
-import { forEachUser } from "@/modules/users/jobs";
+import { forEachUser } from "@ledgerly/domain/users";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { checkSubscriptions } from "./service";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { checkSubscriptions } from "@ledgerly/domain/subscriptions";
 
 /**
  * After a sync that changed the movements (`runAfterSync`; spec §10.2: "Wallet transactions, then

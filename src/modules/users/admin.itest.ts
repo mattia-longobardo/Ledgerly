@@ -8,11 +8,11 @@ import {
   twoFactors,
   users,
   verifications,
-} from "@/platform/auth/schema";
-import { oauthClients, oauthRefreshTokens } from "@/platform/auth/oauth/schema";
-import type { Ctx, Role } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { getObject, putObject } from "@/platform/storage";
+} from "@domain/platform/auth/schema";
+import { oauthClients, oauthRefreshTokens } from "@domain/platform/auth/oauth/schema";
+import type { Ctx, Role } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
+import { getObject, putObject } from "@domain/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import {

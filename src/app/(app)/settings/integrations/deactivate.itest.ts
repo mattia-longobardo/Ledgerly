@@ -7,25 +7,25 @@ import { generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { listAccounts } from "@/modules/accounts/queries";
-import { restoreSourceAccounts } from "@/modules/accounts/service";
-import { createRule } from "@/modules/interests/service";
+import { listAccounts } from "@domain/modules/accounts/queries";
+import { restoreSourceAccounts } from "@domain/modules/accounts/service";
+import { createRule } from "@domain/modules/interests/service";
 import {
   allowanceOf,
   listLeaveDays,
   pendingCount,
   saveAllowance,
   saveLeaveDay,
-} from "@/modules/timeoff/service";
-import { createManualTransaction } from "@/modules/transactions/manual";
-import { transactionIdsOfAccount } from "@/modules/transactions/queries";
-import { pendingSends } from "@/modules/transactions/sending";
-import { sourceCategoryCount } from "@/modules/transactions/source-categories";
-import type { Ctx } from "@/platform/context";
-import { addDays } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { sourceSettings, sourceSkippedAccounts } from "@/platform/integrations/schema";
+} from "@domain/modules/timeoff/service";
+import { createManualTransaction } from "@domain/modules/transactions/manual";
+import { transactionIdsOfAccount } from "@domain/modules/transactions/queries";
+import { pendingSends } from "@domain/modules/transactions/sending";
+import { sourceCategoryCount } from "@domain/modules/transactions/source-categories";
+import type { Ctx } from "@domain/platform/context";
+import { addDays } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { sourceSettings, sourceSkippedAccounts } from "@domain/platform/integrations/schema";
 import {
   deletedSourceAccounts,
   deleteConnection,
@@ -33,13 +33,13 @@ import {
   recordRun,
   saveConnection,
   skippedAccounts,
-} from "@/platform/integrations/service";
-import type { WalletClientOptions } from "@/platform/integrations/wallet/client";
-import { chooseWalletAccounts, syncWalletNow } from "@/platform/integrations/wallet/sync";
+} from "@domain/platform/integrations/service";
+import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
+import { chooseWalletAccounts, syncWalletNow } from "@domain/platform/integrations/wallet/sync";
 import type { Fetch } from "@/platform/plugins/client";
 import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@plugin-contract/calls";
 import type { PluginManifest } from "@plugin-contract/manifest";
-import { credentialsStatus, isPluginActive } from "@/platform/plugins/queries";
+import { credentialsStatus, isPluginActive } from "@domain/platform/plugins/queries";
 import {
   completeAccess,
   refreshManifests,
@@ -59,8 +59,8 @@ import { DeactivateError, deactivateSource, deactivationCounts, type Source, sou
 
 /** One failure of the conversion on demand, in the middle of its transaction (criterion 3). */
 const failure = vi.hoisted(() => ({ next: false }));
-vi.mock("@/modules/transactions/source-categories", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/modules/transactions/source-categories")>();
+vi.mock("@domain/modules/transactions/source-categories", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@domain/modules/transactions/source-categories")>();
   return {
     ...original,
     forgetSourceCategories: async (...args: Parameters<typeof original.forgetSourceCategories>) => {

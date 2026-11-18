@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
-import { listAccounts } from "@/modules/accounts/queries";
+import { listAccounts } from "@ledgerly/domain/accounts";
 import {
   chooseCategoryAction,
   confirmCategoriesAction,
@@ -9,13 +9,13 @@ import {
   similarMovementsAction,
   undoCategoriesAction,
 } from "@/modules/transactions/categorize/actions";
-import { categoryCounts, listMergeProposals, reviewOf } from "@/modules/transactions/categorize/review";
-import type { ReviewGroup } from "@/modules/transactions/categorize/review-rules";
-import { isPreparing } from "@/modules/transactions/categorize/service";
-import { DEFAULT_GROUPS } from "@/modules/transactions/categorize/tables";
-import { listTransactions } from "@/modules/transactions/queries";
-import { categorisableAccountIds } from "@/modules/transactions/service";
-import { listCategories, listLabels } from "@/modules/transactions/taxonomy";
+import { categoryCounts, listMergeProposals, reviewOf } from "@ledgerly/domain/transactions";
+import type { ReviewGroup } from "@ledgerly/domain/transactions";
+import { isPreparing } from "@ledgerly/domain/transactions";
+import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
+import { listTransactions } from "@ledgerly/domain/transactions";
+import { categorisableAccountIds } from "@ledgerly/domain/transactions";
+import { listCategories, listLabels } from "@ledgerly/domain/transactions";
 import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
 import { categoryColor, categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
@@ -24,9 +24,9 @@ import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guid
 import { type ReviewGroupView, ReviewList } from "@/modules/transactions/ui/review-list";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
-import { isCivilDate, today } from "@/platform/dates";
-import { shiftRange } from "@/platform/ranges";
-import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
+import { isCivilDate, today } from "@ledgerly/domain/platform/dates";
+import { shiftRange } from "@ledgerly/domain/platform/ranges";
+import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { cn } from "@/ui/cn";

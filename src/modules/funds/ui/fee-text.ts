@@ -1,11 +1,17 @@
 // The words of a fee row (release N6, screens §7.1), shared by the list, the summary of the form
 // that creates a fund and Settings. Pure: the translator comes from the caller.
 import type { useTranslations } from "next-intl";
-import { parseAmount } from "@/modules/accounts/rules";
-import { isCivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, type NumberFormat, type UiLocale } from "@/platform/format";
-import { feeModes, needsPeriod } from "../fees";
-import { type FeeForm, fractionOfPercent } from "../forms";
+import { parseAmount } from "@ledgerly/domain/accounts/client";
+import { isCivilDate } from "@ledgerly/domain/platform/dates";
+import {
+  formatDate,
+  formatMoney,
+  formatPercent,
+  type NumberFormat,
+  type UiLocale,
+} from "@ledgerly/domain/platform/format";
+import { feeModes, needsPeriod } from "@ledgerly/domain/funds/client";
+import { type FeeForm, fractionOfPercent } from "@ledgerly/domain/funds/client";
 
 export type FeesT = ReturnType<typeof useTranslations<"funds.fees">>;
 

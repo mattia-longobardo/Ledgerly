@@ -2,14 +2,14 @@ import "server-only";
 import { and, arrayContains, desc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { z } from "zod";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { userScoped } from "@/platform/db/scope";
-import { readEnv } from "@/platform/env";
-import { type Auth, getAuth } from "./auth";
-import { type ApiScope, issuerFor, resourceFor } from "./oauth";
-import { oauthClients } from "./oauth/schema";
-import { API_SCOPES, MAX_CLIENT_NAME, parseScopes } from "./scopes";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { userScoped } from "@ledgerly/domain/platform/db";
+import { readEnv } from "@ledgerly/domain/platform/env";
+import { type Auth, getAuth } from "@ledgerly/domain/platform/auth";
+import { type ApiScope, issuerFor, resourceFor } from "@ledgerly/domain/platform/auth";
+import { oauthClients } from "@ledgerly/domain/platform/auth";
+import { API_SCOPES, MAX_CLIENT_NAME, parseScopes } from "@ledgerly/domain/platform/auth";
 
 /**
  * "Client API" (docs/auth-design.md D3): what replaces the personal access token. A confidential

@@ -5,13 +5,13 @@
 // rules and writes. No name of a provider: the source is reached through the registry of passes.
 import "server-only";
 import { createHash } from "node:crypto";
-import { getAccount } from "@/modules/accounts/queries";
-import { hasIbanField } from "@/modules/accounts/rules";
-import { rebuildDerivedBalances } from "@/modules/accounts/service";
-import { closeSwitch, lastSourceBalance, openSwitchOf, recordSwitch } from "@/modules/accounts/switching";
-import { publishingRulesOn } from "@/modules/interests/queries";
-import { restorePublishing, stopPublishing } from "@/modules/interests/switching";
-import { pendingSends } from "@/modules/transactions/sending";
+import { getAccount } from "@ledgerly/domain/accounts";
+import { hasIbanField } from "@ledgerly/domain/accounts";
+import { rebuildDerivedBalances } from "@ledgerly/domain/accounts";
+import { closeSwitch, lastSourceBalance, openSwitchOf, recordSwitch } from "@ledgerly/domain/accounts";
+import { publishingRulesOn } from "@ledgerly/domain/interests";
+import { restorePublishing, stopPublishing } from "@ledgerly/domain/interests";
+import { pendingSends } from "@ledgerly/domain/transactions";
 import {
   compareSources,
   comparisonFrom,
@@ -21,7 +21,7 @@ import {
   SWITCH_MATCH_MAX_DAYS,
   type SwitchMovement,
   type TransferPair,
-} from "@/modules/transactions/switch-rules";
+} from "@ledgerly/domain/transactions";
 import {
   choicesToCarry,
   doubleMovements,
@@ -33,17 +33,17 @@ import {
   undoJoinedDoubles,
   undoTransferPairs,
   writeTransferPairs,
-} from "@/modules/transactions/switching";
-import type { Ctx } from "@/platform/context";
-import { addDays, type CivilDate, civilDateIn } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+} from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/platform/dates";
+import { getDb } from "@ledgerly/domain/platform/db";
 import { passFor } from "@/platform/integrations/registry";
-import { pluginProvider } from "@/platform/integrations/rules";
-import { listConnections } from "@/platform/integrations/service";
-import { withJobLock } from "@/platform/jobs/lock";
-import { parseCents } from "@/platform/money";
-import { listPluginConnections } from "@/platform/plugins/queries";
-import { bankAccountNames, type BankAccountType, institutionOf } from "@/platform/plugins/rules";
+import { pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { listConnections } from "@ledgerly/domain/platform/integrations";
+import { withJobLock } from "@ledgerly/domain/platform/jobs";
+import { parseCents } from "@ledgerly/domain/platform/money";
+import { listPluginConnections } from "@ledgerly/domain/platform/plugins";
+import { bankAccountNames, type BankAccountType, institutionOf } from "@ledgerly/domain/platform/plugins";
 import type { Deps, Presence } from "@/platform/plugins/service";
 import { exposedAccounts, previewBankAccount, readBank } from "@/platform/plugins/sync";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";

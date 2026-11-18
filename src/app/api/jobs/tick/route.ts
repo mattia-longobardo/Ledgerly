@@ -1,7 +1,7 @@
 import { z } from "zod";
 // Registers the passes of the plugins before any tier runs (`plugin-wiring.ts` says why here).
 import "@/app/plugin-wiring";
-import { readEnv } from "@/platform/env";
+import { readEnv } from "@ledgerly/domain/platform/env";
 import { secretMatches } from "@/platform/jobs/secret";
 import { runTier } from "@/platform/jobs/tick";
 

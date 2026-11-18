@@ -4,31 +4,31 @@
 // checked with canary values planted in every one of those places.
 import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Ctx } from "@/platform/context";
-import { today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+import type { Ctx } from "@domain/platform/context";
+import { today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
 import type {
   HoldingsSnapshot,
   InvestmentSource,
   ProviderEvent,
-} from "@/platform/integrations/investments/source";
-import { integrationConnections, providerLinks } from "@/platform/integrations/schema";
+} from "@domain/platform/integrations/investments/source";
+import { integrationConnections, providerLinks } from "@domain/platform/integrations/schema";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { contextFor } from "../../../test/fixtures";
-import { authAccounts } from "@/platform/auth/schema";
+import { authAccounts } from "@domain/platform/auth/schema";
 
 let requestHeaders = new Headers();
 vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
 vi.mock("next/server", () => ({ after: () => {} }));
 
-const { getAuth, invalidateAuth } = await import("@/platform/auth/auth");
+const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClient } = await import("@/platform/auth/api-clients");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
 const { api } = await import("@/platform/api/app");
 const { handleMcp } = await import("@/platform/mcp/handler");
-const { recordOperation } = await import("./service");
+const { recordOperation } = await import("@domain/modules/investments/service");
 const { connectTarget, engineService } = await import("../../../test/investments");
-const { connectInvestmentProvider, setSourcesForTests } = await import("./sync");
+const { connectInvestmentProvider, setSourcesForTests } = await import("@domain/modules/investments/sync");
 
 const ORIGIN = "http://127.0.0.1:3000";
 const API = `${ORIGIN}/api/v1`;
@@ -356,7 +356,7 @@ describe("/api/v1/investments (§5.5)", () => {
     const { manual } = await seed(ctx);
     const token = await tokenFor(["investments:read"], API);
     const on = today(ctx.timeZone);
-    const { investmentsPnl } = await import("./queries");
+    const { investmentsPnl } = await import("@domain/modules/investments/queries");
     const { pnlJson } = await import("./api");
 
     const plain = JSON.parse(await (await get("/investments", token)).text());

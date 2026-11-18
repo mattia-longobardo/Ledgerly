@@ -5,41 +5,37 @@
 // takes a manual movement, the write, then the balance after it.
 import "server-only";
 import { z } from "zod";
-import { getAccount, listAccounts, movementBasis } from "@/modules/accounts/queries";
+import { getAccount, listAccounts, movementBasis } from "@ledgerly/domain/accounts";
 import {
   type AccountMode,
   accountMode,
   MANUAL_MOVEMENT_MODES,
   type MovementEffect,
   movementEffect,
-} from "@/modules/accounts/rules";
-import { rebuildDerivedBalances } from "@/modules/accounts/service";
+} from "@ledgerly/domain/accounts";
+import { rebuildDerivedBalances } from "@ledgerly/domain/accounts";
 import {
   createManualTransaction,
   deleteManualTransaction,
   updateManualTransaction,
-} from "@/modules/transactions/manual";
-import { type ManualKind, signedAmount } from "@/modules/transactions/manual-rules";
-import {
-  manualMovementsByAccount,
-  type Transaction,
-  transactionsByIds,
-} from "@/modules/transactions/queries";
+} from "@ledgerly/domain/transactions";
+import { type ManualKind, signedAmount } from "@ledgerly/domain/transactions";
+import { manualMovementsByAccount, type Transaction, transactionsByIds } from "@ledgerly/domain/transactions";
 import {
   deleteHiddenTransactions,
   hideTransactions,
   restoreTransactions,
   TransactionError,
-} from "@/modules/transactions/service";
-import type { Ctx } from "@/platform/context";
-import { type CivilDate, today } from "@/platform/dates";
-import type { UiLocale } from "@/platform/format";
+} from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import type { UiLocale } from "@ledgerly/domain/platform/format";
 import { labelOf } from "@/platform/integrations/registry";
-import { coreCreatesRecords, isPluginProvider, pluginProvider } from "@/platform/integrations/rules";
-import { listConnections } from "@/platform/integrations/service";
-import type { Cents } from "@/platform/money";
+import { coreCreatesRecords, isPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { listConnections } from "@ledgerly/domain/platform/integrations";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { hasCapability } from "@ledgerly/plugin-contract";
-import { listInstancePlugins } from "@/platform/plugins/queries";
+import { listInstancePlugins } from "@ledgerly/domain/platform/plugins";
 
 type ManualCtx = Pick<Ctx, "userId" | "timeZone">;
 

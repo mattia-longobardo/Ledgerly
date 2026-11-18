@@ -5,9 +5,9 @@
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { searchFunds } from "@/modules/funds/queries";
-import { searchPockets } from "@/modules/pockets/queries";
-import { searchSubscriptions } from "@/modules/subscriptions/queries";
+import { searchFunds } from "@ledgerly/domain/funds";
+import { searchPockets } from "@ledgerly/domain/pockets";
+import { searchSubscriptions } from "@ledgerly/domain/subscriptions";
 import { requireSession } from "@/platform/auth/session";
 import type { RecordMatch } from "@/ui/shell/commands";
 

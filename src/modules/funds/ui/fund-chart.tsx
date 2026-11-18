@@ -10,17 +10,17 @@ import {
   sampled,
   toCents,
 } from "@/modules/investments/ui/chart-data";
-import type { Ctx } from "@/platform/context";
-import type { CivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Card } from "@/ui/card";
 import { MultiLine, StackedBars, stackLayers } from "@/ui/chart";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
 import type { Params } from "@/ui/url";
-import { type FundLine, gainBars, type GainGrain, gainGrain, valueSeries } from "../home";
-import type { FundPeriod } from "../period";
+import { type FundLine, gainBars, type GainGrain, gainGrain, valueSeries } from "@ledgerly/domain/funds";
+import type { FundPeriod } from "@ledgerly/domain/funds";
 
 /**
  * The Performance chart of the home and of a fund (docs/design/funds-ux.md §6): Gain, one bar per

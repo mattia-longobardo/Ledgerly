@@ -9,16 +9,16 @@
 //   node --conditions=react-server --import tsx scripts/plugin-probe.ts [--from YYYY-MM-DD]
 import { createHash } from "node:crypto";
 import { and, eq, like } from "drizzle-orm";
-import { openJson, parseKeyRing } from "../src/platform/crypto";
-import { civilDateIn } from "../src/platform/dates";
-import { getDb, getPool } from "../src/platform/db/client";
-import { readEnv } from "../src/platform/env";
-import { integrationConnections } from "../src/platform/integrations/schema";
+import { openJson, parseKeyRing } from "@domain/platform/crypto";
+import { civilDateIn } from "@domain/platform/dates";
+import { getDb, getPool } from "@domain/platform/db/client";
+import { readEnv } from "@domain/platform/env";
+import { integrationConnections } from "@domain/platform/integrations/schema";
 import { callPlugin, PluginCallError } from "../src/platform/plugins/client";
 import { accountSchema, PLUGIN_PATHS, type SyncResponse, syncResponseSchema } from "@plugin-contract/calls";
-import { configuredPlugin } from "../src/platform/plugins/queries";
-import { measureReading } from "../src/platform/plugins/rules";
-import { pluginUserCredentials } from "../src/platform/plugins/schema";
+import { configuredPlugin } from "@domain/platform/plugins/queries";
+import { measureReading } from "@domain/platform/plugins/rules";
+import { pluginUserCredentials } from "@domain/platform/plugins/schema";
 
 const fromAt = process.argv.indexOf("--from");
 const from = fromAt > 0 ? process.argv[fromAt + 1] : null;

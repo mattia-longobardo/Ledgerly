@@ -9,9 +9,9 @@ import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { serializeSignedCookie } from "better-call";
 import { eq } from "drizzle-orm";
 import { createApiClientWith } from "../src/platform/auth/api-clients";
-import { createAuth } from "../src/platform/auth/auth";
-import { users } from "../src/platform/auth/schema";
-import { getDb } from "../src/platform/db/client";
+import { createAuth } from "@domain/platform/auth/auth";
+import { users } from "@domain/platform/auth/schema";
+import { getDb } from "@domain/platform/db/client";
 
 const [email, name, rawScopes, envFile, prefix] = process.argv.slice(2);
 if (!email || !name || !rawScopes || !envFile || !prefix || !/^[A-Z][A-Z0-9_]*$/.test(prefix)) {

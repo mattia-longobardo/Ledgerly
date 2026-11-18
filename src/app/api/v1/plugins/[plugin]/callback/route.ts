@@ -7,11 +7,11 @@
 // is not part of the token API: it is reached by a browser, with the session cookie, and the
 // return is accepted only for the session that started it.
 import { type NextRequest, NextResponse } from "next/server";
-import { restoreSourceAccounts } from "@/modules/accounts/service";
-import { redactForLog } from "@/platform/auth/logger";
+import { restoreSourceAccounts } from "@ledgerly/domain/accounts";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { getOptionalSession } from "@/platform/auth/session";
-import { readEnv } from "@/platform/env";
-import { pluginProvider } from "@/platform/integrations/rules";
+import { readEnv } from "@ledgerly/domain/platform/env";
+import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { PLUGIN_ID } from "@ledgerly/plugin-contract";
 import { completeAccess, type ReturnOutcome } from "@/platform/plugins/service";
 import { exposedAccounts, readBank, tieBack } from "@/platform/plugins/sync";

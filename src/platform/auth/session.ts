@@ -3,14 +3,14 @@ import type { Route } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
-import { getPreferences } from "@/modules/users/service";
-import type { Preferences } from "@/modules/users/rules";
-import type { Ctx } from "@/platform/context";
-import { readEnv } from "@/platform/env";
-import { numberStyle } from "@/platform/format";
-import { hasPasswordAccount } from "./accounts";
-import { getAuth } from "./auth";
-import { TWO_FACTOR_SETUP_PATH, twoFactorSetupRequired } from "./two-factor-policy";
+import { getPreferences } from "@ledgerly/domain/users";
+import type { Preferences } from "@ledgerly/domain/users";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { readEnv } from "@ledgerly/domain/platform/env";
+import { numberStyle } from "@ledgerly/domain/platform/format";
+import { hasPasswordAccount } from "@ledgerly/domain/platform/auth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
+import { TWO_FACTOR_SETUP_PATH, twoFactorSetupRequired } from "@ledgerly/domain/platform/auth";
 
 export function ctxFrom(user: { id: string; role?: string | null }, prefs: Preferences): Ctx {
   return {

@@ -1,30 +1,23 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, posix, relative, sep } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { measureModularity, type ModularityBaseline } from "../scripts/modularity";
-import { cycleGroups, reciprocalPairs, unitGraph, unitOf } from "../scripts/source-graph";
+import {
+  cycleGroups,
+  reciprocalPairs,
+  resolveSpecifier,
+  treeFiles,
+  unitGraph,
+  unitOf,
+} from "../scripts/source-graph";
 
-const SRC = join(process.cwd(), "src");
+const ROOT = process.cwd();
+const TREE = treeFiles(ROOT);
 const IMPORT_SPECIFIER = /from\s+["']([^"']+)["']/g;
 const TABLES_FILE = "platform/db/tables.ts";
 const TABLES_TARGET = "platform/db/tables";
 const SCHEMA_TARGET = /^modules\/([^/]+)\/schema$/;
 const TABLES_IMPORTER_PREFIXES = ["platform/db/", "platform/auth/"];
-
-function sourceFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const path = join(dir, name);
-    if (statSync(path).isDirectory()) return sourceFiles(path);
-    return /\.(ts|tsx)$/.test(name) ? [path] : [];
-  });
-}
-
-/** Resolves an import specifier (the `@/` alias or a relative path) to a src-relative path with no extension; `null` for a package import. */
-function resolveSpecifier(fromRel: string, specifier: string): string | null {
-  if (specifier.startsWith("@/")) return specifier.slice(2);
-  if (specifier.startsWith(".")) return posix.normalize(posix.join(posix.dirname(fromRel), specifier));
-  return null;
-}
 
 function isSchemaFile(rel: string): boolean {
   return rel.split("/").pop() === "schema.ts";
@@ -104,8 +97,7 @@ const SELF = "architecture.test.ts";
 describe("module boundaries", () => {
   it("holds for the real source tree", () => {
     const files = new Map<string, string>();
-    for (const file of sourceFiles(SRC)) {
-      const rel = relative(SRC, file).split(sep).join("/");
+    for (const [rel, file] of TREE) {
       if (rel === SELF) continue;
       files.set(rel, readFileSync(file, "utf8"));
     }
@@ -122,9 +114,9 @@ describe("module boundaries", () => {
  */
 describe("the known modularity violations", () => {
   const known = JSON.parse(
-    readFileSync(join(process.cwd(), "baselines/modularity.json"), "utf8"),
+    readFileSync(join(ROOT, "baselines/modularity.json"), "utf8"),
   ) as ModularityBaseline;
-  const now = measureModularity(SRC);
+  const now = measureModularity(ROOT);
   const added = (before: readonly string[], after: readonly string[]) =>
     after.filter((entry) => !before.includes(entry));
 
@@ -199,8 +191,7 @@ describe("saving an investment key", () => {
 
   function calls(): Map<string, string[]> {
     const found = new Map<string, string[]>();
-    for (const file of sourceFiles(SRC)) {
-      const rel = relative(SRC, file).split(sep).join("/");
+    for (const [rel, file] of TREE) {
       if (rel === SELF || /\.(test|itest)\.tsx?$/.test(rel) || rel === "platform/integrations/service.ts")
         continue;
       const content = readFileSync(file, "utf8");
@@ -213,7 +204,7 @@ describe("saving an investment key", () => {
   it("happens only in the investments sync, twice: connecting and replacing the key", () => {
     const found = calls();
     expect(found.get(OWNER)).toEqual(["provider.id", "provider.id"]);
-    const owner = readFileSync(join(SRC, OWNER), "utf8");
+    const owner = readFileSync(TREE.get(OWNER)!, "utf8");
     const connect = owner.slice(owner.indexOf("export async function connectInvestmentProvider("));
     const replace = owner.slice(owner.indexOf("export async function replaceKey("));
     expect(connect.split("export async function")[1]).toContain("saveConnection(");
@@ -231,7 +222,7 @@ describe("saving an investment key", () => {
 
 describe("the image's dependencies (PERS-87 SEC-04)", () => {
   it("are installed without their install scripts", () => {
-    const dockerfile = readFileSync(join(process.cwd(), "Dockerfile"), "utf8");
+    const dockerfile = readFileSync(join(ROOT, "Dockerfile"), "utf8");
     const installs = dockerfile.split("\n").filter((line) => /\bnpm (ci|install|i)\b/.test(line));
     expect(installs).toEqual(["RUN npm ci --ignore-scripts"]);
   });

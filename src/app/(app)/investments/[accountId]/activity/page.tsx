@@ -2,20 +2,20 @@ import type { Route } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ACTIVITY_FAMILIES, type ActivityFamily, describeEvent } from "@/modules/investments/activity";
-import { legacyPeriodQuery, type Query, sectionPeriod } from "@/modules/investments/period";
+import { ACTIVITY_FAMILIES, type ActivityFamily, describeEvent } from "@ledgerly/domain/investments";
+import { legacyPeriodQuery, type Query, sectionPeriod } from "@ledgerly/domain/investments";
 import {
   type ActivityRow,
   ACTIVITY_PAGE_SIZE,
   serviceActivity,
   serviceMovements,
   servicePnlView,
-} from "@/modules/investments/queries";
+} from "@ledgerly/domain/investments";
 import { LinkTransferButton, OperationMenu, UnlinkTransferButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
-import { type MonthKey, today as todayOn } from "@/platform/dates";
-import { formatDate, formatMoney, monthName } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { type MonthKey, today as todayOn } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, monthName } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

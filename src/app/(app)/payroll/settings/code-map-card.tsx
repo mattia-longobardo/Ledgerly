@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
 import { resetCodeAction, setCodeRoleAction } from "@/modules/payroll/actions";
-import { CODE_ROLES } from "@/modules/payroll/rules";
+import { CODE_ROLES } from "@ledgerly/domain/payroll/client";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input, Select } from "@/ui/input";

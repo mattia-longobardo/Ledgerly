@@ -1,7 +1,7 @@
 import "server-only";
 import { stat, writeFile } from "node:fs/promises";
-import { redactForLog } from "@/platform/auth/logger";
-import { readEnv } from "@/platform/env";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { readEnv } from "@ledgerly/domain/platform/env";
 
 /** Every tick is hourly at most, so two hours without one means the scheduler is gone. */
 export const HEARTBEAT_MAX_AGE_MS = 2 * 60 * 60 * 1000;

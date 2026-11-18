@@ -3,25 +3,25 @@
 // told that the account is no longer chosen. Here and not in a module because it joins six: the
 // accounts module does not read the tables of the others (§4.2), and each owner moves its own rows.
 import "server-only";
-import { getAccount } from "@/modules/accounts/queries";
-import { AccountError, removeAccount } from "@/modules/accounts/service";
-import { BudgetError, limitsOnAccount, moveLimitsAccount } from "@/modules/budgets/service";
+import { getAccount } from "@ledgerly/domain/accounts";
+import { AccountError, removeAccount } from "@ledgerly/domain/accounts";
+import { BudgetError, limitsOnAccount, moveLimitsAccount } from "@ledgerly/domain/budgets";
 import {
   FundError,
   fundsOnAccount,
   moveFundAccount,
   moveFundSourceAccount,
   releaseFormerAccountReferences,
-} from "@/modules/funds/service";
-import { InterestError, moveRuleAccount, rulesToMove } from "@/modules/interests/service";
-import { movePocketAccount, PocketError, pocketsToMove } from "@/modules/pockets/service";
+} from "@ledgerly/domain/funds";
+import { InterestError, moveRuleAccount, rulesToMove } from "@ledgerly/domain/interests";
+import { movePocketAccount, PocketError, pocketsToMove } from "@ledgerly/domain/pockets";
 import {
   moveSubscriptionAccount,
   SubscriptionError,
   subscriptionsToMove,
-} from "@/modules/subscriptions/service";
-import type { Ctx } from "@/platform/context";
-import { skipSourceAccount } from "@/platform/integrations/service";
+} from "@ledgerly/domain/subscriptions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { skipSourceAccount } from "@ledgerly/domain/platform/integrations";
 
 export const DEPENDENT_KINDS = [
   "pocket",

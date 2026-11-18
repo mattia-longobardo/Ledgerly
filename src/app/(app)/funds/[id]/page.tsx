@@ -3,14 +3,14 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { listAccounts } from "@/modules/accounts/queries";
+import { listAccounts } from "@ledgerly/domain/accounts";
 import { colorFor } from "@/modules/accounts/ui/display";
-import { fundSummary, hypothesesOnly, isFundId } from "@/modules/funds/detail";
-import { isFutureYear, valueToday } from "@/modules/funds/home";
-import { fundHomeRow } from "@/modules/funds/home-queries";
-import { hasPayrollCalendar } from "@/modules/funds/queries";
-import { FundError, requireFund, takenComponents } from "@/modules/funds/service";
-import { closesPeriodBefore, inPeriod, legacyFundQuery, valuationLines } from "@/modules/funds/tabs";
+import { fundSummary, hypothesesOnly, isFundId } from "@ledgerly/domain/funds";
+import { isFutureYear, valueToday } from "@ledgerly/domain/funds";
+import { fundHomeRow } from "@ledgerly/domain/funds";
+import { hasPayrollCalendar } from "@ledgerly/domain/funds";
+import { FundError, requireFund, takenComponents } from "@ledgerly/domain/funds";
+import { closesPeriodBefore, inPeriod, legacyFundQuery, valuationLines } from "@ledgerly/domain/funds";
 import { ContributionButton } from "@/modules/funds/ui/contribution-dialog";
 import { FundChart } from "@/modules/funds/ui/fund-chart";
 import { contributionSetup, FundContributions } from "@/modules/funds/ui/fund-contributions";
@@ -34,15 +34,21 @@ import {
   sectionPeriod,
   type Query,
   yearQuery,
-} from "@/modules/investments/period";
+} from "@ledgerly/domain/investments";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { periodText } from "@/modules/investments/ui/period-control";
-import { chargeCandidates } from "@/modules/transactions/queries";
+import { chargeCandidates } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { type CivilDate, today } from "@/platform/dates";
-import { formatDate, formatDecimalText, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { type CivilDate, today } from "@ledgerly/domain/platform/dates";
+import {
+  formatDate,
+  formatDecimalText,
+  formatMoney,
+  formatPercent,
+  NULL_DISPLAY,
+} from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

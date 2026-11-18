@@ -1,12 +1,12 @@
-import { getDb } from "@/platform/db/client";
-import type { Ctx } from "@/platform/context";
-import { today } from "@/platform/dates";
-import { createAccount } from "@/modules/accounts/service";
-import { accountTypeOf } from "@/modules/investments/catalog";
-import { type InvestmentCategory } from "@/modules/investments/rules";
-import { createManualService, rebuild } from "@/modules/investments/service";
-import { investmentAccountPeriods, investmentAccounts } from "@/modules/investments/schema";
-import { transactions } from "@/modules/transactions/schema";
+import { getDb } from "@domain/platform/db/client";
+import type { Ctx } from "@domain/platform/context";
+import { today } from "@domain/platform/dates";
+import { createAccount } from "@domain/modules/accounts/service";
+import { accountTypeOf } from "@domain/modules/investments/catalog";
+import { type InvestmentCategory } from "@domain/modules/investments/rules";
+import { createManualService, rebuild } from "@domain/modules/investments/service";
+import { investmentAccountPeriods, investmentAccounts } from "@domain/modules/investments/schema";
+import { transactions } from "@domain/modules/transactions/schema";
 
 interface ServiceInput {
   name: string;

@@ -1,5 +1,10 @@
-import { formatAmountInput, formatMoney, formatWholePercent, type NumberFormat } from "@/platform/format";
-import { type BudgetRow, budgetSlug } from "../rules";
+import {
+  formatAmountInput,
+  formatMoney,
+  formatWholePercent,
+  type NumberFormat,
+} from "@ledgerly/domain/platform/format";
+import { type BudgetRow, budgetSlug } from "@ledgerly/domain/budgets";
 import type { BudgetRowView } from "./budgets-table";
 
 /** A category with no colour of its own (and no group to borrow one from) is drawn in grey. */

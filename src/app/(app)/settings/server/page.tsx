@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { identityProviderUrl } from "@/platform/auth/provider";
+import { identityProviderUrl } from "@ledgerly/domain/platform/auth";
 import { requireAdmin } from "@/platform/auth/session";
 import { BACKUPS_KEPT, lastBackup, postgresVersion } from "@/platform/backup/service";
 import { lastExport } from "@/platform/export/jobs";
-import { issuerOrigin } from "@/platform/settings/oidc";
+import { issuerOrigin } from "@ledgerly/domain/platform/settings";
 import { NEXT_VERSION } from "@/platform/next-version";
-import { APP_VERSION } from "@/platform/version";
+import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { jobStatuses } from "@/platform/jobs/queries";
-import { llmFallbackView, oidcView, smtpView } from "@/platform/settings/service";
+import { llmFallbackView, oidcView, smtpView } from "@ledgerly/domain/platform/settings";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { formatInstant } from "../integrations/format-instant";
 import { DiagnosticsCard } from "./diagnostics-card";

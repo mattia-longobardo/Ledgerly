@@ -6,9 +6,9 @@
 // Every entry that can start a pass imports it: the tick of the cron sidecar and "Run now".
 import "server-only";
 import { registerPass } from "@/platform/integrations/registry";
-import { PLUGIN_KINDS } from "@/platform/integrations/rules";
-import { findInstancePlugin } from "@/platform/plugins/queries";
-import { institutionOf } from "@/platform/plugins/rules";
+import { PLUGIN_KINDS } from "@ledgerly/domain/platform/integrations";
+import { findInstancePlugin } from "@ledgerly/domain/platform/plugins";
+import { institutionOf } from "@ledgerly/domain/platform/plugins";
 import { runBankPass } from "@/platform/plugins/sync";
 import { bankSink } from "./(app)/banks/sink";
 

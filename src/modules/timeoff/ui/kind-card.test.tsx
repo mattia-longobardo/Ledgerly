@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { MonthBar } from "../rules";
+import type { MonthBar } from "@domain/modules/timeoff/rules";
 import { KindCard, MonthBars } from "./kind-card";
 
 function renderCard(overrides: Partial<Parameters<typeof KindCard>[0]> = {}) {

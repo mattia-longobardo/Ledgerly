@@ -16,13 +16,13 @@
  * tick tries again.
  */
 import "server-only";
-import { contextFor, personById } from "@/modules/users/jobs";
-import { redactForLog } from "@/platform/auth/logger";
+import { contextFor, personById } from "@ledgerly/domain/users";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { runAfterSync } from "@/platform/jobs/after-sync";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { reportConnection } from "./alerts";
-import { asAutomatic } from "./origin";
+import { asAutomatic } from "@ledgerly/domain/platform/integrations";
 import { type PassOutcome, passFor } from "./registry";
 import {
   advanceSchedule,
@@ -30,7 +30,7 @@ import {
   closeOrphanRuns,
   dueConnections,
   findConnection,
-} from "./service";
+} from "@ledgerly/domain/platform/integrations";
 
 /**
  * One pass of the dispatcher at `now`: every connection due by then, each moved on by its own

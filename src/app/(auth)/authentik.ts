@@ -1,5 +1,5 @@
 import { authClient } from "@/platform/auth/client";
-import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
+import { OIDC_PROVIDER_ID } from "@ledgerly/domain/platform/auth/client";
 
 /**
  * Sends the browser to Authentik's login page. Resolves to false when the flow could not start

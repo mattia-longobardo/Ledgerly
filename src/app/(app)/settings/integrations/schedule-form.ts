@@ -1,4 +1,4 @@
-import type { SyncDays, SyncRule, SyncSchedule } from "@/platform/integrations/schedule";
+import type { SyncDays, SyncRule, SyncSchedule } from "@ledgerly/domain/platform/integrations/client";
 
 /** The intervals "Repeat" offers. Any other one is still valid: it opens under "Custom rules". */
 export const REPEAT_MINUTES = [15, 30, 60, 120, 240, 360, 720] as const;

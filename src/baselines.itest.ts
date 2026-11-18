@@ -2,9 +2,9 @@ import { join } from "node:path";
 import { and, eq } from "drizzle-orm";
 import { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { deleteFolder, ensureBucket } from "@/platform/storage";
+import type { Ctx } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
+import { deleteFolder, ensureBucket } from "@domain/platform/storage";
 import { numbersSnapshot } from "../scripts/numbers-snapshot";
 import { canonical } from "../scripts/snapshot-format";
 import { closeDatabase, resetDatabase } from "../test/db";
@@ -15,7 +15,7 @@ import {
   seedReferenceUser,
   type ReferenceUser,
 } from "../test/reference-user";
-import { authAccounts } from "./platform/auth/schema";
+import { authAccounts } from "@domain/platform/auth/schema";
 
 // The reference files of the rewrite plan (docs/design/rewrite-plan/10-modularity.md §10.10): what
 // the read services (B2, the numbers snapshot), the REST API and the MCP tools (B4, the contract)
@@ -29,7 +29,7 @@ let requestHeaders = new Headers();
 vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
 vi.mock("next/server", () => ({ after: () => {} }));
 
-const { getAuth, invalidateAuth } = await import("./platform/auth/auth");
+const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClient } = await import("./platform/auth/api-clients");
 const { resetRateLimits } = await import("./platform/api/rate-limit");
 const { api } = await import("./platform/api/app");

@@ -2,17 +2,17 @@
 // syncs, a movement as Wallet sends it, this month and the last one, a working day, and the
 // exchange rates of a local preview.
 import { eq } from "drizzle-orm";
-import { accounts } from "../../src/modules/accounts/schema";
-import { applyProviderAccounts } from "../../src/modules/accounts/service";
-import { type IncomingTransaction } from "../../src/modules/transactions/rules";
-import { users } from "../../src/platform/auth/schema";
-import { type Ctx } from "../../src/platform/context";
-import { addDays, addMonths, monthKey, today } from "../../src/platform/dates";
-import { getDb } from "../../src/platform/db/client";
-import { userScoped } from "../../src/platform/db/scope";
-import { saveRates, storedRange } from "../../src/platform/fx/service";
-import { isBookable } from "../../src/platform/holidays/rules";
-import { WALLET_PROVIDER } from "../../src/platform/integrations/rules";
+import { accounts } from "@domain/modules/accounts/schema";
+import { applyProviderAccounts } from "@domain/modules/accounts/service";
+import { type IncomingTransaction } from "@domain/modules/transactions/rules";
+import { users } from "@domain/platform/auth/schema";
+import { type Ctx } from "@domain/platform/context";
+import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { userScoped } from "@domain/platform/db/scope";
+import { saveRates, storedRange } from "@domain/platform/fx/service";
+import { isBookable } from "@domain/platform/holidays/rules";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 /**
  * The Expenses journey needs movements that arrived the way real ones do: a synced account adopted

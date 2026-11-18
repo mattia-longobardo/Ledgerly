@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
-import { subscriptionsView } from "@/modules/subscriptions/queries";
+import { subscriptionsView } from "@ledgerly/domain/subscriptions";
 import { requireSession } from "@/platform/auth/session";
 import { csvDocument } from "@/platform/export/csv";
-import { formatAmountInput } from "@/platform/format";
+import { formatAmountInput } from "@ledgerly/domain/platform/format";
 
 /**
  * "Export CSV" of Subscriptions (plan F3 §3.6.10; not wired in the design, and §8.4.2 wants every

@@ -12,15 +12,15 @@ import {
   useState,
   useTransition,
 } from "react";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts/client";
 import {
   formatDate,
   formatMoney,
   type NumberFormat,
   numberSeparators,
   type UiLocale,
-} from "@/platform/format";
-import type { Cents } from "@/platform/money";
+} from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, InputGroup, Select } from "@/ui/input";
@@ -45,7 +45,7 @@ import {
   updateServiceUrlAction,
   updateServiceValueAction,
 } from "../actions";
-import { type AdjustmentClass, PRODUCTS, type InvestmentCategory } from "../rules";
+import { type AdjustmentClass, PRODUCTS, type InvestmentCategory } from "@ledgerly/domain/investments/client";
 import type { AssetChoice, LinkChoice } from "./dialog-rules";
 
 export type { AssetChoice, LinkChoice } from "./dialog-rules";

@@ -5,14 +5,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
-import { suggestFor } from "@/modules/transactions/categorize/service";
-import { MANUAL_KINDS } from "@/modules/transactions/manual-rules";
-import { TransactionError } from "@/modules/transactions/service";
+import { parseAmount } from "@ledgerly/domain/accounts";
+import { suggestFor } from "@ledgerly/domain/transactions";
+import { MANUAL_KINDS } from "@ledgerly/domain/transactions";
+import { TransactionError } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
-import { type CivilDate, isCivilDate, today } from "@/platform/dates";
-import { formatDate, formatMoney } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { type CivilDate, isCivilDate, today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { coreConnectionAction } from "../settings/integrations/actions";
 import {
   changeVisibility,

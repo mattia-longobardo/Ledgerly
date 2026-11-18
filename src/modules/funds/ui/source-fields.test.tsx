@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import messages from "../../../../messages/en.json";
-import { newSourceForm, type SourceForm } from "../forms";
+import { newSourceForm, type SourceForm } from "@domain/modules/funds/forms";
 import { SourceFields, type SourceFieldsProps } from "./source-fields";
 import { sourceErrors, sourceProblems, sourceSummary, type SourcesT } from "./source-text";
 import { createTranslator } from "next-intl";

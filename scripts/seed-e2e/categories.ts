@@ -1,13 +1,13 @@
 // scripts/seed-e2e/categories.ts — the users and the data of the flow `categories` (tests/e2e/categories/).
-import { createAccount } from "../../src/modules/accounts/service";
-import { createDefaultGroups } from "../../src/modules/transactions/categorize/review";
-import { createRule } from "../../src/modules/transactions/categorize/user-rules-service";
-import { categorise } from "../../src/modules/transactions/categorize/service";
-import { DEFAULT_GROUPS } from "../../src/modules/transactions/categorize/tables";
-import { createManualTransaction } from "../../src/modules/transactions/manual";
-import { categorisableAccountIds } from "../../src/modules/transactions/service";
-import { createCategory } from "../../src/modules/transactions/taxonomy";
-import { addDays, today } from "../../src/platform/dates";
+import { createAccount } from "@domain/modules/accounts/service";
+import { createDefaultGroups } from "@domain/modules/transactions/categorize/review";
+import { createRule } from "@domain/modules/transactions/categorize/user-rules-service";
+import { categorise } from "@domain/modules/transactions/categorize/service";
+import { DEFAULT_GROUPS } from "@domain/modules/transactions/categorize/tables";
+import { createManualTransaction } from "@domain/modules/transactions/manual";
+import { categorisableAccountIds } from "@domain/modules/transactions/service";
+import { createCategory } from "@domain/modules/transactions/taxonomy";
+import { addDays, today } from "@domain/platform/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf } from "./common";
 

@@ -12,17 +12,24 @@
  */
 import "server-only";
 import { createTranslator } from "use-intl/core";
-import type { Person } from "@/modules/users/jobs";
-import type { Ctx } from "@/platform/context";
-import { civilDateIn } from "@/platform/dates";
-import { readEnv } from "@/platform/env";
-import { formatDate } from "@/platform/format";
+import type { Person } from "@ledgerly/domain/users";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { readEnv } from "@ledgerly/domain/platform/env";
+import { formatDate } from "@ledgerly/domain/platform/format";
 import { clearNotification, notifyOnce } from "@/platform/notifications/service";
 import en from "../../../messages/en.json";
 import it from "../../../messages/it.json";
 import { labelOf } from "./registry";
-import type { Connection } from "./service";
-import { codeKey, daysToExpiry, expiryWarning, type StatusFacts, syncStatus, warningFor } from "./status";
+import type { Connection } from "@ledgerly/domain/platform/integrations";
+import {
+  codeKey,
+  daysToExpiry,
+  expiryWarning,
+  type StatusFacts,
+  syncStatus,
+  warningFor,
+} from "@ledgerly/domain/platform/integrations";
 
 const CATALOGUES = { en, it } as const;
 

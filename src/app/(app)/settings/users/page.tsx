@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { listPeople } from "@/modules/users/admin";
-import { initialsOf } from "@/modules/users/rules";
+import { initialsOf } from "@ledgerly/domain/users";
 import { InvitePerson } from "@/modules/users/ui/invite-person";
 import { PeopleTable, type PersonView } from "@/modules/users/ui/people-table";
 import { requireAdmin } from "@/platform/auth/session";
-import { civilDateIn } from "@/platform/dates";
-import { formatDate, NULL_DISPLAY } from "@/platform/format";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { formatDate, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 
 export async function generateMetadata(): Promise<Metadata> {

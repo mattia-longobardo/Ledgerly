@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SYNC_SCHEDULE, type SyncDays, type SyncSchedule } from "@/platform/integrations/schedule";
+import {
+  DEFAULT_SYNC_SCHEDULE,
+  type SyncDays,
+  type SyncSchedule,
+} from "@domain/platform/integrations/schedule";
 import { dayChoice, formRules, normalizeTime, scheduleForm } from "./schedule-form";
 
 const every: SyncDays = { kind: "every" };

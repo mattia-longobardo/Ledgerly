@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../messages/en.json";
-import { type ContributionForm, newContributionForm } from "../forms";
+import { type ContributionForm, newContributionForm } from "@domain/modules/funds/forms";
 import { ContributionButton, type ContributionSetup, DeleteContributionButton } from "./contribution-dialog";
 
 type Result = { ok: true } | { ok: false; error: string };

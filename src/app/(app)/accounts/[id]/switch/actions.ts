@@ -4,7 +4,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redactForLog } from "@/platform/auth/logger";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import { runAfterSync } from "@/platform/jobs/after-sync";
 import { requestPresence } from "../../../banks/presence";

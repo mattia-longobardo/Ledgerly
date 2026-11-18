@@ -1,9 +1,9 @@
 import "server-only";
-import { accountsView } from "@/modules/accounts/queries";
-import { transactionsSummary } from "@/modules/transactions/queries";
-import type { Ctx } from "@/platform/context";
-import { lastDayOfMonth, type MonthKey } from "@/platform/dates";
-import type { Cents } from "@/platform/money";
+import { accountsView } from "@ledgerly/domain/accounts";
+import { transactionsSummary } from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { lastDayOfMonth, type MonthKey } from "@ledgerly/domain/platform/dates";
+import type { Cents } from "@ledgerly/domain/platform/money";
 
 /**
  * The figures of one month: what is owned at the end of it, and what moved during it.

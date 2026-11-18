@@ -8,7 +8,7 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Td } from "@/ui/table";
-import type { SummedField } from "../rules";
+import type { SummedField } from "@ledgerly/domain/payroll/client";
 import { type RegisterGroup, STATE_TONE } from "./present";
 
 const MAIN: readonly SummedField[] = ["gross", "taxesTotal", "employeeSocial", "netPay"];

@@ -2,8 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "../../../../messages/en.json";
-import { type AccrualRate, type ForecastInput, forecastOpening } from "../accrual";
-import type { LeaveDayView, ResidualInput } from "../rules";
+import { type AccrualRate, type ForecastInput, forecastOpening } from "@domain/modules/timeoff/accrual";
+import type { LeaveDayView, ResidualInput } from "@domain/modules/timeoff/rules";
 import { leaveTypeOptions } from "./kinds";
 import { type LeavePanelEntry, LeavePanel } from "./leave-panel";
 

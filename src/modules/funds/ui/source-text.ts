@@ -2,17 +2,17 @@
 // source dialog and the list in Settings (release N6, screens §3.3 and §6.2). Pure: the translator
 // comes from the caller, the server's `getTranslations` or the client's `useTranslations`.
 import type { useTranslations } from "next-intl";
-import { parseAmount } from "@/modules/accounts/rules";
-import { type CivilDate, isCivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@/platform/format";
-import type { SourceForm } from "../forms";
+import { parseAmount } from "@ledgerly/domain/accounts/client";
+import { type CivilDate, isCivilDate } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
+import type { SourceForm } from "@ledgerly/domain/funds/client";
 import {
   type DueCalendar,
   type DueEntry,
   type IntervalUnit,
   PAYROLL_COMPONENTS,
   type PayrollComponent,
-} from "../sources";
+} from "@ledgerly/domain/funds/client";
 
 export type SourcesT = ReturnType<typeof useTranslations<"funds.sources">>;
 

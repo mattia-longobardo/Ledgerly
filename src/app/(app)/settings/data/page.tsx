@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { listSnapshotRuns } from "@/modules/accounts/queries";
+import { listSnapshotRuns } from "@ledgerly/domain/accounts";
 import { SnapshotButton } from "@/modules/accounts/ui/snapshot-button";
 import { requireSession } from "@/platform/auth/session";
-import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
+import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { buttonClassName } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";

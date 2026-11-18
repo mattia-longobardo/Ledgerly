@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
-import { identityProviderUrl } from "@/platform/auth/provider";
+import { identityProviderUrl } from "@ledgerly/domain/platform/auth";
 import { buttonClassName } from "@/ui/button";
 import { PasswordForm } from "./password-form";
 

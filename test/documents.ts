@@ -1,8 +1,8 @@
 // test/documents.ts — raw access to imported documents, for integration tests that stage a state
 // the services never produce by themselves (a stuck reading, a lost original, an expired one).
 import { eq } from "drizzle-orm";
-import { documents } from "@/modules/imports/schema";
-import { getDb } from "@/platform/db/client";
+import { documents } from "@domain/modules/imports/schema";
+import { getDb } from "@domain/platform/db/client";
 
 type Patch = Partial<typeof documents.$inferInsert>;
 

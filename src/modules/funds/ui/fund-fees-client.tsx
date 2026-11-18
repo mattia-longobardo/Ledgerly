@@ -3,11 +3,11 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
-import type { CivilDate } from "@/platform/dates";
-import type { NumberFormat, UiLocale } from "@/platform/format";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { NumberFormat, UiLocale } from "@ledgerly/domain/platform/format";
 import { notify } from "@/ui/toast";
 import { removeFeeAction, saveFeeAction } from "../actions";
-import type { FeeForm } from "../forms";
+import type { FeeForm } from "@ledgerly/domain/funds/client";
 import { CompactEmpty } from "./compact-empty";
 import { FeeManager } from "./fee-list";
 import type { FeeScopeOption } from "./fee-text";

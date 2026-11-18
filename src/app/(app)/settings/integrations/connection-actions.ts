@@ -10,22 +10,22 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import "@/app/plugin-wiring";
 import { syncNowAction } from "@/modules/investments/actions";
-import { providerOf } from "@/modules/investments/catalog";
-import { listInvestmentAccounts } from "@/modules/investments/service";
-import { redactForLog } from "@/platform/auth/logger";
+import { providerOf } from "@ledgerly/domain/investments";
+import { listInvestmentAccounts } from "@ledgerly/domain/investments";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import { labelOf, passFor } from "@/platform/integrations/registry";
-import { isPluginProvider } from "@/platform/integrations/rules";
+import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
 import {
   type Connection,
   findConnection,
   IntegrationError,
   makeDueNow,
   saveSchedule,
-} from "@/platform/integrations/service";
-import { codeKey } from "@/platform/integrations/status";
+} from "@ledgerly/domain/platform/integrations";
+import { codeKey } from "@ledgerly/domain/platform/integrations";
 import { runAfterSync } from "@/platform/jobs/after-sync";
-import { BANK_SCHEDULE } from "@/platform/plugins/rules";
+import { BANK_SCHEDULE } from "@ledgerly/domain/platform/plugins";
 import { PluginActionError, setPluginActive } from "@/platform/plugins/service";
 import { readBank } from "@/platform/plugins/sync";
 import { requestPresence } from "../../banks/presence";

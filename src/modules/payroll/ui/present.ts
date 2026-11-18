@@ -1,8 +1,8 @@
-import type { Evidence } from "@/modules/imports/service";
-import type { DocumentState } from "@/modules/imports/rules";
-import type { Ctx } from "@/platform/context";
-import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
-import { type Cents, parseCents } from "@/platform/money";
+import type { Evidence } from "@ledgerly/domain/imports/client";
+import type { DocumentState } from "@ledgerly/domain/imports/client";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import { type Cents, parseCents } from "@ledgerly/domain/platform/money";
 import {
   effectiveValue,
   FIELD_GROUPS,
@@ -11,9 +11,9 @@ import {
   type FieldGroup,
   type FieldName,
   isDerived,
-} from "../fields";
-import type { RegisterRow, YearSummary } from "../queries";
-import { type PayslipType, SUMMED_FIELDS, type SummedField } from "../rules";
+} from "@ledgerly/domain/payroll/client";
+import type { RegisterRow, YearSummary } from "@ledgerly/domain/payroll/client";
+import { type PayslipType, SUMMED_FIELDS, type SummedField } from "@ledgerly/domain/payroll/client";
 
 type Format = Pick<Ctx, "numberFormat" | "locale">;
 

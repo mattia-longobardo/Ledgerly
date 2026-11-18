@@ -2,15 +2,15 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, gt, isNull, lt, or, sql, TransactionRollbackError } from "drizzle-orm";
 import { z } from "zod";
-import type { Role } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { readEnv } from "@/platform/env";
-import { sendMail } from "@/platform/mail";
-import { mailAllowed } from "@/platform/settings/config";
-import type { Auth } from "./auth";
-import { invitationEmail } from "./emails";
-import { isPasswordLengthValid } from "./password-policy";
-import { invitations, users } from "./schema";
+import type { Role } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { readEnv } from "@ledgerly/domain/platform/env";
+import { sendMail } from "@ledgerly/domain/platform/mail";
+import { mailAllowed } from "@ledgerly/domain/platform/settings";
+import type { Auth } from "@ledgerly/domain/platform/auth";
+import { invitationEmail } from "@ledgerly/domain/platform/auth";
+import { isPasswordLengthValid } from "@ledgerly/domain/platform/auth";
+import { invitations, users } from "@ledgerly/domain/platform/auth";
 
 export const INVITATION_TTL_DAYS = 7;
 

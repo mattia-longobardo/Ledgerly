@@ -1,6 +1,6 @@
 // `npm run db:migrate` locally; bundled to /app/migrate.mjs in the image.
 import { Pool } from "pg";
-import { runMigrations } from "../src/platform/db/migrate";
+import { runMigrations } from "@domain/platform/db/migrate";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is not set");

@@ -1,8 +1,8 @@
 // scripts/seed-e2e/pockets.ts — the users and the data of the flow `pockets` (tests/e2e/pockets/).
-import { saveBalanceEntry } from "../../src/modules/accounts/service";
-import { addPlannedExpense, addToPocket, createPocket } from "../../src/modules/pockets/service";
-import { upsertFromProvider } from "../../src/modules/transactions/service";
-import { addDays, today } from "../../src/platform/dates";
+import { saveBalanceEntry } from "@domain/modules/accounts/service";
+import { addPlannedExpense, addToPocket, createPocket } from "@domain/modules/pockets/service";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { addDays, today } from "@domain/platform/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
 

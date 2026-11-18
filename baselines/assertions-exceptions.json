@@ -278,5 +278,30 @@
     "file": "packages/plugin-contract/src/isolation.test.ts",
     "decision": "R0",
     "reason": "monorepo: the contract is the package `plugin-contract`; only its path and the package name the plugin imports changed"
+  },
+  {
+    "file": "packages/domain/src/platform/auth/oauth.itest.ts",
+    "decision": "R0",
+    "reason": "monorepo: the path of a dynamic import changed, and Prettier wrapped its line again"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/records.test.ts",
+    "decision": "R0",
+    "reason": "monorepo: only the paths of the mocks changed, and Prettier wrapped one of them"
+  },
+  {
+    "file": "src/architecture.test.ts",
+    "decision": "R0",
+    "reason": "monorepo: the tree is read from every package (scripts/source-graph.ts); the rules and the lists are the same"
+  },
+  {
+    "file": "src/modules/funds/removed.test.ts",
+    "decision": "R0",
+    "reason": "monorepo: the folders it searches include packages/domain/src, where the files of Funds are now"
+  },
+  {
+    "file": "src/modules/transactions/categorize/boundaries.test.ts",
+    "decision": "R0",
+    "reason": "monorepo: a path of the tree is read wherever its package keeps the file; the paths and assertions are the same"
   }
 ]

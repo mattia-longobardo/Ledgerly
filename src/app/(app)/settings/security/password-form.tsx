@@ -7,7 +7,7 @@ import {
   isPasswordLengthValid,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
-} from "@/platform/auth/password-policy";
+} from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@/ui/button";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";

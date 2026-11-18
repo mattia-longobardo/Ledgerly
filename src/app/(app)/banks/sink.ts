@@ -4,7 +4,7 @@
 // with the accounts' and the transactions' own services, and holds no rule of its own beyond
 // turning one shape into the other.
 import "server-only";
-import { ACCOUNT_TYPES } from "@/modules/accounts/rules";
+import { ACCOUNT_TYPES } from "@ledgerly/domain/accounts";
 import {
   AccountError,
   accountsOfProvider,
@@ -14,20 +14,20 @@ import {
   ibanOwnersOf,
   saveProviderBalance,
   saveSourceIbans,
-} from "@/modules/accounts/service";
-import type { IncomingTransaction } from "@/modules/transactions/rules";
-import { categorise } from "@/modules/transactions/categorize/service";
-import { categorisableAccountIds, upsertFromProvider } from "@/modules/transactions/service";
-import { addSwitchCounts, openSwitches, openSwitchOf } from "@/modules/accounts/switching";
-import { planTransfers } from "@/modules/transactions/switch-rules";
-import { transferCandidates, writeTransferPairs } from "@/modules/transactions/switching";
-import type { Ctx } from "@/platform/context";
-import { type CivilDate, civilDateIn, wallClockIn } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
-import { isPluginProvider, pluginProvider } from "@/platform/integrations/rules";
+} from "@ledgerly/domain/accounts";
+import type { IncomingTransaction } from "@ledgerly/domain/transactions";
+import { categorise } from "@ledgerly/domain/transactions";
+import { categorisableAccountIds, upsertFromProvider } from "@ledgerly/domain/transactions";
+import { addSwitchCounts, openSwitches, openSwitchOf } from "@ledgerly/domain/accounts";
+import { planTransfers } from "@ledgerly/domain/transactions";
+import { transferCandidates, writeTransferPairs } from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { type CivilDate, civilDateIn, wallClockIn } from "@ledgerly/domain/platform/dates";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { isPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { connectionSharing } from "@/platform/plugins/service";
 import { exposedAccounts } from "@/platform/plugins/sync";
-import { parseCents } from "@/platform/money";
+import { parseCents } from "@ledgerly/domain/platform/money";
 import { type BankSink, type ReadingMovement, SinkRefusal } from "@/platform/plugins/ports";
 
 type AccountType = (typeof ACCOUNT_TYPES)[number];

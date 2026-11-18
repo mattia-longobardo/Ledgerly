@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
-import { type TwoFactorErrorKey, twoFactorErrorKey } from "@/modules/users/two-factor";
+import { type TwoFactorErrorKey, twoFactorErrorKey } from "@ledgerly/domain/users/client";
 import { RecoveryCodes } from "@/modules/users/ui/recovery-codes";
 import { TwoFactorSetup } from "@/modules/users/ui/two-factor-setup";
 import { authClient } from "@/platform/auth/client";
-import type { TwoFactorPolicy } from "@/platform/auth/two-factor-policy";
+import type { TwoFactorPolicy } from "@ledgerly/domain/platform/auth/client";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";

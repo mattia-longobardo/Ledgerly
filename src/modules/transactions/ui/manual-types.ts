@@ -3,7 +3,7 @@
  * The writes and the reads are passed in by the page: they join two modules, so they are Server
  * Actions of the application and no component of this module imports them.
  */
-import type { ManualKind } from "../manual-rules";
+import type { ManualKind } from "@ledgerly/domain/transactions";
 import type { CommandResult } from "./commands";
 
 export type { ManualKind };

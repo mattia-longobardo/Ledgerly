@@ -4,17 +4,17 @@
 // provider: an account kept by hand asks nothing here.
 import "server-only";
 import "@/app/plugin-wiring";
-import type { Ctx } from "@/platform/context";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 import { labelOf } from "@/platform/integrations/registry";
-import { isPluginProvider } from "@/platform/integrations/rules";
+import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
 import {
   type Connection,
   listConnections,
   readSyncJob,
   recentRuns,
   SYNC_RUN_RETENTION_DAYS,
-} from "@/platform/integrations/service";
-import { credentialsStatus, isPluginActive } from "@/platform/plugins/queries";
+} from "@ledgerly/domain/platform/integrations";
+import { credentialsStatus, isPluginActive } from "@ledgerly/domain/platform/plugins";
 import { connectionSharing } from "@/platform/plugins/service";
 import type { ConnectionRowProps } from "../../settings/integrations/connection-row";
 import {

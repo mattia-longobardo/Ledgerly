@@ -1,4 +1,4 @@
-import { type Cents, centsToDecimal } from "@/platform/money";
+import { type Cents, centsToDecimal } from "@ledgerly/domain/platform/money";
 import { csvDocument } from "./csv";
 
 /**

@@ -1,16 +1,16 @@
 // What the hourly budget alerts send (spec §7.3): the highest threshold a budget has reached this
 // month, once, and nothing for a budget whose alerts are off.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { upsertFromProvider } from "@/modules/transactions/service";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
-import { notificationsLog } from "@/platform/notifications/schema";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import type { Ctx } from "@domain/platform/context";
+import { monthKey, today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { notificationsLog } from "@domain/platform/notifications/schema";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { anAccount, movement, newContext } from "../../../test/fixtures";
 import { BUDGET_ALERT_KIND, budgetAlertsJob } from "./jobs";
-import { budgetDetail } from "./queries";
-import { saveAlerts, setLimit } from "./service";
+import { budgetDetail } from "@domain/modules/budgets/queries";
+import { saveAlerts, setLimit } from "@domain/modules/budgets/service";
 
 // One instant for the whole file, for the clock of JavaScript alone: "today" read at two moments is
 // two days when midnight falls between them, and a test that crosses it fails for no fault.

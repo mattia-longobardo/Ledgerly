@@ -6,14 +6,14 @@
 // and `importedPosition` write the rows a document left before N6: the app reads them, as history,
 // and nothing in it writes them any more.
 import { and, eq } from "drizzle-orm";
-import { saveImportBalance } from "@/modules/accounts/service";
+import { saveImportBalance } from "@domain/modules/accounts/service";
 import {
   fundContributionSources,
   fundFees,
   fundOperations,
   positionSnapshots,
   unitMovements,
-} from "@/modules/funds/schema";
+} from "@domain/modules/funds/schema";
 import {
   addContribution,
   createFund,
@@ -21,11 +21,11 @@ import {
   type FundOperation,
   setSourceState,
   sourcesOf,
-} from "@/modules/funds/service";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { userScoped } from "@/platform/db/scope";
-import type { Cents } from "@/platform/money";
+} from "@domain/modules/funds/service";
+import type { Ctx } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
+import { userScoped } from "@domain/platform/db/scope";
+import type { Cents } from "@domain/platform/money";
 
 /** A text no movement carries: a debit source that finds nothing until a test gives it a payee. */
 const NO_MATCH = "no-movement-carries-this";

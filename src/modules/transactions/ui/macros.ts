@@ -2,8 +2,8 @@
 // §2, §5.2, §5.3): the three macros, their groups and categories, with the totals of a period.
 // Pure, on the server: the page reads the categories and the totals, this decides where each
 // amount is drawn.
-import { type CategoryMacroTotal, shareOf } from "../queries";
-import { type CategoryType, CATEGORY_TYPES } from "../rules";
+import { type CategoryMacroTotal, shareOf } from "@ledgerly/domain/transactions";
+import { type CategoryType, CATEGORY_TYPES } from "@ledgerly/domain/transactions";
 
 /** Income, Expenses, Transfers: the type of a category, always in this order (CR1). */
 export const MACROS = CATEGORY_TYPES;

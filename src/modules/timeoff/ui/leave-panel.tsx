@@ -5,8 +5,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, type RefObject, useId, useMemo, useState } from "react";
-import { daysBetween, isCivilDate } from "@/platform/dates";
-import { type UiLocale, formatDate } from "@/platform/format";
+import { daysBetween, isCivilDate } from "@ledgerly/domain/platform/dates";
+import { type UiLocale, formatDate } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Button, LinkButton } from "@/ui/button";
 import { cn } from "@/ui/cn";
@@ -14,7 +14,7 @@ import { Field } from "@/ui/field";
 import { Input, Select, Textarea } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { Segmented } from "@/ui/segmented";
-import { type ForecastInput, forecastChange } from "../accrual";
+import { type ForecastInput, forecastChange } from "@ledgerly/domain/timeoff/client";
 import type { LeaveFormInput } from "../actions";
 import {
   type LeaveDayKind,
@@ -23,7 +23,7 @@ import {
   MAX_RANGE_DAYS,
   otherHalfOf,
   previewLeaveRange,
-} from "../rules";
+} from "@ledgerly/domain/timeoff/client";
 import { type LeaveTypeOption, fullDate, rangeEnds, shortDay } from "./kinds";
 
 /** A booked row as the panel and the table's buttons need it. */

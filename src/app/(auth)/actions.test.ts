@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
+import { MAX_NAME_LENGTH } from "@domain/platform/auth/name-policy";
 import { acceptInviteAction } from "./actions";
 
 const { acceptInvitation, signInEmail, InvitationError } = vi.hoisted(() => ({
@@ -12,7 +12,7 @@ const { acceptInvitation, signInEmail, InvitationError } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@/platform/auth/auth", () => ({ getAuth: () => ({ api: { signInEmail } }) }));
+vi.mock("@domain/platform/auth/auth", () => ({ getAuth: () => ({ api: { signInEmail } }) }));
 vi.mock("@/platform/auth/invitations", () => ({ acceptInvitation, InvitationError }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 

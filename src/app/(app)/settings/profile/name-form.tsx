@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useRef, useState, useTransition } from "react";
 import { updateNameAction } from "@/modules/users/actions";
-import type { Role } from "@/platform/context";
-import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
+import type { Role } from "@ledgerly/domain/platform/context";
+import { MAX_NAME_LENGTH } from "@ledgerly/domain/platform/auth/client";
 import { Avatar } from "@/ui/avatar";
 import { CardFooter } from "@/ui/card";
 import { Field } from "@/ui/field";

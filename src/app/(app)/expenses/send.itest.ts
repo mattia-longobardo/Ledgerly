@@ -5,21 +5,26 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { balancesOn, listAccounts } from "@/modules/accounts/queries";
-import { createManualTransaction } from "@/modules/transactions/manual";
-import { listTransactions } from "@/modules/transactions/queries";
-import { updateTransaction } from "@/modules/transactions/service";
-import { chooseSourceCategory, listSourceCategories } from "@/modules/transactions/source-categories";
-import { listCategories } from "@/modules/transactions/taxonomy";
-import type { Ctx } from "@/platform/context";
-import { addDays, today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
-import { WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { DEFAULT_SYNC_SCHEDULE } from "@/platform/integrations/schedule";
-import { listRuns, resolveExternal, saveConnection, saveSchedule } from "@/platform/integrations/service";
-import type { WalletClientOptions } from "@/platform/integrations/wallet/client";
-import { sendMarker } from "@/platform/integrations/wallet/send";
-import { syncWalletNow } from "@/platform/integrations/wallet/sync";
+import { balancesOn, listAccounts } from "@domain/modules/accounts/queries";
+import { createManualTransaction } from "@domain/modules/transactions/manual";
+import { listTransactions } from "@domain/modules/transactions/queries";
+import { updateTransaction } from "@domain/modules/transactions/service";
+import { chooseSourceCategory, listSourceCategories } from "@domain/modules/transactions/source-categories";
+import { listCategories } from "@domain/modules/transactions/taxonomy";
+import type { Ctx } from "@domain/platform/context";
+import { addDays, today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { DEFAULT_SYNC_SCHEDULE } from "@domain/platform/integrations/schedule";
+import {
+  listRuns,
+  resolveExternal,
+  saveConnection,
+  saveSchedule,
+} from "@domain/platform/integrations/service";
+import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
+import { sendMarker } from "@domain/platform/integrations/wallet/send";
+import { syncWalletNow } from "@domain/platform/integrations/wallet/sync";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";
 import {

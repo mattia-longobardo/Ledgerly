@@ -5,7 +5,7 @@ import {
   expensesView,
   spendingOverTime,
   type TransactionRow as QueryRow,
-} from "@/modules/transactions/queries";
+} from "@ledgerly/domain/transactions";
 import { dayLabels, monthLabels } from "@/modules/accounts/ui/display";
 import { type SpendingBand, SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { BreakdownCard } from "@/modules/transactions/ui/breakdown-card";
@@ -40,10 +40,10 @@ import { requireSession } from "@/platform/auth/session";
 import { sendSourceNames } from "./manual";
 import { ExpensesTabs } from "./tabs";
 import { rowViewOf } from "./row-view";
-import { addDays, monthKey, monthsBetween, today } from "@/platform/dates";
-import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
-import { walletEditableIds } from "@/platform/integrations/wallet/records";
-import type { Cents } from "@/platform/money";
+import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/platform/dates";
+import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import { walletEditableIds } from "@ledgerly/domain/platform/integrations/wallet";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/shell/page";

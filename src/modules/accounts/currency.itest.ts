@@ -1,17 +1,23 @@
 // Display currency (docs/design/investments.md §1.8, §2.3, phase 1b): every account keeps its own
 // currency, and every total converts each account at the ECB rate of its day before summing.
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { contextFor as jobContextFor } from "@/modules/users/jobs";
-import { updatePreferences } from "@/modules/users/service";
-import { DEFAULT_PREFERENCES } from "@/modules/users/rules";
-import type { Ctx } from "@/platform/context";
-import { saveRates } from "@/platform/fx/service";
+import { contextFor as jobContextFor } from "@domain/modules/users/jobs";
+import { updatePreferences } from "@domain/modules/users/service";
+import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
+import type { Ctx } from "@domain/platform/context";
+import { saveRates } from "@domain/platform/fx/service";
 import { monthlyFigures } from "@/platform/reports/monthly";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
-import { accountsView, listSnapshotRuns } from "./queries";
-import { totalSeries } from "./rules";
-import { AccountError, createAccount, runSnapshot, saveBalanceEntry, updateAccountSettings } from "./service";
+import { accountsView, listSnapshotRuns } from "@domain/modules/accounts/queries";
+import { totalSeries } from "@domain/modules/accounts/rules";
+import {
+  AccountError,
+  createAccount,
+  runSnapshot,
+  saveBalanceEntry,
+  updateAccountSettings,
+} from "@domain/modules/accounts/service";
 
 const BASE = {
   color: null,

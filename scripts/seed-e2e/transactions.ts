@@ -3,20 +3,16 @@ import { and, eq } from "drizzle-orm";
 import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../src/app/(app)/banks/plugin";
 import { createManual } from "../../src/app/(app)/expenses/manual";
 import { setSourceCategory } from "../../src/app/(app)/settings/categories/source";
-import { accounts } from "../../src/modules/accounts/schema";
-import {
-  applyProviderAccounts,
-  createAccount,
-  saveProviderBalance,
-} from "../../src/modules/accounts/service";
-import { markNotSent } from "../../src/modules/transactions/sending";
-import { upsertFromProvider } from "../../src/modules/transactions/service";
-import { keepSourceCategory, listSourceCategories } from "../../src/modules/transactions/source-categories";
-import { createCategory, listCategories } from "../../src/modules/transactions/taxonomy";
-import { addDays, today } from "../../src/platform/dates";
-import { getDb } from "../../src/platform/db/client";
-import { userScoped } from "../../src/platform/db/scope";
-import { pluginProvider } from "../../src/platform/integrations/rules";
+import { accounts } from "@domain/modules/accounts/schema";
+import { applyProviderAccounts, createAccount, saveProviderBalance } from "@domain/modules/accounts/service";
+import { markNotSent } from "@domain/modules/transactions/sending";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { keepSourceCategory, listSourceCategories } from "@domain/modules/transactions/source-categories";
+import { createCategory, listCategories } from "@domain/modules/transactions/taxonomy";
+import { addDays, today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { userScoped } from "@domain/platform/db/scope";
+import { pluginProvider } from "@domain/platform/integrations/rules";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, lastMonthOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
 

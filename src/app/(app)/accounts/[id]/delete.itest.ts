@@ -5,17 +5,17 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { getAccount, listAccounts } from "@/modules/accounts/queries";
-import { applyProviderAccounts, archiveAccount, createAccount } from "@/modules/accounts/service";
-import { setLimit } from "@/modules/budgets/service";
-import { createRule } from "@/modules/interests/service";
-import { createPocket } from "@/modules/pockets/service";
-import { createSubscription } from "@/modules/subscriptions/service";
-import { createCategory } from "@/modules/transactions/taxonomy";
-import { listTransactions } from "@/modules/transactions/queries";
-import type { Ctx } from "@/platform/context";
-import { addDays } from "@/platform/dates";
-import { WALLET_PROVIDER } from "@/platform/integrations/rules";
+import { getAccount, listAccounts } from "@domain/modules/accounts/queries";
+import { applyProviderAccounts, archiveAccount, createAccount } from "@domain/modules/accounts/service";
+import { setLimit } from "@domain/modules/budgets/service";
+import { createRule } from "@domain/modules/interests/service";
+import { createPocket } from "@domain/modules/pockets/service";
+import { createSubscription } from "@domain/modules/subscriptions/service";
+import { createCategory } from "@domain/modules/transactions/taxonomy";
+import { listTransactions } from "@domain/modules/transactions/queries";
+import type { Ctx } from "@domain/platform/context";
+import { addDays } from "@domain/platform/dates";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import {
   deleteConnection,
   readSyncJob,
@@ -23,14 +23,14 @@ import {
   saveConnection,
   saveSchedule,
   skippedAccounts,
-} from "@/platform/integrations/service";
-import type { WalletClientOptions } from "@/platform/integrations/wallet/client";
+} from "@domain/platform/integrations/service";
+import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
 import {
   chooseWalletAccounts,
   requestWalletBackfill,
   syncWalletNow,
   walletAccountChoices,
-} from "@/platform/integrations/wallet/sync";
+} from "@domain/platform/integrations/wallet/sync";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { debitFund } from "../../../../../test/funds";
 import { createTestUser } from "../../../../../test/users";

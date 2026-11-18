@@ -1,14 +1,16 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { treeFiles } from "../../../../scripts/source-graph";
 
 // "The model does not leave" (rewrite plan N3, "Test e gate"; 04-now.md §4.4 "Dati"): the memory,
 // the model, the confidence and the model's version are for the cascade only. What a person takes
 // out of the app — the export, the API, MCP — is built field by field from the modules' read
 // models, so it is enough that none of those files, and no shape a browser is handed, names them.
 
-const SRC = join(__dirname, "../../..");
-const read = (path: string) => readFileSync(join(SRC, path), "utf8");
+// A path of the one source tree, wherever its package keeps the file (R0: `scripts/source-graph.ts`).
+const TREE = treeFiles(join(__dirname, "../../../.."));
+const read = (path: string) => readFileSync(TREE.get(path) ?? path, "utf8");
 
 const PRIVATE = [
   "categoryModels",

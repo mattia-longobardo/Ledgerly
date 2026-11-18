@@ -1,4 +1,4 @@
-import { readOriginal } from "@/modules/imports/service";
+import { readOriginal } from "@ledgerly/domain/imports";
 import { requireSession } from "@/platform/auth/session";
 
 /**

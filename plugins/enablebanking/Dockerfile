@@ -6,6 +6,7 @@
 FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
 COPY plugins/enablebanking/package.json ./plugins/enablebanking/
 RUN npm ci --ignore-scripts

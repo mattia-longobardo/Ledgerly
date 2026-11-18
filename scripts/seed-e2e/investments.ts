@@ -1,10 +1,10 @@
 // scripts/seed-e2e/investments.ts — the users and the data of the flow `investments` (tests/e2e/investments/).
-import { createAccount, saveBalanceEntry, saveProviderBalance } from "../../src/modules/accounts/service";
-import { connectInvestmentProvider, setSourcesForTests } from "../../src/modules/investments/sync";
-import { upsertFromProvider } from "../../src/modules/transactions/service";
-import { type Ctx } from "../../src/platform/context";
-import { addDays, today } from "../../src/platform/dates";
-import { listConnections, saveSchedule } from "../../src/platform/integrations/service";
+import { createAccount, saveBalanceEntry, saveProviderBalance } from "@domain/modules/accounts/service";
+import { connectInvestmentProvider, setSourcesForTests } from "@domain/modules/investments/sync";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { type Ctx } from "@domain/platform/context";
+import { addDays, today } from "@domain/platform/dates";
+import { listConnections, saveSchedule } from "@domain/platform/integrations/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
 

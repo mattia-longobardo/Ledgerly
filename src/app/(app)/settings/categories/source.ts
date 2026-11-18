@@ -5,7 +5,7 @@
 // them (rule M8). A change is one transaction — the movements, the category put away and the
 // limits, or nothing — and so is its "Undo".
 import "server-only";
-import { limitsSnapshot, type LimitsSnapshot, mergeLimits, restoreLimits } from "@/modules/budgets/service";
+import { limitsSnapshot, type LimitsSnapshot, mergeLimits, restoreLimits } from "@ledgerly/domain/budgets";
 import {
   chooseSourceCategory,
   listSourceCategories,
@@ -14,11 +14,11 @@ import {
   type SourceCategoryView,
   sourceNamesByCategory,
   undoSourceCategory,
-} from "@/modules/transactions/source-categories";
-import { colorOfCategory, listCategoriesWithUsage } from "@/modules/transactions/taxonomy";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+} from "@ledgerly/domain/transactions";
+import { colorOfCategory, listCategoriesWithUsage } from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { getDb } from "@ledgerly/domain/platform/db";
 import { labelOf } from "@/platform/integrations/registry";
 
 import type { SourceCategoryRow } from "./source-categories";

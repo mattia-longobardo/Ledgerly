@@ -15,39 +15,43 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { accountsView, listBalanceEntries } from "../src/modules/accounts/queries";
-import { accounts, balanceEntries } from "../src/modules/accounts/schema";
-import { budgetsView } from "../src/modules/budgets/queries";
-import { setLimit } from "../src/modules/budgets/service";
-import { fundHomeRow, fundsHomeRows } from "../src/modules/funds/home-queries";
-import { recordValuation } from "../src/modules/funds/service";
-import { rulesOnAccount } from "../src/modules/interests/queries";
-import { createRule } from "../src/modules/interests/service";
+import { accountsView, listBalanceEntries } from "@domain/modules/accounts/queries";
+import { accounts, balanceEntries } from "@domain/modules/accounts/schema";
+import { budgetsView } from "@domain/modules/budgets/queries";
+import { setLimit } from "@domain/modules/budgets/service";
+import { fundHomeRow, fundsHomeRows } from "@domain/modules/funds/home-queries";
+import { recordValuation } from "@domain/modules/funds/service";
+import { rulesOnAccount } from "@domain/modules/interests/queries";
+import { createRule } from "@domain/modules/interests/service";
 import {
   investmentsHome,
   investmentsPnlView,
   serviceDetail,
   servicePnlView,
-} from "../src/modules/investments/queries";
-import { updateServiceValue } from "../src/modules/investments/service";
-import { pocketsOnAccount, pocketsTotal, pocketsView } from "../src/modules/pockets/queries";
-import { addToPocket, createPocket } from "../src/modules/pockets/service";
-import { subscriptionsOnAccount, subscriptionsView, suggestions } from "../src/modules/subscriptions/queries";
-import { createSubscription } from "../src/modules/subscriptions/service";
-import { timeOffView } from "../src/modules/timeoff/queries";
-import { saveAllowance, saveLeaveDay } from "../src/modules/timeoff/service";
-import { expensesView } from "../src/modules/transactions/queries";
-import { categories, transactions } from "../src/modules/transactions/schema";
+} from "@domain/modules/investments/queries";
+import { updateServiceValue } from "@domain/modules/investments/service";
+import { pocketsOnAccount, pocketsTotal, pocketsView } from "@domain/modules/pockets/queries";
+import { addToPocket, createPocket } from "@domain/modules/pockets/service";
+import {
+  subscriptionsOnAccount,
+  subscriptionsView,
+  suggestions,
+} from "@domain/modules/subscriptions/queries";
+import { createSubscription } from "@domain/modules/subscriptions/service";
+import { timeOffView } from "@domain/modules/timeoff/queries";
+import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
+import { expensesView } from "@domain/modules/transactions/queries";
+import { categories, transactions } from "@domain/modules/transactions/schema";
 import { api } from "../src/platform/api/app";
 import { resetRateLimits } from "../src/platform/api/rate-limit";
 import { createApiClientWith, deleteApiClient } from "../src/platform/auth/api-clients";
-import { getAuth } from "../src/platform/auth/auth";
-import { authAccounts, users } from "../src/platform/auth/schema";
-import type { Ctx } from "../src/platform/context";
-import { addDays, addMonths, monthKey, today } from "../src/platform/dates";
-import { getDb, getPool } from "../src/platform/db/client";
-import * as tables from "../src/platform/db/tables";
-import { readEnv } from "../src/platform/env";
+import { getAuth } from "@domain/platform/auth/auth";
+import { authAccounts, users } from "@domain/platform/auth/schema";
+import type { Ctx } from "@domain/platform/context";
+import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { getDb, getPool } from "@domain/platform/db/client";
+import * as tables from "@domain/platform/db/tables";
+import { readEnv } from "@domain/platform/env";
 import { addDeposit, debitFund } from "../test/funds";
 import { accountMovement, manualService } from "../test/investments";
 

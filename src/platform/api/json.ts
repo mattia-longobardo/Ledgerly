@@ -1,4 +1,4 @@
-import { type Cents, centsToDecimal, parseCents } from "@/platform/money";
+import { type Cents, centsToDecimal, parseCents } from "@ledgerly/domain/platform/money";
 
 /**
  * Money on the wire. Amounts are `bigint` cents everywhere in this codebase, and JSON's number is

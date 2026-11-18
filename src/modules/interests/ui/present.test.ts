@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { NumberStyle } from "@/platform/format";
+import type { NumberStyle } from "@domain/platform/format";
 import { formatRate, rateInput, readRate } from "./present";
 
 const style = (overrides: Partial<NumberStyle>): NumberStyle => ({

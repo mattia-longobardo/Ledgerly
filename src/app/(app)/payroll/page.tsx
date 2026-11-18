@@ -1,14 +1,14 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { registerView } from "@/modules/payroll/queries";
+import { registerView } from "@ledgerly/domain/payroll";
 import { AddPayslips } from "@/modules/payroll/ui/add-payslips";
 import { AutoRefresh } from "@/modules/payroll/ui/auto-refresh";
 import { registerGroups, STATE_TONE } from "@/modules/payroll/ui/present";
 import { RegisterTable } from "@/modules/payroll/ui/register-table";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card } from "@/ui/card";
 import { KpiTile } from "@/ui/kpi-tile";

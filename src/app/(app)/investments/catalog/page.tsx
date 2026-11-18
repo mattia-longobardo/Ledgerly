@@ -1,8 +1,8 @@
 import { ExternalLink } from "lucide-react";
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
-import { accountTypeOf, MANUAL_PROVIDER } from "@/modules/investments/catalog";
-import { catalogView } from "@/modules/investments/queries";
+import { accountTypeOf, MANUAL_PROVIDER } from "@ledgerly/domain/investments";
+import { catalogView } from "@ledgerly/domain/investments";
 import { ConnectProviderButton, CreateManualServiceButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
 import { Badge } from "@/ui/badge";

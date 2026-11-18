@@ -8,7 +8,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
+import { today } from "@ledgerly/domain/platform/dates";
 import {
   HolidayServiceError,
   addCalendar,
@@ -16,7 +16,7 @@ import {
   markCalendarFailed,
   refreshCalendar,
   removeCalendar,
-} from "@/platform/holidays/service";
+} from "@ledgerly/domain/platform/holidays";
 import { yearsToRefresh } from "@/platform/holidays/jobs";
 import {
   type HolidayCountry,
@@ -24,8 +24,8 @@ import {
   HolidayError,
   listCountries,
   listSubdivisions,
-} from "@/platform/holidays/sources";
-import { HOLIDAY_SOURCES, type HolidaySource } from "@/platform/holidays/rules";
+} from "@ledgerly/domain/platform/holidays";
+import { HOLIDAY_SOURCES, type HolidaySource } from "@ledgerly/domain/platform/holidays";
 
 export type HolidayActionError = "unreachable" | "duplicate" | "tooMany" | "notFound" | "invalid" | "failed";
 

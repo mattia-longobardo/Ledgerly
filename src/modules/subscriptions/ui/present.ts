@@ -1,5 +1,5 @@
 import type { useTranslations } from "next-intl";
-import type { CivilDate } from "@/platform/dates";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
 import {
   formatAmountInput,
   formatDate,
@@ -7,9 +7,9 @@ import {
   monthName,
   type NumberFormat,
   type UiLocale,
-} from "@/platform/format";
-import type { SubscriptionRow } from "../queries";
-import { dueMoment, type Suggestion, toleranceParts } from "../rules";
+} from "@ledgerly/domain/platform/format";
+import type { SubscriptionRow } from "@ledgerly/domain/subscriptions";
+import { dueMoment, type Suggestion, toleranceParts } from "@ledgerly/domain/subscriptions";
 import type { SubscriptionDraft } from "./subscription-dialog";
 import type { SubscriptionView } from "./subscriptions-table";
 import type { SuggestionView } from "./suggestions-dialog";

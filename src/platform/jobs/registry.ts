@@ -14,7 +14,7 @@ import { holidaysRefreshJob } from "@/platform/holidays/jobs";
 import { integrationsSyncJob } from "@/platform/integrations/jobs";
 import { monthlySummaryJob } from "@/platform/reports/jobs";
 import { housekeepingJob } from "./housekeeping";
-import type { JobDetail } from "./schema";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 
 /**
  * When a job runs. `manual` is the odd one out: no tick ever asks for that tier, so such a job only

@@ -1,4 +1,4 @@
-import type { Ctx } from "@/platform/context";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 
 export const LOCALES = ["en", "it"] as const;
 export const DEFAULT_LOCALE = "en";

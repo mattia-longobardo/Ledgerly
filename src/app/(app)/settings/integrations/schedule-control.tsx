@@ -12,7 +12,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { civilDateIn } from "@/platform/dates";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
 import {
   LAST_DAY,
   MAX_RULES,
@@ -28,7 +28,7 @@ import {
   syncRuleSchema,
   syncScheduleSchema,
   scheduleProblems,
-} from "@/platform/integrations/schedule";
+} from "@ledgerly/domain/platform/integrations/client";
 import { Button, Chip, IconButton } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { Field } from "@/ui/field";

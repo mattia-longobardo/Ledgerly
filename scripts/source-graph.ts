@@ -5,7 +5,7 @@
 // `baselines/modularity.json`, and `scripts/modularity.ts` writes those lists. No package of its own:
 // the same method as the two rules the architecture test already had, a regular expression over the
 // import specifiers (decision H11).
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix, relative, sep } from "node:path";
 
 /** `from "x"`, `import "x"` and `import("x")`: static, side-effect and dynamic imports. */
@@ -29,20 +29,72 @@ export function isTestFile(rel: string): boolean {
   return TEST_FILE.test(rel);
 }
 
-/** The product files of `src/`: path → text. Tests are not part of the graph. */
-export function readProductSources(src: string): Map<string, string> {
+/**
+ * The product trees of the monorepo (R0). Each file keeps the path it had in the one `src/` tree
+ * before the packages: `modules/<name>/…` and `platform/<area>/…` whether the file is in the web app
+ * or in `packages/domain`, the plugin contract under `platform/plugins/contract/`. The units, the
+ * known lists of `baselines/` and the plan's tables keep their names that way.
+ */
+export const SOURCE_ROOTS: readonly { dir: string; prefix: string }[] = [
+  { dir: "src", prefix: "" },
+  { dir: "packages/domain/src", prefix: "" },
+  { dir: "packages/plugin-host/src", prefix: "platform/plugins/" },
+  { dir: "packages/plugin-contract/src", prefix: "platform/plugins/contract/" },
+];
+
+/** Every `.ts`/`.tsx` file of the product trees under `repo`: its path in the tree → its path on disk. */
+export function treeFiles(repo: string): Map<string, string> {
   const files = new Map<string, string>();
-  for (const rel of sourceFiles(src)) {
-    if (!isTestFile(rel)) files.set(rel, readFileSync(join(src, rel), "utf8"));
+  for (const root of SOURCE_ROOTS) {
+    const dir = join(repo, root.dir);
+    if (!existsSync(dir)) continue;
+    for (const rel of sourceFiles(dir)) files.set(`${root.prefix}${rel}`, join(dir, rel));
+  }
+  return new Map([...files].sort(([a], [b]) => a.localeCompare(b)));
+}
+
+/** The product files of the trees: path → text. Tests are not part of the graph. */
+export function readProductSources(repo: string): Map<string, string> {
+  const files = new Map<string, string>();
+  for (const [rel, path] of treeFiles(repo)) {
+    if (!isTestFile(rel)) files.set(rel, readFileSync(path, "utf8"));
   }
   return files;
 }
 
-/** An import specifier as a src-relative path with no extension; `null` for a package. */
+/** The packages a file reaches by name, and where their entries are in the tree. */
+const PACKAGE_ENTRIES: readonly [string, string][] = [
+  ["@ledgerly/plugin-contract", "platform/plugins/contract/index"],
+  ["@ledgerly/plugin-host", "platform/plugins/index"],
+];
+/** The path aliases of the tests and the scripts: a file of a package by its path. */
+const ALIASES: readonly [string, string][] = [
+  ["@/", ""],
+  ["@domain/", ""],
+  ["@plugin-host/", "platform/plugins/"],
+  ["@plugin-contract/", "platform/plugins/contract/"],
+];
+
+/**
+ * An import specifier as a tree path with no extension; `null` for a package outside the repository.
+ * An entry of `@ledgerly/domain` is the unit it names: `@ledgerly/domain/accounts` is
+ * `modules/accounts`, `@ledgerly/domain/platform/db` is `platform/db`.
+ */
 export function resolveSpecifier(fromRel: string, specifier: string): string | null {
-  if (specifier.startsWith("@/")) return specifier.slice(2);
+  for (const [name, path] of PACKAGE_ENTRIES) if (specifier === name) return path;
+  if (specifier.startsWith("@ledgerly/domain/")) {
+    const entry = specifier.slice("@ledgerly/domain/".length);
+    return entry.startsWith("platform/") ? entry : `modules/${entry}`;
+  }
+  for (const [alias, path] of ALIASES)
+    if (specifier.startsWith(alias)) return path + specifier.slice(alias.length);
   if (specifier.startsWith(".")) return posix.normalize(posix.join(posix.dirname(fromRel), specifier));
   return null;
+}
+
+/** A unit's folder stands for its `index.ts`. */
+function withIndex(files: ReadonlyMap<string, string>, path: string): string {
+  return files.has(`${path}/index.ts`) ? `${path}/index` : path;
 }
 
 /** Every import between two files of the tree, once per (file, target), sorted. */
@@ -50,8 +102,9 @@ export function importEdges(files: ReadonlyMap<string, string>): Edge[] {
   const edges = new Map<string, Edge>();
   for (const [rel, content] of files) {
     for (const match of content.matchAll(SPECIFIER)) {
-      const to = resolveSpecifier(rel, match[1]);
-      if (to === null || to.startsWith("..")) continue;
+      const resolved = resolveSpecifier(rel, match[1]);
+      if (resolved === null || resolved.startsWith("..")) continue;
+      const to = withIndex(files, resolved);
       edges.set(`${rel} → ${to}`, { from: rel, to });
     }
   }

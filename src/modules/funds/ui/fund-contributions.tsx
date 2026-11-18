@@ -1,23 +1,23 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import type { CivilDate } from "@/platform/dates";
-import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
-import { contributionFee, periodFees } from "../fees";
-import { contributionFormOf, newContributionForm } from "../forms";
-import { type FundPeriod, onTheWay } from "../period";
-import type { Operation } from "../pension/operations";
-import { type ComponentStatus, MAIN_COMPONENTS, type QuarterStatus } from "../pension/reconcile";
-import { type FundDetail, hasPayrollCalendar } from "../queries";
-import { competencePeriod, periodsPerYear, periodStart } from "../sources";
-import { competenceOn, inPeriod, quarterInPeriod } from "../tabs";
+import { contributionFee, periodFees } from "@ledgerly/domain/funds";
+import { contributionFormOf, newContributionForm } from "@ledgerly/domain/funds";
+import { type FundPeriod, onTheWay } from "@ledgerly/domain/funds";
+import type { Operation } from "@ledgerly/domain/funds";
+import { type ComponentStatus, MAIN_COMPONENTS, type QuarterStatus } from "@ledgerly/domain/funds";
+import { type FundDetail, hasPayrollCalendar } from "@ledgerly/domain/funds";
+import { competencePeriod, periodsPerYear, periodStart } from "@ledgerly/domain/funds";
+import { competenceOn, inPeriod, quarterInPeriod } from "@ledgerly/domain/funds";
 import {
   ContributionButton,
   type ContributionSetup,

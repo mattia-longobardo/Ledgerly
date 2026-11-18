@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../messages/en.json";
-import { DEFAULT_PREFERENCES } from "@/modules/users/rules";
+import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
 import { ThemeProvider } from "@/ui/theme-provider";
 import { stubColorScheme } from "../../../../../test/color-scheme";
 import { PreferencesForm } from "./preferences-form";

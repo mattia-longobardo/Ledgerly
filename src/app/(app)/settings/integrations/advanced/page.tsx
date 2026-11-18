@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import "@/app/plugin-wiring";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { NULL_DISPLAY } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { labelOf } from "@/platform/integrations/registry";
 import { connectionReport, scheduleSummary } from "@/platform/integrations/report";
-import { isPluginProvider } from "@/platform/integrations/rules";
+import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
 import {
   type Connection,
   listConnections,
@@ -15,10 +15,10 @@ import {
   recentRuns,
   SYNC_RUN_RETENTION_DAYS,
   type SyncRun,
-} from "@/platform/integrations/service";
-import { isSyncErrorCode } from "@/platform/integrations/status";
-import { listUserPlugins } from "@/platform/plugins/queries";
-import { APP_VERSION } from "@/platform/version";
+} from "@ledgerly/domain/platform/integrations";
+import { isSyncErrorCode } from "@ledgerly/domain/platform/integrations";
+import { listUserPlugins } from "@ledgerly/domain/platform/plugins";
+import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { Badge } from "@/ui/badge";
 import { Button, ButtonLink } from "@/ui/button";
 import { Select } from "@/ui/input";

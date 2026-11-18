@@ -8,19 +8,19 @@
 //
 // Adding data here changes the reference files on purpose: do it in a commit of its own, never in
 // the commit of a refactor.
-import { createAccount, saveBalanceEntry } from "@/modules/accounts/service";
-import { setLimit } from "@/modules/budgets/service";
-import { recordValuation } from "@/modules/funds/service";
-import { createRule } from "@/modules/interests/service";
-import { updateServiceValue } from "@/modules/investments/service";
-import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@/modules/payroll/service";
-import { addToPocket, createPocket } from "@/modules/pockets/service";
-import { createSubscription } from "@/modules/subscriptions/service";
-import { saveAllowance, saveLeaveDay } from "@/modules/timeoff/service";
-import type { IncomingTransaction } from "@/modules/transactions/rules";
-import { upsertFromProvider } from "@/modules/transactions/service";
-import { listCategories } from "@/modules/transactions/taxonomy";
-import type { Ctx } from "@/platform/context";
+import { createAccount, saveBalanceEntry } from "@domain/modules/accounts/service";
+import { setLimit } from "@domain/modules/budgets/service";
+import { recordValuation } from "@domain/modules/funds/service";
+import { createRule } from "@domain/modules/interests/service";
+import { updateServiceValue } from "@domain/modules/investments/service";
+import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@domain/modules/payroll/service";
+import { addToPocket, createPocket } from "@domain/modules/pockets/service";
+import { createSubscription } from "@domain/modules/subscriptions/service";
+import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
+import type { IncomingTransaction } from "@domain/modules/transactions/rules";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { listCategories } from "@domain/modules/transactions/taxonomy";
+import type { Ctx } from "@domain/platform/context";
 import { APRIL, MARCH } from "./fixtures/payroll/samples";
 import { twinPdf } from "./fixtures/payroll/twin";
 import { anAccount, movement } from "./fixtures";

@@ -11,16 +11,16 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
 import { runAfterSync } from "@/platform/jobs/after-sync";
-import type { Ctx } from "@/platform/context";
-import { isKnownProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
-import { BACKFILL_CHOICES } from "@/platform/integrations/wallet/depth";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { isKnownProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
+import { BACKFILL_CHOICES } from "@ledgerly/domain/platform/integrations/wallet";
 import {
   chooseWalletAccounts,
   isSyncBusy,
   requestWalletBackfill,
   syncWalletNow,
   walletAccountChoices,
-} from "@/platform/integrations/wallet/sync";
+} from "@ledgerly/domain/platform/integrations/wallet";
 import {
   type Connection,
   deleteConnection,
@@ -30,21 +30,21 @@ import {
   readCredentials,
   saveConnection,
   saveSchedule,
-} from "@/platform/integrations/service";
+} from "@ledgerly/domain/platform/integrations";
 import {
   createWalletClient,
   isTokenRejected,
   isUsableToken,
   WalletError,
-} from "@/platform/integrations/wallet/client";
+} from "@ledgerly/domain/platform/integrations/wallet";
 import {
   createTrekClient,
   isTokenRejected as isTrekTokenRejected,
   TrekError,
-} from "@/platform/integrations/trek/client";
-import { isTrekBusy, syncTrekNow } from "@/platform/integrations/trek/sync";
-import { restoreSourceAccounts } from "@/modules/accounts/service";
-import { closePendingDeletes } from "@/modules/timeoff/service";
+} from "@ledgerly/domain/platform/integrations/trek";
+import { isTrekBusy, syncTrekNow } from "@ledgerly/domain/platform/integrations/trek";
+import { restoreSourceAccounts } from "@ledgerly/domain/accounts";
+import { closePendingDeletes } from "@ledgerly/domain/timeoff";
 
 /**
  * Why an action refused, as one of the `settings.integrations.errors.*` keys. A code, not a

@@ -1,10 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAccount, runSnapshot, saveBalanceEntry } from "@/modules/accounts/service";
-import { recordValuation, updateValuation } from "@/modules/funds/service";
-import { uploadPayslip } from "@/modules/payroll/service";
-import type { IncomingTransaction } from "@/modules/transactions/rules";
-import { upsertFromProvider } from "@/modules/transactions/service";
-import type { Ctx } from "@/platform/context";
+import { createAccount, runSnapshot, saveBalanceEntry } from "@domain/modules/accounts/service";
+import { recordValuation, updateValuation } from "@domain/modules/funds/service";
+import { uploadPayslip } from "@domain/modules/payroll/service";
+import type { IncomingTransaction } from "@domain/modules/transactions/rules";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import type { Ctx } from "@domain/platform/context";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { debitFund, payrollFund } from "../../../test/funds";
 import { createTestUser } from "../../../test/users";

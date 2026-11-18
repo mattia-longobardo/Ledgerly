@@ -1,8 +1,8 @@
 // src/modules/investments/ui/dialog-rules.ts — what the dialogs of a service start from and offer
 // (docs/design/investments-ux.md §3.7, U5): pure, so the defaults are tested without a browser.
-import { type CivilDate, daysBetween, isCivilDate } from "@/platform/dates";
-import type { Cents } from "@/platform/money";
-import type { AssetClass, InvestmentCategory } from "../rules";
+import { type CivilDate, daysBetween, isCivilDate } from "@ledgerly/domain/platform/dates";
+import type { Cents } from "@ledgerly/domain/platform/money";
+import type { AssetClass, InvestmentCategory } from "@ledgerly/domain/investments/client";
 
 export interface LinkChoice {
   id: string;

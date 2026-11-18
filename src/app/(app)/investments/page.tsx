@@ -4,9 +4,9 @@ import { permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels, colorFor, dayLabels, PALETTE } from "@/modules/accounts/ui/display";
-import { legacyPeriodQuery, SECTION_PRESETS, sectionPeriod, type Query } from "@/modules/investments/period";
-import type { PnlParts, ServicePnl } from "@/modules/investments/pnl";
-import { investmentsHome, investmentsPnlView } from "@/modules/investments/queries";
+import { legacyPeriodQuery, SECTION_PRESETS, sectionPeriod, type Query } from "@ledgerly/domain/investments";
+import type { PnlParts, ServicePnl } from "@ledgerly/domain/investments";
+import { investmentsHome, investmentsPnlView } from "@ledgerly/domain/investments";
 import {
   asReturns,
   bestAndWorst,
@@ -19,9 +19,9 @@ import {
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import { type Cents, sumCents } from "@/platform/money";
+import { today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import { type Cents, sumCents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card, CardHeader } from "@/ui/card";

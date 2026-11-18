@@ -4,10 +4,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import { type AlertSettings, budgetSlug, type BudgetScope } from "./rules";
-import { BudgetError, saveAlerts, setLimit, stopLimit } from "./service";
+import { type AlertSettings, budgetSlug, type BudgetScope } from "@ledgerly/domain/budgets";
+import { BudgetError, saveAlerts, setLimit, stopLimit } from "@ledgerly/domain/budgets";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 

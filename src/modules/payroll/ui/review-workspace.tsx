@@ -9,7 +9,7 @@ import { cn } from "@/ui/cn";
 import { Input } from "@/ui/input";
 import { type Highlight, PdfViewer } from "@/ui/pdf-viewer";
 import { notify } from "@/ui/toast";
-import type { FieldGroup, FieldName } from "../fields";
+import type { FieldGroup, FieldName } from "@ledgerly/domain/payroll/client";
 import { decideFieldAction } from "../actions";
 import type { FieldView } from "./present";
 

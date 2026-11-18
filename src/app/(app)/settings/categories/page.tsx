@@ -1,13 +1,9 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import {
-  colorOfCategory,
-  listCategoriesWithUsage,
-  listLabelsWithUsage,
-} from "@/modules/transactions/taxonomy";
+import { colorOfCategory, listCategoriesWithUsage, listLabelsWithUsage } from "@ledgerly/domain/transactions";
 import { createDefaultGroupsAction, dismissMergeAction } from "@/modules/transactions/categorize/actions";
-import { DEFAULT_GROUPS } from "@/modules/transactions/categorize/tables";
+import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
 import { categoryColor } from "@/modules/transactions/ui/display";
 import { requireSession } from "@/platform/auth/session";
 import { SettingsGrid, SettingsSection } from "@/ui/section";

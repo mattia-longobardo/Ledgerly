@@ -1,8 +1,13 @@
-import { formatAmountInput, formatDate, type NumberFormat, type UiLocale } from "@/platform/format";
-import type { Cents } from "@/platform/money";
-import type { MoneyOrigin } from "../period";
-import type { ValuationRow } from "../pension/operations";
-import type { DebitStatus, SourceKind } from "../sources";
+import {
+  formatAmountInput,
+  formatDate,
+  type NumberFormat,
+  type UiLocale,
+} from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
+import type { MoneyOrigin } from "@ledgerly/domain/funds";
+import type { ValuationRow } from "@ledgerly/domain/funds";
+import type { DebitStatus, SourceKind } from "@ledgerly/domain/funds";
 import type { ValuationDraft } from "./fund-forms";
 
 /** A recorded valuation as the "Edit" dialog starts from it. */

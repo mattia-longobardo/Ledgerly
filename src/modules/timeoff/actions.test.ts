@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { LEAVE_DAY_KINDS, goesToTrek } from "./rules";
+import { LEAVE_DAY_KINDS, goesToTrek } from "@domain/modules/timeoff/rules";
 import { removeLeaveAction, saveLeaveRangeAction, undoLeaveAction } from "./actions";
 
 const { requireSession, saveLeaveRange, removeLeave, restoreLeave, syncTrekNow, revalidatePath } = vi.hoisted(
@@ -17,9 +17,9 @@ vi.mock("@/platform/auth/session", () => ({ requireSession }));
 vi.mock("next/cache", () => ({ revalidatePath }));
 // `after()` runs its callback once the response has gone out; here that is at once.
 vi.mock("next/server", () => ({ after: (callback: () => unknown) => void callback() }));
-vi.mock("@/platform/integrations/trek/sync", () => ({ syncTrekNow }));
-vi.mock("./service", async (actual) => ({
-  ...(await actual<typeof import("./service")>()),
+vi.mock("@domain/platform/integrations/trek/sync", () => ({ syncTrekNow }));
+vi.mock("@domain/modules/timeoff/service", async (actual) => ({
+  ...(await actual<typeof import("@domain/modules/timeoff/service")>()),
   saveLeaveRange,
   removeLeave,
   restoreLeave,

@@ -10,11 +10,11 @@ import {
   GAIN_COLOR,
   LOSS_COLOR,
 } from "@/modules/accounts/ui/display";
-import { describeEvent } from "@/modules/investments/activity";
-import { legacyPeriodQuery, sectionPeriod, type Query } from "@/modules/investments/period";
-import { contributionsOf } from "@/modules/investments/positions";
-import { STALE_VALUE_DAYS } from "@/modules/investments/rules";
-import { serviceActivity, servicePnlView } from "@/modules/investments/queries";
+import { describeEvent } from "@ledgerly/domain/investments";
+import { legacyPeriodQuery, sectionPeriod, type Query } from "@ledgerly/domain/investments";
+import { contributionsOf } from "@ledgerly/domain/investments";
+import { STALE_VALUE_DAYS } from "@ledgerly/domain/investments";
+import { serviceActivity, servicePnlView } from "@ledgerly/domain/investments";
 import {
   asReturns,
   bestAndWorst,
@@ -26,9 +26,9 @@ import {
 } from "@/modules/investments/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
-import { today } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { StackedArea, StackedBars, stackLayers } from "@/ui/chart";

@@ -1,6 +1,6 @@
 import "server-only";
 import { touchHeartbeat } from "./heartbeat";
-import { withJobLock } from "./lock";
+import { withJobLock } from "@ledgerly/domain/platform/jobs";
 import { JOBS, type JobDefinition, runsIn, type ScheduledTier } from "./registry";
 import { type Outcome, recordSkipped, runAndRecord } from "./run";
 

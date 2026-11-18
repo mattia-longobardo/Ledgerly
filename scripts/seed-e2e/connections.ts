@@ -1,17 +1,17 @@
 // scripts/seed-e2e/connections.ts — the users and the data of the flow `connections` (tests/e2e/connections/).
 import { eq } from "drizzle-orm";
 import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../src/app/(app)/banks/plugin";
-import { applyProviderAccounts } from "../../src/modules/accounts/service";
-import { parseKeyRing, sealJson } from "../../src/platform/crypto";
-import { today } from "../../src/platform/dates";
-import { getDb } from "../../src/platform/db/client";
-import { readEnv } from "../../src/platform/env";
-import { pluginProvider, TREK_PROVIDER, WALLET_PROVIDER } from "../../src/platform/integrations/rules";
-import { integrationConnections, syncRuns } from "../../src/platform/integrations/schema";
-import { saveConnection, savePluginConnection, saveSchedule } from "../../src/platform/integrations/service";
-import { findInstancePlugin } from "../../src/platform/plugins/queries";
-import { BANK_SCHEDULE } from "../../src/platform/plugins/rules";
-import { pluginUserCredentials } from "../../src/platform/plugins/schema";
+import { applyProviderAccounts } from "@domain/modules/accounts/service";
+import { parseKeyRing, sealJson } from "@domain/platform/crypto";
+import { today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { readEnv } from "@domain/platform/env";
+import { pluginProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { integrationConnections, syncRuns } from "@domain/platform/integrations/schema";
+import { saveConnection, savePluginConnection, saveSchedule } from "@domain/platform/integrations/service";
+import { findInstancePlugin } from "@domain/platform/plugins/queries";
+import { BANK_SCHEDULE } from "@domain/platform/plugins/rules";
+import { pluginUserCredentials } from "@domain/platform/plugins/schema";
 import { connectionBag, setPluginActive } from "../../src/platform/plugins/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf } from "./common";

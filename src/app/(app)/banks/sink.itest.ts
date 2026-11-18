@@ -2,15 +2,15 @@ import { generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { getAccount, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
-import { archiveAccount, createAccount, updateAccountSettings } from "@/modules/accounts/service";
-import { getPool } from "@/platform/db/client";
-import { transactionIdsOfAccount, transactionsByIds } from "@/modules/transactions/queries";
-import { categorisableAccountIds } from "@/modules/transactions/service";
-import type { Ctx } from "@/platform/context";
+import { getAccount, listAccounts, listBalanceEntries } from "@domain/modules/accounts/queries";
+import { archiveAccount, createAccount, updateAccountSettings } from "@domain/modules/accounts/service";
+import { getPool } from "@domain/platform/db/client";
+import { transactionIdsOfAccount, transactionsByIds } from "@domain/modules/transactions/queries";
+import { categorisableAccountIds } from "@domain/modules/transactions/service";
+import type { Ctx } from "@domain/platform/context";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
 import { passFor } from "@/platform/integrations/registry";
-import { dueConnections, listRuns, readSyncJob } from "@/platform/integrations/service";
+import { dueConnections, listRuns, readSyncJob } from "@domain/platform/integrations/service";
 import type { Fetch } from "@/platform/plugins/client";
 import {
   PLUGIN_PATHS,
@@ -19,7 +19,7 @@ import {
   syncResponseSchema,
 } from "@plugin-contract/calls";
 import type { PluginManifest } from "@plugin-contract/manifest";
-import { credentialsStatus, listPluginConnections } from "@/platform/plugins/queries";
+import { credentialsStatus, listPluginConnections } from "@domain/platform/plugins/queries";
 import {
   completeAccess,
   connectionSummary,

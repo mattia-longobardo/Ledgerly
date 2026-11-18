@@ -5,7 +5,7 @@
  * and the client row.
  */
 import { errors, type JWTPayload, type JWTVerifyGetKey, jwtVerify } from "jose";
-import { ACCESS_TOKEN_TYPE, API_SCOPES, type ApiScope } from "./oauth";
+import { ACCESS_TOKEN_TYPE, API_SCOPES, type ApiScope } from "@ledgerly/domain/platform/auth";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

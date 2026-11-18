@@ -7,7 +7,7 @@ import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
 import { updateFundAction } from "../actions";
-import type { FundForm } from "../forms";
+import type { FundForm } from "@ledgerly/domain/funds/client";
 import { ErrorLine, errorKey } from "./fund-forms";
 import { FIELD_GRID } from "@/ui/section";
 

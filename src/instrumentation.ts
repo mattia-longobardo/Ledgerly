@@ -7,7 +7,7 @@
 // out loud instead of trusting it — the whole point of this file is a process that stops, and a
 // stop during the image build would be a broken deployment instead of a loud one.
 import { ZodError } from "zod";
-import { readEnv } from "@/platform/env";
+import { readEnv } from "@ledgerly/domain/platform/env";
 
 const BUILD_PHASE = "phase-production-build";
 

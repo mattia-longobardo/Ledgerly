@@ -15,7 +15,13 @@ import {
   type RangePreset,
   shiftRange,
 } from "@/modules/transactions/ui/filters";
-import { type CivilDate, isCivilDate, type MonthKey, monthKey, monthsBetween } from "@/platform/dates";
+import {
+  type CivilDate,
+  isCivilDate,
+  type MonthKey,
+  monthKey,
+  monthsBetween,
+} from "@ledgerly/domain/platform/dates";
 import type { Params } from "@/ui/url";
 
 /** The window these screens open on: the one Expenses opens on. */

@@ -7,8 +7,8 @@
  * needs these two for its legend and its weekday row. A value that both sides use belongs in a
  * module that is neither.
  */
-import { type UiLocale, monthName } from "@/platform/format";
-import { LEAVE_TYPES, type LeaveDayKind, type LeaveType } from "../rules";
+import { type UiLocale, monthName } from "@ledgerly/domain/platform/format";
+import { LEAVE_TYPES, type LeaveDayKind, type LeaveType } from "@ledgerly/domain/timeoff/client";
 
 /**
  * The colour each kind wears, in the calendar and in the table's dot. Vacation and ROL are the

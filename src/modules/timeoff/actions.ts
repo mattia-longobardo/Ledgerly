@@ -6,11 +6,11 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
-import { redactForLog } from "@/platform/auth/logger";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { isCivilDate } from "@/platform/dates";
-import { LEAVE_DAY_KINDS, type LeaveUndo } from "./rules";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { isCivilDate } from "@ledgerly/domain/platform/dates";
+import { LEAVE_DAY_KINDS, type LeaveUndo } from "@ledgerly/domain/timeoff";
 import {
   TimeOffError,
   removeLeave,
@@ -18,7 +18,7 @@ import {
   restoreLeave,
   saveAllowance,
   saveLeaveRange,
-} from "./service";
+} from "@ledgerly/domain/timeoff";
 
 export type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
 export interface RefusedDate {
@@ -49,7 +49,7 @@ function revalidate(): void {
 function nudgeTrek(ctx: Ctx): void {
   after(async () => {
     try {
-      const { syncTrekNow } = await import("@/platform/integrations/trek/sync");
+      const { syncTrekNow } = await import("@ledgerly/domain/platform/integrations/trek");
       await syncTrekNow(ctx);
     } catch (error) {
       console.error("[timeoff] the Trek pass after a save did not finish", redactForLog(error));

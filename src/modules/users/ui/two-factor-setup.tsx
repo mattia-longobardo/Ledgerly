@@ -7,7 +7,12 @@ import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input } from "@/ui/input";
 import { QrCode } from "@/ui/qr-code";
-import { normalizeTotp, totpSecretOf, type TwoFactorErrorKey, twoFactorErrorKey } from "../two-factor";
+import {
+  normalizeTotp,
+  totpSecretOf,
+  type TwoFactorErrorKey,
+  twoFactorErrorKey,
+} from "@ledgerly/domain/users/client";
 import { RecoveryCodes } from "./recovery-codes";
 
 type Enrollment = { totpURI: string; backupCodes: string[] };

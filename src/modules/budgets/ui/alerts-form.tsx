@@ -8,7 +8,12 @@ import { Field } from "@/ui/field";
 import { Checkbox, Input } from "@/ui/input";
 import { notify } from "@/ui/toast";
 import { saveBudgetAlertsAction } from "../actions";
-import { ALERT_PRESETS, type AlertSettings, type BudgetScope, MAX_ALERT_THRESHOLDS } from "../rules";
+import {
+  ALERT_PRESETS,
+  type AlertSettings,
+  type BudgetScope,
+  MAX_ALERT_THRESHOLDS,
+} from "@ledgerly/domain/budgets/client";
 
 /**
  * When a budget emails (spec §7.3): a switch, the preset thresholds as chips, and any other whole

@@ -2,17 +2,17 @@ import "server-only";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
-import { budgetsView } from "@/modules/budgets/queries";
+import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "@ledgerly/domain/accounts";
+import { budgetsView } from "@ledgerly/domain/budgets";
 import { holdingsJson, pnlJson, portfolioJson } from "@/modules/investments/api";
-import { investmentsPnl, investmentsPortfolio, serviceHoldings } from "@/modules/investments/queries";
-import { listTransactions, transactionsSummary } from "@/modules/transactions/queries";
-import { TRANSACTION_TYPES } from "@/modules/transactions/rules";
+import { investmentsPnl, investmentsPortfolio, serviceHoldings } from "@ledgerly/domain/investments";
+import { listTransactions, transactionsSummary } from "@ledgerly/domain/transactions";
+import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
 import { instant, money } from "@/platform/api/json";
-import type { ApiScope } from "@/platform/auth/oauth";
-import type { Ctx } from "@/platform/context";
-import { isCivilDate, monthKey, today } from "@/platform/dates";
-import { APP_VERSION } from "@/platform/version";
+import type { ApiScope } from "@ledgerly/domain/platform/auth";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { isCivilDate, monthKey, today } from "@ledgerly/domain/platform/dates";
+import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { monthlyFigures } from "@/platform/reports/monthly";
 
 /**

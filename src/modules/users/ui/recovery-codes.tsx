@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/ui/button";
 import { notify } from "@/ui/toast";
-import { recoveryCodesFile } from "../two-factor";
+import { recoveryCodesFile } from "@ledgerly/domain/users/client";
 
 /**
  * The ten recovery codes, the one moment they are shown (docs/auth-design.md D2): each works once,

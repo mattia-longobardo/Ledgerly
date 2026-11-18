@@ -9,7 +9,7 @@ import {
   deleteApiClient,
   type MintedClient,
 } from "@/platform/auth/api-clients";
-import { GrantError, revokeConnectedApp } from "@/platform/auth/oauth-grants";
+import { GrantError, revokeConnectedApp } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 
 export type ApiClientMinted = MintedClient;

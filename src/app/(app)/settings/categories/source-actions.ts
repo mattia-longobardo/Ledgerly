@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { keepSourceCategory, SourceCategoryError } from "@/modules/transactions/source-categories";
+import { keepSourceCategory, SourceCategoryError } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
 import { setSourceCategory, undoSourceCategoryChange } from "./source";
 

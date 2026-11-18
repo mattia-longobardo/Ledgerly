@@ -8,8 +8,8 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
-import { formatDate, formatMoney } from "@/platform/format";
-import { categorisableAccountIds, TransactionError } from "../service";
+import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
+import { categorisableAccountIds, TransactionError } from "@ledgerly/domain/transactions";
 import {
   changeCategories,
   createDefaultGroups,
@@ -17,8 +17,8 @@ import {
   restoreMergeProposal,
   similarTo,
   undoChange,
-} from "./review";
-import { categorise, isPreparing } from "./service";
+} from "@ledgerly/domain/transactions";
+import { categorise, isPreparing } from "@ledgerly/domain/transactions";
 
 type Session = Awaited<ReturnType<typeof requireSession>>;
 

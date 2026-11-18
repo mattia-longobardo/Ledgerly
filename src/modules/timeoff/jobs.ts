@@ -9,9 +9,9 @@
  * failure and not a skipped pass: there is simply nothing to ask.
  */
 import "server-only";
-import type { Ctx } from "@/platform/context";
-import { redactForLog } from "@/platform/auth/logger";
-import { isTrekBusy, syncTrekNow } from "@/platform/integrations/trek/sync";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { isTrekBusy, syncTrekNow } from "@ledgerly/domain/platform/integrations/trek";
 
 /** What became of one Trek pass, as the integrations dispatcher counts it. */
 export type TrekPassOutcome = "answered" | "failed" | "refused" | "busy" | "absent";

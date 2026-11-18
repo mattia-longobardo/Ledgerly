@@ -1,7 +1,7 @@
 "use client";
 
-import { CATEGORY_COLORS } from "@/modules/transactions/rules";
-import { NULL_DISPLAY } from "@/platform/format";
+import { CATEGORY_COLORS } from "@ledgerly/domain/transactions/client";
+import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { cn } from "@/ui/cn";
 
 /**

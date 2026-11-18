@@ -3,8 +3,8 @@
 // the bare `/.well-known/oauth-authorization-server` answers the same for clients that ignore
 // the issuer path. Anything else under it is not an issuer of ours.
 import { oauthProviderAuthServerMetadata } from "@better-auth/oauth-provider";
-import { getAuth } from "@/platform/auth/auth";
-import { AUTH_BASE_PATH } from "@/platform/auth/oauth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
+import { AUTH_BASE_PATH } from "@ledgerly/domain/platform/auth";
 
 export const dynamic = "force-dynamic";
 

@@ -8,14 +8,14 @@
  * day after. A failed fetch writes nothing and the next day asks for the same days again.
  */
 import "server-only";
-import { firstBalanceDay } from "@/modules/accounts/queries";
-import { forEachUser } from "@/modules/users/jobs";
-import { type CivilDate, today } from "@/platform/dates";
+import { firstBalanceDay } from "@ledgerly/domain/accounts";
+import { forEachUser } from "@ledgerly/domain/users";
+import { type CivilDate, today } from "@ledgerly/domain/platform/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { rangesToFetch } from "./rules";
-import { saveRates, storedRange } from "./service";
-import { fetchEcbRates, type FxFetchOptions } from "./sources";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { rangesToFetch } from "@ledgerly/domain/platform/fx";
+import { saveRates, storedRange } from "@ledgerly/domain/platform/fx";
+import { fetchEcbRates, type FxFetchOptions } from "@ledgerly/domain/platform/fx";
 
 /** The oldest balance day of the whole instance: the earliest of every user's own. */
 async function instanceFirstBalanceDay(): Promise<CivilDate | null> {

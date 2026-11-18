@@ -2,11 +2,15 @@ import "server-only";
 import { and, eq, lt, sql } from "drizzle-orm";
 import { deleteExpiredInvitations } from "@/platform/auth/invitations";
 import { pruneBackups } from "@/platform/backup/service";
-import { getDb } from "@/platform/db/client";
-import { closeOrphanRuns, deleteOldSyncRuns, SYNC_RUN_RETENTION_DAYS } from "@/platform/integrations/service";
+import { getDb } from "@ledgerly/domain/platform/db";
+import {
+  closeOrphanRuns,
+  deleteOldSyncRuns,
+  SYNC_RUN_RETENTION_DAYS,
+} from "@ledgerly/domain/platform/integrations";
 import { deleteOldNotifications } from "@/platform/notifications/service";
 import type { JobDefinition } from "./registry";
-import { jobRuns } from "./schema";
+import { jobRuns } from "@ledgerly/domain/platform/jobs";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RETENTION_MS = 90 * DAY_MS;

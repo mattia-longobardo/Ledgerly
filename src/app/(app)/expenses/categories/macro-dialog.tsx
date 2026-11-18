@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, useTransition } from "react";
-import type { CategoryType } from "@/modules/transactions/rules";
+import type { CategoryType } from "@ledgerly/domain/transactions/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Select } from "@/ui/input";

@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { Ctx } from "@/platform/context";
-import { getObject, listFolder, putObject } from "@/platform/storage";
+import type { Ctx } from "@domain/platform/context";
+import { getObject, listFolder, putObject } from "@domain/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import {
@@ -40,7 +40,7 @@ beforeEach(async () => {
   await resetDatabase();
   admin = contextFor((await createTestUser()).id);
   for (const object of await listFolder(`${BACKUP_FOLDER}/`)) {
-    const { deleteObject } = await import("@/platform/storage");
+    const { deleteObject } = await import("@domain/platform/storage");
     await deleteObject(object.key);
   }
 });

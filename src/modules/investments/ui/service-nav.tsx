@@ -2,7 +2,7 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { PERIOD_KEYS } from "@/modules/investments/period";
+import { PERIOD_KEYS } from "@ledgerly/domain/investments/client";
 import { TabLinks } from "@/ui/tab-links";
 import { type Params, withParams } from "@/ui/url";
 

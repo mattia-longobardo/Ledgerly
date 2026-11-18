@@ -1,7 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextRequest, NextResponse } from "next/server";
 import { contentSecurityPolicy } from "@/platform/auth/csp";
-import { identityProviderUrl } from "@/platform/auth/provider";
+import { identityProviderUrl } from "@ledgerly/domain/platform/auth";
 
 // `/privacy` and `/terms` are the instance's public documents (`src/app/(legal)`): static text, no
 // session and no user data. A service that registers this instance, a bank aggregator for one,

@@ -2,14 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { type ReactNode, useId } from "react";
-import type { CivilDate } from "@/platform/dates";
-import type { UiLocale } from "@/platform/format";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { UiLocale } from "@ledgerly/domain/platform/format";
 import { LinkButton } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input, Select, Textarea } from "@/ui/input";
 import { Segmented } from "@/ui/segmented";
 import { Switch } from "@/ui/switch";
-import type { SourceForm } from "../forms";
+import type { SourceForm } from "@ledgerly/domain/funds/client";
 import {
   ACCRUAL_PERIODS,
   INTERVAL_UNITS,
@@ -17,7 +17,7 @@ import {
   nextDueDates,
   PAYROLL_COMPONENTS,
   type PayrollComponent,
-} from "../sources";
+} from "@ledgerly/domain/funds/client";
 import { calendarOfForm, dueDatesText, type SourceField, type TakenComponents } from "./source-text";
 import { FIELD_GRID } from "@/ui/section";
 

@@ -1,8 +1,8 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { TRUST_DEVICE_DAYS } from "@/platform/auth/auth";
-import { safeNext } from "@/platform/auth/oauth";
+import { TRUST_DEVICE_DAYS } from "@ledgerly/domain/platform/auth";
+import { safeNext } from "@ledgerly/domain/platform/auth";
 import { signedInDestination } from "@/platform/auth/session";
 import { AuthCard } from "../../auth-card";
 import { ChallengeForm } from "./challenge-form";

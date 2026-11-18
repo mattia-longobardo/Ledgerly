@@ -1,10 +1,10 @@
 // scripts/seed-e2e/subscriptions.ts — the users and the data of the flow `subscriptions` (tests/e2e/subscriptions/).
-import { saveBalanceEntry } from "../../src/modules/accounts/service";
-import { createSubscription } from "../../src/modules/subscriptions/service";
+import { saveBalanceEntry } from "@domain/modules/accounts/service";
+import { createSubscription } from "@domain/modules/subscriptions/service";
 import { refreshRecurrences } from "../../src/modules/transactions/jobs";
-import { upsertFromProvider } from "../../src/modules/transactions/service";
-import { listCategories } from "../../src/modules/transactions/taxonomy";
-import { addDays, today } from "../../src/platform/dates";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { listCategories } from "@domain/modules/transactions/taxonomy";
+import { addDays, today } from "@domain/platform/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
 

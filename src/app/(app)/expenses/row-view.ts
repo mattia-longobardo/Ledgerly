@@ -2,12 +2,12 @@
 // server: every text already formatted, every colour already decided. Shared by Expenses and by
 // "To review", which shows its single movements in the same table. What only one source can do
 // with a row is added by the page that knows that source.
-import type { TransactionRow } from "@/modules/transactions/queries";
-import { displayPayee, isHidden, macrosFor } from "@/modules/transactions/rules";
+import type { TransactionRow } from "@ledgerly/domain/transactions";
+import { displayPayee, isHidden, macrosFor } from "@ledgerly/domain/transactions";
 import { amountToneOf, badgesOf } from "@/modules/transactions/ui/display";
 import type { RowView } from "@/modules/transactions/ui/view";
-import type { Ctx } from "@/platform/context";
-import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 
 export function rowViewOf(
   row: TransactionRow,

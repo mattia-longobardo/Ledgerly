@@ -4,10 +4,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { CYCLES } from "./rules";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { CYCLES } from "@ledgerly/domain/subscriptions";
 import {
   createSubscription,
   deleteSubscription,
@@ -15,7 +15,7 @@ import {
   setUtility,
   SubscriptionError,
   updateSubscription,
-} from "./service";
+} from "@ledgerly/domain/subscriptions";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 

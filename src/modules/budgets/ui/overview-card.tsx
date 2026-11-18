@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import { formatDate, formatMoney } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
 import { Card, CardHeader } from "@/ui/card";
 import { ProgressBar } from "@/ui/progress-bar";
 import { TONE_TEXT } from "@/ui/tone";
-import { budgetsView } from "../queries";
+import { budgetsView } from "@ledgerly/domain/budgets";
 import { budgetName, NO_COLOR } from "./present";
 
 const SHOWN = 5;

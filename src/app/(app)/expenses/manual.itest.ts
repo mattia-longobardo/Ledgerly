@@ -1,5 +1,10 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { accountsToRebuild, balancesOn, listAccounts, listBalanceEntries } from "@/modules/accounts/queries";
+import {
+  accountsToRebuild,
+  balancesOn,
+  listAccounts,
+  listBalanceEntries,
+} from "@domain/modules/accounts/queries";
 import {
   accountDailyBalances,
   applyProviderAccounts,
@@ -9,10 +14,10 @@ import {
   runSnapshot,
   saveBalanceEntry,
   saveProviderBalance,
-} from "@/modules/accounts/service";
-import { getTransaction, listTransactions } from "@/modules/transactions/queries";
-import type { Ctx } from "@/platform/context";
-import { addDays, today } from "@/platform/dates";
+} from "@domain/modules/accounts/service";
+import { getTransaction, listTransactions } from "@domain/modules/transactions/queries";
+import type { Ctx } from "@domain/platform/context";
+import { addDays, today } from "@domain/platform/dates";
 import { closeDatabase, resetDatabase } from "../../../../test/db";
 import { createTestUser } from "../../../../test/users";
 import {

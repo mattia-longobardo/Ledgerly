@@ -1,9 +1,9 @@
 import "server-only";
-import { forEachUser } from "@/modules/users/jobs";
-import { monthKey, today } from "@/platform/dates";
+import { forEachUser } from "@ledgerly/domain/users";
+import { monthKey, today } from "@ledgerly/domain/platform/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { accrueMonth, purgeExpiredPlanned } from "./service";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { accrueMonth, purgeExpiredPlanned } from "@ledgerly/domain/pockets";
 
 /**
  * The 1st of the month at 00:05 (spec §10.2, §7.4): each user's current month accrued on every

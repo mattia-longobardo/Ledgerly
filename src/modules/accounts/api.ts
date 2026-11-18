@@ -5,10 +5,10 @@ import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { centsFrom, instant, money } from "@/platform/api/json";
-import { today } from "@/platform/dates";
-import { AccountError } from "./service";
-import { saveBalanceEntry } from "./service";
-import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "./queries";
+import { today } from "@ledgerly/domain/platform/dates";
+import { AccountError } from "@ledgerly/domain/accounts";
+import { saveBalanceEntry } from "@ledgerly/domain/accounts";
+import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "@ledgerly/domain/accounts";
 
 /**
  * The accounts module's `/api/v1` routes (spec §4.2, §9.3). Nothing here reads a table: it calls

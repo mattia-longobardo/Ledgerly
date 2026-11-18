@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getAuth } from "@/platform/auth/auth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
 import { completeInvitationWithSso } from "@/platform/auth/invitations";
 
 /**

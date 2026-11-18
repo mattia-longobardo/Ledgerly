@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type ContributionForm,
   contributionInputOf,
@@ -14,9 +14,9 @@ import {
   fundInputOf,
   type SourceForm,
   sourceInputOf,
-} from "./forms";
-import type { Component, Decision } from "./pension/rules";
-import { clearDecision, decideDifference } from "./pension/service";
+} from "@ledgerly/domain/funds";
+import type { Component, Decision } from "@ledgerly/domain/funds";
+import { clearDecision, decideDifference } from "@ledgerly/domain/funds";
 import {
   addContribution,
   addFee,
@@ -34,7 +34,7 @@ import {
   updateFee,
   updateFund,
   updateValuation,
-} from "./service";
+} from "@ledgerly/domain/funds";
 
 export type ActionResult =
   | { ok: true; id?: string; dueEntries?: unknown }

@@ -5,8 +5,8 @@ import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { instant, money } from "@/platform/api/json";
-import type { CivilDate } from "@/platform/dates";
-import type { PnlParts, PeriodParams } from "./pnl";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { PnlParts, PeriodParams } from "@ledgerly/domain/investments";
 import {
   type HoldingRow,
   type InvestmentsPnl,
@@ -15,8 +15,8 @@ import {
   type Portfolio,
   serviceHoldings,
   type ServiceSummary,
-} from "./queries";
-import type { Xirr } from "./xirr";
+} from "@ledgerly/domain/investments";
+import type { Xirr } from "@ledgerly/domain/investments";
 
 /**
  * Investments on `/api/v1` and on the MCP (docs/design/investments.md §5.5, SEC-08), behind the

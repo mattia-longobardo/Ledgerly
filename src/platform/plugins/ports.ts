@@ -4,8 +4,8 @@
  * states the port; the application gives it an adapter made of the modules' own services
  * (rule M8: only the application joins a port and its adapter). Nothing here imports a module.
  */
-import type { Ctx } from "@/platform/context";
-import type { CivilDate } from "@/platform/dates";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
 
 type Who = Pick<Ctx, "userId" | "timeZone">;
 

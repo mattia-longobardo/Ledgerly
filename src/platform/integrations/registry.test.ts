@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn() }));
 vi.mock("@/modules/transactions/jobs", () => ({ runWalletPass: vi.fn() }));
-vi.mock("./service", () => ({ listConnections: vi.fn() }));
+vi.mock("@domain/platform/integrations/service", () => ({ listConnections: vi.fn() }));
 
 const { PASSES, passFor } = await import("./registry");
-const { KINDS_OF, PROVIDERS } = await import("./rules");
+const { KINDS_OF, PROVIDERS } = await import("@domain/platform/integrations/rules");
 
 const stub = (provider: string) => ({ provider, kinds: [], run: vi.fn() });
 

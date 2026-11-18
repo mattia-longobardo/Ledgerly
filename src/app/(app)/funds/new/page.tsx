@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { listAccounts } from "@/modules/accounts/queries";
-import { takenComponents } from "@/modules/funds/service";
-import { FUND_TEMPLATES } from "@/modules/funds/templates";
+import { listAccounts } from "@ledgerly/domain/accounts";
+import { takenComponents } from "@ledgerly/domain/funds";
+import { FUND_TEMPLATES } from "@ledgerly/domain/funds";
 import { FundWizard } from "@/modules/funds/ui/fund-wizard";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { today } from "@/platform/dates";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { today } from "@ledgerly/domain/platform/dates";
 import { Card } from "@/ui/card";
 import { Page } from "@/ui/shell/page";
 import { Skeleton } from "@/ui/skeleton";

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { listAccounts } from "@/modules/accounts/queries";
-import { memoryKey } from "@/modules/transactions/categorize/text";
-import type { RuleCondition } from "@/modules/transactions/categorize/user-rules";
-import { listRules } from "@/modules/transactions/categorize/user-rules-service";
-import { getTransaction } from "@/modules/transactions/queries";
-import { listCategories, listLabels } from "@/modules/transactions/taxonomy";
+import { listAccounts } from "@ledgerly/domain/accounts";
+import { memoryKey } from "@ledgerly/domain/transactions";
+import type { RuleCondition } from "@ledgerly/domain/transactions";
+import { listRules } from "@ledgerly/domain/transactions";
+import { getTransaction } from "@ledgerly/domain/transactions";
+import { listCategories, listLabels } from "@ledgerly/domain/transactions";
 import { categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
 import { requireSession } from "@/platform/auth/session";
 import { type RuleDraft, RulesBoard } from "./rules-board";

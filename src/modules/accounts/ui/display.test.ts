@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { monthsBetween } from "@/platform/dates";
+import { monthsBetween } from "@domain/platform/dates";
 import {
   axisLabels,
   changeBetween,

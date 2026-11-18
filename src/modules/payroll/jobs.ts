@@ -1,9 +1,9 @@
 import "server-only";
-import { stuckDocuments } from "@/modules/imports/service";
-import { forEachUser } from "@/modules/users/jobs";
+import { stuckDocuments } from "@ledgerly/domain/imports";
+import { forEachUser } from "@ledgerly/domain/users";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { processPayslip } from "./service";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { processPayslip } from "@ledgerly/domain/payroll";
 
 /** A reading that has not moved for this long is taken over by the sweep. */
 const STUCK_AFTER_MS = 10 * 60_000;

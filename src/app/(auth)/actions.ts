@@ -3,9 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getAuth } from "@/platform/auth/auth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
 import { acceptInvitation, InvitationError } from "@/platform/auth/invitations";
-import { nameSchema } from "@/platform/auth/name-policy";
+import { nameSchema } from "@ledgerly/domain/platform/auth";
 
 // Public: the invitee has no session yet, so the arguments are whatever the caller sent.
 const acceptInviteInput = z.object({

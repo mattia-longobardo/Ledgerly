@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { isFundId } from "@/modules/funds/detail";
-import { FundError, requireFund } from "@/modules/funds/service";
+import { isFundId } from "@ledgerly/domain/funds";
+import { FundError, requireFund } from "@ledgerly/domain/funds";
 import { requireSession } from "@/platform/auth/session";
 
 /** Above the page's skeleton, so another person's fund answers a real 404. */

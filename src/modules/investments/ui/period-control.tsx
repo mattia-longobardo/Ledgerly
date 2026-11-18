@@ -1,7 +1,7 @@
 import type { useTranslations } from "next-intl";
-import type { PnlPeriod } from "@/modules/investments/pnl";
-import type { CivilDate } from "@/platform/dates";
-import { formatDate, type UiLocale } from "@/platform/format";
+import type { PnlPeriod } from "@ledgerly/domain/investments/client";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
 
 /** The words of the period: the server's `getTranslations` or the client's `useTranslations`. */
 export type PeriodT = ReturnType<typeof useTranslations<"investments.period">>;

@@ -9,9 +9,9 @@
  */
 import "server-only";
 import { z } from "zod";
-import type { Ctx } from "@/platform/context";
-import { addDays, type CivilDate, civilDateIn } from "@/platform/dates";
-import { pluginProvider } from "@/platform/integrations/rules";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/platform/dates";
+import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import {
   changeSourceSkippedIds,
   type Connection,
@@ -23,8 +23,8 @@ import {
   savePluginConnection,
   saveSchedule,
   saveSyncJob,
-} from "@/platform/integrations/service";
-import { withJobLock } from "@/platform/jobs/lock";
+} from "@ledgerly/domain/platform/integrations";
+import { withJobLock } from "@ledgerly/domain/platform/jobs";
 import { callPlugin, PluginCallError } from "./client";
 import {
   PLUGIN_PATHS,
@@ -33,7 +33,7 @@ import {
   syncResponseSchema,
 } from "@ledgerly/plugin-contract";
 import { type AccountChoice, type BankSink, type ReadingMovement, SinkRefusal } from "./ports";
-import { listPluginConnections } from "./queries";
+import { listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import {
   BANK_SCHEDULE,
   movementIds,
@@ -42,7 +42,7 @@ import {
   RATE_LIMIT_WAIT_HOURS,
   type ReadingError,
   REREAD_DAYS,
-} from "./rules";
+} from "@ledgerly/domain/platform/plugins";
 import {
   connectionBag,
   type Deps,

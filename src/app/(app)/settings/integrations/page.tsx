@@ -4,10 +4,10 @@ import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@/platform/dates";
-import { formatDate } from "@/platform/format";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { formatDate } from "@ledgerly/domain/platform/format";
 import { labelOf, passFor } from "@/platform/integrations/registry";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "@/platform/integrations/rules";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
 import {
   type Connection,
   listConnections,
@@ -16,16 +16,16 @@ import {
   deletedSourceAccounts,
   sourceSkippedIds,
   SYNC_RUN_RETENTION_DAYS,
-} from "@/platform/integrations/service";
-import { credentialsStatus, listUserPlugins } from "@/platform/plugins/queries";
+} from "@ledgerly/domain/platform/integrations";
+import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
 import { connectionSummary, keepManifestsFresh, returnAddress } from "@/platform/plugins/service";
-import { pluginProvider } from "@/platform/integrations/rules";
-import { listAccounts } from "@/modules/accounts/queries";
-import { interestsView } from "@/modules/interests/queries";
-import { providerOf } from "@/modules/investments/catalog";
-import { listInvestmentAccounts } from "@/modules/investments/service";
-import { pendingCount } from "@/modules/timeoff/service";
-import { pendingSends } from "@/modules/transactions/sending";
+import { pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { listAccounts } from "@ledgerly/domain/accounts";
+import { interestsView } from "@ledgerly/domain/interests";
+import { providerOf } from "@ledgerly/domain/investments";
+import { listInvestmentAccounts } from "@ledgerly/domain/investments";
+import { pendingCount } from "@ledgerly/domain/timeoff";
+import { pendingSends } from "@ledgerly/domain/transactions";
 import { ButtonLink } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { sourceCategoryRows } from "../categories/source";

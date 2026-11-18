@@ -3,11 +3,11 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useRef, useState } from "react";
-import type { CivilDate } from "@/platform/dates";
-import type { NumberFormat, UiLocale } from "@/platform/format";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { NumberFormat, UiLocale } from "@ledgerly/domain/platform/format";
 import { Button } from "@/ui/button";
-import { arrangeFees } from "../fees";
-import { type FeeForm, newFeeForm } from "../forms";
+import { arrangeFees } from "@ledgerly/domain/funds/client";
+import { type FeeForm, newFeeForm } from "@ledgerly/domain/funds/client";
 import { FeeDialog } from "./fee-dialog";
 import { feeAmountText, type FeeScopeOption, feeScopeText, feeValidityText } from "./fee-text";
 

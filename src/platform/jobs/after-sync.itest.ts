@@ -4,23 +4,28 @@
 import { desc, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { BUDGET_ALERT_KIND } from "@/modules/budgets/jobs";
-import { setLimit } from "@/modules/budgets/service";
-import { upsertFromProvider } from "@/modules/transactions/service";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+import { setLimit } from "@domain/modules/budgets/service";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import type { Ctx } from "@domain/platform/context";
+import { monthKey, today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
-import { TREK_PROVIDER } from "@/platform/integrations/rules";
-import { integrationConnections } from "@/platform/integrations/schema";
-import { finishRun, lastMovementChangeAt, recordRun, saveConnection } from "@/platform/integrations/service";
-import { notificationsLog } from "@/platform/notifications/schema";
+import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
+import { integrationConnections } from "@domain/platform/integrations/schema";
+import {
+  finishRun,
+  lastMovementChangeAt,
+  recordRun,
+  saveConnection,
+} from "@domain/platform/integrations/service";
+import { notificationsLog } from "@domain/platform/notifications/schema";
 import { dayClock } from "../../../test/clock";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { anAccount, movement, newContext } from "../../../test/fixtures";
 import { AFTER_SYNC_JOBS, runAfterSync } from "./after-sync";
-import { withJobLock } from "./lock";
+import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
-import { jobRuns } from "./schema";
+import { jobRuns } from "@domain/platform/jobs/schema";
 
 // Each test reads "today", and the code under it reads it again: one day for both (S-8).
 dayClock();

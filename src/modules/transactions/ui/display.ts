@@ -5,10 +5,14 @@
  */
 
 import { PALETTE } from "@/modules/accounts/ui/display";
-import type { TransactionOrigin, TransactionState, TransactionType } from "@/modules/transactions/rules";
-import type { MonthKey } from "@/platform/dates";
-import { formatDate, type UiLocale } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import type {
+  TransactionOrigin,
+  TransactionState,
+  TransactionType,
+} from "@ledgerly/domain/transactions/client";
+import type { MonthKey } from "@ledgerly/domain/platform/dates";
+import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { type Tone, toneOfSign } from "@/ui/tone";
 import { type DateRange, isSingleMonth } from "./filters";
 

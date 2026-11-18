@@ -1,6 +1,6 @@
 // scripts/seed-e2e/timeoff.ts — the users and the data of the flow `timeoff` (tests/e2e/timeoff/).
-import { saveAllowance, saveLeaveDay } from "../../src/modules/timeoff/service";
-import { today } from "../../src/platform/dates";
+import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
+import { today } from "@domain/platform/dates";
 import { contextOf, workingDay } from "./common";
 
 /**

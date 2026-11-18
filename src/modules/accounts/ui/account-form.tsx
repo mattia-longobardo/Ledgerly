@@ -10,7 +10,7 @@ import { Field } from "@/ui/field";
 import { Checkbox, Input, Select } from "@/ui/input";
 import { createAccountAction } from "../actions";
 import { colorField } from "./display";
-import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "../rules";
+import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "@ledgerly/domain/accounts/client";
 import { ibanErrorText } from "./iban-field";
 import { FIELD_GRID } from "@/ui/section";
 

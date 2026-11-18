@@ -1,34 +1,34 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
-import { balancesOn, listAccounts } from "@/modules/accounts/queries";
-import { openSwitchOf } from "@/modules/accounts/switching";
+import { balancesOn, listAccounts } from "@ledgerly/domain/accounts";
+import { openSwitchOf } from "@ledgerly/domain/accounts";
 import { labelOf } from "@/platform/integrations/registry";
 import { switchable } from "../../accounts/[id]/switch/switch";
 
 type Ctx = Awaited<ReturnType<typeof requireSession>>;
-import { categoryCounts } from "@/modules/transactions/categorize/review";
-import { listCategories } from "@/modules/transactions/taxonomy";
-import { accountsOfProvider } from "@/modules/accounts/service";
-import { movementSpanByAccount } from "@/modules/transactions/queries";
+import { categoryCounts } from "@ledgerly/domain/transactions";
+import { listCategories } from "@ledgerly/domain/transactions";
+import { accountsOfProvider } from "@ledgerly/domain/accounts";
+import { movementSpanByAccount } from "@ledgerly/domain/transactions";
 import { withParams } from "@/ui/url";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn, today } from "@/platform/dates";
-import { formatDate, formatMoney } from "@/platform/format";
-import { listRuns, readSyncJob } from "@/platform/integrations/service";
+import { civilDateIn, today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
+import { listRuns, readSyncJob } from "@ledgerly/domain/platform/integrations";
 import {
   credentialsStatus,
   findInstancePlugin,
   isPluginActive,
   listPluginConnections,
-} from "@/platform/plugins/queries";
+} from "@ledgerly/domain/platform/plugins";
 import {
   bankAccountNames,
   bankAccountType,
   institutionOf,
   isReturnError,
   maskIdentifier,
-} from "@/platform/plugins/rules";
+} from "@ledgerly/domain/platform/plugins";
 import { exposedAccounts } from "@/platform/plugins/sync";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";

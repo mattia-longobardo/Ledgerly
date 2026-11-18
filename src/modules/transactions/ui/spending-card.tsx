@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels } from "@/modules/accounts/ui/display";
-import { formatMoney, formatPercent, type NumberFormat } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { formatMoney, formatPercent, type NumberFormat } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Card } from "@/ui/card";
 import { StackedArea } from "@/ui/chart";
 import type { Params } from "@/ui/url";

@@ -1,16 +1,21 @@
 import "server-only";
 import { createTranslator } from "use-intl/core";
-import { forEachUser } from "@/modules/users/jobs";
-import { formatDate, formatMoney, formatWholePercent, type UiLocale } from "@/platform/format";
-import { monthKey, today } from "@/platform/dates";
-import { readEnv } from "@/platform/env";
+import { forEachUser } from "@ledgerly/domain/users";
+import { formatDate, formatMoney, formatWholePercent, type UiLocale } from "@ledgerly/domain/platform/format";
+import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { readEnv } from "@ledgerly/domain/platform/env";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { clearNotification, notifyOnce } from "@/platform/notifications/service";
 import en from "../../../messages/en.json";
 import it from "../../../messages/it.json";
-import { alertSettings, budgetsView } from "./queries";
-import { budgetSlug, DEFAULT_ALERT_SETTINGS, reachedThreshold, thresholdReached } from "./rules";
+import { alertSettings, budgetsView } from "@ledgerly/domain/budgets";
+import {
+  budgetSlug,
+  DEFAULT_ALERT_SETTINGS,
+  reachedThreshold,
+  thresholdReached,
+} from "@ledgerly/domain/budgets";
 import { budgetName } from "./ui/present";
 
 const CATALOGUES = { en, it } as const;

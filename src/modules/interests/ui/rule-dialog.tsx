@@ -10,7 +10,7 @@ import { Checkbox, Input, InputGroup, Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
 import { type ActionResult, createRuleAction, setRuleStateAction, updateRuleAction } from "../actions";
-import { DEFAULT_RUN_HOUR, formatRunHour, RUN_HOURS } from "../rules";
+import { DEFAULT_RUN_HOUR, formatRunHour, RUN_HOURS } from "@ledgerly/domain/interests/client";
 
 /** What the dialog starts from, every value already written the way the person types it. */
 export interface RuleDraft {

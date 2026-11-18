@@ -2,14 +2,14 @@ import "server-only";
 import { after } from "next/server";
 import { Hono } from "hono";
 import { z } from "zod";
-import { processPayslip, uploadPayslip } from "@/modules/payroll/service";
+import { processPayslip, uploadPayslip } from "@ledgerly/domain/payroll";
 import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
-import { redactForLog } from "@/platform/auth/logger";
-import type { Ctx } from "@/platform/context";
-import { DOCUMENT_KINDS, isReadKind, MAX_DOCUMENT_BYTES, type ReadKind } from "./rules";
-import { ImportError } from "./service";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { DOCUMENT_KINDS, isReadKind, MAX_DOCUMENT_BYTES, type ReadKind } from "@ledgerly/domain/imports";
+import { ImportError } from "@ledgerly/domain/imports";
 
 /**
  * `POST /api/v1/imports` (spec §9.3, scope `imports`): the same pipeline the screen uses, reached

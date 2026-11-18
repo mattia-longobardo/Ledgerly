@@ -3,9 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { parseAmount } from "@/modules/accounts/rules";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { parseAmount } from "@ledgerly/domain/accounts/client";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, InputGroup, Select } from "@/ui/input";
@@ -23,7 +23,7 @@ import {
   unlinkExpenseAction,
   updatePocketAction,
 } from "../actions";
-import type { LinkCandidate } from "../queries";
+import type { LinkCandidate } from "@ledgerly/domain/pockets/client";
 
 /** A pocket as the dialogs need it; amounts stay cents so the dialogs can add to them. */
 export interface PocketSummary {

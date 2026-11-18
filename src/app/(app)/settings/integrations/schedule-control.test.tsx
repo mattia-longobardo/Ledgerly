@@ -8,7 +8,7 @@ import {
   type SyncDays,
   type SyncRule,
   type SyncSchedule,
-} from "@/platform/integrations/schedule";
+} from "@domain/platform/integrations/schedule";
 import { ScheduleControl } from "./schedule-control";
 import { REPEAT_MINUTES } from "./schedule-form";
 

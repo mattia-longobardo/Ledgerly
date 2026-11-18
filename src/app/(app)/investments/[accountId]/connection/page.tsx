@@ -3,7 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import type { ServiceDetail } from "@/modules/investments/queries";
+import type { ServiceDetail } from "@ledgerly/domain/investments";
 import {
   ConfirmRevokedButton,
   ConfirmZeroButton,
@@ -15,9 +15,9 @@ import {
 import { KeyCheckLine } from "@/modules/investments/ui/key-check";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@/platform/dates";
-import { formatDate, formatMoney, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
@@ -26,7 +26,7 @@ import { instantText, loadService, providerOf } from "../service-data";
 import { formatInstant } from "@/app/(app)/settings/integrations/format-instant";
 import { recommendedSchedule } from "@/app/(app)/settings/integrations/recommended-schedule";
 import { ScheduleControl } from "@/app/(app)/settings/integrations/schedule-control";
-import { listConnections } from "@/platform/integrations/service";
+import { listConnections } from "@ledgerly/domain/platform/integrations";
 
 type Status = "complete" | "partial" | "check" | "missing";
 

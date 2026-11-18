@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_PREFERENCES } from "@/modules/users/rules";
+import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
 import {
   ctxFrom,
   getOptionalCtx,
@@ -14,12 +14,12 @@ const getSession = vi.hoisted(() => vi.fn());
 const hasPasswordAccount = vi.hoisted(() => vi.fn(async () => false));
 const env = vi.hoisted(() => ({ TWO_FACTOR_POLICY: "required" as "required" | "optional" }));
 
-vi.mock("./accounts", () => ({ hasPasswordAccount }));
-vi.mock("@/platform/env", () => ({ readEnv: () => env }));
+vi.mock("@domain/platform/auth/accounts", () => ({ hasPasswordAccount }));
+vi.mock("@domain/platform/env", () => ({ readEnv: () => env }));
 
-vi.mock("./auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
+vi.mock("@domain/platform/auth/auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
-vi.mock("@/modules/users/service", () => ({
+vi.mock("@domain/modules/users/service", () => ({
   getPreferences: async () => ({ ...DEFAULT_PREFERENCES, theme: "system" }),
 }));
 

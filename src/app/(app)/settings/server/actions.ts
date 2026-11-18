@@ -6,14 +6,14 @@ import { revalidatePath } from "next/cache";
 // "Run now" can start the sync of every connection: the plugins' passes have to be registered.
 import "@/app/plugin-wiring";
 import { after } from "next/server";
-import { redactForLog } from "@/platform/auth/logger";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireAdmin } from "@/platform/auth/session";
 import { BackupError, type BackupErrorCode, backupNow } from "@/platform/backup/service";
 import { JOBS } from "@/platform/jobs/registry";
 import { runJobByHand } from "@/platform/jobs/tick";
-import type { LlmProbeResult } from "@/platform/settings/llm-probe";
-import type { OidcInput } from "@/platform/settings/oidc";
-import type { OidcProbeOutcome } from "@/platform/settings/oidc-probe";
+import type { LlmProbeResult } from "@ledgerly/domain/platform/settings";
+import type { OidcInput } from "@ledgerly/domain/platform/settings";
+import type { OidcProbeOutcome } from "@ledgerly/domain/platform/settings";
 import {
   type MailProbeResult,
   removeLlmFallback,
@@ -26,8 +26,8 @@ import {
   SettingsError,
   testLlmFallback,
   testOidc,
-} from "@/platform/settings/service";
-import type { SmtpInput } from "@/platform/settings/smtp";
+} from "@ledgerly/domain/platform/settings";
+import type { SmtpInput } from "@ledgerly/domain/platform/settings";
 
 export type ServerActionResult = { ok: true } | { ok: false; error: "invalid" | "forbidden" };
 

@@ -1,6 +1,6 @@
-import type { Ctx } from "@/platform/context";
-import { civilDateIn } from "@/platform/dates";
-import { formatDate } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { civilDateIn } from "@ledgerly/domain/platform/dates";
+import { formatDate } from "@ledgerly/domain/platform/format";
 
 /**
  * An instant as a connection shows it: the civil day in the user's zone (spec §8.5) and the clock,

@@ -17,7 +17,8 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"],
-      "@plugin-contract/*": ["./packages/plugin-contract/src/*"]
+      "@plugin-contract/*": ["./packages/plugin-contract/src/*"],
+      "@domain/*": ["./packages/domain/src/*"]
     }
   },
   "include": [

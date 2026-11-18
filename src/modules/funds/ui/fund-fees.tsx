@@ -1,10 +1,10 @@
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import type { CivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent } from "@/platform/format";
-import { assetsCost, feeValidOn } from "../fees";
-import { feeFormOf } from "../forms";
-import type { FundDetail } from "../queries";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
+import { assetsCost, feeValidOn } from "@ledgerly/domain/funds";
+import { feeFormOf } from "@ledgerly/domain/funds";
+import type { FundDetail } from "@ledgerly/domain/funds";
 import type { FeeScopeOption } from "./fee-text";
 import { FundFeesList } from "./fund-fees-client";
 

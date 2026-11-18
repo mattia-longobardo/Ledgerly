@@ -4,13 +4,13 @@
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
-import { rescheduleConnections } from "@/platform/integrations/service";
-import { hasSsoAccount } from "@/platform/auth/accounts";
-import { getAuth } from "@/platform/auth/auth";
-import { redactForLog } from "@/platform/auth/logger";
-import { nameSchema } from "@/platform/auth/name-policy";
+import { rescheduleConnections } from "@ledgerly/domain/platform/integrations";
+import { hasSsoAccount } from "@ledgerly/domain/platform/auth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { nameSchema } from "@ledgerly/domain/platform/auth";
 import { requireAdmin, requireSession } from "@/platform/auth/session";
-import type { Role } from "@/platform/context";
+import type { Role } from "@ledgerly/domain/platform/context";
 import { LOCALE_COOKIE } from "@/platform/i18n/locales";
 import { parseTheme, THEME_COOKIE, type ThemePreference } from "@/platform/theme";
 import {
@@ -26,14 +26,14 @@ import {
   setPersonBlocked,
   setPersonRole,
 } from "./admin";
-import type { Preferences, TimeOffPreferences } from "./rules";
+import type { Preferences, TimeOffPreferences } from "@ledgerly/domain/users";
 import {
   findSessionToken,
   getPreferences,
   updatePreferences,
   updateProfilePreferences,
   updateTimeOffPreferences,
-} from "./service";
+} from "@ledgerly/domain/users";
 
 const YEAR = 60 * 60 * 24 * 365;
 

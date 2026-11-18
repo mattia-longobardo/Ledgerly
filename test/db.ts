@@ -1,5 +1,5 @@
 // test/db.ts — helpers for *.itest.ts files (Vitest only: the client imports `server-only`).
-import { getPool } from "@/platform/db/client";
+import { getPool } from "@domain/platform/db/client";
 import { truncateAllTables } from "./truncate";
 
 /** Empties every application table, keeping the migrations journal. Call in `beforeEach`. */

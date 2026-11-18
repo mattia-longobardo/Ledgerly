@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { getDb } from "@/platform/db/client";
-import { readEnv } from "@/platform/env";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { readEnv } from "@ledgerly/domain/platform/env";
 import { secretMatches } from "@/platform/jobs/secret";
 
 export const dynamic = "force-dynamic";

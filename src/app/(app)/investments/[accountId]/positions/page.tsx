@@ -3,25 +3,25 @@ import type { ReactNode } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { priceText, quantityText } from "@/modules/investments/activity";
-import { legacyPeriodQuery, type Query, sectionPeriod } from "@/modules/investments/period";
-import type { HoldingPnl, PositionAt } from "@/modules/investments/pnl";
+import { priceText, quantityText } from "@ledgerly/domain/investments";
+import { legacyPeriodQuery, type Query, sectionPeriod } from "@ledgerly/domain/investments";
+import type { HoldingPnl, PositionAt } from "@ledgerly/domain/investments";
 import {
   type ClosedGroup,
   closedGroups,
   contributionsOf,
   onCostOf,
   periodReturnOf,
-} from "@/modules/investments/positions";
-import { type HoldingRow, servicePositions } from "@/modules/investments/queries";
-import { formatDecimal, PRICE_SCALE, QUANTITY_SCALE, unitPriceOf } from "@/modules/investments/rules";
+} from "@ledgerly/domain/investments";
+import { type HoldingRow, servicePositions } from "@ledgerly/domain/investments";
+import { formatDecimal, PRICE_SCALE, QUANTITY_SCALE, unitPriceOf } from "@ledgerly/domain/investments";
 import { type HoldingSummary, HoldingMenu, ReconcileButton } from "@/modules/investments/ui/dialogs";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
-import { addDays, today as civilToday } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import { addDays, today as civilToday } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";

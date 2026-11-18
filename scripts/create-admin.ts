@@ -1,12 +1,12 @@
 // scripts/create-admin.ts — bootstrap a password admin when Authentik is not available.
 // Usage: ADMIN_PASSWORD=… npm run user:create-admin -- admin@example.com "Full Name"  (on the homelab)
-import { createAuth } from "../src/platform/auth/auth";
-import { MAX_NAME_LENGTH, nameSchema } from "../src/platform/auth/name-policy";
+import { createAuth } from "@domain/platform/auth/auth";
+import { MAX_NAME_LENGTH, nameSchema } from "@domain/platform/auth/name-policy";
 import {
   isPasswordLengthValid,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
-} from "../src/platform/auth/password-policy";
+} from "@domain/platform/auth/password-policy";
 
 const [email, rawName] = process.argv.slice(2);
 const password = process.env.ADMIN_PASSWORD ?? "";

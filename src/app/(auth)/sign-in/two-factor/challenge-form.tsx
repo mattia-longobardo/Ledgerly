@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
-import { normalizeTotp, type TwoFactorErrorKey, twoFactorErrorKey } from "@/modules/users/two-factor";
+import { normalizeTotp, type TwoFactorErrorKey, twoFactorErrorKey } from "@ledgerly/domain/users/client";
 import { authClient } from "@/platform/auth/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";

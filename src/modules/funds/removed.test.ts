@@ -25,14 +25,23 @@ function filesWith(word: RegExp, folders: readonly string[]): string[] {
 
 describe("what release N6 removed from Funds", () => {
   it("has no deductible limit, figure or text (exception X1, decision H18)", () => {
-    expect(filesWith(new RegExp(["deduct", "ib"].join(""), "i"), ["src", "messages"])).toEqual([]);
+    expect(
+      filesWith(new RegExp(["deduct", "ib"].join(""), "i"), ["src", "packages/domain/src", "messages"]),
+    ).toEqual([]);
   });
 
   it("has no fund type left: the word of the plan with a debit is in no text and in no code of Funds (criterion 9)", () => {
     const word = new RegExp(`\\b${["P", "A", "C"].join("")}\\b`);
-    expect(filesWith(word, ["messages", "src/modules/funds", "src/app/(app)/funds"])).toEqual([]);
+    expect(
+      filesWith(word, [
+        "messages",
+        "src/modules/funds",
+        "packages/domain/src/modules/funds",
+        "src/app/(app)/funds",
+      ]),
+    ).toEqual([]);
     const types = new RegExp(["fund", "\\.", "type", "\\b"].join(""));
-    expect(filesWith(types, ["src", "scripts"])).toEqual([]);
+    expect(filesWith(types, ["src", "packages/domain/src", "scripts"])).toEqual([]);
   });
 
   it("has no upload, reader, page or job for a fund's documents (decision H19, criterion 13)", () => {
@@ -40,6 +49,8 @@ describe("what release N6 removed from Funds", () => {
       "src/app/(app)/funds/[id]/documents",
       "src/modules/funds/parse",
       "src/modules/funds/pension/imports.ts",
+      "packages/domain/src/modules/funds/parse",
+      "packages/domain/src/modules/funds/pension/imports.ts",
     ]) {
       expect(existsSync(join(ROOT, gone)), gone).toBe(false);
     }
@@ -48,6 +59,7 @@ describe("what release N6 removed from Funds", () => {
     expect(
       filesWith(/upload[A-Z][A-Za-z]*Document|process[A-Z][A-Za-z]*Document/, [
         "src/modules/funds",
+        "packages/domain/src/modules/funds",
         "src/app/(app)/funds",
       ]),
     ).toEqual([]);
@@ -55,10 +67,14 @@ describe("what release N6 removed from Funds", () => {
 
   it("writes nothing on a read: no seed of a tariff is left in the module (criterion 8)", () => {
     expect(
-      filesWith(/seedTariffs|fundFeeTariffs/, ["src/modules/funds", "src/app/(app)/funds"]).sort(),
+      filesWith(/seedTariffs|fundFeeTariffs/, [
+        "src/modules/funds",
+        "packages/domain/src/modules/funds",
+        "src/app/(app)/funds",
+      ]).sort(),
     ).toEqual([
       // The table stays in the schema, untouched, for the image before the release: removed in R5f.
-      "src/modules/funds/schema.ts",
+      "packages/domain/src/modules/funds/schema.ts",
     ]);
   });
 });

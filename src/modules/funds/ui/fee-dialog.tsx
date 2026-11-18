@@ -2,14 +2,21 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, type RefObject, useId, useState } from "react";
-import type { NumberFormat } from "@/platform/format";
+import type { NumberFormat } from "@ledgerly/domain/platform/format";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, InputGroup, Select } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { Segmented } from "@/ui/segmented";
-import { FEE_BASES, FEE_PERIODS, type FeeBasis, feeModes, type FeePeriod, needsPeriod } from "../fees";
-import type { FeeForm } from "../forms";
+import {
+  FEE_BASES,
+  FEE_PERIODS,
+  type FeeBasis,
+  feeModes,
+  type FeePeriod,
+  needsPeriod,
+} from "@ledgerly/domain/funds/client";
+import type { FeeForm } from "@ledgerly/domain/funds/client";
 import { cleanFee, feeModeOf, type FeeProblems, feeProblems, type FeeScopeOption } from "./fee-text";
 
 export interface FeeDialogProps {

@@ -6,11 +6,11 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import { WALLET_RECORD_TEXT_MAX, editWalletTransaction } from "@/platform/integrations/wallet/records";
-import { TRANSACTION_TYPES } from "./rules";
-import { searchPayees } from "./queries";
+import { WALLET_RECORD_TEXT_MAX, editWalletTransaction } from "@ledgerly/domain/platform/integrations/wallet";
+import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
+import { searchPayees } from "@ledgerly/domain/transactions";
 import {
   TransactionError,
   deleteHiddenTransactions,
@@ -18,7 +18,7 @@ import {
   restoreTransactions,
   setCategory,
   updateTransaction,
-} from "./service";
+} from "@ledgerly/domain/transactions";
 
 /**
  * Forms call these inside a transition with no error boundary, so a refusal comes back as a

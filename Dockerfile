@@ -4,6 +4,7 @@ FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # The workspaces (R0): the install links each one by its `package.json`.
+COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
 COPY plugins/enablebanking/package.json ./plugins/enablebanking/
 # No install scripts (PERS-87 SEC-04): a dependency's `postinstall` (ccxt's, today a banner) never

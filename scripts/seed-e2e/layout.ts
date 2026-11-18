@@ -7,28 +7,23 @@ import {
   createAccount,
   saveBalanceEntry,
   saveProviderBalance,
-} from "../../src/modules/accounts/service";
-import { setLimit } from "../../src/modules/budgets/service";
-import { recordValuation } from "../../src/modules/funds/service";
-import { createRule } from "../../src/modules/interests/service";
-import { createManualService } from "../../src/modules/investments/service";
-import {
-  applyPayslip,
-  processPayslip,
-  uploadPayslip,
-  verifyPayslip,
-} from "../../src/modules/payroll/service";
-import { expenseLinkCandidates } from "../../src/modules/pockets/queries";
-import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "../../src/modules/pockets/service";
-import { createSubscription } from "../../src/modules/subscriptions/service";
-import { saveAllowance, saveLeaveDay } from "../../src/modules/timeoff/service";
+} from "@domain/modules/accounts/service";
+import { setLimit } from "@domain/modules/budgets/service";
+import { recordValuation } from "@domain/modules/funds/service";
+import { createRule } from "@domain/modules/interests/service";
+import { createManualService } from "@domain/modules/investments/service";
+import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@domain/modules/payroll/service";
+import { expenseLinkCandidates } from "@domain/modules/pockets/queries";
+import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "@domain/modules/pockets/service";
+import { createSubscription } from "@domain/modules/subscriptions/service";
+import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
 import { refreshRecurrences } from "../../src/modules/transactions/jobs";
-import { upsertFromProvider } from "../../src/modules/transactions/service";
-import { listCategories } from "../../src/modules/transactions/taxonomy";
-import { addDays, addMonths, monthKey, today } from "../../src/platform/dates";
-import { TREK_PROVIDER } from "../../src/platform/integrations/rules";
-import { saveConnection, saveSchedule } from "../../src/platform/integrations/service";
-import { findInstancePlugin } from "../../src/platform/plugins/queries";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { listCategories } from "@domain/modules/transactions/taxonomy";
+import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
+import { saveConnection, saveSchedule } from "@domain/platform/integrations/service";
+import { findInstancePlugin } from "@domain/platform/plugins/queries";
 import { setPluginActive } from "../../src/platform/plugins/service";
 import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../../test/fixtures/payroll/samples";
 import { twinPdf } from "../../test/fixtures/payroll/twin";

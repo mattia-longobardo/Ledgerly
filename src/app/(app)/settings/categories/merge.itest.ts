@@ -1,10 +1,14 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createAccount } from "@/modules/accounts/service";
-import { budgetsView } from "@/modules/budgets/queries";
-import { setLimit } from "@/modules/budgets/service";
-import { createManualTransaction } from "@/modules/transactions/manual";
-import { dismissMergeProposal, listMergeProposals } from "@/modules/transactions/categorize/review";
-import { categoryMacroTotals, listTransactions, transactionsSummary } from "@/modules/transactions/queries";
+import { createAccount } from "@domain/modules/accounts/service";
+import { budgetsView } from "@domain/modules/budgets/queries";
+import { setLimit } from "@domain/modules/budgets/service";
+import { createManualTransaction } from "@domain/modules/transactions/manual";
+import { dismissMergeProposal, listMergeProposals } from "@domain/modules/transactions/categorize/review";
+import {
+  categoryMacroTotals,
+  listTransactions,
+  transactionsSummary,
+} from "@domain/modules/transactions/queries";
 import {
   archiveCategory,
   createCategory,
@@ -12,10 +16,10 @@ import {
   listCategories,
   moveCategory,
   restoreCategories,
-} from "@/modules/transactions/taxonomy";
+} from "@domain/modules/transactions/taxonomy";
 import { macroViews } from "@/modules/transactions/ui/macros";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
+import type { Ctx } from "@domain/platform/context";
+import { monthKey, today } from "@domain/platform/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { mergeProposalsView, mergeTwoCategories, undoMergeOfTwo } from "./merge";

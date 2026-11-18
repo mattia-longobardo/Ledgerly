@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAccount, saveBalanceEntry } from "@/modules/accounts/service";
-import type { IncomingTransaction } from "@/modules/transactions/rules";
-import { upsertFromProvider } from "@/modules/transactions/service";
-import { authAccounts } from "@/platform/auth/schema";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { deleteFolder, listFolder } from "@/platform/storage";
+import { createAccount, saveBalanceEntry } from "@domain/modules/accounts/service";
+import type { IncomingTransaction } from "@domain/modules/transactions/rules";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { authAccounts } from "@domain/platform/auth/schema";
+import type { Ctx } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
+import { deleteFolder, listFolder } from "@domain/platform/storage";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
@@ -17,7 +17,7 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 const { api } = await import("./app");
 const { resetRateLimits, MAX_PER_WINDOW } = await import("./rate-limit");
-const { getAuth, invalidateAuth } = await import("@/platform/auth/auth");
+const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClientWith, deleteApiClient } = await import("@/platform/auth/api-clients");
 
 const ORIGIN = "http://127.0.0.1:3000";
@@ -285,7 +285,7 @@ describe("POST /imports", () => {
     expect(response.status).toBe(201);
     const { id } = await response.json();
 
-    const { requireDocument } = await import("@/modules/imports/service");
+    const { requireDocument } = await import("@domain/modules/imports/service");
     await expect(requireDocument(alice, id)).rejects.toMatchObject({ code: "not_found" });
     expect((await requireDocument(bob, id)).id).toBe(id);
   });
@@ -310,7 +310,7 @@ describe("POST /imports", () => {
     so that a caller gets a declared refusal, and nothing of the file is kept.
   */
   it("refuses a fund's document with 415 and keeps nothing of it, while a payslip still uploads", async () => {
-    const { documents } = await import("@/modules/imports/schema");
+    const { documents } = await import("@domain/modules/imports/schema");
     const stored = async () => [
       ...(await listFolder(`payslips/${alice.userId}/`)),
       ...(await listFolder(`cometa/${alice.userId}/`)),

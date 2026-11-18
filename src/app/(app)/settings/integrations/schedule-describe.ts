@@ -1,5 +1,5 @@
-import type { SyncDays, SyncRule, SyncSchedule } from "@/platform/integrations/schedule";
-import { LAST_DAY } from "@/platform/integrations/schedule";
+import type { SyncDays, SyncRule, SyncSchedule } from "@ledgerly/domain/platform/integrations/client";
+import { LAST_DAY } from "@ledgerly/domain/platform/integrations/client";
 
 /**
  * The translator of `settings.integrations.scheduleControl`, reduced to what is used here: the

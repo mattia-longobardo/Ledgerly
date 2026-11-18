@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../messages/en.json";
-import type { WizardForm } from "../forms";
-import { FUND_TEMPLATES, type FundTemplate } from "../templates";
+import type { WizardForm } from "@domain/modules/funds/forms";
+import { FUND_TEMPLATES, type FundTemplate } from "@domain/modules/funds/templates";
 import { FundWizard, type FundWizardProps } from "./fund-wizard";
 
 // The step is in the address: the router of the test keeps it and draws the form again.

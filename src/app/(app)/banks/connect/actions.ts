@@ -6,11 +6,11 @@
 
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { redactForLog } from "@/platform/auth/logger";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { getOptionalSession } from "@/platform/auth/session";
 import { runAfterSync } from "@/platform/jobs/after-sync";
-import { listPluginConnections } from "@/platform/plugins/queries";
-import { instanceKeyOf, institutionOf } from "@/platform/plugins/rules";
+import { listPluginConnections } from "@ledgerly/domain/platform/plugins";
+import { instanceKeyOf, institutionOf } from "@ledgerly/domain/platform/plugins";
 import {
   disconnectBank,
   listInstitutions,

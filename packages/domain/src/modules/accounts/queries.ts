@@ -1,0 +1,515 @@
+import { and, asc, desc, eq, inArray, lte, min, notInArray, sql } from "drizzle-orm";
+import type { Ctx } from "../../platform/context";
+import {
+  type CivilDate,
+  addMonths,
+  lastDayOfMonth,
+  type MonthKey,
+  monthKey,
+  monthsBetween,
+  today,
+} from "../../platform/dates";
+import { getDb } from "../../platform/db/client";
+import { userScoped } from "../../platform/db/scope";
+import { convertCents, type DisplayCurrency } from "../../platform/fx/rules";
+import { ratesOn } from "../../platform/fx/service";
+import type { Cents } from "../../platform/money";
+import {
+  type AccountAlert,
+  type BalancePoint,
+  type BalanceReading,
+  type Bucket,
+  alertsFor,
+  bucketOf,
+  estimatedMonths,
+  isStale,
+  monthEndSeries,
+  MOVEMENT_SOURCE,
+  SOURCE_PRECEDENCE,
+  totalSeries,
+} from "./rules";
+import { accountGroups, accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
+
+export type Account = typeof accounts.$inferSelect;
+export type BalanceEntry = typeof balanceEntries.$inferSelect;
+export type SnapshotRun = typeof snapshotRuns.$inferSelect;
+export type AccountGroup = typeof accountGroups.$inferSelect;
+
+/**
+ * Same day, more than one source: the order of `SOURCE_PRECEDENCE` (spec §7.1) — every source is
+ * named, so a new one cannot fall into a tie by accident.
+ */
+export const SOURCE_RANK = sql`case ${balanceEntries.source} ${sql.raw(
+  [MOVEMENT_SOURCE, ...SOURCE_PRECEDENCE].map((source, rank) => `when '${source}' then ${rank}`).join(" "),
+)} else ${SOURCE_PRECEDENCE.length + 1} end`;
+
+/** The sources that are not a reading of the account: the snapshot's copies and the rebuilt ends. */
+const NOT_OBSERVED = ["system", "derived"] as const;
+
+/**
+ * What is not a reading somebody took: the copies above, and the balance after the manual
+ * movements, which the app works out from the readings (`movementBalances`).
+ */
+const NOT_A_READING = [...NOT_OBSERVED, "movement"] as const;
+
+const MONTH_OF = sql`date_trunc('month', ${balanceEntries.on})`;
+
+/** How many months the Overview and Accounts charts look back over. */
+export const WINDOW_MONTHS = 24;
+
+/**
+ * The balance of each account on a day: its latest entry on or before it.
+ *
+ * `observed` leaves out the snapshot's own `system` rows. The monthly snapshot reads the balances
+ * that way, so a second run copies the real balance again rather than the row its first run wrote
+ * (which would freeze the month at whatever the first run happened to see).
+ */
+export async function balancesOn(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+  on: CivilDate,
+  options: { observed?: boolean } = {},
+): Promise<Map<string, Cents>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .selectDistinctOn([balanceEntries.accountId], {
+      accountId: balanceEntries.accountId,
+      balanceCents: balanceEntries.balanceCents,
+    })
+    .from(balanceEntries)
+    .where(
+      and(
+        userScoped(ctx).owns(balanceEntries),
+        inArray(balanceEntries.accountId, [...accountIds]),
+        lte(balanceEntries.on, on),
+        options.observed ? notInArray(balanceEntries.source, [...NOT_OBSERVED]) : undefined,
+      ),
+    )
+    .orderBy(
+      asc(balanceEntries.accountId),
+      desc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  return new Map(rows.map((row) => [row.accountId, row.balanceCents]));
+}
+
+/**
+ * One point per account per month: that month's last balance, up to and including `through`.
+ * Months before the window are kept on purpose — the most recent one is a series' starting value
+ * (spec §7.1), so a chart does not begin at `null` for an account that simply has not moved.
+ */
+export async function monthlyPoints(
+  ctx: Pick<Ctx, "userId">,
+  through: CivilDate,
+): Promise<Map<string, BalancePoint[]>> {
+  const rows = await getDb()
+    .selectDistinctOn([balanceEntries.accountId, MONTH_OF], {
+      accountId: balanceEntries.accountId,
+      on: balanceEntries.on,
+      balanceCents: balanceEntries.balanceCents,
+      source: balanceEntries.source,
+    })
+    .from(balanceEntries)
+    .where(and(userScoped(ctx).owns(balanceEntries), lte(balanceEntries.on, through)))
+    .orderBy(
+      asc(balanceEntries.accountId),
+      MONTH_OF,
+      desc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  const byAccount = new Map<string, BalancePoint[]>();
+  for (const row of rows) {
+    const points = byAccount.get(row.accountId) ?? [];
+    points.push({ on: row.on, cents: row.balanceCents, derived: row.source === "derived" });
+    byAccount.set(row.accountId, points);
+  }
+  return byAccount;
+}
+
+/**
+ * The readings of each account, one per day — the best source of that day — and nothing the app
+ * wrote itself (no snapshot copy, no rebuilt end): what `deriveMonthEnds` rebuilds the history
+ * from (spec §7.1, F2.5). In date order.
+ */
+export async function observedDays(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, BalancePoint[]>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .selectDistinctOn([balanceEntries.accountId, balanceEntries.on], {
+      accountId: balanceEntries.accountId,
+      on: balanceEntries.on,
+      balanceCents: balanceEntries.balanceCents,
+    })
+    .from(balanceEntries)
+    .where(
+      and(
+        userScoped(ctx).owns(balanceEntries),
+        inArray(balanceEntries.accountId, [...accountIds]),
+        notInArray(balanceEntries.source, [...NOT_A_READING]),
+      ),
+    )
+    .orderBy(
+      asc(balanceEntries.accountId),
+      asc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  const byAccount = new Map<string, BalancePoint[]>();
+  for (const row of rows) {
+    const points = byAccount.get(row.accountId) ?? [];
+    points.push({ on: row.on, cents: row.balanceCents });
+    byAccount.set(row.accountId, points);
+  }
+  return byAccount;
+}
+
+/** What the balance after the manual movements is worked out from (`movementBalances`). */
+export interface MovementBasis {
+  /** One reading per day: the best source's value, and the latest moment any of them was taken. */
+  readings: BalanceReading[];
+  /** The days the app copied or rebuilt a balance on. */
+  copies: CivilDate[];
+  /** The points written by the last rebuild. */
+  points: BalancePoint[];
+}
+
+/**
+ * The readings, the copied days and the current movement points of each account, in date order.
+ * A day read by two sources is one reading: the value of the first in `SOURCE_PRECEDENCE`, taken
+ * at the latest of their moments — a bank's reading of this evening holds what was written this
+ * morning even when a correction typed yesterday still decides the number.
+ */
+export async function movementBasis(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, MovementBasis>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      accountId: balanceEntries.accountId,
+      on: balanceEntries.on,
+      balanceCents: balanceEntries.balanceCents,
+      source: balanceEntries.source,
+      capturedAt: balanceEntries.capturedAt,
+    })
+    .from(balanceEntries)
+    .where(and(userScoped(ctx).owns(balanceEntries), inArray(balanceEntries.accountId, [...accountIds])))
+    .orderBy(
+      asc(balanceEntries.accountId),
+      asc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  const copied: readonly string[] = NOT_OBSERVED;
+  const byAccount = new Map<string, MovementBasis>();
+  for (const row of rows) {
+    const basis = byAccount.get(row.accountId) ?? { readings: [], copies: [], points: [] };
+    byAccount.set(row.accountId, basis);
+    if (row.source === "movement") {
+      basis.points.push({ on: row.on, cents: row.balanceCents });
+    } else if (copied.includes(row.source)) {
+      if (basis.copies.at(-1) !== row.on) basis.copies.push(row.on);
+    } else {
+      const last = basis.readings.at(-1);
+      if (last?.on !== row.on) {
+        basis.readings.push({ on: row.on, cents: row.balanceCents, capturedAt: row.capturedAt });
+      } else if (row.capturedAt > last.capturedAt) {
+        last.capturedAt = row.capturedAt;
+      }
+    }
+  }
+  return byAccount;
+}
+
+/**
+ * Every day of each account with its balance, one row per day — the best source of that day, as
+ * {@link balancesOn} picks it — in date order. `observed` says whether a person or a provider read
+ * it (not a snapshot copy, not a month end rebuilt from the movements). What Investments shows a
+ * manual service's value from (docs/design/investments.md §1.3, PERS-342): the account's own
+ * balance, the one the net worth counts.
+ */
+export async function balanceDays(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+): Promise<Map<string, { on: CivilDate; cents: Cents; observed: boolean }[]>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .selectDistinctOn([balanceEntries.accountId, balanceEntries.on], {
+      accountId: balanceEntries.accountId,
+      on: balanceEntries.on,
+      balanceCents: balanceEntries.balanceCents,
+      source: balanceEntries.source,
+    })
+    .from(balanceEntries)
+    .where(and(userScoped(ctx).owns(balanceEntries), inArray(balanceEntries.accountId, [...accountIds])))
+    .orderBy(
+      asc(balanceEntries.accountId),
+      asc(balanceEntries.on),
+      asc(SOURCE_RANK),
+      desc(balanceEntries.capturedAt),
+    );
+  const notObserved: readonly string[] = NOT_OBSERVED;
+  const byAccount = new Map<string, { on: CivilDate; cents: Cents; observed: boolean }[]>();
+  for (const row of rows) {
+    const days = byAccount.get(row.accountId) ?? [];
+    days.push({ on: row.on, cents: row.balanceCents, observed: !notObserved.includes(row.source) });
+    byAccount.set(row.accountId, days);
+  }
+  return byAccount;
+}
+
+export async function listAccounts(
+  ctx: Pick<Ctx, "userId">,
+  options: { includeArchived?: boolean } = {},
+): Promise<Account[]> {
+  const rows = await getDb()
+    .select()
+    .from(accounts)
+    .where(userScoped(ctx).owns(accounts))
+    .orderBy(asc(accounts.sortOrder), asc(accounts.id));
+  return options.includeArchived ? rows : rows.filter((row) => row.state !== "archived");
+}
+
+/**
+ * Every account of the user with whether it has a movement written by hand, in one read: what the
+ * rebuild of the derived balances starts from (`rebuildDerivedBalances`). Archived ones too.
+ */
+export async function accountsToRebuild(
+  ctx: Pick<Ctx, "userId">,
+): Promise<{ account: Account; hasManualMovements: boolean }[]> {
+  const rows = await getDb()
+    .select({ account: accounts, marked: manualMovementAccounts.accountId })
+    .from(accounts)
+    .leftJoin(manualMovementAccounts, eq(manualMovementAccounts.accountId, accounts.id))
+    .where(userScoped(ctx).owns(accounts))
+    .orderBy(asc(accounts.sortOrder), asc(accounts.id));
+  return rows.map((row) => ({ account: row.account, hasManualMovements: row.marked !== null }));
+}
+
+export async function getAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<Account | null> {
+  const [row] = await getDb()
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  return row ?? null;
+}
+
+export async function listBalanceEntries(
+  ctx: Pick<Ctx, "userId">,
+  accountId: string,
+  limit = 200,
+): Promise<BalanceEntry[]> {
+  return getDb()
+    .select()
+    .from(balanceEntries)
+    .where(and(eq(balanceEntries.accountId, accountId), userScoped(ctx).owns(balanceEntries)))
+    .orderBy(desc(balanceEntries.on), asc(SOURCE_RANK), desc(balanceEntries.id))
+    .limit(limit);
+}
+
+export async function listSnapshotRuns(ctx: Pick<Ctx, "userId">, limit = 24): Promise<SnapshotRun[]> {
+  return getDb()
+    .select()
+    .from(snapshotRuns)
+    .where(userScoped(ctx).owns(snapshotRuns))
+    .orderBy(desc(snapshotRuns.month), desc(snapshotRuns.id))
+    .limit(limit);
+}
+
+export interface AccountRow {
+  account: Account;
+  /** The latest known balance, `null` while the account has none. */
+  balance: Cents | null;
+  /** The same account at the end of the previous month, for the monthly change. */
+  previous: Cents | null;
+  /** One month-end value per month of the window; `interpolate` applies here and nowhere else. */
+  series: (Cents | null)[];
+  /** Per month, whether the value stands on a month end rebuilt from the movements (F2.5). */
+  estimated: boolean[];
+  /**
+   * The same months held, never interpolated: what the net worth sums. The stacked Overview chart
+   * draws these, so its bands add up to its total exactly.
+   */
+  held: (Cents | null)[];
+  /**
+   * The same figures in the display currency (docs/design/investments.md §1.8, D1), each converted
+   * at the rate of its own day: what every total sums and the stacked chart draws. Equal to the
+   * native ones when the account is in the display currency; `null` where a rate is missing.
+   */
+  display: { balance: Cents | null; previous: Cents | null; held: (Cents | null)[] };
+  /** The account has a balance today and no rate to the display currency: it is out of the totals. */
+  missingRate: boolean;
+  stale: boolean;
+}
+
+export type BucketTotals = Record<Bucket, { total: Cents | null; partial: boolean; count: number }>;
+
+export interface AccountsView {
+  /** What every total below is in: the user's display currency. Each row's own fields are not. */
+  currency: DisplayCurrency;
+  months: MonthKey[];
+  rows: AccountRow[];
+  /** The net-worth series: the accounts included in it, held (never interpolated) and summed. */
+  netWorth: { total: Cents | null; partial: boolean }[];
+  /** Per month, whether any account in the net worth stands on a rebuilt month end (F2.5). */
+  netWorthEstimated: boolean[];
+  total: Cents | null;
+  totalPartial: boolean;
+  previousTotal: Cents | null;
+  buckets: BucketTotals;
+  alerts: AccountAlert[];
+  /** The currencies of accounts counted today that have no rate to `currency`, sorted. */
+  missingRates: string[];
+  lastSnapshot: SnapshotRun | null;
+}
+
+function emptyBuckets(): BucketTotals {
+  return {
+    cash: { total: null, partial: false, count: 0 },
+    savings: { total: null, partial: false, count: 0 },
+    investments: { total: null, partial: false, count: 0 },
+    other: { total: null, partial: false, count: 0 },
+  };
+}
+
+/**
+ * Everything Overview and Accounts render, read once. Balances are the month-end series of spec
+ * §7.1: held forward, `null` before an account's first balance, and a total that is `null` only
+ * when every account is unknown. An account's `interpolate` setting shapes its own chart series
+ * and never the totals.
+ *
+ * Every total is in the display currency (§1.8, §2.3): each account's value is converted at the
+ * rate of the day it stands for — a month end at that month's last day, today at today — rounded to
+ * the cent, and only then summed. A value with no rate is left out and makes its total partial,
+ * exactly like an account with no balance; it is never counted 1:1. With every account in the
+ * display currency nothing is converted and no rate is read.
+ */
+export async function accountsView(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
+  options: { months?: number; now?: Date; through?: MonthKey; includeArchived?: boolean } = {},
+): Promise<AccountsView> {
+  const now = options.now ?? new Date();
+  const span = options.months ?? WINDOW_MONTHS;
+  const todayOn = today(ctx.timeZone, now);
+  const thisMonth = monthKey(todayOn);
+  // The window ends on the month asked for, or on the current one. A past month is read at its
+  // last day; the current month is read at today, because its end has not happened yet.
+  const end = options.through ? monthKey(options.through) : thisMonth;
+  const on = end >= thisMonth ? todayOn : lastDayOfMonth(end);
+  const months = monthsBetween(addMonths(end, -(span - 1)), end);
+
+  // An archived account is off the list unless it is asked for. It never joins the totals either
+  // way (see `counted` below): the net worth of today is what you have today, and a closed account
+  // is not part of it — its balances stay counted in the months it was open, which is what the
+  // series already does.
+  const [open, points, snapshots] = await Promise.all([
+    listAccounts(ctx, { includeArchived: options.includeArchived ?? false }),
+    monthlyPoints(ctx, on),
+    listSnapshotRuns(ctx, 1),
+  ]);
+  const latest = await balancesOn(
+    ctx,
+    open.map((account) => account.id),
+    on,
+  );
+  const previousMonthEnd = lastDayOfMonth(addMonths(end, -1));
+  const previous = await balancesOn(
+    ctx,
+    open.map((account) => account.id),
+    previousMonthEnd,
+  );
+
+  const currency = ctx.displayCurrency;
+  // The day each month's value stands for, and so the day of its rate: today for a month still
+  // running, its last day otherwise.
+  const daysOf = months.map((month, i) => (i === months.length - 1 ? on : lastDayOfMonth(month)));
+  const firstDay = daysOf[0] < previousMonthEnd ? daysOf[0] : previousMonthEnd;
+  const rates = await ratesOn(
+    open.some((account) => account.currency !== currency)
+      ? [currency, ...open.map((account) => account.currency)]
+      : [],
+    firstDay,
+    on,
+  );
+  const convert = (cents: Cents | null, from: string, day: CivilDate): Cents | null =>
+    cents === null ? null : convertCents(cents, from, currency, day, rates);
+
+  const rows: AccountRow[] = open.map((account) => {
+    const balance = latest.get(account.id) ?? null;
+    const before = previous.get(account.id) ?? null;
+    const held = monthEndSeries(points.get(account.id) ?? [], months, "hold");
+    const display = {
+      balance: convert(balance, account.currency, on),
+      previous: convert(before, account.currency, previousMonthEnd),
+      held: held.map((cents, i) => convert(cents, account.currency, daysOf[i])),
+    };
+    return {
+      account,
+      balance,
+      previous: before,
+      series: monthEndSeries(points.get(account.id) ?? [], months, account.betweenEntries),
+      estimated: estimatedMonths(points.get(account.id) ?? [], months),
+      held,
+      display,
+      missingRate: balance !== null && display.balance === null,
+      stale:
+        account.state !== "archived" &&
+        account.origin === "synced" &&
+        isStale(account.lastSyncedAt, account.staleAfterHours, now),
+    };
+  });
+
+  const counted = rows.filter((row) => row.account.inNetWorth && row.account.state !== "archived");
+  const netWorth = totalSeries(
+    counted.map((row) => row.display.held),
+    months.length,
+  );
+  const current = netWorth.at(-1) ?? { total: null, partial: false };
+  const netWorthEstimated = months.map((_, i) => counted.some((row) => row.estimated[i]));
+
+  const buckets = emptyBuckets();
+  for (const row of counted) {
+    const bucket = buckets[bucketOf(row.account)];
+    bucket.count += 1;
+    if (row.display.balance === null) bucket.partial = true;
+    else bucket.total = (bucket.total ?? 0n) + row.display.balance;
+  }
+
+  // Nothing to warn about on an account you closed: no low balance, no reading gone stale.
+  const alerts = rows
+    .filter((row) => row.account.state !== "archived")
+    .flatMap((row) => alertsFor(row.account, row.balance, now));
+
+  return {
+    currency,
+    months,
+    rows,
+    netWorth,
+    netWorthEstimated,
+    total: current.total,
+    totalPartial: current.partial,
+    previousTotal: netWorth.at(-2)?.total ?? null,
+    buckets,
+    alerts,
+    missingRates: [
+      ...new Set(counted.filter((row) => row.missingRate).map((row) => row.account.currency)),
+    ].sort(),
+    lastSnapshot: snapshots[0] ?? null,
+  };
+}
+
+/**
+ * The day of the user's oldest balance, of any account and source; `null` with no balance at all.
+ * The exchange-rate backfill starts there (docs/design/investments.md §1.8).
+ */
+export async function firstBalanceDay(ctx: Pick<Ctx, "userId">): Promise<CivilDate | null> {
+  const [row] = await getDb()
+    .select({ on: min(balanceEntries.on) })
+    .from(balanceEntries)
+    .where(userScoped(ctx).owns(balanceEntries));
+  return row?.on ?? null;
+}

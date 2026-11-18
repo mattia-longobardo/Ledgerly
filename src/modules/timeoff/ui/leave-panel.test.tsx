@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../messages/en.json";
-import { italianHolidays } from "@/platform/holidays/rules";
-import type { LeaveDayKind, LeaveDayView, ResidualInput } from "../rules";
+import { italianHolidays } from "@domain/platform/holidays/rules";
+import type { LeaveDayKind, LeaveDayView, ResidualInput } from "@domain/modules/timeoff/rules";
 import { leaveTypeOptions } from "./kinds";
 import { type BookedLeave, type LeavePanelEntry, LeavePanel } from "./leave-panel";
 

@@ -1,9 +1,9 @@
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import { formatMoney, formatPercent } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
 import { Card } from "@/ui/card";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { FORECAST_RATES, type FundForecast } from "../rules";
+import { FORECAST_RATES, type FundForecast } from "@ledgerly/domain/funds";
 
 const SHORT_YEARS: readonly number[] = [5, 10];
 /** The middle hypothesis: the short card names one rate. */

@@ -15,7 +15,7 @@ import {
   setSubscriptionStateAction,
   updateSubscriptionAction,
 } from "../actions";
-import { CYCLES, type Cycle, type SubscriptionState } from "../rules";
+import { CYCLES, type Cycle, type SubscriptionState } from "@ledgerly/domain/subscriptions/client";
 
 /** What the dialog starts from: an existing subscription, a suggestion, or nothing. */
 export interface SubscriptionDraft {

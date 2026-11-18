@@ -2,8 +2,8 @@ import type { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { rangeLabel } from "@/modules/transactions/ui/display";
 import { RangePicker } from "@/modules/transactions/ui/range-picker";
-import type { UiLocale } from "@/platform/format";
-import { type DateRange, RANGE_PRESETS } from "@/platform/ranges";
+import type { UiLocale } from "@ledgerly/domain/platform/format";
+import { type DateRange, RANGE_PRESETS } from "@ledgerly/domain/platform/ranges";
 import type { Params } from "@/ui/url";
 import { LinkTabs, PeriodStepper } from "./controls";
 

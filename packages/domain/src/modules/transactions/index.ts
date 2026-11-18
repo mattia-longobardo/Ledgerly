@@ -1,0 +1,155 @@
+// The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
+export type { ReviewGroup } from "./categorize/review-rules";
+export {
+  categoryCounts,
+  changeCategories,
+  createDefaultGroups,
+  dismissMergeProposal,
+  listMergeProposals,
+  mergeCategories,
+  mergeUndoSchema,
+  restoreMergeProposal,
+  reviewOf,
+  similarTo,
+  undoChange,
+  unmergeCategories,
+} from "./categorize/review";
+export type { MergeProposal, MergeUndo } from "./categorize/review";
+export { categorise, isPreparing, suggestFor } from "./categorize/service";
+export { DEFAULT_GROUPS } from "./categorize/tables";
+export { memoryKey } from "./categorize/text";
+export {
+  applyRule,
+  createRule,
+  deleteRule,
+  listRules,
+  previewRule,
+  previewSavedRule,
+  reorderRules,
+  restoreRule,
+  rulesForCategory,
+  setRuleActive,
+  undoRuleApply,
+  updateRule,
+} from "./categorize/user-rules-service";
+export type { RulePreview } from "./categorize/user-rules-service";
+export {
+  AMOUNT_OPS,
+  COUNTERPARTY_OPS,
+  DIRECTIONS,
+  MAX_CONDITIONS,
+  MAX_TEXT_CONDITIONS,
+  NOTE_MAX,
+  RULE_FIELDS,
+  RULE_SOURCES,
+  TEXT_OPS,
+} from "./categorize/user-rules";
+export type { RuleCondition, RuleField } from "./categorize/user-rules";
+export { MANUAL_KINDS, signedAmount } from "./manual-rules";
+export type { ManualKind } from "./manual-rules";
+export { createManualTransaction, deleteManualTransaction, updateManualTransaction } from "./manual";
+export {
+  MAX_LIMIT,
+  categoryMacroTotals,
+  chargeCandidates,
+  expensesView,
+  facetCounts,
+  getTransaction,
+  listTransactions,
+  manualMovementsByAccount,
+  movementSpanByAccount,
+  rulesForExport,
+  searchPayees,
+  shareOf,
+  spendingOverTime,
+  transactionsByIds,
+  transactionsSummary,
+} from "./queries";
+export type { CategoryMacroTotal, Transaction, TransactionRow } from "./queries";
+export {
+  CATEGORY_COLORS,
+  CATEGORY_TYPES,
+  NAME_MAX,
+  TRANSACTION_TYPES,
+  detectRecurrences,
+  displayPayee,
+  isHidden,
+  macrosFor,
+} from "./rules";
+export type {
+  CategoryType,
+  IncomingTransaction,
+  RecurrenceInput,
+  TransactionOrigin,
+  TransactionState,
+  TransactionType,
+} from "./rules";
+export { recurringPatterns, transactions } from "./schema";
+export { forgetSends, pendingSends } from "./sending";
+export {
+  TransactionError,
+  categorisableAccountIds,
+  deleteHiddenTransactions,
+  hideTransactions,
+  linkOwnTransfers,
+  releaseLocalEdits,
+  restoreTransactions,
+  setCategory,
+  updateTransaction,
+  upsertFromProvider,
+} from "./service";
+export {
+  SourceCategoryError,
+  chooseSourceCategory,
+  forgetSourceCategories,
+  keepSourceCategory,
+  listSourceCategories,
+  sourceCategoryCount,
+  sourceNamesByCategory,
+  undoSourceCategory,
+} from "./source-categories";
+export type { SourceCategoryChange, SourceCategoryHooks, SourceCategoryView } from "./source-categories";
+export {
+  SWITCH_MATCH_MAX_DAYS,
+  compareSources,
+  comparisonFrom,
+  matchDoubles,
+  planTransfers,
+} from "./switch-rules";
+export type { DoubleMatch, SwitchMovement, TransferPair } from "./switch-rules";
+export {
+  choicesToCarry,
+  doubleMovements,
+  joinDoubles,
+  linkFoundInBoth,
+  movementsToCompare,
+  retireBankRows,
+  transferCandidates,
+  undoJoinedDoubles,
+  undoTransferPairs,
+  writeTransferPairs,
+} from "./switching";
+export {
+  TaxonomyError,
+  archiveCategory,
+  categoryOptions,
+  colorOfCategory,
+  createCategory,
+  createLabel,
+  deleteCategory,
+  deleteLabel,
+  getCategory,
+  listCategories,
+  listCategoriesWithUsage,
+  listLabels,
+  listLabelsWithUsage,
+  macroMoveFacts,
+  moveCategory,
+  moveCategoryToMacro,
+  movesBetweenMacros,
+  restoreCategories,
+  restoreCategory,
+  updateCategory,
+  updateLabel,
+} from "./taxonomy";
+export type { MacroPlace } from "./taxonomy";

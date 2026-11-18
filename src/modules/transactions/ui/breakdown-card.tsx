@@ -1,6 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { formatMoney, type NumberFormat } from "@/platform/format";
+import { formatMoney, type NumberFormat } from "@ledgerly/domain/platform/format";
 import { Card } from "@/ui/card";
 import { CompositionBar } from "@/ui/chart";
 import type { BreakdownBar, BreakdownGroup } from "./display";

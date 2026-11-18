@@ -4,14 +4,14 @@
 // application joins them (rule M8), in one transaction — both halves, or nothing.
 import "server-only";
 import { z } from "zod";
-import { listAccounts } from "@/modules/accounts/queries";
+import { listAccounts } from "@ledgerly/domain/accounts";
 import {
   categoriesWithLimit,
   limitsSnapshot,
   type LimitsSnapshot,
   mergeLimits,
   restoreLimits,
-} from "@/modules/budgets/service";
+} from "@ledgerly/domain/budgets";
 import {
   listMergeProposals,
   mergeCategories,
@@ -19,11 +19,11 @@ import {
   type MergeUndo,
   mergeUndoSchema,
   unmergeCategories,
-} from "@/modules/transactions/categorize/review";
-import { TransactionError } from "@/modules/transactions/service";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+} from "@ledgerly/domain/transactions";
+import { TransactionError } from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { getDb } from "@ledgerly/domain/platform/db";
 
 type Who = Pick<Ctx, "userId" | "timeZone">;
 

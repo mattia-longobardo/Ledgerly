@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/platform/auth/provider", () => ({ identityProviderUrl: () => null }));
+vi.mock("@domain/platform/auth/provider", () => ({ identityProviderUrl: () => null }));
 
 const { proxy, config } = await import("./proxy");
 

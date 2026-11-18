@@ -7,7 +7,7 @@
 import type { z } from "zod";
 import { SECRET_HEADER } from "@ledgerly/plugin-contract";
 import { errorBodySchema, type PluginErrorCode } from "@ledgerly/plugin-contract";
-import type { ConfiguredPlugin } from "@/platform/plugin-config";
+import type { ConfiguredPlugin } from "@ledgerly/domain/platform/plugin-config";
 
 /**
  * Why a call failed: a code of the contract, or `plugin_down` when the plugin itself did not

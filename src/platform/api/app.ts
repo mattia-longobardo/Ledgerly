@@ -4,7 +4,7 @@ import { accountsApi } from "@/modules/accounts/api";
 import { importsApi } from "@/modules/imports/api";
 import { investmentsApi } from "@/modules/investments/api";
 import { transactionsApi } from "@/modules/transactions/api";
-import { redactForLog } from "@/platform/auth/logger";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { ApiEnv } from "./auth";
 import { fail } from "./errors";
 import { summaryApi } from "./summary";

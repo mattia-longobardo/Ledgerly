@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CategoryMacroTotal } from "../queries";
+import type { CategoryMacroTotal } from "@domain/modules/transactions/queries";
 import { type MacroCategory, macroViews } from "./macros";
 
 const cat = (id: string, type: MacroCategory["type"], parentId: string | null = null): MacroCategory => ({

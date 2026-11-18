@@ -9,7 +9,7 @@ import { Modal } from "@/ui/modal";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
 import { deleteSubscriptionAction } from "../actions";
-import type { Cycle } from "../rules";
+import type { Cycle } from "@ledgerly/domain/subscriptions/client";
 import { type DialogOptions, SubscriptionDialog, type SubscriptionDraft } from "./subscription-dialog";
 
 export type PaidStatus = "paid" | "amount_differs" | "due" | "not_found" | "not_due" | "unchecked";

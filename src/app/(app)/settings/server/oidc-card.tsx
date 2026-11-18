@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useRef, useState, useTransition } from "react";
-import type { OidcProbeOutcome } from "@/platform/settings/oidc-probe";
+import type { OidcProbeOutcome } from "@ledgerly/domain/platform/settings/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";

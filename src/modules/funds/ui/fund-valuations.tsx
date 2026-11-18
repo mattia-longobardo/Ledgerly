@@ -1,17 +1,17 @@
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import type { CivilDate } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@/platform/format";
-import type { Cents } from "@/platform/money";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import type { Cents } from "@ledgerly/domain/platform/money";
 import { Card, CardHeader } from "@/ui/card";
 import { cn } from "@/ui/cn";
 import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { TONE_TEXT, toneOfSign } from "@/ui/tone";
-import type { ValuationRow } from "../pension/operations";
-import type { FundDetail } from "../queries";
-import { bestAndWorst, closesPeriodBefore, readsPeriod, type ValuationLine } from "../tabs";
-import type { FundPeriod } from "../period";
+import type { ValuationRow } from "@ledgerly/domain/funds";
+import type { FundDetail } from "@ledgerly/domain/funds";
+import { bestAndWorst, closesPeriodBefore, readsPeriod, type ValuationLine } from "@ledgerly/domain/funds";
+import type { FundPeriod } from "@ledgerly/domain/funds";
 import { DeleteValuation, EditValuationButton } from "./fund-forms";
 import { valuationDraft } from "./present";
 

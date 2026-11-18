@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { expenseLinkCandidates, pocketsView, type PocketView } from "@/modules/pockets/queries";
+import { expenseLinkCandidates, pocketsView, type PocketView } from "@ledgerly/domain/pockets";
 import {
   type DialogContext,
   PocketActions,
@@ -9,16 +9,16 @@ import {
   RemovePlannedButton,
   UnlinkExpenseButton,
 } from "@/modules/pockets/ui/pocket-actions";
-import { percentOf } from "@/modules/budgets/rules";
+import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
-import { addMonths, monthKey, today } from "@/platform/dates";
+import { addMonths, monthKey, today } from "@ledgerly/domain/platform/dates";
 import {
   formatAmountInput,
   formatDate,
   formatMoney,
   formatWholePercent,
   NULL_DISPLAY,
-} from "@/platform/format";
+} from "@ledgerly/domain/platform/format";
 import { Badge } from "@/ui/badge";
 import { Card, CardHeader } from "@/ui/card";
 import { MiniBars } from "@/ui/chart";

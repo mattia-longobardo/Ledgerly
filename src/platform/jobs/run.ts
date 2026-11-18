@@ -1,10 +1,10 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { alertAdmins } from "@/platform/alerts/gotify";
-import { redactForLog } from "@/platform/auth/logger";
-import { getDb } from "@/platform/db/client";
+import { alertAdmins } from "@ledgerly/domain/platform/alerts";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { getDb } from "@ledgerly/domain/platform/db";
 import type { JobDefinition, RecordedTier } from "./registry";
-import { jobRuns } from "./schema";
+import { jobRuns } from "@ledgerly/domain/platform/jobs";
 
 export type Status = "success" | "failed" | "skipped";
 export type Outcome = { job: string; status: Status };

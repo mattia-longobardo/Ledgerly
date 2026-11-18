@@ -9,7 +9,7 @@ import { Modal } from "@/ui/modal";
 import { SettingsSection } from "@/ui/section";
 import { notify } from "@/ui/toast";
 import { addConnectionAction, removeConnectionAction, updateConnectionAction } from "../actions";
-import { CONNECTION_CHANNELS, type ConnectionChannel } from "../rules";
+import { CONNECTION_CHANNELS, type ConnectionChannel } from "@ledgerly/domain/accounts/client";
 
 /** One thing hanging off the account, as the browser gets it. */
 export interface ConnectionRow {

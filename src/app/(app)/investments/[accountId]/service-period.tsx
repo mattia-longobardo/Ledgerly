@@ -3,10 +3,10 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PeriodBarView } from "@/modules/accounts/ui/period-bar";
-import { PERIOD_KEYS, periodSpan, SECTION_PRESETS, sectionPeriod } from "@/modules/investments/period";
+import { PERIOD_KEYS, periodSpan, SECTION_PRESETS, sectionPeriod } from "@ledgerly/domain/investments/client";
 import { periodText } from "@/modules/investments/ui/period-control";
-import type { CivilDate } from "@/platform/dates";
-import type { UiLocale } from "@/platform/format";
+import type { CivilDate } from "@ledgerly/domain/platform/dates";
+import type { UiLocale } from "@ledgerly/domain/platform/format";
 import type { Params } from "@/ui/url";
 
 /**

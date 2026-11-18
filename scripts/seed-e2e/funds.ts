@@ -1,12 +1,12 @@
 // scripts/seed-e2e/funds.ts — the users and the data of the flow `funds` (tests/e2e/funds/).
 import { randomUUID } from "node:crypto";
-import { pensionCompetences } from "../../src/modules/funds/schema";
-import { createFund, recordValuation, setFundState } from "../../src/modules/funds/service";
-import { upsertFromProvider } from "../../src/modules/transactions/service";
-import { getPreferences, updatePreferences } from "../../src/modules/users/service";
-import { addDays, addMonths, monthKey, today } from "../../src/platform/dates";
-import { getDb } from "../../src/platform/db/client";
-import { userScoped } from "../../src/platform/db/scope";
+import { pensionCompetences } from "@domain/modules/funds/schema";
+import { createFund, recordValuation, setFundState } from "@domain/modules/funds/service";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { getPreferences, updatePreferences } from "@domain/modules/users/service";
+import { addDays, addMonths, monthKey, today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { userScoped } from "@domain/platform/db/scope";
 import {
   addDeposit,
   addVoluntaryContribution,

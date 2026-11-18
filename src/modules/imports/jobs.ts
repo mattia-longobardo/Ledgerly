@@ -1,8 +1,8 @@
 import "server-only";
-import { forEachUser } from "@/modules/users/jobs";
+import { forEachUser } from "@ledgerly/domain/users";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { expireOriginals } from "./service";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { expireOriginals } from "@ledgerly/domain/imports";
 
 /**
  * Every day (spec §10.2 "eliminazione originali scaduti"): originals past their retention leave S3;

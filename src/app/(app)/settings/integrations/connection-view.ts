@@ -7,13 +7,13 @@
 import "server-only";
 import "@/app/plugin-wiring";
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@/platform/context";
-import { addDays, civilDateIn } from "@/platform/dates";
-import { formatDate } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { addDays, civilDateIn } from "@ledgerly/domain/platform/dates";
+import { formatDate } from "@ledgerly/domain/platform/format";
 import type { ConnectionLabel } from "@/platform/integrations/registry";
-import { isPluginProvider, PROVIDERS } from "@/platform/integrations/rules";
-import type { Connection, RecentRun } from "@/platform/integrations/service";
-import { providerOf } from "@/modules/investments/catalog";
+import { isPluginProvider, PROVIDERS } from "@ledgerly/domain/platform/integrations";
+import type { Connection, RecentRun } from "@ledgerly/domain/platform/integrations";
+import { providerOf } from "@ledgerly/domain/investments";
 import {
   clock,
   codeKey,
@@ -25,7 +25,7 @@ import {
   type StatusAction,
   type SyncStatus,
   syncStatus,
-} from "@/platform/integrations/status";
+} from "@ledgerly/domain/platform/integrations";
 import type { ActionKind, ConnectionRowProps, HistoryItem, RowAction } from "./connection-row";
 import { formatInstant } from "./format-instant";
 

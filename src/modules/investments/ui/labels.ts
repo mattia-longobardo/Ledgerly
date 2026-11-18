@@ -1,4 +1,4 @@
-import { BROKER_PRODUCTS, PRODUCTS } from "../rules";
+import { BROKER_PRODUCTS, PRODUCTS } from "@ledgerly/domain/investments";
 
 /**
  * A product's name for the person (§1.4): the known ones translated, `other:<label>` as its label.

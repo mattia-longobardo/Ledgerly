@@ -2,9 +2,9 @@
 // A plugin's provider is stored as `plugin:<id>`: a person reads the provider's own name, from
 // the manifest and in their language (rewrite plan, rule M14), never the id.
 import "server-only";
-import type { Ctx } from "@/platform/context";
-import { isPluginProvider } from "@/platform/integrations/rules";
-import { findInstancePlugin } from "@/platform/plugins/queries";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
+import { findInstancePlugin } from "@ledgerly/domain/platform/plugins";
 
 export async function providerName(
   ctx: Pick<Ctx, "locale">,

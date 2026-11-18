@@ -6,7 +6,7 @@
 // ways, with a city, a terminal number or a date in the text; most shops belong to one category,
 // a few to two; a few labels are wrong; and new shops keep appearing, so the last months hold
 // texts the first months never saw.
-import type { Example } from "@/modules/transactions/categorize/classifier";
+import type { Example } from "@domain/modules/transactions/categorize/classifier";
 
 interface Shop {
   name: string;

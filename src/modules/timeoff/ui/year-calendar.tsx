@@ -10,9 +10,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { addDays } from "@/platform/dates";
-import { formatDate, type UiLocale } from "@/platform/format";
-import type { CalendarCell, CalendarMonth } from "../rules";
+import { addDays } from "@ledgerly/domain/platform/dates";
+import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
+import type { CalendarCell, CalendarMonth } from "@ledgerly/domain/timeoff/client";
 import { BlankCell, type CellSelection, DayCell } from "./day-cell";
 import { SelectionBar } from "./selection-bar";
 

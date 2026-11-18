@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { API_SCOPES } from "@/platform/auth/scopes";
+import { API_SCOPES } from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Checkbox, Input } from "@/ui/input";

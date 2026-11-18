@@ -1,7 +1,7 @@
 // test/fixtures.ts — the user, account and Wallet movement every F3 integration test starts from.
-import { createAccount } from "@/modules/accounts/service";
-import type { IncomingTransaction } from "@/modules/transactions/rules";
-import type { Ctx } from "@/platform/context";
+import { createAccount } from "@domain/modules/accounts/service";
+import type { IncomingTransaction } from "@domain/modules/transactions/rules";
+import type { Ctx } from "@domain/platform/context";
 import { createTestUser } from "./users";
 
 export function contextFor(userId: string): Ctx {

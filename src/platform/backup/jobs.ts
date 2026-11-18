@@ -1,6 +1,6 @@
 import "server-only";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { dumpDatabase, runBackup } from "./service";
 
 /**

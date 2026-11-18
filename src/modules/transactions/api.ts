@@ -5,9 +5,9 @@ import type { ApiEnv } from "@/platform/api/auth";
 import { withToken } from "@/platform/api/auth";
 import { fail } from "@/platform/api/errors";
 import { instant, money } from "@/platform/api/json";
-import { isCivilDate } from "@/platform/dates";
-import { listTransactions, MAX_LIMIT, transactionsSummary } from "./queries";
-import { TRANSACTION_TYPES } from "./rules";
+import { isCivilDate } from "@ledgerly/domain/platform/dates";
+import { listTransactions, MAX_LIMIT, transactionsSummary } from "@ledgerly/domain/transactions";
+import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
 
 /**
  * The transactions module's `/api/v1` routes (spec §4.2). One list, filtered the way the Expenses

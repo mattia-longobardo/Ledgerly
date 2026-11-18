@@ -18,7 +18,7 @@ import {
   saveBalanceEntryAction,
   updateBalanceEntryAction,
 } from "../actions";
-import type { EntrySource } from "../rules";
+import type { EntrySource } from "@ledgerly/domain/accounts/client";
 
 export interface EntryRow {
   id: string;

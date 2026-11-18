@@ -1,17 +1,17 @@
 import "server-only";
 import { and, asc, eq } from "drizzle-orm";
-import { forEachUser } from "@/modules/users/jobs";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { userScoped } from "@/platform/db/scope";
+import { forEachUser } from "@ledgerly/domain/users";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { userScoped } from "@ledgerly/domain/platform/db";
 import { runAfterSync } from "@/platform/jobs/after-sync";
 import type { JobDefinition } from "@/platform/jobs/registry";
-import type { JobDetail } from "@/platform/jobs/schema";
-import { interestRules } from "./schema";
-import { ensureFreshBalances, type FreshnessOptions, type StaleReason } from "./freshness";
-import { lookUpUnsure, postPending } from "./posting";
-import { runsAt } from "./rules";
-import { bringUpToDate } from "./service";
+import type { JobDetail } from "@ledgerly/domain/platform/jobs";
+import { interestRules } from "@ledgerly/domain/interests";
+import { ensureFreshBalances, type FreshnessOptions, type StaleReason } from "@ledgerly/domain/interests";
+import { lookUpUnsure, postPending } from "@ledgerly/domain/interests";
+import { runsAt } from "@ledgerly/domain/interests";
+import { bringUpToDate } from "@ledgerly/domain/interests";
 
 /**
  * Every hour (spec §10.2, tier `hourly`), each rule accrued once a day at **its own** hour: a pass

@@ -11,12 +11,12 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { Ctx } from "@/platform/context";
-import { type KeyRing, openJson, parseKeyRing, sealJson } from "@/platform/crypto";
-import { getDb, type Tx } from "@/platform/db/client";
-import { userScoped } from "@/platform/db/scope";
-import { readEnv } from "@/platform/env";
-import { pluginProvider } from "@/platform/integrations/rules";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { type KeyRing, openJson, parseKeyRing, sealJson } from "@ledgerly/domain/platform/crypto";
+import { getDb, type Tx } from "@ledgerly/domain/platform/db";
+import { userScoped } from "@ledgerly/domain/platform/db";
+import { readEnv } from "@ledgerly/domain/platform/env";
+import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import {
   changeSourceSkippedIds,
   clearErrorCode,
@@ -26,7 +26,7 @@ import {
   readCredentials,
   savePluginConnection,
   sourceSkippedIds,
-} from "@/platform/integrations/service";
+} from "@ledgerly/domain/platform/integrations";
 import { callPlugin, type Fetch, PluginCallError } from "./client";
 import {
   accountSchema,
@@ -46,7 +46,7 @@ import {
   type InstancePlugin,
   isPluginActive,
   listPluginConnections,
-} from "./queries";
+} from "@ledgerly/domain/platform/plugins";
 import {
   AUTH_STATE_MINUTES,
   hashState,
@@ -55,8 +55,13 @@ import {
   normalizePrivateKey,
   providerAccountIdOf,
   type ReturnError,
-} from "./rules";
-import { pluginActivations, pluginAuthStates, plugins, pluginUserCredentials } from "./schema";
+} from "@ledgerly/domain/platform/plugins";
+import {
+  pluginActivations,
+  pluginAuthStates,
+  plugins,
+  pluginUserCredentials,
+} from "@ledgerly/domain/platform/plugins";
 
 /** Why a plugin action refused: the codes of ux/n1-plugin-bank.md §7, plus the two of a guard. */
 export type PluginActionCode =

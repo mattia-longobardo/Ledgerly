@@ -13,7 +13,7 @@ import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
 import { notify } from "@/ui/toast";
 import { TONE_TEXT } from "@/ui/tone";
 import { setBudgetLimitAction, stopBudgetAction } from "../actions";
-import type { BudgetScope, BudgetStatus } from "../rules";
+import type { BudgetScope, BudgetStatus } from "@ledgerly/domain/budgets/client";
 
 /** One budget as the table draws it: every amount already formatted by the server (spec §8.5). */
 export interface BudgetRowView {

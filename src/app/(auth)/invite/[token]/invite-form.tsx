@@ -3,12 +3,12 @@
 import { unstable_rethrow } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { MAX_NAME_LENGTH } from "@/platform/auth/name-policy";
+import { MAX_NAME_LENGTH } from "@ledgerly/domain/platform/auth/client";
 import {
   isPasswordLengthValid,
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
-} from "@/platform/auth/password-policy";
+} from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input } from "@/ui/input";

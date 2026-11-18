@@ -4,14 +4,14 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { parseAmount } from "@/modules/accounts/rules";
-import { ImportError } from "@/modules/imports/service";
-import { MAX_DOCUMENT_BYTES } from "@/modules/imports/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
+import { ImportError } from "@ledgerly/domain/imports";
+import { MAX_DOCUMENT_BYTES } from "@ledgerly/domain/imports";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { centsToDecimal } from "@/platform/money";
-import { FIELDS, isFieldName } from "./fields";
-import { fillWithLlm } from "./llm";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { centsToDecimal } from "@ledgerly/domain/platform/money";
+import { FIELDS, isFieldName } from "@ledgerly/domain/payroll";
+import { fillWithLlm } from "@ledgerly/domain/payroll";
 import {
   applyPayslip,
   decideField,
@@ -26,7 +26,7 @@ import {
   setCodeRole,
   uploadPayslip,
   verifyPayslip,
-} from "./service";
+} from "@ledgerly/domain/payroll";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 

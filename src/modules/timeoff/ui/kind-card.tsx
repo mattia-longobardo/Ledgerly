@@ -1,6 +1,6 @@
 import { Card } from "@/ui/card";
 import { cn } from "@/ui/cn";
-import type { MonthBar } from "../rules";
+import type { MonthBar } from "@ledgerly/domain/timeoff";
 
 /**
  * One of the two headline cards of the design: how much is left, a bar split between taken and

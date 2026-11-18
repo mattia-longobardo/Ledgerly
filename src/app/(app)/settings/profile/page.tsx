@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { getPreferences } from "@/modules/users/service";
-import { hasSsoAccount } from "@/platform/auth/accounts";
-import { getAuth } from "@/platform/auth/auth";
+import { getPreferences } from "@ledgerly/domain/users";
+import { hasSsoAccount } from "@ledgerly/domain/platform/auth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { utcOffsetLabel } from "@/platform/dates";
-import { mailPolicy } from "@/platform/settings/config";
+import { utcOffsetLabel } from "@ledgerly/domain/platform/dates";
+import { mailPolicy } from "@ledgerly/domain/platform/settings";
 import { SettingsGrid, SettingsSection } from "@/ui/section";
 import { NameForm } from "./name-form";
 import { PreferencesForm } from "./preferences-form";

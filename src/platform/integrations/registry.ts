@@ -4,12 +4,12 @@
  * `ccxt:<exchange>` — so a new integration adds one entry here and the dispatcher does not change.
  */
 import "server-only";
-import { investmentProviderName, runInvestmentPass } from "@/modules/investments/sync";
+import { investmentProviderName, runInvestmentPass } from "@ledgerly/domain/investments";
 import { runTrekPass } from "@/modules/timeoff/jobs";
 import { runWalletPass, WALLET_HISTORY } from "@/modules/transactions/jobs";
-import type { Ctx } from "@/platform/context";
-import type { Person } from "@/modules/users/jobs";
-import type { UiLocale } from "@/platform/format";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import type { Person } from "@ledgerly/domain/users";
+import type { UiLocale } from "@ledgerly/domain/platform/format";
 import en from "../../../messages/en.json";
 import it from "../../../messages/it.json";
 import {
@@ -19,8 +19,8 @@ import {
   type SyncKind,
   TREK_PROVIDER,
   WALLET_PROVIDER,
-} from "./rules";
-import { type Connection, type DueConnection, listConnections } from "./service";
+} from "@ledgerly/domain/platform/integrations";
+import { type Connection, type DueConnection, listConnections } from "@ledgerly/domain/platform/integrations";
 
 export type PassOutcome = "answered" | "failed" | "refused" | "busy" | "absent";
 

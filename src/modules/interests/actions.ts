@@ -4,13 +4,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { parseAmount } from "@/modules/accounts/rules";
+import { parseAmount } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@/platform/context";
-import { percentToFraction } from "./rules";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { percentToFraction } from "@ledgerly/domain/interests";
 import { readRate } from "./ui/present";
-import { markPosted, postEntry, retryPosting } from "./posting";
-import { createRule, InterestError, setRuleState, updateRule } from "./service";
+import { markPosted, postEntry, retryPosting } from "@ledgerly/domain/interests";
+import { createRule, InterestError, setRuleState, updateRule } from "@ledgerly/domain/interests";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 

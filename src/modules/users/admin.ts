@@ -1,12 +1,12 @@
 import "server-only";
 import { and, asc, count, eq, isNull, max, sql } from "drizzle-orm";
 import { z } from "zod";
-import { hasPasswordAccount } from "@/platform/auth/accounts";
-import { getAuth } from "@/platform/auth/auth";
+import { hasPasswordAccount } from "@ledgerly/domain/platform/auth";
+import { getAuth } from "@ledgerly/domain/platform/auth";
 import { createInvitation, sendInvitationEmail } from "@/platform/auth/invitations";
-import { redactForLog } from "@/platform/auth/logger";
-import { revokeUserOAuthTokens } from "@/platform/auth/oauth-grants";
-import { roles } from "@/platform/auth/permissions";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { revokeUserOAuthTokens } from "@ledgerly/domain/platform/auth";
+import { roles } from "@ledgerly/domain/platform/auth";
 import {
   authAccounts,
   invitations,
@@ -14,13 +14,13 @@ import {
   twoFactors,
   users,
   verifications,
-} from "@/platform/auth/schema";
-import { OIDC_PROVIDER_ID } from "@/platform/auth/provider";
-import type { Ctx, Role } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { mailAllowed } from "@/platform/settings/config";
-import { deleteFolder } from "@/platform/storage";
-import { personActionRefusal, type PersonAction, type PersonRefusal } from "./rules";
+} from "@ledgerly/domain/platform/auth";
+import { OIDC_PROVIDER_ID } from "@ledgerly/domain/platform/auth";
+import type { Ctx, Role } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { mailAllowed } from "@ledgerly/domain/platform/settings";
+import { deleteFolder } from "@ledgerly/domain/platform/storage";
+import { personActionRefusal, type PersonAction, type PersonRefusal } from "@ledgerly/domain/users";
 
 /**
  * Admin › Users (spec §7.10, design rows 870–877): who may sign in, how, and with what role.

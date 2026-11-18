@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { formatDate, type UiLocale } from "@/platform/format";
+import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
 import { DateRangePicker } from "@/ui/date-range-picker";
 import type { Params } from "@/ui/url";
 import { type DateRange, daysInRange } from "./filters";

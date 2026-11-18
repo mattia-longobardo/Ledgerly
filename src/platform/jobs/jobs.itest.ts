@@ -3,11 +3,11 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { POST } from "@/app/api/jobs/tick/route";
 import { GET as getMetrics } from "@/app/api/metrics/route";
-import { getDb } from "@/platform/db/client";
+import { getDb } from "@domain/platform/db/client";
 import { heartbeatAgeMs } from "./heartbeat";
-import { withJobLock } from "./lock";
+import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
-import { jobRuns } from "./schema";
+import { jobRuns } from "@domain/platform/jobs/schema";
 import { runTier } from "./tick";
 
 const job = (name: string, run: JobDefinition["run"]): JobDefinition => ({ name, tier: "hourly", run });

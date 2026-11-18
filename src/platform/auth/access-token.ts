@@ -1,16 +1,16 @@
 import "server-only";
 import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey } from "jose";
 import { eq } from "drizzle-orm";
-import { getPreferences } from "@/modules/users/service";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
-import { readEnv } from "@/platform/env";
-import { numberStyle } from "@/platform/format";
+import { getPreferences } from "@ledgerly/domain/users";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { getDb } from "@ledgerly/domain/platform/db";
+import { readEnv } from "@ledgerly/domain/platform/env";
+import { numberStyle } from "@ledgerly/domain/platform/format";
 import { principalOf, verifyAccessJwt } from "./access-token-rules";
-import { getAuth } from "./auth";
-import { type ApiScope, issuerFor, type ResourceKey, resourceFor } from "./oauth";
-import { oauthClients } from "./oauth/schema";
-import { users } from "./schema";
+import { getAuth } from "@ledgerly/domain/platform/auth";
+import { type ApiScope, issuerFor, type ResourceKey, resourceFor } from "@ledgerly/domain/platform/auth";
+import { oauthClients } from "@ledgerly/domain/platform/auth";
+import { users } from "@ledgerly/domain/platform/auth";
 
 /**
  * The resource server of D3: turns an OAuth access token into the same `Ctx` a session would be.

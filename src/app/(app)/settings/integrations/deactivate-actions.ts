@@ -4,7 +4,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redactForLog } from "@/platform/auth/logger";
+import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import { passFor } from "@/platform/integrations/registry";
 import {
@@ -12,7 +12,7 @@ import {
   deletedSourceAccounts,
   listConnections,
   readSyncJob,
-} from "@/platform/integrations/service";
+} from "@ledgerly/domain/platform/integrations";
 import { connectionSharing } from "@/platform/plugins/service";
 import { runConnectionAction } from "./connection-actions";
 import {

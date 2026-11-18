@@ -14,7 +14,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { isTestFile, sourceFiles, unitOf } from "./source-graph";
+import { readProductSources, unitOf } from "./source-graph";
 
 const MIN_TOKENS = 50;
 const MIN_LINES = 6;
@@ -36,7 +36,9 @@ export function tokensOf(rel: string, text: string): FileTokens {
   const tokens: Token[] = [];
   const seen = new Set<number>();
   const visit = (node: ts.Node): void => {
+    // A re-export (`export { … } from "./x"`, the lines of an `index.ts`) is an import by another spelling.
     if (ts.isImportDeclaration(node) || node.kind === ts.SyntaxKind.EndOfFileToken) return;
+    if (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined) return;
     const children = node.getChildren(file);
     if (children.length > 0) {
       children.forEach(visit);
@@ -170,16 +172,8 @@ export function measureDuplication(files: ReadonlyMap<string, string>): Duplicat
   };
 }
 
-export function readProductCode(src: string): Map<string, string> {
-  const files = new Map<string, string>();
-  for (const rel of sourceFiles(src)) {
-    if (!isTestFile(rel)) files.set(rel, readFileSync(join(src, rel), "utf8"));
-  }
-  return files;
-}
-
 if (process.argv[1]?.endsWith("duplication.ts")) {
-  const measured = `${JSON.stringify(measureDuplication(readProductCode(join(process.cwd(), "src"))), null, 2)}\n`;
+  const measured = `${JSON.stringify(measureDuplication(readProductSources(process.cwd())), null, 2)}\n`;
   const path = join(process.cwd(), BASELINE);
   if (process.argv.includes("--check")) {
     if (readFileSync(path, "utf8") !== measured) {

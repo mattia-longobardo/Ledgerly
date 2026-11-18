@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { getDb } from "@/platform/db/client";
-import { users } from "@/platform/auth/schema";
+import { getDb } from "@domain/platform/db/client";
+import { users } from "@domain/platform/auth/schema";
 
 /** Inserts a bare user row (no credentials) for service-level tests. */
 export async function createTestUser(email = `${randomUUID()}@example.test`) {

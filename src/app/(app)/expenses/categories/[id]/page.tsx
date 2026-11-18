@@ -5,16 +5,16 @@ import { getTranslations } from "next-intl/server";
 import { periodEnd, periodMonths } from "@/modules/accounts/ui/period";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
 import { dayLabels, monthLabels } from "@/modules/accounts/ui/display";
-import { budgetDetail } from "@/modules/budgets/queries";
+import { budgetDetail } from "@ledgerly/domain/budgets";
 import {
   chooseCategoryAction,
   confirmCategoriesAction,
   similarMovementsAction,
   undoCategoriesAction,
 } from "@/modules/transactions/categorize/actions";
-import { rulesForCategory } from "@/modules/transactions/categorize/user-rules-service";
-import { categoryMacroTotals, listTransactions, spendingOverTime } from "@/modules/transactions/queries";
-import { getCategory, listCategories, listLabels, TaxonomyError } from "@/modules/transactions/taxonomy";
+import { rulesForCategory } from "@ledgerly/domain/transactions";
+import { categoryMacroTotals, listTransactions, spendingOverTime } from "@ledgerly/domain/transactions";
+import { getCategory, listCategories, listLabels, TaxonomyError } from "@ledgerly/domain/transactions";
 import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
 import { categoryColors, spendingLayers, withMacroTitles } from "@/modules/transactions/ui/display";
 import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
@@ -22,9 +22,9 @@ import { macroViews } from "@/modules/transactions/ui/macros";
 import { SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
-import { addDays, monthKey, monthsBetween, today } from "@/platform/dates";
-import { formatDate, formatMoney, formatPercent } from "@/platform/format";
-import { shiftRange } from "@/platform/ranges";
+import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/platform/dates";
+import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
+import { shiftRange } from "@ledgerly/domain/platform/ranges";
 import { Badge } from "@/ui/badge";
 import { ButtonLink } from "@/ui/button";
 import { Card } from "@/ui/card";

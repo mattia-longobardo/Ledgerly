@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
-import { NULL_DISPLAY } from "@/platform/format";
+import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Button, ButtonLink } from "@/ui/button";
 import { Field } from "@/ui/field";
 import { Input, Textarea } from "@/ui/input";

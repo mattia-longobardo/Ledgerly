@@ -3,13 +3,13 @@
 // covered by `platform/integrations/wallet/sync.itest.ts`.
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { createAccount } from "@/modules/accounts/service";
-import type { Ctx } from "@/platform/context";
-import { getDb } from "@/platform/db/client";
+import { createAccount } from "@domain/modules/accounts/service";
+import type { Ctx } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { createTestUser } from "../../../test/users";
 import { recurrencesRefreshJob, refreshRecurrences } from "./jobs";
-import { recurringPatterns, transactions } from "./schema";
+import { recurringPatterns, transactions } from "@domain/modules/transactions/schema";
 
 const NOW = new Date("2026-01-20T08:07:00Z");
 

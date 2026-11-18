@@ -1,7 +1,7 @@
 // scripts/seed-e2e/budgets.ts — the users and the data of the flow `budgets` (tests/e2e/budgets/).
-import { setLimit } from "../../src/modules/budgets/service";
-import { upsertFromProvider } from "../../src/modules/transactions/service";
-import { listCategories } from "../../src/modules/transactions/taxonomy";
+import { setLimit } from "@domain/modules/budgets/service";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
+import { listCategories } from "@domain/modules/transactions/taxonomy";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
 

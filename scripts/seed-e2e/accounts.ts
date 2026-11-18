@@ -1,17 +1,17 @@
 // scripts/seed-e2e/accounts.ts — the users and the data of the flow `accounts` (tests/e2e/accounts/).
 import { eq } from "drizzle-orm";
 import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../src/app/(app)/banks/plugin";
-import { accounts } from "../../src/modules/accounts/schema";
-import { createAccount } from "../../src/modules/accounts/service";
-import { parseKeyRing, sealJson } from "../../src/platform/crypto";
-import { addDays, today } from "../../src/platform/dates";
-import { getDb } from "../../src/platform/db/client";
-import { readEnv } from "../../src/platform/env";
-import { pluginProvider } from "../../src/platform/integrations/rules";
-import { integrationConnections } from "../../src/platform/integrations/schema";
-import { savePluginConnection } from "../../src/platform/integrations/service";
-import { findInstancePlugin } from "../../src/platform/plugins/queries";
-import { pluginUserCredentials } from "../../src/platform/plugins/schema";
+import { accounts } from "@domain/modules/accounts/schema";
+import { createAccount } from "@domain/modules/accounts/service";
+import { parseKeyRing, sealJson } from "@domain/platform/crypto";
+import { addDays, today } from "@domain/platform/dates";
+import { getDb } from "@domain/platform/db/client";
+import { readEnv } from "@domain/platform/env";
+import { pluginProvider } from "@domain/platform/integrations/rules";
+import { integrationConnections } from "@domain/platform/integrations/schema";
+import { savePluginConnection } from "@domain/platform/integrations/service";
+import { findInstancePlugin } from "@domain/platform/plugins/queries";
+import { pluginUserCredentials } from "@domain/platform/plugins/schema";
 import { connectionBag, setPluginActive } from "../../src/platform/plugins/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount } from "./common";

@@ -4,23 +4,23 @@
 // many of the movements they use (§3.5). Only the application joins them, in one transaction.
 import "server-only";
 import { z } from "zod";
-import { listAccounts } from "@/modules/accounts/queries";
-import { limitsSnapshot, type LimitsSnapshot, restoreLimits, stopLimitsOf } from "@/modules/budgets/service";
-import { postsUnderAny } from "@/modules/interests/service";
-import { expensesAmong } from "@/modules/pockets/service";
-import { chargesAmong } from "@/modules/subscriptions/service";
-import { TransactionError } from "@/modules/transactions/service";
+import { listAccounts } from "@ledgerly/domain/accounts";
+import { limitsSnapshot, type LimitsSnapshot, restoreLimits, stopLimitsOf } from "@ledgerly/domain/budgets";
+import { postsUnderAny } from "@ledgerly/domain/interests";
+import { expensesAmong } from "@ledgerly/domain/pockets";
+import { chargesAmong } from "@ledgerly/domain/subscriptions";
+import { TransactionError } from "@ledgerly/domain/transactions";
 import {
   getCategory,
   type MacroPlace,
   macroMoveFacts,
   moveCategoryToMacro,
   movesBetweenMacros,
-} from "@/modules/transactions/taxonomy";
-import type { CategoryType } from "@/modules/transactions/rules";
-import type { Ctx } from "@/platform/context";
-import { monthKey, today } from "@/platform/dates";
-import { getDb } from "@/platform/db/client";
+} from "@ledgerly/domain/transactions";
+import type { CategoryType } from "@ledgerly/domain/transactions";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import { monthKey, today } from "@ledgerly/domain/platform/dates";
+import { getDb } from "@ledgerly/domain/platform/db";
 import { sourceNotes } from "./source";
 
 type Who = Pick<Ctx, "userId" | "timeZone" | "locale">;

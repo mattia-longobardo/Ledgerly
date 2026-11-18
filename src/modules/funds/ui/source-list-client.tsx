@@ -10,8 +10,8 @@ import { Button, buttonClassName } from "@/ui/button";
 import { cn } from "@/ui/cn";
 import { notify } from "@/ui/toast";
 import { removeSourceAction, restoreSourceAction, setSourceStateAction } from "../actions";
-import { type FeeForm, newSourceForm, type SourceForm } from "../forms";
-import type { SourceKind } from "../sources";
+import { type FeeForm, newSourceForm, type SourceForm } from "@ledgerly/domain/funds/client";
+import type { SourceKind } from "@ledgerly/domain/funds/client";
 import { SourceDialog, type SourceSetup } from "./source-dialog";
 import { freeComponents } from "./source-text";
 

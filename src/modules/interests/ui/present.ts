@@ -1,6 +1,11 @@
-import { formatAmountInput, formatMoney, type NumberFormat, numberSeparators } from "@/platform/format";
-import type { RuleRow } from "../queries";
-import { fractionToPercent, type Tier } from "../rules";
+import {
+  formatAmountInput,
+  formatMoney,
+  type NumberFormat,
+  numberSeparators,
+} from "@ledgerly/domain/platform/format";
+import type { RuleRow } from "@ledgerly/domain/interests";
+import { fractionToPercent, type Tier } from "@ledgerly/domain/interests";
 import type { RuleDraft } from "./rule-dialog";
 
 /**

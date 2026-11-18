@@ -4,13 +4,13 @@
  * stored rate never changes — a second fetch that answers differently adds days, never rewrites.
  */
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Ctx } from "@/platform/context";
-import { createAccount } from "@/modules/accounts/service";
+import type { Ctx } from "@domain/platform/context";
+import { createAccount } from "@domain/modules/accounts/service";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
 import { refreshFxRates } from "./jobs";
-import { listRates, storedRange } from "./service";
-import type { FxFetchOptions } from "./sources";
+import { listRates, storedRange } from "@domain/platform/fx/service";
+import type { FxFetchOptions } from "@domain/platform/fx/sources";
 
 let ctx: Ctx;
 

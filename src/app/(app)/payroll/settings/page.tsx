@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
-import { codeMapView } from "@/modules/payroll/queries";
-import { REPLY_TEAMSYSTEM_CODES } from "@/modules/payroll/rules";
+import { codeMapView } from "@ledgerly/domain/payroll";
+import { REPLY_TEAMSYSTEM_CODES } from "@ledgerly/domain/payroll";
 import { requireSession } from "@/platform/auth/session";
 import { ButtonLink } from "@/ui/button";
 import { SettingsGrid, SettingsSection } from "@/ui/section";

@@ -8,7 +8,7 @@ import { Field } from "@/ui/field";
 import { Checkbox, Input, Select, Textarea } from "@/ui/input";
 import { Modal } from "@/ui/modal";
 import { notify } from "@/ui/toast";
-import { TRANSACTION_TYPES } from "../rules";
+import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions/client";
 import { editInWallet, setLabels, setNote } from "./commands";
 import type { LabelOption, RowView } from "./view";
 

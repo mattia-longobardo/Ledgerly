@@ -12,7 +12,7 @@ import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
 import { colorField } from "./display";
 import { ibanErrorText } from "./iban-field";
-import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "../rules";
+import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "@ledgerly/domain/accounts/client";
 
 export interface SettingsValues {
   id: string;
