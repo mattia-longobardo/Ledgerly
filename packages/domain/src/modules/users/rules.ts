@@ -3,6 +3,15 @@ import type { Ctx } from "../../platform/context";
 import { DEFAULT_DISPLAY_CURRENCY, DISPLAY_CURRENCIES } from "../../platform/fx/rules";
 import { numberStyle } from "../../platform/format";
 
+// The closed vocabularies of the preferences (audit USR-4): one list each, from which the zod
+// schema, the columns and the CHECK constraints are made.
+export const LOCALES = ["en", "it"] as const;
+export const NUMBER_FORMATS = ["it-IT", "en-US", "fr-FR"] as const;
+export const DECIMAL_SEPARATORS = [".", ","] as const;
+export const CURRENCY_POSITIONS = ["before", "after"] as const;
+export const THEMES = ["system", "light", "dark"] as const;
+export const DEFAULT_RANGES = ["this_month", "last_30_days", "year_to_date"] as const;
+
 const VALID_TIME_ZONES = new Set(Intl.supportedValuesOf("timeZone"));
 
 /** Only a recognized IANA zone name is accepted; UTC-offset identifiers ("+01:00") are rejected. */
@@ -24,18 +33,18 @@ export const preferencesInputSchema = z.object({
     .string()
     .refine((value) => canonicalTimeZone(value) !== null, "Unknown timezone")
     .transform((value) => canonicalTimeZone(value) as string),
-  locale: z.enum(["en", "it"]),
-  numberFormat: z.enum(["it-IT", "en-US", "fr-FR"]),
+  locale: z.enum(LOCALES),
+  numberFormat: z.enum(NUMBER_FORMATS),
   // Both override the number format when set; null follows it (a point for en-US, a comma
   // otherwise), so the display of anyone who never touches them does not change.
-  decimalSeparator: z.enum([".", ","]).nullable(),
-  currencyPosition: z.enum(["before", "after"]).nullable(),
+  decimalSeparator: z.enum(DECIMAL_SEPARATORS).nullable(),
+  currencyPosition: z.enum(CURRENCY_POSITIONS).nullable(),
   // What totals across accounts are shown in (§1.8, D1): EUR or a currency the ECB publishes, so
   // there is always a rate. A form written before the setting existed sends none and keeps EUR.
   displayCurrency: z.enum(DISPLAY_CURRENCIES).default(DEFAULT_DISPLAY_CURRENCY),
   weekStart: z.union([z.literal(0), z.literal(1)]),
-  theme: z.enum(["system", "light", "dark"]),
-  defaultRange: z.enum(["this_month", "last_30_days", "year_to_date"]),
+  theme: z.enum(THEMES),
+  defaultRange: z.enum(DEFAULT_RANGES),
   monthlySummary: z.boolean(),
   minutesPerDay: z.number().int().min(60).max(720),
   patronSaint: patronSaintSchema.nullable(),
