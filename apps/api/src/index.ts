@@ -17,3 +17,4 @@ export {
   undoSourceCategoryChange,
 } from "./settings/taxonomy";
 export type { MacroMoveUndo, MacroMoveView } from "./settings/taxonomy";
+export { savePreferences } from "./settings/profile";

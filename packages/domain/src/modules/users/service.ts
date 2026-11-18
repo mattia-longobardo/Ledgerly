@@ -98,7 +98,12 @@ export async function updateProfilePreferences(
   ctx: Pick<Ctx, "userId">,
   input: unknown,
 ): Promise<Preferences> {
-  return (await changePreferences(ctx, profileFormSchema.parse(input))).preferences;
+  return (await changePreferences(ctx, profileChange(input))).preferences;
+}
+
+/** The change the Profile form asks for: its fields of Time off are dropped, not saved. */
+export function profileChange(input: unknown): Partial<Preferences> {
+  return profileFormSchema.parse(input);
 }
 
 /** What Time off › Settings saves: only the fields it names, the rest of the row stays. */

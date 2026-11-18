@@ -9,7 +9,7 @@ export {
   findSessionToken,
   getPreferences,
   listOwnSessions,
+  profileChange,
   updatePreferences,
-  updateProfilePreferences,
   updateTimeOffPreferences,
 } from "./service";

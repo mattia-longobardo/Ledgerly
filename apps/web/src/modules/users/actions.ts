@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
-import { rescheduleConnections } from "@ledgerly/domain/platform/integrations";
+import { savePreferences } from "@ledgerly/api";
 import { getAuth, ProfileError, renameProfile } from "@ledgerly/domain/platform/auth";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireAdmin, requireSession } from "@/platform/auth/session";
@@ -29,7 +29,7 @@ import {
   findSessionToken,
   getPreferences,
   updatePreferences,
-  updateProfilePreferences,
+  profileChange,
   updateTimeOffPreferences,
 } from "@ledgerly/domain/users";
 
@@ -54,10 +54,8 @@ export async function saveTheme(theme: ThemePreference): Promise<void> {
 export async function savePreferencesAction(input: Preferences): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    const saved = await updateProfilePreferences(ctx, input);
-    // The times of an integration's schedule are local times (D7): they follow the person's zone.
-    if (saved.timeZone !== ctx.timeZone)
-      await rescheduleConnections({ userId: ctx.userId, timeZone: saved.timeZone });
+    // The use case of `PATCH /api/v1/preferences`: a new zone moves the times of the connections (D7).
+    const saved = await savePreferences(ctx, profileChange(input));
     const jar = await cookies();
     jar.set(LOCALE_COOKIE, saved.locale, { path: "/", maxAge: YEAR, sameSite: "lax" });
     jar.set(THEME_COOKIE, saved.theme, { path: "/", maxAge: YEAR, sameSite: "lax" });

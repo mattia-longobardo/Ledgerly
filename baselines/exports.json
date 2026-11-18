@@ -12,6 +12,7 @@
     "mergeTwoCategories",
     "moveToMacro",
     "readTools",
+    "savePreferences",
     "setSourceCategory",
     "sourceNotes",
     "undoMergeOfTwo",
@@ -712,8 +713,8 @@
     "initialsOf",
     "listOwnSessions",
     "personById",
+    "profileChange",
     "updatePreferences",
-    "updateProfilePreferences",
     "updateTimeOffPreferences"
   ],
   "packages/domain/src/platform/alerts/index.ts": [
