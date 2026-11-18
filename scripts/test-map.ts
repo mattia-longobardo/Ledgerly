@@ -389,6 +389,7 @@ export const MODULES: Module[] = [
   {
     id: "api",
     files: [
+      "apps/api/**",
       "apps/web/src/platform/api/**",
       "apps/web/src/platform/mcp/**",
       "apps/web/src/app/api/v1/[[...route]]/**",
@@ -603,6 +604,8 @@ export const MODULES: Module[] = [
       "tools/tooling.test.ts",
       "tools/release-script.test.ts",
       "tools/test-map.test.ts",
+      "tools/contract.test.ts",
+      "scripts/openapi.ts",
       "baselines/modularity.json",
       "baselines/duplication.json",
       "baselines/assertions-exceptions.json",
@@ -641,6 +644,7 @@ export const CRITICAL: { files: string[]; why: string }[] = [
       "docker-compose.yml",
       "apps/web/next.config.ts",
       "apps/web/package.json",
+      "apps/api/package.json",
       "apps/web/tsconfig.json",
       "apps/web/postcss.config.mjs",
       "tsconfig.json",

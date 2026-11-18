@@ -16,3 +16,18 @@ function isCalendarDate(value: string): boolean {
 
 /** A civil date on the wire; the message is the caller's when it has one. */
 export const civilDate = (message?: string) => z.string().refine(isCalendarDate, message);
+
+/** An id on the wire: a UUID, as every table keys its rows. */
+export const id = () => z.uuid();
+
+/** A moment on the wire: ISO 8601 in UTC (`Date.toISOString()`). */
+export const instant = () => z.iso.datetime();
+
+/**
+ * An amount on the wire: a decimal **string** ("1234.56"), never a JSON number, which is a double
+ * and would change a large amount without a word (spec §4.3).
+ */
+export const money = () => z.string().regex(/^-?\d+\.\d{2}$/);
+
+/** A colour the person chose: `#rrggbb`. */
+export const hexColor = () => z.string().regex(/^#[0-9a-fA-F]{6}$/);

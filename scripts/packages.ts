@@ -53,6 +53,7 @@ export const ALLOWED: Record<string, { only?: string[]; never?: string[]; typesO
     only: ["@ledgerly/plugin-contract", "@ledgerly/domain"],
     typesOnly: ["@ledgerly/domain"],
   },
+  "@ledgerly/api": { only: ["@ledgerly/api-contract", "@ledgerly/domain", "@ledgerly/plugin-host", "hono"] },
   "@ledgerly/web": { never: ["@ledgerly/domain", "drizzle-orm", "@ledgerly/plugin-host"] },
   "@ledgerly/plugin-enablebanking": { only: ["@ledgerly/plugin-contract", "zod"] },
 };

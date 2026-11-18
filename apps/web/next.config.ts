@@ -29,6 +29,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["ccxt"],
   // The workspaces of the monorepo (R0) ship TypeScript sources: Next compiles them with the app.
   transpilePackages: [
+    "@ledgerly/api",
     "@ledgerly/api-contract",
     "@ledgerly/domain",
     "@ledgerly/plugin-contract",

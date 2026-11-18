@@ -1,6 +1,18 @@
 {
+  "apps/api/src/index.ts": [
+    "apiRoutes"
+  ],
   "packages/api-contract/src/index.ts": [
-    "civilDate"
+    "API_LEVEL",
+    "CONTRACT_ROUTES",
+    "CONTRACT_SCOPES",
+    "ContractScope",
+    "MIN_CLIENT_LEVEL",
+    "RouteContract",
+    "SETTINGS_ROUTES",
+    "civilDate",
+    "metaRoute",
+    "openApiDocument"
   ],
   "packages/domain/src/modules/accounts/client.ts": [
     "ACCOUNT_TYPES",

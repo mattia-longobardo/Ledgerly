@@ -24,6 +24,7 @@ export default defineConfig({
           name: "unit-node",
           environment: "node",
           include: [
+            "apps/api/src/**/*.test.ts",
             "apps/web/src/**/*.test.ts",
             "apps/worker/src/**/*.test.ts",
             "tools/**/*.test.ts",
@@ -52,6 +53,7 @@ export default defineConfig({
           name: "integration",
           environment: "node",
           include: [
+            "apps/api/src/**/*.itest.ts",
             "apps/web/src/**/*.itest.ts",
             "apps/worker/src/**/*.itest.ts",
             "tools/**/*.itest.ts",

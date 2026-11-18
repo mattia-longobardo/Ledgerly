@@ -3,6 +3,15 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-18 · the metadata of the instance (release R2, users and settings)
+
+- New `GET /api/v1/meta`, without a token: `version`, `apiLevel` (1), `minClientLevel` (1),
+  `capabilities` (the capabilities of the routes the instance serves, sorted) and `scopes` (the
+  scopes the instance grants). No other route or tool changes.
+- The OpenAPI document of the contract is generated into `docs/openapi.json`. It already describes
+  the routes of users and settings that later steps serve: `capabilities` of `GET /meta` says what
+  an instance serves, and each route gets its own entry here when it is served.
+
 ## 2026-11-14 · one pension fund model (release N6)
 
 Funds has one kind of fund. A fund's documents are not read any more.

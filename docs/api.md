@@ -45,6 +45,7 @@ curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/sum
 
 | Route                                      | Scope              |
 | ------------------------------------------ | ------------------ |
+| `GET /meta`                                | none               |
 | `GET /accounts`                            | `read`             |
 | `GET /accounts/{id}/balances`              | `read`             |
 | `GET /transactions`                        | `read`             |
@@ -59,6 +60,15 @@ the totals of `/summary` are in your display currency. The investment routes nev
 connection errors.
 
 Personal access tokens (`pat_…`) were removed: they return `401`.
+
+`GET /meta` answers without a token: the version of the instance, the level of the API
+(`apiLevel`), the lowest client level it answers in full (`minClientLevel`), the capabilities of
+the routes it serves and the scopes it grants. An app reads it before it signs in, and hides what
+the instance does not list.
+
+The OpenAPI document of every route of the contract is `docs/openapi.json`, generated from
+`packages/api-contract` (`npm run openapi`). A release only adds to it: `npm test` compares it with
+the document of the last release, `baselines/contract/openapi.json`.
 
 ## MCP server (`/api/mcp`)
 

@@ -4,6 +4,7 @@ FROM node:26-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 # The workspaces (R0): the install links each one by its `package.json`.
+COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 COPY apps/worker/package.json ./apps/worker/
 COPY packages/api-contract/package.json ./packages/api-contract/

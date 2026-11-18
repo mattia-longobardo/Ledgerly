@@ -160,6 +160,7 @@ written by a command and checked by another.
 | `numbers/reference.json`             | `npm run test:integration -- tools/baselines.itest.ts -u`     | `npm run test:integration`                  |
 | `contract/api.json`, `contract/mcp.json` | the same command                                          | `npm run test:integration`                  |
 | `assertions-exceptions.json`         | by hand, with the decision that allows the change             | `npm run assertions-diff`                   |
+| `contract/openapi.json`              | `npm run openapi -- --release`, at each release that adds routes | `npm test` (`tools/contract.test.ts`): only additions |
 
 - **Modularity:** the known imports between modules, the units that import each other and the
   cycles; from R0 also the packages' dependencies that §10.2 does not allow and the imports out of
