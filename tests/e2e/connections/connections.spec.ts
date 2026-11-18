@@ -420,8 +420,9 @@ test.describe("the rows of the connections", () => {
     await hydrated(trek.getByRole("button").first());
     await trek.getByRole("button", { name: /Trek/ }).first().click();
     await page.getByRole("menuitem", { name: "Disconnect" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Disconnect", exact: true }).click();
-    await expect(page.getByRole("dialog")).toBeHidden();
+    const disconnect = page.getByRole("dialog", { name: "Disconnect Trek?" });
+    await disconnect.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await expect(disconnect).toBeHidden();
 
     await page.getByRole("button", { name: "Turn off Trek" }).click();
     const dialog = page.getByRole("dialog", { name: "Turn off Trek?" });
