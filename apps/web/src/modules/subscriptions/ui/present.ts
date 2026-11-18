@@ -13,6 +13,7 @@ import { dueMoment, type Suggestion, toleranceParts } from "@ledgerly/domain/sub
 import type { SubscriptionDraft } from "./subscription-dialog";
 import type { SubscriptionView } from "./subscriptions-table";
 import type { SuggestionView } from "./suggestions-dialog";
+import { intlLocale } from "@ledgerly/domain/platform/format";
 
 type T = ReturnType<typeof useTranslations<"subscriptions">>;
 
@@ -96,8 +97,6 @@ function statusOf(
   }
 }
 
-const WEEKDAY_LOCALE: Record<UiLocale, string> = { en: "en-US", it: "it-IT" };
-
 /**
  * When in its cycle a subscription falls due, in the unit that identifies it (owner, 2026-09-21):
  * the day for a monthly one, the quarter for a quarterly one, the month for a yearly one, the
@@ -116,7 +115,7 @@ function presentDue(row: SubscriptionRow, t: T, format: Format): string {
     case "month":
       return monthName(row.nextChargeOn, format.locale, "long");
     case "weekday":
-      return new Intl.DateTimeFormat(WEEKDAY_LOCALE[format.locale], {
+      return new Intl.DateTimeFormat(intlLocale(format.locale), {
         weekday: "long",
         timeZone: "UTC",
       }).format(new Date(Date.UTC(2024, 0, 7 + moment.weekday)));

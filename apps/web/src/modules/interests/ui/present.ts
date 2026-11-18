@@ -7,6 +7,7 @@ import {
 import type { RuleRow } from "@ledgerly/domain/interests";
 import { fractionToPercent, type Tier } from "@ledgerly/domain/interests";
 import type { RuleDraft } from "./rule-dialog";
+import { countryRule } from "@ledgerly/domain/shared/country";
 
 /**
  * A stored rate as the design writes it: "2,75 %" in Italian, "2.75%" in English, with the decimal
@@ -73,7 +74,7 @@ export function draftOf(
   };
 }
 
-/** A new rule: the first open account, today, the default hour, one tier, 26 % tax, monthly, active. */
+/** A new rule: the first open account, today, the default hour, one tier, the country's tax, monthly, active. */
 export function newDraft(accounts: readonly { id: string; name: string }[], today: string): RuleDraft {
   return {
     id: null,
@@ -83,7 +84,7 @@ export function newDraft(accounts: readonly { id: string; name: string }[], toda
     validTo: "",
     runHour: "",
     tiers: [{ upTo: "", rate: "" }],
-    tax: "26",
+    tax: countryRule("IT", "interestTaxPercent"),
     dayBasis: "365",
     settlement: "monthly",
     payeeMatch: "",

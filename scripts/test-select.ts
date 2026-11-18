@@ -163,7 +163,7 @@ function changedKeys(base: string, head: string, file: string): string[] {
   );
 }
 
-/** `package.json` and its lockfile, when the version number is all that changed. */
+/** A `package.json` (the root's or a workspace's) or the lockfile, when the version number is all that changed. */
 function versionOnly(base: string, head: string, file: string): boolean {
   const without = (revision: string) => {
     const json = show(revision, file) as {
@@ -172,7 +172,10 @@ function versionOnly(base: string, head: string, file: string): boolean {
     };
     if (json === null) return null;
     delete json.version;
-    if (json.packages?.[""]) delete json.packages[""].version;
+    // The lockfile holds the version of the root and of every workspace (R0): a release sets them all.
+    for (const entry of Object.values(json.packages ?? {})) {
+      if (!("resolved" in entry)) delete entry.version;
+    }
     return JSON.stringify(json);
   };
   const before = without(base);
@@ -205,9 +208,9 @@ function main(): void {
           files.filter((file) => /^messages\//.test(file)).flatMap((file) => changedKeys(base, head, file)),
         ),
       ],
-      versionOnly: ["package.json", "package-lock.json"].filter(
-        (file) => files.includes(file) && versionOnly(base, head, file),
-      ),
+      versionOnly: files
+        .filter((file) => /(^|\/)package(-lock)?\.json$/.test(file))
+        .filter((file) => files.includes(file) && versionOnly(base, head, file)),
     };
     title = `${range}, ${files.length} files`;
   }

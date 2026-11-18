@@ -12,6 +12,7 @@ import { cn } from "./cn";
 import { useDismiss } from "./dismissable-details";
 import { type Params, withParams } from "./url";
 import { useWeekStart, type WeekStart } from "./week-start";
+import { intlLocale } from "@ledgerly/domain/platform/format";
 
 /** What the picker picks: whole days, or whole months (spec §8.3, F2.5). */
 type RangeGrain = "day" | "month";
@@ -55,7 +56,7 @@ export function yearCells(year: number): MonthKey[] {
  * built here.
  */
 function weekdayInitials(locale: UiLocale, weekStart: WeekStart): string[] {
-  const formatter = new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
+  const formatter = new Intl.DateTimeFormat(intlLocale(locale), {
     weekday: "narrow",
     timeZone: "UTC",
   });

@@ -8,56 +8,25 @@
 import type { CivilDate } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
 import type { AccrualPeriod, PayrollComponent } from "./sources";
+import {
+  type FeeBasis,
+  type FeePeriod,
+  type FeeRule,
+  feeValidOn,
+  microRate,
+  RATE_SCALE,
+  rateOf,
+} from "../../shared/fees";
 
-export const FEE_BASES = ["one_off", "per_contribution", "periodic", "on_assets", "per_request"] as const;
-export type FeeBasis = (typeof FEE_BASES)[number];
-
-export const FEE_PERIODS = ["month", "quarter", "year"] as const;
-export type FeePeriod = (typeof FEE_PERIODS)[number];
-
-/** The bases that need a period: a fee paid at intervals, and a yearly percentage of the assets. */
-export const needsPeriod = (basis: FeeBasis): boolean => basis === "periodic" || basis === "on_assets";
-
-/** A percentage is the only form of a fee on assets; joining and a request cost an amount. */
-export function feeModes(basis: FeeBasis): readonly ("amount" | "rate")[] {
-  if (basis === "on_assets") return ["rate"];
-  if (basis === "one_off" || basis === "per_request") return ["amount"];
-  return ["amount", "rate"];
-}
-
-export interface FeeLike {
-  basis: FeeBasis;
-  amountCents: Cents | null;
-  /** A fraction as text ("0.004500" is 0,45 %); `null` for a fixed amount. */
-  rate: string | null;
-  period: FeePeriod | null;
+/** A fee of a fund: a rule of the shared vocabulary, and the source and component it is taken from. */
+export interface FeeLike extends FeeRule {
   /** The source the fee is taken from; `null` when it applies to every source. */
   sourceId: string | null;
   component: PayrollComponent | null;
-  validFrom: CivilDate | null;
-  validTo: CivilDate | null;
-}
-
-/** Whether a fee is in force on a day. */
-export function feeValidOn(fee: Pick<FeeLike, "validFrom" | "validTo">, on: CivilDate): boolean {
-  return (fee.validFrom === null || fee.validFrom <= on) && (fee.validTo === null || fee.validTo >= on);
 }
 
 const appliesTo = (fee: FeeLike, sourceId: string | null) =>
   fee.sourceId === null || fee.sourceId === sourceId;
-
-const RATE_SCALE = 1_000_000n;
-
-/** A fraction as text → millionths, exactly. */
-function microRate(rate: string): bigint {
-  const [whole, fraction = ""] = rate.split(".");
-  return BigInt(whole || "0") * RATE_SCALE + BigInt((fraction + "000000").slice(0, 6));
-}
-
-/** A percentage of an amount, half up. */
-export function rateOf(amountCents: Cents, rate: string): Cents {
-  return (amountCents * microRate(rate) + RATE_SCALE / 2n) / RATE_SCALE;
-}
 
 const MONTHS: Record<FeePeriod, number> = { month: 1, quarter: 3, year: 12 };
 

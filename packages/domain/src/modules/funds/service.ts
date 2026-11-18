@@ -14,7 +14,8 @@ import { userScoped } from "../../platform/db/scope";
 import { isDisplayCurrency } from "../../platform/fx/rules";
 import type { Cents } from "../../shared/money";
 import { carriesKey, type Detection, recurrenceKeyOf, summarise } from "./detect";
-import { contributionFee, FEE_BASES, FEE_PERIODS, feeModes, needsPeriod } from "./fees";
+import { contributionFee } from "./fees";
+import { FEE_BASES, FEE_PERIODS, feeModes, needsPeriod } from "../../shared/fees";
 import {
   fundContributionSources,
   fundDepositRules,

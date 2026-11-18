@@ -13,6 +13,7 @@ import { useTheme } from "@/ui/theme-provider";
 import { notify } from "@/ui/toast";
 import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { FIELD_GRID } from "@/ui/section";
+import { intlLocale } from "@ledgerly/domain/platform/format";
 
 /**
  * Starts from the saved preferences; the page re-mounts it (keyed by them) whenever they change
@@ -40,7 +41,7 @@ export function PreferencesForm({
   const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
     setPrefs((p) => ({ ...p, [key]: value }));
 
-  const currencyNames = new Intl.DisplayNames(locale === "it" ? "it-IT" : "en-US", { type: "currency" });
+  const currencyNames = new Intl.DisplayNames(intlLocale(locale), { type: "currency" });
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();

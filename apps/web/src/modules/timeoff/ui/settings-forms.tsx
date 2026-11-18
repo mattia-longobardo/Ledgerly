@@ -13,6 +13,7 @@ import { useUnsavedForm } from "@/ui/unsaved-changes";
 import { saveAllowanceAction } from "../actions";
 import type { AllowanceSummary } from "./leave-actions";
 import { FIELD_GRID } from "@/ui/section";
+import { intlLocale } from "@ledgerly/domain/platform/format";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 // A non-leap-year probe (matches the server's own patron-saint validation): Feb has 28 days here.
@@ -193,7 +194,7 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
   const [patron, setPatron] = useState(patronSaint);
   const { error, save, formRef } = useSave(t("settings.patron.saved"));
 
-  const monthFormatter = new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
+  const monthFormatter = new Intl.DateTimeFormat(intlLocale(locale), {
     month: "long",
     timeZone: "UTC",
   });

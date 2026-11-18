@@ -1,15 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  arrangeFees,
-  assetsCost,
-  contributionFee,
-  type FeeLike,
-  feeModes,
-  feeValidOn,
-  needsPeriod,
-  periodFees,
-  rateOf,
-} from "./fees";
+import { arrangeFees, assetsCost, contributionFee, type FeeLike, periodFees } from "./fees";
+import { feeModes, feeValidOn, needsPeriod, rateOf } from "../../shared/fees";
 
 const fee = (overrides: Partial<FeeLike>): FeeLike => ({
   basis: "per_contribution",

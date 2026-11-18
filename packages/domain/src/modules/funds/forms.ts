@@ -6,7 +6,7 @@ import { fractionToPercent } from "../interests/rules";
 import { percentToFraction } from "../../shared/money";
 import { formatAmountInput, type NumberFormat, numberSeparators } from "../../platform/format";
 import type { Cents } from "../../shared/money";
-import { type FeeBasis, feeModes, type FeePeriod, needsPeriod } from "./fees";
+import { type FeeBasis, feeModes, type FeePeriod, needsPeriod } from "../../shared/fees";
 import type { ManualClass } from "./pension/rules";
 import type { ContributionInput, FeeInput, FundInput, SourceInput } from "./service";
 import {

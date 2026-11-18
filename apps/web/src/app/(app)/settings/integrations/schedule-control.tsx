@@ -48,6 +48,7 @@ import {
   scheduleForm,
   WHOLE_DAY,
 } from "./schedule-form";
+import { intlLocale } from "@ledgerly/domain/platform/format";
 
 /** How many coming passes the preview lists. */
 const PREVIEW = 5;
@@ -157,7 +158,7 @@ export function ScheduleControl({
 }) {
   const t = useTranslations("settings.integrations.scheduleControl");
   const say = t as unknown as T;
-  const locale = useLocale() === "it" ? "it-IT" : "en-US";
+  const locale = intlLocale(useLocale());
   const [open, setOpen] = useState(false);
 
   return (

@@ -10,7 +10,7 @@ import {
   type NumberFormat,
   type UiLocale,
 } from "@ledgerly/domain/platform/format";
-import { feeModes, needsPeriod } from "@ledgerly/domain/funds/client";
+import { feeModes, needsPeriod } from "@ledgerly/domain/shared/fees";
 import { type FeeForm, fractionOfPercent } from "@ledgerly/domain/funds/client";
 
 type FeesT = ReturnType<typeof useTranslations<"funds.fees">>;

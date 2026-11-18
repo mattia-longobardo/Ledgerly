@@ -1,6 +1,6 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export { fundSummary, hypothesesOnly, isFundId } from "./detail";
-export { assetsCost, contributionFee, feeValidOn, periodFees } from "./fees";
+export { assetsCost, contributionFee, periodFees } from "./fees";
 export {
   contributionFormOf,
   contributionInputOf,

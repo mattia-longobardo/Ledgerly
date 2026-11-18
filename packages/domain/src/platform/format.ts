@@ -201,12 +201,18 @@ export function formatPercent(
   return `${sign}${body}${style.name === "en-US" ? "" : NBSP}%`;
 }
 
-const MONTH_LOCALE: Record<UiLocale, string> = { en: "en-US", it: "it-IT" };
+/** The one map from the language of the interface to the locale `Intl` formats with (rewrite plan R0). */
+const INTL_LOCALE: Record<UiLocale, string> = { en: "en-US", it: "it-IT" };
+
+/** The locale `Intl` formats a language with: Italian for "it", English for any other. */
+export function intlLocale(language: string): string {
+  return language === "it" ? INTL_LOCALE.it : INTL_LOCALE.en;
+}
 
 /** A month's name in the reader's language, built from the parts so no local Date is involved. */
 export function monthName(date: CivilDate, locale: UiLocale, width: "short" | "long"): string {
   const [year, month] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat(MONTH_LOCALE[locale], { month: width, timeZone: "UTC" }).format(
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: width, timeZone: "UTC" }).format(
     new Date(Date.UTC(year, month - 1, 1)),
   );
 }

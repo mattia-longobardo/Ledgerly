@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@ledgerly/plugin-contract": "0.35.2",
+    "@ledgerly/plugin-contract": "*",
     "zod": "4.6.7"
   }
 }

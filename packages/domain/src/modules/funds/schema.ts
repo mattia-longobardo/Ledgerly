@@ -20,7 +20,7 @@ import { accounts, balanceEntries } from "../accounts/schema";
 import { documents } from "../imports/schema";
 import { transactions } from "../transactions/schema";
 import { COMPONENTS, DECISIONS, OPERATION_CLASSES, OPERATION_SOURCES } from "./pension/rules";
-import { FEE_BASES, FEE_PERIODS } from "./fees";
+import { FEE_BASES, FEE_PERIODS } from "../../shared/fees";
 import { FUND_STATES, VALUATION_SOURCES } from "./rules";
 import {
   ACCRUAL_PERIODS,

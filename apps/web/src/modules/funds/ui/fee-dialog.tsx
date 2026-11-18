@@ -15,7 +15,7 @@ import {
   feeModes,
   type FeePeriod,
   needsPeriod,
-} from "@ledgerly/domain/funds/client";
+} from "@ledgerly/domain/shared/fees";
 import type { FeeForm } from "@ledgerly/domain/funds/client";
 import { cleanFee, feeModeOf, type FeeProblems, feeProblems, type FeeScopeOption } from "./fee-text";
 

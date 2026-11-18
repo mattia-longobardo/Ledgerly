@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { entryExports, measureModularity, type ModularityBaseline } from "../scripts/modularity";
-import { measurePackages } from "../scripts/packages";
+import { measurePackages, workspaces } from "../scripts/packages";
 import {
   asOneFile,
   cycleGroups,
@@ -298,6 +298,15 @@ describe("the packages", () => {
     expect(
       modules.filter((name) => !existsSync(join(ROOT, "packages/domain/src/modules", name, "index.ts"))),
     ).toEqual([]);
+  });
+
+  it("carry the version of the root: a release sets every package.json to the tag it deploys", () => {
+    const root = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { version: string };
+    const versions = workspaces(ROOT).map(
+      (space) =>
+        `${space.name} ${(JSON.parse(readFileSync(join(ROOT, space.folder, "package.json"), "utf8")) as { version: string }).version}`,
+    );
+    expect(versions).toEqual(workspaces(ROOT).map((space) => `${space.name} ${root.version}`));
   });
 
   it("declare a name once in a unit of the domain (Q4)", () => {

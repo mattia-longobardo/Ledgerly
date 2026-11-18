@@ -70,7 +70,10 @@ that removes a violation or by a written decision — never to make a step pass.
 
 **The version.** The commit that closes a release sets `version` in `package.json` (and in
 `package-lock.json`) to the tag its deploy will create (`git-policy` §9): the Maintenance card
-prints that number, so it has to be the one in production.
+prints that number, so it has to be the one in production. Since R0 the root and every workspace
+carry the same version (`tools/architecture.test.ts` holds them to it): `npm version <x.y.z>
+--workspaces --include-workspace-root --no-git-tag-version` sets them all, and `npm run test:select`
+reads a change of the version alone, in any `package.json` and in the lockfile, as no change.
 
 ## 2. Keep the way back: image, dump, numbers
 
