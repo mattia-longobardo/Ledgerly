@@ -295,7 +295,7 @@ export async function purgeExpiredPlanned(ctx: Pick<Ctx, "userId">, todayOn: Civ
 // is `on delete no action`, so one left behind makes the deletion refuse.
 
 /** The pockets an account backs, whatever their state. */
-export async function pocketsOnAccount(
+export async function pocketsToMove(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
 ): Promise<{ id: string; name: string }[]> {

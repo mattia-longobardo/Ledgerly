@@ -13,12 +13,12 @@ import {
   moveFundSourceAccount,
   releaseFormerAccountReferences,
 } from "@/modules/funds/service";
-import { InterestError, moveRuleAccount, rulesOnAccount } from "@/modules/interests/service";
-import { movePocketAccount, PocketError, pocketsOnAccount } from "@/modules/pockets/service";
+import { InterestError, moveRuleAccount, rulesToMove } from "@/modules/interests/service";
+import { movePocketAccount, PocketError, pocketsToMove } from "@/modules/pockets/service";
 import {
   moveSubscriptionAccount,
   SubscriptionError,
-  subscriptionsOnAccount,
+  subscriptionsToMove,
 } from "@/modules/subscriptions/service";
 import type { Ctx } from "@/platform/context";
 import { skipSourceAccount } from "@/platform/integrations/service";
@@ -74,10 +74,10 @@ async function requireOwn(ctx: Pick<Ctx, "userId">, accountId: string): Promise<
 export async function accountDependents(ctx: Pick<Ctx, "userId">, accountId: string): Promise<Dependent[]> {
   await requireOwn(ctx, accountId);
   const [pockets, rules, limits, subscriptions, funds] = await Promise.all([
-    pocketsOnAccount(ctx, accountId),
-    rulesOnAccount(ctx, accountId),
+    pocketsToMove(ctx, accountId),
+    rulesToMove(ctx, accountId),
     limitsOnAccount(ctx, accountId),
-    subscriptionsOnAccount(ctx, accountId),
+    subscriptionsToMove(ctx, accountId),
     fundsOnAccount(ctx, accountId),
   ]);
   return [

@@ -269,7 +269,7 @@ export async function checkSubscriptions(
 // is `on delete no action`, so one left behind makes the deletion refuse.
 
 /** The subscriptions paid from an account, whatever their state. */
-export async function subscriptionsOnAccount(
+export async function subscriptionsToMove(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
 ): Promise<{ id: string; name: string }[]> {

@@ -6,7 +6,7 @@
 import "server-only";
 import { listAccounts } from "@/modules/accounts/queries";
 import { releaseSourceAccounts } from "@/modules/accounts/service";
-import { publishingRuleCount, stopPublishing } from "@/modules/interests/service";
+import { publishingRuleCount, stopPublishingOnAccounts } from "@/modules/interests/service";
 import { forgetPendingDays, pendingCount } from "@/modules/timeoff/service";
 import { forgetSends, pendingSends } from "@/modules/transactions/sending";
 import { forgetSourceCategories, sourceCategoryCount } from "@/modules/transactions/source-categories";
@@ -130,7 +130,7 @@ export async function deactivateSource(
   const released = await getDb().transaction(async (tx) => {
     const accounts = await releaseSourceAccounts(tx, ctx, source.provider, now);
     const ids = accounts.map((account) => account.id);
-    await stopPublishing(tx, ctx, ids);
+    await stopPublishingOnAccounts(tx, ctx, ids);
     await forgetSends(tx, ctx, ids);
     await forgetSourceCategories(tx, ctx, source.provider);
     if (source.days) await forgetPendingDays(tx, ctx, now);

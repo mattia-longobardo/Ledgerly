@@ -419,7 +419,7 @@ export async function accruedInterest(
 // is `on delete no action`, so one left behind makes the deletion refuse.
 
 /** The interest rules on an account, oldest first. */
-export async function rulesOnAccount(
+export async function rulesToMove(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
 ): Promise<{ id: string; validFrom: string }[]> {
@@ -488,7 +488,7 @@ export async function publishingRuleCount(
  * published to it only computes from now on. Its accruals and settlements stay, a settlement not
  * published yet stays "not published", and turning the source on again does not publish (Q6).
  */
-export async function stopPublishing(
+export async function stopPublishingOnAccounts(
   tx: Tx,
   ctx: Pick<Ctx, "userId">,
   accountIds: readonly string[],
