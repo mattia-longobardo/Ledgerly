@@ -3,12 +3,17 @@
 // web what it still holds — its guard, the names of the sources, the use cases of the connections.
 // The application joins them here (rule M8), so no package imports the web.
 import "server-only";
-import { apiRoutes } from "@ledgerly/api";
+import { apiRoutes, readTools } from "@ledgerly/api";
 import { connectionCases } from "@/app/(app)/settings/integrations/api-cases";
 import { api } from "@/platform/api/app";
 import { withToken } from "@/platform/api/auth";
 import { sourceNameOf } from "@/platform/integrations/registry";
 
-api.route("/", apiRoutes({ guard: withToken, sourceName: sourceNameOf, connections: connectionCases }));
+const adapters = { guard: withToken, sourceName: sourceNameOf, connections: connectionCases };
+
+api.route("/", apiRoutes(adapters));
+
+/** The MCP tools of the reads, from the same descriptors and handlers (`/api/mcp`). */
+export const reads = readTools(adapters);
 
 export { api };

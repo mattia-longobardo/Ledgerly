@@ -6,6 +6,7 @@ import { bearerChallenge, looksLikeJwt } from "@/platform/auth/access-token-rule
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { resourceMetadataUrl } from "@ledgerly/domain/platform/auth";
 import { readEnv } from "@ledgerly/domain/platform/env";
+import type { ReadTool } from "@ledgerly/api";
 import { buildMcpServer } from "./tools";
 
 /**
@@ -49,7 +50,7 @@ function rpcError(status: number, code: number, message: string, headers: Record
   return reply(status, { jsonrpc: "2.0", error: { code, message }, id: null }, headers);
 }
 
-export async function handleMcp(request: Request): Promise<Response> {
+export async function handleMcp(request: Request, reads: readonly ReadTool[] = []): Promise<Response> {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
 
   const match = BEARER.exec(request.headers.get("authorization") ?? "");
@@ -89,7 +90,7 @@ export async function handleMcp(request: Request): Promise<Response> {
     return rpcError(413, -32600, "Request too large.", limits);
   }
 
-  const server = buildMcpServer(identity.ctx, identity.scopes);
+  const server = buildMcpServer(identity.ctx, identity.scopes, reads);
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

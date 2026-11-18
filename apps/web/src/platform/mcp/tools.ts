@@ -15,6 +15,7 @@ import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { monthlyFigures } from "@/platform/reports/monthly";
 import { civilDate } from "@ledgerly/api-contract";
+import type { ReadTool } from "@ledgerly/api";
 
 /**
  * The tools of the MCP server (docs/auth-design.md D6, v1). Each one calls the same services as
@@ -51,7 +52,11 @@ function failure(message: string): CallToolResult {
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 
 /** A server for one request, holding one person's `Ctx`: the transport is stateless (D6). */
-export function buildMcpServer(ctx: Ctx, scopes: readonly ApiScope[]): McpServer {
+export function buildMcpServer(
+  ctx: Ctx,
+  scopes: readonly ApiScope[],
+  reads: readonly ReadTool[] = [],
+): McpServer {
   const server = new McpServer(
     { name: "ledgerly", title: "Ledgerly", version: APP_VERSION },
     {
@@ -62,6 +67,11 @@ export function buildMcpServer(ctx: Ctx, scopes: readonly ApiScope[]): McpServer
     },
   );
   if (scopes.includes("investments:read")) registerInvestmentTools(server, ctx);
+  registerReadTools(
+    server,
+    ctx,
+    reads.filter((tool) => scopes.some((scope) => scope === tool.scope)),
+  );
   if (!scopes.includes("read")) return server;
 
   server.registerTool(
@@ -324,4 +334,30 @@ function registerInvestmentTools(server: McpServer, ctx: Ctx): void {
       return json(holdingsJson(view));
     },
   );
+}
+
+/**
+ * The tools of the reads of `/api/v1` (rewrite plan R2): one per route of the contract with an MCP
+ * entry, answering what the route answers, from the same handler.
+ */
+function registerReadTools(server: McpServer, ctx: Ctx, reads: readonly ReadTool[]): void {
+  for (const tool of reads) {
+    server.registerTool(
+      tool.name,
+      {
+        title: tool.title,
+        description: tool.description,
+        inputSchema: tool.arguments,
+        annotations: READ_ONLY,
+      },
+      async (args) => {
+        try {
+          return json(await tool.run(ctx, args));
+        } catch (error) {
+          if (error instanceof Error && error.name === "ApiRefusal") return failure(error.message);
+          throw error;
+        }
+      },
+    );
+  }
 }

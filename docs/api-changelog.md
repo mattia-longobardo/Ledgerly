@@ -33,6 +33,9 @@ written before it keeps working.
   test, history, its accounts, disconnect) until it is a plugin; `capabilities` says what a
   connection offers through the API. `POST /connections` refuses every provider for now. The start
   and the renewal of a bank's access are not served yet.
+- New MCP tools (scope `read`), from the same descriptors and handlers as their routes, answering
+  what the route answers: `get_preferences`, `get_profile`, `list_categories` (argument `archived`),
+  `list_labels`, `list_connections`.
 
 ## 2026-11-14 · one pension fund model (release N6)
 

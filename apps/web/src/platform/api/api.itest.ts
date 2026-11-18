@@ -16,7 +16,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
-const { api } = await import("@/app/api/v1/[[...route]]/composition");
+const { api, reads } = await import("@/app/api/v1/[[...route]]/composition");
 const { resetRateLimits, MAX_PER_WINDOW } = await import("./rate-limit");
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClientWith, deleteApiClient } = await import("@/platform/auth/api-clients");
@@ -495,6 +495,35 @@ describe("users and settings: connections", () => {
     expect((await call("/sources/nothing/deactivation", aliceToken)).status).toBe(404);
     expect((await call("/plugins/nothing", aliceToken, send("PATCH", { active: true }))).status).toBe(404);
     expect((await call("/banks?country=it", aliceToken)).status).toBe(400);
+  });
+});
+
+describe("parity of users and settings: route = MCP tool", () => {
+  it("answers each read tool with what its route answers", async () => {
+    await saveConnection(alice, { provider: "wallet", credentials: { token: "test-token" } });
+    await call("/labels", aliceToken, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Trip", color: null }),
+    });
+    expect(reads.map((tool) => tool.name).sort()).toEqual([
+      "get_preferences",
+      "get_profile",
+      "list_categories",
+      "list_connections",
+      "list_labels",
+    ]);
+    const paths: Record<string, string> = {
+      get_preferences: "/preferences",
+      get_profile: "/profile",
+      list_categories: "/categories",
+      list_connections: "/connections",
+      list_labels: "/labels",
+    };
+    for (const tool of reads) {
+      const route = await (await call(paths[tool.name], aliceToken)).json();
+      expect(await tool.run(alice, {}), tool.name).toEqual(route);
+    }
   });
 });
 

@@ -13,7 +13,7 @@ import type { SourceName } from "./settings/taxonomy";
  * What the web process lends the API until R4: its guard (`withToken`, so authentication lives
  * once) and the names of the sources (its registry of providers, until E5).
  */
-interface Adapters {
+export interface Adapters {
   guard: Guard;
   sourceName: SourceName;
   /** The use cases of the connections and the banks, until E5 and R4. */

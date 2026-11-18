@@ -104,6 +104,14 @@ function fitsContract<R extends RouteContract>(route: R, input: RawInput): input
   return true;
 }
 
+/** The handlers each app serves, by route id: a read of the contract is also an MCP tool. */
+const HANDLERS = new WeakMap<Hono<ApiEnv>, Map<string, (input: RawInput) => Promise<unknown>>>();
+
+/** The handler `app` serves for `routeId`, with the input already checked; `undefined` when none. */
+export function handlerOf(app: Hono<ApiEnv>, routeId: string) {
+  return HANDLERS.get(app)?.get(routeId);
+}
+
 /** Hono writes a parameter as `:name`; the contract as `{name}`. */
 const honoPath = (path: string) => path.replace(/\{(\w+)\}/g, ":$1");
 
@@ -115,6 +123,12 @@ export function serve<R extends RouteContract>(
   handler: Handler<R>,
 ): void {
   if (route.scope === null) throw new Error(`${route.id}: a public route is served by its own router`);
+  const handlers = HANDLERS.get(app) ?? new Map<string, (input: RawInput) => Promise<unknown>>();
+  HANDLERS.set(app, handlers);
+  handlers.set(route.id, async (input) => {
+    if (!fitsContract(route, input)) throw new ApiRefusal("invalid");
+    return handler(input);
+  });
   app.on(route.method, honoPath(route.path), guard(route.scope), async (context) => {
     const input: RawInput = {
       ctx: context.get("ctx"),
