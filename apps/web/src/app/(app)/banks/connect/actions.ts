@@ -1,44 +1,25 @@
 // src/app/(app)/banks/connect/actions.ts — the procedure "Connect a bank" (ux/n1-plugin-bank.md
-// §6): the banks of a country, the start of an access, the choice of the accounts with the first
-// reading, and the way out. Thin wrappers around `platform/plugins`; the return from the bank is
-// the route `/api/v1/plugins/<id>/callback`.
+// §6). The steps are the use cases of `cases.ts`, which `/api/v1` calls too; the start of an access
+// is the browser's, bound to its session. The return from the bank is `/api/v1/plugins/<id>/callback`.
 "use server";
 
 import { notFound } from "next/navigation";
-import { revalidatePath } from "next/cache";
-import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { getOptionalSession } from "@/platform/auth/session";
-import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { tasks } from "@/platform/jobs/queue";
-import { listPluginConnections } from "@ledgerly/domain/platform/plugins";
-import { instanceKeyOf, institutionOf } from "@ledgerly/domain/platform/plugins";
-import {
-  disconnectBank,
-  listInstitutions,
-  type PluginActionCode,
-  PluginActionError,
-  startAccess,
-} from "@ledgerly/plugin-host";
-import { type AccountDecision, chooseAccounts, readBank } from "@ledgerly/plugin-host";
+import { institutionOf, listPluginConnections } from "@ledgerly/domain/platform/plugins";
+import { type AccountDecision, startAccess } from "@ledgerly/plugin-host";
 import { BANK_PLUGIN_ID } from "../plugin";
 import { requestPresence } from "../presence";
-import { bankSink } from "../sink";
+import {
+  type BankChoice,
+  type BankRefusal,
+  bankRefusal,
+  cancelBankConnection,
+  importBankAccounts,
+  listBanks,
+  retryBankReading,
+} from "./cases";
 
-export interface BankChoice {
-  name: string;
-  /** How many days an access to this bank lasts, at most; null when the bank does not say. */
-  maxAccessDays: number | null;
-  /** The person already has a connection to this bank: it is renewed, not connected again. */
-  connected: boolean;
-}
-
-type Refusal = { ok: false; error: PluginActionCode };
-
-function refusal(error: unknown): Refusal {
-  if (error instanceof PluginActionError) return { ok: false, error: error.code };
-  console.error("[plugins] an action failed", redactForLog(error));
-  return { ok: false, error: "failed" };
-}
+export type { BankChoice } from "./cases";
 
 async function signedIn() {
   const session = await getOptionalSession();
@@ -48,32 +29,16 @@ async function signedIn() {
 
 const COUNTRY = /^[A-Z]{2}$/;
 
-export async function listBanksAction(country: string): Promise<{ ok: true; banks: BankChoice[] } | Refusal> {
-  const session = await signedIn();
-  if (!COUNTRY.test(country)) return { ok: false, error: "failed" };
-  try {
-    const institutions = await listInstitutions(session.ctx, { pluginId: BANK_PLUGIN_ID, country });
-    const connected = new Set(
-      (await listPluginConnections(session.ctx, BANK_PLUGIN_ID)).map((connection) => connection.instanceKey),
-    );
-    return {
-      ok: true,
-      banks: institutions.map(({ name, maxAccessDays }) => ({
-        name,
-        maxAccessDays,
-        connected: connected.has(instanceKeyOf({ name, country })),
-      })),
-    };
-  } catch (error) {
-    return refusal(error);
-  }
+export async function listBanksAction(
+  country: string,
+): Promise<{ ok: true; banks: BankChoice[] } | BankRefusal> {
+  return listBanks((await signedIn()).ctx, country);
 }
 
-/** Starts the access and returns the address of the bank's site, for the browser to go to. */
 export async function startBankAccessAction(
   country: string,
   name: string,
-): Promise<{ ok: true; url: string } | Refusal> {
+): Promise<{ ok: true; url: string } | BankRefusal> {
   const session = await signedIn();
   if (!COUNTRY.test(country) || name.length < 1 || name.length > 200) return { ok: false, error: "failed" };
   try {
@@ -84,14 +49,14 @@ export async function startBankAccessAction(
     });
     return { ok: true, url };
   } catch (error) {
-    return refusal(error);
+    return bankRefusal(error);
   }
 }
 
 /** "Renew access" (§6.7): the same start, for the bank of a connection the person already has. */
 export async function renewBankAccessAction(
   connectionId: string,
-): Promise<{ ok: true; url: string } | Refusal> {
+): Promise<{ ok: true; url: string } | BankRefusal> {
   const session = await signedIn();
   try {
     const connection = (await listPluginConnections(session.ctx, BANK_PLUGIN_ID)).find(
@@ -105,7 +70,7 @@ export async function renewBankAccessAction(
     });
     return { ok: true, url };
   } catch (error) {
-    return refusal(error);
+    return bankRefusal(error);
   }
 }
 
@@ -117,45 +82,14 @@ export async function renewBankAccessAction(
 export async function importBankAccountsAction(
   connectionId: string,
   decisions: AccountDecision[],
-): Promise<{ ok: true } | Refusal> {
-  const session = await signedIn();
-  const target = { pluginId: BANK_PLUGIN_ID, connectionId };
-  try {
-    await chooseAccounts(session.ctx, { ...target, decisions }, bankSink);
-    const outcome = await readBank(session.ctx, { ...target, presence: await requestPresence() }, bankSink);
-    if (outcome.ok && outcome.created + outcome.updated > 0) await enqueue(tasks.afterSync("manual"));
-  } catch (error) {
-    return refusal(error);
-  }
-  revalidatePath("/settings/integrations", "layout");
-  return { ok: true };
+): Promise<{ ok: true } | BankRefusal> {
+  return importBankAccounts((await signedIn()).ctx, connectionId, decisions, await requestPresence());
 }
 
-/** "Try again now" on the outcome page: one more reading the person asked for. */
-export async function retryBankReadingAction(connectionId: string): Promise<{ ok: true } | Refusal> {
-  const session = await signedIn();
-  try {
-    const outcome = await readBank(
-      session.ctx,
-      { pluginId: BANK_PLUGIN_ID, connectionId, presence: await requestPresence() },
-      bankSink,
-    );
-    if (outcome.ok && outcome.created + outcome.updated > 0) await enqueue(tasks.afterSync("manual"));
-  } catch (error) {
-    return refusal(error);
-  }
-  revalidatePath("/banks/connect");
-  return { ok: true };
+export async function retryBankReadingAction(connectionId: string): Promise<{ ok: true } | BankRefusal> {
+  return retryBankReading((await signedIn()).ctx, connectionId, await requestPresence());
 }
 
-/** "Cancel connection" on the choice of the accounts (§6.4): the access is closed, nothing is created. */
-export async function cancelBankConnectionAction(connectionId: string): Promise<{ ok: true } | Refusal> {
-  const session = await signedIn();
-  try {
-    await disconnectBank(session.ctx, { pluginId: BANK_PLUGIN_ID, connectionId });
-  } catch (error) {
-    return refusal(error);
-  }
-  revalidatePath("/settings/integrations", "layout");
-  return { ok: true };
+export async function cancelBankConnectionAction(connectionId: string): Promise<{ ok: true } | BankRefusal> {
+  return cancelBankConnection((await signedIn()).ctx, connectionId);
 }

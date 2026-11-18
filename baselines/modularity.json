@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 18,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 285,
+    "deepImports": 284,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -535,7 +535,6 @@
     "app/(app)/settings/categories/page.tsx → modules/transactions/categorize/actions",
     "app/(app)/settings/categories/page.tsx → modules/transactions/ui/display",
     "app/(app)/settings/data/page.tsx → modules/accounts/ui/snapshot-button",
-    "app/(app)/settings/integrations/connection-actions.ts → modules/investments/actions",
     "app/(app)/settings/profile/name-form.tsx → modules/users/actions",
     "app/(app)/settings/profile/preferences-form.tsx → modules/users/actions",
     "app/(app)/settings/rules/page.tsx → modules/transactions/ui/display",

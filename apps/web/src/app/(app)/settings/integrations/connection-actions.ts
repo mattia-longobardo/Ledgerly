@@ -1,63 +1,19 @@
-// src/app/(app)/settings/integrations/connection-actions.ts — the one Server Action of the row of
-// a connection (ux/n2-connection-status.md §2.4). A thin wrapper: it finds who owns the
-// connection's provider and asks them; the rules are theirs.
-//
-// The id comes from the browser and is read only among the signed-in person's own connections.
-// The answer is a sentence or a toast: no credential and nothing a provider said.
+// src/app/(app)/settings/integrations/connection-actions.ts — the Server Action of a connection's
+// row: the session and the use case of `connection-cases.ts` (which `/api/v1/connections` calls
+// too), then the sentence the row shows.
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import "@/app/plugin-wiring";
-import { syncNowAction } from "@/modules/investments/actions";
-import { providerOf } from "@ledgerly/domain/investments";
-import { listInvestmentAccounts } from "@ledgerly/domain/investments";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
-import { requireSession } from "@/platform/auth/session";
-import { labelOf, passFor } from "@/platform/integrations/registry";
-import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
-import {
-  type Connection,
-  findConnection,
-  IntegrationError,
-  makeDueNow,
-  saveSchedule,
-} from "@ledgerly/domain/platform/integrations";
 import { codeKey } from "@ledgerly/domain/platform/integrations";
-import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { tasks } from "@/platform/jobs/queue";
-import { BANK_SCHEDULE } from "@ledgerly/domain/platform/plugins";
-import { PluginActionError, setPluginActive } from "@ledgerly/plugin-host";
+import { requireSession } from "@/platform/auth/session";
+import { labelOf } from "@/platform/integrations/registry";
 import { requestPresence } from "../../banks/presence";
 import { coreConnectionAction } from "./actions";
-import { recommendedSchedule } from "./recommended-schedule";
+import { CONNECTION_KINDS, type ConnectionKind, type Refusal, runConnection } from "./connection-cases";
 
 type ConnectionActionResult = { ok: true; toast: string | null } | { ok: false; message: string };
-
-/** The kinds this action does itself; the others are a page or a dialog of the row's parent. */
-type Kind = "update" | "resume" | "enable" | "test" | "history";
-
-const pluginIdOf = (provider: string) => provider.slice("plugin:".length);
-
-/** A refusal of a reading as the code whose sentence the row shows. */
-type Refusal = "busy" | "unavailable" | "network" | "notActive" | "pending" | "failed" | string;
-
-/** What the provider of the core or of Investments answered, as a code of the closed list. */
-const CODE_OF_ANSWER: Record<string, Refusal> = {
-  rejected: "auth",
-  unreachable: "provider_down",
-  provider: "invalid_data",
-  busy: "busy",
-  sync_busy: "busy",
-  cooldown: "busy",
-  sync_refused: "auth",
-  provider_auth: "auth",
-  rate_limited: "rate_limited",
-  provider_unavailable: "provider_down",
-  plugin_down: "unavailable",
-  not_active: "notActive",
-  not_chosen: "pending",
-};
 
 function revalidate(): void {
   revalidatePath("/settings/integrations", "layout");
@@ -66,25 +22,16 @@ function revalidate(): void {
   revalidatePath("/accounts", "layout");
 }
 
-/**
- * "Update now": a reading the person asked for, put in the worker's queue (rewrite plan R1). The
- * answer does not wait for the provider: the reading's outcome is in the row, as after a scheduled
- * pass. An investment service is checked here first (connected, a minute since its last run).
- */
-async function update(
-  ctx: Awaited<ReturnType<typeof requireSession>>,
-  connection: Connection,
-): Promise<{ queued: true } | { refusal: Refusal }> {
-  if (providerOf(connection.provider) !== null) {
-    const service = (await listInvestmentAccounts(ctx)).find((one) => one.provider === connection.provider);
-    if (!service) return { refusal: "failed" };
-    const result = await syncNowAction(service.accountId);
-    return result.ok ? { queued: true } : { refusal: CODE_OF_ANSWER[result.error] ?? "failed" };
-  }
-  const presence = isPluginProvider(connection.provider) ? await requestPresence() : null;
-  await enqueue(tasks.updateConnection(ctx.userId, connection.id, presence));
-  return { queued: true };
-}
+const isKind = (kind: string): kind is ConnectionKind => CONNECTION_KINDS.some((one) => one === kind);
+
+/** The toast of each kind that went through. */
+const TOAST = {
+  update: "toasts.started",
+  resume: "toasts.resumed",
+  enable: "toasts.enabled",
+  test: "toasts.tested",
+  history: "toasts.historyRead",
+} as const;
 
 /**
  * Does one thing to one of the person's connections: "Update now", "Turn on again" (the
@@ -100,68 +47,30 @@ export async function runConnectionAction(
   const ctx = await requireSession();
   const t = await getTranslations("settings.connections");
   const failed: ConnectionActionResult = { ok: false, message: t("codes.failed") };
-  const connection = await findConnection(ctx, connectionId);
-  if (!connection) return failed;
-  const label = await labelOf(connection, ctx.locale);
-  const names = { name: label.name, provider: label.provider };
+  if (!isKind(kind)) return failed;
 
-  /** A refusal's sentence, one branch per code so the catalogue keys stay literal. */
-  const refused = (code: Refusal): ConnectionActionResult => {
-    if (code === "busy") return { ok: false, message: t("codes.busy") };
-    if (code === "unavailable") return { ok: false, message: t("codes.unavailable") };
-    if (code === "notActive") return { ok: false, message: t("text.pausedProvider", names) };
-    if (code === "pending") return { ok: false, message: t("text.pending") };
-    return { ok: false, message: t(`codes.${codeKey(code)}`, names) };
-  };
-
+  let outcome: Awaited<ReturnType<typeof runConnection>>;
   try {
-    switch (kind as Kind) {
-      case "update": {
-        const outcome = await update(ctx, connection);
-        if ("refusal" in outcome) return refused(outcome.refusal);
-        return { ok: true, toast: t("toasts.started") };
-      }
-      case "resume": {
-        const schedule = isPluginProvider(connection.provider)
-          ? BANK_SCHEDULE
-          : recommendedSchedule(connection.provider);
-        await saveSchedule(ctx, connection.id, schedule);
-        revalidate();
-        return { ok: true, toast: t("toasts.resumed") };
-      }
-      case "enable": {
-        if (!isPluginProvider(connection.provider)) return failed;
-        await setPluginActive(ctx, { pluginId: pluginIdOf(connection.provider), active: true });
-        // A reading for each of its connections: they are due now, and the next tick of the
-        // dispatcher reads them.
-        await makeDueNow(ctx, connection.provider);
-        revalidate();
-        return { ok: true, toast: t("toasts.enabled", names) };
-      }
-      case "test": {
-        const result = await coreConnectionAction(connection.provider, "test");
-        revalidate();
-        return result.ok
-          ? { ok: true, toast: t("toasts.tested", names) }
-          : refused(CODE_OF_ANSWER[result.error] ?? "failed");
-      }
-      case "history": {
-        // "Download the history again": only for a provider that reads a chosen depth.
-        const choices = passFor(connection.provider)?.history?.choices ?? [];
-        if (months === undefined || !choices.includes(months)) return failed;
-        const result = await coreConnectionAction(connection.provider, "history", months);
-        revalidate();
-        return result.ok
-          ? { ok: true, toast: t("toasts.historyRead") }
-          : refused(CODE_OF_ANSWER[result.error] ?? "failed");
-      }
-      default:
-        return failed;
-    }
+    outcome = await runConnection(ctx, connectionId, kind, {
+      months,
+      presence: await requestPresence(),
+      core: coreConnectionAction,
+    });
   } catch (error) {
-    if (error instanceof PluginActionError) return refused(CODE_OF_ANSWER[error.code] ?? error.code);
-    if (error instanceof IntegrationError) return failed;
     console.error("[connections] an action failed", redactForLog(error));
     return failed;
   }
+  if (kind !== "update") revalidate();
+  if (!outcome.connection) return failed;
+  const label = await labelOf(outcome.connection, ctx.locale);
+  const names = { name: label.name, provider: label.provider };
+  if (outcome.ok) return { ok: true, toast: t(TOAST[kind], names) };
+
+  /** A refusal's sentence, one branch per code so the catalogue keys stay literal. */
+  const code: Refusal = outcome.refusal;
+  if (code === "busy") return { ok: false, message: t("codes.busy") };
+  if (code === "unavailable") return { ok: false, message: t("codes.unavailable") };
+  if (code === "notActive") return { ok: false, message: t("text.pausedProvider", names) };
+  if (code === "pending") return { ok: false, message: t("text.pending") };
+  return { ok: false, message: t(`codes.${codeKey(code)}`, names) };
 }
