@@ -99,7 +99,6 @@ export const envSchema = z
     PLUGIN_URLS: z.preprocess(blankAsUndefined, z.string().optional()),
     PLUGIN_SECRETS: z.preprocess(blankAsUndefined, z.string().optional()),
     CRON_SECRET: z.string().min(32),
-    HEARTBEAT_FILE: z.string().min(1).default("/tmp/ledgerly-heartbeat"),
     METRICS_TOKEN: z.string().min(32).optional(),
     // The reverse proxies in front of the app (comma-separated IPs or CIDR ranges): Better Auth
     // reads the client IP from X-Forwarded-For past these hops, so each client gets its own

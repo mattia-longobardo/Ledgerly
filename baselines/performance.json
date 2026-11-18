@@ -194,7 +194,7 @@
           "medianMs": 5,
           "maxMs": 5
         },
-        "payslips-sweep": {
+        "documents-sweep": {
           "runs": 721,
           "medianMs": 3,
           "maxMs": 100

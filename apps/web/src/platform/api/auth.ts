@@ -73,7 +73,7 @@ export function withToken(scope: Scope): MiddlewareHandler<ApiEnv> {
     }
 
     // One budget per client (D6: key = client_id).
-    const verdict = takeSlot(`client:${identity.clientId}`);
+    const verdict = await takeSlot(`client:${identity.clientId}`);
     c.header("X-RateLimit-Limit", String(MAX_PER_WINDOW));
     c.header("X-RateLimit-Remaining", String(verdict.remaining));
     if (!verdict.allowed) {

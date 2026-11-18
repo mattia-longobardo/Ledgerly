@@ -92,7 +92,7 @@ async function callTool(token: string, name: string, args: Record<string, unknow
 beforeEach(async () => {
   await resetDatabase();
   invalidateAuth();
-  resetRateLimits();
+  await resetRateLimits();
   requestHeaders = new Headers();
 });
 

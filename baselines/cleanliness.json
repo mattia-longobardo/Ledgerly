@@ -497,7 +497,6 @@
     "packages/domain/src/modules/investments/sync/quantities.ts": 3,
     "packages/domain/src/modules/investments/sync/readings.ts": 9,
     "packages/domain/src/modules/investments/sync/settle.ts": 6,
-    "packages/domain/src/modules/investments/sync/sources.ts": 1,
     "packages/domain/src/modules/investments/xirr.ts": 3,
     "packages/domain/src/modules/payroll/llm.ts": 1,
     "packages/domain/src/modules/payroll/parse/checks.ts": 2,

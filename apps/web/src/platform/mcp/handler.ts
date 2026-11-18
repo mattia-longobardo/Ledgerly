@@ -65,7 +65,7 @@ export async function handleMcp(request: Request): Promise<Response> {
   if (!identity) return reply(401, { error: "unauthorized" }, challenge({ error: "invalid_token" }));
 
   // The same budget as /api/v1 for the same client (D6: key = client_id).
-  const verdict = takeSlot(`client:${identity.clientId}`);
+  const verdict = await takeSlot(`client:${identity.clientId}`);
   const limits = {
     "X-RateLimit-Limit": String(MAX_PER_WINDOW),
     "X-RateLimit-Remaining": String(verdict.remaining),

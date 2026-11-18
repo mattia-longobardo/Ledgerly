@@ -1,4 +1,5 @@
 import type { Ctx } from "../../../platform/context";
+import { takeSlot } from "../../../platform/limits/service";
 import { BINANCE_PROVIDER } from "../../../platform/integrations/ccxt/binance";
 import { binanceSource } from "../../../platform/integrations/ccxt/source";
 import { etoroSource } from "../../../platform/integrations/etoro/source";
@@ -68,25 +69,14 @@ export const ATTESTATION_TEXT_VERSIONS: Record<string, string> = {
 };
 /** Permissions that only read, never named as the reason a key was refused (B1). */
 export const READ_PERMISSIONS = new Set(["enableReading", "enableFixReadOnly"]);
-/** Runs work after the answer has gone (Next's `after`): slow first flows never hold a form. */
-export type Defer = (work: () => Promise<unknown>) => void;
 
 /**
- * The attempts of {@link KEY_ATTEMPTS}, held in memory like the API's rate limit
- * (`platform/api/rate-limit.ts`): a guard against a loop, not a boundary, and a restart forgets it.
+ * One attempt of {@link KEY_ATTEMPTS}, counted in the table every process shares (rewrite plan R1):
+ * a fixed window that opens with the first attempt. A guard against a loop, not a boundary.
  */
-const keyAttempts = new Map<string, number[]>();
-
-export function takeKeyAttempt(ctx: Pick<Ctx, "userId">, provider: string, now: Date): void {
-  const key = `${ctx.userId}:${provider}`;
-  const from = now.getTime() - KEY_ATTEMPTS.windowMs;
-  const recent = (keyAttempts.get(key) ?? []).filter((at) => at > from);
-  if (recent.length >= KEY_ATTEMPTS.max) {
-    keyAttempts.set(key, recent);
-    throw new SyncError("cooldown");
-  }
-  recent.push(now.getTime());
-  keyAttempts.set(key, recent);
+export async function takeKeyAttempt(ctx: Pick<Ctx, "userId">, provider: string, now: Date): Promise<void> {
+  const verdict = await takeSlot(`key-attempt:${ctx.userId}:${provider}`, KEY_ATTEMPTS, now);
+  if (!verdict.allowed) throw new SyncError("cooldown");
 }
 
 /** A source failure as the code a form shows (§5.1): never the provider's text. */

@@ -24,12 +24,11 @@ import {
   saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
 import { codeKey } from "@ledgerly/domain/platform/integrations";
-import { runAfterSync } from "@/platform/jobs/after-sync";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import { BANK_SCHEDULE } from "@ledgerly/domain/platform/plugins";
 import { PluginActionError, setPluginActive } from "@ledgerly/plugin-host";
-import { readBank } from "@ledgerly/plugin-host";
 import { requestPresence } from "../../banks/presence";
-import { bankSink } from "../../banks/sink";
 import { coreConnectionAction } from "./actions";
 import { recommendedSchedule } from "./recommended-schedule";
 
@@ -67,33 +66,24 @@ function revalidate(): void {
   revalidatePath("/accounts", "layout");
 }
 
-/** "Update now": a reading the person asked for, by whoever owns the provider. */
+/**
+ * "Update now": a reading the person asked for, put in the worker's queue (rewrite plan R1). The
+ * answer does not wait for the provider: the reading's outcome is in the row, as after a scheduled
+ * pass. An investment service is checked here first (connected, a minute since its last run).
+ */
 async function update(
   ctx: Awaited<ReturnType<typeof requireSession>>,
   connection: Connection,
-): Promise<{ created: number } | { refusal: Refusal }> {
-  if (isPluginProvider(connection.provider)) {
-    const outcome = await readBank(
-      ctx,
-      {
-        pluginId: pluginIdOf(connection.provider),
-        connectionId: connection.id,
-        presence: await requestPresence(),
-      },
-      bankSink,
-    );
-    if (!outcome.ok) return { refusal: CODE_OF_ANSWER[outcome.error] ?? outcome.error };
-    if (outcome.created + outcome.updated > 0) await runAfterSync("manual");
-    return { created: outcome.created };
-  }
+): Promise<{ queued: true } | { refusal: Refusal }> {
   if (providerOf(connection.provider) !== null) {
     const service = (await listInvestmentAccounts(ctx)).find((one) => one.provider === connection.provider);
     if (!service) return { refusal: "failed" };
     const result = await syncNowAction(service.accountId);
-    return result.ok ? { created: 0 } : { refusal: CODE_OF_ANSWER[result.error] ?? "failed" };
+    return result.ok ? { queued: true } : { refusal: CODE_OF_ANSWER[result.error] ?? "failed" };
   }
-  const result = await coreConnectionAction(connection.provider, "update");
-  return result.ok ? { created: 0 } : { refusal: CODE_OF_ANSWER[result.error] ?? "failed" };
+  const presence = isPluginProvider(connection.provider) ? await requestPresence() : null;
+  await enqueue(tasks.updateConnection(ctx.userId, connection.id, presence));
+  return { queued: true };
 }
 
 /**
@@ -128,13 +118,8 @@ export async function runConnectionAction(
     switch (kind as Kind) {
       case "update": {
         const outcome = await update(ctx, connection);
-        revalidate();
         if ("refusal" in outcome) return refused(outcome.refusal);
-        return {
-          ok: true,
-          toast:
-            outcome.created > 0 ? t("toasts.updatedNew", { count: outcome.created }) : t("toasts.updated"),
-        };
+        return { ok: true, toast: t("toasts.started") };
       }
       case "resume": {
         const schedule = isPluginProvider(connection.provider)

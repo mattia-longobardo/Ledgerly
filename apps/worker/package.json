@@ -1,0 +1,10 @@
+{
+  "name": "@ledgerly/worker",
+  "version": "0.35.3",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ledgerly/domain": "*",
+    "@ledgerly/web": "*"
+  }
+}

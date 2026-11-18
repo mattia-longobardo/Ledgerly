@@ -1313,8 +1313,7 @@
         "disconnect": "Disconnect"
       },
       "toasts": {
-        "updated": "Update completed",
-        "updatedNew": "Update completed: {count, plural, one {# new transaction} other {# new transactions}}",
+        "started": "Update started: the data arrives in a few moments",
         "resumed": "Automatic update turned on again",
         "enabled": "{provider} turned on",
         "tested": "{name} answered: the connection works",
@@ -4614,7 +4613,7 @@
       "zeroConfirmed": "Zero confirmed",
       "urlSaved": "Link saved",
       "connected": "{name} connected",
-      "synced": "Synced",
+      "synced": "Sync started: the values arrive in a few moments",
       "verified": "The key only reads",
       "keyReplaced": "Key replaced",
       "disconnected": "{name} disconnected: the account is manual now",

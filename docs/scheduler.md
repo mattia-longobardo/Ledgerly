@@ -79,18 +79,50 @@ dopo `after`.
 
 ## Scheduler
 
-- Nuovo tier **`minute`**: `cron/crontab` chiama `/api/jobs/tick?tier=minute` ogni minuto
-  (supercronic, secondo 0). Il tier contiene solo `integrations-sync`. Sostituisce il tier
-  `quarter`, che resta ammesso in `job_runs.tier` solo per le righe storiche.
+- Nuovo tier **`minute`**: lo scheduler del worker lo mette in coda ogni minuto (fino a R1 era
+  `cron/crontab` con supercronic, secondo 0). Il tier contiene solo `integrations-sync`. Sostituisce
+  il tier `quarter`, che resta ammesso in `job_runs.tier` solo per le righe storiche.
 - `JobDefinition.hasWork()`: prima di prendere il lock il tick chiede se c'è una connessione
   dovuta (`anyConnectionDue`, una lettura sull'indice `next_sync_at`). Se no, nessun lock e nessuna
   riga in `job_runs`: altrimenti 1.440 righe al giorno senza contenuto. "Run now" non lo chiede.
 - Ritardo: una connessione dovuta alle 06:43 parte al tick delle 06:43:00, salvo una sync più
-  lunga di un minuto ancora in corso (il lock fa saltare i tick fino alla sua fine). L'heartbeat
-  viene toccato ogni minuto.
+  lunga di un minuto ancora in corso: il tick dopo aspetta in coda la sua fine (un solo tick in
+  attesa per tier).
 - Dopo il run `next_sync_at = nextSyncAfterPass(schedule, tz, slot, now)`: il primo slot dopo
   `now`, mai entro 15 minuti dallo slot eseguito. Dopo un fermo dell'app parte un run, poi il
   prossimo slot futuro: nessun recupero a raffica.
+
+## Worker e coda (R1)
+
+Dal rilascio R1 nessun job gira nel processo web: li esegue `ledgerly-worker` (`apps/worker`, stessa
+immagine, `node /app/worker.mjs`).
+
+- **Scheduler**: a ogni minuto il worker legge `SCHEDULE` del registro (ora di Roma) e mette in coda
+  i tier di quel minuto: `minute` sempre, `hourly` a :30, `daily` alle 12:00, `monthly` alle 00:05 del
+  giorno 1. Gli stessi istanti del crontab di prima; un minuto in cui il worker è fermo non si
+  recupera, come con cron.
+- **Coda** `job_queue` su PostgreSQL: il worker prende un task alla volta con `FOR UPDATE SKIP
+  LOCKED`, fino a 3 insieme. Ogni task ha una chiave: un solo task in attesa per chiave (un secondo
+  uguale si unisce al primo) e nessun task parte mentre un altro della stessa chiave gira. Chiavi:
+  `tier:<tier>`, `job:<nome>`, `after-sync`, `document-read:<id>`, `categorise:<utente>:…`,
+  `connection:<id>`. Il lock `job:<nome>` resta sotto, come prima.
+- **Cosa mette in coda il web**: "Run now", "Aggiorna ora" di una connessione e "Sincronizza ora"
+  di un servizio d'investimento (il web risponde subito: l'esito è nella riga della connessione), la
+  lettura di un documento caricato, il passaggio verso Trek dopo un giorno di ferie, la cascata delle
+  categorie dopo una scelta, i primi flussi di un servizio appena collegato, i controlli dopo una
+  sync fatta dal web. Le letture che danno un esito subito ("Riprova invio", la scelta dei conti, lo
+  storico di nuovo, il ritorno dalla banca) restano nella richiesta.
+- **Riavvio**: all'avvio il worker rimette in coda i task che un worker morto ha lasciato
+  `running` (al terzo tentativo li abbandona, con un log) e chiude come `failed`/`orphaned` le righe
+  `job_runs` e `sync_runs` ancora `running` iniziate prima del suo avvio.
+- **Heartbeat** in `worker_heartbeats` ogni 30 secondi. L'health del web non ne dipende (lo dice
+  soltanto); l'healthcheck del worker è `node /app/worker.mjs --health`.
+- **Limiti condivisi** in `rate_limit_counters`: le richieste per token dell'API e di MCP (120 al
+  minuto) e i tentativi di chiave degli investimenti (5 in 10 minuti), a finestra fissa che si apre
+  con la prima richiesta. `housekeeping` cancella le finestre scadute.
+- **Pool**: il worker è un processo suo, con il suo pool di connessioni (`PGAPPNAME=ledgerly-worker`).
+- **Rollback**: `docs/design/rewrite-plan/r1-rollback.sql` (immagini `pre-r1`, compose di prima: il
+  cron riparte e il web esegue di nuovo i job; le tabelle restano inutilizzate).
 
 ## Controlli dopo la sincronizzazione
 
@@ -104,7 +136,7 @@ fisso. Il tick `hourly` si sposta da `:07` a `:30` e tiene solo i job che non se
 | `budgets-alerts` | dopo la sync | legge solo i movimenti |
 | `funds-deposits` | dopo la sync | legge solo i movimenti |
 | `interests-accrual` | `hourly`, solo se una regola è dovuta (`hasWork`) | ogni regola matura alla sua ora sul saldo chiuso di ieri, con una sync Wallet propria |
-| `payslips-sweep` | `hourly` | riprende i documenti bloccati, non dipende dai movimenti |
+| `documents-sweep` | `hourly` | riprende i documenti bloccati, con il lettore del loro tipo; non dipende dai movimenti |
 
 `runAfterSync` (`src/platform/jobs/after-sync.ts`) parte una volta alla fine di ogni dispatch di
 `integrations-sync`, dopo "Sync now" e dopo la sync di `interests-accrual`. Un job è **indietro**

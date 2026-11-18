@@ -5,11 +5,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { after } from "next/server";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { tasks } from "@/platform/jobs/queue";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
-import { categorisableAccountIds, TransactionError } from "@ledgerly/domain/transactions";
+import { TransactionError } from "@ledgerly/domain/transactions";
 import {
   changeCategories,
   createDefaultGroups,
@@ -18,7 +19,6 @@ import {
   similarTo,
   undoChange,
 } from "@ledgerly/domain/transactions";
-import { categorise } from "@ledgerly/domain/transactions";
 
 type Session = Awaited<ReturnType<typeof requireSession>>;
 
@@ -40,13 +40,11 @@ function revalidate(): void {
 
 /**
  * A person confirmed or chose: those are new labels. The memory follows them and the cascade
- * reads the movements still waiting, after the answer has gone. The model is trained again at
- * the next reading of a source — or here, with `train`, when the default groups were just made.
+ * reads the movements still waiting, in the worker. The model is trained again at the next
+ * reading of a source — or here, with `train`, when the default groups were just made.
  */
-function learnAfter(ctx: Session, train = false): void {
-  after(async () => {
-    await categorise(ctx, await categorisableAccountIds(ctx), { train });
-  });
+async function learnAfter(ctx: Session, train = false): Promise<void> {
+  await enqueue(tasks.categorise(ctx.userId, train));
 }
 
 const idsSchema = z.array(z.uuid()).min(1).max(5000);
@@ -57,7 +55,7 @@ export async function confirmCategoriesAction(ids: string[]): Promise<ChangeResu
   try {
     const done = await changeCategories(ctx, idsSchema.parse(ids), { kind: "confirm" });
     revalidate();
-    if (done.count > 0) learnAfter(ctx);
+    if (done.count > 0) await learnAfter(ctx);
     return { ok: true, ...done };
   } catch (error) {
     return failed(error);
@@ -71,7 +69,7 @@ export async function chooseCategoryAction(ids: string[], categoryId: string | n
     const chosen = z.uuid().nullable().parse(categoryId);
     const done = await changeCategories(ctx, idsSchema.parse(ids), { kind: "set", categoryId: chosen });
     revalidate();
-    if (done.count > 0) learnAfter(ctx);
+    if (done.count > 0) await learnAfter(ctx);
     return { ok: true, ...done };
   } catch (error) {
     return failed(error);
@@ -158,7 +156,7 @@ export async function createDefaultGroupsAction(keys: string[]): Promise<PlainRe
     );
     revalidate();
     revalidatePath("/settings/categories");
-    learnAfter(ctx, true);
+    await learnAfter(ctx, true);
     return { ok: true, count };
   } catch (error) {
     return failed(error);

@@ -3,6 +3,9 @@
   "version": "0.35.3",
   "private": true,
   "type": "module",
+  "exports": {
+    "./jobs": "./src/app/worker.ts"
+  },
   "scripts": {
     "prebuild": "node ../../scripts/copy-pdfjs.mjs public/pdfjs",
     "build": "next build"

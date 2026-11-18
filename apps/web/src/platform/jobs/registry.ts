@@ -3,7 +3,6 @@ import { budgetAlertsJob } from "@/modules/budgets/jobs";
 import { fundsDepositsJob } from "@/modules/funds/jobs";
 import { documentsRetentionJob } from "@/modules/imports/jobs";
 import { interestsAccrualJob, interestsRematchJob } from "@/modules/interests/jobs";
-import { payslipsSweepJob } from "@/modules/payroll/jobs";
 import { pocketsAccrualJob, pocketsPlannedCleanupJob } from "@/modules/pockets/jobs";
 import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
 import { recurrencesRefreshJob } from "@/modules/transactions/jobs";
@@ -13,11 +12,12 @@ import { fxRatesRefreshJob } from "@/platform/fx/jobs";
 import { holidaysRefreshJob } from "@/platform/holidays/jobs";
 import { integrationsSyncJob } from "@/platform/integrations/jobs";
 import { monthlySummaryJob } from "@/platform/reports/jobs";
+import { documentsSweepJob } from "./documents-sweep";
 import { housekeepingJob } from "./housekeeping";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 
 /**
- * When a job runs. `manual` is the odd one out: no tick ever asks for that tier, so such a job only
+ * When a job runs. `manual` is the odd one out: the scheduler never starts that tier, so such a job only
  * ever runs because an admin pressed "Run now" (spec §10.3). It is a tier and not a flag because
  * `job_runs.tier` has to record what asked for the run, and "nobody asked, a person did" is the
  * honest answer for those. `afterSync` has no tick either: `runAfterSync` starts such a job when a
@@ -25,8 +25,9 @@ import type { JobDetail } from "@ledgerly/domain/platform/jobs";
  */
 export type Tier = "minute" | "hourly" | "daily" | "monthly" | "manual" | "afterSync";
 
-/** The tiers the cron sidecar may ask for. */
-export type ScheduledTier = Exclude<Tier, "manual" | "afterSync">;
+/** The tiers the worker's scheduler starts. */
+export const SCHEDULED_TIERS = ["minute", "hourly", "daily", "monthly"] as const;
+export type ScheduledTier = (typeof SCHEDULED_TIERS)[number];
 
 /** What `job_runs.tier` says: who asked for the run. `afterSync` names a schedule, not an asker. */
 export type RecordedTier = Exclude<Tier, "afterSync">;
@@ -47,6 +48,22 @@ export interface JobDefinition {
 export function runsIn(job: JobDefinition, tier: Tier): boolean {
   return job.tier === tier;
 }
+
+/**
+ * When the worker's scheduler starts each tier, on the wall clock of {@link SCHEDULE_TIME_ZONE}
+ * (spec §10.2): a field left out is every value, as `*` in cron. The same instants `cron/crontab`
+ * gave until the worker (rewrite plan R1).
+ */
+export const SCHEDULE: Record<ScheduledTier, { minute?: number; hour?: number; dayOfMonth?: number }> = {
+  // Every minute: the connections due by their owner's schedule (docs/scheduler.md).
+  minute: {},
+  // What goes by the date or by a stuck document, not by the movements.
+  hourly: { minute: 30 },
+  daily: { hour: 12, minute: 0 },
+  monthly: { dayOfMonth: 1, hour: 0, minute: 5 },
+};
+
+export const SCHEDULE_TIME_ZONE = "Europe/Rome";
 
 /** The one list of scheduled jobs. Each phase appends its jobs here. */
 export const JOBS: readonly JobDefinition[] = [
@@ -70,7 +87,7 @@ export const JOBS: readonly JobDefinition[] = [
   pocketsAccrualJob,
   pocketsPlannedCleanupJob,
   documentsRetentionJob,
-  payslipsSweepJob,
+  documentsSweepJob,
   // The subscribed holiday calendars, kept current from their sources (M3).
   holidaysRefreshJob,
   // The ECB exchange rates of the day, and on its first run the history (investments.md §1.8).

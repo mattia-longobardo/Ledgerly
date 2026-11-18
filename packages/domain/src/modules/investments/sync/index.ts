@@ -1,11 +1,12 @@
 export { SyncError, setSourcesForTests, COOLDOWN_MS, KEY_ATTEMPTS } from "./sources";
-export type { SyncErrorCode, Defer } from "./sources";
-export { connectTargetSchema, connectInvestmentProvider } from "./connect";
+export type { SyncErrorCode } from "./sources";
+export { connectTargetSchema, connectInvestmentProvider, readFirstFlows } from "./connect";
 export type { ConnectTarget } from "./connect";
 export { settleCutoff } from "./settle";
 export type { Settled } from "./settle";
 export {
   runInvestmentPass,
+  checkSyncNow,
   syncNow,
   verifyKey,
   replaceKey,

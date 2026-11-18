@@ -46,7 +46,7 @@ import { connectionOf } from "./connect";
 import { linkedOf, noteFailure, todayLookup, type Linked } from "./quantities";
 import { insertKeyCheck, retireKeys } from "./readings";
 import { runFlows, runHoldings } from "./settle";
-import { BACKOFF_KEY, COOLDOWN_MS, SyncError, codeOf, sourceOf, takeKeyAttempt, type Defer } from "./sources";
+import { BACKOFF_KEY, COOLDOWN_MS, SyncError, codeOf, sourceOf, takeKeyAttempt } from "./sources";
 
 async function backoffUntil(ctx: Pick<Ctx, "userId">, connectionId: string): Promise<Date | null> {
   const job = await readSyncJob(ctx, connectionId, "holdings");
@@ -57,12 +57,7 @@ async function backoffUntil(ctx: Pick<Ctx, "userId">, connectionId: string): Pro
 }
 
 /** One pass of a connection, with its lock (V9) and separate outcomes for holdings and flows (A8). */
-async function passOf(
-  ctx: WriteCtx,
-  linked: Linked,
-  now: Date,
-  defer?: Defer,
-): Promise<"answered" | "failed" | "refused"> {
+async function passOf(ctx: WriteCtx, linked: Linked, now: Date): Promise<"answered" | "failed" | "refused"> {
   const { connection } = linked;
   const until = await backoffUntil(ctx, connection.id);
   if (connection.state === "revoked" || (until !== null && until > now)) {
@@ -78,18 +73,13 @@ async function passOf(
   }
   const holdings = await runHoldings(ctx, linked, now);
   if (holdings === "refused") return "refused";
-  if (defer) {
-    // "Sync now" answers with the value; the flows follow under the same lock (A8: apart anyway).
-    defer(() => withJobLock(`investments-sync:${linked.connection.id}`, () => runFlows(ctx, linked, now)));
-    return holdings;
-  }
   const flows = await runFlows(ctx, linked, now);
   return holdings === "answered" && flows ? "answered" : "failed";
 }
 
-async function lockedPass(ctx: WriteCtx, linked: Linked, now: Date, defer?: Defer) {
+async function lockedPass(ctx: WriteCtx, linked: Linked, now: Date) {
   const result = await withJobLock(`investments-sync:${linked.connection.id}`, () =>
-    passOf(ctx, linked, now, defer),
+    passOf(ctx, linked, now),
   );
   return result.ran ? result.value : ("busy" as const);
 }
@@ -117,18 +107,20 @@ async function linkedAccount(ctx: Pick<Ctx, "userId">, accountId: string): Promi
   return linked;
 }
 
-/** "Sync now" (§4.3): the same pass, at most once a minute per connection (SEC-09). */
-export async function syncNow(
-  ctx: WriteCtx,
-  accountId: string,
-  now: Date = new Date(),
-  /** The flows after the answer (the action passes Next's `after`); inline by default. */
-  defer?: Defer,
-) {
+/**
+ * What "Sync now" checks before it is queued (§4.3): the account is connected, and its last run is
+ * a minute old at least (SEC-09). Throws the `SyncError` the form shows.
+ */
+export async function checkSyncNow(ctx: Pick<Ctx, "userId">, accountId: string, now: Date = new Date()) {
   const linked = await linkedAccount(ctx, accountId);
   const [last] = await listRuns(ctx, { connectionId: linked.connection.id, limit: 1 });
   if (last && now.getTime() - last.startedAt.getTime() < COOLDOWN_MS) throw new SyncError("cooldown");
-  const outcome = await lockedPass(ctx, linked, now, defer);
+  return linked;
+}
+
+/** "Sync now" (§4.3): the same pass, at most once a minute per connection (SEC-09). */
+export async function syncNow(ctx: WriteCtx, accountId: string, now: Date = new Date()) {
+  const outcome = await lockedPass(ctx, await checkSyncNow(ctx, accountId, now), now);
   if (outcome === "busy") throw new SyncError("cooldown");
   return outcome;
 }
@@ -230,7 +222,7 @@ export async function replaceKey(
   const parsed = credentialSchemaOf(provider).safeParse(credentials);
   if (!parsed.success) throw new SyncError("invalid_credentials");
   const keys = parsed.data as Record<string, string>;
-  takeKeyAttempt(ctx, provider.id, now);
+  await takeKeyAttempt(ctx, provider.id, now);
   const source = sourceOf(provider.id);
   let check: KeyCheck;
   let snapshot: HoldingsSnapshot;

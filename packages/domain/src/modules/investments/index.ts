@@ -66,11 +66,12 @@ export {
   SyncError,
   confirmKeyRevoked,
   connectInvestmentProvider,
+  readFirstFlows,
   disconnectProvider,
   investmentProviderName,
   replaceKey,
   runInvestmentPass,
-  syncNow,
+  checkSyncNow,
   verifyKey,
 } from "./sync";
 export type { ConnectTarget } from "./sync";

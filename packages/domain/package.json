@@ -36,6 +36,7 @@
     "./platform/integrations/trek": "./src/platform/integrations/trek/index.ts",
     "./platform/integrations/wallet": "./src/platform/integrations/wallet/index.ts",
     "./platform/jobs": "./src/platform/jobs/index.ts",
+    "./platform/limits": "./src/platform/limits/index.ts",
     "./platform/mail": "./src/platform/mail.ts",
     "./platform/notifications": "./src/platform/notifications/index.ts",
     "./platform/plugin-config": "./src/platform/plugin-config.ts",

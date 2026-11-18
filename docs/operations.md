@@ -4,20 +4,21 @@ How Ledgerly runs on the homelab, how to configure it, and the admin tasks.
 
 ## Architecture
 
-`docker-compose.yml` starts three containers. The app and the cron container read `.env.homelab`.
+`docker-compose.yml` starts three containers. The app and the worker read `.env.homelab`.
 
 | Container                       | Role                                                                          |
 | ------------------------------- | ----------------------------------------------------------------------------- |
 | `ledgerly`                      | The app (Next.js). Applies pending migrations at start, then serves on 3000.  |
-| `ledgerly-cron`                 | Calls `http://ledgerly:3000/api/jobs/tick` every minute, hour, day and month. |
+| `ledgerly-worker`               | The jobs and the syncs: same image, `node /app/worker.mjs` (R1). See below.   |
 | `ledgerly-plugin-enablebanking` | A plugin: reads banks through Enable Banking when the app asks. See below.    |
 
-- The app is on `proxy_public` (Traefik) and `db_internal` (Postgres, S3). The cron container is on
-  `db_internal` only.
+- The app is on `proxy_public` (Traefik) and `db_internal` (Postgres, S3). The worker is on
+  `db_internal`, `mail_internal` and `ledgerly_plugins` (its way to the providers); it has no port.
 - At start, the app checks every environment variable (`src/platform/env.ts`). If a check fails,
   the app does not start.
-- The cron container sends `CRON_SECRET` in the `X-Cron-Secret` header. The value must be the same
-  in both containers.
+- The app's health (`/api/health`) depends on the database only. It says the worker's heartbeat
+  (`fresh`, `stale`, `absent`) without counting it; the worker's own health check is
+  `node /app/worker.mjs --health` (a beat in `worker_heartbeats` in the last two minutes).
 - `projects/stack.sh` finds both containers, so `./stack.sh up` starts them with the other projects.
 
 ### Plugins
@@ -88,22 +89,22 @@ host.
 
 ## Background jobs
 
-The jobs are in `src/platform/jobs/registry.ts`. Details on the sync schedule:
-[`scheduler.md`](scheduler.md).
+The jobs are in `apps/web/src/platform/jobs/registry.ts`; the worker runs them (`apps/worker`, release
+R1). Details on the sync schedule and on the queue: [`scheduler.md`](scheduler.md).
 
-Times are Europe/Rome (`cron/crontab`).
+Times are Europe/Rome (`SCHEDULE` in the registry).
 
 | When                     | Jobs                                                                                                                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Every minute             | `integrations-sync` (only for links that are due)                                                                                                                       |
-| Every hour, at :30       | `interests-accrual`, `payslips-sweep`                                                                                                                                    |
+| Every hour, at :30       | `interests-accrual`, `documents-sweep`                                                                                                                                   |
 | Every day, at 12:00      | `housekeeping`, `accounts-alerts`, `subscriptions-check`, `interests-rematch`, `pockets-planned-cleanup`, `documents-retention`, `holidays-refresh`, `fx-rates-refresh`, `database-backup` |
 | The 1st of each month    | `accounts-snapshot`, `pockets-accrual`, `monthly-summary`                                                                                                                |
 | After a sync with changes | `recurrences-refresh`, `subscriptions-check`, `budgets-alerts`, `funds-deposits`                                                                                         |
 | Only by hand             | `export-all`                                                                                                                                                             |
 
 An admin can see each job with its last run in **Settings → Integrations**, and start it with
-**Run now**. A job that is already running is skipped.
+**Run now**: the job goes in the worker's queue. A job that is already running is skipped.
 
 ## Deploy
 
@@ -115,13 +116,14 @@ docker tag ledgerly:latest ledgerly:pre-<id>
 folder=$(sh scripts/release-dump.sh <id> | tail -n 1)   # --no-dump: no migration, no data change
 npm run numbers -- "$folder" before
 docker compose build ledgerly && docker compose up -d --wait ledgerly
+docker compose up -d --wait --no-build ledgerly-worker
 curl -s https://dash.longobardo.me/api/health    # {"status":"ok","db":"up",…}
 npm run numbers -- "$folder" after --as-of <the instant "before" printed>
 npm run numbers -- --diff "$folder/numbers-before.json" "$folder/numbers-after.json"   # uguale
 npm run e2e
 ```
 
-Rebuild `ledgerly-cron` only when `cron/` changes, and tag it `ledgerly-cron:pre-<id>` first.
+The worker runs the image `ledgerly`: it has no build of its own, and it is restarted after the app.
 
 ### Release dumps
 

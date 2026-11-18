@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { lt, sql } from "drizzle-orm";
 import { deleteExpiredInvitations } from "@/platform/auth/invitations";
 import { pruneBackups } from "@/platform/backup/service";
 import { getDb } from "@ledgerly/domain/platform/db";
@@ -10,7 +10,8 @@ import {
 } from "@ledgerly/domain/platform/integrations";
 import { deleteOldNotifications } from "@/platform/notifications/service";
 import type { JobDefinition } from "./registry";
-import { jobRuns } from "@ledgerly/domain/platform/jobs";
+import { closeOrphanJobRuns, jobRuns } from "@ledgerly/domain/platform/jobs";
+import { deleteExpiredLimits } from "@ledgerly/domain/platform/limits";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const RETENTION_MS = 90 * DAY_MS;
@@ -45,13 +46,10 @@ export const housekeepingJob: JobDefinition = {
     // `running` by a process that died is closed as failed, with its reason (rewrite plan, N2).
     // The dispatcher closes the sync runs every time it passes; this is the net under it, and the
     // only one for the jobs. Not in the detail: nothing was deleted.
-    await getDb()
-      .update(jobRuns)
-      .set({ status: "failed", finishedAt: now, error: "orphaned" })
-      .where(
-        and(eq(jobRuns.status, "running"), lt(jobRuns.startedAt, new Date(now.getTime() - ORPHAN_AFTER_MS))),
-      );
+    await closeOrphanJobRuns(new Date(now.getTime() - ORPHAN_AFTER_MS), now);
     await closeOrphanRuns(now);
+    // The windows of the shared limits that have run out (rewrite plan R1). Not in the detail.
+    await deleteExpiredLimits(now);
     return {
       jobRunsDeleted: runs.length,
       syncRunsDeleted,

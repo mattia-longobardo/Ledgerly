@@ -322,6 +322,7 @@
     "Xirr",
     "accountTypeOf",
     "catalogView",
+    "checkSyncNow",
     "closedGroups",
     "confirmKeyRevoked",
     "confirmZeroReading",
@@ -351,6 +352,7 @@
     "priceText",
     "providerOf",
     "quantityText",
+    "readFirstFlows",
     "reconcileHolding",
     "recordOperation",
     "replaceKey",
@@ -363,7 +365,6 @@
     "serviceMovements",
     "servicePnlView",
     "servicePositions",
-    "syncNow",
     "syncedServicesOf",
     "unitPriceOf",
     "unlinkTransfer",
@@ -870,7 +871,8 @@
     "createTrekClient",
     "isTokenRejected",
     "isTrekBusy",
-    "syncTrekNow"
+    "syncTrekNow",
+    "trekConnection"
   ],
   "packages/domain/src/platform/integrations/wallet/index.ts": [
     "BACKFILL_CHOICES",
@@ -892,8 +894,22 @@
   ],
   "packages/domain/src/platform/jobs/index.ts": [
     "JobDetail",
+    "QueuedTask",
+    "Task",
+    "beat",
+    "claimNext",
+    "closeOrphanJobRuns",
+    "enqueue",
+    "finishTask",
     "jobRuns",
+    "lastBeatAt",
+    "recoverInterrupted",
     "withJobLock"
+  ],
+  "packages/domain/src/platform/limits/index.ts": [
+    "RateVerdict",
+    "deleteExpiredLimits",
+    "takeSlot"
   ],
   "packages/domain/src/platform/notifications/index.ts": [
     "notificationsLog"

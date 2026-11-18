@@ -259,7 +259,7 @@ async function seed(ctx: Ctx): Promise<{ etoro: string; manual: string }> {
 beforeEach(async () => {
   await resetDatabase();
   invalidateAuth();
-  resetRateLimits();
+  await resetRateLimits();
   requestHeaders = new Headers();
   setSourcesForTests(() => fakeSource());
 });

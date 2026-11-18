@@ -7,7 +7,6 @@ test-results
 playwright-report
 docs
 dev
-cron
 .env
 .env.*
 !.env.example
