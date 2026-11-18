@@ -162,21 +162,25 @@ export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
 
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3">
-      <div className={FIELD_GRID}>
-        <Field label={t("settings.hours.label")} htmlFor={`${id}-hours`} hint={t("settings.hours.hint")}>
-          <Input
-            id={`${id}-hours`}
-            // Left like the selects around it: `numeric` right-aligns, for amounts in a column.
-            className="tabular-nums"
-            type="number"
-            min={1}
-            max={12}
-            step={0.25}
-            value={minutes / 60}
-            onChange={(event) => setMinutes(Math.round(Number(event.target.value) * 60))}
-          />
-        </Field>
-      </div>
+      <Field
+        label={t("settings.hours.label")}
+        htmlFor={`${id}-hours`}
+        hint={t("settings.hours.hint")}
+        hintBeside
+      >
+        <Input
+          id={`${id}-hours`}
+          // Left like the selects around it: `numeric` right-aligns, for amounts in a column.
+          className="tabular-nums"
+          type="number"
+          min={1}
+          max={12}
+          step={0.25}
+          value={minutes / 60}
+          onChange={(event) => setMinutes(Math.round(Number(event.target.value) * 60))}
+        />
+      </Field>
+
       <ErrorLine error={error} />
     </form>
   );
@@ -203,41 +207,45 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
 
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3 border-t border-border pt-3">
-      <div className={FIELD_GRID}>
-        <Field label={t("settings.patron.label")} htmlFor={`${id}-month`} hint={t("settings.patron.hint")}>
-          <div className="flex gap-2">
-            <Select
-              id={`${id}-month`}
-              value={patron?.month ?? ""}
-              onChange={(event) => {
-                const month = event.target.value ? Number(event.target.value) : null;
-                setPatron(month ? { month, day: Math.min(patron?.day ?? 1, daysInMonth(month)) } : null);
-              }}
-            >
-              <option value="">{t("settings.patron.none")}</option>
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>
-                  {monthLabel(m)}
-                </option>
-              ))}
-            </Select>
-            <Select
-              aria-label={t("settings.patron.day")}
-              disabled={!patron}
-              value={patron?.day ?? ""}
-              onChange={(event) =>
-                patron && setPatron({ month: patron.month, day: Number(event.target.value) })
-              }
-            >
-              {days.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </Field>
-      </div>
+      <Field
+        label={t("settings.patron.label")}
+        htmlFor={`${id}-month`}
+        hint={t("settings.patron.hint")}
+        hintBeside
+      >
+        <div className="flex gap-2">
+          <Select
+            id={`${id}-month`}
+            value={patron?.month ?? ""}
+            onChange={(event) => {
+              const month = event.target.value ? Number(event.target.value) : null;
+              setPatron(month ? { month, day: Math.min(patron?.day ?? 1, daysInMonth(month)) } : null);
+            }}
+          >
+            <option value="">{t("settings.patron.none")}</option>
+            {MONTHS.map((m) => (
+              <option key={m} value={m}>
+                {monthLabel(m)}
+              </option>
+            ))}
+          </Select>
+          <Select
+            aria-label={t("settings.patron.day")}
+            disabled={!patron}
+            value={patron?.day ?? ""}
+            onChange={(event) =>
+              patron && setPatron({ month: patron.month, day: Number(event.target.value) })
+            }
+          >
+            {days.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </Field>
+
       <ErrorLine error={error} />
     </form>
   );
