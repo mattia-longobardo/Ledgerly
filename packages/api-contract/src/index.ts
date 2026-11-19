@@ -8,3 +8,11 @@ export type { RouteContract } from "./route";
 export { API_LEVEL, MIN_CLIENT_LEVEL, metaRoute } from "./meta";
 export { openApiDocument } from "./openapi";
 export { CONTRACT_ROUTES, SETTINGS, SETTINGS_ROUTES } from "./routes";
+export {
+  LAST_DAY,
+  MAX_RULES,
+  MAX_TIMES,
+  MIN_SYNC_GAP_MINUTES,
+  SCHEDULE_PREVIEW_COUNT,
+  syncScheduleSchema,
+} from "./settings/schedule";

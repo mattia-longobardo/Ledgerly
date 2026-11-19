@@ -366,3 +366,26 @@ export function scheduleProblems(schedule: SyncSchedule, today: CivilDate): Sche
   }
   return problems;
 }
+
+/** What the preview of a schedule can say: its problems, or a rule the server does not accept. */
+export type PreviewProblem = ScheduleProblem | { code: "invalidRule"; rule: number };
+
+/**
+ * The preview of a schedule not saved yet (`POST /connections/{id}/schedule/preview`): the rules
+ * the server refuses, else the problems of the whole, else the next `count` passes after `now`.
+ * The same answer the editor computed in the browser before R3: a client now asks for it.
+ */
+export function previewSchedule(
+  rules: readonly unknown[],
+  timeZone: string,
+  now: Date,
+  count: number,
+): { next: Date[]; problems: PreviewProblem[] } {
+  const invalid = rules.flatMap((rule, index) =>
+    syncRuleSchema.safeParse(rule).success ? [] : [{ code: "invalidRule" as const, rule: index }],
+  );
+  if (invalid.length > 0) return { next: [], problems: invalid };
+  const schedule = syncScheduleSchema.parse({ rules });
+  const problems = scheduleProblems(schedule, civilDateIn(now, timeZone));
+  return { next: problems.length > 0 ? [] : nextSyncTimes(schedule, timeZone, now, count), problems };
+}

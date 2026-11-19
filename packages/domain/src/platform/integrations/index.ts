@@ -14,7 +14,7 @@ export {
   pluginProvider,
 } from "./rules";
 export type { SyncKind } from "./rules";
-export { DEFAULT_SYNC_SCHEDULE } from "./schedule";
+export { DEFAULT_SYNC_SCHEDULE, previewSchedule } from "./schedule";
 export type { SyncSchedule } from "./schedule";
 export {
   IntegrationError,

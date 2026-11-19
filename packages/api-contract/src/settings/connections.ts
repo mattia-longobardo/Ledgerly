@@ -6,10 +6,9 @@
 // back. A refusal answers `conflict` or `invalid` with the provider's code in `reason`.
 import { z } from "zod";
 import { defineRoute } from "../route";
-import { id, instant } from "../primitives";
+import { civilDate, id, instant } from "../primitives";
+import { SCHEDULE_PREVIEW_COUNT, syncScheduleSchema, timeOfDay } from "./schedule";
 import { byId, CONNECTION_ERRORS, CONNECTION_ID } from "./shared";
-
-const timeOfDay = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 const days = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("every") }),
@@ -271,6 +270,43 @@ export const setSchedule = defineRoute({
   example: {
     params: { id: CONNECTION_ID },
     body: { rules: [{ kind: "times", times: ["07:30"], days: { kind: "every" } }] },
+  },
+});
+
+/** What is wrong with a schedule: the same codes the editor showed when the browser computed them. */
+const scheduleProblem = z.discriminatedUnion("code", [
+  /** Two passes closer than the minimum gap: the first pair met, on the wall clock of `day`. */
+  z.object({ code: z.literal("tooFrequent"), day: civilDate(), first: timeOfDay, second: timeOfDay }),
+  /** The rule at index `rule` never runs (a cron that names 31 February). */
+  z.object({ code: z.literal("neverRuns"), rule: z.number().int().min(0) }),
+  /** The rule at index `rule` is not one the server accepts (a cron field out of range). */
+  z.object({ code: z.literal("invalidRule"), rule: z.number().int().min(0) }),
+]);
+
+export const previewSchedule = defineRoute({
+  id: "preview_schedule",
+  method: "POST",
+  path: "/connections/{id}/schedule/preview",
+  scope: "read",
+  capability: "connections",
+  summary:
+    "The next passes of a schedule not saved yet, in the person's zone, and what is wrong with it. Saves nothing.",
+  actions: [],
+  params: byId,
+  body: syncScheduleSchema,
+  response: z.object({
+    /** Empty when there is a problem, or when no rule is left («only by hand»). */
+    next: z.array(instant()).max(SCHEDULE_PREVIEW_COUNT),
+    problems: z.array(scheduleProblem),
+  }),
+  errors: CONNECTION_ERRORS,
+  example: {
+    params: { id: CONNECTION_ID },
+    body: { rules: [{ kind: "times", times: ["07:30"], days: { kind: "every" } }] },
+    response: {
+      next: ["2026-11-20T06:30:00.000Z", "2026-11-21T06:30:00.000Z"],
+      problems: [],
+    },
   },
 });
 

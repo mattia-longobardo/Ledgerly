@@ -489,6 +489,15 @@ describe("users and settings: connections", () => {
     const schedule = { rules: [{ kind: "times", times: ["07:30"], days: { kind: "every" } }] };
     expect((await call(`/connections/${id}/schedule`, aliceToken, send("PUT", schedule))).status).toBe(204);
     expect((await call(`/connections/${id}/schedule`, bobToken, send("PUT", schedule))).status).toBe(404);
+    const preview = await call(`/connections/${id}/schedule/preview`, aliceToken, send("POST", schedule));
+    expect(preview.status).toBe(200);
+    expect(await preview.json()).toMatchObject({
+      next: expect.arrayContaining([expect.any(String)]),
+      problems: [],
+    });
+    expect((await call(`/connections/${id}/schedule/preview`, bobToken, send("POST", schedule))).status).toBe(
+      404,
+    );
     expect((await call(`/connections/${id}/sync`, aliceToken, send("POST"))).status).toBe(202);
   });
 

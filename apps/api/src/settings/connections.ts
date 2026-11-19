@@ -5,7 +5,7 @@
 // do answers `409`, reason `core_provider`.
 import type { Hono } from "hono";
 import type { z } from "zod";
-import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
+import { type RouteContract, SCHEDULE_PREVIEW_COUNT, SETTINGS } from "@ledgerly/api-contract";
 import { providerOf } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
@@ -13,6 +13,7 @@ import {
   findConnection,
   IntegrationError,
   isPluginProvider,
+  previewSchedule,
   saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
 import {
@@ -158,6 +159,11 @@ function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: Connectio
       if (error instanceof IntegrationError) throw new ApiRefusal("invalid", "schedule");
       throw error;
     }
+  });
+  serve(app, guard, connections.previewSchedule, async ({ ctx, params, body }) => {
+    await connectionOf(ctx, params.id);
+    const preview = previewSchedule(body.rules, ctx.timeZone, new Date(), SCHEDULE_PREVIEW_COUNT);
+    return { next: preview.next.map((instant) => instant.toISOString()), problems: preview.problems };
   });
   serve(app, guard, connections.listConnectionAccounts, async ({ ctx, params }) =>
     settled(await cases.exposedAccounts(ctx, await bankOf(ctx, params.id))),

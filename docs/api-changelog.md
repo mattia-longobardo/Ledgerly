@@ -3,6 +3,17 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · the preview of a schedule (release R2, users and settings)
+
+- New `POST /api/v1/connections/{id}/schedule/preview` (`read`, capability `connections`): the body
+  is a schedule as `PUT /connections/{id}/schedule` takes it; the answer is `next` (the next 5
+  passes, in the person's zone, after now) and `problems` (`tooFrequent` with `day`, `first`,
+  `second`; `neverRuns` and `invalidRule` with the index of the `rule`). `next` is empty when there
+  is a problem or no rule. It saves nothing; another person's connection answers `404`.
+- The contract exports the limits of a schedule (`MIN_SYNC_GAP_MINUTES`, `MAX_RULES`, `MAX_TIMES`,
+  `LAST_DAY`, `SCHEDULE_PREVIEW_COUNT`) and `syncScheduleSchema`, the shape a client checks before
+  it asks. No other route or tool changes.
+
 ## 2026-11-18 · the metadata of the instance (release R2, users and settings)
 
 - New `GET /api/v1/meta`, without a token: `version`, `apiLevel` (1), `minClientLevel` (1),
