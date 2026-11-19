@@ -6,7 +6,7 @@ import { KIND_BORDER, KIND_CLASS, KIND_TEXT } from "./kinds";
 export type CellSelection = "edge" | "inside" | null;
 
 /** Forty pixels on a phone, where a finger has to find it; twenty-eight where a mouse drags over it. */
-const SIZE = "h-7 min-w-0 rounded-[4px] text-xs max-md:h-10 max-md:rounded-ctl max-md:text-base";
+const SIZE = "h-7 min-w-0 rounded-sm text-xs max-md:h-10 max-md:rounded-ctl max-md:text-base";
 
 /** The padding at either end of a month: as tall as a day, so the weeks keep their rows. */
 export function BlankCell() {

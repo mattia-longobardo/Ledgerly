@@ -26,7 +26,7 @@ export function Modal({
   return (
     <Dialog.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-[rgba(10,12,16,0.28)]" />
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-overlay" />
         {/*
           A form taller than the screen — a rule with several tiers on a 400 px phone — must still
           be saveable: the popup never grows past the viewport, the fields scroll inside it, and the

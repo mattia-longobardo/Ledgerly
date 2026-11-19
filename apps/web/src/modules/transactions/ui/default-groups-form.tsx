@@ -68,7 +68,7 @@ export function DefaultGroupsForm({
               <span className="flex items-center gap-1.5">
                 <span
                   aria-hidden
-                  className="size-2 shrink-0 rounded-[2px]"
+                  className="size-2 shrink-0 rounded-xs"
                   style={{ background: group.color }}
                 />
                 <Checkbox

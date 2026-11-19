@@ -65,7 +65,7 @@ function FeeList({ fees, scopes, todayOn, format, locale, currency, onEdit, onRe
                 href={fee.note.trim()}
                 rel="noreferrer"
                 target="_blank"
-                className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-[2px] text-sm break-all text-accent hover:underline"
+                className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-xs text-sm break-all text-accent hover:underline"
               >
                 {fee.note.trim()}
               </a>
@@ -140,7 +140,7 @@ function FeeList({ fees, scopes, todayOn, format, locale, currency, onEdit, onRe
       )}
       {expired.length > 0 && (
         <details className="mt-2">
-          <summary className="focus-ring inline-flex min-h-6 cursor-default items-center rounded-[4px] text-sm font-medium text-muted">
+          <summary className="focus-ring inline-flex min-h-6 cursor-default items-center rounded-sm text-sm font-medium text-muted">
             {t("expired", { count: expired.length })}
           </summary>
           <ul className="mt-1 flex flex-col border-b border-border">{expired.map(row)}</ul>

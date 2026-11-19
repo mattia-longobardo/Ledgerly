@@ -121,7 +121,7 @@ export function RegisterTable({ groups }: { groups: RegisterGroup[] }) {
                     )}
                     <Td className="max-w-56 truncate">
                       {row.originalHref ? (
-                        <a href={row.originalHref} target="_blank" rel="noopener" className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm text-accent hover:underline">
+                        <a href={row.originalHref} target="_blank" rel="noopener" className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent hover:underline">
                           {row.fileName}
                         </a>
                       ) : (
@@ -144,7 +144,7 @@ export function RegisterTable({ groups }: { groups: RegisterGroup[] }) {
                     <Td align="right">
                       <Link
                         href={row.href as Route}
-                        className="focus-ring inline-flex h-6 items-center rounded-[5px] border border-border bg-card px-2 text-sm font-medium text-fg hover:bg-hover"
+                        className="focus-ring inline-flex h-6 items-center rounded-tag border border-border bg-card px-2 text-sm font-medium text-fg hover:bg-hover"
                       >
                         {row.applied ? t("register.open") : t("register.review")}
                       </Link>

@@ -520,7 +520,7 @@ export function CompositionBar({
   parts: readonly { label: string; share: number; color: string }[];
 }) {
   return (
-    <div aria-hidden className="flex h-2.5 overflow-hidden rounded-[5px] bg-track">
+    <div aria-hidden className="flex h-2.5 overflow-hidden rounded-tag bg-track">
       {parts.map((part) => (
         <div
           key={part.label}
@@ -729,7 +729,7 @@ export function StackedBars({
           {unavailable && unavailable.slots > 0 && (
             <div
               aria-hidden
-              className="absolute inset-y-0 left-0 flex items-center justify-center rounded-[4px] bg-hover/70 p-1 text-center text-xs text-muted"
+              className="absolute inset-y-0 left-0 flex items-center justify-center rounded-sm bg-hover/70 p-1 text-center text-xs text-muted"
               style={{ width: `${(Math.min(unavailable.slots, count) / Math.max(1, count)) * 100}%` }}
             >
               <span className="line-clamp-3">{unavailable.label}</span>
@@ -813,7 +813,7 @@ export function MiniBars({
               key={index}
               title={labels[index]}
               data-testid="mini-bar"
-              className="rounded-t-[3px] bg-accent opacity-85"
+              className="rounded-t-xs-plus bg-accent opacity-85"
               style={{ height: value === null ? 0 : `${scale(value)}%` }}
             />
           ))}

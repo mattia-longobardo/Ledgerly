@@ -103,7 +103,7 @@ export function FundSettingsForm({
           />
         </Field>
         <details className="col-span-full">
-          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-sm font-medium text-muted hover:text-fg">
+          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm text-sm font-medium text-muted hover:text-fg">
             {t("settings.general.advanced")}
           </summary>
           <div className={`pt-3 ${FIELD_GRID}`}>

@@ -19,7 +19,7 @@ const CONTROL =
 const PANEL =
   "absolute top-9 left-0 z-30 flex w-[240px] max-w-[calc(100vw-32px)] animate-in flex-col rounded-lg border border-border bg-card p-1.5 shadow-overlay";
 
-const OPTION = "focus-ring flex h-[30px] items-center gap-2.5 rounded-[5px] px-2 text-sm hover:bg-hover";
+const OPTION = "focus-ring flex h-[30px] items-center gap-2.5 rounded-tag px-2 text-sm hover:bg-hover";
 
 /** The design's checkbox square, as a glyph: these are links, not form controls. */
 function Box({ checked }: { checked: boolean }) {
@@ -27,7 +27,7 @@ function Box({ checked }: { checked: boolean }) {
     <span
       aria-hidden
       className={cn(
-        "grid size-3.5 shrink-0 place-items-center rounded-[4px] border",
+        "grid size-3.5 shrink-0 place-items-center rounded-sm border",
         checked ? "border-primary bg-primary text-primary-fg" : "border-border2",
       )}
     >
@@ -40,7 +40,7 @@ function Dot({ color }: { color: string | null }) {
   return (
     <span
       aria-hidden
-      className={cn("size-2 shrink-0 rounded-[2px]", color === null && "bg-faint")}
+      className={cn("size-2 shrink-0 rounded-xs", color === null && "bg-faint")}
       style={color === null ? undefined : { background: color }}
     />
   );
@@ -80,11 +80,11 @@ export async function AccountsMenu({
         <ChevronDown aria-hidden className="size-3 text-muted" />
       </summary>
       <div className={cn(PANEL, "w-[240px]")}>
-        <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
+        <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-caps text-faint uppercase">
           {t("accounts.title")}
           <Link
             href={withParams(path, carry, { acc: "" })}
-            className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
+            className="focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline"
           >
             {t("accounts.clear")}
           </Link>
@@ -191,11 +191,11 @@ export async function FilterBar({
           <ChevronDown aria-hidden className="size-3 text-muted" />
         </summary>
         <div className={PANEL}>
-          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
+          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-caps text-faint uppercase">
             {t("categories.title")}
             <Link
               href={withParams(path, carry, { cat: "" })}
-              className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
+              className="focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline"
             >
               {t("categories.clear")}
             </Link>
@@ -242,11 +242,11 @@ export async function FilterBar({
           <ChevronDown aria-hidden className="size-3 text-muted" />
         </summary>
         <div className={cn(PANEL, "w-[200px]")}>
-          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-[0.04em] text-faint uppercase">
+          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-caps text-faint uppercase">
             {t("types.label")}
             <Link
               href={withParams(path, carry, { type: "" })}
-              className="focus-ring rounded-[2px] text-sm font-medium tracking-normal text-accent normal-case hover:underline"
+              className="focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline"
             >
               {t("types.clear")}
             </Link>
@@ -278,7 +278,7 @@ export async function FilterBar({
       {query.filtered && (
         <Link
           href={withParams(path, query.clearedParams, {})}
-          className="focus-ring inline-flex min-h-6 items-center rounded-[2px] px-1 font-medium text-accent hover:underline"
+          className="focus-ring inline-flex min-h-6 items-center rounded-xs px-1 font-medium text-accent hover:underline"
         >
           {t("clear")}
         </Link>

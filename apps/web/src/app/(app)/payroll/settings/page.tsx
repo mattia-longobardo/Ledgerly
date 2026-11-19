@@ -30,7 +30,7 @@ export default async function PayrollSettingsPage() {
   return (
     <Page title={t("tabs.settings")} parent={{ href: "/payroll", label: t("title") }}>
       <div className="flex flex-col gap-4">
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <TabLinks
           label={t("tabs.label")}
           tabs={[

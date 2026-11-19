@@ -9,7 +9,7 @@ import { cn } from "@/ui/cn";
 import { Kbd } from "@/ui/kbd";
 import { useShell } from "./shell-context";
 
-const MOBILE_TITLE = "max-md:text-xl max-md:font-semibold max-md:tracking-[-0.01em]";
+const MOBILE_TITLE = "max-md:text-xl max-md:font-semibold max-md:tracking-snug";
 
 export function Topbar({
   title,
@@ -31,7 +31,7 @@ export function Topbar({
       <div className="flex min-w-0 items-center gap-1.5 text-muted">
         {parent && (
           <>
-            <Link href={parent.href} className="focus-ring rounded-[4px] hover:text-fg max-md:hidden">
+            <Link href={parent.href} className="focus-ring rounded-sm hover:text-fg max-md:hidden">
               {parent.label}
             </Link>
             <span aria-hidden className="text-faint max-md:hidden">

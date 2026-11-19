@@ -67,7 +67,7 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
     <Page title={t("title")} actions={add("primary", t("add"))}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+          <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
           {view.rows.length > 0 && (
             <p className="text-muted tabular-nums">
               {t("summary", {

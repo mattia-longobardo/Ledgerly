@@ -87,7 +87,7 @@ export default async function TimeOffSettingsPage({ searchParams }: PageProps<"/
   return (
     <Page title={t("tabs.settings")} parent={{ href: "/timeoff", label: t("title") }}>
       <div className="flex flex-col gap-4">
-        <h1 className="text-title font-semibold tracking-[-0.02em]">{t("heading")}</h1>
+        <h1 className="text-title font-semibold tracking-title">{t("heading")}</h1>
         <TabLinks
           label={t("tabs.label")}
           tabs={[

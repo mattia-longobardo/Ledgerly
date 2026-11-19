@@ -31,7 +31,7 @@ function Row({
             className="-ml-1 size-3 shrink-0 text-muted transition-transform group-open/breakdown:rotate-90"
           />
         )}
-        <span aria-hidden className="size-2 shrink-0 rounded-[2px]" style={{ background: bar.color }} />
+        <span aria-hidden className="size-2 shrink-0 rounded-xs" style={{ background: bar.color }} />
         <span className={child ? "min-w-0 truncate text-muted" : "min-w-0 truncate font-medium"}>
           {bar.name}
         </span>
@@ -105,7 +105,7 @@ export async function BreakdownCard({
                 <li key={group.id}>
                   <details className="group/breakdown">
                     <summary
-                      className={`${ROW} focus-ring -mx-1 cursor-pointer list-none rounded-[4px] px-1 hover:bg-hover [&::-webkit-details-marker]:hidden`}
+                      className={`${ROW} focus-ring -mx-1 cursor-pointer list-none rounded-sm px-1 hover:bg-hover [&::-webkit-details-marker]:hidden`}
                       title={t("expand", { name: group.name })}
                     >
                       <Row bar={group} numberFormat={numberFormat} shareLabel={share(group)} expandable />

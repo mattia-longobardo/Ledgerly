@@ -89,7 +89,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
   if (home.services.length === 0) {
     return (
       <Page title={t("title")} actions={addService}>
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <EmptyState
           title={t("empty.title")}
           description={t("home.empty")}
@@ -268,7 +268,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
       />
       <Link
         href={serviceHref(row.summary.account.id)}
-        className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[4px] font-medium hover:underline"
+        className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-sm font-medium hover:underline"
       >
         <span className="truncate">{row.summary.account.name}</span>
       </Link>
@@ -361,7 +361,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
 
   const header = (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+      <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
       <PeriodBar
         period={sectionPeriod(query, todayOn)}
         path="/investments"
@@ -393,7 +393,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
           >
             <span
               className={cn(
-                "text-[2rem] leading-tight font-semibold tracking-[-0.02em] tabular-nums",
+                "text-hero leading-tight font-semibold tracking-title tabular-nums",
                 TONE_TEXT[toneOfSign(heroCents)],
               )}
             >
@@ -438,7 +438,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
                   link: (chunks) => (
                     <Link
                       href={"/funds" as Route}
-                      className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent hover:underline"
+                      className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent hover:underline"
                     >
                       {chunks}
                     </Link>
@@ -451,7 +451,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
         {alerts.length === 1 && (
           <Link
             href={alertHref(alerts[0].id)}
-            className="focus-ring inline-flex min-h-6 items-center gap-1.5 rounded-[4px] text-sm hover:underline"
+            className="focus-ring inline-flex min-h-6 items-center gap-1.5 rounded-sm text-sm hover:underline"
           >
             <Badge tone="warn">1</Badge>
             {t("home.alerts.one", { text: alerts[0].text })}
@@ -472,7 +472,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
                 <li key={alert.id}>
                   <Link
                     href={alertHref(alert.id)}
-                    className="focus-ring flex min-h-8 items-center rounded-[4px] px-2 text-sm hover:bg-hover"
+                    className="focus-ring flex min-h-8 items-center rounded-sm px-2 text-sm hover:bg-hover"
                   >
                     {alert.text}
                   </Link>
@@ -626,7 +626,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
             barTotals.some((cents) => cents !== null) &&
             (view === "pnl" || scale !== null) && (
               <details className="text-sm">
-                <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
+                <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm text-muted hover:text-fg">
                   {t("home.chart.data")}
                 </summary>
                 <Table className="mt-2">
@@ -901,7 +901,7 @@ function FundsLine({
         link: (chunks) => (
           <Link
             href={"/funds" as Route}
-            className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent hover:underline"
+            className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent hover:underline"
           >
             {chunks}
           </Link>

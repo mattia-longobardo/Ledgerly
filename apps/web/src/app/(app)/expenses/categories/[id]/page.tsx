@@ -246,7 +246,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           >
             <Link
               href={listHref(category.type)}
-              className="focus-ring inline-flex min-h-6 items-center rounded-[2px] hover:underline"
+              className="focus-ring inline-flex min-h-6 items-center rounded-xs hover:underline"
             >
               {macroName}
             </Link>
@@ -255,7 +255,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
                 <span aria-hidden>›</span>
                 <Link
                   href={`/expenses/categories/${group.id}${withParams("", carry, {})}` as Route}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-[2px] hover:underline"
+                  className="focus-ring inline-flex min-h-6 items-center rounded-xs hover:underline"
                 >
                   {group.name}
                 </Link>
@@ -263,7 +263,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
             )}
           </nav>
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-title font-semibold tracking-[-0.02em]">{category.name}</h1>
+            <h1 className="text-title font-semibold tracking-title">{category.name}</h1>
             {category.archivedAt !== null && (
               <>
                 <Badge tone="neutral">{t("categories.detail.archived")}</Badge>
@@ -276,7 +276,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
               {noteHref === null ? (
                 t("categories.source", { provider: note.source, names: note.names.join(", ") })
               ) : (
-                <Link href={noteHref as Route} className="focus-ring rounded-[2px] hover:underline">
+                <Link href={noteHref as Route} className="focus-ring rounded-xs hover:underline">
                   {t("categories.source", { provider: note.source, names: note.names.join(", ") })}
                 </Link>
               )}
@@ -307,7 +307,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
                 {t("categories.detail.overMonths", { count: overMonths })}
                 <Link
                   href={"/budgets" as Route}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent hover:underline"
                 >
                   {t("categories.detail.openBudgets")}
                 </Link>
@@ -341,7 +341,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
                 >
                   <Link
                     href={`/expenses/categories/${line.category.id}${withParams("", carry, {})}` as Route}
-                    className="focus-ring inline-flex min-h-6 min-w-0 flex-1 items-center truncate rounded-[2px] hover:underline"
+                    className="focus-ring inline-flex min-h-6 min-w-0 flex-1 items-center truncate rounded-xs hover:underline"
                   >
                     {line.category.name}
                   </Link>
@@ -380,7 +380,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
                   <li key={rule.id} className="flex items-center gap-2">
                     <Link
                       href={`/settings/rules#rule-${rule.id}` as Route}
-                      className="focus-ring inline-flex min-h-6 min-w-0 items-center truncate rounded-[2px] hover:underline"
+                      className="focus-ring inline-flex min-h-6 min-w-0 items-center truncate rounded-xs hover:underline"
                     >
                       «{rule.name}» → {category.name}
                     </Link>

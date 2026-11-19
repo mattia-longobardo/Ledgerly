@@ -71,7 +71,7 @@ export async function FundSettings({
             <span>{t("settings.general.valueAccount", { account: detail.accountName })}</span>
             <Link
               href={`/accounts/${fund.valuationAccountId}?tab=settings` as Route}
-              className="focus-ring inline-flex min-h-6 items-center rounded-[2px] font-medium text-accent hover:underline"
+              className="focus-ring inline-flex min-h-6 items-center rounded-xs font-medium text-accent hover:underline"
             >
               {t("settings.general.openAccount", { account: detail.accountName })}
             </Link>

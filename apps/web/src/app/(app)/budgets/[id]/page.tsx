@@ -54,7 +54,7 @@ export default async function BudgetPage({ params }: PageProps<"/budgets/[id]">)
 
   return (
     <Page title={name} parent={{ href: "/budgets", label: t("title") }}>
-      <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{name}</h1>
+      <h1 className="text-title font-semibold tracking-title max-md:sr-only">{name}</h1>
 
       <Card className="flex flex-col gap-4" data-testid="budget-detail">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -62,14 +62,14 @@ export default async function BudgetPage({ params }: PageProps<"/budgets/[id]">)
             <p className="flex items-center gap-2 text-sm text-muted">
               <span
                 aria-hidden
-                className="size-2.5 shrink-0 rounded-[3px]"
+                className="size-2.5 shrink-0 rounded-xs-plus"
                 style={{ background: row.color ?? NO_COLOR }}
               />
               <span className="truncate">
                 {account} · {t("detail.thisMonth", { month: formatDate(month, "monthYear", ctx.locale) })}
               </span>
             </p>
-            <p className="text-hero font-semibold tracking-[-0.02em] tabular-nums">{money(row.spentCents)}</p>
+            <p className="text-hero font-semibold tracking-title tabular-nums">{money(row.spentCents)}</p>
             <p className="text-sm text-muted">{t("detail.progress", { percent: percent(row.percent) })}</p>
           </div>
           <Badge tone={BADGE_TONE[row.status]}>{t(`status.${row.status}`)}</Badge>

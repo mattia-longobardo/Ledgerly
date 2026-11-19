@@ -167,7 +167,7 @@ export function SourceCategories({
             <>
               <span
                 aria-hidden
-                className="size-2 shrink-0 rounded-[2px]"
+                className="size-2 shrink-0 rounded-xs"
                 style={{ background: row.category.color }}
               />
               <span className="min-w-0 flex-1 truncate">{row.category.name}</span>

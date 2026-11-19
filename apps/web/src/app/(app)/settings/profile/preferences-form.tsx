@@ -163,7 +163,7 @@ export function PreferencesForm({
       <p className="text-sm text-muted col-span-full">
         {t.rich("timeOffMoved", {
           link: (chunks) => (
-            <Link href="/timeoff/settings" className="focus-ring rounded-[4px] text-accent underline">
+            <Link href="/timeoff/settings" className="focus-ring rounded-sm text-accent underline">
               {chunks}
             </Link>
           ),

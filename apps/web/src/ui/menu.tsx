@@ -16,7 +16,7 @@ export function ActionMenu({
       <Menu.Trigger
         aria-label={label}
         title={label}
-        className="focus-ring inline-grid size-6 place-items-center rounded-[5px] text-faint hover:bg-hover hover:text-fg"
+        className="focus-ring inline-grid size-6 place-items-center rounded-tag text-faint hover:bg-hover hover:text-fg"
       >
         <Ellipsis aria-hidden className="size-3.5" />
       </Menu.Trigger>
@@ -28,7 +28,7 @@ export function ActionMenu({
                 key={item.label}
                 onClick={item.onSelect}
                 className={cn(
-                  "flex h-7 cursor-default items-center rounded-[5px] px-2 text-base data-[highlighted]:bg-hover",
+                  "flex h-7 cursor-default items-center rounded-tag px-2 text-base data-[highlighted]:bg-hover",
                   item.danger && "text-neg",
                 )}
               >

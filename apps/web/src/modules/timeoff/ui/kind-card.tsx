@@ -51,7 +51,7 @@ export function KindCard({
         {allowanceNote && <span className="text-sm text-muted tabular-nums">{allowanceNote}</span>}
       </div>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-kpi font-semibold tracking-[-0.02em] tabular-nums">{value}</span>
+        <span className="text-kpi font-semibold tracking-title tabular-nums">{value}</span>
         <span className="text-muted">{valueUnit}</span>
       </div>
       <div className="flex h-1.5 overflow-hidden rounded-full bg-track">
@@ -106,7 +106,7 @@ export function MonthBars({
           <div
             key={bar.month}
             title={labelFor(bar)}
-            className="flex min-h-[2px] flex-col justify-end overflow-hidden rounded-[2px]"
+            className="flex min-h-[2px] flex-col justify-end overflow-hidden rounded-xs"
             style={{ height: `${((bar.takenMinutes + bar.plannedMinutes) / peak) * 100}%` }}
           >
             <div
@@ -122,7 +122,7 @@ export function MonthBars({
       </div>
       {/* 10 px, as the design has it: at twelve columns in a quarter-width card, 12 px labels
           run into each other. */}
-      <div className="grid grid-cols-12 text-center text-[10px] text-faint">
+      <div className="grid grid-cols-12 text-center text-micro text-faint">
         {shortNames.map((name, index) => (
           <span key={index}>{name}</span>
         ))}

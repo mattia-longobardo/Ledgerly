@@ -53,7 +53,7 @@ export default async function PocketsPage() {
   if (view.pockets.length === 0) {
     return (
       <Page title={t("title")} actions={<PocketActions place="topbar" pocket={null} context={context} />}>
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <EmptyState
           title={t("empty.title")}
           description={t("empty.description")}
@@ -67,7 +67,7 @@ export default async function PocketsPage() {
   return (
     <Page title={t("title")} actions={<PocketActions place="topbar" pocket={null} context={context} />}>
       <div className="flex flex-col gap-0.5">
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <p className="text-muted">{t("subtitle")}</p>
       </div>
 

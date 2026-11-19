@@ -69,7 +69,7 @@ export function ChartHover({
               <div className="mt-1 flex flex-col gap-0.5 border-t border-border pt-1">
                 {active.rows.map((row) => (
                   <div key={row.label} className="flex items-center gap-1.5 text-xs">
-                    <span className="size-2 shrink-0 rounded-[2px]" style={{ background: row.color }} />
+                    <span className="size-2 shrink-0 rounded-xs" style={{ background: row.color }} />
                     <span className="text-muted">{row.label}</span>
                     <span className="ml-auto pl-3 tabular-nums">{row.value}</span>
                   </div>

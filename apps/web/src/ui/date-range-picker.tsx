@@ -308,7 +308,7 @@ export function DateRangePicker({
                         onClick={() => pick(cell.value)}
                         aria-pressed={cell.value >= from && cell.value <= end}
                         className={cn(
-                          "focus-ring rounded-[4px] text-sm",
+                          "focus-ring rounded-sm text-sm",
                           byMonth ? "h-[30px]" : "h-[26px]",
                           cell.value === draft.from || cell.value === draft.to
                             ? "bg-primary font-semibold text-primary-fg"

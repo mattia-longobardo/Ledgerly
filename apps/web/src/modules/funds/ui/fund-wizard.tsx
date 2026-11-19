@@ -620,7 +620,7 @@ export function FundWizard({
               </div>
             )}
             <details className="col-span-full">
-              <summary className="focus-ring inline-flex min-h-6 cursor-default items-center rounded-[4px] text-sm font-medium text-muted">
+              <summary className="focus-ring inline-flex min-h-6 cursor-default items-center rounded-sm text-sm font-medium text-muted">
                 {t("fund.advanced")}
               </summary>
               <div className={`mt-2 ${FIELD_GRID}`}>

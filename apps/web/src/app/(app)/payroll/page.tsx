@@ -39,7 +39,7 @@ export default async function PayrollPage() {
       <AutoRefresh active={view.inFlight} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+          <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
           <p className="text-muted">
             {view.span
               ? t("summary", {
@@ -119,7 +119,7 @@ export default async function PayrollPage() {
                       <Badge tone={STATE_TONE[document.state]}>{t(`states.${document.state}`)}</Badge>
                       <Link
                         href={`/payroll/${document.id}` as Route}
-                        className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline"
+                        className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm font-medium text-accent hover:underline"
                       >
                         {t("inbox.open")}
                       </Link>

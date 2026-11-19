@@ -33,7 +33,7 @@ export function LinkTabs({
     <div
       role="group"
       aria-label={label}
-      className="inline-flex max-w-full flex-wrap gap-0.5 rounded-[7px] bg-hover p-0.5"
+      className="inline-flex max-w-full flex-wrap gap-0.5 rounded-seg bg-hover p-0.5"
     >
       {options.map((option) => (
         <Link
@@ -41,10 +41,8 @@ export function LinkTabs({
           href={withParams(path, params, { [name]: option.value })}
           aria-current={option.value === current ? "true" : undefined}
           className={cn(
-            "focus-ring inline-flex h-6 items-center rounded-[5px] px-2.5 text-sm font-medium whitespace-nowrap",
-            option.value === current
-              ? "bg-card text-fg shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-              : "text-muted hover:text-fg",
+            "focus-ring inline-flex h-6 items-center rounded-tag px-2.5 text-sm font-medium whitespace-nowrap",
+            option.value === current ? "bg-card text-fg shadow-pressed" : "text-muted hover:text-fg",
           )}
         >
           {option.label}
@@ -105,7 +103,7 @@ export function PeriodStepper({
       {!atLatest && (
         <Link
           href={step(0)}
-          className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline"
+          className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm font-medium text-accent hover:underline"
         >
           {latestLabel}
         </Link>
@@ -144,7 +142,7 @@ export function ToggleLink({
       <span
         aria-hidden
         className={cn(
-          "grid size-3.5 shrink-0 place-items-center rounded-[4px] border",
+          "grid size-3.5 shrink-0 place-items-center rounded-sm border",
           on ? "border-primary bg-primary text-primary-fg" : "border-border2",
         )}
       >

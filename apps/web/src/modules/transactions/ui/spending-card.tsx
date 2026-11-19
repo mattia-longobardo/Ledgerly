@@ -66,7 +66,7 @@ export async function SpendingCard({
         <div className="flex min-w-0 flex-col gap-0.5">
           <h2 className="text-lg font-semibold">{t("title")}</h2>
           <p className="flex flex-wrap items-baseline gap-x-2">
-            <span className="text-kpi font-semibold tracking-[-0.01em] tabular-nums">
+            <span className="text-kpi font-semibold tracking-snug tabular-nums">
               {formatMoney(spent, numberFormat)}
             </span>
             <span className="text-sm text-muted">{t("inRange")}</span>
@@ -122,7 +122,7 @@ export async function SpendingCard({
               <li key={band.id} className="flex min-w-0 items-center gap-2">
                 <span
                   aria-hidden
-                  className="size-2.5 shrink-0 rounded-[3px]"
+                  className="size-2.5 shrink-0 rounded-xs-plus"
                   style={{ background: band.color }}
                 />
                 <span className="min-w-0 truncate">{band.name}</span>

@@ -44,7 +44,7 @@ function SourceMenu({
         <Menu.Trigger
           aria-label={label}
           title={label}
-          className="focus-ring inline-grid size-6 place-items-center rounded-[5px] text-muted hover:bg-hover hover:text-fg"
+          className="focus-ring inline-grid size-6 place-items-center rounded-tag text-muted hover:bg-hover hover:text-fg"
         >
           <Ellipsis aria-hidden className="size-3.5" />
         </Menu.Trigger>
@@ -67,7 +67,7 @@ function SourceMenu({
                 key={item.label}
                 disabled={item.disabled}
                 onClick={item.onSelect}
-                className="flex min-h-7 cursor-default items-center rounded-[5px] px-2 text-base data-[disabled]:text-muted data-[highlighted]:bg-hover"
+                className="flex min-h-7 cursor-default items-center rounded-tag px-2 text-base data-[disabled]:text-muted data-[highlighted]:bg-hover"
               >
                 {item.label}
               </Menu.Item>

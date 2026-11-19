@@ -239,7 +239,7 @@ export default async function InvestmentServiceOverview({
         >
           <span
             className={cn(
-              "text-[2rem] leading-tight font-semibold tracking-[-0.02em] tabular-nums",
+              "text-hero leading-tight font-semibold tracking-title tabular-nums",
               TONE_TEXT[toneOfSign(heroCents)],
             )}
           >
@@ -297,7 +297,7 @@ export default async function InvestmentServiceOverview({
           </span>
           <Link
             href={tab("/connection")}
-            className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+            className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
           >
             {t("service.partialLink")} →
           </Link>
@@ -543,7 +543,7 @@ export default async function InvestmentServiceOverview({
               actions={
                 <Link
                   href={tab("/positions")}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 items-center rounded-sm text-sm text-accent hover:underline"
                 >
                   {t("service.top.all")} →
                 </Link>
@@ -564,7 +564,7 @@ export default async function InvestmentServiceOverview({
                       <span className="flex min-w-0 flex-col">
                         <Link
                           href={tab("/activity", { asset: row.assetId ?? undefined })}
-                          className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-[4px] font-medium hover:underline"
+                          className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-sm font-medium hover:underline"
                         >
                           <span className="truncate">{asset?.name ?? t("positions.unknownAsset")}</span>
                         </Link>
@@ -602,7 +602,7 @@ export default async function InvestmentServiceOverview({
             actions={
               <Link
                 href={tab("/activity")}
-                className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm text-accent hover:underline"
+                className="focus-ring inline-flex min-h-6 items-center rounded-sm text-sm text-accent hover:underline"
               >
                 {t("service.latest.all")} →
               </Link>

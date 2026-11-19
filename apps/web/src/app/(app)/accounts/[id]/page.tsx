@@ -197,16 +197,16 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           {inInvestments && (
             <Link
               href={`/investments/${id}` as Route}
-              className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+              className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
             >
               {td("managedInInvestments")}
             </Link>
           )}
         </p>
         {connection !== null && <ConnectionStatus {...connection} compact />}
-        <h1 className="text-title font-semibold tracking-[-0.02em]">{account.name}</h1>
+        <h1 className="text-title font-semibold tracking-title">{account.name}</h1>
         <p className="flex flex-wrap items-baseline gap-3">
-          <span className="text-hero-sm font-semibold tracking-[-0.02em]">
+          <span className="text-hero-sm font-semibold tracking-title">
             {formatMoney(row.balance, ctx.numberFormat, { currency: account.currency })}
           </span>
           {counter && <span className="text-sm text-muted">{counter}</span>}
@@ -560,7 +560,7 @@ async function OverviewTab({
                 <span className="truncate">{ruleText === "" ? ti("account.none") : ruleText}</span>
                 <Link
                   href={(rules.length === 1 ? `/interests/${rules[0].id}` : "/interests") as Route}
-                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-xs text-accent hover:underline"
                 >
                   {ti("account.manage")}
                 </Link>

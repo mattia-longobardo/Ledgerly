@@ -86,7 +86,7 @@ export function ChallengeForm({ trustDays, next = "/" }: { trustDays: number; ne
       </Button>
       <button
         type="button"
-        className="focus-ring inline-flex min-h-6 items-center self-start rounded-[2px] text-sm font-medium text-accent hover:underline"
+        className="focus-ring inline-flex min-h-6 items-center self-start rounded-xs text-sm font-medium text-accent hover:underline"
         onClick={() => {
           setMode(mode === "totp" ? "backup" : "totp");
           setError(null);
@@ -96,7 +96,7 @@ export function ChallengeForm({ trustDays, next = "/" }: { trustDays: number; ne
       </button>
       <Link
         href="/sign-in"
-        className="focus-ring inline-flex min-h-6 items-center self-start rounded-[2px] text-sm font-medium text-accent hover:underline"
+        className="focus-ring inline-flex min-h-6 items-center self-start rounded-xs text-sm font-medium text-accent hover:underline"
       >
         {t("challenge.back")}
       </Link>

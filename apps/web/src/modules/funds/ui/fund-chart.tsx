@@ -265,14 +265,14 @@ export async function FundChart({
               <span aria-hidden className="w-4 border-t border-dashed border-muted" /> {th("chart.paid")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span aria-hidden className="size-2.5 rounded-[2px] bg-pos-bg" /> {th("chart.band")}
+              <span aria-hidden className="size-2.5 rounded-xs bg-pos-bg" /> {th("chart.band")}
             </span>
           </>
         )}
       </p>
       {view !== "value" && totals.some((cents) => cents !== null) && (view === "gain" || scale !== null) && (
         <details className="text-sm">
-          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
+          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm text-muted hover:text-fg">
             {th("chart.data")}
           </summary>
           <Table className="mt-2">
@@ -297,7 +297,7 @@ export async function FundChart({
       )}
       {view === "value" && series.length >= 2 && (
         <details className="text-sm">
-          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
+          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm text-muted hover:text-fg">
             {th("chart.data")}
           </summary>
           <Table className="mt-2">

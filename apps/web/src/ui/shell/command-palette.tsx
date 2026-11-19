@@ -137,7 +137,7 @@ export function CommandPalette({
   return (
     <Dialog.Root open={paletteOpen} onOpenChange={setPaletteOpen}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-60 bg-[rgba(10,12,16,0.28)]" />
+        <Dialog.Backdrop className="fixed inset-0 z-60 bg-overlay" />
         <Dialog.Popup className="fixed top-[15vh] left-1/2 z-60 w-[560px] max-w-[calc(100vw-32px)] -translate-x-1/2 animate-in overflow-hidden rounded-modal border border-border bg-card shadow-overlay">
           <Dialog.Title className="sr-only">{labels.search}</Dialog.Title>
           <div className="flex h-11 items-center gap-2.5 border-b border-border px-3.5">
@@ -170,7 +170,7 @@ export function CommandPalette({
           <div tabIndex={0} className="focus-ring-inset max-h-[50vh] overflow-y-auto p-1.5">
             <div
               id={pagesLabelId}
-              className="px-2 py-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase"
+              className="px-2 py-1.5 text-xs font-medium tracking-caps text-faint uppercase"
             >
               {labels.palette.pages}
             </div>
@@ -184,7 +184,7 @@ export function CommandPalette({
                   <div
                     id={recordsLabelId}
                     role="presentation"
-                    className="px-2 py-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase"
+                    className="px-2 py-1.5 text-xs font-medium tracking-caps text-faint uppercase"
                   >
                     {labels.palette.records}
                   </div>
@@ -196,7 +196,7 @@ export function CommandPalette({
                   <div
                     id={payeesLabelId}
                     role="presentation"
-                    className="px-2 py-1.5 text-xs font-medium tracking-[0.04em] text-faint uppercase"
+                    className="px-2 py-1.5 text-xs font-medium tracking-caps text-faint uppercase"
                   >
                     {labels.palette.payees}
                   </div>

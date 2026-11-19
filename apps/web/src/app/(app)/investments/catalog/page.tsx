@@ -90,7 +90,7 @@ export default async function InvestmentsCatalogPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={t("actions.openSite", { name: provider.name })}
-                className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-[4px] text-sm text-accent hover:underline"
+                className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-sm text-sm text-accent hover:underline"
               >
                 {t("actions.openSiteShort")}
                 <ExternalLink aria-hidden className="size-3.5" />
@@ -105,7 +105,7 @@ export default async function InvestmentsCatalogPage() {
   return (
     <Page title={t("catalog.title")} parent={{ href: "/investments" as Route, label: t("title") }}>
       <div className="flex flex-col gap-0.5">
-        <h1 className="text-title font-semibold tracking-[-0.02em]">{t("catalog.title")}</h1>
+        <h1 className="text-title font-semibold tracking-title">{t("catalog.title")}</h1>
         <p className="text-muted">{t("catalog.subtitle")}</p>
       </div>
       {sections.map((section) => {
@@ -124,7 +124,7 @@ export default async function InvestmentsCatalogPage() {
       })}
       {planned.length > 0 && (
         <details data-testid="catalog-planned">
-          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center gap-1 rounded-[4px] text-lg font-semibold">
+          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center gap-1 rounded-sm text-lg font-semibold">
             {t("catalog.plannedSection", { count: planned.length })}
           </summary>
           <ul className="mt-3 grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">{planned.map(card)}</ul>

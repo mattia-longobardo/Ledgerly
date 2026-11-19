@@ -103,7 +103,7 @@ export default async function InvestmentServicePositions({
       <span className="flex min-w-0 flex-col items-start gap-0.5">
         <Link
           href={activityOf(input.assetId)}
-          className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-[4px] font-medium hover:underline"
+          className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-sm font-medium hover:underline"
         >
           <span className="truncate">{asset?.name ?? t("unknownAsset")}</span>
         </Link>
@@ -307,7 +307,7 @@ export default async function InvestmentServicePositions({
         {past && status === "open" && (
           <Link
             href={withParams(`${base}/positions`, {}, { status: "open" })}
-            className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-sm text-accent hover:underline"
+            className="focus-ring inline-flex min-h-6 items-center rounded-sm text-sm text-accent hover:underline"
           >
             {t("today")} →
           </Link>
@@ -352,7 +352,7 @@ export default async function InvestmentServicePositions({
               {closedEver.length > 0 && (
                 <Link
                   href={withParams(`${base}/positions`, {}, { ...periodParams, status: "all" })}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
                 >
                   {t("all")} →
                 </Link>
@@ -509,7 +509,7 @@ export default async function InvestmentServicePositions({
               {t("noCostNote", { count: noCost })}{" "}
               <Link
                 href={withParams(`${base}/connection`, {}, periodParams)}
-                className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+                className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
               >
                 {t("costLink")}
               </Link>
@@ -517,7 +517,7 @@ export default async function InvestmentServicePositions({
           )}
           {view.dust.length > 0 && (
             <details data-testid="dust" className="border-t border-border px-4 py-2.5 text-sm">
-              <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted">
+              <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm text-muted">
                 {t("dust", { count: view.dust.length })}
               </summary>
               <p className="mt-1 text-muted">{t("dustNote")}</p>
@@ -658,7 +658,7 @@ export default async function InvestmentServicePositions({
                   <span className="flex min-w-0 flex-1 flex-col">
                     <Link
                       href={activityOf(row.assetId)}
-                      className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-[4px] font-medium hover:underline"
+                      className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-sm font-medium hover:underline"
                     >
                       <span className="truncate">{assetOf(row.assetId)?.name ?? t("unknownAsset")}</span>
                     </Link>

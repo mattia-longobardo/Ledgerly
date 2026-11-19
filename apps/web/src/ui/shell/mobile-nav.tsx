@@ -77,7 +77,7 @@ export function MobileNav({ links, user }: { links: NavLink[]; user: { name: str
       </nav>
       <Dialog.Root open={moreOpen} onOpenChange={setMoreOpen}>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-[rgba(10,12,16,0.25)] md:hidden" />
+          <Dialog.Backdrop className="fixed inset-0 z-50 bg-overlay md:hidden" />
           <Dialog.Popup className="fixed inset-x-0 bottom-16 z-50 animate-in rounded-t-2xl border-t border-border bg-card p-2 md:hidden">
             <Dialog.Title className="sr-only">{labels.more}</Dialog.Title>
             <div aria-hidden className="mx-auto mt-0.5 mb-1.5 h-1 w-9 rounded-full bg-border2" />
@@ -93,7 +93,7 @@ export function MobileNav({ links, user }: { links: NavLink[]; user: { name: str
               >
                 <div
                   id={`more-${group}`}
-                  className="px-3 pt-2 pb-1 text-xs font-medium tracking-[0.04em] text-faint uppercase"
+                  className="px-3 pt-2 pb-1 text-xs font-medium tracking-caps text-faint uppercase"
                 >
                   {labels.groups[group]}
                 </div>

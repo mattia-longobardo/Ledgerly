@@ -157,7 +157,7 @@ export async function NetWorthCard({
           <h2 className="text-lg font-semibold">{t("chart.title")}</h2>
           {/* What the window says, not what today says: the hero above already has today. */}
           <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="text-kpi font-semibold tracking-[-0.01em] tabular-nums">
+            <span className="text-kpi font-semibold tracking-snug tabular-nums">
               {formatMoney(periodEnd, ctx.numberFormat, money)}
             </span>
             <span
@@ -220,10 +220,10 @@ export async function NetWorthCard({
           const value = values[values.length - 1] ?? null;
           return (
             <li key={row.account.id} className="flex min-w-0 items-center gap-2">
-              <span aria-hidden className="size-2.5 shrink-0 rounded-[3px]" style={{ background: color }} />
+              <span aria-hidden className="size-2.5 shrink-0 rounded-xs-plus" style={{ background: color }} />
               <Link
                 href={`/accounts/${row.account.id}`}
-                className="focus-ring inline-flex h-6 min-w-0 items-center truncate rounded-[2px] hover:underline"
+                className="focus-ring inline-flex h-6 min-w-0 items-center truncate rounded-xs hover:underline"
               >
                 {row.account.name}
               </Link>

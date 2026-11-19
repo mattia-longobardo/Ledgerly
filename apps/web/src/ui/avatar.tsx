@@ -1,7 +1,7 @@
 import { cn } from "./cn";
 
 const SIZE = {
-  22: "size-[22px] text-[10px]",
+  22: "size-[22px] text-micro",
   24: "size-6 text-xs",
   28: "size-7 text-xs",
   40: "size-10 text-md",

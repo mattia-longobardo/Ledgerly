@@ -240,7 +240,7 @@ async function FundDetail({
           .join(" · ")}
       </p>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="flex flex-wrap items-center gap-2 text-title font-semibold tracking-[-0.02em]">
+        <h1 className="flex flex-wrap items-center gap-2 text-title font-semibold tracking-title">
           {fund.name}
           {archived && <Badge tone="neutral">{th("list.archived")}</Badge>}
         </h1>
@@ -482,7 +482,7 @@ async function FundDetail({
         </p>
         <Link
           href="/expenses"
-          className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] font-medium text-accent hover:underline"
+          className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-xs font-medium text-accent hover:underline"
         >
           {t("alert.cta")}
         </Link>
@@ -512,7 +512,7 @@ async function FundDetail({
         })}{" "}
         <Link
           href={tabHref("contributions")}
-          className="focus-ring inline-flex min-h-6 items-center rounded-[4px] font-medium text-accent hover:underline"
+          className="focus-ring inline-flex min-h-6 items-center rounded-sm font-medium text-accent hover:underline"
         >
           {tf("onTheWay.link")}
         </Link>
@@ -674,7 +674,7 @@ async function FundDetail({
         actions={
           <Link
             href={tabHref("contributions")}
-            className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm text-accent hover:underline"
+            className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent hover:underline"
           >
             {tf("recent.allContributions")}
           </Link>
@@ -798,7 +798,7 @@ async function FundDetail({
         >
           <span
             className={cn(
-              "text-[2rem] leading-tight font-semibold tracking-[-0.02em] tabular-nums",
+              "text-hero leading-tight font-semibold tracking-title tabular-nums",
               TONE_TEXT[toneOfSign(gainCents)],
             )}
           >

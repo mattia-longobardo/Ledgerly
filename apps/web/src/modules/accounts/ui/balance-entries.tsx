@@ -222,7 +222,7 @@ export function BalanceEntries({
           <p className="text-sm text-muted">{t("managed.note")}</p>
           <a
             href={managedHref}
-            className="focus-ring inline-flex min-h-6 items-center self-start rounded-[4px] text-accent hover:underline"
+            className="focus-ring inline-flex min-h-6 items-center self-start rounded-sm text-accent hover:underline"
           >
             {t("managed.link")}
           </a>

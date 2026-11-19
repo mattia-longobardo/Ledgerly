@@ -98,7 +98,7 @@ export function SeriesToggle({
       aria-label={label}
       aria-pressed={pressed}
       onClick={() => toggle(seriesKey)}
-      className="focus-ring grid size-6 shrink-0 place-items-center rounded-[4px] hover:bg-hover"
+      className="focus-ring grid size-6 shrink-0 place-items-center rounded-sm hover:bg-hover"
     >
       <span
         aria-hidden

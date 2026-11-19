@@ -85,7 +85,7 @@ export default async function PocketPage({ params }: PageProps<"/pockets/[id]">)
       parent={{ href: "/pockets", label: t("title") }}
       actions={<PocketActions place="topbar" pocket={summary} context={context} />}
     >
-      <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{pocket.name}</h1>
+      <h1 className="text-title font-semibold tracking-title max-md:sr-only">{pocket.name}</h1>
 
       <Card className="flex flex-col gap-4" data-testid="pocket-detail">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -99,7 +99,7 @@ export default async function PocketPage({ params }: PageProps<"/pockets/[id]">)
             </p>
             <p
               className={cn(
-                "text-hero font-semibold tracking-[-0.02em] tabular-nums",
+                "text-hero font-semibold tracking-title tabular-nums",
                 selected.balanceCents < 0n && "text-neg",
               )}
             >

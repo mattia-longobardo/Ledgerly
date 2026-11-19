@@ -61,7 +61,7 @@ async function LegalPage({
     >
       <BrandLockup name={t("common.product")} />
       <div>
-        <h1 className="text-title leading-[1.2] font-semibold tracking-[-0.02em]">
+        <h1 className="text-title leading-[1.2] font-semibold tracking-title">
           {t(`legal.${document}.title`)}
         </h1>
         <p className="mt-1.5 text-muted">{t(`legal.${document}.intro`)}</p>

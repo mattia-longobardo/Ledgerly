@@ -487,7 +487,7 @@ export function ManualTransactionDialog({
               <>
                 <span
                   aria-hidden
-                  className="size-[7px] shrink-0 rounded-[2px] border"
+                  className="size-[7px] shrink-0 rounded-xs border"
                   style={{ borderColor: suggested.color }}
                 />
                 <span data-testid="manual-suggestion" className="min-w-0 truncate">
@@ -498,7 +498,7 @@ export function ManualTransactionDialog({
               <>
                 <span
                   aria-hidden
-                  className={cn("size-[7px] shrink-0 rounded-[2px]", category === null && "bg-faint")}
+                  className={cn("size-[7px] shrink-0 rounded-xs", category === null && "bg-faint")}
                   style={category === null ? undefined : { background: category.color }}
                 />
                 <span className="min-w-0 truncate">{category?.name ?? t("row.uncategorised")}</span>

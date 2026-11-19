@@ -11,10 +11,10 @@ const VARIANT = {
 } as const;
 
 const SIZE = {
-  xs: "h-6 px-2 text-sm rounded-[5px]",
+  xs: "h-6 px-2 text-sm rounded-tag",
   sm: "h-7 px-2.5 text-sm",
   md: "h-8 px-3 text-base",
-  lg: "h-9 px-3.5 text-base rounded-[7px]",
+  lg: "h-9 px-3.5 text-base rounded-seg",
 } as const;
 
 const BASE =
@@ -111,7 +111,7 @@ export function LinkButton({
       // `h-6 inline-flex`: the words are 17 px tall, which is smaller than anything should be to
       // press on a phone. The height is the target's, not the text's, so nothing moves.
       className={cn(
-        "focus-ring inline-flex h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline",
+        "focus-ring inline-flex h-6 items-center rounded-xs text-sm font-medium text-accent hover:underline",
         className,
       )}
       {...props}

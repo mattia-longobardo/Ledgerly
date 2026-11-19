@@ -231,7 +231,7 @@ export function TransactionDetails({
                 <span key={label.id} className="inline-flex items-center gap-1.5">
                   <span
                     aria-hidden
-                    className={cn("size-2 shrink-0 rounded-[2px]", label.color === null && "bg-faint")}
+                    className={cn("size-2 shrink-0 rounded-xs", label.color === null && "bg-faint")}
                     style={label.color === null ? undefined : { background: label.color }}
                   />
                   <Checkbox

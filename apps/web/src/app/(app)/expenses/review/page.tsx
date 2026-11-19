@@ -199,7 +199,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
   );
   const heading = (
     <div className="flex flex-col gap-1">
-      <h1 className="text-title font-semibold tracking-[-0.02em]">{title}</h1>
+      <h1 className="text-title font-semibold tracking-title">{title}</h1>
       {count > 0 && (
         <p className="text-muted">
           {t("review.summary", { count, groups: groups.length, total: money(total) })}

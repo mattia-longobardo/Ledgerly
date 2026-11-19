@@ -405,7 +405,7 @@ export function CategoriesBoard({
     ) : (
       <Link
         href={line.source.href}
-        className="focus-ring inline-flex min-h-6 max-w-full items-center truncate rounded-[2px] text-sm text-muted hover:underline"
+        className="focus-ring inline-flex min-h-6 max-w-full items-center truncate rounded-xs text-sm text-muted hover:underline"
       >
         <span className="truncate">{line.source.text}</span>
       </Link>
@@ -440,7 +440,7 @@ export function CategoriesBoard({
           href={line.href}
           title={line.name}
           className={cn(
-            "focus-ring inline-flex min-h-6 max-w-full items-center truncate rounded-[2px] hover:underline",
+            "focus-ring inline-flex min-h-6 max-w-full items-center truncate rounded-xs hover:underline",
             strong && "font-semibold",
             line.zero && "text-muted",
           )}
@@ -611,7 +611,7 @@ export function CategoriesBoard({
                       aria-expanded={isOpen}
                       aria-controls={listId}
                       onClick={() => toggle(group.id)}
-                      className="focus-ring flex min-h-6 min-w-0 flex-1 items-center gap-2 rounded-[2px] text-left font-semibold max-md:min-h-11"
+                      className="focus-ring flex min-h-6 min-w-0 flex-1 items-center gap-2 rounded-xs text-left font-semibold max-md:min-h-11"
                       title={group.name}
                     >
                       <ChevronRight
@@ -641,7 +641,7 @@ export function CategoriesBoard({
                       <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-1.5 pl-8">
                         <Link
                           href={group.only.href}
-                          className="focus-ring inline-flex min-h-6 min-w-0 flex-1 items-center rounded-[2px] text-muted hover:underline"
+                          className="focus-ring inline-flex min-h-6 min-w-0 flex-1 items-center rounded-xs text-muted hover:underline"
                         >
                           {t("onlyGroup", { group: group.name })}
                         </Link>

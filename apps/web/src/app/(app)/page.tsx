@@ -37,7 +37,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
   if (view.rows.length === 0) {
     return (
       <Page title={t("title")}>
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <EmptyState
           title={t("empty.title")}
           description={t("empty.description")}
@@ -79,7 +79,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
           <h1 className="text-sm font-medium text-muted">
             {t("netWorth.on", { date: formatDate(today(ctx.timeZone, now), "long", ctx.locale) })}
           </h1>
-          <p className="text-hero font-semibold tracking-[-0.02em]">
+          <p className="text-hero font-semibold tracking-title">
             {formatMoney(view.total, ctx.numberFormat, total)}
           </p>
           <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -154,7 +154,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
             actions={
               <Link
                 href="/accounts"
-                className="focus-ring inline-flex h-6 items-center rounded-[2px] text-accent hover:underline"
+                className="focus-ring inline-flex h-6 items-center rounded-xs text-accent hover:underline"
               >
                 {t("manageAccounts")}
               </Link>
@@ -178,7 +178,7 @@ export default async function OverviewPage({ searchParams }: PageProps<"/">) {
                       <Td>
                         <Link
                           href={`/accounts/${row.account.id}`}
-                          className="focus-ring inline-flex h-6 items-center rounded-[2px] font-medium hover:underline"
+                          className="focus-ring inline-flex h-6 items-center rounded-xs font-medium hover:underline"
                         >
                           {row.account.name}
                         </Link>

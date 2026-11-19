@@ -206,7 +206,7 @@ export function ConnectionRow({
             (isLink(action) ? (
               <a
                 href={action.href}
-                className="focus-ring inline-flex h-6 items-center rounded-[2px] font-medium text-accent hover:underline"
+                className="focus-ring inline-flex h-6 items-center rounded-xs font-medium text-accent hover:underline"
               >
                 {action.label}
               </a>
@@ -260,7 +260,7 @@ export function ConnectionRow({
               aria-expanded={open}
               aria-controls={listId}
               onClick={() => setOpen((value) => !value)}
-              className="focus-ring mt-0.5 inline-flex h-6 items-center gap-1 rounded-[2px] text-sm font-medium text-accent hover:underline"
+              className="focus-ring mt-0.5 inline-flex h-6 items-center gap-1 rounded-xs text-sm font-medium text-accent hover:underline"
             >
               {t("history.toggle")}
               <ChevronDown aria-hidden className={cn("size-3.5", open && "rotate-180")} />
@@ -338,7 +338,7 @@ export function ConnectionRow({
           {historyMore !== null && (
             <a
               href={historyMore}
-              className="focus-ring mt-1 inline-flex h-6 items-center rounded-[2px] font-medium text-accent hover:underline"
+              className="focus-ring mt-1 inline-flex h-6 items-center rounded-xs font-medium text-accent hover:underline"
             >
               {t("history.all")}
             </a>
@@ -402,7 +402,7 @@ export function DeactivateLink({ href, provider }: { href: string; provider: str
   return (
     <Link
       href={href as Route}
-      className="focus-ring inline-flex min-h-6 items-center self-start rounded-[2px] text-accent underline underline-offset-2"
+      className="focus-ring inline-flex min-h-6 items-center self-start rounded-xs text-accent underline underline-offset-2"
     >
       {t("disconnect.toDeactivate", { provider })}
     </Link>

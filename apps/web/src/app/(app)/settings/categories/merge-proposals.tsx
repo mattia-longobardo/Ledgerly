@@ -29,7 +29,7 @@ function Name({ side }: { side: MergeSide }) {
   const t = useTranslations("settings.categories.merge");
   return (
     <span className="flex min-w-0 items-center gap-1.5">
-      <span aria-hidden className="size-2 shrink-0 rounded-[2px]" style={{ background: side.color }} />
+      <span aria-hidden className="size-2 shrink-0 rounded-xs" style={{ background: side.color }} />
       <span className="min-w-0 break-words">{t("pair", { name: side.name, count: side.usage })}</span>
     </span>
   );

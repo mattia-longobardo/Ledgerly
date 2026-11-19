@@ -165,7 +165,7 @@ export default async function CategoriesPage({ searchParams }: PageProps<"/expen
 
   return (
     <Page title={title} parent={{ href: "/expenses" as Route, label: t("title") }}>
-      <h1 className="text-title font-semibold tracking-[-0.02em]">{title}</h1>
+      <h1 className="text-title font-semibold tracking-title">{title}</h1>
       <ExpensesTabs current="categories" params={carry} />
       <div className="flex flex-wrap items-center gap-2">
         <PeriodBar

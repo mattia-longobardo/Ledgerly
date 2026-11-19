@@ -22,7 +22,7 @@ export function KpiTile({
   return (
     <Card className={cn("flex min-w-0 flex-col gap-1.5", className)}>
       <span className="text-sm font-medium text-muted">{label}</span>
-      <span className={cn("text-kpi font-semibold tracking-[-0.02em]", TONE_TEXT[valueTone])}>{value}</span>
+      <span className={cn("text-kpi font-semibold tracking-title", TONE_TEXT[valueTone])}>{value}</span>
       {(delta || note) && (
         <div className="flex items-center justify-between gap-2 text-sm whitespace-nowrap">
           {delta && <span className={cn("font-medium", TONE_TEXT[deltaTone])}>{delta}</span>}

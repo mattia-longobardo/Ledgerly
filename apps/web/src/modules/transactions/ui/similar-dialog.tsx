@@ -77,7 +77,7 @@ export function SimilarDialog({
           {createRuleHref && (
             <Link
               href={createRuleHref as Route}
-              className="focus-ring mr-auto inline-flex min-h-6 items-center self-center rounded-[2px] text-sm text-accent hover:underline max-sm:mr-0"
+              className="focus-ring mr-auto inline-flex min-h-6 items-center self-center rounded-xs text-sm text-accent hover:underline max-sm:mr-0"
             >
               {t("similar.createRule")}
             </Link>
@@ -105,7 +105,7 @@ export function SimilarDialog({
             {t("similar.ruleStays", { name: rule.name })}{" "}
             <Link
               href={`/settings/rules#rule-${rule.id}` as Route}
-              className="focus-ring rounded-[2px] text-accent hover:underline"
+              className="focus-ring rounded-xs text-accent hover:underline"
             >
               {t("similar.editRule")}
             </Link>
@@ -127,7 +127,7 @@ export function SimilarDialog({
                     <>
                       <span
                         aria-hidden
-                        className="size-[7px] shrink-0 rounded-[2px]"
+                        className="size-[7px] shrink-0 rounded-xs"
                         style={{ background: current.color }}
                       />
                       <span className="min-w-0 truncate">{current.name}</span>

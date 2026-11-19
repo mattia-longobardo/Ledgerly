@@ -102,7 +102,7 @@ export default async function InvestmentServiceLayout({
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={t("actions.openSite", { name: account.name })}
-                  className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-[4px] text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-sm text-accent hover:underline"
                 >
                   {t("header.openSite", { name: account.name })}
                   <ExternalLink aria-hidden className="size-3.5" />
@@ -110,7 +110,7 @@ export default async function InvestmentServiceLayout({
               </>
             )}
           </p>
-          <h1 className="text-title font-semibold tracking-[-0.02em]">{account.name}</h1>
+          <h1 className="text-title font-semibold tracking-title">{account.name}</h1>
         </div>
         <ServiceActions
           context={serviceContextOf(detail, ctx)}

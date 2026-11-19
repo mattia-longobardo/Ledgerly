@@ -775,7 +775,7 @@ function RuleEditor({
                 <>
                   <span
                     aria-hidden
-                    className="size-2 shrink-0 rounded-[2px]"
+                    className="size-2 shrink-0 rounded-xs"
                     style={{ background: category.color }}
                   />
                   <span className="min-w-0 truncate">

@@ -68,7 +68,7 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
       <AutoRefresh active={IN_FLIGHT.includes(document.state)} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-0.5">
-          <h1 className="flex items-center gap-2 text-title font-semibold tracking-[-0.02em]">
+          <h1 className="flex items-center gap-2 text-title font-semibold tracking-title">
             {view.assembled.values.periodLabel ?? t("review.title")}
             <Badge tone={STATE_TONE[document.state]}>{t(`states.${document.state}`)}</Badge>
           </h1>
@@ -173,7 +173,7 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
         />
       )}
       {view.evidence.length === 0 && document.storageKey && !IN_FLIGHT.includes(document.state) && (
-        <a href={`/payroll/${document.id}/original`} target="_blank" rel="noopener" className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm text-accent hover:underline">
+        <a href={`/payroll/${document.id}/original`} target="_blank" rel="noopener" className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent hover:underline">
           {t("review.viewer.open")}
         </a>
       )}

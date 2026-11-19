@@ -262,7 +262,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
               <li key={rule.rule.id} className="border-t border-border px-4 py-3 first:border-t-0">
                 <Link
                   href={`/interests/${rule.rule.id}` as Route}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent underline underline-offset-2"
+                  className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent underline underline-offset-2"
                 >
                   {plugin("writes.rule", { account: rule.accountName })}
                 </Link>
@@ -272,7 +272,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
               <li className="border-t border-border px-4 py-3 first:border-t-0">
                 <Link
                   href={`/expenses?acc=${waitingAccounts.join(",")}` as Route}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent underline underline-offset-2"
+                  className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent underline underline-offset-2"
                 >
                   {plugin("writes.unsent", { count: waiting.length })}
                 </Link>
@@ -476,7 +476,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                 <li key={one.id} className="border-t border-border px-4 py-3 first:border-t-0">
                   <Link
                     href={`${advancedHref(one.id)}#log` as Route}
-                    className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm text-accent underline underline-offset-2"
+                    className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent underline underline-offset-2"
                   >
                     {plugin("advanced.log", { name: labels.get(one.id)?.name ?? name })}
                   </Link>
@@ -624,7 +624,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       <p className="flex justify-end">
         <Link
           href={"/settings/integrations/advanced" as Route}
-          className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline"
+          className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm font-medium text-accent hover:underline"
         >
           {text("actions.advanced")} →
         </Link>

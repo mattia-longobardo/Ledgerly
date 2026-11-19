@@ -57,7 +57,7 @@ export default async function InterestsPage() {
   return (
     <Page title={t("title")} actions={add(t("add"))}>
       <div className="flex flex-col gap-0.5">
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         {rows.length > 0 && (
           <p className="text-muted tabular-nums">
             {t("subtitle", { gross: money(gross), net: money(net), year: todayOn.slice(0, 4) })}
@@ -94,7 +94,7 @@ export default async function InterestsPage() {
                       <Td>
                         <Link
                           href={`/interests/${row.rule.id}` as Route}
-                          className="focus-ring flex flex-col rounded-[2px] hover:underline"
+                          className="focus-ring flex flex-col rounded-xs hover:underline"
                         >
                           <span className="font-medium">{row.accountName}</span>
                           <span className="text-xs text-muted">
@@ -107,7 +107,7 @@ export default async function InterestsPage() {
                           {tierChips(row.tiers, ctx.numberFormat, labels).map((chip, index) => (
                             <span
                               key={index}
-                              className="rounded-[5px] border border-border px-1.5 py-0.5 text-xs"
+                              className="rounded-tag border border-border px-1.5 py-0.5 text-xs"
                             >
                               <span className="font-semibold">{chip.rate}</span>{" "}
                               <span className="text-muted">{chip.range}</span>

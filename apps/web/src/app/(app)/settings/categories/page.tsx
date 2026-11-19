@@ -88,7 +88,7 @@ export default async function SettingsCategoriesPage() {
         <p className="px-4 py-3 text-sm">
           <Link
             href={"/expenses/categories" as Route}
-            className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent underline underline-offset-2"
+            className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent underline underline-offset-2"
           >
             {t("categories.movedLink")}
           </Link>
@@ -98,7 +98,7 @@ export default async function SettingsCategoriesPage() {
             {plugin("categories.movedHint", { provider: source.name })}{" "}
             <Link
               href={source.href as Route}
-              className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-accent underline underline-offset-2"
+              className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent underline underline-offset-2"
             >
               {plugin("settingsOf", { provider: source.name })}
             </Link>

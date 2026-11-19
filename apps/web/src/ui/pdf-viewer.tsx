@@ -173,7 +173,7 @@ export function PdfViewer({
             href={url}
             target="_blank"
             rel="noopener"
-            className="focus-ring ml-2 inline-flex h-6 items-center rounded-[5px] border border-border bg-card px-2 text-sm font-medium text-fg hover:bg-hover"
+            className="focus-ring ml-2 inline-flex h-6 items-center rounded-tag border border-border bg-card px-2 text-sm font-medium text-fg hover:bg-hover"
           >
             {labels.open}
           </a>
@@ -198,7 +198,7 @@ export function PdfViewer({
                 key={index}
                 data-testid="pdf-highlight"
                 aria-hidden
-                className="pointer-events-none absolute rounded-[2px] bg-warn/25 ring-2 ring-warn"
+                className="pointer-events-none absolute rounded-xs bg-warn/25 ring-2 ring-warn"
                 style={{
                   left: `${highlight.bbox[0] * 100}%`,
                   top: `${highlight.bbox[1] * 100}%`,

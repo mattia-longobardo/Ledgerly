@@ -243,7 +243,7 @@ export default async function InvestmentServiceConnection({
                         href={provider.revokeUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-[4px] text-accent hover:underline"
+                        className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-sm text-accent hover:underline"
                       >
                         {t("sync.revokeOpen")}
                       </a>
@@ -288,7 +288,7 @@ export default async function InvestmentServiceConnection({
               {t("settings.flags")}{" "}
               <Link
                 href={`/accounts/${accountId}?tab=settings` as Route}
-                className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+                className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
               >
                 {t("connection.settings.inAccounts", { name })}
               </Link>
@@ -444,7 +444,7 @@ function Received({
       </ul>
       {sync.coverage.length > 0 && (
         <details className="border-t border-border px-4 py-2.5 text-sm">
-          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px] text-muted hover:text-fg">
+          <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm text-muted hover:text-fg">
             {t("connection.received.details", { count: sync.coverage.length })}
           </summary>
           <ul className="mt-2 flex flex-col gap-1">

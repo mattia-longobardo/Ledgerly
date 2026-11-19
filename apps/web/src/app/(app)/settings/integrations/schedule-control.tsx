@@ -344,7 +344,7 @@ function ScheduleDialog({
       description={t.rich("description", {
         timeZone,
         link: (chunks) => (
-          <Link href="/settings/profile" className="focus-ring rounded-[4px] text-accent underline">
+          <Link href="/settings/profile" className="focus-ring rounded-sm text-accent underline">
             {chunks}
           </Link>
         ),

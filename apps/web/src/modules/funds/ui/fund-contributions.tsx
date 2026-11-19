@@ -104,7 +104,7 @@ export async function contributionSetup(
 }
 
 const LINK =
-  "focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline";
+  "focus-ring inline-flex min-h-6 items-center rounded-xs text-sm font-medium text-accent hover:underline";
 
 /**
  * The Contributions tab of a fund (docs/design/rewrite-plan/ux/n6-pension-fund.md §5.3): the

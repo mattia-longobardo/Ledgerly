@@ -136,7 +136,7 @@ export function SubscriptionDialog({
           >
             {category ? (
               <>
-                <span aria-hidden className="size-2 rounded-[2px]" style={{ background: category.color }} />
+                <span aria-hidden className="size-2 rounded-xs" style={{ background: category.color }} />
                 <span className="truncate">{category.name}</span>
               </>
             ) : (
@@ -215,7 +215,7 @@ export function SubscriptionDialog({
                 aria-checked={value === utility}
                 onClick={() => setUtility(value)}
                 className={cn(
-                  "focus-ring h-7 rounded-[5px] border text-sm tabular-nums",
+                  "focus-ring h-7 rounded-tag border text-sm tabular-nums",
                   value <= utility
                     ? utility <= 5
                       ? "border-warn bg-warn-bg text-warn"

@@ -19,7 +19,7 @@ export function Kpi({
   return (
     <Card className="flex min-w-0 flex-col gap-1.5" data-testid={testId}>
       <span className="text-sm font-medium text-muted">{label}</span>
-      <span className={cn("text-kpi font-semibold tracking-[-0.02em] tabular-nums", TONE_TEXT[tone])}>
+      <span className={cn("text-kpi font-semibold tracking-title tabular-nums", TONE_TEXT[tone])}>
         {value}
       </span>
       {note && <span className="text-sm text-muted">{note}</span>}

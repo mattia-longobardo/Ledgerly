@@ -46,7 +46,7 @@ export function Th({
           // `min-h-6`: the words of a header are 17 px tall, and a sort control is a target like
           // any other — 24 px is the repository's floor (plan F9 §3.4).
           className={cn(
-            "focus-ring inline-flex min-h-6 items-center gap-1 rounded-[4px]",
+            "focus-ring inline-flex min-h-6 items-center gap-1 rounded-sm",
             sort.direction && "text-fg",
           )}
         >

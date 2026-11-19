@@ -70,7 +70,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
         );
     return (
       <Page title={t("title")} actions={add}>
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <EmptyState
           title={t("empty.title")}
           description={
@@ -140,7 +140,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
   return (
     <Page title={t("title")} actions={add}>
       <div className="flex flex-wrap items-baseline gap-3">
-        <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title">{t("title")}</h1>
         <p data-testid="accounts-summary" className="text-muted">
           {t("summary", {
             total: formatMoney(view.total, ctx.numberFormat, total),
@@ -198,7 +198,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                       />
                       <Link
                         href={`/accounts/${row.account.id}`}
-                        className="focus-ring inline-flex min-h-6 items-center rounded-[2px] font-medium hover:underline"
+                        className="focus-ring inline-flex min-h-6 items-center rounded-xs font-medium hover:underline"
                       >
                         {row.account.name}
                       </Link>
@@ -269,7 +269,7 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                   />
                   <Link
                     href={`/accounts/${row.account.id}`}
-                    className="focus-ring inline-flex min-h-6 items-center rounded-[2px] font-medium hover:underline"
+                    className="focus-ring inline-flex min-h-6 items-center rounded-xs font-medium hover:underline"
                   >
                     {row.account.name}
                   </Link>

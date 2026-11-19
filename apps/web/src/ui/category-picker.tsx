@@ -188,7 +188,7 @@ export function CategoryPicker({
                 setActive(0);
               }}
               onKeyDown={onKeyDown}
-              className="h-7 w-full rounded-[5px] border border-border bg-card px-2 text-sm placeholder:text-faint focus:border-accent focus:outline-none"
+              className="h-7 w-full rounded-tag border border-border bg-card px-2 text-sm placeholder:text-faint focus:border-accent focus:outline-none"
             />
             {note !== undefined && <p className="px-2 text-sm text-muted">{note}</p>}
             <ul
@@ -210,7 +210,7 @@ export function CategoryPicker({
                       onClick={() => pick(item)}
                       onMouseMove={() => setActive(index)}
                       className={cn(
-                        "flex h-7 cursor-default items-center gap-2 rounded-[5px] px-2 text-sm",
+                        "flex h-7 cursor-default items-center gap-2 rounded-tag px-2 text-sm",
                         index === highlighted && "bg-hover",
                         // A sub-category sits under its group (F2.5).
                         item.depth === 1 && "pl-6",
@@ -219,7 +219,7 @@ export function CategoryPicker({
                     >
                       <span
                         aria-hidden
-                        className={cn("size-2 shrink-0 rounded-[2px]", item.color === null && "bg-faint")}
+                        className={cn("size-2 shrink-0 rounded-xs", item.color === null && "bg-faint")}
                         style={item.color === null ? undefined : { background: item.color }}
                       />
                       <span className="min-w-0 truncate">{item.name}</span>
@@ -231,7 +231,7 @@ export function CategoryPicker({
                   <li key={title} role="group" aria-label={title}>
                     <span
                       aria-hidden
-                      className="block px-2 pt-1.5 pb-0.5 text-micro font-medium tracking-[0.04em] text-faint uppercase"
+                      className="block px-2 pt-1.5 pb-0.5 text-micro font-medium tracking-caps text-faint uppercase"
                     >
                       {title}
                     </span>

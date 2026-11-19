@@ -51,7 +51,7 @@ export function StepIndicator({
             {done ? (
               <Link
                 href={step.href}
-                className="focus-ring inline-flex min-h-6 min-w-6 items-center gap-1.5 rounded-[4px] hover:text-fg"
+                className="focus-ring inline-flex min-h-6 min-w-6 items-center gap-1.5 rounded-sm hover:text-fg"
               >
                 {body}
               </Link>

@@ -18,7 +18,7 @@ export default async function NewAccountPage() {
 
   return (
     <Page title={t("title")} parent={{ href: "/accounts", label: accounts("title") }}>
-      <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+      <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
       <p className="max-w-[560px] text-muted">{t("description")}</p>
       <Card>
         {/* The place the new account will take — last among the open ones, the same list the

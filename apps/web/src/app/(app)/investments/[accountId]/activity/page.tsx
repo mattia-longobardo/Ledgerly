@@ -289,7 +289,7 @@ export default async function InvestmentServiceActivity({
               <Badge tone="accent">{t("activityTab.asset", { name: assetName })}</Badge>
               <Link
                 href={href({ asset: undefined })}
-                className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+                className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
               >
                 {t("activityTab.assetAll")}
               </Link>
@@ -493,7 +493,7 @@ async function ManualActivity({
           {t("activityTab.accountMovementsNote")}
           <Link
             href={`/accounts/${accountId}` as Route}
-            className="focus-ring inline-flex min-h-6 items-center rounded-[4px] text-accent hover:underline"
+            className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
           >
             {t("activityTab.openAccount")}
           </Link>

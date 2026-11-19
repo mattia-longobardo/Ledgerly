@@ -8,7 +8,7 @@ import { FORECAST_RATES, type FundForecast } from "@ledgerly/domain/funds";
 const SHORT_YEARS: readonly number[] = [5, 10];
 /** The middle hypothesis: the short card names one rate. */
 const SHORT_RATE = FORECAST_RATES.indexOf(0.04);
-const DETAILS_SUMMARY = "focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-[4px]";
+const DETAILS_SUMMARY = "focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm";
 
 /** Every horizon at every rate: a table, and on a phone one block per horizon. */
 async function ProjectionTable({

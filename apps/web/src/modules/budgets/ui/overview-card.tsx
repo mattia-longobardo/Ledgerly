@@ -33,7 +33,7 @@ export async function BudgetsOverviewCard({
         actions={
           <Link
             href="/budgets"
-            className="focus-ring inline-flex h-6 items-center rounded-[2px] text-accent hover:underline"
+            className="focus-ring inline-flex h-6 items-center rounded-xs text-accent hover:underline"
           >
             {t("overview.viewAll")}
           </Link>
@@ -55,7 +55,7 @@ export async function BudgetsOverviewCard({
                 <span className="flex min-w-0 items-center gap-2">
                   <span
                     aria-hidden
-                    className="size-2.5 shrink-0 rounded-[3px]"
+                    className="size-2.5 shrink-0 rounded-xs-plus"
                     style={{ background: row.color ?? NO_COLOR }}
                   />
                   <span className="truncate">

@@ -226,7 +226,7 @@ export function BanksCard({
                   href="https://enablebanking.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="focus-ring rounded-[3px] text-accent underline underline-offset-2"
+                  className="focus-ring rounded-xs-plus text-accent underline underline-offset-2"
                 >
                   {chunks}
                   <span className="sr-only"> {t("setup.newTab")}</span>

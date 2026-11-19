@@ -300,7 +300,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     return (
       <ManualMovement {...manual}>
         <Page title={t("title")}>
-          <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+          <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
           <EmptyState
             title={t("unsynced.title")}
             description={t("unsynced.description")}
@@ -325,7 +325,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
           Wallet shows it. What the totals leave out is said right under them. */}
           <div className="flex flex-col gap-1">
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h1 className="text-title font-semibold tracking-[-0.02em]">{t("title")}</h1>
+              <h1 className="text-title font-semibold tracking-title">{t("title")}</h1>
               <p className="text-muted">{t("summary", { count: view.summary.count })}</p>
               <dl aria-label={t("totals.label")} className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 {(

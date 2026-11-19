@@ -93,7 +93,7 @@ export function AddBudget({
               >
                 {chosen ? (
                   <>
-                    <span aria-hidden className="size-2 rounded-[2px]" style={{ background: chosen.color }} />
+                    <span aria-hidden className="size-2 rounded-xs" style={{ background: chosen.color }} />
                     <span className="truncate">{chosen.name}</span>
                   </>
                 ) : (

@@ -21,7 +21,7 @@ export async function AuthCard({
     <div className="flex w-[360px] max-w-full animate-in flex-col gap-5 rounded-modal border border-border bg-card p-8">
       <BrandLockup name={common("product")} />
       <div>
-        <h1 className="text-title leading-[1.2] font-semibold tracking-[-0.02em]">{title}</h1>
+        <h1 className="text-title leading-[1.2] font-semibold tracking-title">{title}</h1>
         {description && <p className="mt-1.5 text-muted">{description}</p>}
       </div>
       {children}

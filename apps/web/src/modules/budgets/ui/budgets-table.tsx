@@ -42,7 +42,7 @@ const BADGE_TONE = { over: "neg", near: "warn", on_track: "pos" } as const;
 const REMAINING_TONE = { over: "neg", near: "warn", on_track: "muted" } as const;
 
 function Swatch({ color }: { color: string }) {
-  return <span aria-hidden className="size-2.5 shrink-0 rounded-[3px]" style={{ background: color }} />;
+  return <span aria-hidden className="size-2.5 shrink-0 rounded-xs-plus" style={{ background: color }} />;
 }
 
 /**
@@ -82,7 +82,7 @@ function LimitCell({ row, month }: { row: BudgetRowView; month: string }) {
         autoFocus
         onKeyDown={onKeyDown}
         onBlur={(event) => save(event.currentTarget.value)}
-        className="h-7 w-24 rounded-[5px] border border-accent bg-card px-2 text-right tabular-nums focus:outline-none"
+        className="h-7 w-24 rounded-tag border border-accent bg-card px-2 text-right tabular-nums focus:outline-none"
       />
     );
   }
@@ -93,7 +93,7 @@ function LimitCell({ row, month }: { row: BudgetRowView; month: string }) {
       aria-label={`${t("editLimit")}: ${row.name}, ${row.limit}`}
       disabled={pending}
       onClick={() => setEditing(true)}
-      className="focus-ring inline-flex min-h-6 items-center rounded-[5px] px-1.5 py-0.5 tabular-nums hover:bg-hover"
+      className="focus-ring inline-flex min-h-6 items-center rounded-tag px-1.5 py-0.5 tabular-nums hover:bg-hover"
     >
       {row.limit}
     </button>
@@ -134,7 +134,7 @@ export function BudgetsTable({
     <span className="flex min-w-0 flex-col">
       <Link
         href={row.href as Route}
-        className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-[2px] font-medium hover:underline"
+        className="focus-ring inline-flex min-h-6 max-w-full items-center rounded-xs font-medium hover:underline"
       >
         <span className="truncate">{row.name}</span>
       </Link>

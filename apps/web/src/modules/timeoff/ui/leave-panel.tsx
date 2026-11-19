@@ -555,7 +555,7 @@ export function LeavePanel({
                         {t("panel.balanceUnknown")}{" "}
                         <Link
                           href={`/timeoff/settings?year=${data.year}` as Route}
-                          className="focus-ring rounded-[2px] font-medium text-accent underline underline-offset-2"
+                          className="focus-ring rounded-xs font-medium text-accent underline underline-offset-2"
                         >
                           {t("actions.setAllowance")}
                         </Link>

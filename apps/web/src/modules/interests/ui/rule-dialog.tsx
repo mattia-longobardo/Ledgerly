@@ -180,7 +180,7 @@ export function RuleDialog({
                           type="button"
                           aria-label={t("form.removeTier")}
                           onClick={() => setTiers((current) => current.filter((_, i) => i !== index))}
-                          className="focus-ring grid size-6 shrink-0 place-items-center rounded-[5px] text-muted hover:bg-hover hover:text-fg"
+                          className="focus-ring grid size-6 shrink-0 place-items-center rounded-tag text-muted hover:bg-hover hover:text-fg"
                         >
                           ×
                         </button>
@@ -272,11 +272,7 @@ export function RuleDialog({
                 >
                   {chosen ? (
                     <>
-                      <span
-                        aria-hidden
-                        className="size-2 rounded-[2px]"
-                        style={{ background: chosen.color }}
-                      />
+                      <span aria-hidden className="size-2 rounded-xs" style={{ background: chosen.color }} />
                       <span className="truncate">{chosen.name}</span>
                     </>
                   ) : (

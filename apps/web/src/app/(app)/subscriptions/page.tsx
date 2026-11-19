@@ -70,7 +70,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
   if (rows.length === 0 && inactive.length === 0) {
     return (
       <Page title={t("title")} actions={actions}>
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <EmptyState
           title={t("empty.title")}
           description={t("empty.description")}
@@ -128,7 +128,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
                 </p>
                 <Link
                   href="/expenses"
-                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[2px] font-medium text-accent hover:underline"
+                  className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-xs font-medium text-accent hover:underline"
                 >
                   {t("alerts.checkExpenses")}
                 </Link>
@@ -139,7 +139,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
       )}
 
       <div className="flex flex-col gap-0.5">
-        <h1 className="text-title font-semibold tracking-[-0.02em] max-md:sr-only">{t("title")}</h1>
+        <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
         <p className="text-muted tabular-nums">
           {t("subtitle", { count: rows.length, monthly: money(view.monthlyCents) })}
         </p>

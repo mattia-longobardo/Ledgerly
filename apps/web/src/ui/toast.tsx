@@ -67,8 +67,8 @@ function ToastList({ closeLabel }: { closeLabel: string }) {
         <Check aria-hidden className="size-3.5 shrink-0 text-pos" />
       )}
       <Toast.Title className="min-w-0" />
-      <Toast.Action className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-[4px] px-1 text-base font-semibold text-card underline underline-offset-2" />
-      <Toast.Close aria-label={closeLabel} className="focus-ring rounded-[4px] opacity-70 hover:opacity-100">
+      <Toast.Action className="focus-ring inline-flex min-h-6 shrink-0 items-center rounded-sm px-1 text-base font-semibold text-card underline underline-offset-2" />
+      <Toast.Close aria-label={closeLabel} className="focus-ring rounded-sm opacity-70 hover:opacity-100">
         <X aria-hidden className="size-3.5" />
       </Toast.Close>
     </Toast.Root>

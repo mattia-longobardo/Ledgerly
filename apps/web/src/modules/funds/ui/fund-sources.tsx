@@ -175,7 +175,7 @@ export async function FundSourcesSection({
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <Link
                       href={"/payroll/settings" as Route}
-                      className="focus-ring inline-flex min-h-6 items-center rounded-[2px] text-sm font-medium text-accent hover:underline"
+                      className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm font-medium text-accent hover:underline"
                     >
                       {t("codes.open")}
                     </Link>

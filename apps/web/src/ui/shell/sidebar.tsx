@@ -77,7 +77,7 @@ export function Sidebar({ links, user }: { links: NavLink[]; user: { name: strin
             <div key={group} className="mb-3 flex flex-col gap-0.5">
               <span
                 className={cn(
-                  "px-2 pt-1.5 pb-1 text-xs font-medium tracking-[0.04em] text-faint uppercase",
+                  "px-2 pt-1.5 pb-1 text-xs font-medium tracking-caps text-faint uppercase",
                   label,
                 )}
               >

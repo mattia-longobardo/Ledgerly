@@ -121,7 +121,7 @@ function ReviewGroupCard({
               <span className="text-muted">{t("review.group.suggestion")}</span>
               <span
                 aria-hidden
-                className="size-2 shrink-0 rounded-[2px]"
+                className="size-2 shrink-0 rounded-xs"
                 style={{ background: suggestion.color }}
               />
               <span className="font-medium break-words">{suggestion.name}</span>

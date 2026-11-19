@@ -104,15 +104,15 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
           · {t("from", { date: formatDate(rule.validFrom, "long", ctx.locale) })}
           {rule.validTo && ` · ${t("to", { date: formatDate(rule.validTo, "long", ctx.locale) })}`}
         </p>
-        <h1 className="text-title font-semibold tracking-[-0.02em]">{detail.accountName}</h1>
+        <h1 className="text-title font-semibold tracking-title">{detail.accountName}</h1>
         <div className="flex flex-wrap gap-1.5">
           {tierChips(detail.tiers, ctx.numberFormat, labels).map((chip, index) => (
-            <span key={index} className="rounded-[5px] border border-border px-1.5 py-0.5 text-xs">
+            <span key={index} className="rounded-tag border border-border px-1.5 py-0.5 text-xs">
               <span className="font-semibold">{chip.rate}</span>{" "}
               <span className="text-muted">{chip.range}</span>
             </span>
           ))}
-          <span className="rounded-[5px] border border-border px-1.5 py-0.5 text-xs text-muted">
+          <span className="rounded-tag border border-border px-1.5 py-0.5 text-xs text-muted">
             {t("columns.tax")} {formatRate(rule.taxRate, ctx.numberFormat)}
           </span>
         </div>

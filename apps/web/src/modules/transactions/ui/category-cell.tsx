@@ -12,7 +12,7 @@ import { cn } from "@/ui/cn";
 import type { CategoryOption, RowView } from "./view";
 
 // 24 px, not 22: the category chip is a button, and a button is a target (plan F9 §3.4).
-export const CHIP = "focus-ring inline-flex h-6 items-center gap-1.5 rounded-[4px] px-1.5 text-sm";
+export const CHIP = "focus-ring inline-flex h-6 items-center gap-1.5 rounded-sm px-1.5 text-sm";
 
 /** The reasons the interface has a sentence for; any other code reads the fallback (ux §2.2). */
 const REASONS = [
@@ -111,7 +111,7 @@ export function CategoryCell({
             <p className="flex items-center gap-1.5 text-sm break-words">
               <span
                 aria-hidden
-                className="size-2 shrink-0 rounded-[2px]"
+                className="size-2 shrink-0 rounded-xs"
                 style={{ background: category.color }}
               />
               {category.name}
@@ -123,7 +123,7 @@ export function CategoryCell({
             {row.categoryReason?.code === "rule" && row.categoryReason.params.ruleId && (
               <Link
                 href={`/settings/rules#rule-${row.categoryReason.params.ruleId}` as Route}
-                className="focus-ring inline-flex min-h-6 items-center self-start rounded-[2px] text-sm text-accent hover:underline"
+                className="focus-ring inline-flex min-h-6 items-center self-start rounded-xs text-sm text-accent hover:underline"
               >
                 {t("auto.openRule")}
               </Link>
@@ -167,7 +167,7 @@ export function CategoryCell({
         >
           <span
             aria-hidden
-            className="size-[7px] shrink-0 rounded-[2px] border"
+            className="size-[7px] shrink-0 rounded-xs border"
             style={{ borderColor: suggestion.color }}
           />
           <span className={cn("min-w-0", wide ? "break-words" : "truncate")}>
@@ -205,7 +205,7 @@ export function CategoryCell({
     >
       <span
         aria-hidden
-        className={cn("size-[7px] shrink-0 rounded-[2px]", !named && "bg-faint")}
+        className={cn("size-[7px] shrink-0 rounded-xs", !named && "bg-faint")}
         style={named ? { background: row.categoryColor as string } : undefined}
       />
       <span className="min-w-0 truncate">{row.categoryName ?? t("row.uncategorised")}</span>
@@ -222,7 +222,7 @@ export function CategoryCell({
           aria-label={t("auto.markLabel")}
           title={t("auto.markLabel")}
           className={cn(
-            "focus-ring inline-flex h-6 min-w-6 shrink-0 items-center justify-center gap-1 rounded-[4px] text-sm text-accent hover:bg-hover",
+            "focus-ring inline-flex h-6 min-w-6 shrink-0 items-center justify-center gap-1 rounded-sm text-sm text-accent hover:bg-hover",
             wide && "px-1",
           )}
         >

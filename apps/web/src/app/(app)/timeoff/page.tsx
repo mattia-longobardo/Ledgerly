@@ -279,7 +279,7 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
       >
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div className="flex flex-wrap items-baseline gap-3">
-            <h1 className="text-title font-semibold tracking-[-0.02em]">{t("heading")}</h1>
+            <h1 className="text-title font-semibold tracking-title">{t("heading")}</h1>
             <p className="text-muted">{headline || t("header.noAllowance")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -389,7 +389,7 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
               </span>
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-kpi font-semibold tracking-[-0.02em] tabular-nums">
+              <span className="text-kpi font-semibold tracking-title tabular-nums">
                 {formatNumber(view.totals.totalMinutes / view.minutesPerDay, locale)}
               </span>
               <span className="text-muted">{t("cards.daysTaken")}</span>
@@ -403,7 +403,7 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
             <ul className="flex flex-wrap gap-x-3 text-xs text-faint tabular-nums">
               {view.totals.byKind.map((share) => (
                 <li key={share.kind} className="flex items-center gap-1.5">
-                  <span aria-hidden="true" className={cn("size-2 rounded-[2px]", KIND_CLASS[share.kind])} />
+                  <span aria-hidden="true" className={cn("size-2 rounded-xs", KIND_CLASS[share.kind])} />
                   {t(`kinds.${share.kind}` as "kinds.vacation")} {days(share.minutes)}
                 </li>
               ))}
@@ -449,17 +449,15 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
           <CardHeader
             title={t("table.title")}
             actions={
-              <div className="flex gap-0.5 rounded-[7px] bg-hover p-0.5">
+              <div className="flex gap-0.5 rounded-seg bg-hover p-0.5">
                 {FILTERS.map((one) => (
                   <Link
                     key={one}
                     href={hrefFor(year, one)}
                     aria-current={filter === one ? "true" : undefined}
                     className={cn(
-                      "focus-ring inline-flex h-6 items-center rounded-[5px] px-2.5 text-sm font-medium",
-                      filter === one
-                        ? "bg-card text-fg shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                        : "text-muted hover:text-fg",
+                      "focus-ring inline-flex h-6 items-center rounded-tag px-2.5 text-sm font-medium",
+                      filter === one ? "bg-card text-fg shadow-pressed" : "text-muted hover:text-fg",
                     )}
                   >
                     {t(`table.filters.${one}` as "table.filters.all")}
@@ -508,7 +506,7 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
                             <span className="inline-flex items-center gap-1.5">
                               <span
                                 aria-hidden="true"
-                                className={cn("size-2 rounded-[2px]", KIND_CLASS[row.kind])}
+                                className={cn("size-2 rounded-xs", KIND_CLASS[row.kind])}
                               />
                               {t(`kinds.${row.kind}` as "kinds.vacation")}
                             </span>
@@ -550,7 +548,7 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
 function Legend({ className, label }: { className: string; label: string }) {
   return (
     <li className="flex items-center gap-1.5">
-      <span aria-hidden="true" className={cn("size-2.5 rounded-[3px]", className)} />
+      <span aria-hidden="true" className={cn("size-2.5 rounded-xs-plus", className)} />
       {label}
     </li>
   );
