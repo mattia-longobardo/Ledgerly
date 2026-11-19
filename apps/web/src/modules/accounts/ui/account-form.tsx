@@ -7,8 +7,10 @@ import { type FormEvent, useState, useTransition } from "react";
 import { Button, ButtonLink } from "@ledgerly/ui/button";
 import { CardFooter } from "@ledgerly/ui/card";
 import { Field } from "@ledgerly/ui/field";
-import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { Input, Select } from "@ledgerly/ui/input";
 import { createAccountAction } from "../calls";
+import { PALETTE } from "@ledgerly/design-tokens";
+import { ColorPicker } from "@ledgerly/ui/color-picker";
 import { colorField } from "./display";
 import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "@ledgerly/domain/accounts/client";
 import { ibanErrorText } from "./iban-field";
@@ -31,7 +33,7 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
   // The colour the account will be drawn with once it exists: the palette's, for the place it
   // takes at the end of the list. Left automatic, it stays the palette's and follows any reordering.
   const colour = colorField({ color: null }, index);
-  const [automatic, setAutomatic] = useState(true);
+  const [chosen, setChosen] = useState<string | null>(null);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,7 +46,7 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
           name: text("name"),
           type: text("type"),
           currency: text("currency") || "EUR",
-          color: automatic ? null : text("color") || null,
+          color: text("color") || null,
           reference: text("reference"),
           iban: hasIbanField(type) ? text("iban") : "",
           purpose: text("purpose"),
@@ -115,21 +117,15 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
         <Input id="currency" name="currency" defaultValue="EUR" maxLength={3} readOnly />
       </Field>
       <Field label={t("color")} htmlFor="color" hint={t("colorHint")}>
-        <div className="flex items-center gap-3">
-          <Input
-            id="color"
-            name="color"
-            type="color"
-            defaultValue={colour.value}
-            disabled={automatic}
-            className="p-1"
-          />
-          <Checkbox
-            label={t("automaticColor")}
-            checked={automatic}
-            onChange={(event) => setAutomatic(event.target.checked)}
-          />
-        </div>
+        <ColorPicker
+          swatches={PALETTE}
+          fallback={colour.value}
+          id="color"
+          name="color"
+          value={chosen}
+          clearLabel={t("automaticColor")}
+          onChange={setChosen}
+        />
       </Field>
       <Field label={t("openedOn")} htmlFor="openedOn">
         <Input id="openedOn" name="openedOn" type="date" max={today} />

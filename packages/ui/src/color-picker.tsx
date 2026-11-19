@@ -17,6 +17,19 @@ export function ColorDot({ color }: { color: string | null }) {
   );
 }
 
+interface ColorPickerProps {
+  /** The presets, in order: the first is what the native picker opens on. */
+  swatches: readonly string[];
+  /** What the native picker shows while there is no colour: the one the thing is drawn with. */
+  fallback?: string;
+  id: string;
+  name: string;
+  value: string | null;
+  clearLabel: string;
+  onChange: (value: string | null) => void;
+  disabled?: boolean;
+}
+
 /**
  * Presets, a native picker for anything else, and a way back to no colour at all. The hex values
  * are data, not interface text, so they are also the accessible name of each swatch.
@@ -28,22 +41,14 @@ export function ColorDot({ color }: { color: string | null }) {
  */
 export function ColorPicker({
   swatches,
+  fallback,
   id,
   name,
   value,
   clearLabel,
   onChange,
   disabled,
-}: {
-  /** The presets, in order: the first is what the native picker opens on. */
-  swatches: readonly string[];
-  id: string;
-  name: string;
-  value: string | null;
-  clearLabel: string;
-  onChange: (value: string | null) => void;
-  disabled?: boolean;
-}) {
+}: ColorPickerProps) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <input type="hidden" name={name} value={value ?? ""} />
@@ -78,7 +83,7 @@ export function ColorPicker({
       <input
         id={id}
         type="color"
-        value={value ?? swatches[0]}
+        value={value ?? fallback ?? swatches[0]}
         disabled={disabled}
         onChange={(event) => onChange(event.currentTarget.value)}
         className="focus-ring h-6 w-9 rounded-ctl border border-border bg-card p-0.5"

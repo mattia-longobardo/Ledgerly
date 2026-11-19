@@ -12,6 +12,8 @@ import { SettingsSection, FIELD_GRID } from "@ledgerly/ui/section";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
 import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../calls";
+import { PALETTE } from "@ledgerly/design-tokens";
+import { ColorPicker } from "@ledgerly/ui/color-picker";
 import { colorField } from "./display";
 import { ibanErrorText } from "./iban-field";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "@ledgerly/domain/accounts/client";
@@ -76,9 +78,9 @@ export function AccountSettingsForm({
   const unsaved = useUnsavedForm(formRef, pending);
   const synced = account.origin === "synced";
   const colour = colorField(account, index);
-  // Checked, the account has no colour of its own and keeps none: the swatch beside it shows the
+  // `null` is «Automatic colour»: the account keeps no colour of its own, the native swatch shows the
   // palette colour it is drawn with, and the save writes `null` rather than freezing that colour in.
-  const [automatic, setAutomatic] = useState(colour.automatic);
+  const [chosen, setChosen] = useState<string | null>(colour.automatic ? null : colour.value);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -90,7 +92,7 @@ export function AccountSettingsForm({
           name: text("name"),
           type: text("type"),
           currency: text("currency") || "EUR",
-          color: automatic ? null : text("color") || null,
+          color: text("color") || null,
           reference: text("reference"),
           iban: account.ibanField && !account.ibanFromSource ? text("iban") : "",
           purpose: text("purpose"),
@@ -213,21 +215,15 @@ export function AccountSettingsForm({
             </Field>
           )}
           <Field label={t("general.color")} htmlFor="color" hint={t("general.colorHint")}>
-            <div className="flex items-center gap-3">
-              <Input
-                id="color"
-                name="color"
-                type="color"
-                defaultValue={colour.value}
-                disabled={automatic}
-                className="p-1"
-              />
-              <Checkbox
-                label={t("general.automaticColor")}
-                checked={automatic}
-                onChange={(event) => setAutomatic(event.target.checked)}
-              />
-            </div>
+            <ColorPicker
+              swatches={PALETTE}
+              fallback={colour.value}
+              id="color"
+              name="color"
+              value={chosen}
+              clearLabel={t("general.automaticColor")}
+              onChange={setChosen}
+            />
           </Field>
           <Field
             label={t("general.currency")}
