@@ -5,6 +5,6 @@ export { BalanceEntries } from "./ui/balance-entries";
 export { ConnectionsSection, ConnectionsSummary } from "./ui/connections";
 export { AccountSettingsForm } from "./ui/settings-form";
 export { UndoSwitch } from "./ui/switch/undo-switch";
-export { centsOf, changeOf, colorFor, counterValue } from "./ui/display";
+export { centsOf, colorFor, counterValue } from "./ui/display";
 export type { CardFormat } from "./ui/net-worth-card";
 export type { EntryRow } from "./ui/balance-entries";

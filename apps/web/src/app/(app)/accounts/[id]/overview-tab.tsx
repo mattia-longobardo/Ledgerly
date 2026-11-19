@@ -11,11 +11,12 @@ import type { Cents } from "@ledgerly/format/cents";
 import { today } from "@ledgerly/format/dates";
 import {
   formatDate,
-  formatDecimalText,
   formatMoney,
   formatPercent,
+  fractionToPercent,
   NULL_DISPLAY,
   type NumberFormat,
+  numberSeparators,
 } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
 import { AreaLine, Bars } from "@ledgerly/ui/chart";
@@ -34,7 +35,7 @@ import { parsePeriodQuery, periodEnd, periodMonths, type PeriodQuery } from "@le
 import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { centsOf, changeOf, ConnectionsSummary } from "@/modules/accounts/client";
+import { centsOf, ConnectionsSummary } from "@/modules/accounts/client";
 import type { AccountPage } from "./account-screen";
 
 /** The chart's choices, from the address: the period, its grain, and line or bars. */
@@ -48,6 +49,8 @@ interface Plot {
   labels: string[];
   values: (Cents | null)[];
   estimated: boolean[];
+  /** Each point from the one before, as the API answers it; the first has none. */
+  changes: { amount: string | null }[];
   xLabels: string[];
   day: boolean;
 }
@@ -132,6 +135,7 @@ function ChartCard({ page, chart }: { page: AccountPage; chart: ChartQuery }) {
                   labels: window.months.map((month) => formatDate(month, "monthYear", locale)),
                   values: windowRowOf(page, window.accounts).series.map(centsOf),
                   estimated: windowRowOf(page, window.accounts).estimated,
+                  changes: windowRowOf(page, window.accounts).seriesChange,
                   xLabels: monthLabels(window.months, locale),
                   day: false,
                 }}
@@ -209,6 +213,7 @@ function DayChart({ page, chart }: { page: AccountPage; chart: ChartQuery }) {
             labels: daily.days.map((day) => formatDate(day, "long", page.format.locale)),
             values: daily.values.map(centsOf),
             estimated: daily.estimated,
+            changes: daily.changes,
             xLabels: dayLabels(daily.days, page.format.locale),
             day: true,
           }}
@@ -225,9 +230,7 @@ function PlotView({ page, mode, plot }: { page: AccountPage; mode: ChartQuery["m
   /** Everything on this tab is the account's own value, in its own currency. */
   const own = { currency: page.account.currency };
   const money = (value: Cents | null, signed = false) => formatMoney(value, numberFormat, { signed, ...own });
-  const steps = plot.values.map((value, index) =>
-    index === 0 ? null : changeOf(value, plot.values[index - 1]).cents,
-  );
+  const steps = plot.changes.map((change) => centsOf(change.amount));
   return (
     <>
       {mode === "bars" ? (
@@ -277,12 +280,15 @@ function MonthEnds({ page, period }: { page: AccountPage; period: PeriodQuery })
       <h2 className="px-4 pt-3.5 pb-2.5 text-lg font-semibold">{text("monthEnd.title")}</h2>
       <Loaded state={read}>
         {(window) => {
-          const series = windowRowOf(page, window.accounts).series.map(centsOf);
+          const row = windowRowOf(page, window.accounts);
           const rows = window.months
             .map((month, index) => ({
               month,
-              value: series[index],
-              change: changeOf(series[index], index > 0 ? series[index - 1] : null),
+              value: centsOf(row.series[index]),
+              change: {
+                cents: centsOf(row.seriesChange[index].amount),
+                fraction: row.seriesChange[index].fraction,
+              },
             }))
             .filter((entry) => entry.value !== null)
             .reverse();
@@ -322,12 +328,9 @@ function MonthEnds({ page, period }: { page: AccountPage; period: PeriodQuery })
 
 type Tiers = AccountPage["context"]["interestRules"][number]["tiers"];
 
-/**
- * A stored rate as Interests writes it — "2,75 %" in Italian, "2.75%" in English — from the API's
- * fraction: `e2` moves the point, and the text is formatted exactly, with no float on the way.
- */
+/** A stored rate as Interests writes it — "2,75 %" in Italian, "2.75%" in English — from the API's fraction. */
 function rateText(fraction: string, format: NumberFormat): string {
-  const plain = formatDecimalText(`${fraction}e2`, format, { max: 4 });
+  const plain = fractionToPercent(fraction).replace(".", numberSeparators(format).decimal);
   const name = typeof format === "string" ? format : format.format;
   return name === "en-US" ? `${plain}%` : `${plain} %`;
 }

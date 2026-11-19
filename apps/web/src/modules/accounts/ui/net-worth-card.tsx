@@ -24,7 +24,7 @@ import { periodEnd as lastDayOf, periodMonths, type PeriodQuery } from "@ledgerl
 import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import type { Params } from "@ledgerly/ui/url";
-import { centsOf, changeOf, colorFor } from "./display";
+import { centsOf, colorFor } from "./display";
 
 type NetWorth = RouteOutput<typeof views.getNetWorth>;
 type Daily = RouteOutput<typeof views.getNetWorthDaily>;
@@ -64,6 +64,8 @@ interface Plot {
   /** The window's months, for the chart's text summary. */
   months: string[];
   currency: string;
+  /** The last point from the first known one, as the API answers it. */
+  change: NetWorth["windowChange"];
 }
 
 /** The months of the window from the first known net worth, and where they start in the answer. */
@@ -142,6 +144,7 @@ function monthPlot(chart: NetWorth, span: Span, locale: UiLocale): Plot {
     estimated: points.map((point) => point.estimated),
     months: span.months,
     currency: chart.currency,
+    change: chart.windowChange,
   };
 }
 
@@ -179,6 +182,7 @@ function dayPlot(daily: Daily, bands: Layer[], months: string[], locale: UiLocal
     estimated: daily.estimated,
     months,
     currency: daily.currency,
+    change: daily.windowChange,
   };
 }
 
@@ -204,7 +208,7 @@ function CardBody({
   const accountsText = useTranslations("accounts");
   const currency = { currency: plot.currency };
   const end = plot.total[plot.total.length - 1] ?? null;
-  const change = changeOf(end, plot.total.find((value) => value !== null) ?? null);
+  const change = { cents: centsOf(plot.change.amount), fraction: plot.change.fraction };
   /** What the grain control carries: the page's own parameters and the period. */
   const carried = { ...carry, ...period.params };
   const money = (value: Cents | null, signed = false) =>

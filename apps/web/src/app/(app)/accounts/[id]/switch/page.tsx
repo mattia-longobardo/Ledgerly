@@ -4,21 +4,16 @@ import { notFound, redirect } from "next/navigation";
 import { getAccount } from "@ledgerly/domain/accounts";
 import { openSwitchOf } from "@ledgerly/domain/accounts";
 import { SwitchCheck } from "@/modules/accounts/ui/switch/switch-check";
-import { UndoSwitch } from "@/modules/accounts/ui/switch/undo-switch";
 import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/shared/dates";
-import { formatDate } from "@ledgerly/domain/platform/format";
 import { labelOf } from "@/platform/integrations/registry";
-import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin, isPluginActive } from "@ledgerly/domain/platform/plugins";
 import { maskIdentifier } from "@ledgerly/domain/platform/plugins";
-import { ButtonLink } from "@ledgerly/ui/button";
-import { Card } from "@ledgerly/ui/card";
 import { Page } from "@ledgerly/ui/shell/page";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
 import { freeBankAccounts, switchable } from "./switch";
 import { SwitchChoices } from "./switch-choices";
+import { SwitchDone } from "./switch-done";
 
 export const metadata: Metadata = { title: "Switch account" };
 
@@ -31,7 +26,7 @@ function one(value: string | string[] | undefined): string | null {
 /**
  * "Move an account to the bank" (ux/n4-account-switch.md §3): one account, three steps in the URL.
  * The step "Account" is a plain form; the step "Check" runs the dry run in the browser's request;
- * the step "Done" reads the switch that "Apply" recorded. Nothing is saved before "Apply".
+ * the step "Done" reads the switch that "Apply" recorded, from `/api/v1`. Nothing is saved before "Apply".
  */
 export default async function SwitchAccountPage({
   params,
@@ -79,45 +74,7 @@ export default async function SwitchAccountPage({
   );
 
   if (step === "done" && open !== null) {
-    const counts = open.counts as Record<string, number>;
-    const since = formatDate(civilDateIn(open.appliedAt, ctx.timeZone), "long", ctx.locale);
-    const sourceThere = (await listConnections(ctx)).some((one) => one.provider === open.fromProvider);
-    return frame(
-      "done",
-      <Card className="flex flex-col gap-3">
-        <h1 tabIndex={-1} className="text-xl font-semibold">
-          {t("done.title", { account: account.name })}
-        </h1>
-        <ul className="flex flex-col gap-1 text-sm">
-          <li>{t("done.matched", { count: counts.matched ?? 0 })}</li>
-          <li>{t("done.fresh", { count: counts.fresh ?? 0 })}</li>
-          {(counts.transfers ?? 0) > 0 && <li>{t("done.transfers", { count: counts.transfers ?? 0 })}</li>}
-          {(counts.joined ?? 0) > 0 && <li>{t("done.joined", { count: counts.joined ?? 0 })}</li>}
-        </ul>
-        <p className="text-sm text-muted">{t("done.sourceStops", { source })}</p>
-        <p className="text-sm text-muted">{t("done.howToUndo")}</p>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <UndoSwitch
-            account={account.name}
-            source={source}
-            bank={t("done.theBank")}
-            since={since}
-            transfers={counts.transfers ?? 0}
-            publishes={(open.interestModes ?? []).length > 0}
-            joined={
-              open.mergedAccountId === null
-                ? null
-                : ((await getAccount(ctx, open.mergedAccountId))?.name ?? null)
-            }
-            available={sourceThere}
-            accountId={account.id}
-          />
-          <ButtonLink href={`/accounts/${account.id}` as Route} variant="primary">
-            {t("done.goToAccount")}
-          </ButtonLink>
-        </div>
-      </Card>,
-    );
+    return frame("done", <SwitchDone account={{ id: account.id, name: account.name }} />);
   }
 
   const target = one(query.t);
@@ -142,6 +99,7 @@ export default async function SwitchAccountPage({
 
   // Step "Account" (§4): the choices are read from `/api/v1`. Their masked identifier is read here,
   // since no answer carries an IBAN, even masked (H45); the names are the API's, so `String`.
+  // decided: the IBAN decision is open, the masked identifier is read on the server.
   const banks = await freeBankAccounts(ctx, account.id, account.currency, String);
   const masked = Object.fromEntries(
     banks.flatMap((bank) =>

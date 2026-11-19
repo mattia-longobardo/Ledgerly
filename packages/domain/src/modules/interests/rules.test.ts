@@ -18,7 +18,6 @@ import {
   assignPayments,
   paymentWindow,
   paysInterest,
-  fractionToPercent,
 } from "./rules";
 import { percentToFraction } from "../../shared/money";
 
@@ -177,15 +176,12 @@ describe("validateTiers", () => {
 });
 
 describe("percentages", () => {
-  it("turns a typed percentage into the stored fraction and back, exactly", () => {
+  it("turns a typed percentage into the stored fraction, exactly", () => {
     expect(percentToFraction("2.75")).toBe("0.027500");
     expect(percentToFraction("26")).toBe("0.260000");
     expect(percentToFraction("0.0125")).toBe("0.000125");
     expect(percentToFraction("100")).toBe("1.000000");
     expect(() => percentToFraction("2,75")).toThrow();
-    expect(fractionToPercent("0.027500")).toBe("2.75");
-    expect(fractionToPercent("0.260000")).toBe("26");
-    expect(fractionToPercent("0.000125")).toBe("0.0125");
   });
 });
 

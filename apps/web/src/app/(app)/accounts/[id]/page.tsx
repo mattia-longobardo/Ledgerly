@@ -15,9 +15,11 @@ export async function generateMetadata({ params }: PageProps<"/accounts/[id]">):
 }
 
 /**
- * An account's page reads its figures from `/api/v1` (rewrite plan R3). Two reads stay here: the IBAN,
- * which no answer carries (H45) and whose display Mattia has not decided; and the row of the
- * connection the account comes from, since no answer ties an account to its connection yet.
+ * An account's page reads its figures from `/api/v1` (rewrite plan R3). Besides the not-found check,
+ * two reads stay here: the IBAN, which no answer carries (H45) and whose display Mattia has not
+ * decided; and the row of the connection the account comes from, since `GET /connections` does not
+ * answer the row's state (`syncStatus`, which needs `consecutiveFailures`) and that domain rule is
+ * not browser-safe.
  */
 export default async function AccountDetailPage({ params, searchParams }: PageProps<"/accounts/[id]">) {
   const ctx = await requireSession();

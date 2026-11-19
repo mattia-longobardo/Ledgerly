@@ -21,20 +21,6 @@ export function colorField(
   return { value: colorFor(account, index), automatic: account.color === null };
 }
 
-/**
- * shortcut: `/api/v1` answers no change between two points of a chart (a step of the account's
- * series, the window of the net worth card), so this is the domain's `changeBetween` over two of its
- * figures; drop it once the views answer those changes.
- */
-export function changeOf(
-  last: Cents | null,
-  first: Cents | null,
-): { cents: Cents | null; fraction: number | null } {
-  if (last === null || first === null) return { cents: null, fraction: null };
-  const cents = last - first;
-  return { cents, fraction: first === 0n ? null : Number(cents) / Math.abs(Number(first)) };
-}
-
 /** An amount of `/api/v1` (a decimal, or null when unknown) as the cents the formatting reads. */
 export function centsOf(amount: string | null): Cents | null {
   return amount === null ? null : parseCents(amount);

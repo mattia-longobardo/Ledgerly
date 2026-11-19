@@ -840,7 +840,7 @@
   "no-restricted-syntax": {
     "apps/web/src/app/.well-known/oauth-protected-resource/[[...resource]]/route.ts": 1,
     "apps/web/src/app/(app)/accounts/[id]/delete-account.tsx": 3,
-    "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 6,
+    "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 4,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 1,
     "apps/web/src/app/(app)/banks/connect/accounts-step.tsx": 2,
     "apps/web/src/app/(app)/banks/connect/page.tsx": 7,

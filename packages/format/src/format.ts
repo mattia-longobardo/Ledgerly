@@ -185,6 +185,21 @@ export function formatDecimalText(
     : `${sign}${body}${style.gap}${style.symbol}`;
 }
 
+/**
+ * A stored fraction ("0.027500") as the percentage it is, trimmed ("2.75"): cut, never rounded, at
+ * hundredths of a basis point, with no float on the way.
+ */
+export function fractionToPercent(fraction: string): string {
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(fraction.trim());
+  if (!match) throw new RangeError(`Not a decimal: "${fraction}"`);
+  const [, sign, whole, digits = ""] = match;
+  const magnitude = BigInt(whole) * 1_000_000n + BigInt((digits + "000000").slice(0, 6));
+  const scaled = sign === "-" ? -magnitude : magnitude; // the fraction × 10⁶
+  const percent = scaled / 10_000n;
+  const decimals = (scaled % 10_000n).toString().padStart(4, "0").replace(/0+$/, "");
+  return decimals === "" ? `${percent}` : `${percent}.${decimals}`;
+}
+
 export function formatPercent(
   fraction: number | null,
   format: NumberFormat,

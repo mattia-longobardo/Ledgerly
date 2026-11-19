@@ -269,13 +269,9 @@ export function validateTiers(tiers: readonly Tier[]): boolean {
   return true;
 }
 
-/** A stored fraction ("0.027500") as the percentage it is, trimmed ("2.75"). */
-export function fractionToPercent(fraction: string): string {
-  const scaled = fixedFromDecimal(fraction) / 1_000_000n; // the fraction × 10⁶: hundredths of a basis point
-  const whole = scaled / 10_000n;
-  const decimals = (scaled % 10_000n).toString().padStart(4, "0").replace(/0+$/, "");
-  return decimals === "" ? `${whole}` : `${whole}.${decimals}`;
-}
+// A stored fraction as its percentage lives in `packages/format`, which the clients share: this
+// entry keeps the domain's path for the files that import it.
+export { fractionToPercent } from "@ledgerly/format/format";
 
 /**
  * Where the bank's payment of a settlement is looked for (plan F4 §3.4.5): from the period's last

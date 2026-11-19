@@ -1,27 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PALETTE } from "@ledgerly/design-tokens";
 import { shareOf } from "@ledgerly/domain/accounts";
-import { changeOf as changeBetween, colorField, colorFor } from "./display";
-
-describe("changeBetween", () => {
-  it("is unknown when either end is unknown, never zero", () => {
-    expect(changeBetween(null, 100n)).toEqual({ cents: null, fraction: null });
-    expect(changeBetween(100n, null)).toEqual({ cents: null, fraction: null });
-  });
-
-  it("measures the change against the earlier value", () => {
-    expect(changeBetween(150n, 100n)).toEqual({ cents: 50n, fraction: 0.5 });
-    expect(changeBetween(50n, 100n)).toEqual({ cents: -50n, fraction: -0.5 });
-  });
-
-  it("gives no percentage when the earlier value was zero", () => {
-    expect(changeBetween(50n, 0n)).toEqual({ cents: 50n, fraction: null });
-  });
-
-  it("measures a rise from a negative balance as a rise", () => {
-    expect(changeBetween(-50n, -100n)).toEqual({ cents: 50n, fraction: 0.5 });
-  });
-});
+import { colorField, colorFor } from "./display";
 
 describe("shareOf", () => {
   it("is null rather than a misleading zero when the total is unknown or empty", () => {

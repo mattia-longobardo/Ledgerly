@@ -6,6 +6,7 @@ import {
   formatWholePercent,
   formatMoney,
   formatPercent,
+  fractionToPercent,
   type NumberStyle,
   numberSeparators,
 } from "./format";
@@ -189,5 +190,13 @@ describe("formatPercent and formatWholePercent", () => {
     expect(plain(formatPercent(0.297, style({ decimalSeparator: "." })))).toBe("29.7 %");
     expect(plain(formatWholePercent(1234, style({ decimalSeparator: "." })))).toBe("1,234 %");
     expect(plain(formatPercent(0.297, style()))).toBe("29,7 %");
+  });
+});
+
+describe("fractionToPercent", () => {
+  it("turns a stored fraction into its percentage, exactly", () => {
+    expect(fractionToPercent("0.027500")).toBe("2.75");
+    expect(fractionToPercent("0.260000")).toBe("26");
+    expect(fractionToPercent("0.000125")).toBe("0.0125");
   });
 });

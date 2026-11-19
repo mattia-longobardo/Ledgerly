@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 206,
+    "deepImports": 205,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -363,7 +363,6 @@
   ],
   "deepImports": [
     "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/switch-check",
-    "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/undo-switch",
     "app/(app)/accounts/new/page.tsx → modules/accounts/ui/account-form",
     "app/(app)/budgets/[id]/page.tsx → modules/budgets/ui/alerts-form",
     "app/(app)/budgets/[id]/page.tsx → modules/budgets/ui/present",
