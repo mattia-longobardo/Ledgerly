@@ -3,6 +3,11 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · the web session's own rate limit (decision H57)
+
+- The web's session cookie on `/api/v1` has 1200 calls per minute per person; a token (Client API,
+  MCP, script) keeps 120 per minute per client. `X-RateLimit-Limit` says the caller's allowance.
+
 ## 2026-11-19 · the last figures of accounts (release R2, accounts, completion)
 
 The changes of the charts, the connection an account comes from and the counts of a switch are

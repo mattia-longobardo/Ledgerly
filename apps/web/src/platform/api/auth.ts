@@ -10,7 +10,7 @@ import type { ApiEnv } from "@ledgerly/api";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { fail } from "./errors";
-import { MAX_PER_WINDOW, takeSlot } from "./rate-limit";
+import { MAX_PER_WINDOW, SESSION_MAX_PER_WINDOW, takeSlot } from "./rate-limit";
 
 /**
  * Who called: an OAuth access token with `aud` = `/api/v1` (docs/auth-design.md T5), or the web's
@@ -21,6 +21,8 @@ interface ApiIdentity {
   ctx: Ctx;
   scopes: readonly string[];
   budget: string;
+  /** The requests a minute `budget` allows: a token's, or the web session's own (H57). */
+  limit: number;
 }
 
 /** What the web's session may do: everything the person may, `admin` only for an admin. */
@@ -45,7 +47,15 @@ async function identify(value: string): Promise<ApiIdentity | null> {
   // A former personal access token (`pat_…`) is not a JWT: it ends here, as an invalid token.
   if (!looksLikeJwt(value)) return null;
   const oauth: AccessIdentity | null = await authenticateAccessToken(value, "api");
-  return oauth && { kind: "oauth", ctx: oauth.ctx, scopes: oauth.scopes, budget: `client:${oauth.clientId}` };
+  return (
+    oauth && {
+      kind: "oauth",
+      ctx: oauth.ctx,
+      scopes: oauth.scopes,
+      budget: `client:${oauth.clientId}`,
+      limit: MAX_PER_WINDOW,
+    }
+  );
 }
 
 /** The web's session in the request's cookie, or null (no session, TOTP setup owed, blocked). */
@@ -53,7 +63,7 @@ async function identifySession(headers: Headers): Promise<ApiIdentity | null> {
   const ctx = await sessionCtxOf(headers);
   if (!ctx) return null;
   const scopes = ctx.role === "admin" ? [...SESSION_SCOPES, "admin"] : SESSION_SCOPES;
-  return { kind: "session", ctx, scopes, budget: `user:${ctx.userId}` };
+  return { kind: "session", ctx, scopes, budget: `user:${ctx.userId}`, limit: SESSION_MAX_PER_WINDOW };
 }
 
 /**
@@ -111,8 +121,8 @@ export function withToken(scope: ContractScope): MiddlewareHandler<ApiEnv> {
     if (identity.kind === "session" && !sameOriginWrite(c)) return fail(c, "forbidden");
 
     // One budget per client (D6: key = client_id), one per person for the web's session.
-    const verdict = await takeSlot(identity.budget);
-    c.header("X-RateLimit-Limit", String(MAX_PER_WINDOW));
+    const verdict = await takeSlot(identity.budget, new Date(), identity.limit);
+    c.header("X-RateLimit-Limit", String(identity.limit));
     c.header("X-RateLimit-Remaining", String(verdict.remaining));
     if (!verdict.allowed) {
       c.header("Retry-After", String(verdict.retryAfter));

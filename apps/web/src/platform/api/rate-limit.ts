@@ -12,10 +12,16 @@ import {
 } from "@ledgerly/domain/platform/limits";
 
 export const WINDOW_MS = 60_000;
+/** A token's allowance: a client API, MCP, a script. */
 export const MAX_PER_WINDOW = 120;
+/**
+ * The web's own session, per person (decision H57): a client screen reads 5-8 routes, so a person who
+ * opens pages in a row, or the E2E suite, passes 120; 1200 still stops a page that fetches in a loop.
+ */
+export const SESSION_MAX_PER_WINDOW = 1200;
 
-export function takeSlot(key: string, now: Date = new Date()): Promise<RateVerdict> {
-  return takeSharedSlot(`api:${key}`, { max: MAX_PER_WINDOW, windowMs: WINDOW_MS }, now);
+export function takeSlot(key: string, now: Date = new Date(), max = MAX_PER_WINDOW): Promise<RateVerdict> {
+  return takeSharedSlot(`api:${key}`, { max, windowMs: WINDOW_MS }, now);
 }
 
 /** For the tests: every window goes, so a test does not inherit another's. */
