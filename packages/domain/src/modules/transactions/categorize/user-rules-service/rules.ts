@@ -4,6 +4,7 @@ import { getDb, type Tx } from "../../../../platform/db/client";
 import { userScoped } from "../../../../platform/db/scope";
 import { categories, categoryRules, labels, transactions } from "../../schema";
 import { TransactionError } from "../../service";
+import { requireCategory } from "../../taxonomy";
 import { RULE_LIMIT, type RuleCondition, type RuleInput, ruleInputSchema } from "../user-rules";
 
 type Who = Pick<Ctx, "userId">;
@@ -89,17 +90,10 @@ export async function rulesForCategory(
 }
 
 async function requireOwned(tx: Tx, ctx: Who, input: RuleInput): Promise<void> {
-  const [category] = await tx
-    .select({ id: categories.id })
-    .from(categories)
-    .where(
-      and(
-        eq(categories.id, input.categoryId),
-        userScoped(ctx).owns(categories),
-        isNull(categories.archivedAt),
-      ),
-    );
-  if (!category) throw new TransactionError("invalid");
+  await requireCategory(ctx, input.categoryId, () => new TransactionError("invalid"), {
+    active: true,
+    executor: tx,
+  });
   if (input.labelIds.length > 0) {
     const own = await tx
       .select({ id: labels.id })

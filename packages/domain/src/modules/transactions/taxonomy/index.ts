@@ -10,6 +10,7 @@ export {
   alignCategoryTypesToMovements,
   listCategoriesWithUsage,
   getCategory,
+  requireCategory,
 } from "./category-reads";
 export type { Label, TreeCategory, ProviderGroupRef } from "./category-reads";
 export {

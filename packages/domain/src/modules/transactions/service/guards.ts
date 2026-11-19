@@ -14,7 +14,8 @@ import {
 import { listInstancePlugins } from "../../../platform/plugins/queries";
 import { type TransactionPatch, normalizeIban, type OwnIban } from "../rules";
 import { type Transaction, getTransaction } from "../queries";
-import { categories, labels, transactionLabels, transactions } from "../schema";
+import { labels, transactionLabels, transactions } from "../schema";
+import { requireCategory } from "../taxonomy";
 
 /**
  * Every failure a caller is expected to handle. `provider_owned` is the refusal of §7.2: payee,
@@ -92,11 +93,7 @@ export async function requireTransaction(ctx: Pick<Ctx, "userId">, id: string): 
 /** A category is only ever the acting user's own: a forged id from another user is a refusal. */
 export async function requireOwnCategory(ctx: Pick<Ctx, "userId">, categoryId: string | null): Promise<void> {
   if (categoryId === null) return;
-  const [row] = await getDb()
-    .select({ id: categories.id })
-    .from(categories)
-    .where(and(eq(categories.id, categoryId), userScoped(ctx).owns(categories)));
-  if (!row) throw new TransactionError("invalid_reference");
+  await requireCategory(ctx, categoryId, () => new TransactionError("invalid_reference"));
 }
 
 /**

@@ -16,7 +16,7 @@ import { TransactionError } from "../../service";
 import { type MergeCategory, mergeProposals, pairKey } from "../review-rules";
 import { DEFAULT_GROUPS } from "../tables";
 import { shownText } from "../text";
-import { requireCategory } from "./changes";
+import { requireCategory } from "../../taxonomy";
 import { AUTOMATIC_CATEGORY_ORIGINS } from "../../rules";
 
 type Who = Pick<Ctx, "userId">;
@@ -141,8 +141,9 @@ const ordered = (a: string, b: string) => (a < b ? { firstId: a, secondId: b } :
 /** "They are different": the proposal for this pair does not come back. */
 export async function dismissMergeProposal(ctx: Who, a: string, b: string): Promise<void> {
   const [first, second] = z.tuple([z.uuid(), z.uuid()]).parse([a, b]);
-  await requireCategory(ctx, first);
-  await requireCategory(ctx, second);
+  for (const id of [first, second]) {
+    await requireCategory(ctx, id, () => new TransactionError("invalid_reference"), { active: true });
+  }
   await getDb()
     .insert(categoryMergeDismissals)
     .values(userScoped(ctx).stamp(ordered(first, second)))

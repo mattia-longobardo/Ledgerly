@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97330,
-    "duplicatedLines": 17145,
-    "percent": 17.62,
-    "blocks": 1259
+    "lines": 97333,
+    "duplicatedLines": 17143,
+    "percent": 17.61,
+    "blocks": 1257
   },
   "units": {
     "api": {
@@ -78,9 +78,9 @@
     },
     "modules/pockets": {
       "lines": 1676,
-      "duplicatedLines": 794,
-      "percent": 47.37,
-      "blocks": 43
+      "duplicatedLines": 795,
+      "percent": 47.43,
+      "blocks": 42
     },
     "modules/subscriptions": {
       "lines": 1879,
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12398,
-      "duplicatedLines": 1942,
-      "percent": 15.66,
-      "blocks": 156
+      "lines": 12401,
+      "duplicatedLines": 1939,
+      "percent": 15.64,
+      "blocks": 155
     },
     "modules/users": {
       "lines": 874,
@@ -599,7 +599,7 @@
     "modules/pockets/jobs.ts": 19,
     "modules/pockets/queries.ts": 81,
     "modules/pockets/schema.ts": 111,
-    "modules/pockets/service.ts": 151,
+    "modules/pockets/service.ts": 152,
     "modules/pockets/ui/pocket-actions.tsx": 337,
     "modules/subscriptions/actions.ts": 43,
     "modules/subscriptions/jobs.ts": 9,
@@ -618,7 +618,7 @@
     "modules/timeoff/ui/settings-forms.tsx": 45,
     "modules/transactions/actions.ts": 56,
     "modules/transactions/categorize/actions.ts": 45,
-    "modules/transactions/categorize/review/changes.ts": 78,
+    "modules/transactions/categorize/review/changes.ts": 72,
     "modules/transactions/categorize/review/merges.ts": 66,
     "modules/transactions/categorize/service.ts": 50,
     "modules/transactions/categorize/user-rules-actions.ts": 30,
@@ -642,7 +642,7 @@
     "modules/transactions/sending.ts": 9,
     "modules/transactions/service/duplicates.ts": 9,
     "modules/transactions/service/edits.ts": 57,
-    "modules/transactions/service/guards.ts": 18,
+    "modules/transactions/service/guards.ts": 21,
     "modules/transactions/service/provider.ts": 26,
     "modules/transactions/source-categories/choosing.ts": 34,
     "modules/transactions/source-categories/reading.ts": 48,

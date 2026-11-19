@@ -4,8 +4,9 @@ import type { Ctx } from "../../../../platform/context";
 import { addDays, type CivilDate, civilDateIn, startOfDayIn } from "../../../../shared/dates";
 import { getDb } from "../../../../platform/db/client";
 import { userScoped } from "../../../../platform/db/scope";
-import { categories, type CategoryUndoRow, categoryUndos, transactions } from "../../schema";
+import { type CategoryUndoRow, categoryUndos, transactions } from "../../schema";
 import { retypeMovements } from "../../macro";
+import { requireCategory } from "../../taxonomy";
 import { chosenBy, TransactionError } from "../../service";
 import { type Review, reviewGroups, type ReviewRow } from "../review-rules";
 import { shownText } from "../text";
@@ -127,16 +128,6 @@ const UNDO_COLUMNS = {
   locallyEdited: transactions.locallyEdited,
 };
 
-export async function requireCategory(ctx: Who, categoryId: string): Promise<void> {
-  const [row] = await getDb()
-    .select({ id: categories.id })
-    .from(categories)
-    .where(
-      and(eq(categories.id, categoryId), userScoped(ctx).owns(categories), isNull(categories.archivedAt)),
-    );
-  if (!row) throw new TransactionError("invalid_reference");
-}
-
 /**
  * Confirms or sets the category of several movements, all of them or none, and keeps what they
  * were for "Undo". Only a movement the cascade reads is touched: one with a category a person or
@@ -151,7 +142,11 @@ export async function changeCategories(
   change: Change,
 ): Promise<{ count: number; undoId: string | null }> {
   const wanted = [...new Set(idsSchema.parse(ids))];
-  if (change.kind === "set" && change.categoryId !== null) await requireCategory(ctx, change.categoryId);
+  if (change.kind === "set" && change.categoryId !== null) {
+    await requireCategory(ctx, change.categoryId, () => new TransactionError("invalid_reference"), {
+      active: true,
+    });
+  }
   return getDb().transaction(async (tx) => {
     const before: CategoryUndoRow[] = await tx
       .select(UNDO_COLUMNS)

@@ -1,7 +1,7 @@
 import { and, asc, count, eq, gte, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "../../../platform/context";
-import { getDb } from "../../../platform/db/client";
+import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { EntityType } from "../../../platform/integrations/rules";
 import { CATEGORY_TYPES, categoryColor, type CategoryType, NAME_MAX, treeOrder } from "../rules";
@@ -366,7 +366,30 @@ export async function parentFor(
 }
 
 export async function getCategory(ctx: Pick<Ctx, "userId">, id: string): Promise<Category> {
-  const row = await categoryById(ctx, parsed(idSchema, id));
-  if (!row) throw new TaxonomyError("not_found");
+  return requireCategory(ctx, parsed(idSchema, id), () => new TaxonomyError("not_found"));
+}
+
+/**
+ * A category of the acting person, or `refusal()` thrown: the module's one check that a category id
+ * a caller hands in is the person's (`requireAccount`'s twin), so a forged id of another user is
+ * refused. `active` refuses an archived one too; each caller keeps its own error.
+ */
+export async function requireCategory(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  refusal: () => Error,
+  { active = false, executor = getDb() }: { active?: boolean; executor?: Db | Tx } = {},
+): Promise<Category> {
+  const [row] = await executor
+    .select()
+    .from(categories)
+    .where(
+      and(
+        eq(categories.id, id),
+        userScoped(ctx).owns(categories),
+        active ? isNull(categories.archivedAt) : undefined,
+      ),
+    );
+  if (!row) throw refusal();
   return row;
 }
