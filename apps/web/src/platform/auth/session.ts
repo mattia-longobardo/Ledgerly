@@ -3,17 +3,12 @@ import type { Route } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
-import { getPreferences } from "@ledgerly/domain/users";
-import type { Preferences } from "@ledgerly/domain/users";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { readEnv } from "@ledgerly/domain/platform/env";
-import { hasPasswordAccount } from "@ledgerly/domain/platform/auth";
 import { getAuth } from "@ledgerly/domain/platform/auth";
-import { TWO_FACTOR_SETUP_PATH, twoFactorSetupRequired } from "@ledgerly/domain/platform/auth";
-import { buildCtx } from "@ledgerly/domain/users";
+import { TWO_FACTOR_SETUP_PATH } from "@ledgerly/domain/platform/auth";
+import { ctxOf, type Preferences, signedInWith } from "./session-lookup";
 
-/** The session's context: the one mapping of the domain (audit USR-3). */
-export { buildCtx as ctxFrom };
+export { ctxFrom } from "./session-lookup";
 
 /**
  * The signed-in user and their saved preferences, or null. Cached per request. `setupPending`: the
@@ -26,45 +21,13 @@ const getSignedIn = cache(async () =>
   signedInWith(await headers()),
 );
 
-/** The person whose session cookie `requestHeaders` carry, as {@link getSignedIn} answers it. */
-async function signedInWith(requestHeaders: Headers) {
-  const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
-  if (!session) return null;
-  const policy = readEnv().TWO_FACTOR_POLICY;
-  const twoFactorEnabled = session.user.twoFactorEnabled === true;
-  // The account lookup only when it can change the answer: most requests skip it.
-  const setupPending =
-    policy === "required" &&
-    !twoFactorEnabled &&
-    twoFactorSetupRequired({
-      policy,
-      twoFactorEnabled,
-      hasPassword: await hasPasswordAccount(session.user.id),
-    });
-  return {
-    user: session.user,
-    preferences: await getPreferences({ userId: session.user.id }),
-    setupPending,
-  };
-}
-
 /**
  * The signed-in user's context, or null. Cached per request. A session still waiting for its TOTP
  * setup has no context: every page, action and route that needs one treats it as signed out.
  */
 export const getOptionalCtx = cache(async (): Promise<Ctx | null> => {
-  const signedIn = await getSignedIn();
-  return signedIn && !signedIn.setupPending ? buildCtx(signedIn.user, signedIn.preferences) : null;
+  return ctxOf(await getSignedIn());
 });
-
-/**
- * The context of the session a request's cookie carries, or null — the same rule as
- * {@link getOptionalCtx}, for a caller that holds the request (the guard of `/api/v1`).
- */
-export async function sessionCtxOf(requestHeaders: Headers): Promise<Ctx | null> {
-  const signedIn = await signedInWith(requestHeaders);
-  return signedIn && !signedIn.setupPending ? buildCtx(signedIn.user, signedIn.preferences) : null;
-}
 
 /**
  * The signed-in user's context with the id of the session they hold, or null. For the one flow

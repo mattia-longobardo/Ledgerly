@@ -2,7 +2,7 @@ import "server-only";
 import type { Context, MiddlewareHandler } from "hono";
 import { type AccessIdentity, authenticateAccessToken } from "@/platform/auth/access-token";
 import { bearerChallenge, looksLikeJwt } from "@/platform/auth/access-token-rules";
-import { sessionCtxOf } from "@/platform/auth/session";
+import { sessionCtxOf } from "@/platform/auth/session-lookup";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { resourceMetadataUrl } from "@ledgerly/domain/platform/auth";
 import { type ContractScope, SESSION_HEADER } from "@ledgerly/api-contract";
