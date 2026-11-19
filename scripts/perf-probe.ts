@@ -75,7 +75,9 @@ const ENTRIES_PER_ACCOUNT = 1_200;
 const [{ current_database: database }] = (
   await getDb().execute<{ current_database: string }>(sql`select current_database()`)
 ).rows;
-if (!database.endsWith("_test")) throw new Error(`Refusing to run against "${database}"`);
+// `ledgerly_test_2` is the client stream's test database (scripts/perf-on-test.sh).
+if (!database.endsWith("_test") && database !== "ledgerly_test_2")
+  throw new Error(`Refusing to run against "${database}"`);
 
 // A person who can sign in, not a bare row: the routes are measured with a real access token.
 const auth = await getAuth();
