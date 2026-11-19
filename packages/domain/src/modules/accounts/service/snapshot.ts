@@ -5,8 +5,8 @@ import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { convertCents } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
-import { type Cents, sumCents } from "../../../shared/money";
-import { isStale } from "../rules";
+import type { Cents } from "../../../shared/money";
+import { isStale, netWorth } from "../rules";
 import { readingsAt } from "../queries";
 import { accounts, balanceEntries, snapshotRuns } from "../schema";
 
@@ -83,22 +83,23 @@ export async function runSnapshot(
   }
 
   const currency = ctx.displayCurrency;
-  const currencyOf = new Map(open.map((account) => [account.id, account.currency]));
   const rates = await ratesOn(
-    open.some((account) => account.currency !== currency) ? [currency, ...currencyOf.values()] : [],
+    open.some((account) => account.currency !== currency)
+      ? [currency, ...open.map((account) => account.currency)]
+      : [],
     on,
     on,
   );
-  const { total } = sumCents(
-    values.map((value) =>
-      convertCents(
-        value.balanceCents as Cents,
-        currencyOf.get(value.accountId) ?? currency,
-        currency,
-        on,
-        rates,
-      ),
-    ),
+  // The one total of the accounts (ACC-3), with the filter of the snapshot (decision D2): the
+  // accounts «in the snapshot» that have a balance, each converted at the month end's rate.
+  const { total } = netWorth(
+    open.flatMap((account) => {
+      const balance = balances.get(account.id);
+      return balance === undefined
+        ? []
+        : [{ account, cents: convertCents(balance, account.currency, currency, on, rates) }];
+    }),
+    "inSnapshot",
   );
   const outcome: SnapshotOutcome = {
     month: monthKey(month),

@@ -12,6 +12,7 @@ import {
   estimatedMonths,
   isStale,
   monthEndSeries,
+  netWorth,
   totalSeries,
 } from "../rules";
 import type { accounts, snapshotRuns } from "../schema";
@@ -118,16 +119,19 @@ export function viewRow(
   };
 }
 
+const BUCKETS: readonly Bucket[] = ["cash", "savings", "investments", "other"];
+
+/** Today's net worth by bucket: the same total as the net worth, on each bucket's accounts. */
 function bucketTotals(counted: readonly AccountRow[]): BucketTotals {
   const buckets = emptyBuckets();
-  for (const row of counted) {
-    const bucket = buckets[bucketOf(row.account)];
-    bucket.count += 1;
-    if (row.display.balance === null) bucket.partial = true;
-    else bucket.total = (bucket.total ?? 0n) + row.display.balance;
+  for (const bucket of BUCKETS) {
+    const own = counted.filter((row) => bucketOf(row.account) === bucket);
+    buckets[bucket] = { ...netWorth(own.map(todayValue), "inNetWorth"), count: own.length };
   }
   return buckets;
 }
+
+const todayValue = (row: AccountRow) => ({ account: row.account, cents: row.display.balance });
 
 /**
  * The totals of the rows: the accounts «in the net worth» that are not archived, summed in the
@@ -140,11 +144,12 @@ export function viewTotals(
   convert: Convert,
 ): Omit<AccountsView, "currency" | "months" | "rows" | "lastSnapshot"> {
   const counted = rows.filter((row) => row.account.inNetWorth && row.account.state !== "archived");
-  const netWorth = totalSeries(
+  const series = totalSeries(
     counted.map((row) => row.display.held),
     window.months.length,
   );
-  const current = netWorth.at(-1) ?? { total: null, partial: false };
+  // Today's total and the buckets are one sum of the same rows (ACC-1).
+  const current = netWorth(counted.map(todayValue), "inNetWorth");
   // The net worth at the end of the month before `end`, whatever the window (decision D1, ACC-2):
   // the same held value Overview's chart has there, so a one-month window is no longer `null`.
   const heldBefore = (row: AccountRow) =>
@@ -154,7 +159,7 @@ export function viewTotals(
     1,
   );
   return {
-    netWorth,
+    netWorth: series,
     netWorthEstimated: window.months.map((_month, index) => counted.some((row) => row.estimated[index])),
     total: current.total,
     totalPartial: current.partial,

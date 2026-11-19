@@ -990,7 +990,6 @@
     "apps/web/src/ui/url.ts": 1,
     "packages/domain/src/modules/accounts/rules.ts": 5,
     "packages/domain/src/modules/accounts/service/provider-accounts.ts": 3,
-    "packages/domain/src/modules/accounts/service/snapshot.ts": 1,
     "packages/domain/src/modules/accounts/switching.ts": 2,
     "packages/domain/src/modules/budgets/service.ts": 1,
     "packages/domain/src/modules/funds/forms.ts": 3,

@@ -364,6 +364,28 @@ export function totalSeries(
   return Array.from({ length }, (_, i) => sumCents(series.map((one) => one[i] ?? null)));
 }
 
+/** Which accounts a total counts (decision D2): «in the net worth», or «in the snapshot». */
+export type TotalOf = "inNetWorth" | "inSnapshot";
+
+/**
+ * The one total of the accounts (ACC-1, ACC-3): the open accounts the filter names, each value
+ * already in the display currency, summed; partial when a value is unknown. The net worth of
+ * Overview, its buckets and the monthly snapshot are this sum, with their own filter.
+ */
+export function netWorth(
+  values: readonly {
+    account: { inNetWorth: boolean; inSnapshot: boolean; state: string };
+    cents: Cents | null;
+  }[],
+  filter: TotalOf,
+): { total: Cents | null; partial: boolean } {
+  return sumCents(
+    values
+      .filter((value) => value.account[filter] && value.account.state !== "archived")
+      .map((value) => value.cents),
+  );
+}
+
 type AlertKind = "low_balance" | "stale_sync";
 
 export interface AccountAlert {
