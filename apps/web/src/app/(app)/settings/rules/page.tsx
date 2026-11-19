@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { listAccounts } from "@ledgerly/domain/accounts";
-import { memoryKey } from "@ledgerly/domain/transactions";
-import type { RuleCondition } from "@ledgerly/domain/transactions";
-import { listRules } from "@ledgerly/domain/transactions";
-import { getTransaction } from "@ledgerly/domain/transactions";
+import { listRules, ruleDraft } from "@ledgerly/domain/transactions";
 import { listCategories, listLabels } from "@ledgerly/domain/transactions";
 import { categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
 import { requireSession } from "@/platform/auth/session";
@@ -62,35 +59,15 @@ export default async function SettingsRulesPage({ searchParams }: PageProps<"/se
     }),
   );
 
-  // The editor filled from a movement (§4.7), or with a category chosen (§5.4).
-  let draft: RuleDraft | null = null;
+  // The editor filled from a movement (§4.7), or with a category chosen (§5.4): a category that
+  // cannot be chosen is left out, and alone it gives no draft.
   const fromId = one("from");
-  const categoryId = one("category");
-  if (fromId !== null) {
-    const movement = await getTransaction(ctx, fromId);
-    if (movement !== null) {
-      const text = memoryKey({ ...movement, counterparty: movement.counterpartyName });
-      const conditions: RuleCondition[] = [];
-      if (movement.counterpartyName) {
-        conditions.push({
-          field: "counterparty",
-          op: "equals",
-          value: movement.counterpartyName.slice(0, 100),
-        });
-      } else if (text !== "") {
-        conditions.push({ field: "text", op: "contains", value: text.slice(0, 100) });
-      }
-      conditions.push({ field: "account", accountIds: [movement.accountId] });
-      const chosen = categoryId ?? movement.categoryId;
-      draft = {
-        name: (movement.counterpartyName ?? movement.payee ?? text).slice(0, 80),
-        conditions,
-        categoryId: chosen !== null && open.some((category) => category.id === chosen) ? chosen : null,
-      };
-    }
-  } else if (categoryId !== null && open.some((category) => category.id === categoryId)) {
-    draft = { name: "", conditions: [{ field: "text", op: "contains", value: "" }], categoryId };
-  }
+  const isOpen = (id: string | null) => id !== null && open.some((category) => category.id === id);
+  const found = await ruleDraft(ctx, { from: fromId, category: one("category") });
+  const draft: RuleDraft | null =
+    found === null || (fromId === null && !isOpen(found.categoryId))
+      ? null
+      : { ...found, categoryId: isOpen(found.categoryId) ? found.categoryId : null };
 
   const currencies = [...new Set(["EUR", ...accounts.map((account) => account.currency)])].sort();
   return (

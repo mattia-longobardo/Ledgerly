@@ -7,9 +7,8 @@ import {
   applyRule,
   createRule,
   deleteRule,
-  getTransaction,
   listRules,
-  memoryKey,
+  ruleDraft,
   previewRule,
   previewSavedRule,
   reorderRules,
@@ -100,39 +99,8 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   });
   // The editor filled from a movement (§4.7), or with a category chosen (§5.4): the page's rule.
   serve(app, guard, rules.getRuleDraft, async ({ ctx, query }) => {
-    if (query.from !== undefined) {
-      const movement = await getTransaction(ctx, query.from);
-      if (movement === null) return { draft: null };
-      const text = memoryKey({ ...movement, counterparty: movement.counterpartyName });
-      const conditions: RuleCondition[] = [];
-      if (movement.counterpartyName) {
-        conditions.push({
-          field: "counterparty",
-          op: "equals",
-          value: movement.counterpartyName.slice(0, 100),
-        });
-      } else if (text !== "") {
-        conditions.push({ field: "text", op: "contains", value: text.slice(0, 100) });
-      }
-      conditions.push({ field: "account", accountIds: [movement.accountId] });
-      return {
-        draft: {
-          name: (movement.counterpartyName ?? movement.payee ?? text).slice(0, 80),
-          conditions: conditions.map(wireCondition),
-          categoryId: query.category ?? movement.categoryId,
-        },
-      };
-    }
-    if (query.category !== undefined) {
-      return {
-        draft: {
-          name: "",
-          conditions: [{ field: "text" as const, op: "contains" as const, value: "" }],
-          categoryId: query.category,
-        },
-      };
-    }
-    return { draft: null };
+    const draft = await ruleDraft(ctx, { from: query.from ?? null, category: query.category ?? null });
+    return { draft: draft === null ? null : { ...draft, conditions: draft.conditions.map(wireCondition) } };
   });
   serve(app, guard, rules.previewRule, async ({ ctx, body }) =>
     previewOf(ctx, await refusing(previewRule(ctx, domainRule(body.rule), body.ruleId))),

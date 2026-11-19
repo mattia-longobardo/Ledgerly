@@ -17,7 +17,6 @@ export {
 export type { MergeProposal, MergeUndo } from "./categorize/review";
 export { categorise, isPreparing, suggestFor } from "./categorize/service";
 export { DEFAULT_GROUPS } from "./categorize/tables";
-export { memoryKey } from "./categorize/text";
 export {
   applyRule,
   createRule,
@@ -27,6 +26,7 @@ export {
   previewSavedRule,
   reorderRules,
   restoreRule,
+  ruleDraft,
   rulesForCategory,
   setRuleActive,
   undoRuleApply,
@@ -43,7 +43,6 @@ export {
   chargeCandidates,
   expensesView,
   facetCounts,
-  getTransaction,
   listTransactions,
   manualMovementsByAccount,
   movementSpanByAccount,

@@ -19,3 +19,4 @@ export { applyRulesToNew } from "./new-movements";
 export { previewRule, previewSavedRule } from "./previews";
 export type { RulePreview } from "./previews";
 export { applyRule, undoRuleApply } from "./applying";
+export { ruleDraft } from "./draft";
