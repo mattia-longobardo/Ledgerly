@@ -4,7 +4,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { profile } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { DISPLAY_CURRENCIES } from "@ledgerly/domain/platform/fx/client";
 import type { Preferences } from "@ledgerly/domain/users/client";
@@ -13,8 +13,6 @@ import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { NameForm } from "./name-form";
 import { PreferencesForm } from "./preferences-form";
-
-const { profile } = SETTINGS;
 
 /**
  * The saved preferences as the form holds them: the API answers the display currency as any code,

@@ -1,13 +1,11 @@
 // The calls of Admin › Users to `/api/v1/people` (rewrite plan R3): each answers `{ ok, outcome }` or
 // the use case's refusal code, as the Server Actions they replace did.
-import { SETTINGS } from "@ledgerly/api-contract";
+import { people } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
 import type { AdminErrorCode, InviteOutcome, ResetOutcome } from "./admin";
 
 type AdminResult<T> = { ok: true; outcome: T } | { ok: false; error: AdminErrorCode };
-
-const { people } = SETTINGS;
 
 const ADMIN_CODES: readonly AdminErrorCode[] = [
   "forbidden",

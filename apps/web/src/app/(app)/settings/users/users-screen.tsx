@@ -2,7 +2,7 @@
 
 // Admin › Users, read from `/api/v1/people` (rewrite plan R3): who may sign in, how, and with what role.
 import { useTranslations } from "next-intl";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { people, profile } from "@ledgerly/api-contract/settings";
 import { civilDateIn } from "@ledgerly/format/dates";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/format/format";
 import { useApi } from "@ledgerly/ui/data";
@@ -11,8 +11,6 @@ import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { InvitePerson } from "@/modules/users/ui/invite-person";
 import { PeopleTable, type PersonView } from "@/modules/users/ui/people-table";
-
-const { people, profile } = SETTINGS;
 
 export function UsersScreen() {
   const text = useTranslations("settings.people");

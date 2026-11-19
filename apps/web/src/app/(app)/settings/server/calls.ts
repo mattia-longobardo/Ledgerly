@@ -1,13 +1,11 @@
 // The calls of Admin › Server to `/api/v1/server` (rewrite plan R3): each answers what the Server
 // Action it replaces answered, so a card reads one shape whatever sent it. A secret goes in and never
 // comes back: the view the cards read carries a hint, never the value.
-import { SETTINGS } from "@ledgerly/api-contract";
+import { server } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
 
 type SaveResult = { ok: true } | { ok: false; error: "invalid" | "forbidden" };
-
-const { server } = SETTINGS;
 
 /** A setting the API refused: `invalid` or `forbidden`, as the use case named it; anything else is thrown. */
 function refusedSetting(error: unknown): { ok: false; error: "invalid" | "forbidden" } {

@@ -15,6 +15,7 @@ const API_ERROR_CODES = [
   "unsupported_format",
   "rate_limited",
   "server_error",
+  "unavailable",
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
@@ -32,6 +33,8 @@ export const API_ERRORS: Record<ApiErrorCode, number> = {
   unsupported_format: 415,
   rate_limited: 429,
   server_error: 500,
+  // The server cannot compute the answer now (a check of the plugins): try again later.
+  unavailable: 503,
 };
 
 /** The body of every answer that is not a 2xx. */

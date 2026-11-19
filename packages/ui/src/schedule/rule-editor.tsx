@@ -1,6 +1,6 @@
 "use client";
 
-import { MIN_SYNC_GAP_MINUTES } from "@ledgerly/api-contract";
+import { MIN_SYNC_GAP_MINUTES } from "@ledgerly/api-contract/settings";
 import { Trash2 } from "lucide-react";
 import { useId } from "react";
 import { useTranslations } from "use-intl";

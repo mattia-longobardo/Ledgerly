@@ -126,3 +126,26 @@ export const updateProfile = defineRoute({
   errors: ["invalid", "conflict"],
   example: { body: { name: "Alex Sample" }, response: { ...PROFILE_EXAMPLE, name: "Alex Sample" } },
 });
+
+export const getProfileOptions = defineRoute({
+  id: "get_profile_options",
+  method: "GET",
+  path: "/profile/options",
+  scope: "read",
+  capability: "profile",
+  summary:
+    "What the Profile form offers: the time zones with their offset now, and whether the instance sends the monthly summary.",
+  actions: [],
+  response: z.object({
+    timeZones: z.array(z.object({ zone: z.string(), offset: z.string() })),
+    /** False when an admin turned the monthly summary off for the instance. */
+    monthlySummaryAllowed: z.boolean(),
+  }),
+  errors: [],
+  example: {
+    response: {
+      timeZones: [{ zone: "Europe/Rome", offset: "UTC+1" }],
+      monthlySummaryAllowed: true,
+    },
+  },
+});

@@ -139,6 +139,42 @@ describe("the session cookie on /api/v1", () => {
     expect((await call("/server/settings", admin)).status).toBe(200);
   });
 
+  it("marks the session of the cookie as the current one", async () => {
+    const { sessions: own } = await (await call("/sessions", alice)).json();
+    expect(own.filter((one: { current: boolean }) => one.current)).toHaveLength(1);
+  });
+
+  it("answers the sign-in, the Profile options and the server's facts with no secret nor value of the environment", async () => {
+    const admin = await signedIn({ role: "admin" });
+    const provider = new URL(readEnv().OIDC_DISCOVERY_URL);
+    const signIn = await (await call("/security/sign-in", admin)).json();
+    expect(signIn).toEqual({
+      password: false,
+      sso: false,
+      identityProvider: provider.origin,
+      twoFactorPolicy: readEnv().TWO_FACTOR_POLICY,
+    });
+    const options = await (await call("/profile/options", admin)).json();
+    expect(options.monthlySummaryAllowed).toBe(true);
+    expect(options.timeZones).toContainEqual({ zone: "Asia/Tokyo", offset: "UTC+9" });
+    const settings = await (await call("/server/settings", admin)).json();
+    expect(settings.oidc.environmentOrigin).toBe(provider.origin);
+    expect(settings.maintenance).toMatchObject({ nextVersion: expect.any(String), export: null });
+
+    const secrets = Object.entries(process.env)
+      // An `_ID` names a key without being one (the S3 key id can be the app's name, as the client id is).
+      .filter(
+        ([name, value]) => /SECRET|PASSWORD|TOKEN|DATABASE_URL|KEY$/.test(name) && (value ?? "").length >= 8,
+      )
+      .map(([name, value]) => [name, value!] as const);
+    expect(secrets.length).toBeGreaterThan(0);
+    for (const path of ["/security/sign-in", "/profile/options", "/server/settings", "/server/diagnostics"]) {
+      const text = await (await call(path, admin)).text();
+      for (const [name, value] of secrets) expect(text.includes(value), `${path} ${name}`).toBe(false);
+      if (path !== "/server/settings") expect(text.includes(provider.href), path).toBe(false);
+    }
+  });
+
   it("refuses a write without the instance's Origin or without the header, with 403", async () => {
     const body = { name: "Mallory" };
     for (const init of [

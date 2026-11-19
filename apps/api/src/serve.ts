@@ -59,6 +59,7 @@ function statusOf(status: number): ContentfulStatusCode {
     case 413:
     case 415:
     case 429:
+    case 503:
       return status;
     default:
       return 500;

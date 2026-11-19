@@ -10,4 +10,22 @@ export const TAXONOMY_ERRORS = ["invalid", "not_found", "conflict"] as const;
 export const CONNECTION_ID = "4b3a2c1d-0e9f-4a8b-9c7d-6e5f4a3b2c1d";
 /** The refusals of a provider or of the state of the connection. */
 export const CONNECTION_ERRORS = ["invalid", "not_found", "conflict"] as const;
+/**
+ * The closed list of `reason`s a run of a connection (sync, test, history, resume, enable) answers
+ * with: the client writes the sentence from its own catalogue, as the Server Action did.
+ */
+export const CONNECTION_REFUSALS = [
+  "busy",
+  "unavailable",
+  "not_active",
+  "pending",
+  "auth",
+  "consent_expired",
+  "rate_limited",
+  "provider_down",
+  "invalid_data",
+  "failed",
+  /** `test` and `history` of a provider of the core: its card on the web does them until R5c. */
+  "core_provider",
+] as const;
 export const byId = z.object({ id: id() });

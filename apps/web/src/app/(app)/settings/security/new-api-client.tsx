@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { security } from "@ledgerly/api-contract/settings";
 import { API_SCOPES } from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
@@ -46,7 +46,7 @@ export function NewApiClient() {
       setError(null);
       setMinted(result.client);
       // The table reads `/api/v1/api-clients`; the client is created by a Server Action until §6 #4.
-      invalidate(SETTINGS.security.listApiClients);
+      invalidate(security.listApiClients);
       router.refresh();
     });
   }

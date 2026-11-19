@@ -7,6 +7,7 @@ import { enqueue } from "@ledgerly/domain/platform/jobs";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { BACKUPS_KEPT, BackupError, backupNow, lastBackup, postgresVersion } from "@/platform/backup/service";
 import { lastExport } from "@/platform/export/jobs";
+import { NEXT_VERSION } from "@/platform/next-version";
 import { jobStatuses } from "@/platform/jobs/queries";
 import { tasks } from "@/platform/jobs/queue";
 import { JOBS } from "@/platform/jobs/registry";
@@ -19,7 +20,8 @@ export const serverCases: ServerCases = {
       postgres,
       lastBackup: backup && { at: backup.at, size: backup.bytes },
       backupsKept: BACKUPS_KEPT,
-      lastExport: exported?.at ?? null,
+      lastExport: exported,
+      nextVersion: NEXT_VERSION,
     };
   },
   async backupNow(ctx) {

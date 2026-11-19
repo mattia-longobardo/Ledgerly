@@ -442,7 +442,7 @@ describe("the routes of the scopes security and admin", () => {
   it("answer 403 or 404 to every token, until the change of the authorization server grants them", async () => {
     const { SETTINGS_ROUTES } = await import("@ledgerly/api-contract");
     const guarded = SETTINGS_ROUTES.filter((route) => route.scope === "security" || route.scope === "admin");
-    expect(guarded).toHaveLength(27);
+    expect(guarded).toHaveLength(29);
     const every = await tokenFor(alice, ["read", "write", "imports", "investments:read"]);
     for (const route of guarded) {
       const path = route.path.replace(/\{\w+\}/g, alice.userId);
@@ -467,7 +467,14 @@ describe("users and settings: connections", () => {
     expect(await (await call("/connections", aliceToken)).json()).toEqual({ connections: [] });
     const { id } = await saveConnection(alice, { provider: "wallet", credentials: { token: "test-token" } });
     const [row] = (await (await call("/connections", aliceToken)).json()).connections;
-    expect(row).toMatchObject({ id, provider: "wallet", state: "active", providerActive: true, runs: [] });
+    expect(row).toMatchObject({
+      id,
+      provider: "wallet",
+      providerName: expect.stringMatching(/./),
+      state: "active",
+      providerActive: true,
+      runs: [],
+    });
     expect(row.capabilities).toEqual({
       sync: true,
       test: false,
@@ -573,6 +580,30 @@ describe("the routes of security, people and server, behind a guard that lets th
     expect((await send(as(bob), "GET", "/people")).status).toBe(403);
   });
 
+  it("answers a refused run of a connection with a reason of the contract's closed list", async () => {
+    const { CONNECTION_REFUSALS } = await import("@ledgerly/api-contract");
+    const id = randomUUID();
+    for (const [refusal, reason] of [
+      ["notActive", "not_active"],
+      ["busy", "busy"],
+      ["consent_expired", "consent_expired"],
+      ["network", "failed"],
+    ]) {
+      const app = apiRoutes({
+        ...adapters,
+        connections: { ...adapters.connections, run: async () => ({ ok: false, refusal, found: true }) },
+        guard: () => async (context, next) => {
+          context.set("ctx", alice);
+          await next();
+        },
+      });
+      const response = await send(app, "POST", `/connections/${id}/sync`);
+      expect(response.status, refusal).toBe(409);
+      expect(await response.json()).toEqual({ error: "conflict", reason });
+      expect(CONNECTION_REFUSALS).toContain(reason);
+    }
+  });
+
   it("refuses to remove the admin who asks, and reads the settings of the server", async () => {
     const app = as({ ...alice, role: "admin" });
     const self = await send(app, "DELETE", `/people/${alice.userId}`);
@@ -580,8 +611,8 @@ describe("the routes of security, people and server, behind a guard that lets th
     const settings = await (await send(app, "GET", "/server/settings")).json();
     expect(settings).toMatchObject({
       llm: null,
-      oidc: { displayName: null },
-      maintenance: { backupsKept: 30 },
+      oidc: { displayName: null, environmentOrigin: "http://127.0.0.1:9" },
+      maintenance: { backupsKept: 30, nextVersion: expect.any(String) },
     });
     expect((await send(app, "POST", "/server/jobs/nothing/run")).status).toBe(404);
   });

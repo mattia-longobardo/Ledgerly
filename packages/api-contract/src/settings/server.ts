@@ -29,6 +29,8 @@ const oidc = z.object({
   saved: z.boolean(),
   updatedAt: instant().nullable(),
   lastCheck: z.object({ outcome: oidcOutcome, checkedAt: instant() }).nullable(),
+  /** The origin (`https://host`) of the provider the environment names; null when it names none. */
+  environmentOrigin: z.string().nullable(),
 });
 
 const mailPolicy = z.object({
@@ -60,6 +62,7 @@ const SERVER_EXAMPLE = {
     saved: true,
     updatedAt: "2026-11-01T10:00:00.000Z",
     lastCheck: { outcome: "ok", checkedAt: "2026-11-18T07:10:00.000Z" },
+    environmentOrigin: "https://sso.example.test",
   },
   smtp: {
     host: "mail.example.test",
@@ -78,6 +81,8 @@ const SERVER_EXAMPLE = {
     lastBackup: { at: "2026-11-18T03:00:00.000Z", size: 1048576 },
     backupsKept: 7,
     lastExport: null,
+    nextVersion: "16.4.5",
+    export: null,
   },
 };
 
@@ -99,10 +104,52 @@ export const getServerSettings = defineRoute({
       lastBackup: z.object({ at: instant(), size: z.number().int() }).nullable(),
       backupsKept: z.number().int(),
       lastExport: instant().nullable(),
+      nextVersion: z.string(),
+      /** The last export of every person's data: when, how many people, how many bytes. */
+      export: z.object({ at: instant(), users: z.number().int(), bytes: z.number().int() }).nullable(),
     }),
   }),
   errors: [],
   example: { response: SERVER_EXAMPLE },
+});
+
+export const getDiagnostics = defineRoute({
+  id: "get_diagnostics",
+  method: "GET",
+  path: "/server/diagnostics",
+  scope: "admin",
+  capability: "server",
+  summary:
+    "Whether each plugin of the instance answers. A plugin that does not is `down` in its row; `503` only when the check cannot run.",
+  actions: [],
+  response: z.object({
+    plugins: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        state: z.enum(["up", "down", "never", "incompatible"]),
+        version: z.string().nullable(),
+        contract: z.string().nullable(),
+        /** The last good check (`up`) or the first failed one of the current series (`down`). */
+        at: instant().nullable(),
+      }),
+    ),
+  }),
+  errors: ["unavailable"],
+  example: {
+    response: {
+      plugins: [
+        {
+          id: "enablebanking",
+          name: "Enable Banking",
+          state: "up",
+          version: "1.0.0",
+          contract: "1",
+          at: "2026-11-18T07:00:00.000Z",
+        },
+      ],
+    },
+  },
 });
 
 export const saveLlm = defineRoute({

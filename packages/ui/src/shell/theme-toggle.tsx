@@ -2,7 +2,7 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useTransition } from "react";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { profile } from "@ledgerly/api-contract/settings";
 import { IconButton } from "../button";
 import { invalidate } from "../data";
 import { useTheme } from "../theme-provider";
@@ -27,7 +27,7 @@ export function ThemeToggle() {
       try {
         await saveTheme(next);
         // A screen that shows the preferences (Settings › Profile) reads them again.
-        invalidate(SETTINGS.profile.getPreferences);
+        invalidate(profile.getPreferences);
       } catch {
         setPreference(previous);
         notify(labels.themeSaveError, "error");

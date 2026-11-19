@@ -1,6 +1,6 @@
 "use client";
 
-import { MIN_SYNC_GAP_MINUTES } from "@ledgerly/api-contract";
+import { MIN_SYNC_GAP_MINUTES } from "@ledgerly/api-contract/settings";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
 import type { SchedulePreview, SyncSchedule } from "./types";

@@ -1,6 +1,6 @@
 "use client";
 
-import { syncScheduleSchema } from "@ledgerly/api-contract";
+import { syncScheduleSchema } from "@ledgerly/api-contract/settings";
 import { useId, useState, useTransition } from "react";
 import { useTranslations } from "use-intl";
 import { Button } from "../button";

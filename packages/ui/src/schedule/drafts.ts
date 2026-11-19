@@ -1,6 +1,6 @@
 // The rules as the editor holds them while a person types: valid or not yet. The contract's schema
 // says whether a draft is a rule; the server says whether the whole schedule runs as meant.
-import { syncRuleSchema } from "@ledgerly/api-contract";
+import { syncRuleSchema } from "@ledgerly/api-contract/settings";
 import {
   dayChoice,
   type DayChoice,

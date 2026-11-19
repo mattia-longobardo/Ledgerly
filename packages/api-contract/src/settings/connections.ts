@@ -52,6 +52,8 @@ const connection = z.object({
   /** The page of its source (`GET /sources/{slug}/…`); null for an investment service. */
   source: z.string().nullable(),
   name: z.string(),
+  /** What a person calls the provider («Enable Banking»): with `name`, the words of a toast. */
+  providerName: z.string(),
   state: z.enum(["active", "error", "revoked"]),
   errorCode: z.string().nullable(),
   lastOkAt: instant().nullable(),
@@ -88,6 +90,7 @@ const CONNECTION_EXAMPLE = {
   provider: "plugin:enablebanking",
   source: "enablebanking",
   name: "Example Bank",
+  providerName: "Enable Banking",
   state: "active",
   errorCode: null,
   lastOkAt: "2026-11-18T07:00:00.000Z",

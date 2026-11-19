@@ -9,7 +9,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type ComponentProps, type ReactNode, useCallback, useMemo } from "react";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { profile } from "@ledgerly/api-contract/settings";
 import { call } from "@ledgerly/api-client";
 import { invalidate, useApi } from "@ledgerly/ui/data";
 import { CommandPalette } from "@ledgerly/ui/shell/command-palette";
@@ -22,8 +22,6 @@ import type { ThemePreference } from "@ledgerly/ui/theme";
 import { Toaster } from "@ledgerly/ui/toast";
 import { WeekStartProvider } from "@ledgerly/ui/week-start";
 import { AppShellProvider } from "@/ui/app-shell-provider";
-
-const { profile } = SETTINGS;
 
 type PaletteProps = ComponentProps<typeof CommandPalette>;
 

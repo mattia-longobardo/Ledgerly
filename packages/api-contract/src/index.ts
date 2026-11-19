@@ -17,4 +17,5 @@ export {
   syncRuleSchema,
   syncScheduleSchema,
 } from "./settings/schedule";
+export { CONNECTION_REFUSALS } from "./settings/shared";
 export { SESSION_CSRF_HEADER } from "./session";

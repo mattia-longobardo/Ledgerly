@@ -9,7 +9,11 @@ import {
   ApiClientError,
   deleteApiClient,
   endOwnSession,
+  getAuth,
   GrantError,
+  hasPasswordAccount,
+  hasSsoAccount,
+  identityProviderUrl,
   invitePerson,
   listApiClients,
   listConnectedApps,
@@ -22,6 +26,7 @@ import {
   setPersonBlocked,
   setPersonRole,
 } from "@ledgerly/domain/platform/auth";
+import { readEnv } from "@ledgerly/domain/platform/env";
 import { describeUserAgent, listOwnSessions } from "@ledgerly/domain/users";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 
@@ -41,15 +46,34 @@ async function refusing<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
+/** The session of the cookie that made the call; none when a Bearer token did (it decides alone). */
+async function currentSessionId(headers: Headers): Promise<string | null> {
+  if (headers.has("authorization")) return null;
+  return (await (await getAuth()).api.getSession({ headers }))?.session.id ?? null;
+}
+
 function serveSecurity(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, security.listSessions, async ({ ctx }) => ({
-    sessions: (await listOwnSessions(ctx)).map((session) => ({
-      id: session.id,
-      ...describeUserAgent(session.userAgent),
-      ipAddress: session.ipAddress,
-      createdAt: session.createdAt.toISOString(),
-    })),
-  }));
+  serve(app, guard, security.listSessions, async ({ ctx, headers }) => {
+    const [own, current] = await Promise.all([listOwnSessions(ctx), currentSessionId(headers)]);
+    return {
+      sessions: own.map((session) => ({
+        id: session.id,
+        ...describeUserAgent(session.userAgent),
+        ipAddress: session.ipAddress,
+        createdAt: session.createdAt.toISOString(),
+        current: session.id === current,
+      })),
+    };
+  });
+  serve(app, guard, security.getSignIn, async ({ ctx }) => {
+    const [password, sso] = await Promise.all([hasPasswordAccount(ctx.userId), hasSsoAccount(ctx.userId)]);
+    return {
+      password,
+      sso,
+      identityProvider: identityProviderUrl()?.origin ?? null,
+      twoFactorPolicy: readEnv().TWO_FACTOR_POLICY,
+    };
+  });
   // A session that is not the person's answers as one already gone (the Server Action does the same).
   serve(app, guard, security.revokeSession, async ({ ctx, params }) => {
     await endOwnSession(ctx, params.id);

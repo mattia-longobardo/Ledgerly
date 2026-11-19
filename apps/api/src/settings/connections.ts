@@ -5,7 +5,12 @@
 // do answers `409`, reason `core_provider`.
 import type { Hono } from "hono";
 import type { z } from "zod";
-import { type RouteContract, SCHEDULE_PREVIEW_COUNT, SETTINGS } from "@ledgerly/api-contract";
+import {
+  CONNECTION_REFUSALS,
+  type RouteContract,
+  SCHEDULE_PREVIEW_COUNT,
+  SETTINGS,
+} from "@ledgerly/api-contract";
 import { providerOf } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
@@ -115,6 +120,12 @@ function settled<T extends { ok: true }>(answer: T | Refused): T {
   throw new ApiRefusal("conflict", answer.error ?? "failed");
 }
 
+/** A refusal of a run in the contract's closed list: an unknown code is `failed`, as its toast is. */
+function refusalOf(refusal: string): (typeof CONNECTION_REFUSALS)[number] {
+  if (refusal === "notActive") return "not_active";
+  return CONNECTION_REFUSALS.find((code) => code === refusal) ?? "failed";
+}
+
 function serveRuns(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): void {
   const run = async (ctx: Ctx, id: string, kind: Kind, options: { months?: number; headers: Headers }) => {
     if (kind === "test" || kind === "history") {
@@ -124,7 +135,7 @@ function serveRuns(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): voi
     const outcome = await cases.run(ctx, id, kind, options);
     if (outcome.ok) return;
     if (!outcome.found) throw new ApiRefusal("not_found");
-    throw new ApiRefusal("conflict", outcome.refusal);
+    throw new ApiRefusal("conflict", refusalOf(outcome.refusal));
   };
   serve(app, guard, connections.syncNow, ({ ctx, params, headers }) =>
     run(ctx, params.id, "update", { headers }),

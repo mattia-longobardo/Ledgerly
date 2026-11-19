@@ -15,7 +15,8 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 const { api } = await import("@/app/api/v1/[[...route]]/composition");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
-const { listApiClients, listConnectedApps } = await import("@ledgerly/domain/platform/auth");
+const { hasPasswordAccount, hasSsoAccount, identityProviderUrl, listApiClients, listConnectedApps } =
+  await import("@ledgerly/domain/platform/auth");
 const { describeUserAgent, listOwnSessions } = await import("@ledgerly/domain/users");
 const { readEnv } = await import("@domain/platform/env");
 const { createApiClientWith } = await import("@/platform/auth/api-clients");
@@ -80,6 +81,7 @@ describe("Settings › Security, old page = new screen", () => {
       scopes: ["read", "write"],
     });
     const ctx = { userId };
+    const current = await (await getAuth()).api.getSession({ headers: new Headers({ cookie }) });
 
     // What the server page read (`security/page.tsx` before R3), in the shape the screen draws.
     const page = {
@@ -88,6 +90,7 @@ describe("Settings › Security, old page = new screen", () => {
         ...describeUserAgent(session.userAgent),
         ipAddress: session.ipAddress,
         createdAt: session.createdAt.toISOString(),
+        current: session.id === current?.session.id,
       })),
       clients: (await listApiClients(ctx)).map((client) => ({
         clientId: client.clientId,
@@ -116,6 +119,18 @@ describe("Settings › Security, old page = new screen", () => {
     }).toEqual({
       ...page,
       apps: page.apps.map((app) => ({ ...app, createdAt: app.createdAt.toISOString() })),
+    });
+  });
+});
+
+describe("Settings › Security, sign-in: old page = new screen", () => {
+  it("shows the same sign-in methods, identity provider and second-factor policy", async () => {
+    const { userId, cookie } = await person();
+    expect(await send("/security/sign-in", cookie)).toEqual({
+      password: await hasPasswordAccount(userId),
+      sso: await hasSsoAccount(userId),
+      identityProvider: identityProviderUrl()?.origin ?? null,
+      twoFactorPolicy: readEnv().TWO_FACTOR_POLICY,
     });
   });
 });

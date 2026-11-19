@@ -1,6 +1,6 @@
 // A schedule as a person reads it: the summary on the card, the title of a rule, the interval of
 // "Repeat". Every word comes from the catalogue of the editor.
-import { LAST_DAY } from "@ledgerly/api-contract";
+import { LAST_DAY } from "@ledgerly/api-contract/settings";
 import type { ScheduleText, SyncDays, SyncRule, SyncSchedule } from "./types";
 
 /** "Mon", "Tue" … in the person's language: ISO weekday 1 = Monday … 7 = Sunday. */

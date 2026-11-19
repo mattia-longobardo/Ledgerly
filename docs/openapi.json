@@ -6490,6 +6490,9 @@
                           "name": {
                             "type": "string"
                           },
+                          "providerName": {
+                            "type": "string"
+                          },
                           "state": {
                             "type": "string",
                             "enum": [
@@ -6879,6 +6882,7 @@
                           "provider",
                           "source",
                           "name",
+                          "providerName",
                           "state",
                           "errorCode",
                           "lastOkAt",
@@ -11781,6 +11785,174 @@
         "x-scope": "write"
       }
     },
+    "/profile/options": {
+      "get": {
+        "operationId": "get_profile_options",
+        "summary": "What the Profile form offers: the time zones with their offset now, and whether the instance sends the monthly summary.",
+        "tags": [
+          "profile"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "timeZones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "zone": {
+                            "type": "string"
+                          },
+                          "offset": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "zone",
+                          "offset"
+                        ]
+                      }
+                    },
+                    "monthlySummaryAllowed": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "timeZones",
+                    "monthlySummaryAllowed"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/security/sign-in": {
+      "get": {
+        "operationId": "get_sign_in",
+        "summary": "How the person signs in: password, identity provider (its origin only) and the instance's second-factor policy.",
+        "tags": [
+          "security"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "password": {
+                      "type": "boolean"
+                    },
+                    "sso": {
+                      "type": "boolean"
+                    },
+                    "identityProvider": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "twoFactorPolicy": {
+                      "type": "string",
+                      "enum": [
+                        "required",
+                        "optional"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "password",
+                    "sso",
+                    "identityProvider",
+                    "twoFactorPolicy"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "security"
+      }
+    },
     "/server/backups": {
       "post": {
         "operationId": "back_up_now",
@@ -11851,6 +12023,133 @@
           },
           "500": {
             "description": "server_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "admin"
+      }
+    },
+    "/server/diagnostics": {
+      "get": {
+        "operationId": "get_diagnostics",
+        "summary": "Whether each plugin of the instance answers. A plugin that does not is `down` in its row; `503` only when the check cannot run.",
+        "tags": [
+          "server"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plugins": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "down",
+                              "never",
+                              "incompatible"
+                            ]
+                          },
+                          "version": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "contract": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "at": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "state",
+                          "version",
+                          "contract",
+                          "at"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "plugins"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -12655,6 +12954,12 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "environmentOrigin": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         }
                       },
                       "required": [
@@ -12665,7 +12970,8 @@
                         "secretHint",
                         "saved",
                         "updatedAt",
-                        "lastCheck"
+                        "lastCheck",
+                        "environmentOrigin"
                       ]
                     },
                     "smtp": {
@@ -12797,6 +13103,41 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "nextVersion": {
+                          "type": "string"
+                        },
+                        "export": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "at": {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                },
+                                "users": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "bytes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "at",
+                                "users",
+                                "bytes"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -12804,7 +13145,9 @@
                         "postgres",
                         "lastBackup",
                         "backupsKept",
-                        "lastExport"
+                        "lastExport",
+                        "nextVersion",
+                        "export"
                       ]
                     }
                   },
@@ -13152,6 +13495,9 @@
                             "type": "string",
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "current": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -13159,7 +13505,8 @@
                           "browser",
                           "os",
                           "ipAddress",
-                          "createdAt"
+                          "createdAt",
+                          "current"
                         ]
                       }
                     }
@@ -14511,7 +14858,8 @@
               "too_large",
               "unsupported_format",
               "rate_limited",
-              "server_error"
+              "server_error",
+              "unavailable"
             ]
           },
           "reason": {

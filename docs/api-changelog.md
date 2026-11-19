@@ -3,6 +3,31 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · Security, Profile and Server in the contract (release R2, users and settings)
+
+- New, scope `security` (capability `security`): `GET /security/sign-in`: `password`, `sso`,
+  `identityProvider` (the origin of the instance's identity provider, never its path or client) and
+  `twoFactorPolicy` (`required` or `optional`).
+- New, scope `read` (capability `profile`): `GET /profile/options`: `timeZones` (`zone` and its
+  `offset` now, as `UTC+1`) and `monthlySummaryAllowed` (false when an admin turned the monthly
+  summary off for the instance).
+- New, scope `admin` (capability `server`): `GET /server/diagnostics`: one row per plugin (`id`,
+  `name`, `state` `up`/`down`/`never`/`incompatible`, `version`, `contract`, `at`). A plugin that
+  does not answer is `down` in its row and the answer is `200`; `503` with the new error code
+  `unavailable` only when the check cannot run at all.
+- `GET /sessions` adds `current` to each session: true only for the session of the cookie of the
+  call; always false for a Bearer token.
+- `GET /server/settings` adds `oidc.environmentOrigin` (the origin of the provider the environment
+  names, or `null`), `maintenance.nextVersion` and `maintenance.export` (`at`, `users`, `bytes` of
+  the last export, or `null`). No secret and no value of the environment besides those origins.
+- `GET /connections` adds `providerName` to each connection (what a person calls the provider). A
+  refused run (`sync`, `test`, `history`, `resume`, `enable`) answers a `reason` of the contract's
+  closed list `CONNECTION_REFUSALS`: `notActive` becomes `not_active`, and a code outside the list
+  becomes `failed`, which is the sentence the web showed for it.
+- `@ledgerly/api-contract` adds the entries `./core`, `./settings` and `./accounts`: a client imports
+  the areas it calls (`import { profile } from "@ledgerly/api-contract/settings"`). `.` is unchanged.
+  No MCP tool changes.
+
 ## 2026-11-19 · accounts (release R2, accounts)
 
 - `previousNetWorth` of `GET /summary`, of `get_summary` and of the monthly mail has a value: the

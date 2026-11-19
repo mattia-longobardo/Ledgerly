@@ -17,6 +17,10 @@ const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { llmFallbackView, oidcView, saveLlmFallback, saveSmtp, smtpView } =
   await import("@ledgerly/domain/platform/settings");
 const { jobStatuses } = await import("@/platform/jobs/queries");
+const { identityProviderUrl } = await import("@ledgerly/domain/platform/auth");
+const { pluginDiagnostics } = await import("@ledgerly/domain/platform/plugins");
+const { lastExport } = await import("@/platform/export/jobs");
+const { NEXT_VERSION } = await import("@/platform/next-version");
 const { readEnv } = await import("@domain/platform/env");
 
 beforeEach(async () => {
@@ -98,5 +102,29 @@ describe("Admin › Server, old page = new screen", () => {
     expect(settings.smtp).toMatchObject(page.smtp as object);
     expect(settings.llm).toMatchObject(page.llm as object);
     expect(jobs).toEqual(page.jobs);
+  });
+
+  it("shows the same facts of the environment, last export and plugins", async () => {
+    const { cookie } = await admin();
+    const exported = await lastExport();
+    // What the server page passed the screen and drew in `DiagnosticsCard`.
+    const page = {
+      environmentOrigin: identityProviderUrl()?.origin ?? null,
+      nextVersion: NEXT_VERSION,
+      export: exported && { users: exported.users, bytes: exported.bytes },
+      plugins: wire(await pluginDiagnostics("en")),
+    };
+    const settings = await read("/server/settings", cookie);
+    const maintenance = settings.maintenance as {
+      nextVersion: string;
+      export: { users: number; bytes: number } | null;
+    };
+    const { plugins } = await read("/server/diagnostics", cookie);
+    expect({
+      environmentOrigin: (settings.oidc as { environmentOrigin: string | null }).environmentOrigin,
+      nextVersion: maintenance.nextVersion,
+      export: maintenance.export && { users: maintenance.export.users, bytes: maintenance.export.bytes },
+      plugins,
+    }).toEqual(page);
   });
 });

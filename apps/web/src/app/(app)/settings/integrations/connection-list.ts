@@ -98,11 +98,13 @@ async function rowOf(
   facts: Facts,
   known: { runs: readonly RecentRun[]; ibanConflicts: (connection: Connection) => string[] },
 ) {
+  const label = await labelOf(connection, ctx.locale);
   return {
     id: connection.id,
     provider: connection.provider,
     source: sourceSlugOf(connection.provider),
-    name: (await labelOf(connection, ctx.locale)).name,
+    name: label.name,
+    providerName: label.provider,
     state: connection.state,
     errorCode: connection.errorCode,
     lastOkAt: instant(connection.lastOkAt),

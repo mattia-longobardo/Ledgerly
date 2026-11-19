@@ -1,6 +1,6 @@
 "use client";
 
-import { LAST_DAY } from "@ledgerly/api-contract";
+import { LAST_DAY } from "@ledgerly/api-contract/settings";
 import { useTranslations } from "use-intl";
 import { Chip } from "../button";
 import { weekdayNames } from "./describe";

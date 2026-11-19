@@ -19,6 +19,8 @@ const { hasSsoAccount } = await import("@ledgerly/domain/platform/auth");
 const { getPreferences, updatePreferences } = await import("@ledgerly/domain/users");
 const { readEnv } = await import("@domain/platform/env");
 const { OIDC_PROVIDER_ID } = await import("@domain/platform/auth/provider");
+const { mailPolicy } = await import("@ledgerly/domain/platform/settings");
+const { utcOffsetLabel } = await import("@ledgerly/domain/shared/dates");
 
 beforeEach(async () => {
   await resetDatabase();
@@ -108,6 +110,22 @@ describe("Settings › Profile, old page = new screen", () => {
       sso: profile.managedByProvider,
       preferences,
     }).toEqual(page);
+  });
+});
+
+describe("Settings › Profile, the options: old page = new screen", () => {
+  it("offers the same zones with their offset and the same block of the monthly summary", async () => {
+    const { cookie } = await person("user");
+    const options = (await read("/profile/options", cookie)) as {
+      timeZones: { zone: string; offset: string }[];
+      monthlySummaryAllowed: boolean;
+    };
+    // What the server page computed (`profile/page.tsx` before the contract carried it).
+    const now = new Date();
+    expect(options.timeZones).toEqual(
+      Intl.supportedValuesOf("timeZone").map((zone) => ({ zone, offset: utcOffsetLabel(zone, now) })),
+    );
+    expect(options.monthlySummaryAllowed).toBe((await mailPolicy()).monthlySummary);
   });
 });
 

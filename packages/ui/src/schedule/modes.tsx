@@ -2,7 +2,7 @@
 
 // The four modes of the dialog — repeat, at set times, manual only, custom rules — each with its own
 // fields under it, and the days of the simple ones.
-import { MAX_RULES } from "@ledgerly/api-contract";
+import { MAX_RULES } from "@ledgerly/api-contract/settings";
 import { Plus } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import { useTranslations } from "use-intl";

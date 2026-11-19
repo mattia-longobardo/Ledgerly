@@ -4,7 +4,7 @@
 // the AI service, the jobs and the maintenance facts.
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { profile, server } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
@@ -15,8 +15,6 @@ import { LlmCard } from "./llm-card";
 import { MaintenanceCard } from "./maintenance-card";
 import { OidcCard } from "./oidc-card";
 import { SmtpCard } from "./smtp-card";
-
-const { profile, server } = SETTINGS;
 
 type Settings = RouteOutput<typeof server.getServerSettings>;
 type Preferences = RouteOutput<typeof profile.getPreferences>;

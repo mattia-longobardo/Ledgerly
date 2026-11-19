@@ -5,6 +5,8 @@ import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { rescheduleConnections } from "@ledgerly/domain/platform/integrations";
 import { ProfileError, profileOf, renameProfile } from "@ledgerly/domain/platform/auth";
+import { mailPolicy } from "@ledgerly/domain/platform/settings";
+import { utcOffsetLabel } from "@ledgerly/domain/shared/dates";
 import { changePreferences, getPreferences, type Preferences } from "@ledgerly/domain/users";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 
@@ -24,6 +26,16 @@ export function serveProfile(app: Hono<ApiEnv>, guard: Guard): readonly RouteCon
   serve(app, guard, profile.getPreferences, ({ ctx }) => getPreferences(ctx));
   serve(app, guard, profile.updatePreferences, ({ ctx, body }) => savePreferences(ctx, body));
   serve(app, guard, profile.getProfile, ({ ctx }) => profileOf(ctx));
+  serve(app, guard, profile.getProfileOptions, async () => {
+    const now = new Date();
+    return {
+      timeZones: Intl.supportedValuesOf("timeZone").map((zone) => ({
+        zone,
+        offset: utcOffsetLabel(zone, now),
+      })),
+      monthlySummaryAllowed: (await mailPolicy()).monthlySummary,
+    };
+  });
   serve(app, guard, profile.updateProfile, async ({ ctx, body }) => {
     try {
       await renameProfile(ctx, body.name);

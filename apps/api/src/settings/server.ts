@@ -3,7 +3,9 @@
 // is still the web process's, lent like the guard until R4.
 import type { Hono } from "hono";
 import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
+import { identityProviderUrl, redactForLog } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
+import { pluginDiagnostics } from "@ledgerly/domain/platform/plugins";
 import {
   llmFallbackView,
   oidcView,
@@ -30,7 +32,8 @@ export interface ServerCases {
     postgres: string | null;
     lastBackup: { at: Date; size: number } | null;
     backupsKept: number;
-    lastExport: Date | null;
+    lastExport: { at: Date; users: number; bytes: number } | null;
+    nextVersion: string;
   }>;
   backupNow(ctx: Ctx): Promise<{ ok: true; size: number } | { ok: false; error: string }>;
   jobs(ctx: Ctx): Promise<
@@ -73,6 +76,7 @@ async function serverSettings(ctx: Ctx, cases: ServerCases) {
     oidc: {
       ...oidc,
       updatedAt: instant(oidc.updatedAt),
+      environmentOrigin: identityProviderUrl()?.origin ?? null,
       lastCheck: oidc.lastCheck && { ...oidc.lastCheck, checkedAt: oidc.lastCheck.checkedAt.toISOString() },
     },
     smtp: { ...smtp, updatedAt: instant(smtp.updatedAt) },
@@ -82,7 +86,11 @@ async function serverSettings(ctx: Ctx, cases: ServerCases) {
         ...maintenance.lastBackup,
         at: maintenance.lastBackup.at.toISOString(),
       },
-      lastExport: instant(maintenance.lastExport),
+      lastExport: instant(maintenance.lastExport?.at ?? null),
+      export: maintenance.lastExport && {
+        ...maintenance.lastExport,
+        at: maintenance.lastExport.at.toISOString(),
+      },
     },
   };
 }
@@ -102,7 +110,20 @@ function serveSettings(app: Hono<ApiEnv>, guard: Guard, cases: ServerCases): voi
   serve(app, guard, server.removeSmtp, ({ ctx }) => settled(() => removeSmtp(ctx)));
 }
 
+/** Each plugin's row; a plugin that does not answer is `down` in it. `503` when no row can be read. */
+async function diagnostics(ctx: Ctx) {
+  let plugins: Awaited<ReturnType<typeof pluginDiagnostics>>;
+  try {
+    plugins = await pluginDiagnostics(ctx.locale);
+  } catch (error) {
+    console.error("[api] the diagnostics of the plugins failed", redactForLog(error));
+    throw new ApiRefusal("unavailable");
+  }
+  return { plugins: plugins.map((plugin) => ({ ...plugin, at: instant(plugin.at) })) };
+}
+
 function serveMaintenance(app: Hono<ApiEnv>, guard: Guard, cases: ServerCases): void {
+  serve(app, guard, server.getDiagnostics, ({ ctx }) => diagnostics(ctx));
   serve(app, guard, server.backUpNow, async ({ ctx }) => {
     const answer = await cases.backupNow(ctx);
     if (!answer.ok)

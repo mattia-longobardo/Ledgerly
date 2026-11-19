@@ -1,15 +1,13 @@
 // The calls of Settings › Security to `/api/v1` (rewrite plan R3): each answers `{ ok }` or a
 // catalogued error key, as the Server Actions they replace did. Signing the other sessions out stays
 // a Server Action (`tools/contract.test.ts`, EXCLUDED: «the other sessions» are the cookie's).
-import { SETTINGS } from "@ledgerly/api-contract";
+import { security } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
 
 export { revokeOtherSessionsAction } from "@/modules/users/actions";
 
 type CallResult = { ok: true } | { ok: false; error: string };
-
-const { security } = SETTINGS;
 
 /** A refusal the screen names; anything else is thrown. */
 function refused(error: unknown, codes: readonly string[]): { ok: false; error: string } {

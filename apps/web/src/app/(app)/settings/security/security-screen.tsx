@@ -4,7 +4,7 @@
 // the Client APIs, the connected apps and the sessions.
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { profile, security } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { API_SCOPES, type Scope, type TwoFactorPolicy } from "@ledgerly/domain/platform/auth/client";
 import { civilDateIn } from "@ledgerly/format/dates";
@@ -17,8 +17,6 @@ import { type ConnectedAppRow, ConnectedAppsTable } from "./connected-apps-table
 import { NewApiClient } from "./new-api-client";
 import { type SessionRow, SessionsList } from "./sessions-list";
 import { TwoFactorCard } from "./two-factor-card";
-
-const { profile, security } = SETTINGS;
 
 type Preferences = RouteOutput<typeof profile.getPreferences>;
 

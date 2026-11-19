@@ -5,7 +5,7 @@
 // `packages/ui`, previewed and saved through `/api/v1/connections/{id}/schedule`. The pages around it
 // are still drawn on the server, so a saved schedule draws them again.
 import { useRouter } from "next/navigation";
-import { SETTINGS } from "@ledgerly/api-contract";
+import { connections } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import {
   type PreviewSchedule,
@@ -13,8 +13,6 @@ import {
   ScheduleControl,
   type SyncSchedule,
 } from "@ledgerly/ui/schedule";
-
-const { connections } = SETTINGS;
 
 export function ConnectionSchedule({
   connectionId,

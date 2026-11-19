@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_TIMES } from "@ledgerly/api-contract";
+import { MAX_TIMES } from "@ledgerly/api-contract/settings";
 import { X } from "lucide-react";
 import { type KeyboardEvent, useId, useRef, useState } from "react";
 import { useTranslations } from "use-intl";

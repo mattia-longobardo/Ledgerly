@@ -1,13 +1,11 @@
 // The calls of the Profile forms to `/api/v1` (rewrite plan R3): each answers `{ ok }` or a catalogued
 // error key, as the Server Actions they replace did, so a form reads one shape whatever sent it.
-import { SETTINGS } from "@ledgerly/api-contract";
+import { profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
 import { browserPreferences } from "@ledgerly/ui/preferences";
 
 type CallResult = { ok: true } | { ok: false; error: string };
-
-const { profile } = SETTINGS;
 
 /** A refusal the form names; anything else is thrown, and the form says the save failed. */
 function refused(error: unknown, codes: Record<string, string>): CallResult {

@@ -3,8 +3,11 @@
   "version": "0.38.0",
   "private": true,
   "type": "module",
+  "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./core": "./src/core/index.ts",
+    "./settings": "./src/settings/index.ts"
   },
   "dependencies": {
     "zod": "4.6.7"

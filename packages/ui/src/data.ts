@@ -4,7 +4,7 @@
 // cache by route and input. A write invalidates the routes it changed, by key, where a Server Action
 // called `revalidatePath`: every screen that reads one of them reads it again and keeps showing what
 // it had meanwhile.
-import { type RouteContract } from "@ledgerly/api-contract";
+import { type RouteContract } from "@ledgerly/api-contract/core";
 import { call, type RouteInput, type RouteOutput } from "@ledgerly/api-client";
 import { useCallback, useSyncExternalStore } from "react";
 

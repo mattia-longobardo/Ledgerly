@@ -14,6 +14,8 @@ const session = z.object({
   os: z.string().nullable(),
   ipAddress: z.string().nullable(),
   createdAt: instant(),
+  /** The session of the cookie that made this call; always false for a Bearer token. */
+  current: z.boolean(),
 });
 
 export const listSessions = defineRoute({
@@ -35,8 +37,36 @@ export const listSessions = defineRoute({
           os: "Linux",
           ipAddress: "192.0.2.10",
           createdAt: "2026-11-18T08:00:00.000Z",
+          current: true,
         },
       ],
+    },
+  },
+});
+
+export const getSignIn = defineRoute({
+  id: "get_sign_in",
+  method: "GET",
+  path: "/security/sign-in",
+  scope: "security",
+  capability: "security",
+  summary:
+    "How the person signs in: password, identity provider (its origin only) and the instance's second-factor policy.",
+  actions: [],
+  response: z.object({
+    password: z.boolean(),
+    sso: z.boolean(),
+    /** The origin of the instance's identity provider (`https://host`), never its path or client. */
+    identityProvider: z.string().nullable(),
+    twoFactorPolicy: z.enum(["required", "optional"]),
+  }),
+  errors: [],
+  example: {
+    response: {
+      password: true,
+      sso: false,
+      identityProvider: "https://sso.example.test",
+      twoFactorPolicy: "required",
     },
   },
 });

@@ -2,7 +2,7 @@
 // route of `@ledgerly/api-contract`. On the web the session cookie goes with every call, same origin;
 // a write adds the header that proves it comes from the app (`SESSION_CSRF_HEADER`). The answer is
 // read with the route's own schema: a client trusts the wire only once it has the declared shape.
-import { type RouteContract, SESSION_CSRF_HEADER } from "@ledgerly/api-contract";
+import { type RouteContract, SESSION_CSRF_HEADER } from "@ledgerly/api-contract/core";
 import type { z } from "zod";
 
 type Schema<S> = S extends z.ZodType ? S : never;
