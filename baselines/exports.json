@@ -92,9 +92,7 @@
     "EntrySource",
     "REMINDERS",
     "TRENDS",
-    "changeBetween",
-    "hasIbanField",
-    "shareOf"
+    "hasIbanField"
   ],
   "packages/domain/src/modules/accounts/index.ts": [
     "ACCOUNT_TYPES",
