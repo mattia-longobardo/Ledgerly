@@ -25,6 +25,7 @@
     "./menu": "./src/menu.tsx",
     "./modal": "./src/modal.tsx",
     "./popover": "./src/popover.tsx",
+    "./preferences": "./src/preferences.ts",
     "./progress-bar": "./src/progress-bar.tsx",
     "./qr-code": "./src/qr-code.tsx",
     "./router": "./src/router.tsx",

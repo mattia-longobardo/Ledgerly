@@ -3,7 +3,8 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ThemePreference } from "../theme";
 import { useRouter } from "../router";
-import { SIDEBAR_COOKIE, type SidebarState } from "./sidebar-state";
+import { browserPreferences } from "../preferences";
+import type { SidebarState } from "./sidebar-state";
 
 const WIDE_QUERY = "(min-width: 1280px)";
 
@@ -65,11 +66,11 @@ export function ShellProvider({
   const [sidebar, setSidebar] = useState(initialSidebar);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // The cookie is written outside the state updater: updaters must stay pure (Strict Mode runs them twice).
+  // The choice is stored outside the state updater: updaters must stay pure (Strict Mode runs them twice).
   const toggleSidebar = useCallback(() => {
     const collapsedNow = sidebar === "collapsed" || (sidebar === "auto" && !matchMedia(WIDE_QUERY).matches);
     const next = collapsedNow ? "expanded" : "collapsed";
-    document.cookie = `${SIDEBAR_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    browserPreferences.write("sidebar", next);
     setSidebar(next);
   }, [sidebar]);
 

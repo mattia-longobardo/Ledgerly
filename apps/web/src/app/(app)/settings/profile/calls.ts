@@ -3,13 +3,11 @@
 import { SETTINGS } from "@ledgerly/api-contract";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
-import { LOCALE_COOKIE } from "@/platform/i18n/locales";
-import { THEME_COOKIE } from "@/platform/theme";
+import { browserPreferences } from "@ledgerly/ui/preferences";
 
 type CallResult = { ok: true } | { ok: false; error: string };
 
 const { profile } = SETTINGS;
-const YEAR = 60 * 60 * 24 * 365;
 
 /** A refusal the form names; anything else is thrown, and the form says the save failed. */
 function refused(error: unknown, codes: Record<string, string>): CallResult {
@@ -32,8 +30,8 @@ export async function updateNameAction(name: string): Promise<CallResult> {
 
 /**
  * The Profile form's fields only: the working day and the patron saint are Time off's, and the
- * default range is not on any form. The language and the theme also go in the cookies the pages
- * without a session read (sign-in), as the Server Action wrote them.
+ * default range is not on any form. The language and the theme are also kept on the
+ * device (`browserPreferences`) for the pages without a session (sign-in), as the Server Action did.
  */
 export async function savePreferencesAction(input: {
   timeZone: string;
@@ -53,8 +51,8 @@ export async function savePreferencesAction(input: {
     const saved = await call(profile.updatePreferences, {
       body: { ...body, displayCurrency, weekStart, theme, monthlySummary },
     });
-    document.cookie = `${LOCALE_COOKIE}=${saved.locale}; path=/; max-age=${YEAR}; samesite=lax`;
-    document.cookie = `${THEME_COOKIE}=${saved.theme}; path=/; max-age=${YEAR}; samesite=lax`;
+    browserPreferences.write("locale", saved.locale);
+    browserPreferences.write("theme", saved.theme);
   } catch (error) {
     return refused(error, { invalid: "invalid" });
   }

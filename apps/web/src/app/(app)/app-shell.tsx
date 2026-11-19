@@ -14,17 +14,16 @@ import { call } from "@ledgerly/api-client";
 import { invalidate, useApi } from "@ledgerly/ui/data";
 import { CommandPalette } from "@ledgerly/ui/shell/command-palette";
 import { MobileNav } from "@ledgerly/ui/shell/mobile-nav";
+import { browserPreferences } from "@ledgerly/ui/preferences";
 import type { NavLink } from "@ledgerly/ui/shell/nav-types";
 import type { SidebarState } from "@ledgerly/ui/shell/sidebar-state";
 import { Sidebar } from "@ledgerly/ui/shell/sidebar";
 import type { ThemePreference } from "@ledgerly/ui/theme";
 import { Toaster } from "@ledgerly/ui/toast";
 import { WeekStartProvider } from "@ledgerly/ui/week-start";
-import { THEME_COOKIE } from "@/platform/theme";
 import { AppShellProvider } from "@/ui/app-shell-provider";
 
 const { profile } = SETTINGS;
-const YEAR = 60 * 60 * 24 * 365;
 
 type PaletteProps = ComponentProps<typeof CommandPalette>;
 
@@ -65,13 +64,13 @@ function useLabels() {
   );
 }
 
-/** Saves the theme as the person's preference, and in the cookie the pages without a session read. */
+/** Saves the theme as the person's preference, and on the device for the pages without a session. */
 function useSaveTheme() {
   const router = useRouter();
   return useCallback(
     async (theme: ThemePreference) => {
       const saved = await call(profile.updatePreferences, { body: { theme } });
-      document.cookie = `${THEME_COOKIE}=${saved.theme}; path=/; max-age=${YEAR}; samesite=lax`;
+      browserPreferences.write("theme", saved.theme);
       invalidate(profile.getPreferences);
       router.refresh();
     },
