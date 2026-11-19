@@ -15,7 +15,8 @@ import { BANK_PLUGIN_ID } from "../../banks/plugin";
 import { switchable } from "./switch/switch";
 import { accountsView, listBalanceEntries } from "@ledgerly/domain/accounts";
 import { hasIbanField } from "@ledgerly/domain/accounts";
-import { changeBetween, colorFor, shareOf, since, counterValue } from "@/modules/accounts/ui/display";
+import { changeBetween, colorFor, shareOf, counterValue } from "@/modules/accounts/ui/display";
+import { SyncStatus } from "@ledgerly/ui/sync-status";
 import {
   asNumbers,
   axisLabels,
@@ -131,7 +132,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const counter = counterValue(row, view.currency, ctx.numberFormat);
   // A service of Investments fed by a provider is synced, from its last reading (investments-ux §8).
   const service = (await syncedServicesOf(ctx, [id])).get(id) ?? null;
-  const synced = since(service?.lastSyncedAt ?? account.lastSyncedAt, now);
+  const syncedAt = (service?.lastSyncedAt ?? account.lastSyncedAt)?.toISOString() ?? null;
   // A plugin's provider is shown by its own name, not by its id.
   const providerLabel = await providerName(ctx, account.provider);
   // The connection the account comes from, in the short form of its row (ux n2 §3.3).
@@ -170,9 +171,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
             <>
               <span aria-hidden>·</span>
               <span>
-                {synced.unit === "never"
-                  ? t("synced.never")
-                  : t(`synced.${synced.unit}`, { count: synced.count })}
+                <SyncStatus lastSyncedAt={syncedAt} now={now.toISOString()} />
               </span>
             </>
           )}

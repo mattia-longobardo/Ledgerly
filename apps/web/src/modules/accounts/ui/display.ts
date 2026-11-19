@@ -36,15 +36,3 @@ export function counterValue(
   if (row.account.currency === currency) return null;
   return `≈ ${formatMoney(row.display.balance, format, { currency })}`;
 }
-
-type Since = { unit: "never" } | { unit: "minutes" | "hours" | "days"; count: number };
-
-/** How long ago an instant was, in the coarse steps the design's "Last synced" column uses. */
-export function since(instant: Date | null, now: Date): Since {
-  if (instant === null) return { unit: "never" };
-  const minutes = Math.max(0, Math.round((now.getTime() - instant.getTime()) / 60_000));
-  if (minutes < 60) return { unit: "minutes", count: minutes };
-  const hours = Math.round(minutes / 60);
-  if (hours < 48) return { unit: "hours", count: hours };
-  return { unit: "days", count: Math.round(hours / 24) };
-}

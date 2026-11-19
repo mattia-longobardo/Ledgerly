@@ -61,6 +61,7 @@
     "./states": "./src/states.tsx",
     "./step-indicator": "./src/step-indicator.tsx",
     "./switch": "./src/switch.tsx",
+    "./sync-status": "./src/sync-status.tsx",
     "./tab-links": "./src/tab-links.tsx",
     "./table": "./src/table.tsx",
     "./theme": "./src/theme.ts",

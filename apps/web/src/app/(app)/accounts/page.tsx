@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { accountsView, listAccounts } from "@ledgerly/domain/accounts";
-import { changeBetween, colorFor, counterValue, shareOf, since } from "@/modules/accounts/ui/display";
+import { changeBetween, colorFor, counterValue, shareOf } from "@/modules/accounts/ui/display";
+import { SyncStatus } from "@ledgerly/ui/sync-status";
 import { asNumbers } from "@ledgerly/ui/chart-labels";
 import { ToggleLink } from "@ledgerly/ui/link-controls";
 import { parsePeriodQuery, periodMonths } from "@ledgerly/ui/period";
@@ -107,7 +108,8 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
       own: { currency: row.account.currency },
       counter: counterValue(row, view.currency, ctx.numberFormat),
       service: services.has(row.account.id),
-      synced: since(services.get(row.account.id)?.lastSyncedAt ?? row.account.lastSyncedAt, now),
+      syncedAt:
+        (services.get(row.account.id)?.lastSyncedAt ?? row.account.lastSyncedAt)?.toISOString() ?? null,
     };
   });
 
@@ -221,11 +223,11 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                   </Td>
                   <Td align="right">{formatPercent(row.share, ctx.numberFormat)}</Td>
                   <Td muted>
-                    {row.account.origin === "manual" && !row.service
-                      ? t("origins.manual")
-                      : row.synced.unit === "never"
-                        ? t("synced.never")
-                        : t(`synced.${row.synced.unit}`, { count: row.synced.count })}
+                    <SyncStatus
+                      manual={row.account.origin === "manual" && !row.service}
+                      lastSyncedAt={row.syncedAt}
+                      now={now.toISOString()}
+                    />
                   </Td>
                   <Td>
                     <Sparkline values={asNumbers(row.series)} tone={row.color} />
@@ -278,11 +280,11 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
                 <span>{t(`types.${row.account.type}`)}</span>
                 <span aria-hidden>·</span>
                 <span>
-                  {row.account.origin === "manual" && !row.service
-                    ? t("origins.manual")
-                    : row.synced.unit === "never"
-                      ? t("synced.never")
-                      : t(`synced.${row.synced.unit}`, { count: row.synced.count })}
+                  <SyncStatus
+                    manual={row.account.origin === "manual" && !row.service}
+                    lastSyncedAt={row.syncedAt}
+                    now={now.toISOString()}
+                  />
                 </span>
                 {row.account.state === "unavailable" && <Badge tone="warn">{t("states.unavailable")}</Badge>}
                 {row.account.state === "archived" && <Badge tone="neutral">{t("states.archived")}</Badge>}
