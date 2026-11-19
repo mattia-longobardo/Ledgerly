@@ -22,7 +22,7 @@ import {
   deleteAccount,
   moveDependent,
 } from "./[id]/delete";
-import { accountContext, switchCandidates } from "./[id]/context";
+import { accountContext, switchCandidates, switchIdentifiers } from "./[id]/context";
 import { applySwitch, checkSwitch, type SwitchError, SwitchFailure, undoSwitch } from "./[id]/switch/switch";
 
 type DeleteFailure = { ok: false; error: DeleteErrorCode | "failed" };
@@ -156,5 +156,9 @@ export const accountCases: AccountCases = {
   switchCandidates: async (ctx, id) => {
     const read = await readOf(ctx, id, (account) => switchCandidates(ctx, account));
     return read.ok ? { ok: true, candidates: read.value } : read;
+  },
+  switchIdentifiers: async (ctx, id) => {
+    const read = await readOf(ctx, id, (account) => switchIdentifiers(ctx, account));
+    return read.ok ? { ok: true, identifiers: read.value } : read;
   },
 };

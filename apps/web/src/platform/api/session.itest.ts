@@ -14,7 +14,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
-const { api } = await import("@/app/api/v1/[[...route]]/composition");
+const { api, reads } = await import("@/app/api/v1/[[...route]]/composition");
 const { MAX_PER_WINDOW, resetRateLimits, SESSION_MAX_PER_WINDOW, takeSlot } = await import("./rate-limit");
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClientWith } = await import("@/platform/auth/api-clients");
@@ -238,6 +238,43 @@ describe("the session cookie on /api/v1", () => {
     expect((await call("/profile", { bearer: "not-a-token", cookie: alice.cookie })).status).toBe(401);
     // With both, the token's scopes count, not the session's.
     expect((await call("/sessions", { bearer: token, cookie: alice.cookie })).status).toBe(403);
+  });
+
+  it("gives the IBAN and the switch's masked identifiers to the session only, never to a token (H45)", async () => {
+    // An example IBAN of the standard, nobody's account.
+    const iban = "IT60X0542811101000000123456";
+    const created = await call("/accounts", alice, {
+      method: "POST",
+      body: { name: "Savings box", type: "savings", iban },
+    });
+    expect(created.status).toBe(201);
+    const { id } = (await created.json()) as { id: string };
+    const ibanPath = `/accounts/${id}/iban`;
+    const identifiersPath = `/accounts/${id}/switch/identifiers`;
+
+    const read = await call(ibanPath, alice);
+    expect(read.status).toBe(200);
+    expect(await read.json()).toEqual({ iban: "IT60 X054 2811 1010 0000 0123 456" });
+    const identifiers = await call(identifiersPath, alice);
+    expect(identifiers.status).toBe(200);
+    expect(await identifiers.json()).toEqual({ identifiers: [] });
+
+    // Every scope a token can be granted, alone or with the cookie: 403, and no IBAN in the answer.
+    const token = await tokenFor(alice, ["read", "write", "imports", "investments:read"]);
+    for (const who of [{ bearer: token }, { bearer: token, cookie: alice.cookie }]) {
+      for (const path of [ibanPath, identifiersPath]) {
+        const refused = await call(path, who);
+        expect(refused.status).toBe(403);
+        const text = await refused.text();
+        expect(text).not.toContain(iban.slice(4));
+        expect(text).not.toContain("3456");
+      }
+    }
+    // No token can ask for `session`, and no MCP tool reads either route.
+    await expect(tokenFor(alice, ["read", "session"])).rejects.toThrow();
+    expect(reads.filter((tool) => tool.scope === "session")).toEqual([]);
+    expect(reads.map((tool) => tool.name)).not.toContain("get_account_iban");
+    expect(reads.map((tool) => tool.name)).not.toContain("list_switch_identifiers");
   });
 
   it("never answers with Access-Control-Allow-Credentials, nor a preflight", async () => {

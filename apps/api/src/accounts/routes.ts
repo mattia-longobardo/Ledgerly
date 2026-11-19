@@ -27,6 +27,7 @@ import {
   updateConnection,
 } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
+import { groupIban } from "@ledgerly/domain/platform/iban";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
@@ -88,6 +89,11 @@ export interface AccountCases {
     ctx: Ctx,
     id: string,
   ): Promise<Outcome<{ candidates: Wire<typeof switching.listSwitchCandidates.response> }>>;
+  /** The same candidates' identifiers, masked: the web's session only (H45). */
+  switchIdentifiers(
+    ctx: Ctx,
+    id: string,
+  ): Promise<Outcome<{ identifiers: Wire<typeof switching.listSwitchIdentifiers.response> }>>;
 }
 
 /** A refusal of a use case of the web as the contract names it. */
@@ -125,6 +131,11 @@ function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, accounts.getAccount, async ({ ctx, params }) =>
     accountDetail(await requireOwn(ctx, params.id)),
   );
+  // Scope `session` (H45): only the web's own session reaches this handler.
+  serve(app, guard, accounts.getAccountIban, async ({ ctx, params }) => {
+    const { iban } = await requireOwn(ctx, params.id);
+    return { iban: iban === null ? null : groupIban(iban) };
+  });
   serve(app, guard, accounts.createAccount, async ({ ctx, body }) => {
     const { openingBalance, ...rest } = body;
     const account = await refusing(
@@ -287,6 +298,10 @@ function serveRemovalAndSwitch(app: Hono<ApiEnv>, guard: Guard, cases: AccountCa
   serve(app, guard, switching.listSwitchCandidates, async ({ ctx, params }) => {
     await requireOwn(ctx, params.id);
     return settled(await cases.switchCandidates(ctx, params.id)).candidates;
+  });
+  serve(app, guard, switching.listSwitchIdentifiers, async ({ ctx, params }) => {
+    await requireOwn(ctx, params.id);
+    return settled(await cases.switchIdentifiers(ctx, params.id)).identifiers;
   });
   serve(app, guard, removal.listAccountDependents, async ({ ctx, params }) => {
     const { dependents, targets } = settled(await cases.dependents(ctx, params.id));

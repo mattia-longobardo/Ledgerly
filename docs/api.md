@@ -44,7 +44,9 @@ curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/sum
 ### The web's session
 
 The web app of the instance calls `/api/v1` with its session cookie, from the same origin. A session
-gets the scopes `read`, `write` and `security`, and `admin` for an admin. It follows the rules of
+gets the scopes `read`, `write`, `security` and `session`, and `admin` for an admin. `session` is
+never granted to a token: the routes that ask for it (the IBAN, H45) answer the web's pages only,
+and a token gets `403`. It follows the rules of
 every page: a session that still owes its TOTP setup, a revoked session or a blocked person gets
 `401`. A write (any method but `GET`, `HEAD`, `OPTIONS`) by cookie must carry `Origin` equal to the
 instance's address and the header `X-Ledgerly-CSRF` (any value; `SESSION_CSRF_HEADER` of
@@ -65,6 +67,7 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | the actions of connections, banks, sources and plugins ([changelog](api-changelog.md)) | `write` |
 | `GET /accounts`                            | `read`             |
 | `GET /accounts/{id}/balances`              | `read`             |
+| `GET /accounts/{id}/iban`, `GET /accounts/{id}/switch/identifiers` | `session` (web only) |
 | `GET /transactions`                        | `read`             |
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |

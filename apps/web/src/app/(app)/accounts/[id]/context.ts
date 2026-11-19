@@ -8,7 +8,12 @@ import { type Account, getAccount, openSwitchOf } from "@ledgerly/domain/account
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { normalizeIban } from "@ledgerly/domain/platform/iban";
 import { isPluginProvider, listConnections } from "@ledgerly/domain/platform/integrations";
-import { findInstancePlugin, isPluginActive, listPluginConnections } from "@ledgerly/domain/platform/plugins";
+import {
+  findInstancePlugin,
+  isPluginActive,
+  listPluginConnections,
+  maskIdentifier,
+} from "@ledgerly/domain/platform/plugins";
 import { rulesOnAccount } from "@ledgerly/domain/interests";
 import { managedSinceOf, serviceAccountIds } from "@ledgerly/domain/investments";
 import { pocketsOnAccount } from "@ledgerly/domain/pockets";
@@ -129,5 +134,22 @@ export async function switchCandidates(ctx: Ctx, account: Account) {
         };
       }),
     })),
+  };
+}
+
+/**
+ * The same candidates' identifiers, masked as the step «Account» shows them (`IT60 •••• 3456`): for
+ * the web's own session only (scope `session`, H45), never a token's.
+ */
+export async function switchIdentifiers(ctx: Ctx, account: Account) {
+  const banks = await freeBankAccounts(ctx, account.id, account.currency, String);
+  return {
+    identifiers: banks.flatMap((bank) =>
+      bank.accounts.map((choice) => ({
+        connectionId: bank.connectionId,
+        bankAccountId: choice.providerAccountId,
+        masked: maskIdentifier(choice.identifier),
+      })),
+    ),
   };
 }

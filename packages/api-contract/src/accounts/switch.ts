@@ -149,6 +149,36 @@ export const undoAccountSwitch = defineRoute({
   example: { params: { id: ACCOUNT_ID } },
 });
 
+/**
+ * The masked identifier of each candidate of the switch (`IT60 •••• 3456`), for the step «Account»
+ * only (H45): scope `session`, which no token is ever granted. Not an MCP tool.
+ */
+export const listSwitchIdentifiers = defineRoute({
+  id: "list_switch_identifiers",
+  method: "GET",
+  path: "/accounts/{id}/switch/identifiers",
+  scope: "session",
+  capability: "accounts",
+  summary:
+    "The bank's identifier of each account of `GET /accounts/{id}/switch/candidates`, masked: its first and last four characters. Only the web's own session reads it (H45): a token gets 403.",
+  actions: [],
+  params: byAccount,
+  response: z.object({
+    identifiers: z.array(
+      z.object({ connectionId: id(), bankAccountId: z.string(), masked: z.string().nullable() }),
+    ),
+  }),
+  errors: ["invalid", "not_found", "conflict"],
+  example: {
+    params: { id: ACCOUNT_ID },
+    response: {
+      identifiers: [
+        { connectionId: CONNECTION_ID, bankAccountId: BANK_ACCOUNT_ID, masked: "IT60 •••• 3456" },
+      ],
+    },
+  },
+});
+
 export const listSwitchCandidates = defineRoute({
   id: "list_switch_candidates",
   method: "GET",
