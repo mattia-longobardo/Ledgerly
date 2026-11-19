@@ -50,6 +50,7 @@ export {
   removeConnection,
   replacePortfolioPoints,
   restoreAccount,
+  twinAccount,
   restoreSourceAccounts,
   runSnapshot,
   saveBalanceEntry,

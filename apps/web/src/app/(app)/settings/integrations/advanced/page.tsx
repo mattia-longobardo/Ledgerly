@@ -137,10 +137,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
       const status = statusOf(
         {
           connection,
-          label: labels.get(connection.id) ?? { name: "", provider: "" },
-          detail: null,
           runs: recent.filter((run) => run.connectionId === connection.id),
-          capabilities: { update: false },
           providerActive: active(connection),
         },
         now,

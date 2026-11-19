@@ -4,7 +4,7 @@ import type { Ctx } from "../../../platform/context";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { normalizeIban } from "../../../platform/iban";
-import { managedAccounts } from "../ports";
+import { managedAccounts, movements } from "../ports";
 import {
   type AccountType,
   hasIbanField,
@@ -34,12 +34,12 @@ export interface ProviderAccountChoice {
 const choiceNameSchema = z.string().trim().min(1).max(80);
 
 /**
- * The accounts a person may hand to a provider that reads a bank: kept by hand, active, not one
- * a service of Investments manages, and of a kind a bank holds. The currency is the caller's to
- * compare: an account keeps its own.
+ * The accounts a person may hand to a provider that reads a bank: kept by hand, active or archived
+ * (an archived one is restored by the tie, decision H58), not one a service of Investments manages,
+ * and of a kind a bank holds. The currency is the caller's to compare: an account keeps its own.
  */
 export async function accountsOpenToProvider(ctx: Pick<Ctx, "userId">): Promise<Account[]> {
-  const all = await listAccounts(ctx);
+  const all = await listAccounts(ctx, { includeArchived: true });
   const managed = await managedAccounts().serviceAccountIds(
     ctx,
     all.map((account) => account.id),
@@ -47,7 +47,7 @@ export async function accountsOpenToProvider(ctx: Pick<Ctx, "userId">): Promise<
   return all.filter(
     (account) =>
       account.origin === "manual" &&
-      account.state === "active" &&
+      account.state !== "unavailable" &&
       !managed.has(account.id) &&
       (account.type === "checking" ||
         account.type === "savings" ||
@@ -82,6 +82,7 @@ export async function linkProviderAccounts(
   const open = new Map((await accountsOpenToProvider(ctx)).map((account) => [account.id, account]));
   const already = await accountsOfProvider(ctx, provider);
   let sortOrder = await nextSortOrder(ctx);
+  const restored: string[] = [];
 
   await getDb().transaction(async (trx) => {
     await lockIbans(trx, ctx);
@@ -97,21 +98,25 @@ export async function linkProviderAccounts(
       const accountId =
         known?.id ??
         (choice.target.kind === "existing"
-          ? await tieExisting(trx, ctx, { choice, tie, open })
+          ? await tieExisting(trx, ctx, { choice, tie, open, restored })
           : await tieNew(trx, ctx, { choice, tie, holders, sortOrder: sortOrder++ }));
       linked.set(choice.providerAccountId, accountId);
     }
   });
+  for (const id of restored) await movements().markDuplicate(ctx, id, null);
   return linked;
 }
 
 type Tie = { origin: "synced"; provider: string; providerAccountId: string; lastSyncedAt: Date };
 
-/** An account kept by hand, tied to the provider's: its balances stay (decision H26). */
+/**
+ * An account kept by hand, tied to the provider's: its balances stay (decision H26). An archived
+ * one comes back to the lists, as "Restore" does (H58): `restored` collects it for the caller.
+ */
 async function tieExisting(
   trx: Tx,
   ctx: Pick<Ctx, "userId">,
-  input: { choice: ProviderAccountChoice; tie: Tie; open: ReadonlyMap<string, Account> },
+  input: { choice: ProviderAccountChoice; tie: Tie; open: ReadonlyMap<string, Account>; restored: string[] },
 ): Promise<string> {
   const { choice, tie, open } = input;
   const account = choice.target.kind === "existing" ? open.get(choice.target.accountId) : undefined;
@@ -119,9 +124,11 @@ async function tieExisting(
   // The source writes the IBAN it gives on the account it is tied to (§2.4.3).
   const iban = normalizeIban(choice.iban);
   const fromSource = iban !== null && hasIbanField(account.type) ? { iban, ibanFromSource: true } : {};
+  const back = account.state === "archived" ? { state: "active" as const, archivedAt: null } : {};
+  if (account.state === "archived") input.restored.push(account.id);
   await trx
     .update(accounts)
-    .set({ ...tie, ...fromSource })
+    .set({ ...tie, ...fromSource, ...back })
     .where(and(eq(accounts.id, account.id), userScoped(ctx).owns(accounts)));
   return account.id;
 }

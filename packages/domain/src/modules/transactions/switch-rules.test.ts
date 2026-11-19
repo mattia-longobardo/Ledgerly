@@ -3,6 +3,7 @@ import { addDays, type CivilDate } from "../../shared/dates";
 import {
   compareSources,
   comparisonFrom,
+  isDoubleOf,
   matchDoubles,
   planTransfers,
   type SwitchMovement,
@@ -350,5 +351,17 @@ describe("matchDoubles", () => {
     const kept = [m("k1", "2026-11-03", -500n), m("k2", "2026-11-04", -500n)];
     const kepts = matchDoubles(doubles, kept).matched.map((pair) => pair.keptId);
     expect(new Set(kepts).size).toBe(2);
+  });
+});
+
+describe("isDoubleOf", () => {
+  it("is a double when every movement has its twin and none was written by hand", () => {
+    expect(isDoubleOf({ movements: 3, manual: 0 }, { unmatched: [] })).toBe(true);
+  });
+
+  it("is not a double with a movement left alone, a movement by hand or no movement", () => {
+    expect(isDoubleOf({ movements: 3, manual: 0 }, { unmatched: ["d1"] })).toBe(false);
+    expect(isDoubleOf({ movements: 3, manual: 1 }, { unmatched: [] })).toBe(false);
+    expect(isDoubleOf({ movements: 0, manual: 0 }, { unmatched: [] })).toBe(false);
   });
 });

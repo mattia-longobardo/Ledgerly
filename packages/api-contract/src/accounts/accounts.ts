@@ -237,3 +237,18 @@ export const restoreAccount = defineRoute({
   errors: ACCOUNT_ERRORS,
   example: { params: { id: ACCOUNT_ID } },
 });
+
+export const getAccountTwin = defineRoute({
+  id: "get_account_twin",
+  method: "GET",
+  path: "/accounts/{id}/twin",
+  scope: "read",
+  capability: "accounts",
+  summary:
+    "The account this one doubles (decision H58): every movement of it is one of the twin's. Open, what archiving it would record; archived, what was recorded. An archived double counts in no month.",
+  actions: [],
+  params: byAccount,
+  response: z.object({ twin: z.object({ id: id(), name: z.string() }).nullable() }),
+  errors: ["invalid", "not_found"],
+  example: { params: { id: ACCOUNT_ID }, response: { twin: { id: ACCOUNT_ID, name: "Everyday account" } } },
+});

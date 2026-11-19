@@ -22,6 +22,16 @@ interface MovementsPort {
   transactionIdsOfAccount(ctx: Pick<Ctx, "userId">, accountId: string): Promise<string[]>;
   /** Joins the giroconti the IBANs of the accounts make of the movements already stored. */
   linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number>;
+  /** The first of `candidates` whose movements hold every movement of the account (H58), or null. */
+  twinOf(
+    ctx: Pick<Ctx, "userId" | "timeZone">,
+    accountId: string,
+    candidates: readonly string[],
+  ): Promise<string | null>;
+  /** Records the account as a double of `twinId` (its movements leave the months), or forgets it. */
+  markDuplicate(ctx: Pick<Ctx, "userId">, accountId: string, twinId: string | null): Promise<void>;
+  /** The twin of each account recorded as a double. */
+  duplicatesOf(ctx: Pick<Ctx, "userId">, accountIds: readonly string[]): Promise<Map<string, string>>;
 }
 
 /** The accounts Investments manages, realised by investments. */

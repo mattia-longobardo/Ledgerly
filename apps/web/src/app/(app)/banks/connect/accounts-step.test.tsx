@@ -104,6 +104,14 @@ describe("the choice of the accounts of a bank", () => {
     ]);
   });
 
+  it("offers an archived account too, said archived, and says it comes back (H58)", async () => {
+    renderStep({ existing: [{ id: "x-3", name: "Old", currency: "EUR", archived: true }] });
+    const select = targetOf(PROPS.accounts[0].legend);
+    expect([...select.options].map((option) => option.textContent)).toContain('Use "Old" (archived)');
+    await userEvent.selectOptions(select, "x-3");
+    expect(screen.getByText(/"Old" is archived: it comes back to the lists/)).toBeTruthy();
+  });
+
   it("does not import the same account of the person twice", async () => {
     renderStep();
     await userEvent.selectOptions(targetOf(PROPS.accounts[0].legend), "x-1");

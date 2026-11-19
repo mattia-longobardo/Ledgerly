@@ -1,7 +1,8 @@
 // scripts/seed-e2e/connections.ts — the users and the data of the flow `connections` (tests/e2e/connections/).
 import { eq } from "drizzle-orm";
 import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/banks/plugin";
-import { applyProviderAccounts } from "@domain/modules/accounts/service";
+import { accounts } from "@domain/modules/accounts/schema";
+import { applyProviderAccounts, createAccount } from "@domain/modules/accounts/service";
 import { parseKeyRing, sealJson } from "@domain/platform/crypto";
 import { today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
@@ -42,6 +43,19 @@ export async function seedConnections(email: string = USERS.connections.email): 
     credentials: { token: "e2e-not-a-token" },
   });
   await saveSchedule(ctx, wallet.id, { rules: [] });
+  // Decision H58: a Wallet account, so "Disconnect" says that no account moves to a bank by itself,
+  // and an archived account kept by hand, which a bank's "Choose the accounts" offers to bring back.
+  await applyProviderAccounts(ctx, WALLET_PROVIDER, [
+    {
+      provider: WALLET_PROVIDER,
+      providerAccountId: "e2e-wallet-everyday",
+      name: "Wallet everyday",
+      type: "checking",
+      currency: "EUR",
+    },
+  ]);
+  const archived = await createAccount(ctx, { name: "Old savings", type: "savings" });
+  await db.update(accounts).set({ state: "archived", archivedAt: now }).where(eq(accounts.id, archived.id));
 
   // The banks need the plugin of the instance; the seed cannot reach a plugin itself, so the
   // credentials are sealed here as the app would seal them, and never checked.

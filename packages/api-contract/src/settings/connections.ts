@@ -81,6 +81,26 @@ const connection = z.object({
     /** The depths, in months, `POST /connections/{id}/history` accepts; empty when none. */
     historyMonths: z.array(z.number().int()),
   }),
+  /**
+   * The state of the row, by the one rule of the server (`syncStatus`): `value` of five, `text` the
+   * sentence to say, `action` the one thing the person can do, or null.
+   */
+  status: z.object({
+    value: z.enum(["ok", "running", "late", "action", "paused"]),
+    text: z.enum([
+      "ok",
+      "running",
+      "late",
+      "lateNever",
+      "lateLimit",
+      "consentExpired",
+      "keyInvalid",
+      "pending",
+      "pausedSchedule",
+      "pausedProvider",
+    ]),
+    action: z.enum(["update", "renew", "replaceKey", "chooseAccounts", "resume", "enable"]).nullable(),
+  }),
   /** The last runs, newest first. */
   runs: z.array(run),
 });
@@ -110,6 +130,7 @@ const CONNECTION_EXAMPLE = {
     renew: true,
     historyMonths: [],
   },
+  status: { value: "ok", text: "ok", action: null },
   runs: [
     {
       kind: "transactions",

@@ -120,7 +120,10 @@ export function accountsLeft(
 }
 
 /** The state of a connection from what the page read about it. */
-export function statusOf(facts: ConnectionFacts, now: Date): SyncStatus {
+export function statusOf(
+  facts: Pick<ConnectionFacts, "connection" | "runs" | "providerActive" | "accountsChosen" | "keyRefused">,
+  now: Date,
+): SyncStatus {
   const { connection } = facts;
   return syncStatus(
     {

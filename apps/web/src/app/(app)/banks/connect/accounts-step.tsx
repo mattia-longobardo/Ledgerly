@@ -34,8 +34,8 @@ export interface AccountsStepProps {
   accounts: AccountToChoose[];
   /** The accounts of this bank already tied here (a renewed access): shown, not asked about. */
   linked: { legend: string; account: string }[];
-  /** The person's own accounts a bank's account may be tied to. */
-  existing: { id: string; name: string; currency: string }[];
+  /** The person's own accounts a bank's account may be tied to; an archived one comes back (H58). */
+  existing: { id: string; name: string; currency: string; archived?: boolean }[];
   /**
    * The person's accounts that come from another source and may be the same account (ux/n4-account-switch.md
    * §2.1): choosing one imports nothing now; the outcome leads to the check of the switch.
@@ -264,7 +264,9 @@ export function AccountsStep({
                     <optgroup label={t("accounts.existingGroup")}>
                       {offered.map((one) => (
                         <option key={one.id} value={one.id}>
-                          {t("accounts.existing", { account: one.name })}
+                          {t(one.archived ? "accounts.existingArchived" : "accounts.existing", {
+                            account: one.name,
+                          })}
                         </option>
                       ))}
                     </optgroup>
@@ -326,7 +328,11 @@ export function AccountsStep({
                 </p>
               )}
               {chosen && (
-                <p className="text-sm text-muted">{t("accounts.existingNote", { account: chosen.name })}</p>
+                <p className="text-sm text-muted">
+                  {t(chosen.archived ? "accounts.existingArchivedNote" : "accounts.existingNote", {
+                    account: chosen.name,
+                  })}
+                </p>
               )}
             </fieldset>
           );

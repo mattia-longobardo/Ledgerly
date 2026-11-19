@@ -159,6 +159,8 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
         title={t("disconnect.title", { name: row.name })}
         description={[
           t("disconnect.description", { name: row.name, count: leave.accounts }),
+          // No switch to a bank happens by itself (decision H58): the person moves each account.
+          t("disconnect.noSwitch", { count: leave.accounts }),
           leave.excluded > 0 ? t("disconnect.excluded", { count: leave.excluded }) : "",
         ]
           .filter(Boolean)

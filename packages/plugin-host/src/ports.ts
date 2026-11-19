@@ -14,6 +14,8 @@ interface OpenAccount {
   id: string;
   name: string;
   currency: string;
+  /** Archived: tying it brings it back (decision H58). */
+  archived: boolean;
 }
 
 /** What the person chose for one account the bank exposes. */

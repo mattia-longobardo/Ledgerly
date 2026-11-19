@@ -11,4 +11,5 @@ export {
 } from "./learning";
 export type { CategoryUndoRow, RuleUndoRow } from "./learning";
 export { switchTransferPairs, switchMergedMovements } from "./switches";
+export { duplicateAccounts } from "./duplicates";
 export type { SwitchLegBefore, MergedMovementBefore } from "./switches";

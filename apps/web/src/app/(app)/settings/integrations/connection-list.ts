@@ -18,7 +18,7 @@ import {
 import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
 import { connectionSummary } from "@ledgerly/plugin-host";
 import { labelOf } from "@/platform/integrations/registry";
-import { sourceSlugOf } from "./connection-view";
+import { sourceSlugOf, statusOf } from "./connection-view";
 
 const DAY_MS = 86_400_000;
 /** The runs of a connection the list gives, newest first: the ten the row shows. */
@@ -96,9 +96,10 @@ async function rowOf(
   ctx: Ctx,
   connection: Connection,
   facts: Facts,
-  known: { runs: readonly RecentRun[]; ibanConflicts: (connection: Connection) => string[] },
+  known: { runs: readonly RecentRun[]; ibanConflicts: (connection: Connection) => string[]; now: Date },
 ) {
   const label = await labelOf(connection, ctx.locale);
+  const runs = known.runs.filter((run) => run.connectionId === connection.id);
   return {
     id: connection.id,
     provider: connection.provider,
@@ -114,16 +115,16 @@ async function rowOf(
     ...facts,
     nextAttempt: instant(facts.nextAttempt),
     ibanConflicts: known.ibanConflicts(connection),
-    runs: known.runs
-      .filter((run) => run.connectionId === connection.id)
-      .map(({ kind, state, origin, errorCode, counts, startedAt }) => ({
-        kind,
-        state,
-        origin,
-        errorCode,
-        counts,
-        startedAt: startedAt.toISOString(),
-      })),
+    // The state of the row, by the same rule as the page's (`syncStatus`): the client says it.
+    status: statusOf({ connection, runs, ...facts }, known.now),
+    runs: runs.map(({ kind, state, origin, errorCode, counts, startedAt }) => ({
+      kind,
+      state,
+      origin,
+      errorCode,
+      counts,
+      startedAt: startedAt.toISOString(),
+    })),
   };
 }
 
@@ -161,7 +162,7 @@ export async function connectionList(ctx: Ctx, now: Date = new Date()) {
       const active = plugins.some((one) => one.id === pluginId && one.state === "active");
       facts = await bankFacts(ctx, connection, { active, keyRefused: await keyRefused(pluginId) }, now);
     }
-    rows.push(await rowOf(ctx, connection, facts, { runs, ibanConflicts }));
+    rows.push(await rowOf(ctx, connection, facts, { runs, ibanConflicts, now }));
   }
   return rows;
 }

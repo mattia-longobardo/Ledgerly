@@ -251,6 +251,7 @@
       "disconnect": {
         "title": "Disconnect {name}?",
         "description": "Access to {name} is closed. {count, plural, =0 {} one {The account stays in Ledgerly as “Disconnected”, with its balance and transactions, and stops updating. } other {The # accounts stay in Ledgerly as “Disconnected”, with their balances and transactions, and stop updating. }}The account choice and the schedule stay: if you connect again, each account goes back to its place.",
+        "noSwitch": "{count, plural, =0 {} one {It does not move to a bank by itself: to keep it up to date, open it and choose “Move to the bank”.} other {They do not move to a bank by themselves: to keep one up to date, open it and choose “Move to the bank”.}}",
         "confirm": "Disconnect",
         "cancel": "Keep connected",
         "excluded": "{count, plural, one {# excluded account stays excluded.} other {# excluded accounts stay excluded.}}"
@@ -5804,11 +5805,13 @@
         "new": "Create a new account",
         "existingGroup": "Use an existing account",
         "existing": "Use \"{account}\"",
+        "existingArchived": "Use \"{account}\" (archived)",
         "skip": "Do not import",
         "name": "Name",
         "type": "Type",
         "unnamed": "Account",
         "existingNote": "From now on the balance and the transactions of \"{account}\" come from the bank. The balances already entered stay.",
+        "existingArchivedNote": "\"{account}\" is archived: it comes back to the lists, and from now on its balance and transactions come from the bank. The balances already entered stay.",
         "duplicate": "This account is already chosen for another account of the bank.",
         "none": "Choose at least one account.",
         "hurry": "Confirm at once: a bank gives its full history only in the first minutes after sign-in.",
