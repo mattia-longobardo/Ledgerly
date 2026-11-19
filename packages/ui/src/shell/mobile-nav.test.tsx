@@ -1,6 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
 import type { NavLink } from "./nav-types";
 import { ShellProvider } from "./shell-context";
@@ -17,7 +16,7 @@ const LINKS: NavLink[] = [
   { id: "overview", href: "/", label: "Overview", icon: "overview", group: "finance", mobile: true },
   {
     id: "components",
-    href: "/components" as Route,
+    href: "/components",
     label: "Components",
     icon: "funds",
     group: "system",
@@ -25,7 +24,7 @@ const LINKS: NavLink[] = [
   },
   {
     id: "settings",
-    href: "/settings/profile" as Route,
+    href: "/settings/profile",
     label: "Settings",
     icon: "settings",
     group: "footer",

@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import type { Route } from "next";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
@@ -54,9 +53,9 @@ describe("Switch", () => {
 
 describe("StepIndicator", () => {
   const steps = [
-    { id: "fund", label: "The fund", href: "/funds/new?step=fund" as Route },
-    { id: "sources", label: "How you pay in", href: "/funds/new?step=sources" as Route },
-    { id: "fees", label: "Fees", href: "/funds/new?step=fees" as Route },
+    { id: "fund", label: "The fund", href: "/funds/new?step=fund" },
+    { id: "sources", label: "How you pay in", href: "/funds/new?step=sources" },
+    { id: "fees", label: "Fees", href: "/funds/new?step=fees" },
   ];
 
   it("marks the current step, and makes the ones before it links back", () => {

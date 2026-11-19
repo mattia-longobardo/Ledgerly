@@ -1,4 +1,3 @@
-import type { Route } from "next";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +22,7 @@ const LINKS: NavLink[] = [
   { id: "overview", href: "/", label: "Overview", icon: "overview", group: "finance", mobile: true },
   {
     id: "components",
-    href: "/components" as Route,
+    href: "/components",
     label: "Components",
     icon: "funds",
     group: "system",
@@ -31,7 +30,7 @@ const LINKS: NavLink[] = [
   },
   {
     id: "settings",
-    href: "/settings/profile" as Route,
+    href: "/settings/profile",
     label: "Settings",
     icon: "settings",
     group: "footer",
@@ -124,7 +123,7 @@ describe("shell", () => {
       >
         <Topbar
           title="Profile"
-          parent={{ href: "/settings/profile" as Route, label: "Settings" }}
+          parent={{ href: "/settings/profile", label: "Settings" }}
           themeToggle={null}
         />
       </ShellProvider>,

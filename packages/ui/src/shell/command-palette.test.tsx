@@ -1,4 +1,3 @@
-import type { Route } from "next";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,7 +16,7 @@ const LINKS: NavLink[] = [
   { id: "overview", href: "/", label: "Overview", icon: "overview", group: "finance", mobile: true },
   {
     id: "components",
-    href: "/components" as Route,
+    href: "/components",
     label: "Components",
     icon: "funds",
     group: "system",
@@ -25,7 +24,7 @@ const LINKS: NavLink[] = [
   },
   {
     id: "settings",
-    href: "/settings/profile" as Route,
+    href: "/settings/profile",
     label: "Settings",
     icon: "settings",
     group: "footer",
@@ -61,7 +60,7 @@ describe("CommandPalette", () => {
   it("finds the search-only pages by name, and does not list them before a search", async () => {
     const security: NavLink = {
       id: "settings-security",
-      href: "/settings/security" as Route,
+      href: "/settings/security",
       label: "Settings › Security",
       icon: "settings",
       group: "footer",
@@ -142,7 +141,7 @@ describe("CommandPalette", () => {
 
   it("offers the pockets and subscriptions found by name, before the payees (spec §8.2)", async () => {
     const searchRecords = vi.fn(async () => [
-      { id: "pocket:p-1", label: "Holidays", hint: "Pocket", href: "/pockets/p-1" as Route },
+      { id: "pocket:p-1", label: "Holidays", hint: "Pocket", href: "/pockets/p-1" },
     ]);
     const searchPayees = vi.fn(async () => [{ payee: "Holiday Inn", count: 2 }]);
     render(
