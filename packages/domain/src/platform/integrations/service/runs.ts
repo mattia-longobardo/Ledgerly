@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, lte, lt, ne, or, sql } from "drizzle-orm";
 import type { Ctx } from "../../context";
 import { getDb } from "../../db/client";
+import { closeOrphaned } from "../../db/orphans";
 import { userScoped } from "../../db/scope";
 import { APP_VERSION } from "../../version";
 import { currentOrigin } from "../origin";
@@ -274,12 +275,12 @@ export async function closeOrphanRuns(
   now: Date = new Date(),
   startedBefore: Date = new Date(now.getTime() - ORPHAN_AFTER_MS),
 ): Promise<number> {
-  const closed = await getDb()
-    .update(syncRuns)
-    .set({ state: "failed", finishedAt: now, error: "orphaned" })
-    .where(and(eq(syncRuns.state, "running"), lt(syncRuns.startedAt, startedBefore)))
-    .returning({ id: syncRuns.id });
-  return closed.length;
+  return closeOrphaned(
+    syncRuns,
+    syncRuns.state,
+    { state: "failed", finishedAt: now, error: "orphaned" },
+    startedBefore,
+  );
 }
 
 /**

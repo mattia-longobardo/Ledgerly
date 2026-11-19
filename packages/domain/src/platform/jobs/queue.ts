@@ -1,5 +1,6 @@
 import { and, eq, lt, ne, or, isNull, sql } from "drizzle-orm";
 import { getDb } from "../db/client";
+import { closeOrphaned } from "../db/orphans";
 import { APP_VERSION } from "../version";
 import { jobQueue, jobRuns, workerHeartbeats } from "./schema";
 
@@ -131,10 +132,6 @@ export async function lastBeatAt(): Promise<Date | null> {
  * died); `housekeeping` with an hour's margin, the net under it.
  */
 export async function closeOrphanJobRuns(startedBefore: Date, now: Date = new Date()): Promise<number> {
-  const closed = await getDb()
-    .update(jobRuns)
-    .set({ status: "failed", finishedAt: now, error: "orphaned" })
-    .where(and(eq(jobRuns.status, "running"), lt(jobRuns.startedAt, startedBefore)))
-    .returning({ id: jobRuns.id });
-  return closed.length;
+  const failed = { status: "failed" as const, finishedAt: now, error: "orphaned" };
+  return closeOrphaned(jobRuns, jobRuns.status, failed, startedBefore);
 }
