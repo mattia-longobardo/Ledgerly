@@ -7,7 +7,6 @@ import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
-import { linkOwnTransfers } from "@ledgerly/domain/transactions";
 import { parseAmount } from "@ledgerly/domain/platform/format";
 import {
   AccountError,
@@ -108,8 +107,6 @@ export async function saveAccountSettingsAction(
       ...input,
       lowBalanceCents: input.lowBalance ? amount(input.lowBalance, ctx) : null,
     });
-    // A new IBAN may make giroconti of movements already stored (F2.5).
-    await linkOwnTransfers(ctx);
     revalidatePath("/expenses");
     revalidatePath(`/accounts/${id}`);
     revalidatePath("/accounts");

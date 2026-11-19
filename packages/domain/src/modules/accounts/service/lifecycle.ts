@@ -11,8 +11,7 @@ import {
   unlinkEntities,
   unlinkEntitiesOfEveryProvider,
 } from "../../../platform/integrations/service";
-import { serviceAccountIds } from "../../investments/managed";
-import { transactionIdsOfAccount } from "../../transactions/queries";
+import { managedAccounts, movements } from "../ports";
 import {
   type AccountCreateInput,
   accountCreateSchema,
@@ -95,11 +94,11 @@ export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown
     settings.type !== current.type &&
     settings.type !== "investment" &&
     settings.type !== "crypto" &&
-    (await serviceAccountIds(ctx, [id])).has(id)
+    (await managedAccounts().serviceAccountIds(ctx, [id])).has(id)
   ) {
     throw new AccountError("managed_locked");
   }
-  return getDb().transaction(async (tx) => {
+  const saved = await getDb().transaction(async (tx) => {
     const iban = await personIban(tx, ctx, settings.iban, settings.type, current);
     const [row] = await tx
       .update(accounts)
@@ -130,6 +129,10 @@ export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown
       .returning();
     return row;
   });
+  // A new IBAN may make giroconti of movements already stored (F2.5): the form, the route and any
+  // other caller get them joined by this one use case.
+  await movements().linkOwnTransfers(ctx);
+  return saved;
 }
 
 export async function archiveAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
@@ -181,7 +184,7 @@ export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promi
   // `provider_links` rows do not (`entity_id` is not a real foreign key: the deviation of §11.4).
   // Left behind they would hold the entity unique key of rows nothing can resolve, and a source
   // chosen again would take its movements for known ones and never import them back.
-  const movementIds = await transactionIdsOfAccount(ctx, id);
+  const movementIds = await movements().transactionIdsOfAccount(ctx, id);
   // An account of a source turned off is kept by hand and keeps the source's id as a link only.
   const converted = await linksOfEntity(ctx, "account", id);
   // A switch goes with the account (`on delete cascade`): without it, the source the account left

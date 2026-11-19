@@ -4,7 +4,7 @@ import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { normalizeIban } from "../../../platform/iban";
-import { serviceAccountIds } from "../../investments/managed";
+import { managedAccounts } from "../ports";
 import {
   type AccountType,
   hasIbanField,
@@ -39,7 +39,7 @@ const choiceNameSchema = z.string().trim().min(1).max(80);
  */
 export async function accountsOpenToProvider(ctx: Pick<Ctx, "userId">): Promise<Account[]> {
   const all = await listAccounts(ctx);
-  const managed = await serviceAccountIds(
+  const managed = await managedAccounts().serviceAccountIds(
     ctx,
     all.map((account) => account.id),
   );

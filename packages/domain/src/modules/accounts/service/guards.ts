@@ -4,7 +4,7 @@ import { type CivilDate } from "../../../shared/dates";
 import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { normalizeIban } from "../../../platform/iban";
-import { managedSinceOf } from "../../investments/managed";
+import { managedAccounts } from "../ports";
 import { type AccountType, hasIbanField, ibanConflict } from "../rules";
 import { type Account, type BalanceEntry } from "../queries";
 import { accounts, balanceEntries } from "../schema";
@@ -110,7 +110,7 @@ export async function refuseManaged(
   accountId: string,
   on: CivilDate,
 ): Promise<void> {
-  const since = await managedSinceOf(ctx, accountId);
+  const since = await managedAccounts().managedSinceOf(ctx, accountId);
   if (since !== null && on >= since) throw new AccountError("managed_locked");
 }
 

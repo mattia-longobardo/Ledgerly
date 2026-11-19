@@ -1,19 +1,6 @@
-// Accounts · the use cases the Server Actions and the routes share (rewrite plan R2 criterion 4),
-// and the refusal of the module as the contract names it.
-import { AccountError, updateAccountSettings } from "@ledgerly/domain/accounts";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import { linkOwnTransfers } from "@ledgerly/domain/transactions";
+// Accounts · the refusal of the module as the contract names it.
+import { AccountError } from "@ledgerly/domain/accounts";
 import { ApiRefusal } from "../serve";
-
-/**
- * Changes an account's settings, then joins the giroconti a new IBAN makes of movements already
- * stored (F2.5), as the settings form does. shortcut: two calls in the form and here until the
- * step's `MovementsPort` lets `updateAccountSettings` join them itself (ACC-8).
- */
-export async function changeAccountSettings(ctx: Ctx, id: string, input: unknown): Promise<void> {
-  await updateAccountSettings(ctx, id, input);
-  await linkOwnTransfers(ctx);
-}
 
 const INVALID = new Set(["future_date", "iban_invalid", "invalid"]);
 

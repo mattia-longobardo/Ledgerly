@@ -46,6 +46,10 @@ import { seedPockets } from "./seed-e2e/pockets";
 import { seedSubscriptions } from "./seed-e2e/subscriptions";
 import { seedTimeOff } from "./seed-e2e/timeoff";
 import { seedExpenses, seedManual, seedSources } from "./seed-e2e/transactions";
+import { wireDomain } from "../apps/api/src/wiring";
+
+// The ports of the domain, as every process wires them (10-modularity.md §10.3).
+wireDomain();
 
 const mode = process.argv[2];
 

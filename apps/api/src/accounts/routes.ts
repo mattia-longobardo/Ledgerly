@@ -23,6 +23,7 @@ import {
   runSnapshot,
   saveBalanceEntry,
   snapshotMonthFor,
+  updateAccountSettings,
   updateBalanceEntry,
   updateConnection,
 } from "@ledgerly/domain/accounts";
@@ -30,7 +31,7 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { addDays, type CivilDate, monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
-import { accountRefusal, changeAccountSettings, refusing } from "./cases";
+import { accountRefusal, refusing } from "./cases";
 import { accountDetail, accountRow, balanceEntry, money, moneyOf, snapshot, viewRow } from "./dto";
 
 const { accounts, balances, links, removal, switch: switching, summary, views } = ACCOUNTS;
@@ -135,7 +136,7 @@ function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
     const { lowBalance, ...rest } = body;
     // A field left out keeps its value; the IBAN is kept as stored, never sent back (H45).
     await refusing(
-      changeAccountSettings(ctx, params.id, {
+      updateAccountSettings(ctx, params.id, {
         name: current.name,
         type: current.type,
         currency: current.currency,

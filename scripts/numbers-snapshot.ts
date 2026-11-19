@@ -39,6 +39,10 @@ import type { Ctx } from "@domain/platform/context";
 import { lastDayOfMonth, today } from "@domain/shared/dates";
 import { monthlyFigures } from "../apps/web/src/platform/reports/monthly";
 import { canonical, differences, project, namesIn, sha256, type Json } from "./snapshot-format";
+import { wireDomain } from "../apps/api/src/wiring";
+
+// The ports of the domain, as every process wires them (10-modularity.md §10.3).
+wireDomain();
 
 type SnapshotCtx = Pick<Ctx, "userId" | "timeZone" | "displayCurrency">;
 

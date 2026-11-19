@@ -55,6 +55,10 @@ import * as tables from "@domain/platform/db/tables";
 import { readEnv } from "@domain/platform/env";
 import { addDeposit, debitFund } from "../test/funds";
 import { accountMovement, manualService } from "../test/investments";
+import { wireDomain } from "../apps/api/src/wiring";
+
+// The ports of the domain, as every process wires them (10-modularity.md §10.3).
+wireDomain();
 
 // The application's own `getDb()`, with a logger that counts: set before the first call, which is
 // what `getDb()` then hands to every module. No product code knows it is being counted.

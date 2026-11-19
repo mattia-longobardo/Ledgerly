@@ -76,3 +76,4 @@ export {
 } from "./sync";
 export type { ConnectTarget } from "./sync";
 export type { Xirr } from "./xirr";
+export { managedAccountsOfInvestments } from "./ports";

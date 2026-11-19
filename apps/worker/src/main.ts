@@ -13,6 +13,7 @@
  * tasks the web adds).
  */
 import { hostname } from "node:os";
+import { wireDomain } from "@ledgerly/api";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { closeOrphanRuns } from "@ledgerly/domain/platform/integrations";
 import {
@@ -62,6 +63,7 @@ async function recover(workerId: string, bootAt: Date): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  wireDomain();
   if (process.argv.includes("--health")) process.exit(await health());
 
   // The preview (`scripts/preview-on-test.sh`) runs the queue only: no tier starts by itself there.

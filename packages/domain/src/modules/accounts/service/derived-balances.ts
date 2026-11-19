@@ -5,7 +5,7 @@ import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { syncsTransactions } from "../../../platform/integrations/rules";
 import { type Cents } from "../../../shared/money";
-import { dailyNetByAccount, manualMovementsByAccount } from "../../transactions/queries";
+import { movements } from "../ports";
 import { dailySeries, deriveMonthEnds, movementBalances, withMovementPoints } from "../rules";
 import {
   type Account,
@@ -40,7 +40,7 @@ export async function reconstructedBalances(
       ctx,
       owned.map((account) => account.id),
     ),
-    dailyNetByAccount(ctx, syncedIds),
+    movements().dailyNetByAccount(ctx, syncedIds),
   ]);
   const days: CivilDate[] = [];
   for (let day = window.from; day <= window.to; day = addDays(day, 1)) days.push(day);
@@ -121,7 +121,7 @@ async function rebuildMovementBalances(
   wanted: readonly { id: string; marked: boolean }[],
 ): Promise<void> {
   const ids = wanted.map((account) => account.id);
-  const manual = await manualMovementsByAccount(ctx, ids);
+  const manual = await movements().manualMovementsByAccount(ctx, ids);
   const basis = await movementBasis(ctx, [...manual.keys()]);
   const capturedAt = new Date();
   const rows = [...manual].flatMap(([accountId, movements]) => {
@@ -178,7 +178,10 @@ async function rebuildMonthEnds(
   );
   if (synced.length === 0) return { written: 0 };
   const ids = synced.map((account) => account.id);
-  const [observed, daily] = await Promise.all([observedDays(ctx, ids), dailyNetByAccount(ctx, ids)]);
+  const [observed, daily] = await Promise.all([
+    observedDays(ctx, ids),
+    movements().dailyNetByAccount(ctx, ids),
+  ]);
   const capturedAt = new Date();
   const rows = ids.flatMap((accountId) =>
     deriveMonthEnds(observed.get(accountId) ?? [], daily.get(accountId) ?? []).map((point) =>

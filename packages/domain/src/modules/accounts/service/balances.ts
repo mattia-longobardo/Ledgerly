@@ -4,7 +4,7 @@ import { type CivilDate, isCivilDate, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { type Cents } from "../../../shared/money";
-import { managedSinceOf } from "../../investments/managed";
+import { managedAccounts } from "../ports";
 import { type BalanceEntryInput, balanceEntrySchema, isFutureDate } from "../rules";
 import { type BalanceEntry } from "../queries";
 import { accounts, balanceEntries } from "../schema";
@@ -135,7 +135,7 @@ export async function saveProviderBalance(
 ): Promise<BalanceEntry | null> {
   await requireAccount(ctx, accountId);
   if (!isCivilDate(input.on)) throw new RangeError(`Not a civil date: "${input.on}"`);
-  const since = await managedSinceOf(ctx, accountId);
+  const since = await managedAccounts().managedSinceOf(ctx, accountId);
   if (since !== null && input.on >= since) {
     await getDb()
       .update(accounts)

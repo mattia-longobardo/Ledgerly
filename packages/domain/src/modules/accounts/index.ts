@@ -56,3 +56,4 @@ export {
   openSwitches,
   recordSwitch,
 } from "./switching";
+export { wireAccounts } from "./ports";

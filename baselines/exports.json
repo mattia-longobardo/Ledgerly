@@ -19,7 +19,8 @@
     "sourceNotes",
     "undoMergeOfTwo",
     "undoMoveToMacro",
-    "undoSourceCategoryChange"
+    "undoSourceCategoryChange",
+    "wireDomain"
   ],
   "packages/api-client/src/index.ts": [],
   "packages/api-contract/src/index.ts": [
@@ -113,7 +114,8 @@
     "snapshotMonthFor",
     "updateAccountSettings",
     "updateBalanceEntry",
-    "updateConnection"
+    "updateConnection",
+    "wireAccounts"
   ],
   "packages/domain/src/modules/budgets/client.ts": [
     "ALERT_PRESETS",
@@ -396,6 +398,7 @@
     "legacyPeriodQuery",
     "linkTransfer",
     "listInvestmentAccounts",
+    "managedAccountsOfInvestments",
     "managedSinceOf",
     "onCostOf",
     "periodReturnOf",
@@ -666,6 +669,7 @@
     "moveCategory",
     "moveCategoryToMacro",
     "movementSpanByAccount",
+    "movementsOfAccounts",
     "movementsToCompare",
     "movesBetweenMacros",
     "pendingSends",

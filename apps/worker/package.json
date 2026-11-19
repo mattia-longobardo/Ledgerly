@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@ledgerly/api": "*",
     "@ledgerly/domain": "*",
     "@ledgerly/web": "*"
   }

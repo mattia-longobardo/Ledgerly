@@ -23,7 +23,7 @@ export function describeEnvFailure(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export function register(): void {
+export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === BUILD_PHASE) return;
   try {
@@ -37,5 +37,10 @@ export function register(): void {
     // what README's "the process refuses to start if any check fails" promises.
     console.error(`[env] refusing to start: ${describeEnvFailure(error)}`);
     process.exit(1);
+    return;
   }
+  // The ports of the domain, before any request (10-modularity.md §10.3): a dynamic import, so the
+  // Edge runtime of `proxy.ts` never bundles the domain. After the checks, which stay synchronous.
+  const { wireDomain } = await import("@ledgerly/api");
+  wireDomain();
 }

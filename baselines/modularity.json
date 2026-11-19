@@ -1,10 +1,10 @@
 {
   "counts": {
-    "crossModuleImports": 118,
+    "crossModuleImports": 115,
     "moduleIndexFiles": 12,
-    "reciprocalModulePairs": 5,
-    "reciprocalUnitPairs": 52,
-    "moduleCycleGroups": 1,
+    "reciprocalModulePairs": 4,
+    "reciprocalUnitPairs": 51,
+    "moduleCycleGroups": 2,
     "platformToModuleImports": 76,
     "platformFilesImportingModules": 23,
     "uiToPlatformImports": 3,
@@ -12,14 +12,11 @@
     "forbiddenNameKeys": 18,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 280,
+    "deepImports": 278,
     "tableAccess": 10
   },
   "crossModuleImports": [
-    "modules/accounts/actions.ts → modules/transactions/index",
     "modules/accounts/jobs.ts → modules/users/index",
-    "modules/accounts/service.ts → modules/investments/managed",
-    "modules/accounts/service.ts → modules/transactions/queries",
     "modules/accounts/ui/period-bar.tsx → modules/transactions/ui/display",
     "modules/accounts/ui/period-bar.tsx → modules/transactions/ui/range-picker",
     "modules/accounts/ui/period.ts → modules/transactions/ui/filters",
@@ -137,7 +134,6 @@
   ],
   "reciprocalUnits": [
     "app ↔ modules/funds",
-    "modules/accounts ↔ modules/investments",
     "modules/accounts ↔ modules/transactions",
     "modules/accounts ↔ platform/db",
     "modules/accounts ↔ platform/fx",
@@ -192,12 +188,13 @@
   "moduleCycles": [
     [
       "modules/accounts",
+      "modules/transactions"
+    ],
+    [
       "modules/funds",
       "modules/imports",
-      "modules/interests",
       "modules/investments",
-      "modules/payroll",
-      "modules/transactions"
+      "modules/payroll"
     ]
   ],
   "forbiddenNames": [
@@ -553,8 +550,6 @@
     "app/(app)/timeoff/settings/page.tsx → modules/timeoff/ui/settings-forms",
     "app/(app)/timeoff/settings/page.tsx → modules/timeoff/ui/year-picker",
     "app/(auth)/sign-in/two-factor/setup/setup-flow.tsx → modules/users/ui/two-factor-setup",
-    "modules/accounts/service.ts → modules/investments/managed",
-    "modules/accounts/service.ts → modules/transactions/queries",
     "modules/accounts/ui/period-bar.tsx → modules/transactions/ui/display",
     "modules/accounts/ui/period-bar.tsx → modules/transactions/ui/range-picker",
     "modules/accounts/ui/period.ts → modules/transactions/ui/filters",

@@ -19,6 +19,10 @@ import { accountSchema, PLUGIN_PATHS, type SyncResponse, syncResponseSchema } fr
 import { configuredPlugin } from "@domain/platform/plugins/queries";
 import { measureReading } from "@domain/platform/plugins/rules";
 import { pluginUserCredentials } from "@domain/platform/plugins/schema";
+import { wireDomain } from "../apps/api/src/wiring";
+
+// The ports of the domain, as every process wires them (10-modularity.md §10.3).
+wireDomain();
 
 const fromAt = process.argv.indexOf("--from");
 const from = fromAt > 0 ? process.argv[fromAt + 1] : null;

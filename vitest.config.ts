@@ -63,6 +63,7 @@ export default defineConfig({
           testTimeout: 30_000,
           hookTimeout: 60_000,
           globalSetup: ["./test/integration-setup.ts"],
+          setupFiles: ["./test/wiring.ts"],
           env: {
             DATABASE_URL: process.env.TEST_DATABASE_URL ?? "",
             BETTER_AUTH_URL: "http://127.0.0.1:3000",
