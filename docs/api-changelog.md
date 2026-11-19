@@ -5,6 +5,9 @@ written before it keeps working.
 
 ## 2026-11-19 · accounts (release R2, accounts)
 
+- `previousNetWorth` of `GET /summary`, of `get_summary` and of the monthly mail has a value: the
+  net worth at the end of the previous month, the one Overview shows the change from (decision D1).
+  It was always `null`.
 - `GET /accounts`, `GET`/`POST /accounts/{id}/balances` and `GET /summary` keep their answers; they
   are now served from the contract, with one serializer for the route and its MCP tool. A refusal of
   `POST /accounts/{id}/balances` adds `reason` (`future_date`, `managed_locked`, …); the status is

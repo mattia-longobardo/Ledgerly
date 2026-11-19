@@ -468,6 +468,19 @@ export async function accountsView(
     months.length,
   );
   const current = netWorth.at(-1) ?? { total: null, partial: false };
+  // The net worth at the end of the month before `end`, whatever the window (decision D1, ACC-2):
+  // the same held value Overview's chart has there, so a one-month window is no longer `null`.
+  const previousMonth = addMonths(end, -1);
+  const [previousNetWorth] = totalSeries(
+    counted.map((row) => [
+      convert(
+        monthEndSeries(points.get(row.account.id) ?? [], [previousMonth], "hold")[0] ?? null,
+        row.account.currency,
+        previousMonthEnd,
+      ),
+    ]),
+    1,
+  );
   const netWorthEstimated = months.map((_, i) => counted.some((row) => row.estimated[i]));
 
   const buckets = emptyBuckets();
@@ -491,7 +504,7 @@ export async function accountsView(
     netWorthEstimated,
     total: current.total,
     totalPartial: current.partial,
-    previousTotal: netWorth.at(-2)?.total ?? null,
+    previousTotal: previousNetWorth?.total ?? null,
     buckets,
     alerts,
     missingRates: [

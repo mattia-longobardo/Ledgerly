@@ -136,8 +136,8 @@ describe("golden: every account in EUR, display currency EUR", () => {
       currency: "EUR",
       netWorthCents: 9_000_00n,
       netWorthPartial: false,
-      // A one-month window has no month before it: null, exactly as before phase 1b.
-      previousNetWorthCents: null,
+      // Decision D1 (ACC-2): the end of the month before, as Overview shows it, whatever the window.
+      previousNetWorthCents: 9_200_50n,
       cashCents: 900_00n,
     });
 

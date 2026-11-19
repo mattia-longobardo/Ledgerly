@@ -411,7 +411,7 @@
    "currency": "EUR",
    "netWorth": "43671.40",
    "netWorthPartial": false,
-   "previousNetWorth": null,
+   "previousNetWorth": "41564.84",
    "cash": "11302.40",
    "cashPartial": false,
    "income": "0.00",
