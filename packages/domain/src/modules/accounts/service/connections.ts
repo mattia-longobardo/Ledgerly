@@ -4,6 +4,7 @@ import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../../platform/db/errors";
 import { userScoped } from "../../../platform/db/scope";
+import { groupBy } from "../../../shared/collections";
 import { CONNECTION_CHANNELS } from "../rules";
 import { accountConnections } from "../schema";
 import { AccountError, requireAccount } from "./guards";
@@ -71,9 +72,7 @@ export async function connectionsByAccount(
       asc(sql`lower(${accountConnections.name})`),
       asc(accountConnections.id),
     );
-  const byAccount = new Map<string, AccountConnection[]>();
-  for (const row of rows) byAccount.set(row.accountId, [...(byAccount.get(row.accountId) ?? []), row]);
-  return byAccount;
+  return groupBy(rows, (row) => row.accountId);
 }
 
 export async function addConnection(

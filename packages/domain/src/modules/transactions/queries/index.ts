@@ -14,9 +14,8 @@ export {
 } from "./movements";
 export {
   monthSpending,
+  findMovements,
   chargeCandidates,
-  incomeCandidates,
-  linkCandidates,
   payeeSamples,
   listRecurringPatterns,
 } from "./candidates";

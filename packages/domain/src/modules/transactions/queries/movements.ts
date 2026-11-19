@@ -4,6 +4,7 @@ import { addDays, type CivilDate, civilDateIn } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { Cents } from "../../../shared/money";
+import { groupBy } from "../../../shared/collections";
 import { transactions } from "../schema";
 import { cents, dayExpression, dayStart, labelIdsFor, type Transaction } from "./filters";
 
@@ -105,13 +106,11 @@ export async function dailyNetByAccount(
     // By position, for the same reason as `monthlyTotals`.
     .groupBy(sql`1`, sql`2`)
     .orderBy(sql`1`, sql`2`);
-  const byAccount = new Map<string, { on: CivilDate; cents: Cents }[]>();
-  for (const row of rows) {
-    const days = byAccount.get(row.accountId) ?? [];
-    days.push({ on: row.on, cents: cents(row.cents) });
-    byAccount.set(row.accountId, days);
-  }
-  return byAccount;
+  return groupBy(
+    rows,
+    (row) => row.accountId,
+    (row) => ({ on: row.on, cents: cents(row.cents) }),
+  );
 }
 
 /**
@@ -142,18 +141,16 @@ export async function manualMovementsByAccount(
       ),
     )
     .orderBy(asc(transactions.accountId), asc(transactions.occurredAt), asc(transactions.id));
-  const byAccount = new Map<string, { id: string; on: CivilDate; cents: Cents; writtenAt: Date }[]>();
-  for (const row of rows) {
-    const list = byAccount.get(row.accountId) ?? [];
-    list.push({
+  return groupBy(
+    rows,
+    (row) => row.accountId,
+    (row) => ({
       id: row.id,
       on: civilDateIn(row.occurredAt, ctx.timeZone),
       cents: row.cents,
       writtenAt: row.writtenAt,
-    });
-    byAccount.set(row.accountId, list);
-  }
-  return byAccount;
+    }),
+  );
 }
 
 /** A movement of an account as Investments counts it: money in (> 0) or out (< 0) of the account. */
@@ -195,18 +192,16 @@ export async function movementsByAccount(
       ),
     )
     .orderBy(asc(transactions.accountId), asc(transactions.occurredAt), asc(transactions.id));
-  const byAccount = new Map<string, AccountMovement[]>();
-  for (const row of rows) {
-    const list = byAccount.get(row.accountId) ?? [];
-    list.push({
+  return groupBy(
+    rows,
+    (row) => row.accountId,
+    (row): AccountMovement => ({
       id: row.id,
       on: civilDateIn(row.occurredAt, ctx.timeZone),
       occurredAt: row.occurredAt,
       cents: row.cents,
       payee: row.payee,
       transferGroupId: row.transferGroupId,
-    });
-    byAccount.set(row.accountId, list);
-  }
-  return byAccount;
+    }),
+  );
 }

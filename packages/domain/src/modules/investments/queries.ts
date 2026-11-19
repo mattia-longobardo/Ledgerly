@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, exists, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { type Account, readingsAt, listAccounts, reconstructedBalances } from "../accounts";
 import { fundsOverview } from "../funds/overview";
-import { escapeLike, linkCandidates, movementsByAccount, transactionsByIds } from "../transactions/queries";
+import { escapeLike, findMovements, movementsByAccount, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
 import { addDays, civilDateIn, type CivilDate, type MonthKey, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
@@ -81,6 +81,8 @@ const HISTORY_MONTHS = 36;
 const OPEN_ADJUSTMENT_DAYS = 30;
 /** How far back a bank movement can be picked to document a deposit or a withdrawal. */
 const LINK_WINDOW_DAYS = 400;
+/** How many of the newest bank movements of each way the picker offers. */
+const LINK_LIMIT = 300;
 
 export interface ServiceSummary {
   account: Account;
@@ -866,8 +868,8 @@ export async function serviceDetail(
 
   const from = addDays(todayOn, -LINK_WINDOW_DAYS);
   const [out, incoming, assets] = await Promise.all([
-    linkCandidates(ctx, { direction: "out", from, to: todayOn }),
-    linkCandidates(ctx, { direction: "in", from, to: todayOn }),
+    findMovements(ctx, { sign: "out", from, to: todayOn, newestFirst: true, limit: LINK_LIMIT }),
+    findMovements(ctx, { sign: "in", from, to: todayOn, newestFirst: true, limit: LINK_LIMIT }),
     listAssets(ctx),
   ]);
   const option = (row: {

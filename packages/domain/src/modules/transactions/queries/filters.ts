@@ -17,6 +17,7 @@ import {
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
 import { type Account } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
+import { groupBy } from "../../../shared/collections";
 import { addDays, type CivilDate, type MonthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
@@ -455,13 +456,11 @@ export async function labelIdsFor(
     .from(transactionLabels)
     .where(and(inArray(transactionLabels.transactionId, wanted), userScoped(ctx).owns(transactionLabels)))
     .orderBy(asc(transactionLabels.transactionId), asc(transactionLabels.labelId));
-  const byTransaction = new Map<string, string[]>();
-  for (const row of rows) {
-    const ids = byTransaction.get(row.transactionId) ?? [];
-    ids.push(row.labelId);
-    byTransaction.set(row.transactionId, ids);
-  }
-  return byTransaction;
+  return groupBy(
+    rows,
+    (row) => row.transactionId,
+    (row) => row.labelId,
+  );
 }
 
 /** The labels of each movement with their names and colours, for the table's chips. */
@@ -482,11 +481,9 @@ export async function labelsFor(
     .innerJoin(labels, eq(labels.id, transactionLabels.labelId))
     .where(and(inArray(transactionLabels.transactionId, wanted), userScoped(ctx).owns(transactionLabels)))
     .orderBy(asc(transactionLabels.transactionId), asc(labels.name), asc(labels.id));
-  const byTransaction = new Map<string, TransactionLabel[]>();
-  for (const row of rows) {
-    const list = byTransaction.get(row.transactionId) ?? [];
-    list.push({ id: row.id, name: row.name, color: row.color });
-    byTransaction.set(row.transactionId, list);
-  }
-  return byTransaction;
+  return groupBy(
+    rows,
+    (row) => row.transactionId,
+    (row): TransactionLabel => ({ id: row.id, name: row.name, color: row.color }),
+  );
 }

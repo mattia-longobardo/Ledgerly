@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql, sum } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, lt, ne, sql, sum } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { type CivilDate, civilDateIn, lastDayOfMonth, type MonthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
@@ -45,15 +45,73 @@ export async function monthSpending(
   }));
 }
 
-/** A movement as the subscription check sees it (spec §7.5): a positive amount, on a civil day. */
-interface ChargeCandidate {
+/** A movement as the matching services see it (audit TRX-8): its own day, and its texts. */
+interface FoundMovement {
   id: string;
   accountId: string;
   on: CivilDate;
+  /** Positive when a `sign` was asked for; the stored amount otherwise. */
   cents: Cents;
   payee: string | null;
   /** The bank's own text, where a direct debit prints its creditor and its mandate (F4, owner). */
   note: string | null;
+  categoryName: string | null;
+}
+
+/**
+ * The visible movements of a window (spec §7.2: neither hidden nor gone from the provider), the one
+ * query behind every "which movement is it" search: a subscription's charge, the interest the bank
+ * paid, the money sent to a platform, a fund's debit. `sign` keeps the money going one way and turns
+ * the amount positive; `types` keeps those types only (every type when absent, giroconti included);
+ * `accountIds` those accounts only (every account when absent). Oldest first, unless `newestFirst`.
+ */
+export async function findMovements(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  input: {
+    from: CivilDate;
+    to: CivilDate;
+    sign?: "in" | "out";
+    types?: readonly TransactionType[];
+    accountIds?: readonly string[];
+    newestFirst?: boolean;
+    limit?: number;
+  },
+): Promise<FoundMovement[]> {
+  const order = input.newestFirst ? desc : asc;
+  const query = getDb()
+    .select({
+      id: transactions.id,
+      accountId: transactions.accountId,
+      occurredAt: transactions.occurredAt,
+      amountCents: transactions.amountCents,
+      payee: transactions.payee,
+      note: transactions.note,
+      categoryName: categories.name,
+    })
+    .from(transactions)
+    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+    .where(
+      and(
+        conditions(ctx, { from: input.from, to: input.to, accountIds: input.accountIds }),
+        input.types === undefined ? undefined : inArray(transactions.type, [...input.types]),
+        input.sign === "out"
+          ? lt(transactions.amountCents, 0n)
+          : input.sign === "in"
+            ? gt(transactions.amountCents, 0n)
+            : undefined,
+      ),
+    )
+    .orderBy(order(transactions.occurredAt), order(transactions.id));
+  const rows = await (input.limit === undefined ? query : query.limit(input.limit));
+  return rows.map((row) => ({
+    id: row.id,
+    accountId: row.accountId,
+    on: civilDateIn(row.occurredAt, ctx.timeZone),
+    cents: input.sign === "out" ? -row.amountCents : row.amountCents,
+    payee: row.payee,
+    note: row.note,
+    categoryName: row.categoryName,
+  }));
 }
 
 /**
@@ -67,122 +125,17 @@ export async function chargeCandidates(
     accountId: string | null;
     from: CivilDate;
     to: CivilDate;
-    /** `expense` by default; a PAC debit may reach Wallet as a giroconto too (F4). */
+    /** `expense` by default; a PAC debit may reach the ledger as a giroconto too (F4). */
     types?: readonly TransactionType[];
   },
-): Promise<ChargeCandidate[]> {
-  const rows = await getDb()
-    .select({
-      id: transactions.id,
-      accountId: transactions.accountId,
-      occurredAt: transactions.occurredAt,
-      amountCents: transactions.amountCents,
-      payee: transactions.payee,
-      note: transactions.note,
-    })
-    .from(transactions)
-    .where(
-      and(
-        conditions(ctx, {
-          from: input.from,
-          to: input.to,
-          accountIds: input.accountId === null ? undefined : [input.accountId],
-        }),
-        inArray(transactions.type, [...(input.types ?? ["expense"])]),
-        lt(transactions.amountCents, 0n),
-      ),
-    )
-    .orderBy(asc(transactions.occurredAt), asc(transactions.id));
-  return rows.map((row) => ({
-    id: row.id,
-    accountId: row.accountId,
-    on: civilDateIn(row.occurredAt, ctx.timeZone),
-    cents: -row.amountCents,
-    payee: row.payee,
-    note: row.note,
-  }));
-}
-
-/**
- * The income of an account in a window, with payee, note and category name (F4): where the interest the
- * bank really paid is looked for (plan F4 §3.6.1). Visible rows only, never a giroconto; the amount
- * is positive and the day the user's own.
- */
-export async function incomeCandidates(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  input: { accountId: string; from: CivilDate; to: CivilDate },
-): Promise<
-  {
-    id: string;
-    on: CivilDate;
-    cents: Cents;
-    payee: string | null;
-    note: string | null;
-    categoryName: string | null;
-  }[]
-> {
-  const rows = await getDb()
-    .select({
-      id: transactions.id,
-      occurredAt: transactions.occurredAt,
-      amountCents: transactions.amountCents,
-      payee: transactions.payee,
-      note: transactions.note,
-      categoryName: categories.name,
-    })
-    .from(transactions)
-    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
-    .where(
-      and(
-        conditions(ctx, { from: input.from, to: input.to, accountIds: [input.accountId] }),
-        eq(transactions.type, "income"),
-      ),
-    )
-    .orderBy(asc(transactions.occurredAt), asc(transactions.id));
-  return rows.map((row) => ({
-    id: row.id,
-    on: civilDateIn(row.occurredAt, ctx.timeZone),
-    cents: row.amountCents,
-    payee: row.payee,
-    note: row.note,
-    categoryName: row.categoryName,
-  }));
-}
-
-/**
- * What a movement on an investment platform may be linked to (the investments page): every visible
- * bank movement of the window going the given way — `out` for money sent to a platform, `in` for
- * money that came back — giroconti included, since a transfer to a broker is often booked as one.
- * The amount comes back positive and the day is the user's own; newest first.
- */
-export async function linkCandidates(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  input: { direction: "in" | "out"; from: CivilDate; to: CivilDate; limit?: number },
-): Promise<{ id: string; accountId: string; on: CivilDate; cents: Cents; payee: string | null }[]> {
-  const rows = await getDb()
-    .select({
-      id: transactions.id,
-      accountId: transactions.accountId,
-      occurredAt: transactions.occurredAt,
-      amountCents: transactions.amountCents,
-      payee: transactions.payee,
-    })
-    .from(transactions)
-    .where(
-      and(
-        conditions(ctx, { from: input.from, to: input.to }),
-        input.direction === "out" ? lt(transactions.amountCents, 0n) : sql`${transactions.amountCents} > 0`,
-      ),
-    )
-    .orderBy(desc(transactions.occurredAt), desc(transactions.id))
-    .limit(input.limit ?? 300);
-  return rows.map((row) => ({
-    id: row.id,
-    accountId: row.accountId,
-    on: civilDateIn(row.occurredAt, ctx.timeZone),
-    cents: row.amountCents < 0n ? -row.amountCents : row.amountCents,
-    payee: row.payee,
-  }));
+): Promise<FoundMovement[]> {
+  return findMovements(ctx, {
+    from: input.from,
+    to: input.to,
+    sign: "out",
+    types: input.types ?? ["expense"],
+    accountIds: input.accountId === null ? undefined : [input.accountId],
+  });
 }
 
 /**

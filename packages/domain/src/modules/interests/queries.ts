@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { accountNames, listAccounts } from "../accounts";
-import { incomeCandidates } from "../transactions/queries";
+import { findMovements } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";
 import type { Ctx } from "../../platform/context";
@@ -195,8 +195,9 @@ export async function ruleDetail(
     rule.mode === "post_to_provider" || needle === null || windows.length === 0
       ? []
       : (
-          await incomeCandidates(ctx, {
-            accountId: rule.accountId,
+          await findMovements(ctx, {
+            types: ["income"],
+            accountIds: [rule.accountId],
             from: windows.reduce(
               (first, one) => (one.window.from < first ? one.window.from : first),
               windows[0].window.from,

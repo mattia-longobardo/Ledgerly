@@ -14,6 +14,7 @@ import { userScoped } from "../../../platform/db/scope";
 import { convertCents } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
 import type { Cents } from "../../../shared/money";
+import { groupBy } from "../../../shared/collections";
 import { type BalancePoint, type BalanceReading, MOVEMENT_SOURCE, SOURCE_PRECEDENCE } from "../rules";
 import { accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "../schema";
 import { type AccountsView, viewRow, viewTotals } from "./view";
@@ -109,13 +110,11 @@ async function monthlyPoints(
       asc(SOURCE_RANK),
       desc(balanceEntries.capturedAt),
     );
-  const byAccount = new Map<string, BalancePoint[]>();
-  for (const row of rows) {
-    const points = byAccount.get(row.accountId) ?? [];
-    points.push({ on: row.on, cents: row.balanceCents, derived: row.source === "derived" });
-    byAccount.set(row.accountId, points);
-  }
-  return byAccount;
+  return groupBy(
+    rows,
+    (row) => row.accountId,
+    (row): BalancePoint => ({ on: row.on, cents: row.balanceCents, derived: row.source === "derived" }),
+  );
 }
 
 /**
@@ -148,13 +147,11 @@ export async function observedDays(
       asc(SOURCE_RANK),
       desc(balanceEntries.capturedAt),
     );
-  const byAccount = new Map<string, BalancePoint[]>();
-  for (const row of rows) {
-    const points = byAccount.get(row.accountId) ?? [];
-    points.push({ on: row.on, cents: row.balanceCents });
-    byAccount.set(row.accountId, points);
-  }
-  return byAccount;
+  return groupBy(
+    rows,
+    (row) => row.accountId,
+    (row): BalancePoint => ({ on: row.on, cents: row.balanceCents }),
+  );
 }
 
 /** What the balance after the manual movements is worked out from (`movementBalances`). */
@@ -243,13 +240,11 @@ export async function balanceDays(
       desc(balanceEntries.capturedAt),
     );
   const notObserved: readonly string[] = NOT_OBSERVED;
-  const byAccount = new Map<string, { on: CivilDate; cents: Cents; observed: boolean }[]>();
-  for (const row of rows) {
-    const days = byAccount.get(row.accountId) ?? [];
-    days.push({ on: row.on, cents: row.balanceCents, observed: !notObserved.includes(row.source) });
-    byAccount.set(row.accountId, days);
-  }
-  return byAccount;
+  return groupBy(
+    rows,
+    (row) => row.accountId,
+    (row) => ({ on: row.on, cents: row.balanceCents, observed: !notObserved.includes(row.source) }),
+  );
 }
 
 export async function listAccounts(

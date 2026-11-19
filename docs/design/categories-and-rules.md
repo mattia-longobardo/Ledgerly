@@ -213,9 +213,9 @@ un'azione della persona di §3.3.
 | `summary.netCents`, `netWorthCents`, `cashCents` | No | Saldi e net non dipendono dal tipo |
 | `subscriptions` (addebiti trovati, prossimo addebito, totale annuo) | Sì, se un addebito di un abbonamento diventa giroconto | `chargeCandidates` cerca solo `expense` |
 | `pockets` (spese collegate a un pocket) | Sì, se un addebito collegato diventa giroconto | `chargeCandidates` |
-| `interests.details` (interessi pagati dalla banca) | Sì, se un accredito di interessi diventa giroconto | `incomeCandidates` cerca solo `income` |
+| `interests.details` (interessi pagati dalla banca) | Sì, se un accredito di interessi diventa giroconto | `findMovements` con `types: ["income"]` cerca solo `income` |
 | `accounts.*` (saldi, serie, patrimonio, riquadri) | No | — |
-| `investments.*`, `funds.*` | No | I candidati includono già i giroconti (`linkCandidates`, `types: ["expense", "transfer"]`) |
+| `investments.*`, `funds.*` | No | I candidati includono già i giroconti (`findMovements` senza `types`, `types: ["expense", "transfer"]`) |
 | `timeOff.*`, `payroll.*` | No | — |
 
 Protezione per abbonamenti, pocket e interessi [DEV]: il dialogo di «Sposta in un'altra macro» e l'anteprima di una

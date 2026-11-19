@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97333,
-    "duplicatedLines": 17143,
-    "percent": 17.61,
-    "blocks": 1257
+    "lines": 97297,
+    "duplicatedLines": 17049,
+    "percent": 17.52,
+    "blocks": 1249
   },
   "units": {
     "api": {
@@ -35,9 +35,9 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 5138,
-      "duplicatedLines": 990,
-      "percent": 19.27,
+      "lines": 5130,
+      "duplicatedLines": 987,
+      "percent": 19.24,
       "blocks": 70
     },
     "modules/budgets": {
@@ -59,15 +59,15 @@
       "blocks": 16
     },
     "modules/interests": {
-      "lines": 2198,
+      "lines": 2199,
       "duplicatedLines": 516,
-      "percent": 23.48,
+      "percent": 23.47,
       "blocks": 41
     },
     "modules/investments": {
-      "lines": 10296,
-      "duplicatedLines": 1957,
-      "percent": 19.01,
+      "lines": 10298,
+      "duplicatedLines": 1956,
+      "percent": 18.99,
       "blocks": 134
     },
     "modules/payroll": {
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12401,
-      "duplicatedLines": 1939,
-      "percent": 15.64,
-      "blocks": 155
+      "lines": 12348,
+      "duplicatedLines": 1855,
+      "percent": 15.02,
+      "blocks": 148
     },
     "modules/users": {
       "lines": 874,
@@ -168,9 +168,9 @@
     },
     "platform/fx": {
       "lines": 308,
-      "duplicatedLines": 46,
-      "percent": 14.94,
-      "blocks": 3
+      "duplicatedLines": 40,
+      "percent": 12.99,
+      "blocks": 2
     },
     "platform/holidays": {
       "lines": 570,
@@ -340,6 +340,12 @@
       "percent": 0,
       "blocks": 0
     },
+    "shared/collections": {
+      "lines": 22,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
+    },
     "shared/country": {
       "lines": 13,
       "duplicatedLines": 0,
@@ -491,11 +497,11 @@
     "modules/accounts/calls.ts": 33,
     "modules/accounts/jobs.ts": 18,
     "modules/accounts/queries/directory.ts": 6,
-    "modules/accounts/queries/index.ts": 145,
+    "modules/accounts/queries/index.ts": 141,
     "modules/accounts/rules/index.ts": 37,
     "modules/accounts/schema.ts": 175,
     "modules/accounts/service/balances.ts": 7,
-    "modules/accounts/service/connections.ts": 52,
+    "modules/accounts/service/connections.ts": 53,
     "modules/accounts/service/guards.ts": 27,
     "modules/accounts/service/lifecycle.ts": 57,
     "modules/accounts/service/provider-accounts.ts": 18,
@@ -570,7 +576,7 @@
     "modules/investments/queries.ts": 99,
     "modules/investments/rules.ts": 36,
     "modules/investments/schema.ts": 404,
-    "modules/investments/service.ts": 268,
+    "modules/investments/service.ts": 267,
     "modules/investments/sync/connect.ts": 70,
     "modules/investments/sync/history.ts": 78,
     "modules/investments/sync/pass.ts": 55,
@@ -619,7 +625,7 @@
     "modules/transactions/actions.ts": 56,
     "modules/transactions/categorize/actions.ts": 45,
     "modules/transactions/categorize/review/changes.ts": 72,
-    "modules/transactions/categorize/review/merges.ts": 66,
+    "modules/transactions/categorize/review/merges.ts": 59,
     "modules/transactions/categorize/service.ts": 50,
     "modules/transactions/categorize/user-rules-actions.ts": 30,
     "modules/transactions/categorize/user-rules-service/applying.ts": 67,
@@ -628,10 +634,10 @@
     "modules/transactions/categorize/user-rules.ts": 6,
     "modules/transactions/jobs.ts": 57,
     "modules/transactions/manual.ts": 6,
-    "modules/transactions/queries/candidates.ts": 72,
-    "modules/transactions/queries/filters.ts": 35,
+    "modules/transactions/queries/candidates.ts": 20,
+    "modules/transactions/queries/filters.ts": 26,
     "modules/transactions/queries/listing.ts": 30,
-    "modules/transactions/queries/movements.ts": 69,
+    "modules/transactions/queries/movements.ts": 53,
     "modules/transactions/queries/views.ts": 62,
     "modules/transactions/rules/vocabulary.ts": 7,
     "modules/transactions/schema/categories.ts": 105,
@@ -679,7 +685,7 @@
     "platform/auth/profile.ts": 14,
     "platform/auth/schema.ts": 69,
     "platform/export/service.ts": 185,
-    "platform/fx/rules.ts": 37,
+    "platform/fx/rules.ts": 31,
     "platform/fx/sources.ts": 9,
     "platform/holidays/schema.ts": 52,
     "platform/holidays/service.ts": 40,
