@@ -17,7 +17,7 @@
  * Nothing here writes to the interest tables, and nothing here accrues.
  */
 import { redactForLog } from "../../platform/auth/logger";
-import { type Account, listAccounts } from "../accounts/queries";
+import { type Account, listAccounts } from "../accounts";
 import type { Ctx } from "../../platform/context";
 import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { listConnections } from "../../platform/integrations/service";

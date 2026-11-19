@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
-import { accountNames, listAccounts } from "../accounts/queries";
+import { accountNames, listAccounts } from "../accounts";
 import { incomeCandidates } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";

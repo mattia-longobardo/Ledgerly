@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, lt, notInArray } from "drizzle-orm";
-import { getAccount } from "../../accounts/queries";
+import { getAccount } from "../../accounts";
 import { alertAdmins } from "../../../platform/alerts/gotify";
 import type { Ctx } from "../../../platform/context";
 import { type CivilDate, today } from "../../../shared/dates";

@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { listAccounts, listBalanceEntries } from "../accounts/queries";
+import { listAccounts, listBalanceEntries } from "../accounts";
 import { FUND_ROLES } from "../payroll/pension";
 import { listCodeMap, payslipsOf } from "../payroll/service";
 import type { Ctx } from "../../platform/context";

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, exists, ilike, inArray, isNull, lt, gte, or, sql, type SQL } from "drizzle-orm";
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
-import { type Account } from "../../accounts/queries";
+import { type Account } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { addDays, type CivilDate, type MonthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";

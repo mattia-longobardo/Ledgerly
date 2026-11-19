@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
-import { getAccount, listAccounts } from "../../accounts/queries";
+import { getAccount, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";

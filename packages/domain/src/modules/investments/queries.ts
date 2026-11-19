@@ -1,6 +1,5 @@
 import { and, asc, count, desc, eq, exists, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
-import { type Account, readingsAt, listAccounts } from "../accounts/queries";
-import { reconstructedBalances } from "../accounts/service";
+import { type Account, readingsAt, listAccounts, reconstructedBalances } from "../accounts";
 import { fundsOverview } from "../funds/overview";
 import { escapeLike, linkCandidates, movementsByAccount, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";

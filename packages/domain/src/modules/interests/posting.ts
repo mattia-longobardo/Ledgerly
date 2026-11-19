@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { getAccount } from "../accounts/queries";
+import { getAccount } from "../accounts";
 import { redactForLog } from "../../platform/auth/logger";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";

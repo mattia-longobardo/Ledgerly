@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
-import { requireOpenAccount } from "../accounts/queries";
+import { requireOpenAccount } from "../accounts";
 import { chargeCandidates } from "../transactions/queries";
 import { getCategory, TaxonomyError } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";

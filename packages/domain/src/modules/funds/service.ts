@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
 import { z } from "zod";
-import { getAccount } from "../accounts/queries";
-import { isFutureDate } from "../accounts/rules";
-import { createAccount, deleteBalanceEntry, removeAccount, saveBalanceEntry } from "../accounts/service";
+import {
+  getAccount,
+  isFutureDate,
+  createAccount,
+  deleteBalanceEntry,
+  removeAccount,
+  saveBalanceEntry,
+} from "../accounts";
 import { chargeCandidates, getTransaction } from "../transactions/queries";
 import { payeeKeyOf } from "../transactions/rules";
 import type { Ctx } from "../../platform/context";

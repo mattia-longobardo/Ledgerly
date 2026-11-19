@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ne } from "drizzle-orm";
-import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts/queries";
+import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts";
 import { listRecurringPatterns, payeeSamples, transactionsByIds } from "../transactions/queries";
 import { colorOfCategory, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";

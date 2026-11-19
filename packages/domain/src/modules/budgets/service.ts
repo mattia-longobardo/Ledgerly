@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, lte } from "drizzle-orm";
-import { requireOpenAccount } from "../accounts/queries";
+import { requireOpenAccount } from "../accounts";
 import { getCategory, TaxonomyError } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
 import type { MonthKey } from "../../shared/dates";

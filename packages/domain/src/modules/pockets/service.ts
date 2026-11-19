@@ -1,8 +1,7 @@
 import { and, asc, eq, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
-import { requireOpenAccount } from "../accounts/queries";
+import { requireOpenAccount, isFutureDate } from "../accounts";
 import { transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
-import { isFutureDate } from "../accounts/rules";
 import { addDays, type CivilDate, type MonthKey, monthKey, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../platform/db/errors";

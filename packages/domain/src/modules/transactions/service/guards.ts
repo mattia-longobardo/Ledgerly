@@ -1,6 +1,6 @@
 import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { listAccounts, requireOpenAccount } from "../../accounts/queries";
+import { listAccounts, requireOpenAccount } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import type { CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";

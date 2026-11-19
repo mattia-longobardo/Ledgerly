@@ -1,5 +1,5 @@
 import { and, asc, lte, min } from "drizzle-orm";
-import { accountOptions, listAccounts } from "../accounts/queries";
+import { accountOptions, listAccounts } from "../accounts";
 import { monthSpending } from "../transactions/queries";
 import { categoryOptions, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";

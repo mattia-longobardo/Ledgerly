@@ -1,6 +1,6 @@
 import { and, asc, count, eq, ne, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { accountNames as namesOf, listAccounts } from "../../accounts/queries";
+import { accountNames as namesOf, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { civilDateIn, monthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";

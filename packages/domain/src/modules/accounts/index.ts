@@ -1,6 +1,9 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export {
+  accountNames,
+  accountOptions,
   accountsView,
+  balanceDays,
   readingsAt,
   firstBalanceDay,
   getAccount,
@@ -8,14 +11,17 @@ export {
   listBalanceEntries,
   listSnapshotRuns,
   movementBasis,
+  requireOpenAccount,
 } from "./queries";
 export type { Account } from "./queries";
 export {
   ACCOUNT_TYPES,
   MANUAL_MOVEMENT_MODES,
+  SOURCE_PRECEDENCE,
   accountMode,
   bucketOf,
   hasIbanField,
+  isFutureDate,
   movementEffect,
 } from "./rules";
 export type { AccountMode, MovementEffect } from "./rules";
@@ -32,10 +38,12 @@ export {
   deleteBalanceEntry,
   ibanOwnersOf,
   linkProviderAccounts,
+  openedNoLaterThan,
   rebuildDerivedBalances,
   releaseSourceAccounts,
   removeAccount,
   removeConnection,
+  replacePortfolioPoints,
   restoreAccount,
   restoreSourceAccounts,
   runSnapshot,
@@ -43,6 +51,7 @@ export {
   saveProviderBalance,
   saveSourceIbans,
   snapshotMonthFor,
+  takeOverEntries,
   updateAccountSettings,
   updateBalanceEntry,
   updateConnection,

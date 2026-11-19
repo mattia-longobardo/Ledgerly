@@ -1,7 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import { requireOpenAccount } from "../accounts/queries";
-import { reconstructedBalances } from "../accounts/service";
+import { requireOpenAccount, reconstructedBalances } from "../accounts";
 import { listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
 import { addDays, type CivilDate, today } from "../../shared/dates";

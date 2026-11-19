@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { balanceDays, getAccount } from "../../accounts/queries";
-import { openedNoLaterThan, takeOverEntries } from "../../accounts/service";
+import { balanceDays, getAccount, openedNoLaterThan, takeOverEntries } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { type CivilDate, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";

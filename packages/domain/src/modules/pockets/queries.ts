@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ne } from "drizzle-orm";
-import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts/queries";
+import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts";
 import { accruedInterest } from "../interests/service";
 import { chargeCandidates, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";

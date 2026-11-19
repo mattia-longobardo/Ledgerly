@@ -1,5 +1,5 @@
 import { and, asc, eq, notInArray } from "drizzle-orm";
-import { openedNoLaterThan } from "../../accounts/service";
+import { openedNoLaterThan } from "../../accounts";
 import { addDays, type CivilDate, civilDateIn, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";

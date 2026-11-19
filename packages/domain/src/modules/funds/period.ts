@@ -7,7 +7,7 @@ import {
   type MonthKey,
   monthKey,
 } from "../../shared/dates";
-import { SOURCE_PRECEDENCE } from "../accounts/rules";
+import { SOURCE_PRECEDENCE } from "../accounts";
 import { modifiedDietz } from "../investments/pnl";
 import { xirr, type Xirr } from "../investments/xirr";
 import { type MovementLike, valuePoints } from "./pension/metrics";
