@@ -42,7 +42,8 @@ import { timeOffView } from "@domain/modules/timeoff/queries";
 import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
 import { expensesView } from "@domain/modules/transactions/queries";
 import { categories, transactions } from "@domain/modules/transactions/schema";
-import { api } from "../apps/web/src/platform/api/app";
+// `/api/v1` as the web serves it, `apps/api` included (R2).
+import { api } from "../apps/web/src/app/api/v1/[[...route]]/composition";
 import { resetRateLimits } from "../apps/web/src/platform/api/rate-limit";
 import { createApiClientWith, deleteApiClient } from "../apps/web/src/platform/auth/api-clients";
 import { getAuth } from "@domain/platform/auth/auth";
