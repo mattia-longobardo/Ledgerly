@@ -1,0 +1,309 @@
+{
+  "apps/web/src/app/(app)/accounts/[id]/delete-actions.ts": {
+    "closedBy": "R3 of accounts",
+    "actions": [
+      "accountDependentsAction",
+      "deleteAccountAction",
+      "moveDependentAction"
+    ]
+  },
+  "apps/web/src/app/(app)/accounts/[id]/switch/actions.ts": {
+    "closedBy": "R3 of accounts",
+    "actions": [
+      "applySwitchAction",
+      "checkSwitchAction",
+      "undoSwitchAction"
+    ]
+  },
+  "apps/web/src/app/(app)/banks/connect/actions.ts": {
+    "closedBy": "R3 of the connections (bank procedure)",
+    "actions": [
+      "cancelBankConnectionAction",
+      "importBankAccountsAction",
+      "listBanksAction",
+      "renewBankAccessAction",
+      "retryBankReadingAction",
+      "startBankAccessAction"
+    ]
+  },
+  "apps/web/src/app/(app)/expenses/manual-actions.ts": {
+    "closedBy": "R3 of transactions",
+    "actions": [
+      "changeVisibilityAction",
+      "createManualAction",
+      "deleteManualAction",
+      "manualFormAction",
+      "previewManualAction",
+      "retrySendAction",
+      "suggestManualAction",
+      "updateManualAction"
+    ]
+  },
+  "apps/web/src/app/(app)/funds/fund-setup.ts": {
+    "closedBy": "R3 of funds",
+    "actions": [
+      "createFundAction",
+      "rebuildCompetencesAction",
+      "saveSourceAction"
+    ]
+  },
+  "apps/web/src/app/(app)/palette-actions.ts": {
+    "closedBy": "the route of the search across modules, before the end of R3 (searchRecordsAction, injected in the palette)",
+    "actions": [
+      "searchRecordsAction"
+    ]
+  },
+  "apps/web/src/app/(app)/settings/categories/actions.ts": {
+    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
+    "actions": [
+      "archiveWithUndoAction",
+      "createCategoryAction",
+      "createLabelAction",
+      "deleteCategoryAction",
+      "deleteLabelAction",
+      "macroMoveFactsAction",
+      "mergeCategoriesAction",
+      "moveCategoryAction",
+      "moveToMacroAction",
+      "restoreCategoriesAction",
+      "restoreCategoryAction",
+      "saveCategoryAction",
+      "saveLabelAction",
+      "undoMergeAction",
+      "undoMoveToMacroAction"
+    ]
+  },
+  "apps/web/src/app/(app)/settings/categories/source-actions.ts": {
+    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
+    "actions": [
+      "keepSourceCategoryAction",
+      "setSourceCategoryAction",
+      "undoSourceCategoryAction"
+    ]
+  },
+  "apps/web/src/app/(app)/settings/integrations/actions.ts": {
+    "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
+    "actions": [
+      "chooseWalletAccountsAction",
+      "connectTrekAction",
+      "connectWalletAction",
+      "coreConnectionAction",
+      "disconnectTrekAction",
+      "disconnectWalletAction",
+      "walletAccountsAction"
+    ]
+  },
+  "apps/web/src/app/(app)/settings/integrations/connection-actions.ts": {
+    "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
+    "actions": [
+      "runConnectionAction"
+    ]
+  },
+  "apps/web/src/app/(app)/settings/integrations/deactivate-actions.ts": {
+    "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
+    "actions": [
+      "deactivateSourceAction",
+      "deactivationCountsAction",
+      "resumeSourceAccountAction"
+    ]
+  },
+  "apps/web/src/app/(app)/settings/integrations/plugin-actions.ts": {
+    "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
+    "actions": [
+      "disconnectBankAction",
+      "removeBankCredentialsAction",
+      "saveBankCredentialsAction",
+      "setPluginActiveAction"
+    ]
+  },
+  "apps/web/src/app/(app)/settings/security/actions.ts": {
+    "closedBy": "POST /api-clients, with git-policy \u00a76 #4",
+    "actions": [
+      "createApiClientAction"
+    ]
+  },
+  "apps/web/src/app/(app)/timeoff/settings/holiday-actions.ts": {
+    "closedBy": "R3 of timeoff",
+    "actions": [
+      "addHolidayCalendarAction",
+      "holidayCountriesAction",
+      "holidaySubdivisionsAction",
+      "refreshHolidayCalendarAction",
+      "removeHolidayCalendarAction"
+    ]
+  },
+  "apps/web/src/app/(auth)/actions.ts": {
+    "closedBy": "kept: web cookie (contract test, EXCLUDED)",
+    "actions": [
+      "acceptInviteAction"
+    ]
+  },
+  "apps/web/src/modules/accounts/actions.ts": {
+    "closedBy": "R3 of accounts",
+    "actions": [
+      "addConnectionAction",
+      "archiveAccountAction",
+      "createAccountAction",
+      "deleteBalanceEntryAction",
+      "removeConnectionAction",
+      "restoreAccountAction",
+      "runSnapshotNowAction",
+      "saveAccountSettingsAction",
+      "saveBalanceEntryAction",
+      "updateBalanceEntryAction",
+      "updateConnectionAction"
+    ]
+  },
+  "apps/web/src/modules/budgets/actions.ts": {
+    "closedBy": "R3 of budgets",
+    "actions": [
+      "saveBudgetAlertsAction",
+      "setBudgetLimitAction",
+      "stopBudgetAction"
+    ]
+  },
+  "apps/web/src/modules/funds/actions.ts": {
+    "closedBy": "R3 of funds",
+    "actions": [
+      "clearDecisionAction",
+      "decideDifferenceAction",
+      "deleteContributionAction",
+      "deleteValuationAction",
+      "proposeDebitMatchAction",
+      "recordValuationAction",
+      "removeFeeAction",
+      "removeSourceAction",
+      "restoreSourceAction",
+      "saveContributionAction",
+      "saveFeeAction",
+      "setFundStateAction",
+      "setSourceStateAction",
+      "updateFundAction",
+      "updateValuationAction"
+    ]
+  },
+  "apps/web/src/modules/interests/actions.ts": {
+    "closedBy": "R3 of interests",
+    "actions": [
+      "createRuleAction",
+      "markPostedAction",
+      "postEntryAction",
+      "setRuleStateAction",
+      "updateRuleAction"
+    ]
+  },
+  "apps/web/src/modules/investments/actions.ts": {
+    "closedBy": "R3 of investments",
+    "actions": [
+      "confirmKeyRevokedAction",
+      "confirmZeroAction",
+      "connectProviderAction",
+      "createManualServiceAction",
+      "deleteOperationAction",
+      "disconnectProviderAction",
+      "linkTransferAction",
+      "reconcileAction",
+      "recordOperationAction",
+      "replaceKeyAction",
+      "syncNowAction",
+      "unlinkTransferAction",
+      "updateServiceUrlAction",
+      "updateServiceValueAction",
+      "verifyKeyAction"
+    ]
+  },
+  "apps/web/src/modules/payroll/actions.ts": {
+    "closedBy": "R3 of payroll",
+    "actions": [
+      "applyPayslipAction",
+      "decideFieldAction",
+      "deletePayslipDocumentAction",
+      "fillWithLlmAction",
+      "rejectPayslipAction",
+      "renamePayslipAction",
+      "reopenPayslipAction",
+      "resetCodeAction",
+      "retryPayslipAction",
+      "setCodeRoleAction",
+      "uploadPayslipsAction",
+      "verifyPayslipAction"
+    ]
+  },
+  "apps/web/src/modules/pockets/actions.ts": {
+    "closedBy": "R3 of pockets",
+    "actions": [
+      "addPlannedExpenseAction",
+      "addToPocketAction",
+      "createPocketAction",
+      "linkExpenseAction",
+      "removePlannedExpenseAction",
+      "setPocketStateAction",
+      "unlinkExpenseAction",
+      "updatePocketAction"
+    ]
+  },
+  "apps/web/src/modules/subscriptions/actions.ts": {
+    "closedBy": "R3 of subscriptions",
+    "actions": [
+      "createSubscriptionAction",
+      "deleteSubscriptionAction",
+      "setSubscriptionStateAction",
+      "updateSubscriptionAction"
+    ]
+  },
+  "apps/web/src/modules/timeoff/actions.ts": {
+    "closedBy": "R3 of timeoff",
+    "actions": [
+      "removeLeaveAction",
+      "removeLeaveRangeAction",
+      "saveAllowanceAction",
+      "saveLeaveRangeAction",
+      "undoLeaveAction"
+    ]
+  },
+  "apps/web/src/modules/transactions/actions.ts": {
+    "closedBy": "R2/R3 of transactions (searchPayeesAction is injected in the palette)",
+    "actions": [
+      "deleteHiddenTransactionsAction",
+      "editWalletTransactionAction",
+      "hideTransactionsAction",
+      "restoreTransactionsAction",
+      "searchPayeesAction",
+      "setTransactionCategoryAction",
+      "setTransactionLabelsAction",
+      "setTransactionNoteAction"
+    ]
+  },
+  "apps/web/src/modules/transactions/categorize/actions.ts": {
+    "closedBy": "R3 of transactions",
+    "actions": [
+      "chooseCategoryAction",
+      "confirmCategoriesAction",
+      "createDefaultGroupsAction",
+      "dismissMergeAction",
+      "similarMovementsAction",
+      "undoCategoriesAction"
+    ]
+  },
+  "apps/web/src/modules/transactions/categorize/user-rules-actions.ts": {
+    "closedBy": "R3 of transactions",
+    "actions": [
+      "applyRuleAction",
+      "deleteRuleAction",
+      "previewRuleAction",
+      "previewSavedRuleAction",
+      "reorderRulesAction",
+      "saveRuleAction",
+      "setRuleActiveAction",
+      "undoRuleApplyAction"
+    ]
+  },
+  "apps/web/src/modules/users/actions.ts": {
+    "closedBy": "R3 users: saveTheme with the shell; revokeOtherSessionsAction kept (web cookie); saveTimeOffPreferencesAction with R3 timeoff",
+    "actions": [
+      "revokeOtherSessionsAction",
+      "saveTheme",
+      "saveTimeOffPreferencesAction"
+    ]
+  }
+}
