@@ -124,7 +124,11 @@ describe("the known modularity violations", () => {
     after.filter((entry) => !before.includes(entry));
 
   it("gain no import between two modules (M2)", () => {
-    expect(added(known.crossModuleImports, now.crossModuleImports)).toEqual([]);
+    // A file and the module it imports: the same import read through the module's entry instead of
+    // one of its files (M3) is not a new import between two modules.
+    const toModule = (entries: readonly string[]) =>
+      entries.map((entry) => entry.replace(/ → (modules\/[^/]+)\/.*$/, " → $1"));
+    expect(added(toModule(known.crossModuleImports), toModule(now.crossModuleImports))).toEqual([]);
   });
 
   it("gain no pair of units that import each other (M4)", () => {
