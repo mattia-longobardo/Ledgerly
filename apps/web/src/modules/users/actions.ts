@@ -2,16 +2,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { z } from "zod";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { parseTheme, THEME_COOKIE, type ThemePreference } from "@/platform/theme";
 import type { TimeOffPreferences } from "@ledgerly/domain/users";
-import { getPreferences, updatePreferences, updateTimeOffPreferences } from "@ledgerly/domain/users";
-
-const YEAR = 60 * 60 * 24 * 365;
+import { updateTimeOffPreferences } from "@ledgerly/domain/users";
 
 /**
  * Every settings Server Action reports failure this way instead of throwing: a form calls it
@@ -19,15 +16,6 @@ const YEAR = 60 * 60 * 24 * 365;
  * `error` is a catalogued message key under the calling component's own `next-intl` namespace.
  */
 type ActionResult = { ok: true } | { ok: false; error: string };
-
-/** The saved preference is what every page renders with; the cookie only serves anonymous pages. */
-export async function saveTheme(theme: ThemePreference): Promise<void> {
-  const ctx = await requireSession();
-  const next = parseTheme(theme);
-  await updatePreferences(ctx, { ...(await getPreferences(ctx)), theme: next });
-  (await cookies()).set(THEME_COOKIE, next, { path: "/", maxAge: YEAR, sameSite: "lax" });
-  revalidatePath("/", "layout");
-}
 
 /** Time off › Settings: the working day and the patron saint, each form on its own. */
 export async function saveTimeOffPreferencesAction(input: TimeOffPreferences): Promise<ActionResult> {

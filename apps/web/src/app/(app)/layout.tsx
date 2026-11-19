@@ -1,88 +1,46 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { searchPayeesAction } from "@/modules/transactions/actions";
-import { searchRecordsAction } from "./palette-actions";
-import { saveTheme } from "@/modules/users/actions";
 import { getPreferences } from "@ledgerly/domain/users";
-import { hasSsoAccount } from "@ledgerly/domain/platform/auth";
-import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { CommandPalette } from "@ledgerly/ui/shell/command-palette";
-import { MobileNav } from "@ledgerly/ui/shell/mobile-nav";
 import type { NavLink } from "@ledgerly/ui/shell/nav-types";
-import { AppShellProvider } from "@/ui/app-shell-provider";
 import { parseSidebar, SIDEBAR_COOKIE } from "@ledgerly/ui/shell/sidebar-state";
-import { Sidebar } from "@ledgerly/ui/shell/sidebar";
-import { Toaster } from "@ledgerly/ui/toast";
-import { WeekStartProvider } from "@ledgerly/ui/week-start";
+import { AppShell } from "./app-shell";
 import { navFor } from "./navigation";
+import { searchRecordsAction } from "./palette-actions";
 import { paletteCommands } from "./palette-commands";
 
+/**
+ * Every signed-in page. The layout keeps what only the server knows yet: the session's role (the
+ * menu and the commands of the palette are a role's), the first day of the week (a context of the
+ * server-drawn pages), the sidebar's cookie and the two searches of the palette; the shell reads the
+ * person from `/api/v1`.
+ */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
-  const session = await (await getAuth()).api.getSession({ headers: await headers() });
-  const viaSso = await hasSsoAccount(ctx.userId);
-  const t = await getTranslations();
-  const { weekStart } = await getPreferences(ctx);
-
+  const [text, { weekStart }] = await Promise.all([getTranslations(), getPreferences(ctx)]);
   const links: NavLink[] = navFor(ctx.role).map(({ id, href, icon, group, mobile, labelKey }) => ({
     id,
     href,
     icon,
     group,
     mobile,
-    label: t(`nav.${labelKey}`),
+    label: text(`nav.${labelKey}`),
   }));
-  const labels = {
-    product: t("common.product"),
-    primary: t("nav.primary"),
-    groups: { finance: t("nav.groups.finance"), work: t("nav.groups.work"), system: t("nav.groups.system") },
-    toggleSidebar: t("shell.toggleSidebar"),
-    search: t("shell.search"),
-    toggleTheme: t("shell.toggleTheme"),
-    themeSaveError: t("shell.themeSaveError"),
-    signOut: t("shell.signOut"),
-    profile: t("shell.profile"),
-    more: t("nav.more"),
-    palette: {
-      placeholder: t("shell.palette.placeholder"),
-      pages: t("shell.palette.pages"),
-      records: t("shell.palette.records"),
-      payees: t("expenses.palette.payees"),
-      empty: t("shell.palette.empty"),
-      shortcut: t("shell.palette.shortcut"),
-      escape: t("shell.palette.escape"),
-    },
-  };
-  const sidebar = parseSidebar((await cookies()).get(SIDEBAR_COOKIE)?.value);
-  const user = {
-    name: session?.user.name ?? "",
-    via: t(viaSso ? "shell.via.authentik" : "shell.via.password"),
-  };
-
   return (
-    <AppShellProvider initialSidebar={sidebar} labels={labels} saveTheme={saveTheme}>
+    <AppShell
+      initialSidebar={parseSidebar((await cookies()).get(SIDEBAR_COOKIE)?.value)}
+      weekStart={weekStart}
+      links={links}
+      searchLinks={paletteCommands(ctx.role, text)}
+      searchPayees={searchPayeesAction}
+      searchRecords={searchRecordsAction}
+    >
       {/* Here and not in the root layout: the manifest is behind the session, so only a signed-in
         page may name it, and the browser has to send the cookie with the request (the comment of
         `src/app/manifest.webmanifest/route.ts`). React moves the element into `<head>`. */}
       <link rel="manifest" href="/manifest.webmanifest" crossOrigin="use-credentials" />
-      <WeekStartProvider value={weekStart}>
-        <div className="flex h-dvh overflow-hidden">
-          <Sidebar links={links} user={user} />
-          {/* `relative`: the containing block of every absolutely placed element of a page. Without it
-            an `sr-only` label far down a long list was placed against the viewport instead, and
-            stretched the document itself: a second scrollbar over an empty half page (2026-09-18). */}
-          <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
-        </div>
-        <MobileNav links={links} user={user} />
-        <CommandPalette
-          links={links}
-          searchLinks={paletteCommands(ctx.role, t)}
-          searchPayees={searchPayeesAction}
-          searchRecords={searchRecordsAction}
-        />
-        <Toaster closeLabel={t("common.close")} />
-      </WeekStartProvider>
-    </AppShellProvider>
+      {children}
+    </AppShell>
   );
 }

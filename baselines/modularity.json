@@ -8,11 +8,11 @@
     "platformToModuleImports": 76,
     "platformFilesImportingModules": 23,
     "uiToPlatformImports": 2,
-    "forbiddenNameFiles": 104,
-    "forbiddenNameKeys": 18,
+    "forbiddenNameFiles": 103,
+    "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 252,
+    "deepImports": 251,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -201,7 +201,6 @@
     "app/(app)/investments/[accountId]/service-data.ts: wallet",
     "app/(app)/investments/catalog/page.tsx: binance",
     "app/(app)/investments/catalog/page.tsx: etoro",
-    "app/(app)/layout.tsx: authentik",
     "app/(app)/payroll/settings/page.tsx: reply",
     "app/(app)/payroll/settings/page.tsx: teamsystem",
     "app/(app)/settings/categories/actions.ts: wallet",
@@ -340,7 +339,6 @@
     "settings.integrations.providers.trek",
     "settings.integrations.providers.wallet",
     "settings.integrations.trek",
-    "shell.via.authentik",
     "timeoff.settings.trek",
     "timeoff.table.fromTrek",
     "timeoff.trekCheck"
@@ -496,7 +494,6 @@
     "app/(app)/investments/page.tsx → modules/investments/ui/chart-data",
     "app/(app)/investments/page.tsx → modules/investments/ui/period-control",
     "app/(app)/layout.tsx → modules/transactions/actions",
-    "app/(app)/layout.tsx → modules/users/actions",
     "app/(app)/page.tsx → modules/accounts/ui/display",
     "app/(app)/page.tsx → modules/accounts/ui/net-worth-card",
     "app/(app)/page.tsx → modules/accounts/ui/period",

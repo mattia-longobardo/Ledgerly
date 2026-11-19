@@ -5,11 +5,10 @@ import { previewClient, signInWithPassword } from "../_shared/helpers";
 
 test.use({ extraHTTPHeaders: previewClient(2) });
 
-/** The next Server Action POST (the theme toggle saves in a transition). */
+/** The next save of the preferences (the theme toggle saves with `PATCH /api/v1/preferences`). */
 function nextActionResponse(page: Page) {
   return page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" && response.request().headers()["next-action"] !== undefined,
+    (response) => response.request().method() === "PATCH" && response.url().includes("/api/v1/preferences"),
   );
 }
 

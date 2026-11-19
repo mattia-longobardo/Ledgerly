@@ -299,10 +299,9 @@
     ]
   },
   "apps/web/src/modules/users/actions.ts": {
-    "closedBy": "R3 users: saveTheme with the shell; revokeOtherSessionsAction kept (web cookie); saveTimeOffPreferencesAction with R3 timeoff",
+    "closedBy": "revokeOtherSessionsAction kept (web cookie); saveTimeOffPreferencesAction with R3 timeoff",
     "actions": [
       "revokeOtherSessionsAction",
-      "saveTheme",
       "saveTimeOffPreferencesAction"
     ]
   }

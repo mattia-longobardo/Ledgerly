@@ -43,7 +43,7 @@
     "signOut": "Esci",
     "profile": "Profilo e preferenze",
     "via": {
-      "authentik": "tramite Authentik",
+      "sso": "tramite Authentik",
       "password": "tramite password"
     },
     "palette": {

@@ -70,7 +70,7 @@ export const updatePreferences = defineRoute({
   capability: "preferences",
   summary:
     "Changes some preferences; a field left out keeps its value. A new zone moves the sync times with it.",
-  actions: ["saveTimeOffPreferencesAction", "saveTheme"],
+  actions: ["saveTimeOffPreferencesAction"],
   body: preferences.partial().strict(),
   response: preferences,
   errors: ["invalid"],

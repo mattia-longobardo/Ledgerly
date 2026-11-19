@@ -43,7 +43,7 @@
     "signOut": "Sign out",
     "profile": "Profile and preferences",
     "via": {
-      "authentik": "via Authentik",
+      "sso": "via Authentik",
       "password": "via password"
     },
     "palette": {

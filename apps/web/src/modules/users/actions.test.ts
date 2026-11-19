@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
-import { revokeOtherSessionsAction, saveTheme } from "./actions";
+import { revokeOtherSessionsAction } from "./actions";
 
 const {
   requireSession,
@@ -46,21 +45,6 @@ const CTX = {
 };
 /** A provider error whose message carries a credential in a URL query string. */
 const LEAKY_ERROR = new Error("revoke failed at https://auth.example.test/revoke?token=secret-token");
-
-describe("saveTheme", () => {
-  beforeEach(() => {
-    requireSession.mockReset().mockResolvedValue(CTX);
-    getPreferences.mockReset().mockResolvedValue({ ...DEFAULT_PREFERENCES });
-    updatePreferences.mockReset();
-    revalidatePath.mockReset();
-  });
-
-  it("saves the theme into the preferences and re-renders the layout with it", async () => {
-    await saveTheme("system");
-    expect(updatePreferences).toHaveBeenCalledWith(CTX, { ...DEFAULT_PREFERENCES, theme: "system" });
-    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
-  });
-});
 
 describe("session revocation failures", () => {
   beforeEach(() => {

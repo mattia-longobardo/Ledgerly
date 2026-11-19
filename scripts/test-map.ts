@@ -572,6 +572,7 @@ export const MODULES: Module[] = [
       "apps/web/src/ui/**",
       "apps/web/src/app/layout.tsx",
       "apps/web/src/app/(app)/layout.tsx",
+      "apps/web/src/app/(app)/app-shell.tsx",
       "apps/web/src/app/(app)/settings/layout.tsx",
       "apps/web/src/app/(app)/settings/page.tsx",
       "apps/web/src/app/globals.css",
