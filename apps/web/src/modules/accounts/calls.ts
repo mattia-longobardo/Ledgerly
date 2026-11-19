@@ -8,10 +8,6 @@ import { centsToDecimal } from "@ledgerly/format/cents";
 import { numberStyle, parseAmount } from "@ledgerly/format/format";
 import { read } from "@ledgerly/ui/data";
 
-// Creating an account and saving its settings stay Server Actions until a refusal of `/api/v1` names
-// the account that already has the IBAN (`baselines/server-actions.json`): the forms read them here.
-export { createAccountAction, saveAccountSettingsAction } from "./actions";
-
 export type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
 
 /** The use case's code: the route names it as the refusal's reason, or as the refusal itself. */

@@ -49,6 +49,7 @@
     "./shell/nav-types": "./src/shell/nav-types.ts",
     "./shell/page": "./src/shell/page.tsx",
     "./shell/shell-context": "./src/shell/shell-context.tsx",
+    "./shell/shell-labels": "./src/shell/shell-labels.ts",
     "./shell/sidebar": "./src/shell/sidebar.tsx",
     "./shell/sidebar-state": "./src/shell/sidebar-state.ts",
     "./shell/theme-toggle": "./src/shell/theme-toggle.tsx",

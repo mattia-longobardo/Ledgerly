@@ -36,16 +36,11 @@ function useRedrawOnChange(value: unknown) {
   }, [value, router]);
 }
 
-export function ProfileScreen({
-  timeZones,
-  summaryBlocked,
-}: {
-  timeZones: { value: string; label: string }[];
-  summaryBlocked: boolean;
-}) {
+export function ProfileScreen() {
   const text = useTranslations("settings");
   const person = useApi(profile.getProfile, {});
   const preferences = useApi(profile.getPreferences, {});
+  const options = useApi(profile.getProfileOptions, {});
   useRedrawOnChange(preferences.data);
   useRedrawOnChange(person.data);
 
@@ -63,12 +58,19 @@ export function ProfileScreen({
           {(saved) => {
             const initial = formPreferences(saved);
             return initial ? (
-              <PreferencesForm
-                key={JSON.stringify(initial)}
-                initial={initial}
-                timeZones={timeZones}
-                summaryBlocked={summaryBlocked}
-              />
+              <Loaded state={options}>
+                {(offered) => (
+                  <PreferencesForm
+                    key={JSON.stringify(initial)}
+                    initial={initial}
+                    timeZones={offered.timeZones.map(({ zone, offset }) => ({
+                      value: zone,
+                      label: `${zone} (${offset})`,
+                    }))}
+                    summaryBlocked={!offered.monthlySummaryAllowed}
+                  />
+                )}
+              </Loaded>
             ) : (
               <p role="alert" className="text-sm text-neg">
                 {text("preferences.errors.failed")}

@@ -4,7 +4,7 @@
 // shared component's link or navigation becomes Next's. Mounted once, in the root layout.
 import NextLink from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import { appRoute, isAppAddress } from "./route";
 import { type AppRouter, type LinkProps, type RouterAdapter, RouterProvider } from "@ledgerly/ui/router";
 
@@ -13,13 +13,17 @@ function Link({ href, ...props }: LinkProps) {
   return isAppAddress(href) ? <NextLink href={href} {...props} /> : <a href={href} {...props} />;
 }
 
+/** The same object while Next's router stays the same: a shell's context holds what it builds. */
 function useAppRouter(): AppRouter {
   const router = useRouter();
-  return {
-    push: (href) => router.push(appRoute(href)),
-    replace: (href) => router.replace(appRoute(href)),
-    refresh: () => router.refresh(),
-  };
+  return useMemo(
+    () => ({
+      push: (href) => router.push(appRoute(href)),
+      replace: (href) => router.replace(appRoute(href)),
+      refresh: () => router.refresh(),
+    }),
+    [router],
+  );
 }
 
 const NEXT_ROUTER: RouterAdapter = { Link, useRouter: useAppRouter, usePathname };

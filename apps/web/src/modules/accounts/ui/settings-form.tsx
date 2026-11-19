@@ -10,7 +10,9 @@ import { Checkbox, Input, Select } from "@ledgerly/ui/input";
 import { SettingsSection, FIELD_GRID } from "@ledgerly/ui/section";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
-import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../calls";
+// Saving stays a Server Action until a refusal of `/api/v1` names the account that has the IBAN.
+import { saveAccountSettingsAction } from "../actions";
+import { archiveAccountAction, restoreAccountAction } from "../calls";
 import { colorField } from "./display";
 import { ibanErrorText } from "./iban-field";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "@ledgerly/domain/accounts/client";

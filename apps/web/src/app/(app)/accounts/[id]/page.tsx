@@ -24,18 +24,14 @@ import {
   symmetricAxisLabels,
 } from "@ledgerly/ui/chart-labels";
 import { BalanceEntries, type EntryRow } from "@/modules/accounts/ui/balance-entries";
-import {
-  ConnectionsSection,
-  ConnectionsSummary,
-  type ConnectionRow,
-} from "@/modules/accounts/ui/connections";
+import { ConnectionsSection, ConnectionsSummary } from "@/modules/accounts/ui/connections";
 import { providerName } from "../../banks/provider-name";
 import { ConnectionRow as ConnectionStatus } from "../../settings/integrations/connection-row";
 import { accountConnectionRow } from "./connection-status";
 import { DeleteAccount } from "./delete-account";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
-import { accountReconstructedBalances, connectionsOf } from "@ledgerly/domain/accounts";
+import { accountReconstructedBalances } from "@ledgerly/domain/accounts";
 import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { periodEnd, periodMonths, parsePeriodQuery, type PeriodQuery } from "@ledgerly/ui/period";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
@@ -98,13 +94,6 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   // archiving rather than removing — and without this the lookup below answered 404 for it, so
   // "Restore account" sat on a screen nobody could reach.
   const view = await accountsView(ctx, { now, includeArchived: true });
-  // What hangs off this account, for the Settings tab and for the read-only line on Overview.
-  const connections: ConnectionRow[] = (await connectionsOf(ctx, id)).map((row) => ({
-    id: row.id,
-    channel: row.channel,
-    name: row.name,
-    note: row.note,
-  }));
   const index = view.rows.findIndex((row) => row.account.id === id);
   if (index < 0) notFound();
   const row = view.rows[index];
@@ -235,7 +224,6 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
           color={color}
           id={id}
           chart={chart}
-          connections={connections}
           source={source}
         />
       )}
@@ -258,7 +246,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
         // Save and Discard for the settings live in the banner, which appears with a change: above
         // the connections, the first section of the tab, so it is seen where the tab starts.
         <UnsavedChangesProvider>
-          <ConnectionsSection accountId={id} rows={connections} />
+          <ConnectionsSection accountId={id} />
           <AccountSettingsForm
             sourceExtra={await switchBlock(ctx, account)}
             deleteControl={
@@ -319,7 +307,6 @@ async function OverviewTab({
   color,
   id,
   chart,
-  connections,
   source,
 }: {
   ctx: Ctx;
@@ -329,7 +316,6 @@ async function OverviewTab({
   windowRow: Row;
   months: string[];
   /** What hangs off the account, read-only here: it is consulted far more often than edited. */
-  connections: ConnectionRow[];
   /** Where the balance comes from: "Manual", or the provider that syncs it. */
   source: string;
   /** The window day by day, when the chart's grain is the day (F2.5). */
@@ -570,7 +556,7 @@ async function OverviewTab({
                     })}
               </dd>
             </dl>
-            <ConnectionsSummary rows={connections} />
+            <ConnectionsSummary accountId={id} />
             <span aria-hidden className="h-1 rounded-full" style={{ background: color }} />
           </Card>
         </div>

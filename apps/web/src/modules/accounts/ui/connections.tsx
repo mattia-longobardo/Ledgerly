@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
+import { links } from "@ledgerly/api-contract/accounts";
 import { Button } from "@ledgerly/ui/button";
+import { invalidate, useApi } from "@ledgerly/ui/data";
 import { Field } from "@ledgerly/ui/field";
 import { Input, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
@@ -12,12 +13,17 @@ import { notify } from "@ledgerly/ui/toast";
 import { addConnectionAction, removeConnectionAction, updateConnectionAction } from "../calls";
 import { CONNECTION_CHANNELS, type ConnectionChannel } from "@ledgerly/domain/accounts/client";
 
-/** One thing hanging off the account, as the browser gets it. */
-export interface ConnectionRow {
+/** One thing hanging off the account, as `GET /accounts/{id}/links` answers it. */
+interface ConnectionRow {
   id: string;
   channel: ConnectionChannel;
   name: string;
   note: string | null;
+}
+
+/** What hangs off the account, read from `/api/v1`: one read for the section and the summary. */
+function useLinks(accountId: string): ConnectionRow[] | undefined {
+  return useApi(links.listAccountLinks, { params: { id: accountId } }).data?.links;
 }
 
 /** `id` is `null` while adding: the same dialog creates and edits, as Labels already does. */
@@ -44,12 +50,12 @@ const groupBy = (rows: readonly ConnectionRow[], channel: ConnectionChannel) =>
  * moves it to the other channel, or removes it. One target per connection, and it is a whole chip
  * rather than a 17 px link.
  */
-export function ConnectionsSection({ accountId, rows }: { accountId: string; rows: ConnectionRow[] }) {
+export function ConnectionsSection({ accountId }: { accountId: string }) {
   const t = useTranslations("accounts.connections");
+  const rows = useLinks(accountId) ?? [];
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function messageFor(code: string): string {
     if (code === "duplicate_connection") return t("errors.duplicate");
@@ -87,7 +93,7 @@ export function ConnectionsSection({ accountId, rows }: { accountId: string; row
       }
       notify(t(draft.id === null ? "added" : "saved", { name: input.name.trim() }));
       setDraft(null);
-      router.refresh();
+      invalidate(links.listAccountLinks);
     });
   }
 
@@ -102,7 +108,7 @@ export function ConnectionsSection({ accountId, rows }: { accountId: string; row
       }
       notify(t("removed", { name }), "success");
       setDraft(null);
-      router.refresh();
+      invalidate(links.listAccountLinks);
     });
   }
 
@@ -201,9 +207,10 @@ export function ConnectionsSection({ accountId, rows }: { accountId: string; row
  * The same lists, read-only, on the account's Overview: the owner's habit was to *consult* that
  * table, and making them open Settings to do it would be a step backwards.
  */
-export function ConnectionsSummary({ rows }: { rows: readonly ConnectionRow[] }) {
+export function ConnectionsSummary({ accountId }: { accountId: string }) {
   const t = useTranslations("accounts.connections");
-  if (rows.length === 0) return null;
+  const rows = useLinks(accountId);
+  if (rows === undefined || rows.length === 0) return null;
   return (
     <dl className="flex flex-col gap-1.5 text-sm">
       {CONNECTION_CHANNELS.map((channel) => {
