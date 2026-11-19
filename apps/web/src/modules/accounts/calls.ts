@@ -1,7 +1,8 @@
 // The calls of the accounts' forms to `/api/v1` (rewrite plan R3): each keeps the name and the answer of
 // the Server Action it replaces — `{ ok }` or the use case's code — so a form reads one shape whatever
 // sent it. An amount is typed in the person's number format and travels as a plain decimal.
-import { ACCOUNTS, SETTINGS } from "@ledgerly/api-contract";
+import { accounts, accountSwitch, balances, links, summary } from "@ledgerly/api-contract/accounts";
+import { profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
 import { numberStyle, parseAmount } from "@ledgerly/format/format";
@@ -12,8 +13,6 @@ import { read } from "@ledgerly/ui/data";
 export { createAccountAction, saveAccountSettingsAction } from "./actions";
 
 export type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
-
-const { balances, links, accounts, summary } = ACCOUNTS;
 
 /** The use case's code: the route names it as the refusal's reason, or as the refusal itself. */
 const codeOf = (error: unknown): string | null =>
@@ -37,7 +36,7 @@ async function writing(work: () => Promise<unknown>): Promise<ActionResult> {
 
 /** Typed text in the person's own number format, as the decimal the contract takes. */
 async function decimal(text: string): Promise<string> {
-  const preferences = await read(SETTINGS.profile.getPreferences, {});
+  const preferences = await read(profile.getPreferences, {});
   return centsToDecimal(parseAmount(text, numberStyle(preferences)));
 }
 
@@ -123,8 +122,6 @@ export function removeConnectionAction(accountId: string, linkId: string) {
 
 // ——— «Move the account to the bank» (ux/n4-account-switch.md) ———————————————————————————————————
 
-const routes = ACCOUNTS.switch;
-
 type SwitchRefusal = { ok: false; error: string; retryAt: string | null };
 
 function refusal(error: unknown): SwitchRefusal {
@@ -140,7 +137,7 @@ export async function checkSwitchAction(
   target: { connectionId: string; bankAccountId: string },
 ) {
   try {
-    const report = await call(routes.checkAccountSwitch, { params: { id: accountId }, body: target });
+    const report = await call(accountSwitch.checkAccountSwitch, { params: { id: accountId }, body: target });
     return { ok: true as const, report };
   } catch (error) {
     return refusal(error);
@@ -153,7 +150,7 @@ export async function applySwitchAction(
   target: { connectionId: string; bankAccountId: string; fingerprint: string },
 ) {
   try {
-    const outcome = await call(routes.applyAccountSwitch, { params: { id: accountId }, body: target });
+    const outcome = await call(accountSwitch.applyAccountSwitch, { params: { id: accountId }, body: target });
     return { ok: true as const, ...outcome };
   } catch (error) {
     return refusal(error);
@@ -163,7 +160,7 @@ export async function applySwitchAction(
 /** "Undo switch" (§10). */
 export async function undoSwitchAction(accountId: string) {
   try {
-    await call(routes.undoAccountSwitch, { params: { id: accountId } });
+    await call(accountSwitch.undoAccountSwitch, { params: { id: accountId } });
     return { ok: true as const };
   } catch (error) {
     return refusal(error);

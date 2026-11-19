@@ -23,6 +23,14 @@
     "wireDomain"
   ],
   "packages/api-client/src/index.ts": [],
+  "packages/api-contract/src/accounts/index.ts": [
+    "accountSwitch",
+    "accounts",
+    "balances",
+    "links",
+    "removal",
+    "summary"
+  ],
   "packages/api-contract/src/core/index.ts": [
     "RouteContract",
     "SESSION_CSRF_HEADER"

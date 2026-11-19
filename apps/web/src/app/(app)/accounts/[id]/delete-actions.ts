@@ -1,9 +1,7 @@
 // The calls of «Delete account» to `/api/v1` (rewrite plan R3): the answers of the Server Actions they
 // replace, `{ ok }` or the dialog's code; what the dialog cannot name is `failed`, never a throw.
-import { ACCOUNTS } from "@ledgerly/api-contract";
+import { removal } from "@ledgerly/api-contract/accounts";
 import { ApiError, call } from "@ledgerly/api-client";
-
-const { removal } = ACCOUNTS;
 
 /** The kinds of what rests on an account, as the route takes them. */
 const DEPENDENT_KINDS = [
