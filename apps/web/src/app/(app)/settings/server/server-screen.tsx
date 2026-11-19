@@ -3,13 +3,13 @@
 // Admin › Server, read from `/api/v1/server` (rewrite plan R3): the identity provider, outgoing mail,
 // the AI service, the jobs and the maintenance facts.
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
 import { profile, server } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { formatInstant } from "@ledgerly/format/format";
+import { DiagnosticsCard } from "./diagnostics-card";
 import { JobsCard } from "./jobs-card";
 import { LlmCard } from "./llm-card";
 import { MaintenanceCard } from "./maintenance-card";
@@ -19,14 +19,20 @@ import { SmtpCard } from "./smtp-card";
 type Settings = RouteOutput<typeof server.getServerSettings>;
 type Preferences = RouteOutput<typeof profile.getPreferences>;
 
-/** What the server still tells the screen until the contract carries it. */
+/** The facts of the instance the sections show, from `GET /server/settings`. */
 interface ServerFacts {
   /** The identity provider's origin in the instance's environment: the one the CSP names. */
   environmentOrigin: string | null;
   nextVersion: string;
-  /** The people and the size of the last export: the API answers only its time yet. */
+  /** The people and the size of the last export. */
   lastExport: { users: number; bytes: number } | null;
 }
+
+const factsOf = (settings: Settings): ServerFacts => ({
+  environmentOrigin: settings.oidc.environmentOrigin,
+  nextVersion: settings.maintenance.nextVersion,
+  lastExport: settings.maintenance.export,
+});
 
 /** A size a person reads at a glance: whole megabytes, in their own number format. */
 function megabytes(bytes: number, locale: string): string {
@@ -138,7 +144,8 @@ function JobsSection({ prefs }: { prefs: Preferences }) {
   );
 }
 
-export function ServerScreen({ facts, diagnostics }: { facts: ServerFacts; diagnostics: ReactNode }) {
+export function ServerScreen() {
+  const diagnosticsText = useTranslations("settings.diagnostics");
   const smtpText = useTranslations("settings.smtp");
   const llmText = useTranslations("settings.llm");
   const preferences = useApi(profile.getPreferences, {});
@@ -149,7 +156,7 @@ export function ServerScreen({ facts, diagnostics }: { facts: ServerFacts; diagn
         <Loaded state={settings}>
           {(saved) => (
             <SettingsGrid>
-              <OidcSection settings={saved} prefs={prefs} facts={facts} />
+              <OidcSection settings={saved} prefs={prefs} facts={factsOf(saved)} />
               <SettingsSection title={smtpText("title")} description={smtpText("description")}>
                 <SmtpCard
                   host={saved.smtp.host}
@@ -166,8 +173,14 @@ export function ServerScreen({ facts, diagnostics }: { facts: ServerFacts; diagn
                 <LlmCard current={saved.llm && { model: saved.llm.model, keyHint: saved.llm.keyHint }} />
               </SettingsSection>
               <JobsSection prefs={prefs} />
-              {diagnostics}
-              <MaintenanceSection settings={saved} prefs={prefs} facts={facts} />
+              <SettingsSection
+                title={diagnosticsText("title")}
+                description={diagnosticsText("description")}
+                padded={false}
+              >
+                <DiagnosticsCard prefs={prefs} />
+              </SettingsSection>
+              <MaintenanceSection settings={saved} prefs={prefs} facts={factsOf(saved)} />
             </SettingsGrid>
           )}
         </Loaded>

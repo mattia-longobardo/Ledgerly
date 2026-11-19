@@ -281,7 +281,6 @@
     "apps/web/src/app/(app)/settings/security/sessions-list.tsx": 1,
     "apps/web/src/app/(app)/settings/security/sign-in-method.tsx": 1,
     "apps/web/src/app/(app)/settings/security/two-factor-card.tsx": 2,
-    "apps/web/src/app/(app)/settings/server/diagnostics-card.tsx": 1,
     "apps/web/src/app/(app)/settings/server/jobs-card.tsx": 1,
     "apps/web/src/app/(app)/settings/server/llm-card.tsx": 1,
     "apps/web/src/app/(app)/settings/server/maintenance-card.tsx": 1,
