@@ -521,7 +521,6 @@ export const MODULES: Module[] = [
       "apps/web/src/app/(app)/layout.tsx",
       "apps/web/src/app/(app)/settings/layout.tsx",
       "apps/web/src/app/(app)/settings/page.tsx",
-      "apps/web/src/app/(app)/settings/settings-tabs.tsx",
       "apps/web/src/app/globals.css",
       "packages/design-tokens/**",
       "packages/ui/**",

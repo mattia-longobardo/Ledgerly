@@ -10,11 +10,9 @@ import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { isActive } from "./active";
 import { NAV_ICONS } from "./icons";
-import type { NavLink } from "./nav-types";
+import { NAV_GROUPS, type NavLink } from "./nav-types";
 import { useShell } from "./shell-context";
 import { useSignOut } from "./sign-out";
-
-const GROUPS = ["finance", "work", "system"] as const;
 
 /** In the More sheet the sidebar's footer items (Settings) open the System group, as in the design. */
 function sheetGroups(links: NavLink[]) {
@@ -22,7 +20,7 @@ function sheetGroups(links: NavLink[]) {
     ...links.filter((link) => link.group === "footer"),
     ...links.filter((link) => link.group !== "footer"),
   ];
-  return GROUPS.map((group) => ({
+  return NAV_GROUPS.map((group) => ({
     group,
     items: ordered.filter((link) => (link.group === "footer" ? "system" : link.group) === group),
   })).filter(({ items }) => items.length > 0);

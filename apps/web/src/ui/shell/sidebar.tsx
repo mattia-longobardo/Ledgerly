@@ -9,12 +9,10 @@ import { cn } from "@ledgerly/ui/cn";
 import { isActive } from "./active";
 import { BrandMark } from "./brand";
 import { NAV_ICONS } from "./icons";
-import type { NavLink } from "./nav-types";
+import { NAV_GROUPS, type NavLink } from "./nav-types";
 import { useShell } from "./shell-context";
 import type { SidebarState } from "./sidebar-state";
 import { useSignOut } from "./sign-out";
-
-const GROUPS = ["finance", "work", "system"] as const;
 
 /** A sidebar item's look; the Components page shows its states from the same classes. */
 function navItemClassName(active: boolean): string {
@@ -70,7 +68,7 @@ export function Sidebar({ links, user }: { links: NavLink[]; user: { name: strin
         <span className={cn("font-semibold whitespace-nowrap", label)}>{labels.product}</span>
       </div>
       <div className="flex flex-1 flex-col overflow-y-auto">
-        {GROUPS.map((group) => {
+        {NAV_GROUPS.map((group) => {
           const items = links.filter((link) => link.group === group);
           if (items.length === 0) return null;
           return (

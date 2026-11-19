@@ -59,3 +59,8 @@ export function Link(props: LinkProps) {
   const { Link: Implementation } = useContext(RouterContext);
   return <Implementation {...props} />;
 }
+
+/** The path of the open page, without its query. */
+export function usePathname(): string {
+  return useContext(RouterContext).usePathname();
+}

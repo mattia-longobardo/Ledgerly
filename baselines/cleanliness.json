@@ -933,7 +933,6 @@
     "apps/web/src/app/(app)/settings/integrations/page.tsx": 7,
     "apps/web/src/app/(app)/settings/integrations/schedule-control.tsx": 11,
     "apps/web/src/app/(app)/settings/integrations/schedule-form.ts": 1,
-    "apps/web/src/app/(app)/settings/layout.tsx": 2,
     "apps/web/src/app/(app)/settings/profile/preferences-form.tsx": 6,
     "apps/web/src/app/(app)/settings/rules/page.tsx": 1,
     "apps/web/src/app/(app)/settings/rules/rules-board.tsx": 9,

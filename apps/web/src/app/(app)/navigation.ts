@@ -135,3 +135,31 @@ const NAV_ITEMS: readonly NavItem[] = [
 export function navFor(role: Role): NavItem[] {
   return NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin");
 }
+
+type SettingsTabId =
+  "profile" | "security" | "integrations" | "categories" | "rules" | "data" | "users" | "server";
+
+interface SettingsTab {
+  id: SettingsTabId;
+  href: Route;
+  /** Admin › Users and Admin › Server (spec §7.10): their pages answer 404 to anyone else. */
+  adminOnly: boolean;
+  /** Found by ⌘K. Rules never was: a product choice this list keeps, not one it makes. */
+  inPalette: boolean;
+}
+
+/** The single list of the pages of Settings (audit UI-NAV-2): the tabs and the palette derive from it. */
+const SETTINGS_TABS: readonly SettingsTab[] = [
+  { id: "profile", href: "/settings/profile", adminOnly: false, inPalette: true },
+  { id: "security", href: "/settings/security", adminOnly: false, inPalette: true },
+  { id: "integrations", href: "/settings/integrations", adminOnly: false, inPalette: true },
+  { id: "categories", href: "/settings/categories", adminOnly: false, inPalette: true },
+  { id: "rules", href: "/settings/rules", adminOnly: false, inPalette: false },
+  { id: "data", href: "/settings/data", adminOnly: false, inPalette: true },
+  { id: "users", href: "/settings/users", adminOnly: true, inPalette: true },
+  { id: "server", href: "/settings/server", adminOnly: true, inPalette: true },
+];
+
+export function settingsTabsFor(role: Role): SettingsTab[] {
+  return SETTINGS_TABS.filter((tab) => !tab.adminOnly || role === "admin");
+}
