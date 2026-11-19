@@ -6,6 +6,7 @@ import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { UiLocale } from "@ledgerly/domain/platform/format";
 import { LinkButton } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
+import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Checkbox, Input, Select, Textarea } from "@ledgerly/ui/input";
 import { Segmented } from "@ledgerly/ui/segmented";
 import { Switch } from "@ledgerly/ui/switch";
@@ -293,19 +294,15 @@ function DebitFields({ form, onChange, accounts, errors, idPrefix, afterPayee }:
         </Field>
       )}
       <Field label={t("debit.account")} htmlFor={id("accountId")}>
-        <Select
+        <AccountSelect
           id={id("accountId")}
           value={form.accountId}
           onChange={(event) => set({ accountId: event.currentTarget.value })}
+          accounts={accounts}
+          none={t("debit.anyAccount")}
         >
-          <option value="">{t("debit.anyAccount")}</option>
           {unknownAccount && <option value={form.accountId}>{t("debit.otherAccount")}</option>}
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
+        </AccountSelect>
       </Field>
       <Field label={t("debit.from")} htmlFor={id("validFrom")} hint={t("debit.fromHint")}>
         <Input

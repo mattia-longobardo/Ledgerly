@@ -6,6 +6,7 @@ import { Button } from "@ledgerly/ui/button";
 import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picker";
 import { cn } from "@ledgerly/ui/cn";
 import { Field } from "@ledgerly/ui/field";
+import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Input, InputGroup, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
@@ -145,14 +146,13 @@ export function SubscriptionDialog({
           </CategoryPicker>
         </Field>
         <Field label={t("form.paidFrom")} htmlFor={`${id}-account`}>
-          <Select id={`${id}-account`} name="account" defaultValue={draft.paymentAccountId ?? ""}>
-            <option value="">{t("form.anyAccount")}</option>
-            {options.accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </Select>
+          <AccountSelect
+            id={`${id}-account`}
+            name="account"
+            defaultValue={draft.paymentAccountId ?? ""}
+            accounts={options.accounts}
+            none={t("form.anyAccount")}
+          />
         </Field>
         <Field label={t("form.price")} htmlFor={`${id}-price`}>
           <Input

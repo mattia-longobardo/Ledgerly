@@ -6,6 +6,7 @@ import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button, LinkButton } from "@ledgerly/ui/button";
 import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picker";
 import { Field } from "@ledgerly/ui/field";
+import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Checkbox, Input, InputGroup, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
@@ -114,18 +115,13 @@ export function RuleDialog({
       <form onSubmit={onSubmit} noValidate className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
         <div className="col-span-full">
           <Field label={t("form.account")} htmlFor={`${id}-account`}>
-            <Select
+            <AccountSelect
               id={`${id}-account`}
               name="account"
               defaultValue={draft.accountId}
               onChange={(event) => setAccountId(event.target.value)}
-            >
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </Select>
+              accounts={accounts}
+            />
           </Field>
         </div>
         <Field label={t("form.validFrom")} htmlFor={`${id}-from`}>

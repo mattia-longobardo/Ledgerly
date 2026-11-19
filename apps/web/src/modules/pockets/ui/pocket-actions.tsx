@@ -8,6 +8,7 @@ import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledg
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
+import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Input, InputGroup, Select } from "@ledgerly/ui/input";
 import { ActionMenu } from "@ledgerly/ui/menu";
 import { Modal } from "@ledgerly/ui/modal";
@@ -143,14 +144,13 @@ function PocketDialog({
           </Field>
         </div>
         <Field label={t("form.account")} htmlFor={`${id}-account`}>
-          <Select id={`${id}-account`} name="account" defaultValue={pocket?.backingAccountId ?? ""}>
-            <option value="">{t("form.none")}</option>
-            {context.accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </Select>
+          <AccountSelect
+            id={`${id}-account`}
+            name="account"
+            defaultValue={pocket?.backingAccountId ?? ""}
+            accounts={context.accounts}
+            none={t("form.none")}
+          />
         </Field>
         <Field label={t("form.target")} htmlFor={`${id}-target`}>
           <InputGroup suffix="€">

@@ -5,7 +5,8 @@ import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picker";
 import { Field } from "@ledgerly/ui/field";
-import { Input, InputGroup, Select } from "@ledgerly/ui/input";
+import { AccountSelect } from "@ledgerly/ui/account-select";
+import { Input, InputGroup } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import { setBudgetLimitAction } from "../actions";
@@ -102,14 +103,14 @@ export function AddBudget({
               </CategoryPicker>
             </Field>
             <Field label={t("form.account")} htmlFor={`${id}-account`}>
-              <Select id={`${id}-account`} name="account" defaultValue="" onChange={() => setError(null)}>
-                <option value="">{t("form.anyAccount")}</option>
-                {accounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </Select>
+              <AccountSelect
+                id={`${id}-account`}
+                name="account"
+                defaultValue=""
+                onChange={() => setError(null)}
+                accounts={accounts}
+                none={t("form.anyAccount")}
+              />
             </Field>
           </div>
           <Field label={t("form.amount")} htmlFor={`${id}-amount`}>

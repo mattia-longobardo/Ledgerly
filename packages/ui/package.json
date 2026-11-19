@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./account-select": "./src/account-select.tsx",
     "./avatar": "./src/avatar.tsx",
     "./badge": "./src/badge.tsx",
     "./button": "./src/button.tsx",

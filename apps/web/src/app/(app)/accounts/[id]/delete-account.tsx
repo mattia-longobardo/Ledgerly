@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
 import { Button } from "@ledgerly/ui/button";
-import { Select } from "@ledgerly/ui/input";
+import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import type { Dependent } from "./delete";
@@ -173,7 +173,7 @@ export function DeleteAccount({
                         {describe(one)}
                       </label>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Select
+                        <AccountSelect
                           id={id}
                           className="min-w-0 flex-1"
                           value={targets[key] ?? ""}
@@ -182,14 +182,9 @@ export function DeleteAccount({
                             setTargets((before) => ({ ...before, [key]: value }));
                           }}
                           disabled={pending}
-                        >
-                          <option value="">{t("dependents.choose")}</option>
-                          {loaded?.targets.map((target) => (
-                            <option key={target.id} value={target.id}>
-                              {target.name}
-                            </option>
-                          ))}
-                        </Select>
+                          accounts={loaded?.targets ?? []}
+                          none={t("dependents.choose")}
+                        />
                         <Button size="sm" onClick={() => onMove(one)} disabled={pending}>
                           {t("dependents.move")}
                         </Button>
