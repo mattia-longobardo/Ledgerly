@@ -258,6 +258,25 @@ export function dayStart(on: CivilDate, timeZone: string): SQL {
   return sql`(${on}::date)::timestamp at time zone ${timeZone}`;
 }
 
+/**
+ * The civil day of an instant in the user's zone, `YYYY-MM-DD`: `to_char` on the shifted instant,
+ * the SQL twin of `civilDateIn` (audit TRX-9). `instant` defaults to the movement's own.
+ */
+export function dayExpression(
+  timeZone: string,
+  instant: SQL | AnyPgColumn = transactions.occurredAt,
+): SQL<string> {
+  return sql<string>`to_char(${instant} at time zone ${timeZone}, 'YYYY-MM-DD')`;
+}
+
+/**
+ * The grouping key of a payee in SQL: the twin of `payeeKeyOf` (audit TRX-9), which a test holds
+ * it to. A payee that normalises to nothing is `''` here and `null` there; neither is a key.
+ */
+export function payeeKeyExpression(payee: SQL | AnyPgColumn): SQL<string> {
+  return sql<string>`lower(regexp_replace(${payee}, '\\s+', '', 'g'))`;
+}
+
 /** The month key of a movement in the user's zone: `to_char` on the shifted instant. */
 export function monthExpression(timeZone: string): SQL<string> {
   return sql<string>`to_char(date_trunc('month', ${transactions.occurredAt} at time zone ${timeZone}), 'YYYY-MM-01')`;

@@ -14,6 +14,7 @@ import {
   boundedLimit,
   cents,
   conditions,
+  dayExpression,
   escapeLike,
   monthExpression,
   type ExpensesView,
@@ -109,10 +110,7 @@ export async function spendingOverTime(
   type: TransactionType = "expense",
 ): Promise<SpendingPoint[]> {
   const parents = alias(categories, "spending_parents");
-  const bucket =
-    grain === "day"
-      ? sql<string>`to_char(${transactions.occurredAt} at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`
-      : monthExpression(ctx.timeZone);
+  const bucket = grain === "day" ? dayExpression(ctx.timeZone) : monthExpression(ctx.timeZone);
   const rows = await getDb()
     .select({
       bucket,
@@ -313,7 +311,7 @@ export async function movementSpanByAccount(
     .select({
       accountId: transactions.accountId,
       count: sql<number>`count(*)::int`,
-      first: sql<string>`to_char(min(${transactions.occurredAt}) at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`,
+      first: dayExpression(ctx.timeZone, sql`min(${transactions.occurredAt})`),
     })
     .from(transactions)
     .where(

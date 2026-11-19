@@ -16,5 +16,13 @@ export const optionalText = (max: number) =>
     .nullable()
     .default(null);
 
+/**
+ * A name as it is matched: no whitespace and no case, so "Net Flix" and "netflix" are one. The one
+ * definition behind a payee's key and a provider account's name (audit TRX-9).
+ */
+export function nameKey(name: string): string {
+  return name.replace(/\s+/g, "").toLocaleLowerCase();
+}
+
 /** A colour as `#rrggbb`. */
 export const HEX_COLOR = /^#[0-9a-f]{6}$/i;

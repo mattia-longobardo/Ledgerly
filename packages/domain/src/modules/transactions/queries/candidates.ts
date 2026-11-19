@@ -6,7 +6,7 @@ import { userScoped } from "../../../platform/db/scope";
 import type { Cents } from "../../../shared/money";
 import { type TransactionType } from "../rules";
 import { categories, recurringPatterns, transactions } from "../schema";
-import { WAITING_FOR_CATEGORY, cents, conditions } from "./filters";
+import { WAITING_FOR_CATEGORY, cents, conditions, payeeKeyExpression } from "./filters";
 
 /**
  * What each category spent on each account in one month (spec §7.3, F3): the sum of the absolute
@@ -195,7 +195,7 @@ export async function payeeSamples(
   payeeKeys: readonly string[],
 ): Promise<Map<string, { payee: string; accountId: string; categoryId: string | null; on: CivilDate }>> {
   if (payeeKeys.length === 0) return new Map();
-  const key = sql<string>`lower(regexp_replace(${transactions.payee}, '\\s+', '', 'g'))`;
+  const key = payeeKeyExpression(transactions.payee);
   const rows = await getDb()
     .selectDistinctOn([key], {
       key,

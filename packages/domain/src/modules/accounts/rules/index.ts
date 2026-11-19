@@ -172,13 +172,7 @@ export {
   totalSeries,
 } from "./series";
 export type { AccountAlert, BalancePoint, TotalOf } from "./series";
-export {
-  accountMode,
-  hasIbanField,
-  ibanConflict,
-  normalizeName,
-  reconcileProviderAccounts,
-} from "./provider";
+export { accountMode, hasIbanField, ibanConflict, reconcileProviderAccounts } from "./provider";
 export type { AccountMode, IbanHolder, LocalAccount, RemoteAccount } from "./provider";
 export { MANUAL_MOVEMENT_MODES, movementBalances, movementEffect, withMovementPoints } from "./movements";
 export type { BalanceReading, ManualMovement, MovementEffect } from "./movements";

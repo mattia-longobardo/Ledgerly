@@ -1,3 +1,4 @@
+import { nameKey } from "../../../shared/inputs";
 import type { Cents } from "../../../shared/money";
 import { type TransactionState, type TransactionType } from "./vocabulary";
 
@@ -118,7 +119,7 @@ export function displayPayee(payee: string | null): string | null {
  * same answer as a missing one, which is what keeps it out of recurrence detection.
  */
 export function payeeKeyOf(payee: string | null): string | null {
-  const key = (payee ?? "").replace(/\s+/g, "").toLocaleLowerCase();
+  const key = nameKey(payee ?? "");
   return key === "" ? null : key;
 }
 

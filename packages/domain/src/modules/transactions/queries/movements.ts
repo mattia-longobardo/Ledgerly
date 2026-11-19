@@ -5,7 +5,7 @@ import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { Cents } from "../../../shared/money";
 import { transactions } from "../schema";
-import { cents, dayStart, labelIdsFor, type Transaction } from "./filters";
+import { cents, dayExpression, dayStart, labelIdsFor, type Transaction } from "./filters";
 
 /** The movements of a set of ids, with their labels: what the service loads before it merges. */
 export async function transactionsByIds(
@@ -90,7 +90,7 @@ export async function dailyNetByAccount(
   accountIds: readonly string[],
 ): Promise<Map<string, { on: CivilDate; cents: Cents }[]>> {
   if (accountIds.length === 0) return new Map();
-  const day = sql<string>`to_char(${transactions.occurredAt} at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`;
+  const day = dayExpression(ctx.timeZone);
   const rows = await getDb()
     .select({ accountId: transactions.accountId, on: day, cents: sum(transactions.amountCents) })
     .from(transactions)

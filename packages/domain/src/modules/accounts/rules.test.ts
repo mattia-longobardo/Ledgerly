@@ -12,7 +12,6 @@ import {
   isStale,
   type LocalAccount,
   monthEndSeries,
-  normalizeName,
   reconcileProviderAccounts,
   type RemoteAccount,
   settingsForSynced,
@@ -20,6 +19,7 @@ import {
   totalSeries,
 } from "./rules";
 import { parseAmount } from "../../platform/format";
+import { nameKey as normalizeName } from "../../shared/inputs";
 
 const MONTHS = monthsBetween("2026-01-01", "2026-04-01");
 

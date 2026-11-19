@@ -13,6 +13,7 @@ import {
   boundedLimit,
   cents,
   conditions,
+  dayExpression,
   labelsFor,
   monthExpression,
   ordering,
@@ -100,7 +101,7 @@ function pageOf(
       categoryColor: categories.color,
       // The person's day, by Postgres: the same zone rules as every total by day, without a
       // formatter per row in Node (audit TRX-11).
-      on: sql<string>`to_char(${transactions.occurredAt} at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`,
+      on: dayExpression(ctx.timeZone),
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))

@@ -1,10 +1,7 @@
 // The accounts of a provider against the person's (spec §7.1, N4): the steps of a reading, the
 // rule «one IBAN, one account», the mode of an account. Part of `rules`; pure.
+import { nameKey } from "../../../shared/inputs";
 import type { AccountOrigin, AccountState, AccountType } from "./index";
-
-export function normalizeName(name: string): string {
-  return name.replace(/\s+/g, "").toLocaleLowerCase();
-}
 
 export interface LocalAccount {
   id: string;
@@ -85,7 +82,7 @@ function adoptableByName(mine: readonly LocalAccount[]): Map<string, LocalAccoun
     if (account.origin !== "manual" || account.state === "archived") continue;
     // Two manual accounts can share a name: the first in the user's own order is adopted, so the
     // same input always produces the same outcome.
-    const key = normalizeName(account.name);
+    const key = nameKey(account.name);
     if (!adoptable.has(key)) adoptable.set(key, account);
   }
   return adoptable;
@@ -115,9 +112,9 @@ function newStep(
   adoptable: Map<string, LocalAccount>,
   local: readonly LocalAccount[],
 ): ReconcileStep {
-  const candidate = adoptable.get(normalizeName(incoming.name));
+  const candidate = adoptable.get(nameKey(incoming.name));
   if (candidate) {
-    adoptable.delete(normalizeName(incoming.name));
+    adoptable.delete(nameKey(incoming.name));
     return { action: "adopt", id: candidate.id, remote: incoming };
   }
   const iban = incoming.iban ?? null;
