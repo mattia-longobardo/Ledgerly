@@ -48,9 +48,10 @@ export function workspaces(repo: string): Workspace[] {
 export const ALLOWED: Record<string, { only?: string[]; never?: string[]; typesOnly?: string[] }> = {
   // `api-contract` (zod only): the limits and the shape of what comes over the wire have one source,
   // which the domain computes from (the schedule of a connection). The contract never imports the domain.
-  "@ledgerly/domain": { only: ["@ledgerly/api-contract", "drizzle-orm", "pg", "zod"] },
+  "@ledgerly/domain": { only: ["@ledgerly/api-contract", "@ledgerly/format", "drizzle-orm", "pg", "zod"] },
   "@ledgerly/api-contract": { only: ["zod"] },
   "@ledgerly/design-tokens": { only: [] },
+  "@ledgerly/format": { only: [] },
   "@ledgerly/api-client": { only: ["@ledgerly/api-contract", "zod"], typesOnly: ["zod"] },
   "@ledgerly/plugin-contract": { only: ["zod"] },
   "@ledgerly/plugin-host": {
@@ -84,6 +85,7 @@ export const FORBIDDEN_LAYERS: Record<string, RegExp> = {
   "@ledgerly/domain": /^(next|react|react-dom|hono)(\/|$)/,
   "@ledgerly/api-contract": /^(?!zod$)/,
   "@ledgerly/plugin-contract": /^(?!zod$)/,
+  "@ledgerly/format": /^(?!$)/,
   "@ledgerly/ui": /^(next|next-intl|hono|drizzle-orm|@ledgerly\/(domain|api|web|worker|plugin-host))(\/|$)/,
 };
 
@@ -92,6 +94,7 @@ const BROWSER_PACKAGES = [
   "@ledgerly/ui",
   "@ledgerly/design-tokens",
   "@ledgerly/api-client",
+  "@ledgerly/format",
   // The wire's shapes: zod schemas and constants, the same on both sides.
   "@ledgerly/api-contract",
 ];

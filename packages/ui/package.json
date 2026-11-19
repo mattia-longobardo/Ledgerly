@@ -49,6 +49,7 @@
     "@ledgerly/api-client": "*",
     "@ledgerly/api-contract": "*",
     "@ledgerly/design-tokens": "*",
+    "@ledgerly/format": "*",
     "clsx": "2.1.1",
     "lucide-react": "1.45.0",
     "react": "19.3.0",

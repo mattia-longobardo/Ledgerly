@@ -1,0 +1,11 @@
+{
+  "name": "@ledgerly/format",
+  "version": "0.37.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./cents": "./src/cents.ts",
+    "./dates": "./src/dates.ts",
+    "./format": "./src/format.ts"
+  }
+}

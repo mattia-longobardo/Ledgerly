@@ -734,6 +734,7 @@ export const CRITICAL: { files: string[]; why: string }[] = [
     why: "used by almost every module",
     files: [
       "packages/domain/src/shared/**",
+      "packages/format/**",
       "packages/api-contract/**",
       "packages/domain/src/platform/format*",
       "packages/domain/src/platform/ranges.ts",

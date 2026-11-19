@@ -1,0 +1,278 @@
+import { type Cents, centsToDecimal, parseCents } from "./cents";
+import { type CivilDate, isCivilDate } from "./dates";
+
+/** The saved `number_format` preference: the locale whose conventions a number starts from. */
+type NumberFormatName = "it-IT" | "en-US" | "fr-FR";
+type DecimalSeparator = "." | ",";
+/** Where the euro sign goes: `€ 1.234,56` or `1.234,56 €`. */
+type CurrencyPosition = "before" | "after";
+
+/**
+ * A number format plus the two explicit overrides a user can set (Settings › Profile):
+ * `null` on either means "whatever the chosen format does", so a preference left alone
+ * formats exactly as it did before the overrides existed.
+ */
+export interface NumberStyle {
+  format: NumberFormatName;
+  decimalSeparator: DecimalSeparator | null;
+  currencyPosition: CurrencyPosition | null;
+}
+
+/**
+ * What every formatting function accepts: a bare format name (fixtures)
+ * or the user's full style. `Ctx.numberFormat` carries the style, so every call site that already
+ * passes `ctx.numberFormat` picks the overrides up with no change.
+ */
+export type NumberFormat = NumberFormatName | NumberStyle;
+
+export type UiLocale = "en" | "it";
+
+export const NULL_DISPLAY = "—";
+const MINUS = "−";
+const NBSP = " ";
+/** What an amount is in when the caller does not say: every value stored before D1 is in euro. */
+const EUR = "EUR";
+
+/** Builds the style carried by `Ctx` from the saved preferences. */
+export function numberStyle(prefs: {
+  numberFormat: NumberFormatName;
+  decimalSeparator: DecimalSeparator | null;
+  currencyPosition: CurrencyPosition | null;
+}): NumberStyle {
+  return {
+    format: prefs.numberFormat,
+    decimalSeparator: prefs.decimalSeparator,
+    currencyPosition: prefs.currencyPosition,
+  };
+}
+
+interface Native {
+  decimal: string;
+  group: string;
+  position: CurrencyPosition;
+  /** What the locale puts between the currency sign and the digits: nothing, or a no-break space. */
+  gap: string;
+  /** The locale's own sign for the currency: "€", "$" in en-US, "USD" in it-IT, "CHF". */
+  symbol: string;
+}
+
+const NATIVE = new Map<string, Native>();
+
+/**
+ * What the format itself does with a currency, read from Intl once per pair (fr-FR groups with
+ * U+202F). The separators do not depend on the currency; the sign and the space next to it do
+ * ("€1.00" but "CHF 1.00" in en-US).
+ */
+function nativeOf(name: NumberFormatName, currency: string = EUR): Native {
+  const key = `${name}|${currency}`;
+  const cached = NATIVE.get(key);
+  if (cached) return cached;
+  const plain = new Intl.NumberFormat(name, {
+    minimumFractionDigits: 2,
+    useGrouping: "always",
+  }).formatToParts(1234.5);
+  const money = new Intl.NumberFormat(name, { style: "currency", currency }).formatToParts(1);
+  const currencyAt = money.findIndex((part) => part.type === "currency");
+  const digitsAt = money.findIndex((part) => part.type === "integer");
+  const position: CurrencyPosition = currencyAt < digitsAt ? "before" : "after";
+  const neighbour = money[position === "before" ? currencyAt + 1 : currencyAt - 1];
+  const native: Native = {
+    decimal: plain.find((part) => part.type === "decimal")?.value ?? ".",
+    group: plain.find((part) => part.type === "group")?.value ?? ",",
+    position,
+    gap: neighbour?.type === "literal" ? neighbour.value : "",
+    symbol: money[currencyAt]?.value ?? currency,
+  };
+  NATIVE.set(key, native);
+  return native;
+}
+
+interface Resolved extends Native {
+  name: NumberFormatName;
+}
+
+/**
+ * The separators and the euro placement actually used. A number can never show the same character
+ * for both roles: when the chosen decimal separator is the format's own grouping character, the
+ * two swap (it-IT with a decimal point groups with commas, en-US with a decimal comma groups with
+ * points); fr-FR groups with a narrow space, which collides with neither and stays.
+ */
+function resolveStyle(format: NumberFormat, currency: string = EUR): Resolved {
+  const style: NumberStyle =
+    typeof format === "string" ? { format, decimalSeparator: null, currencyPosition: null } : format;
+  const native = nativeOf(style.format, currency);
+  const decimal = style.decimalSeparator ?? native.decimal;
+  const group = native.group === decimal ? native.decimal : native.group;
+  const position = style.currencyPosition ?? native.position;
+  return {
+    name: style.format,
+    decimal,
+    group,
+    position,
+    symbol: native.symbol,
+    // Flipping the currency sign to the other side of the number always leaves a space between them:
+    // "1,234.56 €" for a format that natively writes "€1,234.56" with none.
+    gap: position === native.position ? native.gap : NBSP,
+  };
+}
+
+/** The separators an amount is written with, for a field that reads back what it wrote (`parseAmount`). */
+export function numberSeparators(format: NumberFormat): { decimal: string; group: string } {
+  const { decimal, group } = resolveStyle(format);
+  return { decimal, group };
+}
+
+/** The sign (a typographic minus, or an explicit plus) split from the digits, with our separators. */
+function digitsOf(
+  value: number | `${number}`,
+  style: Resolved,
+  options: Intl.NumberFormatOptions,
+): { sign: string; body: string } {
+  // A decimal string is formatted exactly (Intl.NumberFormat v3): no float on the way.
+  const parts = new Intl.NumberFormat(style.name, { useGrouping: "always", ...options }).formatToParts(value);
+  let sign = "";
+  let body = "";
+  for (const part of parts) {
+    if (part.type === "minusSign") sign = MINUS;
+    else if (part.type === "plusSign") sign = "+";
+    else if (part.type === "group") body += style.group;
+    else if (part.type === "decimal") body += style.decimal;
+    else body += part.value;
+  }
+  return { sign, body };
+}
+
+/**
+ * An amount in its currency (`EUR` when not given: a value with no currency of its own is in euro).
+ * The sign is the locale's own and goes where the format, or the user's override, puts it; the
+ * digits always carry two decimals, because every amount is cents.
+ */
+export function formatMoney(
+  cents: Cents | null,
+  format: NumberFormat,
+  options: { decimals?: boolean; signed?: boolean; currency?: string } = {},
+): string {
+  if (cents === null) return NULL_DISPLAY;
+  const digits = options.decimals === false ? 0 : 2;
+  const style = resolveStyle(format, options.currency);
+  const { sign, body } = digitsOf(centsToDecimal(cents) as `${number}`, style, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    signDisplay: options.signed ? "exceptZero" : "auto",
+  });
+  return style.position === "before"
+    ? `${sign}${style.symbol}${style.gap}${body}`
+    : `${sign}${body}${style.gap}${style.symbol}`;
+}
+
+/**
+ * A decimal written as text — a quantity, a unit price — with our separators and between `min` and
+ * `max` decimals, exactly (no float on the way); with `currency`, its symbol where an amount has it.
+ */
+export function formatDecimalText(
+  value: string,
+  format: NumberFormat,
+  options: { min?: number; max: number; currency?: string },
+): string {
+  const style = resolveStyle(format, options.currency);
+  const { sign, body } = digitsOf(value as `${number}`, style, {
+    minimumFractionDigits: options.min ?? 0,
+    maximumFractionDigits: options.max,
+  });
+  if (options.currency === undefined) return `${sign}${body}`;
+  return style.position === "before"
+    ? `${sign}${style.symbol}${style.gap}${body}`
+    : `${sign}${body}${style.gap}${style.symbol}`;
+}
+
+export function formatPercent(
+  fraction: number | null,
+  format: NumberFormat,
+  options: { decimals?: number; signed?: boolean } = {},
+): string {
+  if (fraction === null) return NULL_DISPLAY;
+  const digits = options.decimals ?? 1;
+  const style = resolveStyle(format);
+  const { sign, body } = digitsOf(fraction * 100, style, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    signDisplay: options.signed ? "exceptZero" : "auto",
+  });
+  return `${sign}${body}${style.name === "en-US" ? "" : NBSP}%`;
+}
+
+/** The one map from the language of the interface to the locale `Intl` formats with (rewrite plan R0). */
+const INTL_LOCALE: Record<UiLocale, string> = { en: "en-US", it: "it-IT" };
+
+/** The locale `Intl` formats a language with: Italian for "it", English for any other. */
+export function intlLocale(language: string): string {
+  return language === "it" ? INTL_LOCALE.it : INTL_LOCALE.en;
+}
+
+/** A month's name in the reader's language, built from the parts so no local Date is involved. */
+export function monthName(date: CivilDate, locale: UiLocale, width: "short" | "long"): string {
+  const [year, month] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: width, timeZone: "UTC" }).format(
+    new Date(Date.UTC(year, month - 1, 1)),
+  );
+}
+
+/**
+ * Civil dates are formatted from their parts, never through a local Date,
+ * so the displayed day cannot drift with the server's timezone. Month names
+ * come from Intl; the order of the parts is fixed to match the design.
+ */
+export function formatDate(
+  date: CivilDate | null,
+  style: "dayMonth" | "long" | "monthYear" | "monthShort" | "month",
+  locale: UiLocale,
+): string {
+  if (date === null) return NULL_DISPLAY;
+  if (!isCivilDate(date)) throw new RangeError(`Not a civil date: "${date}"`);
+  const [year, , day] = date.split("-");
+  switch (style) {
+    case "dayMonth":
+      return `${day} ${monthName(date, locale, "short")}`;
+    case "long":
+      return `${Number(day)} ${monthName(date, locale, "short")} ${year}`;
+    case "monthYear":
+      return `${monthName(date, locale, "long")} ${year}`;
+    case "monthShort":
+      return `${monthName(date, locale, "short")} ${year.slice(2)}`;
+    case "month":
+      // The month alone, for a grid that already names the year above it (the month picker).
+      return monthName(date, locale, "short");
+  }
+}
+
+/**
+ * An amount as a person would type it back into a field, in their own format: their decimal
+ * separator and no grouping ("1234,56" in Italian, "1234.56" in English), which `parseAmount`
+ * reads back to the same cents. `null` is an empty field.
+ */
+export function formatAmountInput(cents: Cents | null, format: NumberFormat): string {
+  if (cents === null) return "";
+  return centsToDecimal(cents).replace(".", resolveStyle(format).decimal);
+}
+
+/** A whole percentage as the design writes it ("88 %" in Italian, "88%" in English), past 100 too. */
+export function formatWholePercent(percent: number, format: NumberFormat): string {
+  const style = resolveStyle(format);
+  const { sign, body } = digitsOf(percent, style, { maximumFractionDigits: 0 });
+  return `${sign}${body}${style.name === "en-US" ? "" : NBSP}%`;
+}
+
+/**
+ * An amount as a person types it, in their own number format (spec §8.5): "1.234,56", "1 234,56"
+ * or "1,234.56", with or without a euro sign. Grouping and decimal separators are resolved by the
+ * style rather than guessed, so "1.234" is one thousand in Italian and one point two in English —
+ * and they come from the same place `formatAmountInput` writes them, including the user's own
+ * decimal-separator override, so a field always reads back what it printed.
+ */
+export function parseAmount(input: string, format: NumberFormat): Cents {
+  const cleaned = input.replace(/[\s\u00a0\u202f€]/g, "").replace(/\u2212/g, "-");
+  if (cleaned === "") throw new RangeError("Empty amount");
+  const { decimal, group } = numberSeparators(format);
+  const plain = cleaned.split(group).join("").replace(decimal, ".");
+  return parseCents(plain);
+}

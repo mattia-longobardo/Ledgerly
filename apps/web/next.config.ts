@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
     "@ledgerly/api-contract",
     "@ledgerly/design-tokens",
     "@ledgerly/domain",
+    "@ledgerly/format",
     "@ledgerly/plugin-contract",
     "@ledgerly/plugin-host",
     "@ledgerly/ui",
