@@ -73,8 +73,10 @@ export function useApi<R extends RouteContract>(route: R, input: RouteInput<R>):
   const entry = entryOf(route, input);
   const subscribe = useCallback(
     (listener: () => void) => {
+      // A screen that opens again reads again, showing what it had meanwhile, as a page drawn on the
+      // server did on every visit: a write elsewhere may have changed the answer since.
+      if (!entry.loaded || entry.listeners.size === 0) load(entry);
       entry.listeners.add(listener);
-      if (!entry.loaded) load(entry);
       return () => entry.listeners.delete(listener);
     },
     [entry],
