@@ -14,7 +14,7 @@ import {
   useSyncExternalStore,
   useTransition,
 } from "react";
-import { type CategoryType, NAME_MAX } from "@ledgerly/domain/transactions/client";
+import { CATEGORY_COLORS, type CategoryType, NAME_MAX } from "@ledgerly/domain/transactions/client";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
@@ -36,7 +36,7 @@ import {
   saveCategoryAction,
   undoMergeAction,
 } from "../../settings/categories/actions";
-import { ColorDot, ColorSwatchPicker } from "../../settings/categories/color-swatch";
+import { ColorDot, ColorPicker } from "@ledgerly/ui/color-picker";
 import { DeleteCategoryDialog } from "../../settings/categories/delete-dialog";
 import { MacroMoveDialog } from "./macro-dialog";
 
@@ -1002,7 +1002,8 @@ function ColorField({ id, initial, disabled }: { id: string; initial: string | n
   const [color, setColor] = useState<string | null>(initial);
   return (
     <Field label={ts("color")} htmlFor={id} hint={ts("colorHint")}>
-      <ColorSwatchPicker
+      <ColorPicker
+        swatches={CATEGORY_COLORS}
         id={id}
         name="color"
         value={color}

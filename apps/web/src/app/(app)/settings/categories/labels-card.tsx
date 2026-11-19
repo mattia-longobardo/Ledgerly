@@ -10,8 +10,8 @@ import { Modal } from "@ledgerly/ui/modal";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
 import { createLabelAction, deleteLabelAction, saveLabelAction } from "./actions";
-import { ColorDot, ColorSwatchPicker } from "./color-swatch";
-import { NAME_MAX } from "@ledgerly/domain/transactions/client";
+import { ColorDot, ColorPicker } from "@ledgerly/ui/color-picker";
+import { CATEGORY_COLORS, NAME_MAX } from "@ledgerly/domain/transactions/client";
 
 /** What the browser gets per label: the row itself plus how many movements carry it. */
 export interface LabelRow {
@@ -194,7 +194,8 @@ export function LabelsCard({ rows }: { rows: LabelRow[] }) {
               />
             </Field>
             <Field label={t("color")} htmlFor="label-color">
-              <ColorSwatchPicker
+              <ColorPicker
+                swatches={CATEGORY_COLORS}
                 id="label-color"
                 name="color"
                 value={draft.color}

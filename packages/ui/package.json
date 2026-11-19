@@ -14,6 +14,7 @@
     "./chart-hover": "./src/chart-hover.tsx",
     "./chart-labels": "./src/chart-labels.ts",
     "./cn": "./src/cn.ts",
+    "./color-picker": "./src/color-picker.tsx",
     "./composition-card": "./src/composition-card.tsx",
     "./connection-row": "./src/connection-row.tsx",
     "./data": "./src/data.ts",

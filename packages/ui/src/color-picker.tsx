@@ -1,15 +1,9 @@
 "use client";
 
-import { CATEGORY_COLORS } from "@ledgerly/domain/transactions/client";
-import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { cn } from "@ledgerly/ui/cn";
-
-/**
- * The palette of the design's category dots: the category colours, so a preset and an automatic
- * colour are always the same family. The hex values are data, not interface text, so they are also
- * the accessible name of each swatch — nothing here needs a message.
- */
-const SWATCHES = CATEGORY_COLORS;
+// The choice of a colour (spec §8.3, audit UI-SET-6) and the dot that shows one. The presets are the
+// caller's palette — the categories give theirs — so the picker knows no module.
+import { NULL_DISPLAY } from "@ledgerly/format/format";
+import { cn } from "./cn";
 
 /** The dot in front of a name in the lists; an uncoloured row keeps the dot's space empty. */
 export function ColorDot({ color }: { color: string | null }) {
@@ -24,16 +18,16 @@ export function ColorDot({ color }: { color: string | null }) {
 }
 
 /**
- * The ColorSwatchPicker of spec §8.3, which F1 did not build: presets, a native picker for
- * anything else, and a way back to no colour at all. It lives here until the design system wants
- * it — `src/ui/` belongs to the orchestrator.
+ * Presets, a native picker for anything else, and a way back to no colour at all. The hex values
+ * are data, not interface text, so they are also the accessible name of each swatch.
  *
  * `id` goes on the native input so the enclosing `Field`'s label names it; the presets carry their
  * own name. The value is controlled, and the hidden input is what a `FormData` submit picks up.
  * `clearLabel` arrives as a string rather than being read from a message namespace here, so the
- * component stays a design-system piece the way `src/ui/states.tsx` does.
+ * component reads no message catalogue.
  */
-export function ColorSwatchPicker({
+export function ColorPicker({
+  swatches,
   id,
   name,
   value,
@@ -41,6 +35,8 @@ export function ColorSwatchPicker({
   onChange,
   disabled,
 }: {
+  /** The presets, in order: the first is what the native picker opens on. */
+  swatches: readonly string[];
   id: string;
   name: string;
   value: string | null;
@@ -51,7 +47,7 @@ export function ColorSwatchPicker({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <input type="hidden" name={name} value={value ?? ""} />
-      {SWATCHES.map((swatch) => (
+      {swatches.map((swatch) => (
         <button
           key={swatch}
           type="button"
@@ -82,7 +78,7 @@ export function ColorSwatchPicker({
       <input
         id={id}
         type="color"
-        value={value ?? SWATCHES[0]}
+        value={value ?? swatches[0]}
         disabled={disabled}
         onChange={(event) => onChange(event.currentTarget.value)}
         className="focus-ring h-6 w-9 rounded-ctl border border-border bg-card p-0.5"
