@@ -4,11 +4,11 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useId } from "react";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { UiLocale } from "@ledgerly/domain/platform/format";
-import { LinkButton } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select, Textarea } from "@/ui/input";
-import { Segmented } from "@/ui/segmented";
-import { Switch } from "@/ui/switch";
+import { LinkButton } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select, Textarea } from "@ledgerly/ui/input";
+import { Segmented } from "@ledgerly/ui/segmented";
+import { Switch } from "@ledgerly/ui/switch";
 import type { SourceForm } from "@ledgerly/domain/funds/client";
 import {
   ACCRUAL_PERIODS,
@@ -19,7 +19,7 @@ import {
   type PayrollComponent,
 } from "@ledgerly/domain/funds/client";
 import { calendarOfForm, dueDatesText, type SourceField, type TakenComponents } from "./source-text";
-import { FIELD_GRID } from "@/ui/section";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 export interface SourceFieldsProps {
   form: SourceForm;

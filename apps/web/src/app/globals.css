@@ -1,6 +1,8 @@
 @import "tailwindcss";
 /* Every colour, size and corner: packages/design-tokens (the one source, audit UI-DS-15). */
 @import "@ledgerly/design-tokens/tokens.css";
+/* The shared components live outside the app: Tailwind reads their classes there too. */
+@source "../../../../packages/ui/src";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 

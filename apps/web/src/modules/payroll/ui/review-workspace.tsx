@@ -3,12 +3,12 @@
 import { Check, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { Badge } from "@/ui/badge";
-import { Button, IconButton } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Input } from "@/ui/input";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button, IconButton } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Input } from "@ledgerly/ui/input";
 import { type Highlight, PdfViewer } from "@/ui/pdf-viewer";
-import { notify } from "@/ui/toast";
+import { notify } from "@ledgerly/ui/toast";
 import type { FieldGroup, FieldName } from "@ledgerly/domain/payroll/client";
 import { decideFieldAction } from "../actions";
 import type { FieldView } from "./present";

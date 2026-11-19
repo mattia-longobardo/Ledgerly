@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseTheme,
-  requestThemePreference,
-  resolveTheme,
-  THEME_SCRIPT,
-  type ThemePreference,
-} from "./theme";
+import { resolveTheme } from "@ledgerly/ui/theme";
+import { parseTheme, requestThemePreference, THEME_SCRIPT, type ThemePreference } from "./theme";
 
 /** Runs the pre-paint script against a stand-in <html> element and media query. */
 function runThemeScript(themePref: string | undefined, prefersDark: boolean): string | undefined {

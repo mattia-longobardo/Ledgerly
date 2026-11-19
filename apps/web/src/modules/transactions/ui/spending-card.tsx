@@ -3,8 +3,8 @@ import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { asNumbers, axisLabels } from "@/modules/accounts/ui/display";
 import { formatMoney, formatPercent, type NumberFormat } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { Card } from "@/ui/card";
-import { StackedArea } from "@/ui/chart";
+import { Card } from "@ledgerly/ui/card";
+import { StackedArea } from "@ledgerly/ui/chart";
 import type { Params } from "@/ui/url";
 import type { ChartGrain } from "./filters";
 

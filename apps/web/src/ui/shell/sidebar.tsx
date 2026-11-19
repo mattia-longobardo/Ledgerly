@@ -3,9 +3,9 @@
 import { LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Avatar } from "@/ui/avatar";
-import { IconButton } from "@/ui/button";
-import { cn } from "@/ui/cn";
+import { Avatar } from "@ledgerly/ui/avatar";
+import { IconButton } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
 import { isActive } from "./active";
 import { BrandMark } from "./brand";
 import { NAV_ICONS } from "./icons";

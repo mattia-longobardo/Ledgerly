@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubColorScheme } from "../../../../../test/color-scheme";
 import type { ThemePreference } from "@/platform/theme";
-import { ThemeProvider } from "@/ui/theme-provider";
-import { Toaster } from "@/ui/toast";
+import { ThemeProvider } from "@ledgerly/ui/theme-provider";
+import { Toaster } from "@ledgerly/ui/toast";
 import { ShellProvider } from "./shell-context";
 import { ThemeToggle } from "./theme-toggle";
 

@@ -1,5 +1,5 @@
-import { Card } from "@/ui/card";
-import { cn } from "@/ui/cn";
+import { Card } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
 import type { MonthBar } from "@ledgerly/domain/timeoff";
 
 /**

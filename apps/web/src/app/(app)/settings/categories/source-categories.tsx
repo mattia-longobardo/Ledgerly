@@ -3,12 +3,12 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Badge } from "@/ui/badge";
-import { LinkButton } from "@/ui/button";
-import { type CategoryOption, CategoryPicker } from "@/ui/category-picker";
-import { cn } from "@/ui/cn";
-import { Segmented } from "@/ui/segmented";
-import { notify } from "@/ui/toast";
+import { Badge } from "@ledgerly/ui/badge";
+import { LinkButton } from "@ledgerly/ui/button";
+import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picker";
+import { cn } from "@ledgerly/ui/cn";
+import { Segmented } from "@ledgerly/ui/segmented";
+import { notify } from "@ledgerly/ui/toast";
 
 /** One category of a source, as its row draws it. */
 export interface SourceCategoryRow {

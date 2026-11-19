@@ -2,7 +2,7 @@
 
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { TabLinks } from "@/ui/tab-links";
+import { TabLinks } from "@ledgerly/ui/tab-links";
 
 type Tab = { href: Route; label: string };
 

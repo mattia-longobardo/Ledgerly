@@ -2,15 +2,15 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useRef, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Badge } from "@/ui/badge";
-import { Card, CardHeader } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { notify } from "@/ui/toast";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { Button } from "@ledgerly/ui/button";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { notify } from "@ledgerly/ui/toast";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import {
   type ActionResult,
   type BalanceEntryFormInput,

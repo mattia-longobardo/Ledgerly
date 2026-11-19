@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Button } from "@/ui/button";
-import { Modal } from "@/ui/modal";
+import { Button } from "@ledgerly/ui/button";
+import { Modal } from "@ledgerly/ui/modal";
 import { type DialogOptions, SubscriptionDialog, type SubscriptionDraft } from "./subscription-dialog";
 
 export interface SuggestionView {

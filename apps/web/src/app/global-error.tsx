@@ -1,7 +1,7 @@
 "use client";
 
 import messages from "../../../../messages/en.json";
-import { ErrorState } from "@/ui/states";
+import { ErrorState } from "@ledgerly/ui/states";
 import "./globals.css";
 
 /**

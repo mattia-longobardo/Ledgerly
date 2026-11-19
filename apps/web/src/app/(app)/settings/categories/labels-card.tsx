@@ -2,13 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
-import { Modal } from "@/ui/modal";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
+import { ActionMenu } from "@ledgerly/ui/menu";
+import { Modal } from "@ledgerly/ui/modal";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { notify } from "@ledgerly/ui/toast";
 import { createLabelAction, deleteLabelAction, saveLabelAction } from "./actions";
 import { ColorDot, ColorSwatchPicker } from "./color-swatch";
 import { NAME_MAX } from "@ledgerly/domain/transactions/client";

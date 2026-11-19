@@ -2,9 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { notify } from "@ledgerly/ui/toast";
 import { markPostedAction, postEntryAction } from "../actions";
 import { CATEGORY_NOT_LINKED, type PostingState } from "@ledgerly/domain/interests/client";
 

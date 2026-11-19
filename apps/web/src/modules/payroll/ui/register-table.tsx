@@ -4,10 +4,10 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Fragment, useState } from "react";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Td } from "@/ui/table";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Td } from "@ledgerly/ui/table";
 import type { SummedField } from "@ledgerly/domain/payroll/client";
 import { type RegisterGroup, STATE_TONE } from "./present";
 

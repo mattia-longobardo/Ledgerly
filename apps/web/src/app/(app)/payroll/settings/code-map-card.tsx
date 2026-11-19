@@ -5,11 +5,11 @@ import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
 import { resetCodeAction, setCodeRoleAction } from "@/modules/payroll/actions";
 import { CODE_ROLES } from "@ledgerly/domain/payroll/client";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { Input, Select } from "@/ui/input";
-import { notify } from "@/ui/toast";
-import { useUnsavedForm } from "@/ui/unsaved-changes";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button } from "@ledgerly/ui/button";
+import { Input, Select } from "@ledgerly/ui/input";
+import { notify } from "@ledgerly/ui/toast";
+import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
 
 interface Entry {
   code: string;

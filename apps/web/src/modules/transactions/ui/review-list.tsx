@@ -4,12 +4,12 @@ import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useId, useState } from "react";
-import { Button, LinkButton } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { CategoryPicker } from "@/ui/category-picker";
-import { cn } from "@/ui/cn";
-import { Checkbox } from "@/ui/input";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Button, LinkButton } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { CategoryPicker } from "@ledgerly/ui/category-picker";
+import { cn } from "@ledgerly/ui/cn";
+import { Checkbox } from "@ledgerly/ui/input";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { useCategoryActions } from "./category-actions";
 import type { CategoryOption } from "./view";
 

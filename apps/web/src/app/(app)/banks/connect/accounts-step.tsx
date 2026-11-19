@@ -4,12 +4,12 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Input, Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Button } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Input, Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import type { AccountDecision } from "@ledgerly/plugin-host";
 import { cancelBankConnectionAction, importBankAccountsAction } from "./actions";
 

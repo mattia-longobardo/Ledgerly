@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import { backupNowAction, runJobAction } from "./actions";
 
 interface MaintenanceProps {

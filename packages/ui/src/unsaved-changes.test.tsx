@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { type FormEvent, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import messages from "../../../../messages/en.json";
+import messages from "../../../messages/en.json";
 import { UnsavedChangesProvider, useUnsavedForm } from "./unsaved-changes";
 
 /** One uncontrolled field and one controlled select and checkbox: the two kinds Settings has. */

@@ -13,8 +13,8 @@ import type { NavLink } from "@/ui/shell/nav-types";
 import { ShellProvider } from "@/ui/shell/shell-context";
 import { parseSidebar, SIDEBAR_COOKIE } from "@/ui/shell/sidebar-state";
 import { Sidebar } from "@/ui/shell/sidebar";
-import { Toaster } from "@/ui/toast";
-import { WeekStartProvider } from "@/ui/week-start";
+import { Toaster } from "@ledgerly/ui/toast";
+import { WeekStartProvider } from "@ledgerly/ui/week-start";
 import { navFor } from "./navigation";
 import { paletteCommands } from "./palette-commands";
 

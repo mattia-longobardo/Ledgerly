@@ -3,11 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { codeMapView } from "@ledgerly/domain/payroll";
 import { REPLY_TEAMSYSTEM_CODES } from "@ledgerly/domain/payroll";
 import { requireSession } from "@/platform/auth/session";
-import { ButtonLink } from "@/ui/button";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { Page } from "@/ui/shell/page";
-import { TabLinks } from "@/ui/tab-links";
-import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
+import { TabLinks } from "@ledgerly/ui/tab-links";
+import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { CodeMapCard } from "./code-map-card";
 
 export async function generateMetadata(): Promise<Metadata> {

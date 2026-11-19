@@ -18,15 +18,15 @@ import { syncedServicesOf } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { ButtonLink } from "@/ui/button";
-import { Badge } from "@/ui/badge";
-import { Card } from "@/ui/card";
-import { CompositionBar, Sparkline } from "@/ui/chart";
-import { KpiTile } from "@/ui/kpi-tile";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card } from "@ledgerly/ui/card";
+import { CompositionBar, Sparkline } from "@ledgerly/ui/chart";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { EmptyState } from "@ledgerly/ui/states";
+import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { withParams } from "@/ui/url";
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -6,10 +6,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
-import { Button } from "@/ui/button";
-import { Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import type { Dependent } from "./delete";
 import { accountDependentsAction, deleteAccountAction, moveDependentAction } from "./delete-actions";
 

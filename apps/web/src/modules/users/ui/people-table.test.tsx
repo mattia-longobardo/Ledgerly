@@ -6,7 +6,7 @@ import messages from "../../../../../../messages/en.json";
 import { PeopleTable, type PersonView } from "./people-table";
 
 const notify = vi.fn();
-vi.mock("@/ui/toast", () => ({ notify: (...a: unknown[]) => notify(...a) }));
+vi.mock("@ledgerly/ui/toast", () => ({ notify: (...a: unknown[]) => notify(...a) }));
 
 const setRole = vi.fn();
 const setBlocked = vi.fn();

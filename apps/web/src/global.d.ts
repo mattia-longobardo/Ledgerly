@@ -7,3 +7,10 @@ declare module "next-intl" {
     Messages: typeof en;
   }
 }
+
+declare module "use-intl" {
+  interface AppConfig {
+    Locale: (typeof LOCALES)[number];
+    Messages: typeof en;
+  }
+}

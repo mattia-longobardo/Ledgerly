@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type PluginDiagnostic, pluginDiagnostics } from "@ledgerly/domain/platform/plugins";
-import { cn } from "@/ui/cn";
-import { type Tone, TONE_TEXT } from "@/ui/tone";
+import { cn } from "@ledgerly/ui/cn";
+import { type Tone, TONE_TEXT } from "@ledgerly/ui/tone";
 
 const LOOK: Record<PluginDiagnostic["state"], { dot: string; tone: Tone }> = {
   up: { dot: "bg-pos", tone: "pos" },

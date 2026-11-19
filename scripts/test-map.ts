@@ -524,6 +524,8 @@ export const MODULES: Module[] = [
       "apps/web/src/app/(app)/settings/settings-tabs.tsx",
       "apps/web/src/app/globals.css",
       "packages/design-tokens/**",
+      "packages/ui/**",
+      "apps/web/src/platform/router.tsx",
       "scripts/tokens.ts",
       "apps/web/src/app/error.tsx",
       "apps/web/src/app/global-error.tsx",

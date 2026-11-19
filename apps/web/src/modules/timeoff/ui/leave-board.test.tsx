@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/en.json";
 import { italianHolidays } from "@domain/platform/holidays/rules";
-import { Toaster } from "@/ui/toast";
+import { Toaster } from "@ledgerly/ui/toast";
 import type { LeaveDayKind } from "@domain/modules/timeoff/rules";
 import { leaveTypeOptions } from "./kinds";
 import { AddLeave, RowActions } from "./leave-actions";

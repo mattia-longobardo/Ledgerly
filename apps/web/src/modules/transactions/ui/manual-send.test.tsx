@@ -14,7 +14,7 @@ import type { RowView } from "./view";
 const notify = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
-vi.mock("@/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
+vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
 vi.mock("./commands", () => ({
   setCategory: vi.fn(),
   hide: vi.fn(),

@@ -2,7 +2,7 @@ import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
 import { Page } from "@/ui/shell/page";
-import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
+import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { SettingsTabs, SettingsTitle } from "./settings-tabs";
 
 export default async function SettingsLayout({ children }: LayoutProps<"/settings">) {

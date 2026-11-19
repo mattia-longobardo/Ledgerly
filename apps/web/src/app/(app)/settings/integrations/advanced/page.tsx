@@ -19,12 +19,12 @@ import {
 import { isSyncErrorCode } from "@ledgerly/domain/platform/integrations";
 import { listUserPlugins } from "@ledgerly/domain/platform/plugins";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
-import { Badge } from "@/ui/badge";
-import { Button, ButtonLink } from "@/ui/button";
-import { Select } from "@/ui/input";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
-import { EmptyState } from "@/ui/states";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { Select } from "@ledgerly/ui/input";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
+import { EmptyState } from "@ledgerly/ui/states";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { RUNS_PER_CONNECTION, sourceSlugOf, statusOf } from "../connection-view";
 import { formatInstant } from "../format-instant";
 import { ScheduleCell } from "../schedule-cell";

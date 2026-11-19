@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { NumberFormat, UiLocale } from "@ledgerly/domain/platform/format";
-import { notify } from "@/ui/toast";
+import { notify } from "@ledgerly/ui/toast";
 import { removeFeeAction, saveFeeAction } from "../actions";
 import type { FeeForm } from "@ledgerly/domain/funds/client";
 import { CompactEmpty } from "./compact-empty";

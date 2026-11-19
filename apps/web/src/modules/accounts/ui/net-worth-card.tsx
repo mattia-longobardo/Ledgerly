@@ -8,10 +8,10 @@ import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platfor
 import { convertCents } from "@ledgerly/domain/platform/fx";
 import { ratesOn } from "@ledgerly/domain/platform/fx";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { Card } from "@/ui/card";
-import { StackedArea } from "@/ui/chart";
-import { cn } from "@/ui/cn";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { Card } from "@ledgerly/ui/card";
+import { StackedArea } from "@ledgerly/ui/chart";
+import { cn } from "@ledgerly/ui/cn";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import type { Params } from "@/ui/url";
 import { LinkTabs } from "./controls";
 import { asNumbers, axisLabels, changeBetween, colorFor, dayLabels, monthLabels, shareOf } from "./display";

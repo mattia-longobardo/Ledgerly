@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useId, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Select } from "@/ui/input";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Select } from "@ledgerly/ui/input";
+import { notify } from "@ledgerly/ui/toast";
 import { runConnectionAction } from "../connection-actions";
 
 /**

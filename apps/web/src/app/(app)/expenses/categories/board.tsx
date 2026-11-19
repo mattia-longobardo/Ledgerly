@@ -15,17 +15,17 @@ import {
   useTransition,
 } from "react";
 import { type CategoryType, NAME_MAX } from "@ledgerly/domain/transactions/client";
-import { Badge } from "@/ui/badge";
-import { Button, ButtonLink, LinkButton } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
-import { Modal } from "@/ui/modal";
-import { ProgressBar } from "@/ui/progress-bar";
-import { Segmented } from "@/ui/segmented";
-import { notify } from "@/ui/toast";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { ActionMenu } from "@ledgerly/ui/menu";
+import { Modal } from "@ledgerly/ui/modal";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
+import { Segmented } from "@ledgerly/ui/segmented";
+import { notify } from "@ledgerly/ui/toast";
 import {
   archiveWithUndoAction,
   createCategoryAction,

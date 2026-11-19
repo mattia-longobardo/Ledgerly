@@ -6,11 +6,11 @@ import { type FormEvent, type RefObject, useId, useState, useTransition } from "
 import { saveSourceAction } from "@/app/(app)/funds/fund-setup";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
-import { Button, LinkButton } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button, LinkButton } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import { proposeDebitMatchAction } from "../actions";
 import type { SourceForm } from "@ledgerly/domain/funds/client";
 import { sourceFieldId, SourceFields } from "./source-fields";

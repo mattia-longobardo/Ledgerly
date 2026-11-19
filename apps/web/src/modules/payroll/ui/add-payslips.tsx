@@ -4,10 +4,10 @@ import { FileUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type DragEvent, useId, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import { uploadPayslipsAction } from "../actions";
 
 /**

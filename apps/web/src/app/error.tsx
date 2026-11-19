@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ErrorState } from "@/ui/states";
+import { ErrorState } from "@ledgerly/ui/states";
 
 /** An unexpected error below the root layout: generic copy only, never the error's own message. */
 export default function ErrorBoundary({ reset }: { error: Error & { digest?: string }; reset: () => void }) {

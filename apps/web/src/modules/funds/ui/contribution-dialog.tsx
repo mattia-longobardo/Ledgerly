@@ -5,12 +5,12 @@ import { type FormEvent, type RefObject, useId, useRef, useState, useTransition 
 import { parseAmount } from "@ledgerly/domain/platform/format";
 import { formatMoney, type NumberFormat, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { Segmented } from "@/ui/segmented";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { Segmented } from "@ledgerly/ui/segmented";
+import { notify } from "@ledgerly/ui/toast";
 import { deleteContributionAction, saveContributionAction } from "../actions";
 import type { ContributionForm } from "@ledgerly/domain/funds/client";
 import { ErrorLine, errorKey } from "./fund-forms";

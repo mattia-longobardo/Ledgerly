@@ -3,12 +3,12 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import type { Role } from "@ledgerly/domain/platform/context";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { Modal } from "@/ui/modal";
-import { Select } from "@/ui/input";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { notify } from "@/ui/toast";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button } from "@ledgerly/ui/button";
+import { Modal } from "@ledgerly/ui/modal";
+import { Select } from "@ledgerly/ui/input";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { notify } from "@ledgerly/ui/toast";
 import type { AdminErrorCode, PersonStatus, SignInMethod } from "../admin";
 import {
   removePersonAction,

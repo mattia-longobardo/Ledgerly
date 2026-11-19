@@ -11,7 +11,7 @@ const notify = vi.fn();
 const refresh = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-vi.mock("@/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
+vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
 
 const OPTIONS = [
   { id: "cat-food", name: "Food", color: "#2563eb", depth: 0 as const },

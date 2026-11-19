@@ -6,9 +6,9 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Button } from "@/ui/button";
-import { CategoryPicker } from "@/ui/category-picker";
-import { cn } from "@/ui/cn";
+import { Button } from "@ledgerly/ui/button";
+import { CategoryPicker } from "@ledgerly/ui/category-picker";
+import { cn } from "@ledgerly/ui/cn";
 import type { CategoryOption, RowView } from "./view";
 
 // 24 px, not 22: the category chip is a button, and a button is a target (plan F9 §3.4).

@@ -4,9 +4,9 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { type DefaultGroupView, DefaultGroupsForm } from "@/modules/transactions/ui/default-groups-form";
-import { Button } from "@/ui/button";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 
 /**
  * "Use the default groups", for a person with no category who connects no bank

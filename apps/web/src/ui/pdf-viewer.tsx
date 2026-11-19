@@ -2,8 +2,8 @@
 
 import { Minus, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Button, IconButton } from "./button";
-import { cn } from "./cn";
+import { Button, IconButton } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
 import { PDF_ASSETS } from "./pdf-assets";
 
 /** A box on a page to draw attention to: fractions of the page, origin top left (spec §7.8). */

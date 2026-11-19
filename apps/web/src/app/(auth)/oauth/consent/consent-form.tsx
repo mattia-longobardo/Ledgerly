@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { ApiScope } from "@ledgerly/domain/platform/auth/client";
-import { Button } from "@/ui/button";
+import { Button } from "@ledgerly/ui/button";
 
 /**
  * Allow or deny. The answer goes to Better Auth's `/oauth2/consent` with the signed query, and the

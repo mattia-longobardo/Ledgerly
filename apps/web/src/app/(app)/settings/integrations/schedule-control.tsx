@@ -29,13 +29,13 @@ import {
   syncScheduleSchema,
   scheduleProblems,
 } from "@ledgerly/domain/platform/integrations/client";
-import { Button, Chip, IconButton } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { Segmented } from "@/ui/segmented";
-import { notify } from "@/ui/toast";
+import { Button, Chip, IconButton } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { Segmented } from "@ledgerly/ui/segmented";
+import { notify } from "@ledgerly/ui/toast";
 import { saveScheduleAction } from "./actions";
 import { describeEvery, describeRule, describeSchedule, type T, weekdayNames } from "./schedule-describe";
 import {

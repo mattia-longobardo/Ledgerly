@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { Button } from "@/ui/button";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import { restoreCategoryAction } from "../../../settings/categories/actions";
 
 /** "Restore" on the page of an archived category (categories-and-rules.md §6). */

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 import { authClient } from "@/platform/auth/client";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
 
 export function ForgotForm() {
   const t = useTranslations("auth");

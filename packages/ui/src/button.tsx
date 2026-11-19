@@ -1,5 +1,4 @@
-import type { Route } from "next";
-import Link from "next/link";
+import { Link } from "./router";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { cn } from "./cn";
 
@@ -49,7 +48,7 @@ export function Button({
 }
 
 interface ButtonLinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> {
-  href: Route;
+  href: string;
   variant?: Variant;
   size?: Size;
 }

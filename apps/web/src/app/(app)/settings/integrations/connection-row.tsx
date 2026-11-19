@@ -6,11 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, useTransition } from "react";
-import { Button, ButtonLink, LinkButton } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { ActionMenu } from "@/ui/menu";
-import { notify } from "@/ui/toast";
-import { type Tone, TONE_TEXT } from "@/ui/tone";
+import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { ActionMenu } from "@ledgerly/ui/menu";
+import { notify } from "@ledgerly/ui/toast";
+import { type Tone, TONE_TEXT } from "@ledgerly/ui/tone";
 import { runConnectionAction } from "./connection-actions";
 
 /** The five values of a connection's state, and `absent` for a connection that does not exist. */

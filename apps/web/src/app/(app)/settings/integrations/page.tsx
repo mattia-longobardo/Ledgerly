@@ -26,8 +26,8 @@ import { providerOf } from "@ledgerly/domain/investments";
 import { listInvestmentAccounts } from "@ledgerly/domain/investments";
 import { pendingCount } from "@ledgerly/domain/timeoff";
 import { pendingSends } from "@ledgerly/domain/transactions";
-import { ButtonLink } from "@/ui/button";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { sourceCategoryRows } from "../categories/source";
 import { bankWait, ibanConflictNames } from "./connection-list";
 import {

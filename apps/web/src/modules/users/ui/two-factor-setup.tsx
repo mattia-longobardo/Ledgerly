@@ -3,10 +3,10 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
 import { authClient } from "@/platform/auth/client";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Checkbox, Input } from "@/ui/input";
-import { QrCode } from "@/ui/qr-code";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input } from "@ledgerly/ui/input";
+import { QrCode } from "@ledgerly/ui/qr-code";
 import {
   normalizeTotp,
   totpSecretOf,

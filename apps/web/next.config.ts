@@ -35,6 +35,7 @@ const nextConfig: NextConfig = {
     "@ledgerly/domain",
     "@ledgerly/plugin-contract",
     "@ledgerly/plugin-host",
+    "@ledgerly/ui",
   ],
   // A document is at most 10 MB (spec §9.3); the multipart envelope needs a little more.
   experimental: { proxyClientMaxBodySize: "11mb", serverActions: { bodySizeLimit: "11mb" } },

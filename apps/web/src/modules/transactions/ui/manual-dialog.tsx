@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type FormEvent, type RefObject, useEffect, useId, useRef, useState } from "react";
-import { Button, ButtonLink } from "@/ui/button";
-import { CategoryPicker } from "@/ui/category-picker";
-import { cn } from "@/ui/cn";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select, Textarea } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { Segmented } from "@/ui/segmented";
+import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { CategoryPicker } from "@ledgerly/ui/category-picker";
+import { cn } from "@ledgerly/ui/cn";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select, Textarea } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { Segmented } from "@ledgerly/ui/segmented";
 import { setLabels } from "./commands";
 import type {
   ManualAccountView,

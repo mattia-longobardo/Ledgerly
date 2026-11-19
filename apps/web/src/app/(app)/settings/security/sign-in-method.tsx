@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { identityProviderUrl } from "@ledgerly/domain/platform/auth";
-import { buttonClassName } from "@/ui/button";
+import { buttonClassName } from "@ledgerly/ui/button";
 import { PasswordForm } from "./password-form";
 
 const strong = (chunks: ReactNode) => <span className="font-medium text-fg">{chunks}</span>;

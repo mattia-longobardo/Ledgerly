@@ -4,10 +4,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import type { Tier } from "@/platform/jobs/registry";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { notify } from "@/ui/toast";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button } from "@ledgerly/ui/button";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { notify } from "@ledgerly/ui/toast";
 import { runJobAction } from "./actions";
 
 export interface JobRow {

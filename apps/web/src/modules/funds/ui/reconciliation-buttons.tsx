@@ -3,11 +3,11 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import { clearDecisionAction, decideDifferenceAction } from "../actions";
 import { ErrorLine, useResult } from "./fund-forms";
 

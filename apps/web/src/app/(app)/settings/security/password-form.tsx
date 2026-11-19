@@ -8,12 +8,12 @@ import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
 } from "@ledgerly/domain/platform/auth/client";
-import { Button } from "@/ui/button";
-import { CardFooter } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
-import { notify } from "@/ui/toast";
-import { FIELD_GRID } from "@/ui/section";
+import { Button } from "@ledgerly/ui/button";
+import { CardFooter } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
+import { notify } from "@ledgerly/ui/toast";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 const PASSWORD_BOUNDS = { min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH };
 

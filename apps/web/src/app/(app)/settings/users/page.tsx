@@ -7,7 +7,7 @@ import { PeopleTable, type PersonView } from "@/modules/users/ui/people-table";
 import { requireAdmin } from "@/platform/auth/session";
 import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");

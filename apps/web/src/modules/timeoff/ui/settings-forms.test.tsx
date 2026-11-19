@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/en.json";
-import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
+import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { AllowanceForm, PatronSaintForm, WorkingHoursForm } from "./settings-forms";
 
 const savePreferences = vi.fn();

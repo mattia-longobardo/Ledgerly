@@ -14,11 +14,11 @@ import { isFieldName, llmFillable } from "@ledgerly/domain/payroll";
 import { addMonths, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { parseCents } from "@ledgerly/domain/shared/money";
-import { Badge } from "@/ui/badge";
-import { Card } from "@/ui/card";
-import { cn } from "@/ui/cn";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
 import { Page } from "@/ui/shell/page";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("payroll"))("review.title") };

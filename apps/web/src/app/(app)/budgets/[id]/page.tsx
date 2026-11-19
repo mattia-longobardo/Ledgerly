@@ -10,12 +10,12 @@ import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatWholePercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { Card, CardHeader } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { Page } from "@/ui/shell/page";
-import { TONE_TEXT } from "@/ui/tone";
+import { TONE_TEXT } from "@ledgerly/ui/tone";
 
 const BAR_TONE = { over: "neg", near: "warn", on_track: "accent" } as const;
 const BADGE_TONE = { over: "neg", near: "warn", on_track: "pos" } as const;

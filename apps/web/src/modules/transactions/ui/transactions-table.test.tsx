@@ -26,7 +26,7 @@ vi.mock("./commands", () => ({
   setLabels: (...args: unknown[]) => setLabels(...args),
 }));
 
-vi.mock("@/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
+vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
 
 const LABELS: LabelOption[] = [
   { id: "lab-1", name: "subscriptions", color: "#b45309" },

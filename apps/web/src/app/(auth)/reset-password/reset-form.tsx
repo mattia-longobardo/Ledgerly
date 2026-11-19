@@ -9,9 +9,9 @@ import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
 } from "@ledgerly/domain/platform/auth/client";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
 
 const PASSWORD_BOUNDS = { min: MIN_PASSWORD_LENGTH, max: MAX_PASSWORD_LENGTH };
 

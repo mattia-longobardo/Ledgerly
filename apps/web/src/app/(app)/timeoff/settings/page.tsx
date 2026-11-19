@@ -12,11 +12,11 @@ import { civilDateIn, today as todayIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
 import { countDaysByCalendar, listCalendars } from "@ledgerly/domain/platform/holidays";
 import { TREK_PROVIDER } from "@ledgerly/domain/platform/integrations";
-import { ButtonLink } from "@/ui/button";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { Page } from "@/ui/shell/page";
-import { TabLinks } from "@/ui/tab-links";
-import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
+import { TabLinks } from "@ledgerly/ui/tab-links";
+import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { type CalendarRow, HolidayCalendars } from "./holiday-calendars";
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -7,7 +7,7 @@ import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
 import { utcOffsetLabel } from "@ledgerly/domain/shared/dates";
 import { mailPolicy } from "@ledgerly/domain/platform/settings";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { NameForm } from "./name-form";
 import { PreferencesForm } from "./preferences-form";
 

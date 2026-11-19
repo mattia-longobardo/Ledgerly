@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useRef, useState, useTransition } from "react";
 import { ENCRYPTIONS, type Encryption, type MailPolicy } from "@ledgerly/domain/platform/settings/client";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
-import { notify } from "@/ui/toast";
-import { useUnsavedForm } from "@/ui/unsaved-changes";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { notify } from "@ledgerly/ui/toast";
+import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
 import { removeSmtpAction, saveSmtpAction, sendTestEmailAction } from "./actions";
-import { FIELD_GRID } from "@/ui/section";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 interface SmtpCardProps {
   host: string;

@@ -3,13 +3,13 @@
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useMemo, useState, useTransition } from "react";
-import { Button, ButtonLink } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { Field } from "@/ui/field";
-import { Input, Select } from "@/ui/input";
-import { Skeleton } from "@/ui/skeleton";
-import { EmptyState } from "@/ui/states";
+import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { Field } from "@ledgerly/ui/field";
+import { Input, Select } from "@ledgerly/ui/input";
+import { Skeleton } from "@ledgerly/ui/skeleton";
+import { EmptyState } from "@ledgerly/ui/states";
 import { type BankChoice, listBanksAction, startBankAccessAction } from "./actions";
 
 /** Why the person is back on this step, from the return route (ux/n1-plugin-bank.md §6.3). */

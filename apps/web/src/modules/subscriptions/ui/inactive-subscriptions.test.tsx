@@ -6,7 +6,7 @@ import messages from "../../../../../../messages/en.json";
 import { InactiveSubscriptions, type SubscriptionView } from "./subscriptions-table";
 
 const notify = vi.fn();
-vi.mock("@/ui/toast", () => ({ notify: (...a: unknown[]) => notify(...a) }));
+vi.mock("@ledgerly/ui/toast", () => ({ notify: (...a: unknown[]) => notify(...a) }));
 
 const deleteSubscription = vi.fn();
 vi.mock("../actions", () => ({

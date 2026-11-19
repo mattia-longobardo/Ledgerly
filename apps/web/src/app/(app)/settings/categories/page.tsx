@@ -6,7 +6,7 @@ import { createDefaultGroupsAction, dismissMergeAction } from "@/modules/transac
 import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
 import { categoryColor } from "@/modules/transactions/ui/display";
 import { requireSession } from "@/platform/auth/session";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { mergeCategoriesAction } from "./actions";
 import { DefaultGroupsButton } from "./default-groups";
 import { type LabelRow, LabelsCard } from "./labels-card";

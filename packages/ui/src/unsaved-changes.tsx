@@ -8,7 +8,7 @@
 // A form is compared by what its controls show, not by its state: the Settings forms are a mix of
 // controlled and uncontrolled ones, and the DOM is the one thing every one of them has.
 import { TriangleAlert } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "use-intl";
 import {
   createContext,
   type ReactNode,

@@ -10,14 +10,14 @@ import { parsePeriodQuery } from "@/modules/accounts/ui/period";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { ButtonLink } from "@/ui/button";
-import { Card, CardHeader } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { KpiTile } from "@/ui/kpi-tile";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { EmptyState } from "@ledgerly/ui/states";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("overview"))("title") };

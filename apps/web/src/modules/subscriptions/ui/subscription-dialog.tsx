@@ -2,13 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { type CategoryOption, CategoryPicker } from "@/ui/category-picker";
-import { cn } from "@/ui/cn";
-import { Field } from "@/ui/field";
-import { Input, InputGroup, Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picker";
+import { cn } from "@ledgerly/ui/cn";
+import { Field } from "@ledgerly/ui/field";
+import { Input, InputGroup, Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import {
   type ActionResult,
   createSubscriptionAction,

@@ -4,8 +4,9 @@ import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import { getOptionalPreferences } from "@/platform/auth/session";
+import { NextRouter } from "@/platform/router";
 import { requestThemePreference, THEME_COOKIE, THEME_SCRIPT } from "@/platform/theme";
-import { ThemeProvider } from "@/ui/theme-provider";
+import { ThemeProvider } from "@ledgerly/ui/theme-provider";
 import "./globals.css";
 
 // Inter, self-hosted (spec §8.1): the variable-weight latin and latin-ext files shipped by
@@ -47,9 +48,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body>
         <NextIntlClientProvider>
-          <ThemeProvider saved={theme}>
-            <div className="root">{children}</div>
-          </ThemeProvider>
+          <NextRouter>
+            <ThemeProvider saved={theme}>
+              <div className="root">{children}</div>
+            </ThemeProvider>
+          </NextRouter>
         </NextIntlClientProvider>
       </body>
     </html>

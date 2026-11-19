@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@/ui/cn";
+import { cn } from "@ledgerly/ui/cn";
 import { type Params, withParams } from "@/ui/url";
 
 // Moved to `src/ui/url.ts` in F2.5 so the date range picker in `src/ui` can build addresses too;

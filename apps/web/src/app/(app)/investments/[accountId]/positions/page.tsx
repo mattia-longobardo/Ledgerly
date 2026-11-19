@@ -23,11 +23,11 @@ import { requireSession } from "@/platform/auth/session";
 import { addDays, today as civilToday } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { Badge } from "@/ui/badge";
-import { Card, CardHeader } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { GroupRow, Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { GroupRow, Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { withParams } from "@/ui/url";
 import { loadService, serviceContextOf } from "../service-data";
 

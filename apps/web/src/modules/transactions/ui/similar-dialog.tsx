@@ -5,9 +5,9 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Modal } from "@/ui/modal";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Modal } from "@ledgerly/ui/modal";
 import type { CategoryOption } from "./view";
 
 /** A movement similar to the one just filed: its day and its amount already formatted. */

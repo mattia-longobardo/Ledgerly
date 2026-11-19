@@ -2,14 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
+import { notify } from "@ledgerly/ui/toast";
 import { updateFundAction } from "../actions";
 import type { FundForm } from "@ledgerly/domain/funds/client";
 import { ErrorLine, errorKey } from "./fund-forms";
-import { FIELD_GRID } from "@/ui/section";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 /**
  * Settings › General (docs/design/rewrite-plan/ux/n6-pension-fund.md §6.1): one form for every fund.

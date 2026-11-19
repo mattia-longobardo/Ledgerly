@@ -44,11 +44,11 @@ import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/shared
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { walletEditableIds } from "@ledgerly/domain/platform/integrations/wallet";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { ButtonLink } from "@/ui/button";
-import { Card } from "@/ui/card";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { EmptyState } from "@ledgerly/ui/states";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import {
   changeVisibilityAction,
   createManualAction,

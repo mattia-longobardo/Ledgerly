@@ -57,6 +57,21 @@ export const ALLOWED: Record<string, { only?: string[]; never?: string[]; typesO
   "@ledgerly/api": {
     only: ["@ledgerly/api-contract", "@ledgerly/domain", "@ledgerly/plugin-host", "hono", "zod"],
   },
+  // §10.2 lists the workspaces `ui` may use; the libraries its components are drawn with (Base UI, icons,
+  // class helpers, the QR code, the message catalogue) come with it. What it never reaches is fixed.
+  "@ledgerly/ui": {
+    never: [
+      "@ledgerly/domain",
+      "@ledgerly/api",
+      "@ledgerly/web",
+      "@ledgerly/worker",
+      "@ledgerly/plugin-host",
+      "drizzle-orm",
+      "hono",
+      "next",
+      "next-intl",
+    ],
+  },
   "@ledgerly/web": { never: ["@ledgerly/domain", "drizzle-orm", "@ledgerly/plugin-host"] },
   "@ledgerly/plugin-enablebanking": { only: ["@ledgerly/plugin-contract", "zod"] },
 };
@@ -66,7 +81,11 @@ export const FORBIDDEN_LAYERS: Record<string, RegExp> = {
   "@ledgerly/domain": /^(next|react|react-dom|hono)(\/|$)/,
   "@ledgerly/api-contract": /^(?!zod$)/,
   "@ledgerly/plugin-contract": /^(?!zod$)/,
+  "@ledgerly/ui": /^(next|next-intl|hono|drizzle-orm|@ledgerly\/(domain|api|web|worker|plugin-host))(\/|$)/,
 };
+
+/** The workspaces written for the browser only: a client component may import any of their entries. */
+const BROWSER_PACKAGES = ["@ledgerly/ui", "@ledgerly/design-tokens"];
 
 const ALIASES = /^@(domain|plugin-host|plugin-contract)\//;
 
@@ -216,7 +235,7 @@ export function measurePackages(repo: string): PackageMeasure {
         const browserSafe =
           name === "@ledgerly/domain"
             ? /\/client$/.test(entry) || /^\/(platform|shared)\/[^/]+$/.test(entry)
-            : !name.startsWith("@ledgerly/");
+            : !name.startsWith("@ledgerly/") || BROWSER_PACKAGES.includes(name);
         if (!browserSafe) measure.clientReach.push(`${path} → ${specifier}`);
       }
     }

@@ -1,6 +1,6 @@
-import { Card } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { type Tone, TONE_TEXT } from "@/ui/tone";
+import { Card } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { type Tone, TONE_TEXT } from "@ledgerly/ui/tone";
 
 /** A KPI whose note wraps: the tiles here explain their number, and a cut note explains nothing. */
 export function Kpi({

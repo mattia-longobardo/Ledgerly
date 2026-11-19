@@ -10,7 +10,7 @@ import { type CivilDate, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { labelOf } from "@/platform/integrations/registry";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin, isPluginActive, listPluginConnections } from "@ledgerly/domain/platform/plugins";
-import { ButtonLink } from "@/ui/button";
+import { ButtonLink } from "@ledgerly/ui/button";
 import { BANK_PLUGIN_ID } from "../../banks/plugin";
 import { undoSwitchAction } from "./switch/actions";
 import { switchable } from "./switch/switch";
@@ -39,7 +39,7 @@ import { ConnectionRow as ConnectionStatus } from "../../settings/integrations/c
 import { accountConnectionRow } from "./connection-status";
 import { DeleteAccount } from "./delete-account";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
-import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
+import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { accountDailyBalances, connectionsOf } from "@ledgerly/domain/accounts";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { periodEnd, periodMonths, parsePeriodQuery, type PeriodQuery } from "@/modules/accounts/ui/period";
@@ -61,15 +61,15 @@ import {
   formatPercent,
   NULL_DISPLAY,
 } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { Card } from "@/ui/card";
-import { AreaLine, Bars } from "@/ui/chart";
-import { KpiTile } from "@/ui/kpi-tile";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card } from "@ledgerly/ui/card";
+import { AreaLine, Bars } from "@ledgerly/ui/chart";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { TabLinks } from "@/ui/tab-links";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { EmptyState } from "@ledgerly/ui/states";
+import { TabLinks } from "@ledgerly/ui/tab-links";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 
 const TABS = ["overview", "transactions", "entries", "settings"] as const;
 type Tab = (typeof TABS)[number];

@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import type { FundDetail } from "@ledgerly/domain/funds";
 import { FundFeesSection } from "./fund-fees";
 import { FundStateButton } from "./fund-forms";

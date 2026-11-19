@@ -4,8 +4,8 @@ import { Dialog } from "@base-ui/react/dialog";
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
-import { cn } from "@/ui/cn";
-import { Kbd } from "@/ui/kbd";
+import { cn } from "@ledgerly/ui/cn";
+import { Kbd } from "@ledgerly/ui/kbd";
 import {
   filterCommands,
   type PaletteOption,

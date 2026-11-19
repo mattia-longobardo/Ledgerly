@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { TwoFactorSetup } from "@/modules/users/ui/two-factor-setup";
 import { authClient } from "@/platform/auth/client";
-import { Button } from "@/ui/button";
+import { Button } from "@ledgerly/ui/button";
 
 /** The forced setup: on success the app opens; "Sign out" is the way out for the wrong account. */
 export function SetupFlow({ account }: { account: string }) {

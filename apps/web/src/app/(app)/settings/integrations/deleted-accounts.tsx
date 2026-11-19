@@ -4,8 +4,8 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import { resumeSourceAccountAction } from "./deactivate-actions";
 
 /**

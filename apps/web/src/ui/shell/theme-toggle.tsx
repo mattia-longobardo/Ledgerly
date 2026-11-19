@@ -2,9 +2,9 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useTransition } from "react";
-import { IconButton } from "@/ui/button";
-import { useTheme } from "@/ui/theme-provider";
-import { notify } from "@/ui/toast";
+import { IconButton } from "@ledgerly/ui/button";
+import { useTheme } from "@ledgerly/ui/theme-provider";
+import { notify } from "@ledgerly/ui/toast";
 import { useShell } from "./shell-context";
 
 /**

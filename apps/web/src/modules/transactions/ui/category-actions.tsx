@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
-import { notify } from "@/ui/toast";
+import { notify } from "@ledgerly/ui/toast";
 import { SimilarDialog, type SimilarRowView } from "./similar-dialog";
 import type { CategoryOption } from "./view";
 

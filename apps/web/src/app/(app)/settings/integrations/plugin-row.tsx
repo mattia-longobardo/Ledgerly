@@ -2,12 +2,12 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { ActionMenu } from "@/ui/menu";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
-import { TONE_TEXT } from "@/ui/tone";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { ActionMenu } from "@ledgerly/ui/menu";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
+import { TONE_TEXT } from "@ledgerly/ui/tone";
 import { setPluginActiveAction } from "./plugin-actions";
 
 /**

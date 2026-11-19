@@ -5,13 +5,13 @@ import { type FormEvent, useRef, useState, useTransition } from "react";
 import { updateNameAction } from "@/modules/users/actions";
 import type { Role } from "@ledgerly/domain/platform/context";
 import { MAX_NAME_LENGTH } from "@ledgerly/domain/platform/auth/client";
-import { Avatar } from "@/ui/avatar";
-import { CardFooter } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
-import { notify } from "@/ui/toast";
-import { useUnsavedForm } from "@/ui/unsaved-changes";
-import { FIELD_GRID } from "@/ui/section";
+import { Avatar } from "@ledgerly/ui/avatar";
+import { CardFooter } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
+import { notify } from "@ledgerly/ui/toast";
+import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 export function NameForm({
   name,

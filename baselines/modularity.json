@@ -7,7 +7,7 @@
     "moduleCycleGroups": 1,
     "platformToModuleImports": 78,
     "platformFilesImportingModules": 23,
-    "uiToPlatformImports": 4,
+    "uiToPlatformImports": 3,
     "forbiddenNameFiles": 111,
     "forbiddenNameKeys": 18,
     "packageDependencies": 16,

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useRef, useState } from "react";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { NumberFormat, UiLocale } from "@ledgerly/domain/platform/format";
-import { Button } from "@/ui/button";
+import { Button } from "@ledgerly/ui/button";
 import { arrangeFees } from "@ledgerly/domain/funds/client";
 import { type FeeForm, newFeeForm } from "@ledgerly/domain/funds/client";
 import { FeeDialog } from "./fee-dialog";

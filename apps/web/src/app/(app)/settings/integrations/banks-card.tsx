@@ -4,12 +4,12 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { Button, ButtonLink } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input, Textarea } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input, Textarea } from "@ledgerly/ui/input";
+import { ActionMenu } from "@ledgerly/ui/menu";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink } from "./connection-row";
 import {
   disconnectBankAction,

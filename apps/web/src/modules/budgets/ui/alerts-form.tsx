@@ -2,11 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { Button, Chip } from "@/ui/button";
-import { CardFooter } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Checkbox, Input } from "@/ui/input";
-import { notify } from "@/ui/toast";
+import { Button, Chip } from "@ledgerly/ui/button";
+import { CardFooter } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input } from "@ledgerly/ui/input";
+import { notify } from "@ledgerly/ui/toast";
 import { saveBudgetAlertsAction } from "../actions";
 import {
   ALERT_PRESETS,

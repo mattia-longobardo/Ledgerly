@@ -6,9 +6,9 @@ import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
 import { normalizeTotp, type TwoFactorErrorKey, twoFactorErrorKey } from "@ledgerly/domain/users/client";
 import { authClient } from "@/platform/auth/client";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Checkbox, Input } from "@/ui/input";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input } from "@ledgerly/ui/input";
 import { goTo } from "../destination";
 
 /** A code from the authenticator app, or one of the recovery codes when the phone is gone. */

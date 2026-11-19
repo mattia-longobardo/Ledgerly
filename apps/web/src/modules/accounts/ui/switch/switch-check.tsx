@@ -6,11 +6,11 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { Button, ButtonLink, LinkButton } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { Modal } from "@/ui/modal";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { Modal } from "@ledgerly/ui/modal";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 
 /** One movement of the report, as the server gives it. */
 interface SwitchRow {

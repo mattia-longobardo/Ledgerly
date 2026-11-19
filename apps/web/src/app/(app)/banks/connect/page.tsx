@@ -30,10 +30,10 @@ import {
   maskIdentifier,
 } from "@ledgerly/domain/platform/plugins";
 import { exposedAccounts } from "@ledgerly/plugin-host";
-import { ButtonLink } from "@/ui/button";
-import { Card } from "@/ui/card";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
 import { Page } from "@/ui/shell/page";
-import { StepIndicator } from "@/ui/step-indicator";
+import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { formatInstant } from "../../settings/integrations/format-instant";
 import { BANK_PLUGIN_ID } from "../plugin";
 import { bankSink } from "../sink";

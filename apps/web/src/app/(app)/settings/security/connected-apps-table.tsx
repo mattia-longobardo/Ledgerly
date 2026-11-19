@@ -3,10 +3,10 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import type { ApiScope } from "@ledgerly/domain/platform/auth/client";
-import { Button } from "@/ui/button";
-import { Modal } from "@/ui/modal";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Modal } from "@ledgerly/ui/modal";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { notify } from "@ledgerly/ui/toast";
 import { revokeConnectedAppAction } from "./actions";
 
 /** One consent as the table shows it: the date already formatted for the reader. */

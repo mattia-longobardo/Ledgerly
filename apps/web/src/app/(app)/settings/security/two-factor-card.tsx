@@ -8,12 +8,12 @@ import { RecoveryCodes } from "@/modules/users/ui/recovery-codes";
 import { TwoFactorSetup } from "@/modules/users/ui/two-factor-setup";
 import { authClient } from "@/platform/auth/client";
 import type { TwoFactorPolicy } from "@ledgerly/domain/platform/auth/client";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 
 type Dialog = "setup" | "codes" | "disable" | null;
 

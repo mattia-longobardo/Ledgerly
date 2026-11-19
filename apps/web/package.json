@@ -20,6 +20,7 @@
     "@ledgerly/domain": "*",
     "@ledgerly/plugin-contract": "*",
     "@ledgerly/plugin-host": "*",
+    "@ledgerly/ui": "*",
     "@modelcontextprotocol/sdk": "1.32.2",
     "@tailwindcss/postcss": "4.3.3",
     "better-auth": "1.7.14",

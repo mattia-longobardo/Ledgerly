@@ -4,9 +4,9 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import type { DeactivationCounts } from "./deactivate";
 import { deactivateSourceAction, deactivationCountsAction } from "./deactivate-actions";
 

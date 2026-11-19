@@ -4,15 +4,15 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { Button, ButtonLink } from "@/ui/button";
-import { CardFooter } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
+import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { CardFooter } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select } from "@ledgerly/ui/input";
 import { createAccountAction } from "../actions";
 import { colorField } from "./display";
 import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "@ledgerly/domain/accounts/client";
 import { ibanErrorText } from "./iban-field";
-import { FIELD_GRID } from "@/ui/section";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 /**
  * A new manual account, with the optional opening balance of spec §7.1. The amount stays text all

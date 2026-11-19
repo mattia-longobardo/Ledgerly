@@ -4,7 +4,7 @@ import { AccountForm } from "@/modules/accounts/ui/account-form";
 import { listAccounts } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
-import { Card } from "@/ui/card";
+import { Card } from "@ledgerly/ui/card";
 import { Page } from "@/ui/shell/page";
 
 export async function generateMetadata(): Promise<Metadata> {

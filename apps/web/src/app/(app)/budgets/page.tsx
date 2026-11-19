@@ -10,12 +10,12 @@ import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
 import { addMonths, lastDayOfMonth, monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatWholePercent } from "@ledgerly/domain/platform/format";
-import { Card } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Card } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { TONE_TEXT } from "@/ui/tone";
+import { EmptyState } from "@ledgerly/ui/states";
+import { TONE_TEXT } from "@ledgerly/ui/tone";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("budgets"))("title") };

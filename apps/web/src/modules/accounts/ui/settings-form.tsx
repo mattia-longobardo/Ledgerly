@@ -2,13 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { CardFooter } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select } from "@/ui/input";
-import { SettingsSection, FIELD_GRID } from "@/ui/section";
-import { notify } from "@/ui/toast";
-import { useUnsavedForm } from "@/ui/unsaved-changes";
+import { Button } from "@ledgerly/ui/button";
+import { CardFooter } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { SettingsSection, FIELD_GRID } from "@ledgerly/ui/section";
+import { notify } from "@ledgerly/ui/toast";
+import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
 import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
 import { colorField } from "./display";
 import { ibanErrorText } from "./iban-field";

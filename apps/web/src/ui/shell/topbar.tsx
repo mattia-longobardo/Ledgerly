@@ -4,9 +4,9 @@ import { PanelLeft, Search } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import type { ReactNode } from "react";
-import { IconButton } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Kbd } from "@/ui/kbd";
+import { IconButton } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Kbd } from "@ledgerly/ui/kbd";
 import { useShell } from "./shell-context";
 
 const MOBILE_TITLE = "max-md:text-xl max-md:font-semibold max-md:tracking-snug";

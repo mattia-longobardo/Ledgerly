@@ -2,9 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 
 /**
  * "Undo switch" (ux/n4-account-switch.md §10): a confirmation that says what goes back and what to

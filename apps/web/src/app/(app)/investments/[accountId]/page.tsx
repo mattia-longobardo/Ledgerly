@@ -29,12 +29,12 @@ import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { Badge } from "@/ui/badge";
-import { Card, CardHeader } from "@/ui/card";
-import { StackedArea, StackedBars, stackLayers } from "@/ui/chart";
-import { cn } from "@/ui/cn";
-import { KpiTile } from "@/ui/kpi-tile";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { StackedArea, StackedBars, stackLayers } from "@ledgerly/ui/chart";
+import { cn } from "@ledgerly/ui/cn";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { withParams } from "@/ui/url";
 import { loadService } from "./service-data";
 

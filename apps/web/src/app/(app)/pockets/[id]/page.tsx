@@ -19,13 +19,13 @@ import {
   formatWholePercent,
   NULL_DISPLAY,
 } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { Card, CardHeader } from "@/ui/card";
-import { MiniBars } from "@/ui/chart";
-import { cn } from "@/ui/cn";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { MiniBars } from "@ledgerly/ui/chart";
+import { cn } from "@ledgerly/ui/cn";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { Page } from "@/ui/shell/page";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 
 export async function generateMetadata({ params }: PageProps<"/pockets/[id]">): Promise<Metadata> {
   const ctx = await requireSession();

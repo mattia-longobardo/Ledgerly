@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, type ReactNode, useContext, useLayoutEffect, useMemo, useState } from "react";
-import { PREFERS_DARK_QUERY, resolveTheme, type ThemePreference } from "@/platform/theme";
+import { PREFERS_DARK_QUERY, resolveTheme, type ThemePreference } from "./theme";
 
 interface ThemeState {
   /** The preference on screen: the saved one, or an unsaved choice while its save is in flight. */

@@ -11,11 +11,11 @@ import { coreCreatesRecords } from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { Card } from "@/ui/card";
-import { cn } from "@/ui/cn";
+import { Card } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { EmptyState } from "@ledgerly/ui/states";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("interests"))("title") };

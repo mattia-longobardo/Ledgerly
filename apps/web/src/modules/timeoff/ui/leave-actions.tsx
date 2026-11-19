@@ -2,8 +2,8 @@
 
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
 import { useLeaveBoard } from "./leave-board";
 
 /** The year's allowance as the dialog shows it, in the units a contract states. */

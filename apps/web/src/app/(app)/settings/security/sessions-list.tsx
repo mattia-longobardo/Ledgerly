@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { revokeOtherSessionsAction, revokeSessionAction } from "@/modules/users/actions";
-import { Button } from "@/ui/button";
+import { Button } from "@ledgerly/ui/button";
 
 /** What the browser gets per session: an id, never the bearer token. */
 export interface SessionRow {

@@ -1,5 +1,5 @@
-import { Card } from "@/ui/card";
-import { Skeleton } from "@/ui/skeleton";
+import { Card } from "@ledgerly/ui/card";
+import { Skeleton } from "@ledgerly/ui/skeleton";
 
 /** The shape of a fund's page while it reads (§6): the header, the hero, the KPIs, the chart and two rows. */
 export function FundDetailSkeleton() {

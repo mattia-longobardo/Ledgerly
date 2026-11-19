@@ -2,12 +2,12 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { Tag } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Modal } from "@/ui/modal";
-import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@/ui/table";
-import { notify } from "@/ui/toast";
+import { Tag } from "@ledgerly/ui/badge";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Modal } from "@ledgerly/ui/modal";
+import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
+import { notify } from "@ledgerly/ui/toast";
 import { deleteSubscriptionAction } from "../actions";
 import type { Cycle } from "@ledgerly/domain/subscriptions/client";
 import { type DialogOptions, SubscriptionDialog, type SubscriptionDraft } from "./subscription-dialog";

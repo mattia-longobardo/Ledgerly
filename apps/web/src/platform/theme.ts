@@ -1,8 +1,8 @@
-export const THEME_COOKIE = "theme";
-export type ThemePreference = "system" | "light" | "dark";
-type ResolvedTheme = "light" | "dark";
+import { PREFERS_DARK_QUERY, type ThemePreference } from "@ledgerly/ui/theme";
 
-export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
+export type { ThemePreference } from "@ledgerly/ui/theme";
+
+export const THEME_COOKIE = "theme";
 
 /** Light is the default theme (spec §8.1); System and Dark are explicit choices. */
 export function parseTheme(value: string | undefined): ThemePreference {
@@ -18,10 +18,6 @@ export function requestThemePreference(
   cookie: string | undefined,
 ): ThemePreference {
   return saved ?? parseTheme(cookie);
-}
-
-export function resolveTheme(preference: ThemePreference, prefersDark: boolean): ResolvedTheme {
-  return preference === "dark" || (preference === "system" && prefersDark) ? "dark" : "light";
 }
 
 /**

@@ -1,8 +1,8 @@
 import { ChevronRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { formatMoney, type NumberFormat } from "@ledgerly/domain/platform/format";
-import { Card } from "@/ui/card";
-import { CompositionBar } from "@/ui/chart";
+import { Card } from "@ledgerly/ui/card";
+import { CompositionBar } from "@ledgerly/ui/chart";
 import type { BreakdownBar, BreakdownGroup } from "./display";
 
 const ROW = "grid grid-cols-[minmax(0,100px)_minmax(0,1fr)_80px] items-center gap-2.5 text-sm";

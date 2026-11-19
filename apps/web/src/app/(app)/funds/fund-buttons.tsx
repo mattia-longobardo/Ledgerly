@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import { rebuildCompetencesAction } from "./fund-setup";
 
 /** Settings › Contributions › "Rebuild from payslips": the payslip source's competences, read again. */

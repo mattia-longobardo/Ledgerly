@@ -7,12 +7,12 @@ import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatWholePercent } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { cn } from "@/ui/cn";
-import { KpiTile } from "@/ui/kpi-tile";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Badge } from "@ledgerly/ui/badge";
+import { cn } from "@ledgerly/ui/cn";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
+import { EmptyState } from "@ledgerly/ui/states";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("pockets"))("title") };

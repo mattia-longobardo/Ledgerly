@@ -4,10 +4,10 @@ import { listSnapshotRuns } from "@ledgerly/domain/accounts";
 import { SnapshotButton } from "@/modules/accounts/ui/snapshot-button";
 import { requireSession } from "@/platform/auth/session";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { buttonClassName } from "@/ui/button";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { Badge } from "@ledgerly/ui/badge";
+import { buttonClassName } from "@ledgerly/ui/button";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("settings.tabs"))("data") };

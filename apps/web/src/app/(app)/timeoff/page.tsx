@@ -15,14 +15,14 @@ import { KIND_CLASS, leaveTypeOptions, weekdayInitials } from "@/modules/timeoff
 import { requireSession } from "@/platform/auth/session";
 import { today as todayIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, NULL_DISPLAY, type UiLocale } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { ButtonLink } from "@/ui/button";
-import { Card, CardHeader } from "@/ui/card";
-import { cn } from "@/ui/cn";
+import { Badge } from "@ledgerly/ui/badge";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
 import { Page } from "@/ui/shell/page";
-import { TabLinks } from "@/ui/tab-links";
-import { EmptyState } from "@/ui/states";
-import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { TabLinks } from "@ledgerly/ui/tab-links";
+import { EmptyState } from "@ledgerly/ui/states";
+import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("timeoff"))("title") };

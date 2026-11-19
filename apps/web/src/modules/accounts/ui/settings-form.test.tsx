@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import { DeleteAccount } from "@/app/(app)/accounts/[id]/delete-account";
-import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
+import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import messages from "../../../../../../messages/en.json";
 import { AccountSettingsForm, type SettingsValues } from "./settings-form";
 

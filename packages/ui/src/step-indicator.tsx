@@ -1,13 +1,12 @@
 import { Check } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
+import { Link } from "./router";
 import { cn } from "./cn";
 
 interface Step {
   id: string;
   label: string;
   /** Where a step already done leads back to. */
-  href: Route;
+  href: string;
 }
 
 /**

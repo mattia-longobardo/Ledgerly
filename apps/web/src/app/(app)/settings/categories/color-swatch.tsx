@@ -2,7 +2,7 @@
 
 import { CATEGORY_COLORS } from "@ledgerly/domain/transactions/client";
 import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { cn } from "@/ui/cn";
+import { cn } from "@ledgerly/ui/cn";
 
 /**
  * The palette of the design's category dots: the category colours, so a preset and an automatic

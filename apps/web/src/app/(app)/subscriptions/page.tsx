@@ -11,13 +11,13 @@ import { categoryOptions } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
-import { buttonClassName } from "@/ui/button";
-import { Card, CardHeader } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { KpiTile } from "@/ui/kpi-tile";
-import { ProgressBar } from "@/ui/progress-bar";
+import { buttonClassName } from "@ledgerly/ui/button";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
+import { EmptyState } from "@ledgerly/ui/states";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("subscriptions"))("title") };

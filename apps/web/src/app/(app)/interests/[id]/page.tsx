@@ -13,11 +13,11 @@ import { coreCreatesRecords } from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { civilDateIn, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { Card, CardHeader } from "@/ui/card";
-import { cn } from "@/ui/cn";
-import { KpiTile } from "@/ui/kpi-tile";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
-import { Table, TBody, Td, Th, THead, Tr } from "@/ui/table";
+import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 
 const STATUS_TONE = {
   no_data: "bg-hover text-muted",

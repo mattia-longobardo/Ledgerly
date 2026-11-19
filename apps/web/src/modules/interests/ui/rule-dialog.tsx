@@ -3,12 +3,12 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { Button, LinkButton } from "@/ui/button";
-import { type CategoryOption, CategoryPicker } from "@/ui/category-picker";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, InputGroup, Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button, LinkButton } from "@ledgerly/ui/button";
+import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picker";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, InputGroup, Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import { type ActionResult, createRuleAction, setRuleStateAction, updateRuleAction } from "../actions";
 import { DEFAULT_RUN_HOUR, formatRunHour, RUN_HOURS } from "@ledgerly/domain/interests/client";
 

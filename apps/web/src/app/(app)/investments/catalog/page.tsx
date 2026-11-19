@@ -5,9 +5,9 @@ import { accountTypeOf, MANUAL_PROVIDER } from "@ledgerly/domain/investments";
 import { catalogView } from "@ledgerly/domain/investments";
 import { ConnectProviderButton, CreateManualServiceButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
-import { Badge } from "@/ui/badge";
-import { ButtonLink } from "@/ui/button";
-import { Card } from "@/ui/card";
+import { Badge } from "@ledgerly/ui/badge";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
 import { Page } from "@/ui/shell/page";
 
 export async function generateMetadata(): Promise<Metadata> {

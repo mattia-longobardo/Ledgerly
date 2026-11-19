@@ -16,7 +16,7 @@ const notify = vi.fn();
 const setCategory = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh }) }));
-vi.mock("@/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
+vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
 vi.mock("./commands", () => ({
   setCategory: (...args: unknown[]) => setCategory(...args),
   hide: vi.fn(),

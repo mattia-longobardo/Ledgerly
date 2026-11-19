@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Button } from "@/ui/button";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import { recoveryCodesFile } from "@ledgerly/domain/users/client";
 
 /**

@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Fragment } from "react";
-import { Card } from "@/ui/card";
-import { Kbd } from "@/ui/kbd";
+import { Card } from "@ledgerly/ui/card";
+import { Kbd } from "@ledgerly/ui/kbd";
 
 /**
  * The prototype's "Shortcuts" card. It lists what the table really answers to (spec §8.4 point 2)

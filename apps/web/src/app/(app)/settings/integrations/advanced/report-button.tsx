@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { Button } from "@/ui/button";
-import { Textarea } from "@/ui/input";
+import { Button } from "@ledgerly/ui/button";
+import { Textarea } from "@ledgerly/ui/input";
 
 /**
  * "Copy report" (ux/n2-connection-status.md §8.4): the report of the current filter, built on the

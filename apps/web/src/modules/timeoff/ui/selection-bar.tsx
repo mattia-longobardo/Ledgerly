@@ -1,4 +1,4 @@
-import { Button } from "@/ui/button";
+import { Button } from "@ledgerly/ui/button";
 
 /**
  * The bar that is there while a range has a first day and no last one (rewrite plan N5).

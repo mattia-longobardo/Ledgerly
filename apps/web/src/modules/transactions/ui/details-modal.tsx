@@ -2,12 +2,12 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { cn } from "@/ui/cn";
-import { Field } from "@/ui/field";
-import { Checkbox, Input, Select, Textarea } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { cn } from "@ledgerly/ui/cn";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Input, Select, Textarea } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions/client";
 import { editInWallet, setLabels, setNote } from "./commands";
 import type { LabelOption, RowView } from "./view";

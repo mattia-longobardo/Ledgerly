@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Badge } from "@/ui/badge";
+import { Badge } from "@ledgerly/ui/badge";
 
 /**
  * The key's last check on the service page, with a warning when Binance says the key is not

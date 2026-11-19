@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { Button } from "@/ui/button";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { notify } from "@ledgerly/ui/toast";
 import { runSnapshotNowAction } from "../actions";
 
 /** Settings › Data: runs the caller's own monthly snapshot at once (spec §10.3). */

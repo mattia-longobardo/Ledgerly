@@ -11,7 +11,7 @@ import { formatDate } from "@ledgerly/domain/platform/format";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { listApiClients } from "@/platform/auth/api-clients";
 import { listConnectedApps } from "@ledgerly/domain/platform/auth";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { type ApiClientRow, ApiClientsTable } from "./api-clients-table";
 import { type ConnectedAppRow, ConnectedAppsTable } from "./connected-apps-table";
 import { NewApiClient } from "./new-api-client";

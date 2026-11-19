@@ -2,9 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
-import { Button } from "@/ui/button";
-import { Checkbox } from "@/ui/input";
-import { FIELD_GRID } from "@/ui/section";
+import { Button } from "@ledgerly/ui/button";
+import { Checkbox } from "@ledgerly/ui/input";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 /** A default group as the form offers it: its name and its examples in the person's language. */
 export interface DefaultGroupView {

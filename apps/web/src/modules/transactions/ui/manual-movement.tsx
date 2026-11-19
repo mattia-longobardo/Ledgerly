@@ -14,9 +14,9 @@ import {
   useState,
   useTransition,
 } from "react";
-import { Button } from "@/ui/button";
-import { Modal } from "@/ui/modal";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Modal } from "@ledgerly/ui/modal";
+import { notify } from "@ledgerly/ui/toast";
 import type { CommandResult } from "./commands";
 import { type ManualCategoryOption, ManualTransactionDialog } from "./manual-dialog";
 import type { ManualCommands, ShownRange } from "./manual-types";

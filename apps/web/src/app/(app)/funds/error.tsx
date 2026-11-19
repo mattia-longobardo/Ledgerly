@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ErrorState } from "@/ui/states";
+import { ErrorState } from "@ledgerly/ui/states";
 
 /**
  * Funds could not be read (docs/design/rewrite-plan/ux/n6-pension-fund.md §10.3): the pages of the

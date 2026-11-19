@@ -1,5 +1,4 @@
-import type { Route } from "next";
-import Link from "next/link";
+import { Link } from "./router";
 import type { ReactNode } from "react";
 import { cn } from "./cn";
 
@@ -15,7 +14,7 @@ export function TabLinks({
   tabs,
 }: {
   label: string;
-  tabs: { href: Route; label: ReactNode; active: boolean }[];
+  tabs: { href: string; label: ReactNode; active: boolean }[];
 }) {
   return (
     <nav aria-label={label} className="flex flex-wrap gap-x-1 border-b border-border">

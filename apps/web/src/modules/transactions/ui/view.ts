@@ -5,8 +5,8 @@
  */
 
 import type { RowBadge } from "./display";
-import type { Tone } from "@/ui/tone";
-import type { CategoryOption } from "@/ui/category-picker";
+import type { Tone } from "@ledgerly/ui/tone";
+import type { CategoryOption } from "@ledgerly/ui/category-picker";
 import type { CategoryType, TransactionType } from "@ledgerly/domain/transactions";
 import type { ManualFieldsView } from "./manual-types";
 

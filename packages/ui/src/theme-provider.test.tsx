@@ -1,8 +1,8 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { stubColorScheme } from "../../../../test/color-scheme";
-import type { ThemePreference } from "@/platform/theme";
+import { stubColorScheme } from "../../../test/color-scheme";
+import type { ThemePreference } from "./theme";
 import { ThemeProvider, useTheme } from "./theme-provider";
 
 /** Stands in for the toggle and the preferences form: a local, not yet saved, choice. */

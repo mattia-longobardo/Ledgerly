@@ -49,14 +49,14 @@ import {
   NULL_DISPLAY,
 } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { Badge } from "@/ui/badge";
-import { ButtonLink } from "@/ui/button";
-import { Card, CardHeader } from "@/ui/card";
-import { cn } from "@/ui/cn";
+import { Badge } from "@ledgerly/ui/badge";
+import { ButtonLink } from "@ledgerly/ui/button";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { cn } from "@ledgerly/ui/cn";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { TabLinks } from "@/ui/tab-links";
-import { TONE_TEXT, toneOfSign } from "@/ui/tone";
+import { EmptyState } from "@ledgerly/ui/states";
+import { TabLinks } from "@ledgerly/ui/tab-links";
+import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type Params, withParams } from "@/ui/url";
 import { RebuildCompetencesButton } from "../fund-buttons";
 import { FundDetailSkeleton } from "./fund-skeleton";

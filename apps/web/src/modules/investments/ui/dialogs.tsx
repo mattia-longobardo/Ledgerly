@@ -21,13 +21,13 @@ import {
   type UiLocale,
 } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Input, InputGroup, Select } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
-import { Modal } from "@/ui/modal";
-import { Segmented } from "@/ui/segmented";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Input, InputGroup, Select } from "@ledgerly/ui/input";
+import { ActionMenu } from "@ledgerly/ui/menu";
+import { Modal } from "@ledgerly/ui/modal";
+import { Segmented } from "@ledgerly/ui/segmented";
+import { notify } from "@ledgerly/ui/toast";
 import {
   confirmKeyRevokedAction,
   confirmZeroAction,

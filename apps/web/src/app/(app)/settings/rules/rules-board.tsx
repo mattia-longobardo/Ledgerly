@@ -31,16 +31,16 @@ import {
   undoRuleApplyAction,
 } from "@/modules/transactions/categorize/user-rules-actions";
 import { formatAmountInput, type NumberFormat } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { CategoryPicker, type CategoryOption } from "@/ui/category-picker";
-import { Checkbox, Input, Select } from "@/ui/input";
-import { ActionMenu } from "@/ui/menu";
-import { Modal } from "@/ui/modal";
-import { EmptyState } from "@/ui/states";
-import { Switch } from "@/ui/switch";
-import { notify } from "@/ui/toast";
+import { Badge } from "@ledgerly/ui/badge";
+import { Button } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { CategoryPicker, type CategoryOption } from "@ledgerly/ui/category-picker";
+import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { ActionMenu } from "@ledgerly/ui/menu";
+import { Modal } from "@ledgerly/ui/modal";
+import { EmptyState } from "@ledgerly/ui/states";
+import { Switch } from "@ledgerly/ui/switch";
+import { notify } from "@ledgerly/ui/toast";
 
 /** A rule as the list draws it: what the service answers, plus its category's path. */
 interface RuleView {

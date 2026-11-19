@@ -15,15 +15,15 @@ import {
   type UiLocale,
 } from "@ledgerly/domain/platform/format";
 import { DISPLAY_CURRENCIES } from "@ledgerly/domain/platform/fx/client";
-import { Button, ButtonLink, LinkButton } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Input, Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { StepIndicator } from "@/ui/step-indicator";
-import { Switch } from "@/ui/switch";
-import { notify } from "@/ui/toast";
-import { useUnsavedForm } from "@/ui/unsaved-changes";
+import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Input, Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { StepIndicator } from "@ledgerly/ui/step-indicator";
+import { Switch } from "@ledgerly/ui/switch";
+import { notify } from "@ledgerly/ui/toast";
+import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
 import {
   type FeeForm,
   type FundForm,
@@ -47,7 +47,7 @@ import {
   sourceSummary,
   type TakenComponents,
 } from "./source-text";
-import { FIELD_GRID } from "@/ui/section";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 
 const WIZARD_STEPS = ["fund", "sources", "fees", "review"] as const;
 type WizardStep = (typeof WIZARD_STEPS)[number];

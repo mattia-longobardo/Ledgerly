@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
-import { UnsavedChangesProvider } from "@/ui/unsaved-changes";
+import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";

@@ -2,9 +2,9 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
-import { Card, CardHeader } from "@/ui/card";
-import { ProgressBar } from "@/ui/progress-bar";
-import { TONE_TEXT } from "@/ui/tone";
+import { Card, CardHeader } from "@ledgerly/ui/card";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
+import { TONE_TEXT } from "@ledgerly/ui/tone";
 import { budgetsView } from "@ledgerly/domain/budgets";
 import { budgetName, NO_COLOR } from "./present";
 

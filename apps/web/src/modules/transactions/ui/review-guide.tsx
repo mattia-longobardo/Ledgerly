@@ -4,9 +4,9 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, ButtonLink } from "@/ui/button";
-import { Card } from "@/ui/card";
-import { ProgressBar } from "@/ui/progress-bar";
+import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { Card } from "@ledgerly/ui/card";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { type DefaultGroupView, DefaultGroupsForm } from "./default-groups-form";
 
 /** How often the page is read again while the categories are being worked out, and for how long. */

@@ -9,12 +9,12 @@ import { RegisterTable } from "@/modules/payroll/ui/register-table";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { Badge } from "@/ui/badge";
-import { Card } from "@/ui/card";
-import { KpiTile } from "@/ui/kpi-tile";
+import { Badge } from "@ledgerly/ui/badge";
+import { Card } from "@ledgerly/ui/card";
+import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Page } from "@/ui/shell/page";
-import { EmptyState } from "@/ui/states";
-import { TabLinks } from "@/ui/tab-links";
+import { EmptyState } from "@ledgerly/ui/states";
+import { TabLinks } from "@ledgerly/ui/tab-links";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("payroll"))("title") };

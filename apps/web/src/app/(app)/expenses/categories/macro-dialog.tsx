@@ -3,12 +3,12 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, useTransition } from "react";
 import type { CategoryType } from "@ledgerly/domain/transactions/client";
-import { Button } from "@/ui/button";
-import { Field } from "@/ui/field";
-import { Select } from "@/ui/input";
-import { Modal } from "@/ui/modal";
-import { Segmented } from "@/ui/segmented";
-import { notify } from "@/ui/toast";
+import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
+import { Select } from "@ledgerly/ui/input";
+import { Modal } from "@ledgerly/ui/modal";
+import { Segmented } from "@ledgerly/ui/segmented";
+import { notify } from "@ledgerly/ui/toast";
 import {
   type MacroMoveFacts,
   macroMoveFactsAction,

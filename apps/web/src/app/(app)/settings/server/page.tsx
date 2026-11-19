@@ -9,7 +9,7 @@ import { NEXT_VERSION } from "@/platform/next-version";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { jobStatuses } from "@/platform/jobs/queries";
 import { llmFallbackView, oidcView, smtpView } from "@ledgerly/domain/platform/settings";
-import { SettingsGrid, SettingsSection } from "@/ui/section";
+import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { formatInstant } from "../integrations/format-instant";
 import { DiagnosticsCard } from "./diagnostics-card";
 import { type JobRow, JobsCard } from "./jobs-card";

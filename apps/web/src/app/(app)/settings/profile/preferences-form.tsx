@@ -6,13 +6,13 @@ import { type FormEvent, useRef, useState, useTransition } from "react";
 import { savePreferencesAction } from "@/modules/users/actions";
 import type { Preferences } from "@ledgerly/domain/users/client";
 import { DISPLAY_CURRENCIES } from "@ledgerly/domain/platform/fx/client";
-import { CardFooter } from "@/ui/card";
-import { Field } from "@/ui/field";
-import { Checkbox, Select } from "@/ui/input";
-import { useTheme } from "@/ui/theme-provider";
-import { notify } from "@/ui/toast";
-import { useUnsavedForm } from "@/ui/unsaved-changes";
-import { FIELD_GRID } from "@/ui/section";
+import { CardFooter } from "@ledgerly/ui/card";
+import { Field } from "@ledgerly/ui/field";
+import { Checkbox, Select } from "@ledgerly/ui/input";
+import { useTheme } from "@ledgerly/ui/theme-provider";
+import { notify } from "@ledgerly/ui/toast";
+import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
+import { FIELD_GRID } from "@ledgerly/ui/section";
 import { intlLocale } from "@ledgerly/domain/platform/format";
 
 /**
