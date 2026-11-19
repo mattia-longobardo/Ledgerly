@@ -27,6 +27,8 @@
     "./progress-bar": "./src/progress-bar.tsx",
     "./qr-code": "./src/qr-code.tsx",
     "./router": "./src/router.tsx",
+    "./schedule": "./src/schedule/schedule-control.tsx",
+    "./schedule/form": "./src/schedule/form.ts",
     "./section": "./src/section.tsx",
     "./section-tabs": "./src/section-tabs.tsx",
     "./segmented": "./src/segmented.tsx",
@@ -55,6 +57,7 @@
     "react": "19.3.0",
     "tailwind-merge": "3.7.0",
     "uqr": "0.1.3",
-    "use-intl": "4.14.4"
+    "use-intl": "4.14.4",
+    "zod": "4.6.7"
   }
 }

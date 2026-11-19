@@ -4,7 +4,7 @@ import {
   type SyncDays,
   type SyncSchedule,
 } from "@domain/platform/integrations/schedule";
-import { dayChoice, formRules, normalizeTime, scheduleForm } from "./schedule-form";
+import { dayChoice, formRules, normalizeTime, scheduleForm } from "./form";
 
 const every: SyncDays = { kind: "every" };
 const workdays: SyncDays = { kind: "weekdays", weekdays: [1, 2, 3, 4, 5] };

@@ -25,7 +25,7 @@ import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { instantText, loadService, providerOf } from "../service-data";
 import { formatInstant } from "@/app/(app)/settings/integrations/format-instant";
 import { recommendedSchedule } from "@/app/(app)/settings/integrations/recommended-schedule";
-import { ScheduleControl } from "@/app/(app)/settings/integrations/schedule-control";
+import { ConnectionSchedule } from "@/ui/connection-schedule";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 
 type Status = "complete" | "partial" | "check" | "missing";
@@ -213,8 +213,8 @@ export default async function InvestmentServiceConnection({
                   {connection && (
                     <div className="text-sm">
                       <div className="text-muted">{tIntegrations("fields.schedule")}</div>
-                      <ScheduleControl
-                        provider={connection.provider}
+                      <ConnectionSchedule
+                        connectionId={connection.id}
                         name={name}
                         schedule={connection.schedule}
                         recommended={recommendedSchedule(connection.provider)}

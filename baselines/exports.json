@@ -857,22 +857,6 @@
     "refreshCalendar",
     "removeCalendar"
   ],
-  "packages/domain/src/platform/integrations/client.ts": [
-    "LAST_DAY",
-    "MAX_RULES",
-    "MAX_TIMES",
-    "MIN_SYNC_GAP_MINUTES",
-    "RuleKind",
-    "ScheduleProblem",
-    "SyncDays",
-    "SyncRule",
-    "SyncSchedule",
-    "minutesOf",
-    "nextSyncTimes",
-    "scheduleProblems",
-    "syncRuleSchema",
-    "syncScheduleSchema"
-  ],
   "packages/domain/src/platform/integrations/index.ts": [
     "BINANCE_PROVIDER",
     "Connection",

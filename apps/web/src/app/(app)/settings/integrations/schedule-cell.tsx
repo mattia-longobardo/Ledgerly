@@ -4,7 +4,7 @@ import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
 import type { Connection } from "@ledgerly/domain/platform/integrations";
 import { formatInstant } from "./format-instant";
 import { recommendedSchedule } from "./recommended-schedule";
-import { ScheduleControl } from "./schedule-control";
+import { ConnectionSchedule } from "@/ui/connection-schedule";
 
 /**
  * When one connection is read by itself (ux/n2-connection-status.md §8): the control for a source
@@ -45,8 +45,8 @@ export async function ScheduleCell({
     );
   }
   return (
-    <ScheduleControl
-      provider={connection.provider}
+    <ConnectionSchedule
+      connectionId={connection.id}
       name={name}
       schedule={connection.schedule}
       recommended={recommendedSchedule(connection.provider)}

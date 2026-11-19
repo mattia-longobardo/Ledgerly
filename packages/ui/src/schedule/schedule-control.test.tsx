@@ -2,21 +2,24 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import messages from "../../../../../../../messages/en.json";
+import messages from "../../../../messages/en.json";
 import {
   DEFAULT_SYNC_SCHEDULE,
+  previewSchedule,
   type SyncDays,
   type SyncRule,
   type SyncSchedule,
 } from "@domain/platform/integrations/schedule";
+import { REPEAT_MINUTES } from "./form";
 import { ScheduleControl } from "./schedule-control";
-import { REPEAT_MINUTES } from "./schedule-form";
 
 const save = vi.fn();
 
-vi.mock("./actions", () => ({
-  saveScheduleAction: (...args: unknown[]) => save(...args),
-}));
+/** The server's answer, computed here by the function the route runs, so the dialog shows it at once. */
+const preview = (schedule: { rules: readonly unknown[] }) => {
+  const { next, problems } = previewSchedule(schedule.rules, "Europe/Rome", new Date(), 5);
+  return { next: next.map((instant) => instant.toISOString()), problems };
+};
 
 const T = messages.settings.integrations.scheduleControl;
 
@@ -24,7 +27,8 @@ function renderControl(schedule: SyncSchedule = DEFAULT_SYNC_SCHEDULE) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
       <ScheduleControl
-        provider="wallet"
+        save={(rules) => save("wallet", rules)}
+        preview={preview}
         name="Budget Makers Wallet"
         schedule={schedule}
         recommended={DEFAULT_SYNC_SCHEDULE}

@@ -261,7 +261,7 @@ export const setSchedule = defineRoute({
   scope: "write",
   capability: "connections",
   summary: "Saves when the connection is read: times in the person's zone. No rule is «only by hand».",
-  actions: ["saveScheduleAction"],
+  actions: [],
   params: byId,
   body: schedule,
   response: null,

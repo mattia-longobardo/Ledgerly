@@ -13,7 +13,7 @@ import { requireSession } from "@/platform/auth/session";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
 import { tasks } from "@/platform/jobs/queue";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { isKnownProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
 import { BACKFILL_CHOICES } from "@ledgerly/domain/platform/integrations/wallet";
 import {
   chooseWalletAccounts,
@@ -30,7 +30,6 @@ import {
   markConnection,
   readCredentials,
   saveConnection,
-  saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
 import {
   createWalletClient,
@@ -426,25 +425,3 @@ export async function coreConnectionAction(
 }
 
 /* The schedule of any connection (D7) */
-
-/** Saves when one of the person's own connections syncs; the provider names which one. */
-export async function saveScheduleAction(
-  provider: string,
-  schedule: unknown,
-): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  if (!isKnownProvider(provider)) return { ok: false, error: "notConnected" };
-  const connection = (await listConnections(ctx)).find((one) => one.provider === provider);
-  if (!connection) return { ok: false, error: "notConnected" };
-  try {
-    await saveSchedule(ctx, connection.id, schedule);
-  } catch (error) {
-    if (error instanceof IntegrationError) return { ok: false, error: "schedule" };
-    throw error;
-  }
-  revalidate();
-  // The same control sits on a service's Connection tab and on Time off › Settings.
-  revalidatePath("/investments", "layout");
-  revalidatePath("/timeoff/settings");
-  return { ok: true };
-}
