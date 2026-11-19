@@ -26,10 +26,7 @@ const WORSE = 1.1;
  * not a baseline): the time is printed and not held, the queries still are. The step named here
  * removes its entry; a later run that still needs it asks again.
  */
-const ACCEPTED_TIMES: Record<string, string> = {
-  // 9.6 → 12.7-13.1 ms, the same on v0.37.0 in production: accepted on 2026-11-19.
-  "GET /transactions": "fino al passo R2 transactions",
-};
+const ACCEPTED_TIMES: Record<string, string> = {};
 
 type Measure = { medianMs: number; p95Ms: number; queries: number };
 type Group = Record<string, Measure>;

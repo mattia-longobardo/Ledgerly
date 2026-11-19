@@ -1,8 +1,8 @@
 import { and, asc, count, eq, ne, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { accountNames as namesOf, listAccounts } from "../../accounts";
+import { type Account, accountNames as namesOf, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
-import { civilDateIn, monthKey } from "../../../shared/dates";
+import { monthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { Cents } from "../../../shared/money";
@@ -87,6 +87,29 @@ export async function countTransactions(
   return Number(row?.total ?? 0);
 }
 
+/** One page of the rows, ordered by `ordered`'s names when the sort is the account's. */
+function pageOf(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  filters: TransactionFilters,
+  ordered: readonly Account[],
+) {
+  return getDb()
+    .select({
+      transaction: transactions,
+      categoryName: categories.name,
+      categoryColor: categories.color,
+      // The person's day, by Postgres: the same zone rules as every total by day, without a
+      // formatter per row in Node (audit TRX-11).
+      on: sql<string>`to_char(${transactions.occurredAt} at time zone ${ctx.timeZone}, 'YYYY-MM-DD')`,
+    })
+    .from(transactions)
+    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+    .where(conditions(ctx, filters))
+    .orderBy(...ordering(filters, ordered))
+    .limit(boundedLimit(filters.limit))
+    .offset(Math.max(0, Math.trunc(filters.offset ?? 0)));
+}
+
 /**
  * The filtered list. `limit` is bounded, so a caller cannot ask for the whole table by mistake;
  * `summary` tells the truth about the range whatever the page holds.
@@ -95,35 +118,28 @@ export async function listTransactions(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
 ): Promise<TransactionRow[]> {
-  // The accounts come first: the table shows their names, and the account sort orders by them.
-  const accounts = await listAccounts(ctx, { includeArchived: true });
-  const rows = await getDb()
-    .select({
-      transaction: transactions,
-      categoryName: categories.name,
-      categoryColor: categories.color,
-    })
-    .from(transactions)
-    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
-    .where(conditions(ctx, filters))
-    .orderBy(...ordering(filters, accounts))
-    .limit(boundedLimit(filters.limit))
-    .offset(Math.max(0, Math.trunc(filters.offset ?? 0)));
-
+  // The table shows the accounts' names; only the account sort needs them before the rows are read,
+  // so every other order reads them beside the rows (audit TRX-11).
+  const reading = listAccounts(ctx, { includeArchived: true });
+  const sortedByAccount = (filters.sort ?? "date") === "account";
+  const [accounts, rows] = await Promise.all([
+    reading,
+    (sortedByAccount ? reading : Promise.resolve([])).then((ordered) => pageOf(ctx, filters, ordered)),
+  ]);
+  const accountNames = namesOf(accounts);
   const chips = await labelsFor(
     ctx,
     rows.map((row) => row.transaction.id),
   );
-  const accountNames = namesOf(accounts);
 
-  return rows.map(({ transaction, categoryName, categoryColor }) => {
+  return rows.map(({ transaction, categoryName, categoryColor, on }) => {
     const categoryState = categoryStateOf(transaction);
     return {
       id: transaction.id,
       accountId: transaction.accountId,
       accountName: accountNames.get(transaction.accountId) ?? null,
       occurredAt: transaction.occurredAt,
-      on: civilDateIn(transaction.occurredAt, ctx.timeZone),
+      on,
       amountCents: transaction.amountCents,
       currency: transaction.currency,
       type: transaction.type,
