@@ -20,11 +20,13 @@ export {
   SOURCE_PRECEDENCE,
   accountMode,
   bucketOf,
+  changeBetween,
   hasIbanField,
   isFutureDate,
   movementEffect,
+  shareOf,
 } from "./rules";
-export type { AccountMode, MovementEffect } from "./rules";
+export type { AccountMode, Change, MovementEffect } from "./rules";
 export {
   AccountError,
   accountReconstructedBalances,
@@ -34,6 +36,7 @@ export {
   archiveAccount,
   connectionsOf,
   createAccount,
+  dailyNetWorth,
   reconstructedBalances,
   deleteBalanceEntry,
   ibanOwnersOf,

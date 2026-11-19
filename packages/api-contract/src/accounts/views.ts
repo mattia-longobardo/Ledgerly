@@ -4,8 +4,8 @@
 // an account's own fields are in its currency.
 import { z } from "zod";
 import { defineRoute } from "../route";
-import { civilDate, id, money, monthStart } from "../primitives";
-import { ACCOUNT_ID, ACCOUNT_ORIGINS, ACCOUNT_STATES, ACCOUNT_TYPES, byAccount } from "./shared";
+import { civilDate, id, instant, money, monthStart } from "../primitives";
+import { ACCOUNT_ID, ACCOUNT_ORIGINS, ACCOUNT_STATES, ACCOUNT_TYPES, byAccount, delta } from "./shared";
 
 /** The longest window of the views: ten years of month ends, three of days. */
 const MAX_MONTHS = 120;
@@ -43,6 +43,15 @@ const viewRow = z.object({
   }),
   missingRate: z.boolean(),
   stale: z.boolean(),
+  /** `balance` from `previous`, in the account's currency. */
+  change: delta,
+  /** `balance` from the same month a year before (the 13th month end back); null with fewer months. */
+  yoy: delta,
+  /** `display.balance` as a fraction of `total`; null for an archived account, outside the total. */
+  share: z.number().nullable(),
+  lastSyncedAt: instant().nullable(),
+  /** The service of Investments a provider feeds, and its last reading: what «Last synced» shows first. */
+  service: z.object({ provider: z.string(), lastSyncedAt: instant().nullable() }).nullable(),
 });
 
 const VIEW_ROW_EXAMPLE = {
@@ -64,6 +73,11 @@ const VIEW_ROW_EXAMPLE = {
   display: { balance: "11302.40", previous: "11545.84", held: ["11545.84", "11302.40"] },
   missingRate: false,
   stale: false,
+  change: { amount: "-243.44", fraction: -0.0210849 },
+  yoy: { amount: null, fraction: null },
+  share: 1,
+  lastSyncedAt: null,
+  service: null,
 };
 
 export const getNetWorth = defineRoute({
@@ -88,6 +102,10 @@ export const getNetWorth = defineRoute({
     totalPartial: z.boolean(),
     /** The net worth at the end of the month before `through`. */
     previousTotal: money().nullable(),
+    /** `total` from `previousTotal`. */
+    change: delta,
+    /** `total` from the net worth at the end of December of the year before `through`; null outside the window. */
+    yearToDate: delta,
     buckets: z.object({
       cash: bucketTotal,
       savings: bucketTotal,
@@ -113,6 +131,8 @@ export const getNetWorth = defineRoute({
       total: "11302.40",
       totalPartial: false,
       previousTotal: "11545.84",
+      change: { amount: "-243.44", fraction: -0.0210849 },
+      yearToDate: { amount: null, fraction: null },
       buckets: {
         cash: { total: "11302.40", partial: false, count: 1 },
         savings: { total: null, partial: false, count: 0 },
@@ -151,6 +171,104 @@ export const getAccountDailyBalances = defineRoute({
       days: ["2026-11-01", "2026-11-02"],
       values: ["11302.40", "11250.00"],
       estimated: [false, true],
+    },
+  },
+});
+
+/** The longest window of the daily net worth: a year of days, as the chart draws it. */
+const MAX_NET_WORTH_DAYS = 366;
+
+export const getNetWorthDaily = defineRoute({
+  id: "get_net_worth_daily",
+  method: "GET",
+  path: "/net-worth/daily",
+  scope: "read",
+  capability: "accounts",
+  summary: `The accounts «in the net worth» day by day from \`from\` to \`to\`, in the display currency at the rate of each day: at most the last ${MAX_NET_WORTH_DAYS} days of the window, cut at today.`,
+  actions: [],
+  query: z.object({ from: civilDate(), to: civilDate() }),
+  response: z.object({
+    currency: z.string(),
+    days: z.array(z.string()),
+    /** Summed like the net worth: unknown only when every account is. */
+    total: z.array(money().nullable()),
+    /** Per day, whether any account stands on its movements rather than on a reading. */
+    estimated: z.array(z.boolean()),
+    accounts: z.array(
+      z.object({ id: id(), values: z.array(money().nullable()), estimated: z.array(z.boolean()) }),
+    ),
+  }),
+  errors: ["invalid"],
+  example: {
+    query: { from: "2026-11-01", to: "2026-11-02" },
+    response: {
+      currency: "EUR",
+      days: ["2026-11-01", "2026-11-02"],
+      total: ["11302.40", "11250.00"],
+      estimated: [false, true],
+      accounts: [{ id: ACCOUNT_ID, values: ["11302.40", "11250.00"], estimated: [false, true] }],
+    },
+  },
+});
+
+const SWITCH_OFFERS = ["none", "connect_first", "offer"] as const;
+
+export const getAccountContext = defineRoute({
+  id: "get_account_context",
+  method: "GET",
+  path: "/accounts/{id}/context",
+  scope: "read",
+  capability: "accounts",
+  summary:
+    "What an account's page shows around its figures: its provider, Investments, the pockets, subscriptions and interest rules on it, and the switch to the bank.",
+  actions: [],
+  params: byAccount,
+  response: z.object({
+    /** The provider's name as a person calls it; null for a manual account. */
+    providerLabel: z.string().nullable(),
+    /** A service of Investments: its page is in Investments. */
+    inInvestments: z.boolean(),
+    /** Investments writes its balances: no balance is recorded by hand. */
+    managed: z.boolean(),
+    pockets: z.array(z.object({ id: id(), name: z.string() })),
+    /** The subscriptions paid from it, and what they cost a month, in the account's currency. */
+    subscriptions: z.object({ count: z.number().int(), monthly: money() }),
+    interestRules: z.array(
+      z.object({
+        id: id(),
+        /** `upTo` null on the last tier: everything above. `annualRate` a fraction ("0.0275"). */
+        tiers: z.array(z.object({ upTo: money().nullable(), annualRate: z.string() })),
+      }),
+    ),
+    /** The switch to the bank still open on it, or null. */
+    switch: z
+      .object({
+        source: z.string(),
+        appliedAt: instant(),
+        cutDate: civilDate(),
+        transfers: z.number().int(),
+        publishes: z.boolean(),
+        /** The account it was joined to, by name. */
+        joined: z.string().nullable(),
+        /** The source of before is still connected: «Undo switch» can run. */
+        sourceConnected: z.boolean(),
+      })
+      .nullable(),
+    /** With no open switch: `offer` it can move to a connected bank, `connect_first` no bank yet, `none` not at all. */
+    switchOffer: z.enum(SWITCH_OFFERS),
+  }),
+  errors: ["invalid", "not_found"],
+  example: {
+    params: { id: ACCOUNT_ID },
+    response: {
+      providerLabel: null,
+      inInvestments: false,
+      managed: false,
+      pockets: [],
+      subscriptions: { count: 2, monthly: "24.98" },
+      interestRules: [{ id: ACCOUNT_ID, tiers: [{ upTo: null, annualRate: "0.0275" }] }],
+      switch: null,
+      switchOffer: "none",
     },
   },
 });

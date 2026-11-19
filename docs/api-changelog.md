@@ -3,6 +3,29 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · the figures of accounts (release R2, accounts, completion)
+
+Every change, share and conversion a screen of accounts shows is now a field of the API: the
+client does not work them out. A change is `{ amount, fraction }`: `amount` is `null` when either
+value is unknown, `fraction` is `null` also when the earlier value is zero.
+
+- A refusal `iban_exists` or `iban_archived` (`POST /accounts`, `PATCH /accounts/{id}`) adds `other`:
+  the name of the account that has the IBAN. Never the IBAN. The error body may carry `other`.
+- `GET /net-worth` adds `change` (from `previousTotal`) and `yearToDate` (from the end of December
+  before the year of the window's last month; `null` when that month is outside the window). Each
+  row of `accounts` adds `change` (from `previous`), `yoy` (from the 13th month end back), `share`
+  (of `total`, `null` for an archived account), `lastSyncedAt`, and `service` (`provider` and
+  `lastSyncedAt` of the service of Investments that feeds it, or `null`).
+- `GET /accounts/{id}/balances` and the MCP tool `get_account_balances` add `change` to each entry:
+  from the entry before it. The oldest entry of a page has one too; only the oldest ever has `null`.
+- New, scope `read`: `GET /net-worth/daily?from=&to=` (the accounts in the net worth day by day, in
+  the display currency at the rate of each day, with their sum; at most the last 366 days of the
+  window, cut at today), `GET /accounts/{id}/context` (provider's name, Investments, pockets,
+  subscriptions, interest rules, the open switch and whether the switch is offered) and
+  `GET /accounts/{id}/switch/candidates` (the accounts of the banks the switch can move it to;
+  the IBAN only as `sameIban` and `otherIban`, never whole or masked).
+- No MCP tool is added.
+
 ## 2026-11-19 · Security, Profile and Server in the contract (release R2, users and settings)
 
 - New, scope `security` (capability `security`): `GET /security/sign-in`: `password`, `sso`,

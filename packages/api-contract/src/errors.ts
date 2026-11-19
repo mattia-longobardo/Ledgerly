@@ -38,4 +38,9 @@ export const API_ERRORS: Record<ApiErrorCode, number> = {
 };
 
 /** The body of every answer that is not a 2xx. */
-export const errorBody = z.object({ error: z.enum(API_ERROR_CODES), reason: z.string().optional() });
+export const errorBody = z.object({
+  error: z.enum(API_ERROR_CODES),
+  reason: z.string().optional(),
+  /** `iban_exists` and `iban_archived`: the name of the account that has the IBAN, never the IBAN (H45). */
+  other: z.string().optional(),
+});

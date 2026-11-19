@@ -6,9 +6,8 @@ import type { Hono } from "hono";
 import type { z } from "zod";
 import { ACCOUNTS, type RouteContract } from "@ledgerly/api-contract";
 import {
-  accountReconstructedBalances,
-  accountsView,
   addConnection,
+  changeBetween,
   archiveAccount,
   readingsAt,
   connectionsOf,
@@ -28,13 +27,16 @@ import {
   updateConnection,
 } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { addDays, type CivilDate, monthKey, today } from "@ledgerly/domain/shared/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { accountRefusal, refusing } from "./cases";
-import { accountDetail, accountRow, balanceEntry, money, moneyOf, snapshot, viewRow } from "./dto";
+import { serveViews } from "./views";
+import { accountDetail, accountRow, balanceEntry, delta, money, moneyOf, snapshot } from "./dto";
 
 const { accounts, balances, links, removal, switch: switching, summary, views } = ACCOUNTS;
+
+type Wire<T extends z.ZodType> = z.input<T>;
 
 type Failure = { ok: false; error: string; retryAt?: string | null };
 type Outcome<T> = ({ ok: true } & T) | Failure;
@@ -79,6 +81,13 @@ export interface AccountCases {
     headers: Headers,
   ): Promise<Outcome<{ matched: number; transfers: number; fresh: number }>>;
   undoSwitch(ctx: Ctx, id: string): Promise<Outcome<object>>;
+  /** What the account's page shows around its figures (the registry of providers is the web's). */
+  context(ctx: Ctx, id: string): Promise<Outcome<{ context: Wire<typeof views.getAccountContext.response> }>>;
+  /** The step «Account» of the switch: the accounts of the banks, with the IBAN as two flags only. */
+  switchCandidates(
+    ctx: Ctx,
+    id: string,
+  ): Promise<Outcome<{ candidates: Wire<typeof switching.listSwitchCandidates.response> }>>;
 }
 
 /** A refusal of a use case of the web as the contract names it. */
@@ -102,9 +111,6 @@ function historyLimit(raw: string | undefined): number {
   const limit = Number(raw);
   return Number.isInteger(limit) && limit >= 1 && limit <= 200 ? limit : 200;
 }
-
-/** The longest window of `daily-balances`, as the contract says it. */
-const MAX_DAYS = 1100;
 
 function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, accounts.listAccounts, async ({ ctx }) => {
@@ -167,8 +173,15 @@ function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
 function serveBalances(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, balances.getAccountBalances, async ({ ctx, params, query }) => {
     await requireOwn(ctx, params.id);
-    const entries = await listBalanceEntries(ctx, params.id, historyLimit(query.limit));
-    return { balances: entries.map(balanceEntry) };
+    const limit = historyLimit(query.limit);
+    // One more than asked: the oldest entry answered has a change too, from the one before it.
+    const entries = await listBalanceEntries(ctx, params.id, limit + 1);
+    return {
+      balances: entries.slice(0, limit).map((entry, index) => ({
+        ...balanceEntry(entry),
+        change: delta(changeBetween(entry.balanceCents, entries[index + 1]?.balanceCents ?? null)),
+      })),
+    };
   });
   serve(app, guard, balances.recordAccountBalance, async ({ ctx, params, body }) => {
     try {
@@ -266,47 +279,15 @@ function serveFigures(app: Hono<ApiEnv>, guard: Guard, cases: AccountCases): voi
   });
 }
 
-function serveViews(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, views.getNetWorth, async ({ ctx, query }) => {
-    const view = await accountsView(ctx, {
-      months: query.months,
-      through: query.through,
-      includeArchived: query.includeArchived === "true",
-    });
-    return {
-      currency: view.currency,
-      months: view.months,
-      netWorth: view.netWorth.map((point, index) => ({
-        total: money(point.total),
-        partial: point.partial,
-        estimated: view.netWorthEstimated[index] ?? false,
-      })),
-      total: money(view.total),
-      totalPartial: view.totalPartial,
-      previousTotal: money(view.previousTotal),
-      buckets: {
-        cash: { ...view.buckets.cash, total: money(view.buckets.cash.total) },
-        savings: { ...view.buckets.savings, total: money(view.buckets.savings.total) },
-        investments: { ...view.buckets.investments, total: money(view.buckets.investments.total) },
-        other: { ...view.buckets.other, total: money(view.buckets.other.total) },
-      },
-      alerts: view.alerts.map((alert) => ({ accountId: alert.accountId, kind: alert.kind })),
-      missingRates: view.missingRates,
-      lastSnapshotMonth: view.lastSnapshot?.month ?? null,
-      accounts: view.rows.map(viewRow),
-    };
-  });
-  serve(app, guard, views.getAccountDailyBalances, async ({ ctx, params, query }) => {
-    await requireOwn(ctx, params.id);
-    const todayOn = today(ctx.timeZone);
-    const to: CivilDate = query.to < todayOn ? query.to : todayOn;
-    if (query.from > to || addDays(query.from, MAX_DAYS - 1) < to) throw new ApiRefusal("invalid");
-    const daily = await refusing(accountReconstructedBalances(ctx, params.id, { from: query.from, to }));
-    return { days: daily.days, values: daily.values.map(money), estimated: daily.estimated };
-  });
-}
-
 function serveRemovalAndSwitch(app: Hono<ApiEnv>, guard: Guard, cases: AccountCases): void {
+  serve(app, guard, views.getAccountContext, async ({ ctx, params }) => {
+    await requireOwn(ctx, params.id);
+    return settled(await cases.context(ctx, params.id)).context;
+  });
+  serve(app, guard, switching.listSwitchCandidates, async ({ ctx, params }) => {
+    await requireOwn(ctx, params.id);
+    return settled(await cases.switchCandidates(ctx, params.id)).candidates;
+  });
   serve(app, guard, removal.listAccountDependents, async ({ ctx, params }) => {
     const { dependents, targets } = settled(await cases.dependents(ctx, params.id));
     return { dependents, targets };

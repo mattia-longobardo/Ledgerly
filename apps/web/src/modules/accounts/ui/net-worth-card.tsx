@@ -1,12 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { accountsView } from "@ledgerly/domain/accounts";
-import { reconstructedBalances } from "@ledgerly/domain/accounts";
+import { dailyNetWorth } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { addDays, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
-import { convertCents } from "@ledgerly/domain/platform/fx";
-import { ratesOn } from "@ledgerly/domain/platform/fx";
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { Card } from "@ledgerly/ui/card";
 import { StackedArea } from "@ledgerly/ui/chart";
@@ -95,40 +93,24 @@ export async function NetWorthCard({
     const earliest = addDays(end, -365);
     const first = period.range.from > months[0] ? period.range.from : months[0];
     const start = first > earliest ? first : earliest;
-    const read = await reconstructedBalances(
+    // The domain's daily net worth, the one `GET /net-worth/daily` answers.
+    const read = await dailyNetWorth(
       ctx,
-      stacked.map(({ row }) => row.account.id),
+      stacked.map(({ row }) => row.account),
       { from: start, to: end },
     );
-    const nothing = read.days.map(() => null);
-    // Each day at its own rate, like the month ends; no rate is read when nothing needs one.
-    const rates = await ratesOn(
-      stacked.some(({ row }) => row.account.currency !== currency)
-        ? [currency, ...stacked.map(({ row }) => row.account.currency)]
-        : [],
-      start,
-      end,
-    );
+    const byId = new Map(read.accounts.map((account) => [account.id, account]));
     const layers = stacked.map(({ row, color }) => ({
       row,
       color,
-      values: (read.series.get(row.account.id)?.values ?? nothing).map((cents, index) =>
-        cents === null ? null : convertCents(cents, row.account.currency, currency, read.days[index], rates),
-      ),
-      estimated: read.series.get(row.account.id)?.estimated ?? read.days.map(() => false),
+      values: byId.get(row.account.id)?.values ?? read.days.map(() => null),
     }));
     plot = {
       labels: read.days.map((day) => formatDate(day, "long", ctx.locale)),
       xLabels: dayLabels(read.days, ctx.locale),
       layers,
-      // Summed like the net worth: unknown only when every account is.
-      total: read.days.map((_, index) =>
-        layers.reduce<Cents | null>((sum, layer) => {
-          const value = layer.values[index];
-          return value === null ? sum : (sum ?? 0n) + value;
-        }, null),
-      ),
-      estimated: read.days.map((_, index) => layers.some((layer) => layer.estimated[index])),
+      total: read.total,
+      estimated: read.estimated,
     };
   } else {
     plot = {

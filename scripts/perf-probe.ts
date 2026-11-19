@@ -403,6 +403,9 @@ const routes: [string, () => Promise<void>][] = [
   ],
   ["GET /transactions", () => call("GET", `/transactions?from=${civil(30)}&to=${civil(0)}`)],
   ["GET /summary", () => call("GET", "/summary")],
+  // One query more than the page's view: the last reading of the services of Investments
+  // (`service.lastSyncedAt`), which the pages read themselves before R3. Accepted on 2026-11-19.
+  ["GET /net-worth", () => call("GET", "/net-worth")],
   ["GET /investments", () => call("GET", "/investments")],
   ["GET /investments/:accountId/holdings", () => call("GET", `/investments/${brokers[0]}/holdings`)],
 ];

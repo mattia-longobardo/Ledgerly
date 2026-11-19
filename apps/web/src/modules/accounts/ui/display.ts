@@ -21,24 +21,8 @@ export function colorField(
   return { value: colorFor(account, index), automatic: account.color === null };
 }
 
-interface Change {
-  cents: Cents | null;
-  /** The change as a fraction of the earlier value; `null` when there is nothing to compare to. */
-  fraction: number | null;
-}
-
-/** What changed between two known values. Either one unknown makes the change unknown, not zero. */
-export function changeBetween(current: Cents | null, earlier: Cents | null): Change {
-  if (current === null || earlier === null) return { cents: null, fraction: null };
-  const cents = current - earlier;
-  return { cents, fraction: earlier === 0n ? null : Number(cents) / Math.abs(Number(earlier)) };
-}
-
-/** An account's share of a total; `null` rather than a misleading 0 % when either is unknown. */
-export function shareOf(value: Cents | null, total: Cents | null): number | null {
-  if (value === null || total === null || total === 0n) return null;
-  return Number(value) / Number(total);
-}
+// The change and the share are the domain's rule, the same one `/api/v1` answers.
+export { changeBetween, shareOf } from "@ledgerly/domain/accounts";
 
 /**
  * An account's value in the display currency, for the line under its own (§1.8): `null` when the

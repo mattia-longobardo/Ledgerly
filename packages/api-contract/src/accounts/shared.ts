@@ -84,6 +84,12 @@ export const balanceEntry = z.object({
   capturedAt: instant(),
 });
 
+/**
+ * What changed between two values: the amount, and the fraction of the earlier one. Either value
+ * unknown gives `amount: null`; an earlier value of zero gives `fraction: null`.
+ */
+export const delta = z.object({ amount: money().nullable(), fraction: z.number().nullable() });
+
 export const BALANCE_ENTRY_EXAMPLE = {
   id: ENTRY_ID,
   on: "2026-10-31",

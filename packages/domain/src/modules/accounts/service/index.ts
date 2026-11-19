@@ -45,3 +45,4 @@ export {
   removeConnection,
 } from "./connections";
 export type { AccountConnection, ConnectionInput } from "./connections";
+export { dailyNetWorth } from "./daily-net-worth";

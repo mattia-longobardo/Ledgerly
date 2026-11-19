@@ -148,3 +148,61 @@ export const undoAccountSwitch = defineRoute({
   errors: SWITCH_ERRORS,
   example: { params: { id: ACCOUNT_ID } },
 });
+
+export const listSwitchCandidates = defineRoute({
+  id: "list_switch_candidates",
+  method: "GET",
+  path: "/accounts/{id}/switch/candidates",
+  scope: "read",
+  capability: "accounts",
+  summary:
+    "The step «Account» of the switch: the accounts of the person's banks in the account's currency that it can move to. No IBAN, whole or masked (H45): only whether it is the account's own.",
+  actions: [],
+  params: byAccount,
+  response: z.object({
+    banks: z.array(
+      z.object({
+        connectionId: id(),
+        bank: z.string(),
+        /** The consent ran out: its accounts cannot be chosen. */
+        expired: z.boolean(),
+        accounts: z.array(
+          z.object({
+            bankAccountId: z.string(),
+            name: z.string().nullable(),
+            currency: z.string(),
+            /** The account here the bank already feeds, which the switch joins. */
+            here: z.object({ id: id(), name: z.string() }).nullable(),
+            /** The bank's IBAN is the account's own. */
+            sameIban: z.boolean(),
+            /** The bank's IBAN is another one: it cannot be chosen. */
+            otherIban: z.boolean(),
+          }),
+        ),
+      }),
+    ),
+  }),
+  errors: ["invalid", "not_found", "conflict"],
+  example: {
+    params: { id: ACCOUNT_ID },
+    response: {
+      banks: [
+        {
+          connectionId: CONNECTION_ID,
+          bank: "Example Bank",
+          expired: false,
+          accounts: [
+            {
+              bankAccountId: BANK_ACCOUNT_ID,
+              name: "Current account",
+              currency: "EUR",
+              here: null,
+              sameIban: true,
+              otherIban: false,
+            },
+          ],
+        },
+      ],
+    },
+  },
+});

@@ -56,6 +56,13 @@ export interface ProviderPass {
 
 const CATALOGUES = { en, it } as const;
 
+/** The name of a kind of account a bank exposes, in `locale`: what «Choose the accounts» calls it. */
+export function bankKindLabel(
+  locale: UiLocale,
+): (type: "checking" | "savings" | "credit" | "cash") => string {
+  return (type) => CATALOGUES[locale].accounts.types[type];
+}
+
 /** A provider with one connection: the connection has the provider's name. */
 const named = (name: string): ConnectionLabel => ({ name, provider: name });
 

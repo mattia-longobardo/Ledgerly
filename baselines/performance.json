@@ -97,6 +97,11 @@
       "p95Ms": 36.9,
       "queries": 10
     },
+    "GET /net-worth": {
+      "medianMs": 36.6,
+      "p95Ms": 39.8,
+      "queries": 10
+    },
     "GET /investments": {
       "medianMs": 21.9,
       "p95Ms": 24.3,

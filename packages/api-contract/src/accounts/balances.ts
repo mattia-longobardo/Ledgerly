@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { amountInput, civilDate, id, money } from "../primitives";
-import { ACCOUNT_ERRORS, ACCOUNT_ID, BALANCE_ENTRY_EXAMPLE, balanceEntry, ENTRY_ID } from "./shared";
+import { ACCOUNT_ERRORS, ACCOUNT_ID, BALANCE_ENTRY_EXAMPLE, balanceEntry, delta, ENTRY_ID } from "./shared";
 
 /** The most entries one read gives, and how many when the caller does not say. */
 const MAX_BALANCES = 200;
@@ -31,7 +31,12 @@ export const getAccountBalances = defineRoute({
   actions: [],
   params: z.object({ id: id() }),
   query: z.object({ limit: z.string().optional() }),
-  response: z.object({ balances: z.array(balanceEntry) }),
+  response: z.object({
+    balances: z.array(
+      /** `change`: from the entry before it, in the account's currency (the oldest one ever: null). */
+      balanceEntry.extend({ change: delta }),
+    ),
+  }),
   errors: ["invalid", "not_found"],
   mcp: {
     title: "Balance history",
@@ -53,7 +58,9 @@ export const getAccountBalances = defineRoute({
   example: {
     params: { id: ACCOUNT_ID },
     query: { limit: "50" },
-    response: { balances: [BALANCE_ENTRY_EXAMPLE] },
+    response: {
+      balances: [{ ...BALANCE_ENTRY_EXAMPLE, change: { amount: "-243.44", fraction: -0.0210849 } }],
+    },
   },
 });
 

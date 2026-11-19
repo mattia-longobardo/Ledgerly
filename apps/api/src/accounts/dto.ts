@@ -3,19 +3,21 @@
 // string, a moment as ISO 8601, and an IBAN never (H45).
 import type { z } from "zod";
 import type { ACCOUNTS } from "@ledgerly/api-contract";
-import { type Account, bucketOf } from "@ledgerly/domain/accounts";
+import { type Account, bucketOf, type Change } from "@ledgerly/domain/accounts";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
 type Wire<T extends z.ZodType> = z.input<T>;
 type Detail = Wire<typeof ACCOUNTS.accounts.getAccount.response>;
 type Row = Wire<typeof ACCOUNTS.accounts.listAccounts.response>["accounts"][number];
-type Entry = Wire<typeof ACCOUNTS.balances.getAccountBalances.response>["balances"][number];
+type Entry = Wire<typeof ACCOUNTS.balances.updateBalanceEntry.response>;
 type Snapshot = Wire<typeof ACCOUNTS.summary.listSnapshots.response>["snapshots"][number];
 type ViewRow = Wire<typeof ACCOUNTS.views.getNetWorth.response>["accounts"][number];
 
 export const money = (cents: Cents | null): string | null => (cents === null ? null : centsToDecimal(cents));
 export const moneyOf = (cents: Cents): string => centsToDecimal(cents);
-const instant = (moment: Date | null): string | null => moment?.toISOString() ?? null;
+export const instant = (moment: Date | null): string | null => moment?.toISOString() ?? null;
+/** A change of the domain (`changeBetween`) as the wire writes it. */
+export const delta = (change: Change) => ({ amount: money(change.cents), fraction: change.fraction });
 
 export function accountRow(account: Account, balance: Cents | null): Row {
   return {
@@ -102,17 +104,20 @@ export function snapshot(run: {
   };
 }
 
-export function viewRow(row: {
-  account: Account;
-  balance: Cents | null;
-  previous: Cents | null;
-  series: (Cents | null)[];
-  estimated: boolean[];
-  held: (Cents | null)[];
-  display: { balance: Cents | null; previous: Cents | null; held: (Cents | null)[] };
-  missingRate: boolean;
-  stale: boolean;
-}): ViewRow {
+export function viewRow(
+  row: {
+    account: Account;
+    balance: Cents | null;
+    previous: Cents | null;
+    series: (Cents | null)[];
+    estimated: boolean[];
+    held: (Cents | null)[];
+    display: { balance: Cents | null; previous: Cents | null; held: (Cents | null)[] };
+    missingRate: boolean;
+    stale: boolean;
+  },
+  extra: Pick<ViewRow, "change" | "yoy" | "share" | "service">,
+): ViewRow {
   const { account } = row;
   return {
     id: account.id,
@@ -137,5 +142,7 @@ export function viewRow(row: {
     },
     missingRate: row.missingRate,
     stale: row.stale,
+    lastSyncedAt: instant(account.lastSyncedAt),
+    ...extra,
   };
 }

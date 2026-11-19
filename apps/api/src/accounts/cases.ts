@@ -8,7 +8,11 @@ const INVALID = new Set(["future_date", "iban_invalid", "invalid"]);
 export function accountRefusal(error: unknown): unknown {
   if (!(error instanceof AccountError)) return error;
   if (error.code === "not_found") return new ApiRefusal("not_found");
-  return new ApiRefusal(INVALID.has(error.code) ? "invalid" : "conflict", error.code);
+  return new ApiRefusal(
+    INVALID.has(error.code) ? "invalid" : "conflict",
+    error.code,
+    error.other ?? undefined,
+  );
 }
 
 /** Runs a use case of the module and turns its refusal into the contract's. */

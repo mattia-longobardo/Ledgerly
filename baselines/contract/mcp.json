@@ -415,7 +415,11 @@
      "available": null,
      "source": "manual",
      "note": null,
-     "capturedAt": "2031-10-15T10:00:00.000Z"
+     "capturedAt": "2031-10-15T10:00:00.000Z",
+     "change": {
+      "amount": "-243.44",
+      "fraction": -0.021084650402222793
+     }
     },
     {
      "id": "<id-8>",
@@ -424,7 +428,11 @@
      "available": null,
      "source": "manual",
      "note": null,
-     "capturedAt": "2031-10-15T10:00:00.000Z"
+     "capturedAt": "2031-10-15T10:00:00.000Z",
+     "change": {
+      "amount": "2111.46",
+      "fraction": 0.2238048499212455
+     }
     },
     {
      "id": "<id-9>",
@@ -433,7 +441,11 @@
      "available": null,
      "source": "manual",
      "note": null,
-     "capturedAt": "2031-10-15T10:00:00.000Z"
+     "capturedAt": "2031-10-15T10:00:00.000Z",
+     "change": {
+      "amount": "2111.46",
+      "fraction": 0.28833580047303536
+     }
     }
    ]
   }

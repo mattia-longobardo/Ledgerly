@@ -57,6 +57,14 @@ describe("call", () => {
     });
   });
 
+  it("carries the name of the account a refusal is about", async () => {
+    answer(409, { error: "conflict", reason: "iban_exists", other: "Bills" });
+    await expect(call(profile.updateProfile, { body: { name: "x" } })).rejects.toMatchObject({
+      reason: "iban_exists",
+      other: "Bills",
+    });
+  });
+
   it("refuses an answer that is not the declared shape", async () => {
     answer(200, { name: 1 });
     await expect(call(profile.getProfile, {})).rejects.toBeInstanceOf(ApiError);

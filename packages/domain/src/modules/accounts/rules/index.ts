@@ -182,3 +182,5 @@ export {
 export type { AccountMode, IbanHolder, LocalAccount, RemoteAccount } from "./provider";
 export { MANUAL_MOVEMENT_MODES, movementBalances, movementEffect, withMovementPoints } from "./movements";
 export type { BalanceReading, ManualMovement, MovementEffect } from "./movements";
+export { changeBetween, shareOf } from "./changes";
+export type { Change } from "./changes";

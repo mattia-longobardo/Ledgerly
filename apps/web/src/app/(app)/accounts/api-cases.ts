@@ -6,7 +6,7 @@ import "server-only";
 import { z } from "zod";
 import type { AccountCases } from "@ledgerly/api";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
-import { listAccounts } from "@ledgerly/domain/accounts";
+import { type Account, getAccount, listAccounts } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
@@ -22,6 +22,7 @@ import {
   deleteAccount,
   moveDependent,
 } from "./[id]/delete";
+import { accountContext, switchCandidates } from "./[id]/context";
 import { applySwitch, checkSwitch, type SwitchError, SwitchFailure, undoSwitch } from "./[id]/switch/switch";
 
 type DeleteFailure = { ok: false; error: DeleteErrorCode | "failed" };
@@ -133,6 +134,13 @@ async function undoSwitchOf(ctx: Ctx, accountId: string): Promise<{ ok: true } |
   }
 }
 
+/** A read of the account's page; the route already checked the account is the person's. */
+async function readOf<T>(ctx: Ctx, accountId: string, read: (account: Account) => Promise<T>) {
+  const account = await getAccount(ctx, accountId);
+  if (!account) return { ok: false as const, error: "not_found" };
+  return { ok: true as const, value: await read(account) };
+}
+
 export const accountCases: AccountCases = {
   figures: (ctx) => monthlyFigures(ctx, monthKey(today(ctx.timeZone))),
   dependents: dependentsOf,
@@ -141,4 +149,12 @@ export const accountCases: AccountCases = {
   checkSwitch: (ctx, id, target, headers) => checkSwitchOf(ctx, id, target, presenceOf(headers)),
   applySwitch: (ctx, id, target, headers) => applySwitchOf(ctx, id, target, presenceOf(headers)),
   undoSwitch: undoSwitchOf,
+  context: async (ctx, id) => {
+    const read = await readOf(ctx, id, (account) => accountContext(ctx, account));
+    return read.ok ? { ok: true, context: read.value } : read;
+  },
+  switchCandidates: async (ctx, id) => {
+    const read = await readOf(ctx, id, (account) => switchCandidates(ctx, account));
+    return read.ok ? { ok: true, candidates: read.value } : read;
+  },
 };

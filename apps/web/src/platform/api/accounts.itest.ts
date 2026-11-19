@@ -196,3 +196,147 @@ describe("parity of accounts: route = MCP tool", () => {
     );
   });
 });
+
+describe("the fields of R3 accounts: every figure a screen shows is the API's", () => {
+  async function record(ctx: Ctx, id: string, on: string, balance: string) {
+    expect((await send(ctx, "POST", `/accounts/${id}/balances`, { on, balance })).status).toBe(201);
+  }
+
+  /** Two accounts in the net worth and one archived, over a year and a month. */
+  async function history() {
+    const main = await newAccount(alice, { name: "Main" });
+    const side = await newAccount(alice, { name: "Side" });
+    const gone = await newAccount(alice, { name: "Gone" });
+    for (const [on, balance] of [
+      ["2025-02-28", "100"],
+      ["2025-12-31", "120"],
+      ["2026-01-31", "150"],
+      ["2026-02-20", "180"],
+    ]) {
+      await record(alice, main.id, on, balance);
+    }
+    await record(alice, side.id, "2026-01-31", "20");
+    await record(alice, gone.id, "2026-01-31", "5");
+    await send(alice, "POST", `/accounts/${gone.id}/archive`);
+    return { main, side, gone };
+  }
+
+  it("names the account that has the IBAN in a refusal, and never the IBAN", async () => {
+    await newAccount(alice, { iban: IBAN });
+    const twice = await send(alice, "POST", "/accounts", { name: "Second", type: "checking", iban: IBAN });
+    expect(twice).toEqual({
+      status: 409,
+      body: { error: "conflict", reason: "iban_exists", other: "Everyday" },
+    });
+    const other = await newAccount(alice, { name: "Other" });
+    const moved = await send(alice, "PATCH", `/accounts/${other.id}`, { iban: IBAN });
+    expect(moved.body).toEqual({ error: "conflict", reason: "iban_exists", other: "Everyday" });
+    expect(JSON.stringify([twice, moved])).not.toContain(IBAN.slice(4));
+  });
+
+  it("gives each account's change, year over year, share and sync, and the net worth's changes", async () => {
+    const { main, side, gone } = await history();
+    const view = (await send(alice, "GET", "/net-worth?months=13&through=2026-02-01&includeArchived=true"))
+      .body;
+    const row = (id: string) => view.accounts.find((one: { id: string }) => one.id === id);
+    expect(view.total).toBe("200.00");
+    expect(row(main.id)).toMatchObject({
+      change: { amount: "30.00", fraction: 0.2 },
+      yoy: { amount: "80.00", fraction: 0.8 },
+      share: 0.9,
+      lastSyncedAt: null,
+      service: null,
+    });
+    expect(row(side.id)).toMatchObject({ change: { amount: "0.00", fraction: 0 }, share: 0.1 });
+    expect(row(gone.id).share).toBeNull();
+    expect(view.change).toEqual({ amount: "30.00", fraction: 30 / 170 });
+    expect(view.yearToDate).toEqual({ amount: "80.00", fraction: 80 / 120 });
+
+    // Parity: what the pages work out today from the same view (`accounts/page.tsx`, `(app)/page.tsx`).
+    const { accountsView } = await import("@ledgerly/domain/accounts");
+    const { changeBetween, shareOf } = await import("@/modules/accounts/ui/display");
+    const page = await accountsView(alice, { through: "2026-02-01", months: 13, includeArchived: true });
+    const wire = (change: { cents: bigint | null; fraction: number | null }) => ({
+      amount: change.cents === null ? null : (Number(change.cents) / 100).toFixed(2),
+      fraction: change.fraction,
+    });
+    for (const one of page.rows) {
+      expect(row(one.account.id)).toMatchObject({
+        change: wire(changeBetween(one.balance, one.previous)),
+        yoy: wire(changeBetween(one.balance, one.series.at(-13) ?? null)),
+        share: one.account.state === "archived" ? null : shareOf(one.display.balance, page.total),
+      });
+    }
+    const january = page.months.indexOf("2026-01-01");
+    expect(view.change).toEqual(wire(changeBetween(page.total, page.previousTotal)));
+    expect(view.yearToDate).toEqual(wire(changeBetween(page.total, page.netWorth[january - 1].total)));
+  });
+
+  it("gives each balance its change from the one before, also the oldest of a page", async () => {
+    const { main } = await history();
+    const two = (await send(alice, "GET", `/accounts/${main.id}/balances?limit=2`)).body.balances;
+    expect(two.map((entry: { change: unknown }) => entry.change)).toEqual([
+      { amount: "30.00", fraction: 0.2 },
+      { amount: "30.00", fraction: 0.25 },
+    ]);
+    const all = (await send(alice, "GET", `/accounts/${main.id}/balances`)).body.balances;
+    expect(all.at(-1).change).toEqual({ amount: null, fraction: null });
+    // Parity with the page's table (`entryRows`): each entry from the next older one.
+    const { changeBetween } = await import("@/modules/accounts/ui/display");
+    const amounts = ["180", "150", "120", "100"].map((value) => BigInt(value) * 100n);
+    expect(all.map((entry: { change: { fraction: number | null } }) => entry.change.fraction)).toEqual(
+      amounts.map((cents, index) => changeBetween(cents, amounts[index + 1] ?? null).fraction),
+    );
+  });
+
+  it("gives the net worth day by day in the display currency, as the chart drew it", async () => {
+    const { main, side } = await history();
+    const daily = await send(alice, "GET", "/net-worth/daily?from=2026-01-30&to=2026-02-01");
+    expect(daily.body).toEqual({
+      currency: "EUR",
+      days: ["2026-01-30", "2026-01-31", "2026-02-01"],
+      total: ["120.00", "170.00", "170.00"],
+      estimated: [false, false, false],
+      accounts: [
+        { id: main.id, values: ["120.00", "150.00", "150.00"], estimated: [false, false, false] },
+        { id: side.id, values: [null, "20.00", "20.00"], estimated: [false, false, false] },
+      ],
+    });
+    // Parity with the chart before it read the domain's rule: each account rebuilt, then summed.
+    const { reconstructedBalances } = await import("@ledgerly/domain/accounts");
+    const read = await reconstructedBalances(alice, [main.id, side.id], {
+      from: "2026-01-30",
+      to: "2026-02-01",
+    });
+    const summed = read.days.map((_day, index) =>
+      [main.id, side.id].reduce((sum, id) => sum + (read.series.get(id)?.values[index] ?? 0n), 0n),
+    );
+    expect(daily.body.total).toEqual(summed.map((cents) => (Number(cents) / 100).toFixed(2)));
+    const year = await send(alice, "GET", "/net-worth/daily?from=2020-01-01&to=2026-02-01");
+    expect(year.body.days).toHaveLength(366);
+    expect((await send(alice, "GET", "/net-worth/daily?from=2026-02-02&to=2026-02-01")).status).toBe(400);
+  });
+
+  it("gives what the account's page reads around its figures, and the bank accounts without an IBAN", async () => {
+    const account = await newAccount(alice, { iban: IBAN });
+    const context = await send(alice, "GET", `/accounts/${account.id}/context`);
+    expect(context).toEqual({
+      status: 200,
+      body: {
+        providerLabel: null,
+        inInvestments: false,
+        managed: false,
+        pockets: [],
+        subscriptions: { count: 0, monthly: "0.00" },
+        interestRules: [],
+        switch: null,
+        switchOffer: "none",
+      },
+    });
+    const candidates = await send(alice, "GET", `/accounts/${account.id}/switch/candidates`);
+    expect(candidates).toEqual({ status: 200, body: { banks: [] } });
+    expect(JSON.stringify([context.body, candidates.body])).not.toContain(IBAN.slice(4));
+    expect((await send(bob, "GET", `/accounts/${account.id}/context`)).status).toBe(404);
+    expect((await send(bob, "GET", `/accounts/${account.id}/switch/candidates`)).status).toBe(404);
+  });
+});

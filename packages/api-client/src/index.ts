@@ -25,6 +25,8 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     readonly reason: string | null,
+    /** `iban_exists` and `iban_archived`: the name of the account that has the IBAN. */
+    readonly other: string | null = null,
   ) {
     super(`${status} ${code}${reason ? ` (${reason})` : ""}`);
     this.name = "ApiError";
@@ -76,10 +78,12 @@ async function refusalOf(response: Response): Promise<ApiError> {
   const body: unknown = await response.json().catch(() => null);
   const code = isRecord(body) ? body.error : undefined;
   const reason = isRecord(body) ? body.reason : undefined;
+  const other = isRecord(body) ? body.other : undefined;
   return new ApiError(
     response.status,
     typeof code === "string" ? code : "server_error",
     typeof reason === "string" ? reason : null,
+    typeof other === "string" ? other : null,
   );
 }
 
