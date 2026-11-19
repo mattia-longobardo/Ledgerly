@@ -94,8 +94,9 @@ e2e() { npx playwright test -c playwright.preview.config.ts --reporter=line --ou
 duplication() {
   npx tsx -e '
     import { readFileSync } from "node:fs";
-    import { measureDuplication, readProductCode } from "./scripts/duplication.ts";
-    const now = measureDuplication(readProductCode(process.cwd() + "/src")).total;
+    import { measureDuplication } from "./scripts/duplication.ts";
+    import { readProductSources } from "./scripts/source-graph.ts";
+    const now = measureDuplication(readProductSources(process.cwd())).total;
     const was = JSON.parse(readFileSync("baselines/duplication.json", "utf8")).total;
     console.log(`${now.duplicatedLines} of ${now.lines} lines (${now.percent}%); recorded ${was.percent}%`);
     if (now.percent > was.percent) process.exit(1);
