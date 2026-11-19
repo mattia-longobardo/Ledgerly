@@ -5,6 +5,7 @@
 import "server-only";
 import { apiRoutes, readTools } from "@ledgerly/api";
 import { accountCases } from "@/app/(app)/accounts/api-cases";
+import { transactionCases } from "@/app/(app)/expenses/api-cases";
 import { connectionCases } from "@/app/(app)/settings/integrations/api-cases";
 import { serverCases } from "@/app/(app)/settings/server/api-cases";
 import { api } from "@/platform/api/app";
@@ -17,6 +18,7 @@ export const adapters = {
   connections: connectionCases,
   server: serverCases,
   accounts: accountCases,
+  transactions: transactionCases,
 };
 
 api.route("/", apiRoutes(adapters));

@@ -5,9 +5,7 @@ import { z } from "zod";
 import { budgetsView } from "@ledgerly/domain/budgets";
 import { holdingsJson, pnlJson, portfolioJson } from "@/modules/investments/api";
 import { investmentsPnl, investmentsPortfolio, serviceHoldings } from "@ledgerly/domain/investments";
-import { listTransactions, transactionsSummary } from "@ledgerly/domain/transactions";
-import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
-import { instant, money } from "@/platform/api/json";
+import { money } from "@/platform/api/json";
 import type { ApiScope } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
@@ -29,9 +27,6 @@ import type { ReadTool } from "@ledgerly/api";
  * not see the tool at all. The Investments tools need `investments:read`, which `read` does not
  * imply (docs/design/investments.md §5.5).
  */
-
-const MAX_TRANSACTIONS = 500;
-const DEFAULT_TRANSACTIONS = 50;
 
 const civilDateField = civilDate("A date as YYYY-MM-DD");
 const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "A month as YYYY-MM");
@@ -69,73 +64,6 @@ export function buildMcpServer(
     reads.filter((tool) => scopes.some((scope) => scope === tool.scope)),
   );
   if (!scopes.includes("read")) return server;
-
-  server.registerTool(
-    "list_transactions",
-    {
-      title: "Transactions",
-      description:
-        "Movements filtered by period, account, category, type and payee text, with the totals of the " +
-        "whole filtered range (not just the page), as GET /api/v1/transactions. Paginate with offset.",
-      inputSchema: {
-        from: civilDateField.optional().describe("First day included, YYYY-MM-DD."),
-        to: civilDateField.optional().describe("Last day included, YYYY-MM-DD."),
-        account_id: z.uuid().optional().describe("Only this account, from list_accounts."),
-        category_id: z
-          .uuid()
-          .optional()
-          .describe("Only this category (a group includes its sub-categories)."),
-        type: z.enum(TRANSACTION_TYPES).optional(),
-        payee: z.string().trim().min(1).max(200).optional().describe("Text the payee contains."),
-        limit: z
-          .number()
-          .int()
-          .min(1)
-          .max(MAX_TRANSACTIONS)
-          .optional()
-          .describe(`Page size (default ${DEFAULT_TRANSACTIONS}).`),
-        offset: z.number().int().min(0).optional(),
-      },
-      annotations: READ_ONLY,
-    },
-    async ({ account_id, category_id, type, limit, ...rest }) => {
-      const filters = {
-        ...rest,
-        accountIds: account_id ? [account_id] : undefined,
-        categoryIds: category_id ? [category_id] : undefined,
-        types: type ? [type] : undefined,
-      };
-      const [rows, summary] = await Promise.all([
-        listTransactions(ctx, { ...filters, limit: limit ?? DEFAULT_TRANSACTIONS }),
-        transactionsSummary(ctx, filters),
-      ]);
-      return json({
-        transactions: rows.map((row) => ({
-          id: row.id,
-          on: row.on,
-          occurredAt: instant(row.occurredAt),
-          accountId: row.accountId,
-          accountName: row.accountName,
-          amount: money(row.amountCents),
-          currency: row.currency,
-          type: row.type,
-          state: row.state,
-          categoryId: row.categoryId,
-          categoryName: row.categoryName,
-          payee: row.payee,
-          note: row.note,
-          labels: row.labels.map((label) => label.name),
-          hidden: row.hidden,
-        })),
-        summary: {
-          count: summary.count,
-          income: money(summary.incomeCents),
-          expense: money(summary.expenseCents),
-          net: money(summary.netCents),
-        },
-      });
-    },
-  );
 
   server.registerTool(
     "list_budgets",

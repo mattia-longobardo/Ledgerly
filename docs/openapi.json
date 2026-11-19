@@ -13736,7 +13736,6 @@
                                     },
                                     "value": {
                                       "type": "string",
-                                      "minLength": 1,
                                       "maxLength": 100
                                     }
                                   },
@@ -13762,7 +13761,6 @@
                                     },
                                     "value": {
                                       "type": "string",
-                                      "minLength": 1,
                                       "maxLength": 100
                                     }
                                   },
@@ -15453,7 +15451,6 @@
                                       },
                                       "value": {
                                         "type": "string",
-                                        "minLength": 1,
                                         "maxLength": 100
                                       }
                                     },
@@ -15479,7 +15476,6 @@
                                       },
                                       "value": {
                                         "type": "string",
-                                        "minLength": 1,
                                         "maxLength": 100
                                       }
                                     },
@@ -22788,7 +22784,7 @@
     "/transactions/spending": {
       "get": {
         "operationId": "get_spending",
-        "summary": "The movements of a filtered range summed by category, by day or by month, giroconti left out unless `type` is `transfer`.",
+        "summary": "The movements of a filtered range summed by category (the card, with each one's share), by category and type, by day or by month.",
         "tags": [
           "transactions"
         ],
@@ -22908,6 +22904,7 @@
               "type": "string",
               "enum": [
                 "category",
+                "macro",
                 "day",
                 "month"
               ]
@@ -23007,21 +23004,42 @@
                             ]
                           },
                           "count": {
-                            "type": "integer",
-                            "minimum": -9007199254740991,
-                            "maximum": 9007199254740991
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "amount": {
                             "type": "string",
                             "pattern": "^-?\\d+\\.\\d{2}$"
                           },
                           "in": {
-                            "type": "string",
-                            "pattern": "^-?\\d+\\.\\d{2}$"
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "out": {
-                            "type": "string",
-                            "pattern": "^-?\\d+\\.\\d{2}$"
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "share": {
                             "type": [
@@ -23770,7 +23788,7 @@
     "/transactions/visibility": {
       "post": {
         "operationId": "change_transactions_visibility",
-        "summary": "Hides, restores or deletes for good (hidden rows only) a selection, with the balance of a manual movement's account kept right. A synced row deleted is never imported again.",
+        "summary": "Hides, restores or deletes for good (hidden rows only) a selection. With `rebuildBalances`, the balance of each manual movement's account is rebuilt, as Expenses does; without, it is left as it is, as the other pages do today. A synced row deleted is never imported again.",
         "tags": [
           "transactions"
         ],
@@ -23798,11 +23816,15 @@
                       "restore",
                       "delete"
                     ]
+                  },
+                  "rebuildBalances": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
                   "ids",
-                  "change"
+                  "change",
+                  "rebuildBalances"
                 ]
               }
             }

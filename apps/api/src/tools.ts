@@ -24,7 +24,12 @@ export interface ReadTool {
 function splitArguments(route: RouteContract, args: Record<string, unknown>) {
   const named = route.mcp?.pathArguments ?? {};
   const params = Object.fromEntries(Object.entries(named).map(([param, arg]) => [param, args[arg]]));
-  const rest = Object.entries(args).filter(([arg]) => !Object.values(named).includes(arg));
+  const renamed = new Map(
+    Object.entries(route.mcp?.queryArguments ?? {}).map(([param, arg]) => [arg, param]),
+  );
+  const rest = Object.entries(args)
+    .filter(([arg]) => !Object.values(named).includes(arg))
+    .map(([arg, value]) => [renamed.get(arg) ?? arg, value] as const);
   const query = route.mcp?.arguments
     ? Object.fromEntries(
         rest.filter(([, value]) => value !== undefined).map(([arg, value]) => [arg, String(value)]),
@@ -48,7 +53,9 @@ export function readTools(adapters: Adapters): ReadTool[] {
         scope: route.scope,
         arguments: route.mcp.arguments ?? route.query?.shape ?? {},
         run: async (ctx: Ctx, args: Record<string, unknown>) => {
-          const { params, query } = splitArguments(route, args);
+          const split = splitArguments(route, args);
+          const params = split.params;
+          const query = { ...route.mcp?.queryDefaults, ...split.query };
           return response.parse(
             await handler({ ctx, headers: new Headers(), params, query, body: undefined }),
           );

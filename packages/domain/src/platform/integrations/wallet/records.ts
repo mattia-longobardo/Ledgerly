@@ -42,7 +42,7 @@ import {
   createWalletClient,
 } from "./client";
 import { WALLET_TRANSFER_CATEGORY } from "./mapping";
-import { toIncomingTransaction } from "./sync";
+import { syncWalletNow, toIncomingTransaction } from "./sync";
 
 const TRANSACTION_ENTITY = "transaction";
 
@@ -76,6 +76,18 @@ function usable(connection: Connection): boolean {
 
 async function walletConnection(ctx: Pick<Ctx, "userId">): Promise<Connection | null> {
   return (await listConnections(ctx)).find(usable) ?? null;
+}
+
+/**
+ * "Sync now" of the source a manual movement waits for, without a session (`retry_manual_send`):
+ * `false` when `provider` is not Wallet or the person has no usable connection to it.
+ */
+export async function syncWalletFor(ctx: Ctx, provider: string): Promise<boolean> {
+  if (provider !== WALLET_PROVIDER) return false;
+  const connection = await walletConnection(ctx);
+  if (!connection) return false;
+  await syncWalletNow(ctx, connection.id);
+  return true;
 }
 
 /**

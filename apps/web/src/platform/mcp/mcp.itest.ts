@@ -202,6 +202,7 @@ describe("MCP tools", () => {
       "get_account_balances",
       "get_preferences",
       "get_profile",
+      "get_spending",
       "get_summary",
       "list_accounts",
       "list_budgets",

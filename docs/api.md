@@ -68,7 +68,8 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | `GET /accounts`                            | `read`             |
 | `GET /accounts/{id}/balances`              | `read`             |
 | `GET /accounts/{id}/iban`, `GET /accounts/{id}/switch/identifiers` | `session` (web only) |
-| `GET /transactions`                        | `read`             |
+| `GET /transactions`, `/transactions/{id}`, `/transactions/view`, `/transactions/facets`, `/transactions/spending`, `/transactions/review`, `/payees`, `/rules`, `/search` | `read` |
+| the writes of movements, manual movements, categories to review and rules ([changelog](api-changelog.md)) | `write` |
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |
 | `POST /imports`                            | `imports`          |
@@ -103,6 +104,7 @@ and uses the same services as the REST API.
 | `list_accounts`            | `GET /api/v1/accounts`                      |
 | `get_account_balances`     | `GET /api/v1/accounts/{id}/balances`        |
 | `list_transactions`        | `GET /api/v1/transactions`                  |
+| `get_spending`             | `GET /api/v1/transactions/spending`         |
 | `list_budgets`             | the Budgets page                            |
 | `list_investments`         | `GET /api/v1/investments`                   |
 | `get_investment_holdings`  | `GET /api/v1/investments/{accountId}/holdings` |

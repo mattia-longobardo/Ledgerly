@@ -22,22 +22,21 @@ export const DIRECTIONS = ["in", "out"] as const;
 export const RULE_SOURCES = ["bank", "manual"] as const;
 export const MAX_CONDITIONS = 8;
 
-const words = z.string().trim().min(1).max(100);
-
-/** The conditions without an amount: the same going in and coming out. */
-const plainConditions = [
-  z.object({ field: z.literal("text"), op: z.enum(TEXT_OPS), value: words }),
-  z.object({ field: z.literal("counterparty"), op: z.enum(COUNTERPARTY_OPS), value: words }),
-  z.object({ field: z.literal("ownAccount") }),
-  z.object({ field: z.literal("direction"), value: z.enum(DIRECTIONS) }),
-  z.object({ field: z.literal("account"), accountIds: z.array(id()).min(1).max(50) }),
-  z.object({ field: z.literal("source"), value: z.enum(RULE_SOURCES) }),
-  z.object({ field: z.literal("currency"), value: z.string().regex(/^[A-Z]{3}$/) }),
-] as const;
+/** The conditions without an amount; `words` is what a text may be (an answer's draft may be empty). */
+const plainConditions = (words: z.ZodString) =>
+  [
+    z.object({ field: z.literal("text"), op: z.enum(TEXT_OPS), value: words }),
+    z.object({ field: z.literal("counterparty"), op: z.enum(COUNTERPARTY_OPS), value: words }),
+    z.object({ field: z.literal("ownAccount") }),
+    z.object({ field: z.literal("direction"), value: z.enum(DIRECTIONS) }),
+    z.object({ field: z.literal("account"), accountIds: z.array(id()).min(1).max(50) }),
+    z.object({ field: z.literal("source"), value: z.enum(RULE_SOURCES) }),
+    z.object({ field: z.literal("currency"), value: z.string().regex(/^[A-Z]{3}$/) }),
+  ] as const;
 
 /** A condition as a caller sends it; the domain checks the rest (repeated fields, the limits). */
 const conditionInput = z.discriminatedUnion("field", [
-  ...plainConditions,
+  ...plainConditions(z.string().trim().min(1).max(100)),
   z.object({
     field: z.literal("amount"),
     op: z.enum(AMOUNT_OPS),
@@ -48,7 +47,7 @@ const conditionInput = z.discriminatedUnion("field", [
 
 /** A condition as an answer gives it: the amounts as the server writes them. */
 const condition = z.discriminatedUnion("field", [
-  ...plainConditions,
+  ...plainConditions(z.string().max(100)),
   z.object({
     field: z.literal("amount"),
     op: z.enum(AMOUNT_OPS),

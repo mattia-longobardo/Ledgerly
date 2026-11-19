@@ -19,4 +19,5 @@ export {
 export type { MacroMoveUndo, MacroMoveView } from "./settings/taxonomy";
 export { savePreferences } from "./settings/profile";
 export type { AccountCases, MonthlyFigures } from "./accounts/routes";
+export type { EditOutcome, ManualMovement, TransactionCases } from "./transactions/cases";
 export { wireDomain } from "./wiring";

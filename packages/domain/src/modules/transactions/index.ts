@@ -50,11 +50,12 @@ export {
   rulesForExport,
   searchPayees,
   shareOf,
+  spending,
   spendingOverTime,
   transactionsByIds,
   transactionsSummary,
 } from "./queries";
-export type { CategoryMacroTotal, Transaction, TransactionRow } from "./queries";
+export type { CategoryMacroTotal, SpendingGroup, Transaction, TransactionRow } from "./queries";
 export {
   CATEGORY_TYPES,
   TRANSACTION_TYPES,

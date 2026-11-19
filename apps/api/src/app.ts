@@ -11,6 +11,8 @@ import { serveProfile } from "./settings/profile";
 import { serveSecurityAndPeople } from "./settings/security";
 import { type ServerCases, serveServer } from "./settings/server";
 import type { SourceName } from "./settings/taxonomy";
+import type { TransactionCases } from "./transactions/cases";
+import { serveTransactions } from "./transactions/routes";
 
 /**
  * What the web process lends the API until R4: its guard (`withToken`, so authentication lives
@@ -25,10 +27,19 @@ export interface Adapters {
   server: ServerCases;
   /** The compositions of accounts the web still holds (deletion, switch, monthly figures), until R4. */
   accounts: AccountCases;
+  /** The manual movement, the source of a movement and the queue, until R4 and R5c. */
+  transactions: TransactionCases;
 }
 
 /** Every module's routes, served behind the guard; `/meta` lists their capabilities. */
-export function apiRoutes({ guard, sourceName, connections, server, accounts }: Adapters): Hono<ApiEnv> {
+export function apiRoutes({
+  guard,
+  sourceName,
+  connections,
+  server,
+  accounts,
+  transactions,
+}: Adapters): Hono<ApiEnv> {
   const app = new Hono<ApiEnv>();
   const served = [
     ...serveProfile(app, guard),
@@ -38,6 +49,7 @@ export function apiRoutes({ guard, sourceName, connections, server, accounts }: 
     ...serveSecurityAndPeople(app, guard),
     ...serveServer(app, guard, server),
     ...serveAccounts(app, guard, accounts),
+    ...serveTransactions(app, guard, transactions),
   ];
   app.route("/", metaApi(served));
   return app;

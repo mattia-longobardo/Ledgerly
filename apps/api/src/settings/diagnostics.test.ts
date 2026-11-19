@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { AccountCases } from "../accounts/routes";
+import type { TransactionCases } from "../transactions/cases";
 import { apiRoutes } from "../index";
 import type { ConnectionCases } from "./connections";
 import type { ServerCases } from "./server";
@@ -27,6 +28,7 @@ const app = () =>
     connections: {} as ConnectionCases,
     server: {} as ServerCases,
     accounts: {} as AccountCases,
+    transactions: {} as TransactionCases,
   });
 
 describe("GET /server/diagnostics", () => {

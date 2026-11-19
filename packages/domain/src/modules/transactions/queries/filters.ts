@@ -110,6 +110,8 @@ type SortDirection = "asc" | "desc";
  * `labelIds` matches a movement carrying **any** of them.
  */
 export interface TransactionFilters {
+  /** Only these movements: one row read the way the list reads it. */
+  ids?: readonly string[];
   from?: CivilDate;
   to?: CivilDate;
   accountIds?: readonly string[];
@@ -283,6 +285,7 @@ const DEFAULT_DIRECTION: Record<TransactionSort, SortDirection> = {
 export function conditions(ctx: Pick<Ctx, "userId" | "timeZone">, filters: TransactionFilters): SQL {
   const parts: (SQL | undefined)[] = [userScoped(ctx).owns(transactions)];
 
+  if (filters.ids) parts.push(inArray(transactions.id, [...filters.ids]));
   if (filters.from) parts.push(gte(transactions.occurredAt, dayStart(filters.from, ctx.timeZone)));
   if (filters.to) parts.push(lt(transactions.occurredAt, dayStart(addDays(filters.to, 1), ctx.timeZone)));
   if (filters.accountIds && filters.accountIds.length > 0) {

@@ -36,5 +36,6 @@ export {
   expensesView,
   movementSpanByAccount,
   rulesForExport,
+  spending,
 } from "./views";
-export type { CategoryMacroTotal } from "./views";
+export type { CategoryMacroTotal, SpendingGroup } from "./views";

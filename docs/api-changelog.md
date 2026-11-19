@@ -3,6 +3,21 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-20 · the routes of transactions (rewrite plan R2)
+
+- `GET /transactions` is served from the contract with the answer of F8. New optional filters:
+  `accounts`, `category`, `categories` (`none` for «Uncategorised»), `labels`, `types` (lists
+  separated by commas), `hidden`, `sort`, `direction`.
+- New reads (`read`): `GET /transactions/{id}`, `/transactions/view`, `/transactions/facets`,
+  `/transactions/spending?groupBy=category|macro|day|month`, `/transactions/review`,
+  `/transactions/{id}/similar`, `/transactions/manual/form`, `/payees`, `/rules`, `/rules/draft`,
+  `/rules/{id}/preview`, `/search` (the ⌘K palette: pockets, funds, subscriptions); `POST
+  /transactions/manual/preview`, `/transactions/manual/suggestion` and `/rules/preview` write nothing.
+- New writes (`write`): a movement's note and labels, its category, its visibility, its edit at the
+  source; the manual movement (create with an idempotency key, change, delete, retry the send); the
+  choices of «To review» with «Undo»; the merge proposals; the default groups; the rules.
+- MCP: new tool `get_spending`; `list_transactions` keeps its arguments and its page of 50.
+
 ## 2026-11-19 · archived doubles and the state of a connection (decision H58)
 
 - `GET /accounts/{id}/twin` (new, `read`): `{ twin: { id, name } | null }`, the account this one

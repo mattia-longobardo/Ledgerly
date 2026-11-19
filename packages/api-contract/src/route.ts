@@ -32,13 +32,17 @@ export interface RouteContract {
   /**
    * A read that is also an MCP tool: its title and the sentence the model reads. `arguments` are the
    * tool's when they are not the query's (a tool takes no path), and `pathArguments` names the
-   * argument that gives each parameter of the path.
+   * argument that gives each parameter of the path, `queryArguments` the one that gives a parameter
+   * of the query with another name (a tool's arguments are `snake_case` since F8).
    */
   mcp?: {
     title: string;
     description: string;
     arguments?: z.ZodRawShape;
     pathArguments?: Record<string, string>;
+    queryArguments?: Record<string, string>;
+    /** What the tool puts in the query when its caller leaves an argument out. */
+    queryDefaults?: Record<string, string>;
   };
   /** One example, checked against the schemas by the gate. */
   example: {

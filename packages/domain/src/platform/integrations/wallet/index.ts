@@ -11,3 +11,10 @@ export {
   walletAccountChoices,
 } from "./sync";
 export { WALLET_RECORD_TEXT_MAX, editWalletTransaction, walletEditableIds } from "./records";
+// The source of a movement (rewrite plan R2, port of transactions until R5c), by names that are no
+// provider's: `/api/v1` imports them from `@ledgerly/domain/platform/integrations/source` (rule M12).
+export {
+  editWalletTransaction as editAtSource,
+  syncWalletFor as syncSourceNow,
+  walletEditableIds as editableAtSource,
+} from "./records";

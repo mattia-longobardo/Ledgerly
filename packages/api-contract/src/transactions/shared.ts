@@ -39,7 +39,7 @@ export const LABEL_ID = "8c9d0e1f-2a3b-4c4d-8e5f-6a7b8c9d0e1f";
 export const UNDO_ID = "9d0e1f2a-3b4c-4d5e-9f6a-7b8c9d0e1f2a";
 export const byTransaction = z.object({ id: id() });
 
-const csv = (item: z.ZodType<unknown, string>) =>
+const csv = <T extends z.ZodType<unknown, string>>(item: T) =>
   z
     .string()
     .max(4000)

@@ -368,3 +368,67 @@ export async function rulesForExport(ctx: Pick<Ctx, "userId">): Promise<
     labels: labelIds.flatMap((id) => labelName.get(id) ?? []),
   }));
 }
+
+type SpendingGroupBy = "category" | "macro" | "day" | "month";
+
+/**
+ * One group of `spending` (audit TRX-3, TRX-4): the same shape whatever the grouping, with `null`
+ * for what a grouping does not say. `share` is the card's and nobody else's: computed here, once.
+ */
+export interface SpendingGroup {
+  bucket: CivilDate | null;
+  categoryId: string | null;
+  name: string | null;
+  color: string | null;
+  parentId: string | null;
+  parentName: string | null;
+  parentColor: string | null;
+  type: TransactionType | null;
+  count: number | null;
+  totalCents: Cents;
+  inCents: Cents | null;
+  outCents: Cents | null;
+  share: number | null;
+}
+
+const NO_GROUP = {
+  bucket: null,
+  categoryId: null,
+  name: null,
+  color: null,
+  parentId: null,
+  parentName: null,
+  parentColor: null,
+  type: null,
+  count: null,
+  inCents: null,
+  outCents: null,
+  share: null,
+} as const;
+
+/**
+ * The money of a filtered range by one grouping: `category`, the «By category» card (giroconti
+ * out, with the share); `macro`, each category in the macro of its movements' type; `day` and
+ * `month`, the chart of one `type` (spending when none) by category group.
+ */
+export async function spending(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  filters: TransactionFilters,
+  groupBy: SpendingGroupBy,
+  type: TransactionType = "expense",
+): Promise<SpendingGroup[]> {
+  if (groupBy === "category") {
+    return (await categoryTotals(ctx, filters)).map((slice) => ({ ...NO_GROUP, ...slice }));
+  }
+  if (groupBy === "macro") {
+    return (await categoryMacroTotals(ctx, filters)).map((row) => ({ ...NO_GROUP, ...row }));
+  }
+  return (await spendingOverTime(ctx, filters, groupBy, type)).map((point) => ({
+    ...NO_GROUP,
+    bucket: point.bucket,
+    categoryId: point.groupId,
+    name: point.groupName,
+    color: point.groupColor,
+    totalCents: point.cents,
+  }));
+}

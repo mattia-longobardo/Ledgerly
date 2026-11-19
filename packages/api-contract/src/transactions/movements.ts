@@ -68,6 +68,8 @@ export const listTransactions = defineRoute({
         .describe(`Page size (default ${TOOL_DEFAULT}).`),
       offset: z.number().int().min(0).optional(),
     },
+    queryArguments: { account: "account_id", category: "category_id" },
+    queryDefaults: { limit: String(TOOL_DEFAULT) },
   },
   example: {
     query: { from: "2026-10-01", to: "2026-10-31", type: "expense", limit: "50" },
@@ -200,18 +202,23 @@ export const changeTransactionsVisibility = defineRoute({
   scope: "write",
   capability: "transactions",
   summary:
-    "Hides, restores or deletes for good (hidden rows only) a selection, with the balance of a manual " +
-    "movement's account kept right. A synced row deleted is never imported again.",
+    "Hides, restores or deletes for good (hidden rows only) a selection. With `rebuildBalances`, the " +
+    "balance of each manual movement's account is rebuilt, as Expenses does; without, it is left as it is, " +
+    "as the other pages do today. A synced row deleted is never imported again.",
   actions: [
     "changeVisibilityAction",
     "hideTransactionsAction",
     "restoreTransactionsAction",
     "deleteHiddenTransactionsAction",
   ],
-  body: z.object({ ids: selection(MAX_SELECTION), change: z.enum(VISIBILITY_CHANGES) }),
+  body: z.object({
+    ids: selection(MAX_SELECTION),
+    change: z.enum(VISIBILITY_CHANGES),
+    rebuildBalances: z.boolean(),
+  }),
   response: changed,
   errors: TRANSACTION_ERRORS,
-  example: { body: { ids: [TRANSACTION_ID], change: "hide" }, response: { count: 1 } },
+  example: { body: { ids: [TRANSACTION_ID], change: "hide", rebuildBalances: true }, response: { count: 1 } },
 });
 
 export const editAtSource = defineRoute({

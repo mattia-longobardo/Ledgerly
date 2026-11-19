@@ -184,6 +184,7 @@ export const MODULES: Module[] = [
       "e2e:subscriptions",
       "admin",
       "e2e:funds",
+      "e2e:api",
     ],
   },
   {
@@ -280,7 +281,7 @@ export const MODULES: Module[] = [
     files: ["apps/web/src/modules/funds/**", "packages/domain/src/modules/funds/**", page("funds")],
     integration: ["apps/web/src/modules/funds", "packages/domain/src/modules/funds"],
     flows: ["funds"],
-    usedBy: ["investments", "payroll", "export", "jobs", "accounts", "e2e:accounts", "e2e:shell"],
+    usedBy: ["investments", "payroll", "export", "jobs", "accounts", "api", "e2e:accounts", "e2e:shell"],
   },
   {
     id: "investments",
@@ -445,6 +446,7 @@ export const MODULES: Module[] = [
       "e2e:categories",
       "e2e:connections",
       "perf",
+      "e2e:transactions",
     ],
   },
   {
@@ -459,7 +461,14 @@ export const MODULES: Module[] = [
       "apps/web/src/app/api/metrics/**",
     ],
     integration: ["apps/web/src/platform/jobs", "packages/domain/src/platform/jobs", "apps/worker/src"],
-    usedBy: ["integration:*", "e2e:connections", "e2e:admin", "e2e:accounts"],
+    usedBy: [
+      "integration:*",
+      "e2e:connections",
+      "e2e:admin",
+      "e2e:accounts",
+      "e2e:categories",
+      "e2e:transactions",
+    ],
   },
   {
     id: "admin",

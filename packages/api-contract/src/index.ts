@@ -26,4 +26,5 @@ export {
   syncScheduleSchema,
 } from "./settings/schedule";
 export { CONNECTION_REFUSALS } from "./settings/shared";
+export { searchRecords } from "./search";
 export { SESSION_CSRF_HEADER } from "./session";

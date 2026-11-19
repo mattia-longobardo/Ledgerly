@@ -6,12 +6,13 @@ import { defineRoute } from "../route";
 import { civilDate, hexColor, id, money } from "../primitives";
 import { CATEGORY_ID, TRANSACTION_TYPES, transactionFilters } from "./shared";
 
-export const SPENDING_GROUPS = ["category", "day", "month"] as const;
+export const SPENDING_GROUPS = ["category", "macro", "day", "month"] as const;
 
 /**
- * One group of the range. By `category`: the category (null for «Uncategorised»), its group and its
- * share of the card. By `day` or `month`: the bucket, by category group. `amount` is the sum; `in`
- * and `out` its two signs.
+ * One group of the range. By `category` (the card, giroconti out): the category (null for
+ * «Uncategorised»), its group and its share. By `macro`: the category and the movements' type, every
+ * type in. By `day` or `month`: the bucket and the category group, for one `type` (expense when none),
+ * spending and transfers out as positive amounts. `amount` is the sum; `in` and `out` its two signs.
  */
 const spendingGroup = z.object({
   bucket: civilDate().nullable(),
@@ -22,11 +23,13 @@ const spendingGroup = z.object({
   parentName: z.string().nullable(),
   parentColor: hexColor().nullable(),
   type: z.enum(TRANSACTION_TYPES).nullable(),
-  count: z.number().int(),
+  /** Null by `day` and `month`. */
+  count: z.number().int().nullable(),
   amount: money(),
-  in: money(),
-  out: money(),
-  /** Percentage of the card, one decimal, over the absolute values; null by `day` and `month`. */
+  /** The two signs of `amount`, by `macro` only. */
+  in: money().nullable(),
+  out: money().nullable(),
+  /** Percentage of the card, one decimal, over the absolute values; by `category` only. */
   share: z.number().nullable(),
 });
 
@@ -37,8 +40,8 @@ export const getSpending = defineRoute({
   scope: "read",
   capability: "transactions",
   summary:
-    "The movements of a filtered range summed by category, by day or by month, giroconti left out " +
-    "unless `type` is `transfer`.",
+    "The movements of a filtered range summed by category (the card, with each one's share), by category " +
+    "and type, by day or by month.",
   actions: [],
   query: transactionFilters.extend({ groupBy: z.enum(SPENDING_GROUPS) }),
   response: z.object({ groups: z.array(spendingGroup) }),
@@ -46,7 +49,8 @@ export const getSpending = defineRoute({
   mcp: {
     title: "Spending",
     description:
-      "The movements of a range summed by category (with each one's share), by day or by month, as " +
+      "The movements of a range summed by category (with each one's share), by category and type, by day " +
+      "or by month, as " +
       "GET /api/v1/transactions/spending. Takes the filters of list_transactions.",
   },
   example: {
@@ -64,8 +68,8 @@ export const getSpending = defineRoute({
           type: "expense",
           count: 1,
           amount: "-42.80",
-          in: "0.00",
-          out: "-42.80",
+          in: null,
+          out: null,
           share: 100,
         },
       ],
