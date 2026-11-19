@@ -472,6 +472,7 @@ export const MODULES: Module[] = [
       "packages/domain/src/platform/settings",
       "apps/web/src/platform/backup",
       "apps/web/src/platform/reports",
+      "apps/web/src/app/(app)/settings/server",
     ],
     flows: ["admin"],
     usedBy: [

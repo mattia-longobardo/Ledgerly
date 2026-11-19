@@ -29,7 +29,7 @@ const MAX_BACKUP_BYTES = 256 * 1024 * 1024;
 /** A dump that has not finished by then is not going to: an admin is waiting on the button. */
 const DUMP_TIMEOUT_MS = 10 * 60_000;
 
-export type BackupErrorCode = "forbidden" | "dump_failed" | "too_large" | "upload_failed";
+type BackupErrorCode = "forbidden" | "dump_failed" | "too_large" | "upload_failed";
 
 export class BackupError extends Error {
   constructor(readonly code: BackupErrorCode) {

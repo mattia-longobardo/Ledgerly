@@ -9,7 +9,7 @@ import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
-import { removeOidcAction, saveOidcAction, testOidcAction } from "./actions";
+import { removeOidcAction, saveOidcAction, testOidcAction } from "./calls";
 import { FIELD_GRID } from "@ledgerly/ui/section";
 
 interface OidcCardProps {

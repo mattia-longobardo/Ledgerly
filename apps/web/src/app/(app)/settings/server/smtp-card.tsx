@@ -9,7 +9,7 @@ import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input, Select } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
-import { removeSmtpAction, saveSmtpAction, sendTestEmailAction } from "./actions";
+import { removeSmtpAction, saveSmtpAction, sendTestEmailAction } from "./calls";
 import { FIELD_GRID } from "@ledgerly/ui/section";
 
 interface SmtpCardProps {

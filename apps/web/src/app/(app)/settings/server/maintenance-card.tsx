@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { notify } from "@ledgerly/ui/toast";
-import { backupNowAction, runJobAction } from "./actions";
+import { backupNowAction, runJobAction } from "./calls";
 
 interface MaintenanceProps {
   /** Everything already formatted for the reader; null when it has never happened. */

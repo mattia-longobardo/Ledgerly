@@ -9,7 +9,7 @@ import { Input } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
 import type { LlmProbeResult } from "@ledgerly/domain/platform/settings/client";
-import { removeLlmFallbackAction, saveLlmFallbackAction, testLlmFallbackAction } from "./actions";
+import { removeLlmFallbackAction, saveLlmFallbackAction, testLlmFallbackAction } from "./calls";
 
 /**
  * The OpenAI fallback (spec D12, D18): the model and the API key. The key is write-only — the page

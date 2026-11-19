@@ -8,9 +8,9 @@ import { Badge } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
-import { runJobAction } from "./actions";
+import { runJobAction } from "./calls";
 
-export interface JobRow {
+interface JobRow {
   name: string;
   tier: Tier;
   /** Already formatted for the reader; null when it has never run. */

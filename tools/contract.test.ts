@@ -120,7 +120,6 @@ describe("the contract of /api/v1", () => {
 const SETTINGS_ACTION_FILES = [
   "apps/web/src/modules/users/actions.ts",
   "apps/web/src/app/(auth)/actions.ts",
-  "apps/web/src/app/(app)/settings/server/actions.ts",
   "apps/web/src/app/(app)/settings/security/actions.ts",
   "apps/web/src/app/(app)/settings/categories/actions.ts",
   "apps/web/src/app/(app)/settings/categories/source-actions.ts",

@@ -113,7 +113,7 @@ export const saveLlm = defineRoute({
   capability: "server",
   summary:
     "Saves the AI service that reads a document when its reader cannot. An empty key keeps the saved one.",
-  actions: ["saveLlmFallbackAction"],
+  actions: [],
   body: z
     .object({
       provider: z.enum(AI_PROVIDERS).default("openai"),
@@ -134,7 +134,7 @@ export const testLlm = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Tries the saved key and model. Saves nothing; the service's answer is never quoted.",
-  actions: ["testLlmFallbackAction"],
+  actions: [],
   response: z.object({
     outcome: z.enum(["ok", "keyRejected", "modelMissing", "rateLimited", "notConfigured", "unreachable"]),
     /** Only with `ok`: the model that was saved. */
@@ -151,7 +151,7 @@ export const removeLlm = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Removes the AI service and its key.",
-  actions: ["removeLlmFallbackAction"],
+  actions: [],
   response: null,
   status: 204,
   errors: [],
@@ -165,7 +165,7 @@ export const saveOidc = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Saves the sign-in provider. A new issuer signs everyone out (`signedEveryoneOut`).",
-  actions: ["saveOidcAction"],
+  actions: [],
   body: z
     .object({
       issuer: z.url().max(200),
@@ -197,7 +197,7 @@ export const testOidc = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Reads the discovery document of the saved provider and records the verdict.",
-  actions: ["testOidcAction"],
+  actions: [],
   response: z.object({ outcome: oidcOutcome }),
   errors: [],
   example: { response: { outcome: "ok" } },
@@ -210,7 +210,7 @@ export const removeOidc = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Removes the saved provider: the values of the environment apply again.",
-  actions: ["removeOidcAction"],
+  actions: [],
   response: null,
   status: 204,
   errors: [],
@@ -224,7 +224,7 @@ export const saveSmtp = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Saves the mail transport and which emails go out. An empty password keeps the saved one.",
-  actions: ["saveSmtpAction"],
+  actions: [],
   body: z
     .object({
       host: z.string().trim().min(1).max(200),
@@ -263,7 +263,7 @@ export const testSmtp = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Sends one email to the admin who asked, through the transport as it is saved.",
-  actions: ["sendTestEmailAction"],
+  actions: [],
   response: z.object({
     outcome: z.enum(["ok", "noAddress", "failed"]),
     /** With `ok`: where it went. */
@@ -282,7 +282,7 @@ export const removeSmtp = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Removes the saved transport: the values of the environment apply again.",
-  actions: ["removeSmtpAction"],
+  actions: [],
   response: null,
   status: 204,
   errors: [],
@@ -296,7 +296,7 @@ export const backUpNow = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Makes a backup of the database now and answers its size in bytes.",
-  actions: ["backupNowAction"],
+  actions: [],
   response: z.object({ size: z.number().int() }),
   status: 201,
   errors: ["conflict", "server_error"],
@@ -351,7 +351,7 @@ export const runJob = defineRoute({
   scope: "admin",
   capability: "server",
   summary: "Puts one job in the worker's queue. The answer does not wait: the run is in `GET /server/jobs`.",
-  actions: ["runJobAction"],
+  actions: [],
   params: z.object({ name: z.string().min(1).max(64) }),
   response: null,
   status: 202,
