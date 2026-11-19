@@ -9,7 +9,7 @@ import { searchFunds } from "@ledgerly/domain/funds";
 import { searchPockets } from "@ledgerly/domain/pockets";
 import { searchSubscriptions } from "@ledgerly/domain/subscriptions";
 import { requireSession } from "@/platform/auth/session";
-import type { RecordMatch } from "@/ui/shell/commands";
+import type { RecordMatch } from "@ledgerly/ui/shell/commands";
 
 export async function searchRecordsAction(query: string): Promise<RecordMatch[]> {
   const ctx = await requireSession();

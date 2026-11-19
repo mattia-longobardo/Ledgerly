@@ -1,18 +1,16 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Avatar } from "@ledgerly/ui/avatar";
-import { IconButton } from "@ledgerly/ui/button";
-import { cn } from "@ledgerly/ui/cn";
+import { Link, usePathname } from "../router";
+import { Avatar } from "../avatar";
+import { IconButton } from "../button";
+import { cn } from "../cn";
 import { isActive } from "./active";
 import { BrandMark } from "./brand";
 import { NAV_ICONS } from "./icons";
 import { NAV_GROUPS, type NavLink } from "./nav-types";
-import { useShell } from "./shell-context";
+import { useShell, useSignOut } from "./shell-context";
 import type { SidebarState } from "./sidebar-state";
-import { useSignOut } from "./sign-out";
 
 /** A sidebar item's look; the Components page shows its states from the same classes. */
 function navItemClassName(active: boolean): string {

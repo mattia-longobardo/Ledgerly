@@ -17,7 +17,7 @@ import { parseCents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@ledgerly/ui/badge";
 import { Card } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 
 export async function generateMetadata(): Promise<Metadata> {

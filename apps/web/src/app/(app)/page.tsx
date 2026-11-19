@@ -14,7 +14,7 @@ import { ButtonLink } from "@ledgerly/ui/button";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";

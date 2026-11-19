@@ -14,7 +14,7 @@ import { countDaysByCalendar, listCalendars } from "@ledgerly/domain/platform/ho
 import { TREK_PROVIDER } from "@ledgerly/domain/platform/integrations";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { type CalendarRow, HolidayCalendars } from "./holiday-calendars";

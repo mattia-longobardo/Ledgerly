@@ -4,7 +4,7 @@ import { createTranslator } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { LOCALES } from "@/platform/i18n/locales";
 import { readEnv } from "@ledgerly/domain/platform/env";
-import { BrandLockup } from "@/ui/shell/brand";
+import { BrandLockup } from "@ledgerly/ui/shell/brand";
 import { type LegalLocale, legalLocale } from "./language";
 
 type LegalDocument = "privacy" | "terms";

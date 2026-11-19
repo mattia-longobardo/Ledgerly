@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { LoadingState } from "@ledgerly/ui/states";
 
 /** What the Time off pages show while their year is being read. */

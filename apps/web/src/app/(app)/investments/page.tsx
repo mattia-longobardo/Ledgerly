@@ -30,7 +30,7 @@ import { cn } from "@ledgerly/ui/cn";
 import { HighlightScope, SeriesToggle } from "@ledgerly/ui/highlight";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Popover } from "@ledgerly/ui/popover";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";

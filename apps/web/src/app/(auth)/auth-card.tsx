@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import packageJson from "../../../../../package.json";
 import { identityProviderUrl } from "@ledgerly/domain/platform/auth";
-import { BrandLockup } from "@/ui/shell/brand";
+import { BrandLockup } from "@ledgerly/ui/shell/brand";
 
 export async function AuthCard({
   title,

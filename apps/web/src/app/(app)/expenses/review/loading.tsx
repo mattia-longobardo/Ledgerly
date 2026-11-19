@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { Skeleton } from "@ledgerly/ui/skeleton";
 
 /** The shape of "To review" while it is read: the controls, three groups and the summary. */

@@ -6,7 +6,7 @@
 import type { Route } from "next";
 import type { getTranslations } from "next-intl/server";
 import type { Role } from "@ledgerly/domain/platform/context";
-import type { NavLink } from "@/ui/shell/nav-types";
+import type { NavLink } from "@ledgerly/ui/shell/nav-types";
 import { settingsTabsFor } from "./navigation";
 
 /** The translator of the whole catalogue, as the layout has it: `getTranslations()` with no namespace. */

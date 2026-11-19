@@ -1,10 +1,10 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { stubColorScheme } from "../../../../../test/color-scheme";
-import type { ThemePreference } from "@/platform/theme";
-import { ThemeProvider } from "@ledgerly/ui/theme-provider";
-import { Toaster } from "@ledgerly/ui/toast";
+import { stubColorScheme } from "../../../../test/color-scheme";
+import type { ThemePreference } from "../theme";
+import { ThemeProvider } from "../theme-provider";
+import { Toaster } from "../toast";
 import { ShellProvider } from "./shell-context";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -33,7 +33,12 @@ const LABELS = {
 function renderToggle(saved: ThemePreference, saveTheme: (theme: ThemePreference) => Promise<void>) {
   return render(
     <ThemeProvider saved={saved}>
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={saveTheme}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={saveTheme}
+        signOut={async () => undefined}
+      >
         <ThemeToggle />
         <Toaster closeLabel="Close" />
       </ShellProvider>

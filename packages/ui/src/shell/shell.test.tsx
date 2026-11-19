@@ -1,6 +1,6 @@
+import type { Route } from "next";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Route } from "next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isActive } from "./active";
 import { CommandPalette } from "./command-palette";
@@ -12,7 +12,10 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ usePathname: () => "/settings/profile", useRouter: () => ({ push }) }));
+vi.mock("../router", async (original) => ({
+  ...(await original<object>()),
+  ...{ usePathname: () => "/settings/profile", useRouter: () => ({ push }) },
+}));
 
 // "/components" and "/settings/profile" are not yet real routes (Tasks 18-19 add their pages), so
 // typed routes only accept them through the cast — same pattern as `sidebar.tsx`'s `/sign-in` push.
@@ -60,7 +63,12 @@ const LABELS = {
 
 function renderShell(sidebar: SidebarState = "expanded") {
   return render(
-    <ShellProvider initialSidebar={sidebar} labels={LABELS} saveTheme={async () => undefined}>
+    <ShellProvider
+      initialSidebar={sidebar}
+      labels={LABELS}
+      saveTheme={async () => undefined}
+      signOut={async () => undefined}
+    >
       <Sidebar links={LINKS} user={{ name: "Anna Bianchi", via: "via Authentik" }} />
       <CommandPalette links={LINKS} />
     </ShellProvider>,
@@ -108,7 +116,12 @@ describe("shell", () => {
 
   it("shows the parent crumb and the page on desktop, and the section as the phone title", () => {
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={async () => undefined}
+        signOut={async () => undefined}
+      >
         <Topbar
           title="Profile"
           parent={{ href: "/settings/profile" as Route, label: "Settings" }}

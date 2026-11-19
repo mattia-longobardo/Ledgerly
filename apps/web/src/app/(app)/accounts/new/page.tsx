@@ -5,7 +5,7 @@ import { listAccounts } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { Card } from "@ledgerly/ui/card";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("accounts.new"))("title") };

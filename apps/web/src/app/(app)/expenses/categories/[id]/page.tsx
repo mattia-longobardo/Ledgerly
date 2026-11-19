@@ -29,7 +29,7 @@ import { Badge } from "@ledgerly/ui/badge";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { withParams } from "@/ui/url";
 import { sourceNotes } from "../../../settings/categories/source";
 import { sourceHref } from "../../../settings/integrations/connection-view";

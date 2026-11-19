@@ -1,4 +1,4 @@
-import { cn } from "@ledgerly/ui/cn";
+import { cn } from "../cn";
 
 export function BrandMark({ size = 24 }: { size?: 24 | 28 }) {
   return (

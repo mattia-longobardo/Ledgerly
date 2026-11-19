@@ -1,12 +1,11 @@
 "use client";
 
 import { PanelLeft, Search } from "lucide-react";
-import Link from "next/link";
-import type { Route } from "next";
+import { Link } from "../router";
 import type { ReactNode } from "react";
-import { IconButton } from "@ledgerly/ui/button";
-import { cn } from "@ledgerly/ui/cn";
-import { Kbd } from "@ledgerly/ui/kbd";
+import { IconButton } from "../button";
+import { cn } from "../cn";
+import { Kbd } from "../kbd";
 import { useShell } from "./shell-context";
 
 const MOBILE_TITLE = "max-md:text-xl max-md:font-semibold max-md:tracking-snug";
@@ -18,7 +17,7 @@ export function Topbar({
   themeToggle,
 }: {
   title: ReactNode;
-  parent?: { href: Route; label: string };
+  parent?: { href: string; label: string };
   actions?: ReactNode;
   themeToggle: ReactNode;
 }) {

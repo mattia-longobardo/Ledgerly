@@ -1,5 +1,3 @@
-import type { Route } from "next";
-
 export type IconName =
   | "overview"
   | "accounts"
@@ -16,7 +14,7 @@ export type IconName =
 
 export interface NavLink {
   id: string;
-  href: Route;
+  href: string;
   label: string;
   icon: IconName;
   group: "finance" | "work" | "system" | "footer";

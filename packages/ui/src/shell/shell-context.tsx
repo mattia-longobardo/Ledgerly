@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { ThemePreference } from "@/platform/theme";
+import type { ThemePreference } from "../theme";
+import { useRouter } from "../router";
 import { SIDEBAR_COOKIE, type SidebarState } from "./sidebar-state";
 
 const WIDE_QUERY = "(min-width: 1280px)";
@@ -34,8 +35,10 @@ interface ShellState {
   paletteOpen: boolean;
   setPaletteOpen: (open: boolean) => void;
   labels: ShellLabels;
-  /** Saves the theme preference: a Server Action the app layout hands down, so src/ui needs no domain module. */
+  /** Saves the theme preference: the container says how. */
   saveTheme: (theme: ThemePreference) => Promise<void>;
+  /** Ends the session: the container says how (on the web, the auth client). */
+  signOut: () => Promise<void>;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
@@ -50,11 +53,13 @@ export function ShellProvider({
   initialSidebar,
   labels,
   saveTheme,
+  signOut,
   children,
 }: {
   initialSidebar: SidebarState;
   labels: ShellLabels;
   saveTheme: (theme: ThemePreference) => Promise<void>;
+  signOut: () => Promise<void>;
   children: ReactNode;
 }) {
   const [sidebar, setSidebar] = useState(initialSidebar);
@@ -84,8 +89,18 @@ export function ShellProvider({
   }, [toggleSidebar]);
 
   const value = useMemo(
-    () => ({ sidebar, toggleSidebar, paletteOpen, setPaletteOpen, labels, saveTheme }),
-    [sidebar, toggleSidebar, paletteOpen, labels, saveTheme],
+    () => ({ sidebar, toggleSidebar, paletteOpen, setPaletteOpen, labels, saveTheme, signOut }),
+    [sidebar, toggleSidebar, paletteOpen, labels, saveTheme, signOut],
   );
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
+}
+
+/** Ends the session and goes to sign-in: the sidebar and the mobile More sheet both use it. */
+export function useSignOut(): () => Promise<void> {
+  const { signOut } = useShell();
+  const router = useRouter();
+  return async () => {
+    await signOut();
+    router.push("/sign-in");
+  };
 }

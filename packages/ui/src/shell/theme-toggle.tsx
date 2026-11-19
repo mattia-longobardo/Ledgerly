@@ -3,10 +3,10 @@
 import { Moon, Sun } from "lucide-react";
 import { useTransition } from "react";
 import { SETTINGS } from "@ledgerly/api-contract";
-import { IconButton } from "@ledgerly/ui/button";
-import { invalidate } from "@ledgerly/ui/data";
-import { useTheme } from "@ledgerly/ui/theme-provider";
-import { notify } from "@ledgerly/ui/toast";
+import { IconButton } from "../button";
+import { invalidate } from "../data";
+import { useTheme } from "../theme-provider";
+import { notify } from "../toast";
 import { useShell } from "./shell-context";
 
 /**

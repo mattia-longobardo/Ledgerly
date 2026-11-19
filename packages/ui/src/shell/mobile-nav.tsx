@@ -2,17 +2,15 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import { ChevronRight, Ellipsis } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, usePathname } from "../router";
 import { useState } from "react";
-import { Avatar } from "@ledgerly/ui/avatar";
-import { Button } from "@ledgerly/ui/button";
-import { cn } from "@ledgerly/ui/cn";
+import { Avatar } from "../avatar";
+import { Button } from "../button";
+import { cn } from "../cn";
 import { isActive } from "./active";
 import { NAV_ICONS } from "./icons";
 import { NAV_GROUPS, type NavLink } from "./nav-types";
-import { useShell } from "./shell-context";
-import { useSignOut } from "./sign-out";
+import { useShell, useSignOut } from "./shell-context";
 
 /** In the More sheet the sidebar's footer items (Settings) open the System group, as in the design. */
 function sheetGroups(links: NavLink[]) {

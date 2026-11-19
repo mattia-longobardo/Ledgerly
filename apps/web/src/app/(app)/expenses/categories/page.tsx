@@ -15,7 +15,7 @@ import { listAccounts } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { withParams } from "@/ui/url";
 import { DefaultGroupsButton } from "../../settings/categories/default-groups";

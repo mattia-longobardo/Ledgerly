@@ -8,8 +8,10 @@ import { MobileNav } from "./mobile-nav";
 
 const push = vi.hoisted(() => vi.fn());
 const signOut = vi.hoisted(() => vi.fn());
-vi.mock("next/navigation", () => ({ usePathname: () => "/settings/profile", useRouter: () => ({ push }) }));
-vi.mock("@/platform/auth/client", () => ({ authClient: { signOut } }));
+vi.mock("../router", async (original) => ({
+  ...(await original<object>()),
+  ...{ usePathname: () => "/settings/profile", useRouter: () => ({ push }) },
+}));
 
 const LINKS: NavLink[] = [
   { id: "overview", href: "/", label: "Overview", icon: "overview", group: "finance", mobile: true },
@@ -55,7 +57,12 @@ const LABELS = {
 
 async function openMore() {
   render(
-    <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+    <ShellProvider
+      initialSidebar="expanded"
+      labels={LABELS}
+      saveTheme={async () => undefined}
+      signOut={signOut}
+    >
       <MobileNav links={LINKS} user={{ name: "Anna Bianchi", via: "via Authentik" }} />
     </ShellProvider>,
   );

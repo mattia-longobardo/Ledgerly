@@ -9,7 +9,7 @@ import { ServicePeriodControl } from "./service-period";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { Badge } from "@ledgerly/ui/badge";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { alertsOf, firstDayOf, instantText, loadService, providerOf, serviceContextOf } from "./service-data";
 
 export async function generateMetadata({

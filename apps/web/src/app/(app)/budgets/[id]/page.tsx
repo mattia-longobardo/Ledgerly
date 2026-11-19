@@ -14,7 +14,7 @@ import { Badge } from "@ledgerly/ui/badge";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { ProgressBar } from "@ledgerly/ui/progress-bar";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { TONE_TEXT } from "@ledgerly/ui/tone";
 
 const BAR_TONE = { over: "neg", near: "warn", on_track: "accent" } as const;

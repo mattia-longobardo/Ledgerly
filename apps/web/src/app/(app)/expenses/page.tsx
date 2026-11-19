@@ -46,7 +46,7 @@ import { walletEditableIds } from "@ledgerly/domain/platform/integrations/wallet
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import {

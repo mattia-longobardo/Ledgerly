@@ -1,13 +1,16 @@
+import type { Route } from "next";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Route } from "next";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CommandPalette } from "./command-palette";
 import type { NavLink } from "./nav-types";
 import { ShellProvider } from "./shell-context";
 
 const push = vi.fn();
-vi.mock("next/navigation", () => ({ usePathname: () => "/", useRouter: () => ({ push }) }));
+vi.mock("../router", async (original) => ({
+  ...(await original<object>()),
+  ...{ usePathname: () => "/", useRouter: () => ({ push }) },
+}));
 
 // "/components" and "/settings/profile" are not yet real routes (Tasks 18-19 add their pages).
 const LINKS: NavLink[] = [
@@ -65,7 +68,12 @@ describe("CommandPalette", () => {
       mobile: false,
     };
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={async () => undefined}
+        signOut={async () => undefined}
+      >
         <CommandPalette links={LINKS} searchLinks={[security]} />
       </ShellProvider>,
     );
@@ -79,7 +87,12 @@ describe("CommandPalette", () => {
 
   it("moves aria-activedescendant and aria-selected as ArrowDown moves the cursor", async () => {
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={async () => undefined}
+        signOut={async () => undefined}
+      >
         <CommandPalette links={LINKS} />
       </ShellProvider>,
     );
@@ -105,7 +118,12 @@ describe("CommandPalette", () => {
   it("offers the payees the search found, under their own heading, and opens them filtered", async () => {
     const searchPayees = vi.fn(async () => [{ payee: "Netflix", count: 7 }]);
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={async () => undefined}
+        signOut={async () => undefined}
+      >
         <CommandPalette links={LINKS} searchPayees={searchPayees} />
       </ShellProvider>,
     );
@@ -128,7 +146,12 @@ describe("CommandPalette", () => {
     ]);
     const searchPayees = vi.fn(async () => [{ payee: "Holiday Inn", count: 2 }]);
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={async () => undefined}
+        signOut={async () => undefined}
+      >
         <CommandPalette links={LINKS} searchPayees={searchPayees} searchRecords={searchRecords} />
       </ShellProvider>,
     );
@@ -149,7 +172,12 @@ describe("CommandPalette", () => {
   it("asks once for the settled query, not once per keystroke", async () => {
     const searchPayees = vi.fn(async () => []);
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={async () => undefined}
+        signOut={async () => undefined}
+      >
         <CommandPalette links={LINKS} searchPayees={searchPayees} />
       </ShellProvider>,
     );
@@ -167,7 +195,12 @@ describe("CommandPalette", () => {
       throw new Error("offline");
     });
     render(
-      <ShellProvider initialSidebar="expanded" labels={LABELS} saveTheme={async () => undefined}>
+      <ShellProvider
+        initialSidebar="expanded"
+        labels={LABELS}
+        saveTheme={async () => undefined}
+        signOut={async () => undefined}
+      >
         <CommandPalette links={LINKS} searchPayees={searchPayees} />
       </ShellProvider>,
     );

@@ -13,7 +13,7 @@ import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Card } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 

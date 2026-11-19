@@ -1,4 +1,3 @@
-import type { Route } from "next";
 import type { ReactNode } from "react";
 import { ThemeToggle } from "./theme-toggle";
 import { Topbar } from "./topbar";
@@ -16,7 +15,7 @@ export function Page({
   children,
 }: {
   title: ReactNode;
-  parent?: { href: Route; label: string };
+  parent?: { href: string; label: string };
   actions?: ReactNode;
   children: ReactNode;
 }) {

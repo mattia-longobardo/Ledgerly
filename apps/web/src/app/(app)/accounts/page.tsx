@@ -23,7 +23,7 @@ import { Badge } from "@ledgerly/ui/badge";
 import { Card } from "@ledgerly/ui/card";
 import { CompositionBar, Sparkline } from "@ledgerly/ui/chart";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";

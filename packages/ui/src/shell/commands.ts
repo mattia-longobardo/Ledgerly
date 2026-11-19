@@ -1,4 +1,3 @@
-import type { Route } from "next";
 import type { NavLink } from "./nav-types";
 
 export function filterCommands(links: NavLink[], query: string): NavLink[] {
@@ -18,7 +17,7 @@ export interface RecordMatch {
   label: string;
   /** What kind of record it is, already translated. */
   hint: string;
-  href: Route;
+  href: string;
 }
 
 /**
@@ -29,13 +28,13 @@ export interface PaletteOption {
   id: string;
   label: string;
   hint: string;
-  href: Route;
+  href: string;
   group: "pages" | "records" | "payees";
 }
 
 /** Where a payee leads: the Expenses screen already reads its search from `q` (spec §7.2). */
-function payeeHref(payee: string): Route {
-  return `/expenses?q=${encodeURIComponent(payee)}` as Route;
+function payeeHref(payee: string): string {
+  return `/expenses?q=${encodeURIComponent(payee)}` as string;
 }
 
 export function paletteOptions(

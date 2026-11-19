@@ -65,7 +65,7 @@ import { Badge } from "@ledgerly/ui/badge";
 import { Card } from "@ledgerly/ui/card";
 import { AreaLine, Bars } from "@ledgerly/ui/chart";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";

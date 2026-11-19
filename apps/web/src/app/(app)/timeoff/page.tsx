@@ -19,7 +19,7 @@ import { Badge } from "@ledgerly/ui/badge";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { EmptyState } from "@ledgerly/ui/states";
 import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";

@@ -7,8 +7,8 @@
     "moduleCycleGroups": 2,
     "platformToModuleImports": 76,
     "platformFilesImportingModules": 23,
-    "uiToPlatformImports": 3,
-    "forbiddenNameFiles": 106,
+    "uiToPlatformImports": 2,
+    "forbiddenNameFiles": 104,
     "forbiddenNameKeys": 18,
     "packageDependencies": 16,
     "packageEscapes": 14,
@@ -323,9 +323,7 @@
     "platform/settings/config.ts: authentik",
     "platform/settings/oidc-probe.ts: authentik",
     "platform/settings/oidc.ts: authentik",
-    "platform/settings/service.ts: authentik",
-    "ui/shell/command-palette.tsx: reply",
-    "ui/shell/icons.ts: wallet"
+    "platform/settings/service.ts: authentik"
   ],
   "forbiddenNameKeys": [
     "auth.invite.authentik",

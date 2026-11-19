@@ -7,12 +7,12 @@ import { getPreferences } from "@ledgerly/domain/users";
 import { hasSsoAccount } from "@ledgerly/domain/platform/auth";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { CommandPalette } from "@/ui/shell/command-palette";
-import { MobileNav } from "@/ui/shell/mobile-nav";
-import type { NavLink } from "@/ui/shell/nav-types";
-import { ShellProvider } from "@/ui/shell/shell-context";
-import { parseSidebar, SIDEBAR_COOKIE } from "@/ui/shell/sidebar-state";
-import { Sidebar } from "@/ui/shell/sidebar";
+import { CommandPalette } from "@ledgerly/ui/shell/command-palette";
+import { MobileNav } from "@ledgerly/ui/shell/mobile-nav";
+import type { NavLink } from "@ledgerly/ui/shell/nav-types";
+import { AppShellProvider } from "@/ui/app-shell-provider";
+import { parseSidebar, SIDEBAR_COOKIE } from "@ledgerly/ui/shell/sidebar-state";
+import { Sidebar } from "@ledgerly/ui/shell/sidebar";
 import { Toaster } from "@ledgerly/ui/toast";
 import { WeekStartProvider } from "@ledgerly/ui/week-start";
 import { navFor } from "./navigation";
@@ -61,7 +61,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   };
 
   return (
-    <ShellProvider initialSidebar={sidebar} labels={labels} saveTheme={saveTheme}>
+    <AppShellProvider initialSidebar={sidebar} labels={labels} saveTheme={saveTheme}>
       {/* Here and not in the root layout: the manifest is behind the session, so only a signed-in
         page may name it, and the browser has to send the cookie with the request (the comment of
         `src/app/manifest.webmanifest/route.ts`). React moves the element into `<head>`. */}
@@ -83,6 +83,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         />
         <Toaster closeLabel={t("common.close")} />
       </WeekStartProvider>
-    </ShellProvider>
+    </AppShellProvider>
   );
 }

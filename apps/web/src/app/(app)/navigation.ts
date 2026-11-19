@@ -1,6 +1,6 @@
 import type { Route } from "next";
 import type { Role } from "@ledgerly/domain/platform/context";
-import type { NavLink } from "@/ui/shell/nav-types";
+import type { NavLink } from "@ledgerly/ui/shell/nav-types";
 
 interface NavItem extends Omit<NavLink, "label"> {
   labelKey:

@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { requireSession } from "@/platform/auth/session";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { SectionTabs, SectionTitle } from "@ledgerly/ui/section-tabs";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { settingsTabsFor } from "../navigation";

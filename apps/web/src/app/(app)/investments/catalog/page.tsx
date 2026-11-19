@@ -8,7 +8,7 @@ import { requireSession } from "@/platform/auth/session";
 import { Badge } from "@ledgerly/ui/badge";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("investments"))("catalog.title") };

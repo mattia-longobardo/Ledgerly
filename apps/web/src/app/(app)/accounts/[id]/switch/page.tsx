@@ -16,7 +16,7 @@ import { maskIdentifier } from "@ledgerly/domain/platform/plugins";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button, ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";

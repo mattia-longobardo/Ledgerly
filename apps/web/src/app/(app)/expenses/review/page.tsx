@@ -30,7 +30,7 @@ import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { withParams } from "@/ui/url";

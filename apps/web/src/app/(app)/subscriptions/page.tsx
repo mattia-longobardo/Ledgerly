@@ -16,7 +16,7 @@ import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { ProgressBar } from "@ledgerly/ui/progress-bar";
-import { Page } from "@/ui/shell/page";
+import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 
 export async function generateMetadata(): Promise<Metadata> {
