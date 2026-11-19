@@ -19,8 +19,9 @@ vi.mock("./actions", () => ({
   walletAccountsAction: (...args: unknown[]) => listChoice(...args),
   chooseWalletAccountsAction: (...args: unknown[]) => saveChoice(...args),
 }));
-vi.mock("./connection-actions", () => ({
-  runConnectionAction: (...args: unknown[]) => rowAction(...args),
+vi.mock("./connection-calls", async (original) => ({
+  ...(await original<object>()),
+  runConnectionCall: (...args: unknown[]) => rowAction(...args),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
@@ -156,7 +157,7 @@ describe("WalletCard", () => {
   });
 
   it("leaves the update and the test of the link to the row's one action", async () => {
-    rowAction.mockResolvedValue({ ok: true, toast: null });
+    rowAction.mockResolvedValue({ ok: true, names: { name: "Wallet", provider: "Wallet" } });
     renderCard();
     await fromMenu(C.actions.test);
     expect(rowAction).toHaveBeenLastCalledWith("c1", "test");

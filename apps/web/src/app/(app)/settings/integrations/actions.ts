@@ -407,7 +407,7 @@ export async function disconnectTrekAction(): Promise<IntegrationActionResult> {
 
 /**
  * "Update now" and "Test the connection" for the two providers of this file, by provider id: the
- * action of every connection (`connection-actions.ts`) names no provider and asks here.
+ * row of every connection (`connection-calls.ts`) names no provider and asks here.
  */
 export async function coreConnectionAction(
   provider: string,

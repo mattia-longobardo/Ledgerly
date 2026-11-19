@@ -124,7 +124,6 @@ const SETTINGS_ACTION_FILES = [
   "apps/web/src/app/(app)/settings/categories/actions.ts",
   "apps/web/src/app/(app)/settings/categories/source-actions.ts",
   "apps/web/src/app/(app)/settings/integrations/actions.ts",
-  "apps/web/src/app/(app)/settings/integrations/connection-actions.ts",
   "apps/web/src/app/(app)/settings/integrations/deactivate-actions.ts",
   "apps/web/src/app/(app)/settings/integrations/plugin-actions.ts",
   "apps/web/src/app/(app)/banks/connect/actions.ts",
@@ -133,7 +132,7 @@ const SETTINGS_ACTION_FILES = [
 const EXCLUDED: Record<string, string> = {
   revokeOtherSessionsAction: "web cookie: «the other sessions» are the ones that are not the cookie's",
   acceptInviteAction: "web cookie: it creates the account and signs it in, before any token exists",
-  coreConnectionAction: "a dispatcher by kind: its kinds are the routes of runConnectionAction",
+  coreConnectionAction: "Wallet and Trek «test» and «history» until R5c: the routes answer `core_provider`",
   // The providers of the core keep their cards on the web until they are plugins (R5c): moving
   // their use cases out of the web would name them in a new file (rule M12).
   connectWalletAction: "Wallet until R5c",

@@ -77,12 +77,6 @@
       "walletAccountsAction"
     ]
   },
-  "apps/web/src/app/(app)/settings/integrations/connection-actions.ts": {
-    "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
-    "actions": [
-      "runConnectionAction"
-    ]
-  },
   "apps/web/src/app/(app)/settings/integrations/deactivate-actions.ts": {
     "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
     "actions": [

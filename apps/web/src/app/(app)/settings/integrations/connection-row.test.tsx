@@ -14,8 +14,9 @@ const action = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
 
-vi.mock("./connection-actions", () => ({
-  runConnectionAction: (...args: unknown[]) => action(...args),
+vi.mock("./connection-calls", async (original) => ({
+  ...(await original<object>()),
+  runConnectionCall: (...args: unknown[]) => action(...args),
 }));
 vi.mock("@ledgerly/ui/router", async (original) => ({
   ...(await original<object>()),
@@ -96,7 +97,7 @@ describe("ConnectionRow", () => {
   });
 
   it("updates through the one action, says what came and asks the page again", async () => {
-    action.mockResolvedValueOnce({ ok: true, toast: "Update completed" });
+    action.mockResolvedValueOnce({ ok: true, names: { name: "North Bank", provider: "Enable Banking" } });
     renderRow(row({ status: status("late", "Last update yesterday.", "update") }));
     await userEvent.click(screen.getByRole("button", { name: C.actions.update }));
     expect(action).toHaveBeenCalledWith("c1", "update");
@@ -105,7 +106,11 @@ describe("ConnectionRow", () => {
   });
 
   it("shows a refusal under the row, in the server's own sentence, and no toast", async () => {
-    action.mockResolvedValueOnce({ ok: false, message: "North Bank is not responding." });
+    action.mockResolvedValueOnce({
+      ok: false,
+      refusal: "provider_down",
+      names: { name: "North Bank", provider: "Enable Banking" },
+    });
     renderRow(row({ status: status("late", "Last update yesterday.", "update") }));
     await userEvent.click(screen.getByRole("button", { name: C.actions.update }));
     expect(await screen.findByRole("alert")).toHaveTextContent("North Bank is not responding.");
@@ -212,7 +217,7 @@ describe("ConnectionRow", () => {
   });
 
   it("is the short form on an account's page: word, sentence and the action as a link", async () => {
-    action.mockResolvedValueOnce({ ok: true, toast: null });
+    action.mockResolvedValueOnce({ ok: true, names: { name: "North Bank", provider: "Enable Banking" } });
     renderRow(row({ status: status("paused", "Enable Banking is not active.", "enable") }), {
       compact: true,
     });

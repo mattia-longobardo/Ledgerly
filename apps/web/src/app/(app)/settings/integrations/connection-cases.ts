@@ -1,7 +1,7 @@
 // src/app/(app)/settings/integrations/connection-cases.ts — what can be done to one of the person's
 // connections, by id: "Update now", "Turn on again", "Turn on", "Test the connection", "Download
-// the history again" (ux/n2-connection-status.md §2.4). The answer is a code: the row's Server
-// Action turns it into a sentence, `/api/v1/connections` into a code of the contract.
+// the history again" (ux/n2-connection-status.md §2.4). The answer is a code: `/api/v1/connections`
+// turns it into a code of the contract, which the row translates.
 import "server-only";
 // "Update now" can start the sync of a plugin's connection: the plugins' passes have to be registered.
 import "@/app/plugin-wiring";
@@ -27,31 +27,10 @@ import { BANK_SCHEDULE } from "@ledgerly/domain/platform/plugins";
 import { PluginActionError, type Presence, setPluginActive } from "@ledgerly/plugin-host";
 import { tasks } from "@/platform/jobs/queue";
 import { passFor } from "@/platform/integrations/registry";
+import { answered, CODE_OF_ANSWER, type Refusal } from "./connection-codes";
 import { recommendedSchedule } from "./recommended-schedule";
 
-/** The kinds a connection can be asked for. */
-export const CONNECTION_KINDS = ["update", "resume", "enable", "test", "history"] as const;
-export type ConnectionKind = (typeof CONNECTION_KINDS)[number];
-
-/** A refusal of a reading as the code whose sentence the row shows. */
-export type Refusal = "busy" | "unavailable" | "network" | "notActive" | "pending" | "failed" | string;
-
-/** What the provider of the core or of Investments answered, as a code of the closed list. */
-const CODE_OF_ANSWER: Record<string, Refusal> = {
-  rejected: "auth",
-  unreachable: "provider_down",
-  provider: "invalid_data",
-  busy: "busy",
-  sync_busy: "busy",
-  cooldown: "busy",
-  sync_refused: "auth",
-  provider_auth: "auth",
-  rate_limited: "rate_limited",
-  provider_unavailable: "provider_down",
-  plugin_down: "unavailable",
-  not_active: "notActive",
-  not_chosen: "pending",
-};
+type ConnectionKind = "update" | "resume" | "enable" | "test" | "history";
 
 type ConnectionOutcome =
   { ok: true; connection: Connection } | { ok: false; refusal: Refusal; connection: Connection | null };
@@ -101,10 +80,6 @@ export type CoreConnection = (
 ) => Promise<{ ok: true } | { ok: false; error: string }>;
 
 type Options = { months?: number; presence: Presence | null; core: CoreConnection };
-
-/** The code of what a provider of the core answered; `null` when it went through. */
-const answered = (result: { ok: boolean; error?: string }): Refusal | null =>
-  result.ok ? null : (CODE_OF_ANSWER[result.error ?? ""] ?? "failed");
 
 /** One function per kind; each answers `null` when it went through, or the refusal. */
 const ACTIONS: Record<

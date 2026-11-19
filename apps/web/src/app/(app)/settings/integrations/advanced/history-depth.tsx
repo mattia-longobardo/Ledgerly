@@ -6,7 +6,7 @@ import { useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Select } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
-import { runConnectionAction } from "../connection-actions";
+import { useRunConnection } from "../connection-row";
 
 /**
  * How far back a connection's history goes, and "Download again" (spec §9.1, F2.5), for a provider
@@ -24,6 +24,7 @@ export function HistoryDepth({
 }) {
   const t = useTranslations("settings.connections");
   const router = useRouter();
+  const run = useRunConnection();
   const id = useId();
   const [months, setMonths] = useState(initial);
   const [failure, setFailure] = useState<string | null>(null);
@@ -33,7 +34,7 @@ export function HistoryDepth({
     setFailure(null);
     startTransition(async () => {
       try {
-        const result = await runConnectionAction(connectionId, "history", months);
+        const result = await run(connectionId, "history", months);
         if (!result.ok) {
           setFailure(result.message);
           return;

@@ -253,7 +253,6 @@
     "apps/web/src/app/(app)/settings/integrations/advanced/page.tsx": 4,
     "apps/web/src/app/(app)/settings/integrations/advanced/report-button.tsx": 1,
     "apps/web/src/app/(app)/settings/integrations/banks-card.tsx": 1,
-    "apps/web/src/app/(app)/settings/integrations/connection-actions.ts": 1,
     "apps/web/src/app/(app)/settings/integrations/connection-view.ts": 4,
     "apps/web/src/app/(app)/settings/integrations/deactivate-zone.tsx": 1,
     "apps/web/src/app/(app)/settings/integrations/deactivate.ts": 1,

@@ -8,8 +8,9 @@ import { HistoryDepth } from "./history-depth";
 const action = vi.fn();
 const refresh = vi.fn();
 
-vi.mock("../connection-actions", () => ({
-  runConnectionAction: (...args: unknown[]) => action(...args),
+vi.mock("../connection-calls", async (original) => ({
+  ...(await original<object>()),
+  runConnectionCall: (...args: unknown[]) => action(...args),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh }) }));
 
@@ -39,7 +40,7 @@ describe("HistoryDepth", () => {
   });
 
   it("downloads the history again at the depth picked, through the one action of a connection", async () => {
-    action.mockResolvedValueOnce({ ok: true, toast: "History downloaded again" });
+    action.mockResolvedValueOnce({ ok: true, names: { name: "North Bank", provider: "Enable Banking" } });
     renderControl();
     await userEvent.selectOptions(screen.getByLabelText(T.label), "60");
     await userEvent.click(screen.getByRole("button", { name: T.action }));
@@ -49,7 +50,11 @@ describe("HistoryDepth", () => {
   });
 
   it("says why nothing was downloaded, in the server's own sentence", async () => {
-    action.mockResolvedValueOnce({ ok: false, message: "An update is already running. Try again shortly." });
+    action.mockResolvedValueOnce({
+      ok: false,
+      refusal: "busy",
+      names: { name: "North Bank", provider: "Enable Banking" },
+    });
     renderControl();
     await userEvent.click(screen.getByRole("button", { name: T.action }));
     expect(await screen.findByRole("alert")).toHaveTextContent("An update is already running.");
