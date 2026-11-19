@@ -7,11 +7,10 @@ import { SwitchCheck } from "@/modules/accounts/ui/switch/switch-check";
 import { requireSession } from "@/platform/auth/session";
 import { labelOf } from "@/platform/integrations/registry";
 import { findInstancePlugin, isPluginActive } from "@ledgerly/domain/platform/plugins";
-import { maskIdentifier } from "@ledgerly/domain/platform/plugins";
 import { Page } from "@ledgerly/ui/shell/page";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
-import { freeBankAccounts, switchable } from "./switch";
+import { switchable } from "./switch";
 import { SwitchChoices } from "./switch-choices";
 import { SwitchDone } from "./switch-done";
 
@@ -97,25 +96,13 @@ export default async function SwitchAccountPage({
     );
   }
 
-  // Step "Account" (§4): the choices are read from `/api/v1`. Their masked identifier is read here,
-  // since no answer carries an IBAN, even masked (H45); the names are the API's, so `String`.
-  // decided: the IBAN decision is open, the masked identifier is read on the server.
-  const banks = await freeBankAccounts(ctx, account.id, account.currency, String);
-  const masked = Object.fromEntries(
-    banks.flatMap((bank) =>
-      bank.accounts.map((choice) => [
-        `${bank.connectionId}:${choice.providerAccountId}`,
-        maskIdentifier(choice.identifier),
-      ]),
-    ),
-  );
+  // Step "Account" (§4): the choices and their masked identifiers are read from `/api/v1`.
   return frame(
     "account",
     <SwitchChoices
       account={{ id: account.id, name: account.name, currency: account.currency }}
       settings={settings}
       here={here}
-      masked={masked}
     />,
   );
 }

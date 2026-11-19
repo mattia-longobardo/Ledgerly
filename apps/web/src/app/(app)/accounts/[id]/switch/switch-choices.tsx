@@ -20,19 +20,44 @@ interface ChoicesProps {
   /** Where «Cancel» goes, and where the form sends its choice. */
   settings: string;
   here: string;
-  /**
-   * The bank's identifier of each choice, masked (`IT60 •••• 3456`), by `connectionId:bankAccountId`:
-   * no answer carries it, whole or masked (H45), so the server hands it in.
-   */
-  masked: Record<string, string | null>;
 }
+
+/** The bank's identifier of each choice, masked (`IT60 •••• 3456`), by `connectionId:bankAccountId`. */
+type Masked = Map<string, string | null>;
 
 export function SwitchChoices(props: ChoicesProps) {
-  const read = useApi(accountSwitch.listSwitchCandidates, { params: { id: props.account.id } });
-  return <Loaded state={read}>{(answer) => <Choices {...props} banks={answer.banks} />}</Loaded>;
+  const input = { params: { id: props.account.id } };
+  const read = useApi(accountSwitch.listSwitchCandidates, input);
+  // Only the web's own session reads the masked identifiers (scope `session`, H45).
+  const identifiers = useApi(accountSwitch.listSwitchIdentifiers, input);
+  return (
+    <Loaded state={read}>
+      {(answer) => (
+        <Loaded state={identifiers}>
+          {(masked) => (
+            <Choices
+              {...props}
+              banks={answer.banks}
+              masked={
+                new Map(
+                  masked.identifiers.map((one) => [`${one.connectionId}:${one.bankAccountId}`, one.masked]),
+                )
+              }
+            />
+          )}
+        </Loaded>
+      )}
+    </Loaded>
+  );
 }
 
-function Choices({ account, settings, here, masked, banks }: ChoicesProps & { banks: Banks }) {
+function Choices({
+  account,
+  settings,
+  here,
+  masked,
+  banks,
+}: ChoicesProps & { banks: Banks; masked: Masked }) {
   const text = useTranslations("accounts.switch");
   const choices = banks.flatMap((bank) => bank.accounts);
   if (choices.length === 0) return <NoChoice banks={banks.length} currency={account.currency} />;
@@ -61,7 +86,7 @@ function Choices({ account, settings, here, masked, banks }: ChoicesProps & { ba
                     key={value}
                     value={value}
                     choice={choice}
-                    masked={masked[value] ?? null}
+                    masked={masked.get(value) ?? null}
                     disabled={bank.expired || choice.otherIban}
                     preselected={preselected === choice}
                   />
