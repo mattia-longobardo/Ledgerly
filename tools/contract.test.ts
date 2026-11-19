@@ -3,11 +3,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  ACCOUNTS_ROUTES,
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
   SETTINGS_ROUTES,
   type RouteContract,
 } from "@ledgerly/api-contract";
+import * as wire from "../packages/api-contract/src/accounts/shared";
+import * as domain from "@domain/modules/accounts/rules";
 import { breakingChanges, DOCUMENT, generated, RELEASED } from "../scripts/openapi";
 
 const json = (path: string) => JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
@@ -155,6 +158,36 @@ describe("the Server Actions of users and settings", () => {
   it("are named by the routes only when they exist", () => {
     expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
     expect(Object.keys(EXCLUDED).filter((name) => !actions.includes(name))).toEqual([]);
+  });
+});
+
+/** The Server Actions of accounts (05-refactor.md §5.5) and their routes; no exclusion. */
+const ACCOUNTS_ACTION_FILES = [
+  "apps/web/src/modules/accounts/actions.ts",
+  "apps/web/src/app/(app)/accounts/[id]/delete-actions.ts",
+  "apps/web/src/app/(app)/accounts/[id]/switch/actions.ts",
+];
+
+describe("the Server Actions of accounts", () => {
+  const actions = ACCOUNTS_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(ACCOUNTS_ROUTES.flatMap((route) => route.actions));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(wire.ACCOUNT_TYPES).toEqual(domain.ACCOUNT_TYPES);
+    expect(wire.ACCOUNT_STATES).toEqual(domain.ACCOUNT_STATES);
+    expect(wire.ACCOUNT_ORIGINS).toEqual(domain.ACCOUNT_ORIGINS);
+    expect(wire.ENTRY_SOURCES).toEqual(domain.ENTRY_SOURCES);
+    expect(wire.REMINDERS).toEqual(domain.REMINDERS);
+    expect(wire.TRENDS).toEqual(domain.TRENDS);
+    expect(wire.CONNECTION_CHANNELS).toEqual(domain.CONNECTION_CHANNELS);
+    expect(wire.SNAPSHOT_STATES).toEqual(domain.SNAPSHOT_STATES);
   });
 });
 

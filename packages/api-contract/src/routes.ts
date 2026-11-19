@@ -1,5 +1,11 @@
 // Every route of the contract, in one list: `apps/api` serves them, the OpenAPI document and the
 // MCP tools of the reads are generated from them (rewrite plan R2). A module's step adds its own.
+import * as accountLinks from "./accounts/links";
+import * as accounts from "./accounts/accounts";
+import * as balances from "./accounts/balances";
+import * as removal from "./accounts/removal";
+import * as accountSummary from "./accounts/summary";
+import * as accountSwitch from "./accounts/switch";
 import { metaRoute } from "./meta";
 import type { RouteContract } from "./route";
 import * as banks from "./settings/banks";
@@ -35,4 +41,19 @@ export const SETTINGS_ROUTES: readonly RouteContract[] = [
   ...Object.values(banks),
 ];
 
-export const CONTRACT_ROUTES: readonly RouteContract[] = [metaRoute, ...SETTINGS_ROUTES];
+/** Accounts by area, for `apps/api` to serve each one by name. */
+export const ACCOUNTS = {
+  accounts,
+  balances,
+  links: accountLinks,
+  removal,
+  switch: accountSwitch,
+  summary: accountSummary,
+} as const;
+
+/** Accounts, the second module of R2 (05-refactor.md §5.2). */
+export const ACCOUNTS_ROUTES: readonly RouteContract[] = Object.values(ACCOUNTS).flatMap((area) =>
+  Object.values(area).filter((value): value is RouteContract => typeof value === "object" && "path" in value),
+);
+
+export const CONTRACT_ROUTES: readonly RouteContract[] = [metaRoute, ...SETTINGS_ROUTES, ...ACCOUNTS_ROUTES];

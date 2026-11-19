@@ -20,6 +20,8 @@
     "undoSourceCategoryChange"
   ],
   "packages/api-contract/src/index.ts": [
+    "ACCOUNTS",
+    "ACCOUNTS_ROUTES",
     "API_ERRORS",
     "API_LEVEL",
     "ApiErrorCode",
