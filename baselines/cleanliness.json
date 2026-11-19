@@ -318,7 +318,7 @@
     "apps/web/src/modules/accounts/ui/balance-entries.tsx": 3,
     "apps/web/src/modules/accounts/ui/connections.tsx": 2,
     "apps/web/src/modules/accounts/ui/iban-field.ts": 1,
-    "apps/web/src/modules/accounts/ui/net-worth-card.tsx": 7,
+    "apps/web/src/modules/accounts/ui/net-worth-card.tsx": 5,
     "apps/web/src/modules/accounts/ui/settings-form.tsx": 1,
     "apps/web/src/modules/accounts/ui/snapshot-button.tsx": 1,
     "apps/web/src/modules/accounts/ui/switch/switch-check.tsx": 5,
