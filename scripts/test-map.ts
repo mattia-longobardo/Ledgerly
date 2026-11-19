@@ -217,7 +217,16 @@ export const MODULES: Module[] = [
     integration: ["apps/web/src/modules/pockets", "packages/domain/src/modules/pockets"],
     flows: ["pockets"],
     // "Move to another section" counts the expenses a pocket uses (N3.3).
-    usedBy: ["export", "jobs", "accounts", "categories", "e2e:accounts", "e2e:shell", "e2e:categories"],
+    usedBy: [
+      "export",
+      "jobs",
+      "accounts",
+      "api",
+      "categories",
+      "e2e:accounts",
+      "e2e:shell",
+      "e2e:categories",
+    ],
   },
   {
     id: "subscriptions",
@@ -229,7 +238,16 @@ export const MODULES: Module[] = [
     integration: ["apps/web/src/modules/subscriptions", "packages/domain/src/modules/subscriptions"],
     flows: ["subscriptions"],
     // "Move to another section" counts the charges of a subscription (N3.3).
-    usedBy: ["export", "jobs", "accounts", "categories", "e2e:accounts", "e2e:shell", "e2e:categories"],
+    usedBy: [
+      "export",
+      "jobs",
+      "accounts",
+      "api",
+      "categories",
+      "e2e:accounts",
+      "e2e:shell",
+      "e2e:categories",
+    ],
   },
   {
     id: "interests",
@@ -243,6 +261,7 @@ export const MODULES: Module[] = [
     // "Move to another section" asks whether a rule posts under the category (N3.3). "Turn off" a
     // source stops the rules that publish to it (N7.3).
     usedBy: [
+      "api",
       "connections",
       "pockets",
       "funds",
@@ -403,7 +422,22 @@ export const MODULES: Module[] = [
     ],
     integration: ["apps/web/src/platform/api", "apps/web/src/platform/mcp", "tools/baselines.itest.ts"],
     flows: ["api"],
-    usedBy: ["investments", "accounts", "transactions", "imports", "perf"],
+    // `apps/api` serves the routes of users, settings and accounts (R2): their tests run with it.
+    usedBy: [
+      "investments",
+      "accounts",
+      "transactions",
+      "imports",
+      "admin",
+      "categories",
+      "connections",
+      "users",
+      "e2e:accounts",
+      "e2e:admin",
+      "e2e:categories",
+      "e2e:connections",
+      "perf",
+    ],
   },
   {
     id: "jobs",
@@ -433,7 +467,18 @@ export const MODULES: Module[] = [
       "apps/web/src/platform/reports",
     ],
     flows: ["admin"],
-    usedBy: ["payroll", "jobs", "api", "export", "accounts", "users", "e2e:payroll", "e2e:auth", "e2e:api"],
+    usedBy: [
+      "payroll",
+      "jobs",
+      "api",
+      "export",
+      "accounts",
+      "users",
+      "e2e:payroll",
+      "e2e:auth",
+      "e2e:api",
+      "e2e:accounts",
+    ],
   },
   {
     id: "export",

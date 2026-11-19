@@ -5,14 +5,14 @@
     "reciprocalModulePairs": 5,
     "reciprocalUnitPairs": 53,
     "moduleCycleGroups": 1,
-    "platformToModuleImports": 78,
+    "platformToModuleImports": 76,
     "platformFilesImportingModules": 23,
     "uiToPlatformImports": 3,
-    "forbiddenNameFiles": 110,
+    "forbiddenNameFiles": 111,
     "forbiddenNameKeys": 18,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 284,
+    "deepImports": 283,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -136,10 +136,10 @@
     "modules/transactions/ui/transactions-table.tsx → modules/accounts/ui/controls"
   ],
   "reciprocalUnits": [
+    "api ↔ modules/users",
     "app ↔ modules/funds",
     "modules/accounts ↔ modules/investments",
     "modules/accounts ↔ modules/transactions",
-    "modules/accounts ↔ platform/api",
     "modules/accounts ↔ platform/db",
     "modules/accounts ↔ platform/fx",
     "modules/accounts ↔ platform/jobs",
@@ -202,6 +202,7 @@
     ]
   ],
   "forbiddenNames": [
+    "api/settings/categories.ts: wallet",
     "app/(app)/expenses/page.tsx: wallet",
     "app/(app)/investments/[accountId]/connection/page.tsx: binance",
     "app/(app)/investments/[accountId]/connection/page.tsx: etoro",
@@ -647,7 +648,6 @@
     "modules/transactions/ui/spending-card.tsx → modules/accounts/ui/controls",
     "modules/transactions/ui/spending-card.tsx → modules/accounts/ui/display",
     "modules/transactions/ui/transactions-table.tsx → modules/accounts/ui/controls",
-    "platform/api/app.ts → modules/accounts/api",
     "platform/api/app.ts → modules/imports/api",
     "platform/api/app.ts → modules/investments/api",
     "platform/api/app.ts → modules/transactions/api",

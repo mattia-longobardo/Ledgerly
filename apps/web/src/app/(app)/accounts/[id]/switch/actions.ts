@@ -1,32 +1,12 @@
 // src/app/(app)/accounts/[id]/switch/actions.ts — the Server Actions of "move an account to the
-// bank" (ux/n4-account-switch.md): thin wrappers around `switch.ts`, which answer a code of a closed
-// list and never what a bank or a source said.
+// bank" (ux/n4-account-switch.md): the use cases of `../../api-cases.ts`, which `/api/v1` calls
+// too. They answer a code of a closed list and never what a bank or a source said.
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { tasks } from "@/platform/jobs/queue";
 import { requestPresence } from "../../../banks/presence";
-import {
-  applySwitch,
-  checkSwitch,
-  type SwitchError,
-  SwitchFailure,
-  type SwitchReport,
-  undoSwitch,
-} from "./switch";
-
-type SwitchRefusal = { ok: false; error: SwitchError; retryAt: string | null };
-
-function refusal(error: unknown): SwitchRefusal {
-  if (error instanceof SwitchFailure) {
-    return { ok: false, error: error.code, retryAt: error.retryAt?.toISOString() ?? null };
-  }
-  console.error("[accounts] a switch failed", redactForLog(error));
-  return { ok: false, error: "failed", retryAt: null };
-}
+import { applySwitchOf, checkSwitchOf, undoSwitchOf } from "../../api-cases";
 
 function revalidate(accountId: string) {
   revalidatePath(`/accounts/${accountId}`);
@@ -40,40 +20,23 @@ function revalidate(accountId: string) {
 export async function checkSwitchAction(
   accountId: string,
   target: { connectionId: string; bankAccountId: string },
-): Promise<{ ok: true; report: SwitchReport } | SwitchRefusal> {
-  const ctx = await requireSession();
-  try {
-    return { ok: true, report: await checkSwitch(ctx, accountId, target, await requestPresence()) };
-  } catch (error) {
-    return refusal(error);
-  }
+) {
+  return checkSwitchOf(await requireSession(), accountId, target, await requestPresence());
 }
 
 /** "Apply" (§8): only with the print of the report the person read. */
 export async function applySwitchAction(
   accountId: string,
   target: { connectionId: string; bankAccountId: string; fingerprint: string },
-): Promise<{ ok: true; matched: number; transfers: number; fresh: number } | SwitchRefusal> {
-  const ctx = await requireSession();
-  try {
-    const outcome = await applySwitch(ctx, accountId, target, await requestPresence());
-    await enqueue(tasks.afterSync("manual"));
-    revalidate(accountId);
-    return { ok: true, ...outcome };
-  } catch (error) {
-    return refusal(error);
-  }
+) {
+  const outcome = await applySwitchOf(await requireSession(), accountId, target, await requestPresence());
+  if (outcome.ok) revalidate(accountId);
+  return outcome;
 }
 
 /** "Undo switch" (§10). */
-export async function undoSwitchAction(accountId: string): Promise<{ ok: true } | SwitchRefusal> {
-  const ctx = await requireSession();
-  try {
-    await undoSwitch(ctx, accountId);
-    await enqueue(tasks.afterSync("manual"));
-    revalidate(accountId);
-    return { ok: true };
-  } catch (error) {
-    return refusal(error);
-  }
+export async function undoSwitchAction(accountId: string) {
+  const outcome = await undoSwitchOf(await requireSession(), accountId);
+  if (outcome.ok) revalidate(accountId);
+  return outcome;
 }

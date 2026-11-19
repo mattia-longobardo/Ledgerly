@@ -1,13 +1,11 @@
 import "server-only";
 import { Hono } from "hono";
-import { accountsApi } from "@/modules/accounts/api";
 import { importsApi } from "@/modules/imports/api";
 import { investmentsApi } from "@/modules/investments/api";
 import { transactionsApi } from "@/modules/transactions/api";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { ApiEnv } from "./auth";
 import { fail } from "./errors";
-import { summaryApi } from "./summary";
 
 /**
  * `/api/v1` (spec §4.2, D5): one entry point, one place that authenticates, one shape of error.
@@ -19,9 +17,7 @@ import { summaryApi } from "./summary";
  */
 export const api = new Hono<ApiEnv>().basePath("/api/v1");
 
-api.route("/", accountsApi);
 api.route("/", transactionsApi);
-api.route("/", summaryApi);
 api.route("/", importsApi);
 api.route("/", investmentsApi);
 

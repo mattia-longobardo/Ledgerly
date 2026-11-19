@@ -82,7 +82,7 @@ interface ReportMovement {
   cents: string;
 }
 
-export interface SwitchReport {
+interface SwitchReport {
   fingerprint: string;
   connectionId: string;
   bankAccountId: string;

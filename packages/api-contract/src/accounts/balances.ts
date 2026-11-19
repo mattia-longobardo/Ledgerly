@@ -38,6 +38,17 @@ export const getAccountBalances = defineRoute({
     description:
       "The recorded balances of one account, newest first, as GET /api/v1/accounts/{id}/balances. " +
       "Take the account id from list_accounts.",
+    arguments: {
+      account_id: id().describe("The account's id, from list_accounts."),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(MAX_BALANCES)
+        .optional()
+        .describe(`How many entries, newest first (default ${MAX_BALANCES}).`),
+    },
+    pathArguments: { id: "account_id" },
   },
   example: {
     params: { id: ACCOUNT_ID },

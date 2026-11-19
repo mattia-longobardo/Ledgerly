@@ -517,8 +517,11 @@ describe("parity of users and settings: route = MCP tool", () => {
       body: JSON.stringify({ name: "Trip", color: null }),
     });
     expect(reads.map((tool) => tool.name).sort()).toEqual([
+      "get_account_balances",
       "get_preferences",
       "get_profile",
+      "get_summary",
+      "list_accounts",
       "list_categories",
       "list_connections",
       "list_labels",
@@ -530,7 +533,8 @@ describe("parity of users and settings: route = MCP tool", () => {
       list_connections: "/connections",
       list_labels: "/labels",
     };
-    for (const tool of reads) {
+    // Accounts' tools are held to their routes by `accounts.itest.ts`.
+    for (const tool of reads.filter((one) => one.name in paths)) {
       const route = await (await call(paths[tool.name], aliceToken)).json();
       expect(await tool.run(alice, {}), tool.name).toEqual(route);
     }

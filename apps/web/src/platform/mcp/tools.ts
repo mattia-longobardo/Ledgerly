@@ -2,7 +2,6 @@ import "server-only";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { balancesOn, getAccount, listAccounts, listBalanceEntries } from "@ledgerly/domain/accounts";
 import { budgetsView } from "@ledgerly/domain/budgets";
 import { holdingsJson, pnlJson, portfolioJson } from "@/modules/investments/api";
 import { investmentsPnl, investmentsPortfolio, serviceHoldings } from "@ledgerly/domain/investments";
@@ -13,7 +12,6 @@ import type { ApiScope } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
-import { monthlyFigures } from "@/platform/reports/monthly";
 import { civilDate } from "@ledgerly/api-contract";
 import type { ReadTool } from "@ledgerly/api";
 
@@ -34,8 +32,6 @@ import type { ReadTool } from "@ledgerly/api";
 
 const MAX_TRANSACTIONS = 500;
 const DEFAULT_TRANSACTIONS = 50;
-const MAX_BALANCES = 200;
-const DEFAULT_BALANCES = 50;
 
 const civilDateField = civilDate("A date as YYYY-MM-DD");
 const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "A month as YYYY-MM");
@@ -73,107 +69,6 @@ export function buildMcpServer(
     reads.filter((tool) => scopes.some((scope) => scope === tool.scope)),
   );
   if (!scopes.includes("read")) return server;
-
-  server.registerTool(
-    "get_summary",
-    {
-      title: "Summary",
-      description:
-        "Net worth, liquid cash, and this month's income, spending and net, as GET /api/v1/summary. " +
-        "`currency` is the user's display currency, which netWorth, previousNetWorth and cash are " +
-        "converted to at the ECB rate of their day. " +
-        "`netWorthPartial`/`cashPartial` are true when an account counted has no balance yet, or no " +
-        "exchange rate to that currency.",
-      annotations: READ_ONLY,
-    },
-    async () => {
-      const figures = await monthlyFigures(ctx, monthKey(today(ctx.timeZone)));
-      return json({
-        month: figures.month,
-        currency: figures.currency,
-        netWorth: money(figures.netWorthCents),
-        netWorthPartial: figures.netWorthPartial,
-        previousNetWorth: money(figures.previousNetWorthCents),
-        cash: money(figures.cashCents),
-        cashPartial: figures.cashPartial,
-        income: money(figures.incomeCents),
-        expense: money(figures.expenseCents),
-        net: money(figures.netCents),
-        transactions: figures.transactions,
-        accounts: figures.accounts,
-        lastSnapshotMonth: figures.lastSnapshotMonth,
-      });
-    },
-  );
-
-  server.registerTool(
-    "list_accounts",
-    {
-      title: "Accounts",
-      description:
-        "Every account with its type, currency, state and today's balance, as GET /api/v1/accounts.",
-      annotations: READ_ONLY,
-    },
-    async () => {
-      const accounts = await listAccounts(ctx);
-      const latest = await balancesOn(
-        ctx,
-        accounts.map((account) => account.id),
-        today(ctx.timeZone),
-      );
-      return json({
-        accounts: accounts.map((account) => ({
-          id: account.id,
-          name: account.name,
-          type: account.type,
-          currency: account.currency,
-          origin: account.origin,
-          state: account.state,
-          inNetWorth: account.inNetWorth,
-          countsAsLiquid: account.countsAsLiquid,
-          balance: money(latest.get(account.id) ?? null),
-          lastSyncedAt: instant(account.lastSyncedAt),
-        })),
-      });
-    },
-  );
-
-  server.registerTool(
-    "get_account_balances",
-    {
-      title: "Balance history",
-      description:
-        "The recorded balances of one account, newest first, as GET /api/v1/accounts/{id}/balances. " +
-        "Take the account id from list_accounts.",
-      inputSchema: {
-        account_id: z.uuid().describe("The account's id, from list_accounts."),
-        limit: z
-          .number()
-          .int()
-          .min(1)
-          .max(MAX_BALANCES)
-          .optional()
-          .describe(`How many entries, newest first (default ${DEFAULT_BALANCES}).`),
-      },
-      annotations: READ_ONLY,
-    },
-    async ({ account_id, limit }) => {
-      // Another person's account is `not_found`, exactly as on the screen: `getAccount` is scoped.
-      if (!(await getAccount(ctx, account_id))) return failure("Account not found.");
-      const entries = await listBalanceEntries(ctx, account_id, limit ?? DEFAULT_BALANCES);
-      return json({
-        balances: entries.map((entry) => ({
-          id: entry.id,
-          on: entry.on,
-          balance: money(entry.balanceCents),
-          available: money(entry.availableCents),
-          source: entry.source,
-          note: entry.note,
-          capturedAt: instant(entry.capturedAt),
-        })),
-      });
-    },
-  );
 
   server.registerTool(
     "list_transactions",

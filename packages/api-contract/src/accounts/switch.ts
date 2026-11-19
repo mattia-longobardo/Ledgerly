@@ -2,8 +2,8 @@
 // ux/n4-account-switch.md). The check reads the bank and the source of before, so it is a `POST`
 // even if it writes nothing of its own. A refusal is `conflict` with the code of the closed list in
 // `reason` (`not_allowed`, `source_unavailable`, `bank_unavailable`, `consent_expired`,
-// `account_gone`, `stale`, `busy`, `failed`); a wait the bank asks for is `rate_limited` with
-// `Retry-After`. Nothing a bank or a source said travels in an answer.
+// `account_gone`, `stale`, `busy`, `failed`); a wait the bank asks for is `rate_limited` with the
+// moment to try again in `reason`. Nothing a bank or a source said travels in an answer.
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { id } from "../primitives";

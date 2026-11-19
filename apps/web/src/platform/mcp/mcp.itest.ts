@@ -18,6 +18,8 @@ const { createApiClient } = await import("../auth/api-clients");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
 const { saveBalanceEntry } = await import("@domain/modules/accounts/service");
 const { handleMcp } = await import("./handler");
+// The tools of the reads, as `app/api/mcp/route.ts` hands them to the server.
+const { reads } = await import("@/app/api/v1/[[...route]]/composition");
 
 const ORIGIN = "http://127.0.0.1:3000";
 const API = `${ORIGIN}/api/v1`;
@@ -77,6 +79,7 @@ async function rpc(token: string | null, method: string, params: unknown = {}, h
       body:
         httpMethod === "POST" ? JSON.stringify({ jsonrpc: "2.0", id: ++rpcId, method, params }) : undefined,
     }),
+    reads,
   );
 }
 
@@ -197,9 +200,14 @@ describe("MCP tools", () => {
       .result.tools;
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "get_account_balances",
+      "get_preferences",
+      "get_profile",
       "get_summary",
       "list_accounts",
       "list_budgets",
+      "list_categories",
+      "list_connections",
+      "list_labels",
       "list_transactions",
     ]);
     for (const tool of tools) expect(tool.annotations).toMatchObject({ readOnlyHint: true });
@@ -255,7 +263,7 @@ describe("MCP tools", () => {
 
     // Another person's account is not found, not forbidden: its existence is not disclosed.
     const foreign = await callTool(token, "get_account_balances", { account_id: theirs });
-    expect(foreign).toEqual({ isError: true, text: "Account not found." });
+    expect(foreign).toEqual({ isError: true, text: "not_found" });
 
     const transactions = JSON.parse(
       (await callTool(token, "list_transactions", { account_id: theirs })).text,

@@ -29,8 +29,17 @@ export interface RouteContract {
   status?: 200 | 201 | 202 | 204;
   /** The codes of `errors.ts` the route answers with, besides `unauthorized`, `forbidden`, `rate_limited`. */
   errors: readonly ApiErrorCode[];
-  /** A read that is also an MCP tool: its title and the sentence the model reads. */
-  mcp?: { title: string; description: string };
+  /**
+   * A read that is also an MCP tool: its title and the sentence the model reads. `arguments` are the
+   * tool's when they are not the query's (a tool takes no path), and `pathArguments` names the
+   * argument that gives each parameter of the path.
+   */
+  mcp?: {
+    title: string;
+    description: string;
+    arguments?: z.ZodRawShape;
+    pathArguments?: Record<string, string>;
+  };
   /** One example, checked against the schemas by the gate. */
   example: {
     params?: Record<string, string>;

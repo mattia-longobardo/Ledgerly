@@ -32,7 +32,8 @@ vi.mock("next/server", () => ({ after: () => {} }));
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClient } = await import("../apps/web/src/platform/auth/api-clients");
 const { resetRateLimits } = await import("../apps/web/src/platform/api/rate-limit");
-const { api } = await import("../apps/web/src/platform/api/app");
+// `/api/v1` and the MCP tools of the reads as the web process serves them (R2: `apps/api` included).
+const { api, reads } = await import("../apps/web/src/app/api/v1/[[...route]]/composition");
 const { handleMcp } = await import("../apps/web/src/platform/mcp/handler");
 
 const ORIGIN = "http://127.0.0.1:3000";
@@ -210,6 +211,7 @@ describe("the reference user", () => {
           },
           body: JSON.stringify({ jsonrpc: "2.0", id: (rpcId += 1), method, params }),
         }),
+        reads,
       );
       expect(response.status).toBe(200);
       return ((await response.json()) as { result: unknown }).result;

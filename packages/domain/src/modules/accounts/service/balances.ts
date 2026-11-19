@@ -53,7 +53,13 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
  * the balance is on neither date. `rebuildDerivedBalances` follows as in {@link saveBalanceEntry}:
  * which month ends get rebuilt depends on the manual corrections, and here two dates moved.
  */
-export async function updateBalanceEntry(ctx: Ctx, id: string, input: unknown): Promise<BalanceEntry> {
+export async function updateBalanceEntry(
+  ctx: Ctx,
+  id: string,
+  input: unknown,
+  /** When given, an entry of another account is `not_found`, as the route of the account says. */
+  accountId?: string,
+): Promise<BalanceEntry> {
   const parsed: BalanceEntryInput = balanceEntrySchema.parse(input);
   const [current] = await getDb()
     .select()
@@ -62,6 +68,7 @@ export async function updateBalanceEntry(ctx: Ctx, id: string, input: unknown): 
       and(
         eq(balanceEntries.id, id),
         eq(balanceEntries.source, "manual"),
+        accountId === undefined ? undefined : eq(balanceEntries.accountId, accountId),
         userScoped(ctx).owns(balanceEntries),
       ),
     );
@@ -194,12 +201,18 @@ export async function saveImportBalance(
   return row;
 }
 
-export async function deleteBalanceEntry(ctx: Pick<Ctx, "userId" | "timeZone">, id: string): Promise<void> {
+export async function deleteBalanceEntry(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  id: string,
+  /** When given, an entry of another account stays: nothing is deleted. */
+  accountId?: string,
+): Promise<void> {
   const [entry] = await getDb()
     .select({ accountId: balanceEntries.accountId, on: balanceEntries.on })
     .from(balanceEntries)
     .where(and(eq(balanceEntries.id, id), userScoped(ctx).owns(balanceEntries)));
-  if (entry) await refuseManaged(ctx, entry.accountId, entry.on);
+  if (!entry || (accountId !== undefined && entry.accountId !== accountId)) return;
+  await refuseManaged(ctx, entry.accountId, entry.on);
   const [row] = await getDb()
     .delete(balanceEntries)
     .where(

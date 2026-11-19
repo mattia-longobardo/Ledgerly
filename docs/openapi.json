@@ -2037,6 +2037,144 @@
         "x-scope": "write"
       }
     },
+    "/accounts/{id}/daily-balances": {
+      "get": {
+        "operationId": "get_account_daily_balances",
+        "summary": "One account day by day from `from` to `to` (both included, at most 1100 days, cut at today): readings held, a synced account rebuilt from its movements.",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "days": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "values": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "estimated": {
+                      "type": "array",
+                      "items": {
+                        "type": "boolean"
+                      }
+                    }
+                  },
+                  "required": [
+                    "days",
+                    "values",
+                    "estimated"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
     "/accounts/{id}/dependents": {
       "get": {
         "operationId": "list_account_dependents",
@@ -9321,6 +9459,550 @@
           }
         },
         "security": []
+      }
+    },
+    "/net-worth": {
+      "get": {
+        "operationId": "get_net_worth",
+        "summary": "The net worth and every account by month end, through `through` (this month when missing), for `months` months (1-120, 24 when missing).",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 120
+            }
+          },
+          {
+            "name": "through",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+            }
+          },
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "currency": {
+                      "type": "string"
+                    },
+                    "months": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                      }
+                    },
+                    "netWorth": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "total": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "partial": {
+                            "type": "boolean"
+                          },
+                          "estimated": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "total",
+                          "partial",
+                          "estimated"
+                        ]
+                      }
+                    },
+                    "total": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "totalPartial": {
+                      "type": "boolean"
+                    },
+                    "previousTotal": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "buckets": {
+                      "type": "object",
+                      "properties": {
+                        "cash": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "partial": {
+                              "type": "boolean"
+                            },
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "partial",
+                            "count"
+                          ]
+                        },
+                        "savings": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "partial": {
+                              "type": "boolean"
+                            },
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "partial",
+                            "count"
+                          ]
+                        },
+                        "investments": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "partial": {
+                              "type": "boolean"
+                            },
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "partial",
+                            "count"
+                          ]
+                        },
+                        "other": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "partial": {
+                              "type": "boolean"
+                            },
+                            "count": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "partial",
+                            "count"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "cash",
+                        "savings",
+                        "investments",
+                        "other"
+                      ]
+                    },
+                    "alerts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "low_balance",
+                              "stale_sync"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "accountId",
+                          "kind"
+                        ]
+                      }
+                    },
+                    "missingRates": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "lastSnapshotMonth": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "checking",
+                              "savings",
+                              "cash",
+                              "investment",
+                              "pension",
+                              "crypto",
+                              "credit",
+                              "other"
+                            ]
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "manual",
+                              "synced"
+                            ]
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "unavailable",
+                              "archived"
+                            ]
+                          },
+                          "color": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "inNetWorth": {
+                            "type": "boolean"
+                          },
+                          "countsAsLiquid": {
+                            "type": "boolean"
+                          },
+                          "bucket": {
+                            "type": "string",
+                            "enum": [
+                              "cash",
+                              "savings",
+                              "investments",
+                              "other"
+                            ]
+                          },
+                          "balance": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "previous": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "series": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "estimated": {
+                            "type": "array",
+                            "items": {
+                              "type": "boolean"
+                            }
+                          },
+                          "held": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "display": {
+                            "type": "object",
+                            "properties": {
+                              "balance": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "previous": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "held": {
+                                "type": "array",
+                                "items": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "balance",
+                              "previous",
+                              "held"
+                            ]
+                          },
+                          "missingRate": {
+                            "type": "boolean"
+                          },
+                          "stale": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "type",
+                          "currency",
+                          "origin",
+                          "state",
+                          "color",
+                          "inNetWorth",
+                          "countsAsLiquid",
+                          "bucket",
+                          "balance",
+                          "previous",
+                          "series",
+                          "estimated",
+                          "held",
+                          "display",
+                          "missingRate",
+                          "stale"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "currency",
+                    "months",
+                    "netWorth",
+                    "total",
+                    "totalPartial",
+                    "previousTotal",
+                    "buckets",
+                    "alerts",
+                    "missingRates",
+                    "lastSnapshotMonth",
+                    "accounts"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
       }
     },
     "/people": {

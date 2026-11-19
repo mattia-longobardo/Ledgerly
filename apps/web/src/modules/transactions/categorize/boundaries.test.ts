@@ -39,7 +39,7 @@ describe("what the automatic categories keep to themselves", () => {
     "platform/export/service.ts",
     "platform/mcp/tools.ts",
     "modules/transactions/api.ts",
-    "modules/accounts/api.ts",
+    "api/accounts/dto.ts",
   ])("is named nowhere in %s", (path) => {
     const source = read(path);
     for (const name of PRIVATE) expect(source).not.toContain(name);

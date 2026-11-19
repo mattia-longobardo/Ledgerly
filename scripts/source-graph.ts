@@ -40,6 +40,7 @@ export const SOURCE_ROOTS: readonly { dir: string; prefix: string }[] = [
   { dir: "packages/domain/src", prefix: "" },
   { dir: "packages/plugin-host/src", prefix: "platform/plugins/" },
   { dir: "packages/plugin-contract/src", prefix: "platform/plugins/contract/" },
+  { dir: "apps/api/src", prefix: "api/" },
 ];
 
 /** Every `.ts`/`.tsx` file of the product trees under `repo`: its path in the tree → its path on disk. */
@@ -66,6 +67,7 @@ export function readProductSources(repo: string): Map<string, string> {
 const PACKAGE_ENTRIES: readonly [string, string][] = [
   ["@ledgerly/plugin-contract", "platform/plugins/contract/index"],
   ["@ledgerly/plugin-host", "platform/plugins/index"],
+  ["@ledgerly/api", "api/index"],
 ];
 /** The path aliases of the tests and the scripts: a file of a package by its path. */
 const ALIASES: readonly [string, string][] = [

@@ -6,6 +6,7 @@ import * as balances from "./accounts/balances";
 import * as removal from "./accounts/removal";
 import * as accountSummary from "./accounts/summary";
 import * as accountSwitch from "./accounts/switch";
+import * as views from "./accounts/views";
 import { metaRoute } from "./meta";
 import type { RouteContract } from "./route";
 import * as banks from "./settings/banks";
@@ -49,6 +50,7 @@ export const ACCOUNTS = {
   removal,
   switch: accountSwitch,
   summary: accountSummary,
+  views,
 } as const;
 
 /** Accounts, the second module of R2 (05-refactor.md §5.2). */

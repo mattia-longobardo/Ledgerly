@@ -1,6 +1,7 @@
 // `apps/api` (10-modularity.md §10.2): the HTTP entry of `/api/v1`. Until R4 the web process serves
 // it: `apps/web`'s Hono app mounts this router with its adapters (`apps/web/src/platform/api/app.ts`).
 import { Hono } from "hono";
+import { type AccountCases, serveAccounts } from "./accounts/routes";
 import { metaApi } from "./meta";
 import type { ApiEnv, Guard } from "./serve";
 import { serveTaxonomy } from "./settings/categories";
@@ -22,10 +23,12 @@ export interface Adapters {
   connections: ConnectionCases;
   /** The maintenance of the instance, until R4. */
   server: ServerCases;
+  /** The compositions of accounts the web still holds (deletion, switch, monthly figures), until R4. */
+  accounts: AccountCases;
 }
 
 /** Every module's routes, served behind the guard; `/meta` lists their capabilities. */
-export function apiRoutes({ guard, sourceName, connections, server }: Adapters): Hono<ApiEnv> {
+export function apiRoutes({ guard, sourceName, connections, server, accounts }: Adapters): Hono<ApiEnv> {
   const app = new Hono<ApiEnv>();
   const served = [
     ...serveProfile(app, guard),
@@ -34,6 +37,7 @@ export function apiRoutes({ guard, sourceName, connections, server }: Adapters):
     ...serveConnections(app, guard, connections),
     ...serveSecurityAndPeople(app, guard),
     ...serveServer(app, guard, server),
+    ...serveAccounts(app, guard, accounts),
   ];
   app.route("/", metaApi(served));
   return app;

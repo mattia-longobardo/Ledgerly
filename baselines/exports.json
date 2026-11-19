@@ -1,9 +1,11 @@
 {
   "apps/api/src/index.ts": [
+    "AccountCases",
     "ApiEnv",
     "ConnectionCases",
     "MacroMoveUndo",
     "MacroMoveView",
+    "MonthlyFigures",
     "ReadTool",
     "ServerCases",
     "apiRoutes",
@@ -77,6 +79,7 @@
     "addSwitchCounts",
     "archiveAccount",
     "balancesOn",
+    "bucketOf",
     "closeSwitch",
     "connectionsOf",
     "createAccount",

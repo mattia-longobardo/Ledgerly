@@ -164,7 +164,7 @@ export async function updateBalanceEntryAction(
   const parsed = z.uuid().safeParse(entryId);
   if (!parsed.success) return { ok: false, error: "invalid" };
   try {
-    await updateBalanceEntry(ctx, parsed.data, entryValues(input, ctx));
+    await updateBalanceEntry(ctx, parsed.data, entryValues(input, ctx), accountId);
     revalidatePath(`/accounts/${accountId}`);
     revalidatePath("/accounts");
     revalidatePath("/");
@@ -178,7 +178,7 @@ export async function deleteBalanceEntryAction(accountId: string, entryId: strin
   const ctx = await requireSession();
   const parsed = z.uuid().safeParse(entryId);
   if (!parsed.success) return { ok: false, error: "invalid" };
-  await deleteBalanceEntry(ctx, parsed.data);
+  await deleteBalanceEntry(ctx, parsed.data, accountId);
   revalidatePath(`/accounts/${accountId}`);
   revalidatePath("/accounts");
   revalidatePath("/");

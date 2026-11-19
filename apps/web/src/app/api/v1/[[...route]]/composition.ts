@@ -4,6 +4,7 @@
 // The application joins them here (rule M8), so no package imports the web.
 import "server-only";
 import { apiRoutes, readTools } from "@ledgerly/api";
+import { accountCases } from "@/app/(app)/accounts/api-cases";
 import { connectionCases } from "@/app/(app)/settings/integrations/api-cases";
 import { serverCases } from "@/app/(app)/settings/server/api-cases";
 import { api } from "@/platform/api/app";
@@ -15,6 +16,7 @@ export const adapters = {
   sourceName: sourceNameOf,
   connections: connectionCases,
   server: serverCases,
+  accounts: accountCases,
 };
 
 api.route("/", apiRoutes(adapters));

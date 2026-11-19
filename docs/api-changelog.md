@@ -3,6 +3,30 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · accounts (release R2, accounts)
+
+- `GET /accounts`, `GET`/`POST /accounts/{id}/balances` and `GET /summary` keep their answers; they
+  are now served from the contract, with one serializer for the route and its MCP tool. A refusal of
+  `POST /accounts/{id}/balances` adds `reason` (`future_date`, `managed_locked`, …); the status is
+  the same as before.
+- The balance history has one default for REST and MCP: 200 entries. `get_account_balances` without
+  `limit` gives up to 200 entries (50 before). A `limit` that is not 1-200 still gives 200.
+- New, scope `read` (capability `accounts`): `GET /accounts/{id}` (the settings; `hasIban` and
+  `ibanFromSource`, never the IBAN), `GET /accounts/{id}/links`, `GET /accounts/{id}/dependents`,
+  `GET /snapshots`, `GET /net-worth?months=&through=&includeArchived=` and
+  `GET /accounts/{id}/daily-balances?from=&to=` (at most 1100 days, cut at today).
+- New, scope `write`: `POST /accounts`, `PATCH /accounts/{id}` (a field left out keeps its value,
+  `iban: null` removes the IBAN), `POST /accounts/{id}/archive`, `POST /accounts/{id}/restore`,
+  `PUT`/`DELETE /accounts/{id}/balances/{entryId}` (a reading a person recorded),
+  `POST /accounts/{id}/links`, `PUT`/`DELETE /accounts/{id}/links/{linkId}`, `POST /snapshots`,
+  `POST /accounts/{id}/dependents/move`, `DELETE /accounts/{id}`, `POST /accounts/{id}/switch/check`,
+  `POST /accounts/{id}/switch` and `DELETE /accounts/{id}/switch`. A refusal answers `400`, `404` or
+  `409` with the code of the use case in `reason`.
+- MCP: `tools/list` also lists the read tools of users and settings (`get_preferences`,
+  `get_profile`, `list_categories`, `list_labels`, `list_connections`), in a new order. A tool that
+  does not find what it was asked answers the text `not_found` (`get_account_balances` said
+  `Account not found.`).
+
 ## 2026-11-19 · the web's session (release R2, users and settings)
 
 - `/api/v1` also accepts the session cookie of the web, same origin: scopes `read`, `write`,
