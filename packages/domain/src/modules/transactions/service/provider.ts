@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { getAccount, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
@@ -277,6 +277,10 @@ export async function upsertFromProvider(
   return outcome;
 }
 
+// Only a transfer or a row in a pair can change or weigh in `planIbanTransfers`: an income or an
+// expense outside any pair is neither a leg, nor a twin, nor a member (audit TRX-11).
+const PAIRING_CANDIDATE = or(eq(transactions.type, "transfer"), isNotNull(transactions.transferGroupId));
+
 /**
  * Links the two legs of the giroconti the provider left unpaired, by the IBAN in their details
  * (`planIbanTransfers`), and undoes a pairing whose row is no longer a transfer. Reads first, then
@@ -303,7 +307,7 @@ export async function linkOwnTransfers(ctx: Pick<Ctx, "userId">): Promise<number
       note: transactions.note,
     })
     .from(transactions)
-    .where(userScoped(ctx).owns(transactions))
+    .where(and(userScoped(ctx).owns(transactions), PAIRING_CANDIDATE))
     .orderBy(asc(transactions.occurredAt), asc(transactions.id));
   const assignments = planIbanTransfers(own, rows);
   if (assignments.length === 0) return 0;

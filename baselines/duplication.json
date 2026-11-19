@@ -4,8 +4,8 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97328,
-    "duplicatedLines": 17146,
+    "lines": 97330,
+    "duplicatedLines": 17145,
     "percent": 17.62,
     "blocks": 1259
   },
@@ -95,9 +95,9 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12396,
-      "duplicatedLines": 1943,
-      "percent": 15.67,
+      "lines": 12398,
+      "duplicatedLines": 1942,
+      "percent": 15.66,
       "blocks": 156
     },
     "modules/users": {
@@ -643,7 +643,7 @@
     "modules/transactions/service/duplicates.ts": 9,
     "modules/transactions/service/edits.ts": 57,
     "modules/transactions/service/guards.ts": 18,
-    "modules/transactions/service/provider.ts": 27,
+    "modules/transactions/service/provider.ts": 26,
     "modules/transactions/source-categories/choosing.ts": 34,
     "modules/transactions/source-categories/reading.ts": 48,
     "modules/transactions/switch-rules.ts": 40,

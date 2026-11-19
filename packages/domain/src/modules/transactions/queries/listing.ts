@@ -113,15 +113,16 @@ function pageOf(
 
 /**
  * The filtered list. `limit` is bounded, so a caller cannot ask for the whole table by mistake;
- * `summary` tells the truth about the range whatever the page holds.
+ * `summary` tells the truth about the range whatever the page holds. `reading` is the person's
+ * accounts, archived ones included, when the caller reads them anyway (audit TRX-11).
  */
 export async function listTransactions(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
+  reading: Promise<Account[]> = listAccounts(ctx, { includeArchived: true }),
 ): Promise<TransactionRow[]> {
   // The table shows the accounts' names; only the account sort needs them before the rows are read,
   // so every other order reads them beside the rows (audit TRX-11).
-  const reading = listAccounts(ctx, { includeArchived: true });
   const sortedByAccount = (filters.sort ?? "date") === "account";
   const [accounts, rows] = await Promise.all([
     reading,

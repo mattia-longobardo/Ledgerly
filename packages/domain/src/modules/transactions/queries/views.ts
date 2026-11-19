@@ -257,6 +257,8 @@ export async function expensesView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   filters: TransactionFilters = {},
 ): Promise<ExpensesView> {
+  // One read of the accounts for the list and the page (audit TRX-11).
+  const reading = listAccounts(ctx, { includeArchived: true });
   const [
     rows,
     listCount,
@@ -269,14 +271,14 @@ export async function expensesView(
     categoryList,
     labelList,
   ] = await Promise.all([
-    listTransactions(ctx, filters),
+    listTransactions(ctx, filters, reading),
     countTransactions(ctx, filters),
     transactionsSummary(ctx, filters),
     monthlyTotals(ctx, filters),
     categoryTotals(ctx, filters),
     facetCounts(ctx, filters),
     countAllAndWaiting(ctx, filters),
-    listAccounts(ctx, { includeArchived: true }),
+    reading,
     listCategories(ctx),
     listLabels(ctx),
   ]);
