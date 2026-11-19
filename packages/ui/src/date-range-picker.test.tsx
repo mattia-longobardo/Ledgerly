@@ -3,9 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { calendarCells, DateRangePicker, yearCells } from "./date-range-picker";
 
-const push = vi.fn();
+const push = vi.hoisted(() => vi.fn());
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("./router", async (original) => ({
+  ...(await original<object>()),
+  ...{ useRouter: () => ({ push }) },
+}));
 
 const LABELS = {
   label: "Chart range",

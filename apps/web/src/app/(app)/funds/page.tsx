@@ -1,10 +1,11 @@
 import { Plus } from "lucide-react";
 import type { Metadata, Route } from "next";
-import Link from "next/link";
+import { Link } from "@ledgerly/ui/router";
 import { permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { colorFor, PALETTE } from "@/modules/accounts/ui/display";
+import { colorFor } from "@/modules/accounts/ui/display";
+import { PALETTE } from "@ledgerly/design-tokens";
 import {
   firstDataOn,
   type FundLine,
@@ -31,7 +32,7 @@ import {
   type Query,
   yearQuery,
 } from "@ledgerly/domain/investments";
-import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
@@ -49,7 +50,8 @@ import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { type Params, withParams } from "@/ui/url";
+import { type Params, withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 import { FundsHomeSkeleton } from "./home-skeleton";
 
 const PATH = "/funds";
@@ -75,10 +77,10 @@ export default async function FundsHomePage({ searchParams }: PageProps<"/funds"
   const todayOn = today(ctx.timeZone);
 
   const legacy = legacyPeriodQuery(query, todayOn);
-  if (legacy) permanentRedirect(withParams(PATH, {}, legacy));
+  if (legacy) permanentRedirect(appRoute(withParams(PATH, {}, legacy)));
   const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "gain";
   const kept: Params = { view: view === "gain" ? undefined : view };
-  if (isFutureYear(one(query.period), todayOn)) redirect(withParams(PATH, kept, {}));
+  if (isFutureYear(one(query.period), todayOn)) redirect(appRoute(withParams(PATH, kept, {})));
   return (
     <Suspense fallback={<FundsHomeSkeleton />}>
       <FundsHome ctx={ctx} query={query} todayOn={todayOn} view={view} kept={kept} />

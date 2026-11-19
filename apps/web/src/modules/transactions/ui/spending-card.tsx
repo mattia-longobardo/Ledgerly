@@ -1,11 +1,11 @@
 import { getTranslations } from "next-intl/server";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { asNumbers, axisLabels } from "@/modules/accounts/ui/display";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
+import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
 import { formatMoney, formatPercent, type NumberFormat } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { Card } from "@ledgerly/ui/card";
 import { StackedArea } from "@ledgerly/ui/chart";
-import type { Params } from "@/ui/url";
+import type { Params } from "@ledgerly/ui/url";
 import type { ChartGrain } from "./filters";
 
 /** A group of categories as the chart draws it: its name and colour, and what it spent each step. */

@@ -1,14 +1,11 @@
-import type { useTranslations } from "next-intl";
-import { getTranslations } from "next-intl/server";
-import { rangeLabel } from "@/modules/transactions/ui/display";
-import { RangePicker } from "@/modules/transactions/ui/range-picker";
-import type { UiLocale } from "@ledgerly/domain/platform/format";
-import { type DateRange, RANGE_PRESETS } from "@ledgerly/domain/platform/ranges";
-import type { Params } from "@/ui/url";
-import { LinkTabs, PeriodStepper } from "./controls";
+"use client";
 
-/** The words of the control: the server's `getTranslations` or the client's `useTranslations`. */
-type PeriodBarT = ReturnType<typeof useTranslations<"expenses.filters">>;
+import { useTranslations } from "use-intl";
+import type { UiLocale } from "@ledgerly/format/format";
+import { type DateRange, RANGE_PRESETS, rangeLabel } from "@ledgerly/format/ranges";
+import { LinkTabs, PeriodStepper } from "./link-controls";
+import { RangePicker } from "./range-picker";
+import type { Params } from "./url";
 
 /** What the control draws of a period: Accounts' `PeriodQuery`, or the one of Funds and Investments. */
 interface PeriodBarPeriod {
@@ -23,15 +20,13 @@ interface PeriodBarPeriod {
  * The period control of Expenses (spec §7.2), on Overview, Accounts, Account detail (PERS-342),
  * Funds and Investments: the stepper with the range as its label — the button that opens the day
  * picker — and the presets. `carry` is what the page's own links keep; the period is this control's
- * to change. Neither a server nor a client component: a page draws it through `PeriodBar`, a layout
- * — which never sees the search parameters — from a client component of its own.
+ * to change. One control for every screen (audit UI-ACC-4); it reads its own words.
  */
-export function PeriodBarView({
+export function PeriodBar({
   period,
   path,
   carry = {},
   locale,
-  t,
   presets = RANGE_PRESETS,
   name,
   whole,
@@ -40,7 +35,6 @@ export function PeriodBarView({
   path: string;
   carry?: Params;
   locale: UiLocale;
-  t: PeriodBarT;
   /** The presets of the screen, in order: the four of Expenses, and "All" where a P&L is shown. */
   presets?: readonly ("thisMonth" | "lastMonth" | "last3Months" | "ytd" | "all")[];
   /** The period's own name, when it has one the days do not say: a year, as a month has its own. */
@@ -48,15 +42,16 @@ export function PeriodBarView({
   /** Under a preset with no window: the days it really spans, and the words for them. */
   whole?: { range: DateRange; text: string };
 }) {
+  const words = useTranslations("expenses.filters");
   /** What a preset or a picked range starts from: the page's parameters and the chart's grain. */
   const kept = { ...carry, ...period.stepperParams, preset: undefined, from: undefined, to: undefined };
-  const picker = (range: DateRange, text: string) => (
+  const picker = (range: DateRange, rangeText: string) => (
     <RangePicker
       range={range}
-      text={text}
+      text={rangeText}
       params={kept}
       locale={locale}
-      label={t("range.label")}
+      label={words("range.label")}
       path={path}
     />
   );
@@ -64,7 +59,7 @@ export function PeriodBarView({
     <div className="flex flex-wrap items-center gap-2 text-sm">
       {period.range !== null ? (
         <PeriodStepper
-          label={t("range.label")}
+          label={words("range.label")}
           path={path}
           params={{ ...carry, ...period.stepperParams }}
           offset={period.offset}
@@ -73,9 +68,9 @@ export function PeriodBarView({
               {picker(period.range, name ?? rangeLabel(period.range, locale))}
             </span>
           }
-          previousLabel={t("range.previous")}
-          nextLabel={t("range.next")}
-          latestLabel={t("range.latest")}
+          previousLabel={words("range.previous")}
+          nextLabel={words("range.next")}
+          latestLabel={words("range.latest")}
         />
       ) : (
         whole && (
@@ -85,19 +80,13 @@ export function PeriodBarView({
         )
       )}
       <LinkTabs
-        label={t("range.label")}
+        label={words("range.label")}
         path={path}
         params={kept}
         name="preset"
         current={period.preset ?? ""}
-        options={presets.map((preset) => ({ value: preset, label: t(`presets.${preset}`) }))}
+        options={presets.map((preset) => ({ value: preset, label: words(`presets.${preset}`) }))}
       />
     </div>
   );
-}
-
-/** The control on a page: the server reads the words. */
-export async function PeriodBar(props: Omit<Parameters<typeof PeriodBarView>[0], "t">) {
-  const t = await getTranslations("expenses.filters");
-  return <PeriodBarView {...props} t={t} />;
 }

@@ -4,7 +4,7 @@
  * range. Pure functions, unit-tested, so the components stay layout and nothing else.
  */
 
-import { PALETTE } from "@/modules/accounts/ui/display";
+import { PALETTE } from "@ledgerly/design-tokens";
 import type {
   TransactionOrigin,
   TransactionState,
@@ -14,7 +14,6 @@ import type { MonthKey } from "@ledgerly/domain/shared/dates";
 import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { type Tone, toneOfSign } from "@ledgerly/ui/tone";
-import { type DateRange, isSingleMonth } from "./filters";
 
 /** A category's own colour wins; the ones without get a stable one from the shared palette. */
 export function categoryColor(color: string | null, index: number): string {
@@ -257,16 +256,6 @@ export function spendingLayers(
 /** A month group's heading: the month spelled out, as in the design's group rows. */
 export function monthLabel(month: MonthKey, locale: UiLocale): string {
   return formatDate(month, "monthYear", locale);
-}
-
-/**
- * The label of the date range control: one month is named, anything else is spelled out end to
- * end. The prototype makes the same distinction, and it is what keeps "September 2026" from
- * turning into "1 Sep 2026 – 30 Sep 2026" on the common case.
- */
-export function rangeLabel(range: DateRange, locale: UiLocale): string {
-  if (isSingleMonth(range)) return formatDate(range.from, "monthYear", locale);
-  return `${formatDate(range.from, "long", locale)} – ${formatDate(range.to, "long", locale)}`;
 }
 
 /**

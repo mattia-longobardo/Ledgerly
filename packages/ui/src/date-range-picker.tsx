@@ -1,18 +1,15 @@
 "use client";
 
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { type FormEvent, useRef, useState } from "react";
-import { addMonths, type CivilDate, type MonthKey, monthKey } from "@ledgerly/domain/shared/dates";
-import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
-import { Button, IconButton } from "@ledgerly/ui/button";
-import { cn } from "@ledgerly/ui/cn";
-import { useDismiss } from "@ledgerly/ui/dismissable-details";
+import { addMonths, type CivilDate, type MonthKey, monthKey } from "@ledgerly/format/dates";
+import { formatDate, intlLocale, type UiLocale } from "@ledgerly/format/format";
+import { Button, IconButton } from "./button";
+import { cn } from "./cn";
+import { useDismiss } from "./dismissable-details";
+import { Link, useRouter } from "./router";
 import { type Params, withParams } from "./url";
-import { useWeekStart, type WeekStart } from "@ledgerly/ui/week-start";
-import { intlLocale } from "@ledgerly/domain/platform/format";
+import { useWeekStart, type WeekStart } from "./week-start";
 
 /** What the picker picks: whole days, or whole months (spec §8.3, F2.5). */
 type RangeGrain = "day" | "month";
@@ -225,7 +222,7 @@ export function DateRangePicker({
             {shortcuts.map((shortcut) => (
               <Link
                 key={shortcut.href}
-                href={shortcut.href as Route}
+                href={shortcut.href}
                 aria-current={shortcut.current ? "true" : undefined}
                 onClick={() => setOpen(false)}
                 className={cn(

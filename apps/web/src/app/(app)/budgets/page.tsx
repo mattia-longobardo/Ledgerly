@@ -5,7 +5,7 @@ import { budgetsView } from "@ledgerly/domain/budgets";
 import { AddBudget } from "@/modules/budgets/ui/add-budget";
 import { BudgetsTable } from "@/modules/budgets/ui/budgets-table";
 import { presentRows } from "@/modules/budgets/ui/present";
-import { PeriodStepper } from "@/modules/accounts/ui/controls";
+import { PeriodStepper } from "@ledgerly/ui/link-controls";
 import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
 import { addMonths, lastDayOfMonth, monthKey, today } from "@ledgerly/domain/shared/dates";

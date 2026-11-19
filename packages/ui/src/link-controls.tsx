@@ -1,12 +1,10 @@
-import Link from "next/link";
+// The controls whose state is the address (spec §8.4): segmented links, the period stepper and a
+// checkbox link. Generic, so every screen and module draws them from here (audit ACC-11).
 import type { ReactNode } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@ledgerly/ui/cn";
-import { type Params, withParams } from "@/ui/url";
-
-// Moved to `src/ui/url.ts` in F2.5 so the date range picker in `src/ui` can build addresses too;
-// re-exported here because every screen of F1 and F2 already imports them from this file.
-export { type Params, withParams };
+import { cn } from "./cn";
+import { Link } from "./router";
+import { type Params, withParams } from "./url";
 
 /**
  * The design's segmented switches (range, span, chart mode, grain) as links rather than state: the

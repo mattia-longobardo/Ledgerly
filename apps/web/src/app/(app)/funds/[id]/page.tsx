@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "@ledgerly/ui/router";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
@@ -35,7 +35,7 @@ import {
   type Query,
   yearQuery,
 } from "@ledgerly/domain/investments";
-import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { chargeCandidates } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
@@ -57,7 +57,8 @@ import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { type Params, withParams } from "@/ui/url";
+import { type Params, withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 import { RebuildCompetencesButton } from "../fund-buttons";
 import { FundDetailSkeleton } from "./fund-skeleton";
 
@@ -101,24 +102,28 @@ export default async function FundDetailPage({ params, searchParams }: PageProps
   const base = `${HOME}/${id}`;
 
   const legacy = legacyFundQuery(query, todayOn);
-  if (legacy) permanentRedirect(withParams(base, {}, legacy));
+  if (legacy) permanentRedirect(appRoute(withParams(base, {}, legacy)));
   // The tab of the deposits is the tab of the contributions now: an address saved before still opens it.
   if (one(query.tab) === "deposits") {
     redirect(
-      withParams(
-        base,
-        { ...sectionPeriod(query, todayOn).params, view: one(query.view) },
-        { tab: "contributions" },
+      appRoute(
+        withParams(
+          base,
+          { ...sectionPeriod(query, todayOn).params, view: one(query.view) },
+          { tab: "contributions" },
+        ),
       ),
     );
   }
   if (isFutureYear(one(query.period), todayOn)) {
     const tab = TABS.find((name) => name === one(query.tab) && name !== "overview");
     redirect(
-      withParams(
-        base,
-        { tab, view: (["value", "return"] as const).find((key) => key === one(query.view)) },
-        {},
+      appRoute(
+        withParams(
+          base,
+          { tab, view: (["value", "return"] as const).find((key) => key === one(query.view)) },
+          {},
+        ),
       ),
     );
   }

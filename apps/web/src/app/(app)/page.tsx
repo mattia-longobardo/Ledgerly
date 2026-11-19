@@ -6,7 +6,7 @@ import { BudgetsOverviewCard } from "@/modules/budgets/ui/overview-card";
 import { pocketsTotal } from "@ledgerly/domain/pockets";
 import { changeBetween, counterValue } from "@/modules/accounts/ui/display";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
-import { parsePeriodQuery } from "@/modules/accounts/ui/period";
+import { parsePeriodQuery } from "@ledgerly/ui/period";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";

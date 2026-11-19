@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { asNumbers, axisLabels, GAIN_COLOR, LOSS_COLOR } from "@/modules/accounts/ui/display";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
+import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
+import { GAIN_COLOR, LOSS_COLOR } from "@ledgerly/design-tokens";
 import {
   asReturns,
   bestAndWorst,
@@ -18,7 +19,7 @@ import { Card } from "@ledgerly/ui/card";
 import { MultiLine, StackedBars, stackLayers } from "@ledgerly/ui/chart";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import type { Params } from "@/ui/url";
+import type { Params } from "@ledgerly/ui/url";
 import { type FundLine, gainBars, type GainGrain, gainGrain, valueSeries } from "@ledgerly/domain/funds";
 import type { FundPeriod } from "@ledgerly/domain/funds";
 

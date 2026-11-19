@@ -2,17 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { accountsView, listAccounts } from "@ledgerly/domain/accounts";
-import {
-  asNumbers,
-  changeBetween,
-  colorFor,
-  counterValue,
-  shareOf,
-  since,
-} from "@/modules/accounts/ui/display";
-import { ToggleLink } from "@/modules/accounts/ui/controls";
-import { parsePeriodQuery, periodMonths } from "@/modules/accounts/ui/period";
-import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { changeBetween, colorFor, counterValue, shareOf, since } from "@/modules/accounts/ui/display";
+import { asNumbers } from "@ledgerly/ui/chart-labels";
+import { ToggleLink } from "@ledgerly/ui/link-controls";
+import { parsePeriodQuery, periodMonths } from "@ledgerly/ui/period";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { NetWorthCard } from "@/modules/accounts/ui/net-worth-card";
 import { syncedServicesOf } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
@@ -27,7 +21,7 @@ import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { withParams } from "@/ui/url";
+import { withParams } from "@ledgerly/ui/url";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("accounts"))("title") };

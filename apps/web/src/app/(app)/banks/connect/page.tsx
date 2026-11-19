@@ -11,7 +11,7 @@ import { categoryCounts } from "@ledgerly/domain/transactions";
 import { listCategories } from "@ledgerly/domain/transactions";
 import { accountsOfProvider } from "@ledgerly/domain/accounts";
 import { movementSpanByAccount } from "@ledgerly/domain/transactions";
-import { withParams } from "@/ui/url";
+import { withParams } from "@ledgerly/ui/url";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";

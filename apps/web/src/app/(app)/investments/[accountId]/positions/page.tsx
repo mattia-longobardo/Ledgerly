@@ -1,8 +1,8 @@
-import Link from "next/link";
+import { Link } from "@ledgerly/ui/router";
 import type { ReactNode } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { priceText, quantityText } from "@ledgerly/domain/investments";
 import { legacyPeriodQuery, type Query, sectionPeriod } from "@ledgerly/domain/investments";
 import type { HoldingPnl, PositionAt } from "@ledgerly/domain/investments";
@@ -28,7 +28,8 @@ import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { GroupRow, Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { withParams } from "@/ui/url";
+import { withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 import { loadService, serviceContextOf } from "../service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
@@ -50,7 +51,7 @@ export default async function InvestmentServicePositions({
   const query = (await searchParams) as Query;
   // The period before the presets (`period=all`, a year) goes to the new one, once.
   const legacy = legacyPeriodQuery(query, civilToday(ctx.timeZone));
-  if (legacy) permanentRedirect(withParams(`/investments/${accountId}/positions`, {}, legacy));
+  if (legacy) permanentRedirect(appRoute(withParams(`/investments/${accountId}/positions`, {}, legacy)));
   const asked = one(query.status);
   const status: Status = STATUSES.includes(asked as Status) ? (asked as Status) : "open";
   // "Group by Asset | Class" of the open positions (§3.4, mockup 05): by asset is the plain list.
@@ -65,7 +66,9 @@ export default async function InvestmentServicePositions({
   if (!detail || !view) notFound();
   // A manual service keeps no positions (PERS-335): its value and P&L are on the Overview.
   if (detail.summary.origin === "manual") {
-    redirect(withParams(`/investments/${accountId}`, {}, sectionPeriod(query, view.todayOn).params));
+    redirect(
+      appRoute(withParams(`/investments/${accountId}`, {}, sectionPeriod(query, view.todayOn).params)),
+    );
   }
   const { period, span, todayOn, service, assets, holdings } = view;
   const context = serviceContextOf(detail, ctx);

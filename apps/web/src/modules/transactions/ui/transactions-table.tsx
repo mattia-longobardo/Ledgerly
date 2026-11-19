@@ -4,7 +4,8 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Fragment, type MouseEvent, useEffect, useMemo, useState, useTransition } from "react";
-import { type Params, withParams } from "@/modules/accounts/ui/controls";
+import { type Params, withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 import { Badge, Tag } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
@@ -274,10 +275,12 @@ export function TransactionsTable({
   function sortBy(key: SortKey) {
     const next = nextDirection(key, sort, direction);
     router.push(
-      withParams(path, params, {
-        sort: key === "date" ? undefined : key,
-        dir: next === DEFAULT_DIRECTION[key] ? undefined : next,
-      }),
+      appRoute(
+        withParams(path, params, {
+          sort: key === "date" ? undefined : key,
+          dir: next === DEFAULT_DIRECTION[key] ? undefined : next,
+        }),
+      ),
     );
   }
 

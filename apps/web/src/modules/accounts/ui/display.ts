@@ -1,30 +1,6 @@
-import { type CivilDate, type MonthKey } from "@ledgerly/domain/shared/dates";
-import { type NumberFormat, type UiLocale, formatDate, formatMoney } from "@ledgerly/domain/platform/format";
+import { type NumberFormat, formatMoney } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
-
-/**
- * The colours of the accounts, in order; an account's own colour wins when it has one. The same
- * family as the category colours (`CATEGORY_COLORS`), a little darker so that white text on an
- * account card stays readable, and ordered so that neighbours never share a hue.
- */
-export const PALETTE = [
-  "#3c79f0", // blue
-  "#eb6202", // orange
-  "#35ad44", // green
-  "#da3aa4", // magenta
-  "#01a4b9", // cyan
-  "#d98b09", // amber
-  "#8f54dc", // violet
-  "#ea3c3f", // red
-  "#03a578", // emerald
-  "#0a96d6", // light blue
-  "#645fdf", // indigo
-  "#616a75", // slate
-] as const;
-
-/** A gain and a loss where a chart of one thing colours its bars by sign: the palette's own. */
-export const GAIN_COLOR = PALETTE[2];
-export const LOSS_COLOR = PALETTE[7];
+import { PALETTE } from "@ledgerly/design-tokens";
 
 export function colorFor(account: { color: string | null }, index: number): string {
   return account.color ?? PALETTE[index % PALETTE.length];
@@ -64,11 +40,6 @@ export function shareOf(value: Cents | null, total: Cents | null): number | null
   return Number(value) / Number(total);
 }
 
-/** Cents as plain numbers for the charts, which measure distances rather than money. */
-export function asNumbers(values: readonly (Cents | null)[]): (number | null)[] {
-  return values.map((value) => (value === null ? null : Number(value)));
-}
-
 /**
  * An account's value in the display currency, for the line under its own (§1.8): `null` when the
  * account is already in that currency, so nothing is said twice. A missing rate is the dash.
@@ -80,59 +51,6 @@ export function counterValue(
 ): string | null {
   if (row.account.currency === currency) return null;
   return `≈ ${formatMoney(row.display.balance, format, { currency })}`;
-}
-
-/** Four horizontal grid labels, top to bottom, over the range a series actually covers. */
-export function axisLabels(
-  values: readonly (Cents | null)[],
-  format: NumberFormat,
-  steps = 4,
-  currency = "EUR",
-): string[] {
-  const known = values.filter((value): value is Cents => value !== null).map(Number);
-  const high = known.length === 0 ? 0 : Math.max(...known, 0);
-  const low = known.length === 0 ? 0 : Math.min(...known, 0);
-  return Array.from({ length: steps }, (_, index) => {
-    const value = high - ((high - low) * index) / (steps - 1);
-    return formatMoney(BigInt(Math.round(value)), format, { decimals: false, currency });
-  });
-}
-
-/**
- * The labels of a chart whose zero is its middle line — the changes drawn as bars around it —
- * from the largest change at the top to its opposite at the bottom, zero in the middle. The plain
- * `axisLabels` runs from the highest to the lowest value, which put a figure like "2.600 €" on the
- * bars' baseline.
- */
-export function symmetricAxisLabels(
-  values: readonly (Cents | null)[],
-  format: NumberFormat,
-  currency = "EUR",
-): string[] {
-  const reach = values.reduce<Cents>((largest, value) => {
-    if (value === null) return largest;
-    const size = value < 0n ? -value : value;
-    return size > largest ? size : largest;
-  }, 0n);
-  return axisLabels([reach, -reach], format, 5, currency);
-}
-
-/** At most `count` month labels, evenly spread, always including the first and the last. */
-export function monthLabels(months: readonly MonthKey[], locale: UiLocale, count = 5): string[] {
-  if (months.length <= count) return months.map((month) => formatDate(month, "monthShort", locale));
-  const step = (months.length - 1) / (count - 1);
-  return Array.from({ length: count }, (_, index) =>
-    formatDate(months[Math.round(index * step)], "monthShort", locale),
-  );
-}
-
-/** At most `count` day labels, evenly spread, always including the first and the last (F2.5). */
-export function dayLabels(days: readonly CivilDate[], locale: UiLocale, count = 5): string[] {
-  if (days.length <= count) return days.map((day) => formatDate(day, "dayMonth", locale));
-  const step = (days.length - 1) / (count - 1);
-  return Array.from({ length: count }, (_, index) =>
-    formatDate(days[Math.round(index * step)], "dayMonth", locale),
-  );
 }
 
 type Since = { unit: "never" } | { unit: "minutes" | "hours" | "days"; count: number };

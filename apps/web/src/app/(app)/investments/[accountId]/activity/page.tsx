@@ -1,5 +1,5 @@
 import type { Route } from "next";
-import Link from "next/link";
+import { Link } from "@ledgerly/ui/router";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ACTIVITY_FAMILIES, type ActivityFamily, describeEvent } from "@ledgerly/domain/investments";
@@ -24,7 +24,8 @@ import { Input } from "@ledgerly/ui/input";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { type Params, withParams } from "@/ui/url";
+import { type Params, withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 import { loadService, operationOf, serviceContextOf } from "../service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
@@ -43,7 +44,7 @@ export default async function InvestmentServiceActivity({
   const query = (await searchParams) as Query;
   // The period before the presets (`period=all`, a year) goes to the new one, once.
   const legacy = legacyPeriodQuery(query, todayOn(ctx.timeZone));
-  if (legacy) permanentRedirect(withParams(`/investments/${accountId}/activity`, {}, legacy));
+  if (legacy) permanentRedirect(appRoute(withParams(`/investments/${accountId}/activity`, {}, legacy)));
   const t = await getTranslations("investments");
   const ta = await getTranslations("investments.activity");
   const base = `/investments/${accountId}/activity`;

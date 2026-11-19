@@ -1,17 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider } from "next-intl";
+import { IntlProvider } from "use-intl";
 import { describe, expect, it, vi } from "vitest";
-import messages from "../../../../../../messages/en.json";
+import messages from "../../../messages/en.json";
 import { RangePicker } from "./range-picker";
 
-const push = vi.fn();
+const push = vi.hoisted(() => vi.fn());
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("./router", async (original) => ({
+  ...(await original<object>()),
+  ...{ useRouter: () => ({ push }) },
+}));
 
 function renderPicker() {
   render(
-    <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
+    <IntlProvider locale="en" messages={messages} timeZone="Europe/Rome">
       <RangePicker
         range={{ from: "2026-09-01", to: "2026-09-30" }}
         text="September 2026"
@@ -19,7 +22,7 @@ function renderPicker() {
         locale="en"
         label="Date range"
       />
-    </NextIntlClientProvider>,
+    </IntlProvider>,
   );
 }
 

@@ -16,18 +16,14 @@ import { undoSwitchAction } from "./switch/actions";
 import { switchable } from "./switch/switch";
 import { accountsView, listBalanceEntries } from "@ledgerly/domain/accounts";
 import { hasIbanField } from "@ledgerly/domain/accounts";
+import { changeBetween, colorFor, shareOf, since, counterValue } from "@/modules/accounts/ui/display";
 import {
   asNumbers,
   axisLabels,
-  changeBetween,
-  colorFor,
   dayLabels,
   monthLabels,
-  shareOf,
-  since,
   symmetricAxisLabels,
-  counterValue,
-} from "@/modules/accounts/ui/display";
+} from "@ledgerly/ui/chart-labels";
 import { BalanceEntries, type EntryRow } from "@/modules/accounts/ui/balance-entries";
 import {
   ConnectionsSection,
@@ -41,9 +37,9 @@ import { DeleteAccount } from "./delete-account";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { accountReconstructedBalances, connectionsOf } from "@ledgerly/domain/accounts";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { periodEnd, periodMonths, parsePeriodQuery, type PeriodQuery } from "@/modules/accounts/ui/period";
-import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
+import { periodEnd, periodMonths, parsePeriodQuery, type PeriodQuery } from "@ledgerly/ui/period";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { pocketsOnAccount } from "@ledgerly/domain/pockets";
 import { subscriptionsOnAccount } from "@ledgerly/domain/subscriptions";
 import { rulesOnAccount } from "@ledgerly/domain/interests";

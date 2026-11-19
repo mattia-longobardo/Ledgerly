@@ -2,9 +2,9 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { periodEnd, periodMonths } from "@/modules/accounts/ui/period";
-import { PeriodBar } from "@/modules/accounts/ui/period-bar";
-import { dayLabels, monthLabels } from "@/modules/accounts/ui/display";
+import { periodEnd, periodMonths } from "@ledgerly/ui/period";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
+import { dayLabels, monthLabels } from "@ledgerly/ui/chart-labels";
 import { budgetDetail } from "@ledgerly/domain/budgets";
 import {
   chooseCategoryAction,
@@ -30,7 +30,7 @@ import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Page } from "@ledgerly/ui/shell/page";
-import { withParams } from "@/ui/url";
+import { withParams } from "@ledgerly/ui/url";
 import { sourceNotes } from "../../../settings/categories/source";
 import { sourceHref } from "../../../settings/integrations/connection-view";
 import { rowViewOf } from "../../row-view";

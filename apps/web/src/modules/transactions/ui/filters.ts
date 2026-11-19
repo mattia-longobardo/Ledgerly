@@ -7,37 +7,34 @@
  * in, the same way the rest of the repository does it (spec §4.3).
  */
 
-import type { Params } from "@/modules/accounts/ui/controls";
+import type { Params } from "@ledgerly/ui/url";
 import { TRANSACTION_TYPES, type TransactionType } from "@ledgerly/domain/transactions/client";
 import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
 
 export {
   type DateRange,
   daysInRange,
-  isSingleMonth,
   isWholeMonths,
   presetRange,
   RANGE_PRESETS,
   type RangePreset,
   shiftRange,
-} from "@ledgerly/domain/platform/ranges";
+} from "@ledgerly/format/ranges";
 import {
   type DateRange,
+  DAY_GRAIN_MAX_DAYS,
   daysInRange,
   presetRange,
   RANGE_PRESETS,
   type RangePreset,
   shiftRange,
-} from "@ledgerly/domain/platform/ranges";
+} from "@ledgerly/format/ranges";
 
 /** The range the screen opens on. */
 const DEFAULT_PRESET: RangePreset = "thisMonth";
 
 /** What the spending chart adds up per point: days, or months (F2.5). */
 export type ChartGrain = "day" | "month";
-
-/** Up to this many days a range is drawn day by day unless the address says otherwise. */
-export const DAY_GRAIN_MAX_DAYS = 62;
 
 /** The five sortable columns of the design, matching `TransactionSort` in `queries.ts`. */
 const SORT_KEYS = ["date", "payee", "account", "category", "amount"] as const;

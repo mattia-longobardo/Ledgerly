@@ -6,6 +6,7 @@
   "exports": {
     "./cents": "./src/cents.ts",
     "./dates": "./src/dates.ts",
-    "./format": "./src/format.ts"
+    "./format": "./src/format.ts",
+    "./ranges": "./src/ranges.ts"
   }
 }

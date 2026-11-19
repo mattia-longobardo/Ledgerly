@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { withParams } from "./controls";
+import { withParams } from "./url";
 
 describe("withParams", () => {
   it("keeps the parameters already on the page and changes the one asked for", () => {

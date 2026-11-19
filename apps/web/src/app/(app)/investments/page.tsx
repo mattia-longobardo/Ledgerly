@@ -1,9 +1,11 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
+import { Link } from "@ledgerly/ui/router";
 import { permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
-import { asNumbers, axisLabels, colorFor, dayLabels, PALETTE } from "@/modules/accounts/ui/display";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
+import { colorFor } from "@/modules/accounts/ui/display";
+import { asNumbers, axisLabels, dayLabels } from "@ledgerly/ui/chart-labels";
+import { PALETTE } from "@ledgerly/design-tokens";
 import { legacyPeriodQuery, SECTION_PRESETS, sectionPeriod, type Query } from "@ledgerly/domain/investments";
 import type { PnlParts, ServicePnl } from "@ledgerly/domain/investments";
 import { investmentsHome, investmentsPnlView } from "@ledgerly/domain/investments";
@@ -16,7 +18,7 @@ import {
   sampled,
   toCents,
 } from "@/modules/investments/ui/chart-data";
-import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
@@ -34,7 +36,8 @@ import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { type Params, withParams } from "@/ui/url";
+import { type Params, withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("investments"))("title") };
@@ -57,7 +60,7 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
 
   // The charts' old address (`range`, months, `grain`) goes to the new one, once (§1.2).
   const legacy = legacyPeriodQuery(query, todayOn);
-  if (legacy) permanentRedirect(withParams("/investments", {}, legacy));
+  if (legacy) permanentRedirect(appRoute(withParams("/investments", {}, legacy)));
 
   const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "pnl";
   const by = (["class", "ccy"] as const).find((key) => key === one(query.by)) ?? "service";

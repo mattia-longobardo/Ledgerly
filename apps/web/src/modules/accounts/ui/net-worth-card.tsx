@@ -12,11 +12,12 @@ import { Card } from "@ledgerly/ui/card";
 import { StackedArea } from "@ledgerly/ui/chart";
 import { cn } from "@ledgerly/ui/cn";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import type { Params } from "@/ui/url";
-import { LinkTabs } from "./controls";
-import { asNumbers, axisLabels, changeBetween, colorFor, dayLabels, monthLabels, shareOf } from "./display";
-import { periodEnd as lastDayOf, periodMonths, type PeriodQuery } from "./period";
-import { PeriodBar } from "./period-bar";
+import type { Params } from "@ledgerly/ui/url";
+import { asNumbers, axisLabels, dayLabels, monthLabels } from "@ledgerly/ui/chart-labels";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
+import { periodEnd as lastDayOf, periodMonths, type PeriodQuery } from "@ledgerly/ui/period";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
+import { changeBetween, colorFor, shareOf } from "./display";
 
 /**
  * "Net worth over time" (spec §7.1, F2.5): the stacked chart of Overview, also on Accounts. Its

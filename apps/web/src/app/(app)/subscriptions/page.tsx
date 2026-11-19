@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { subscriptionsView, suggestions } from "@ledgerly/domain/subscriptions";
 import { newDraft, presentRow, presentSuggestion, toleranceInput } from "@/modules/subscriptions/ui/present";
 import { AddSubscription, type DialogOptions } from "@/modules/subscriptions/ui/subscription-dialog";

@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { TabLinks } from "@ledgerly/ui/tab-links";
-import { type Params, withParams } from "@/ui/url";
+import { type Params, withParams } from "@ledgerly/ui/url";
 
 const TABS = [
   { id: "movements", href: "/expenses" },

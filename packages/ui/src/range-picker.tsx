@@ -1,15 +1,15 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
-import { DateRangePicker } from "@/ui/date-range-picker";
-import type { Params } from "@/ui/url";
-import { type DateRange, daysInRange } from "./filters";
+import { useTranslations } from "use-intl";
+import { formatDate, type UiLocale } from "@ledgerly/format/format";
+import { type DateRange, daysInRange } from "@ledgerly/format/ranges";
+import { DateRangePicker } from "./date-range-picker";
+import type { Params } from "./url";
 
 /**
  * Expenses' date range control: the design system's `DateRangePicker` at day grain, with the words
- * of this screen. The picker itself lives in `src/ui` since F2.5, where Overview and Account detail
- * use it too at month grain; `src/ui` knows no message catalogue, so the translation happens here.
+ * of this screen. The picker itself draws Overview and Account detail at month grain too, with
+ * the words its caller gives; this control gives Expenses' own.
  */
 export function RangePicker({
   range,
@@ -29,7 +29,7 @@ export function RangePicker({
   label: string;
   path?: string;
 }) {
-  const t = useTranslations("expenses.filters.range");
+  const words = useTranslations("expenses.filters.range");
   return (
     <DateRangePicker
       grain="day"
@@ -40,16 +40,16 @@ export function RangePicker({
       locale={locale}
       labels={{
         label,
-        from: t("from"),
-        to: t("to"),
-        previous: t("previousMonth"),
-        next: t("nextMonth"),
-        pickEnd: t("pickEnd"),
-        apply: t("apply"),
-        cancel: t("cancel"),
+        from: words("from"),
+        to: words("to"),
+        previous: words("previousMonth"),
+        next: words("nextMonth"),
+        pickEnd: words("pickEnd"),
+        apply: words("apply"),
+        cancel: words("cancel"),
       }}
       describe={(from, to) =>
-        t("hint", {
+        words("hint", {
           from: formatDate(from, "long", locale),
           to: formatDate(to, "long", locale),
           count: daysInRange({ from, to }),

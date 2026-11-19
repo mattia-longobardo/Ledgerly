@@ -68,6 +68,9 @@
   ],
   "packages/design-tokens/src/index.ts": [
     "COLORS",
+    "GAIN_COLOR",
+    "LOSS_COLOR",
+    "PALETTE",
     "TONE_TEXT",
     "tokensCss",
     "type Tone"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PALETTE } from "@/modules/accounts/ui/display";
+import { PALETTE } from "@ledgerly/design-tokens";
 import {
   amountToneOf,
   badgesOf,
@@ -7,7 +7,6 @@ import {
   categoryBreakdown,
   categoryColors,
   groupedBreakdown,
-  rangeLabel,
   spendingLayers,
   withMacroTitles,
 } from "./display";
@@ -105,14 +104,6 @@ describe("categoryBreakdown", () => {
     ]);
     expect(zero.bars).toEqual([]);
     expect(zero.totalCents).toBe(0n);
-  });
-});
-
-describe("rangeLabel", () => {
-  it("names a single month and spells anything else out", () => {
-    expect(rangeLabel({ from: "2026-09-01", to: "2026-09-30" }, "en")).toBe("September 2026");
-    expect(rangeLabel({ from: "2026-07-01", to: "2026-09-30" }, "en")).toBe("1 Jul 2026 – 30 Sep 2026");
-    expect(rangeLabel({ from: "2026-09-01", to: "2026-09-30" }, "it")).toBe("settembre 2026");
   });
 });
 

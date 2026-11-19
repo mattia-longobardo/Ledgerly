@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { withParams } from "@/modules/accounts/ui/controls";
+import { withParams } from "@ledgerly/ui/url";
 import {
   expensesView,
   spendingOverTime,
   type TransactionRow as QueryRow,
 } from "@ledgerly/domain/transactions";
-import { dayLabels, monthLabels } from "@/modules/accounts/ui/display";
+import { dayLabels, monthLabels } from "@ledgerly/ui/chart-labels";
 import { type SpendingBand, SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { BreakdownCard } from "@/modules/transactions/ui/breakdown-card";
 import {

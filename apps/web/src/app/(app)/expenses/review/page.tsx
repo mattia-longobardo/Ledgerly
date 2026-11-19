@@ -18,7 +18,7 @@ import { categorisableAccountIds } from "@ledgerly/domain/transactions";
 import { listCategories, listLabels } from "@ledgerly/domain/transactions";
 import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
 import { categoryColor, categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
-import { PeriodBar } from "@/modules/accounts/ui/period-bar";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { presetRange, RANGE_PRESETS } from "@/modules/transactions/ui/filters";
 import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guide";
 import { type ReviewGroupView, ReviewList } from "@/modules/transactions/ui/review-list";
@@ -33,7 +33,7 @@ import { cn } from "@ledgerly/ui/cn";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
-import { withParams } from "@/ui/url";
+import { withParams } from "@ledgerly/ui/url";
 import { rowViewOf } from "../row-view";
 import { ExpensesTabs } from "../tabs";
 

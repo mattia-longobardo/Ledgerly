@@ -1,15 +1,10 @@
-import Link from "next/link";
+import { Link } from "@ledgerly/ui/router";
 import { notFound, permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { LinkTabs } from "@/modules/accounts/ui/controls";
-import {
-  asNumbers,
-  axisLabels,
-  colorFor,
-  dayLabels,
-  GAIN_COLOR,
-  LOSS_COLOR,
-} from "@/modules/accounts/ui/display";
+import { LinkTabs } from "@ledgerly/ui/link-controls";
+import { colorFor } from "@/modules/accounts/ui/display";
+import { asNumbers, axisLabels, dayLabels } from "@ledgerly/ui/chart-labels";
+import { GAIN_COLOR, LOSS_COLOR } from "@ledgerly/design-tokens";
 import { describeEvent } from "@ledgerly/domain/investments";
 import { legacyPeriodQuery, sectionPeriod, type Query } from "@ledgerly/domain/investments";
 import { contributionsOf } from "@ledgerly/domain/investments";
@@ -35,7 +30,8 @@ import { StackedArea, StackedBars, stackLayers } from "@ledgerly/ui/chart";
 import { cn } from "@ledgerly/ui/cn";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { withParams } from "@/ui/url";
+import { withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 import { loadService } from "./service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
@@ -58,7 +54,7 @@ export default async function InvestmentServiceOverview({
 
   // The old chart address of this page (`range`, months, `grain`) goes to the new one, once (§1.2).
   const legacy = legacyPeriodQuery(query, todayOn);
-  if (legacy) permanentRedirect(withParams(base, {}, legacy));
+  if (legacy) permanentRedirect(appRoute(withParams(base, {}, legacy)));
 
   const t = await getTranslations("investments");
   const tp = await getTranslations("investments.period");
