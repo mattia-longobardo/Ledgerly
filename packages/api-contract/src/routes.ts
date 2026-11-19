@@ -8,6 +8,7 @@ import * as accountSummary from "./accounts/summary";
 import * as accountSwitch from "./accounts/switch";
 import * as views from "./accounts/views";
 import { metaRoute } from "./meta";
+import * as search from "./search";
 import type { RouteContract } from "./route";
 import * as banks from "./settings/banks";
 import * as categories from "./settings/categories";
@@ -17,6 +18,11 @@ import * as people from "./settings/people";
 import * as profile from "./settings/profile";
 import * as security from "./settings/security";
 import * as server from "./settings/server";
+import * as manual from "./transactions/manual";
+import * as movements from "./transactions/movements";
+import * as review from "./transactions/review";
+import * as rules from "./transactions/rules";
+import * as spending from "./transactions/spending";
 
 /** The routes of users and settings by area, for `apps/api` to serve each one by name. */
 export const SETTINGS = {
@@ -58,4 +64,22 @@ export const ACCOUNTS_ROUTES: readonly RouteContract[] = Object.values(ACCOUNTS)
   Object.values(area).filter((value): value is RouteContract => typeof value === "object" && "path" in value),
 );
 
-export const CONTRACT_ROUTES: readonly RouteContract[] = [metaRoute, ...SETTINGS_ROUTES, ...ACCOUNTS_ROUTES];
+/** Transactions by area, for `apps/api` to serve each one by name. */
+export const TRANSACTIONS = { movements, spending, manual, review, rules } as const;
+
+/** Transactions, the third module of R2 (05-refactor.md §5.2), and the search across modules. */
+export const TRANSACTIONS_ROUTES: readonly RouteContract[] = [
+  ...Object.values(TRANSACTIONS).flatMap((area) =>
+    Object.values(area).filter(
+      (value): value is RouteContract => typeof value === "object" && "path" in value,
+    ),
+  ),
+  search.searchRecords,
+];
+
+export const CONTRACT_ROUTES: readonly RouteContract[] = [
+  metaRoute,
+  ...SETTINGS_ROUTES,
+  ...ACCOUNTS_ROUTES,
+  ...TRANSACTIONS_ROUTES,
+];

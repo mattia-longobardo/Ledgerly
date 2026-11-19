@@ -7,7 +7,15 @@ export type { ContractScope } from "./scopes";
 export type { RouteContract } from "./route";
 export { API_LEVEL, MIN_CLIENT_LEVEL, metaRoute } from "./meta";
 export { openApiDocument } from "./openapi";
-export { ACCOUNTS, ACCOUNTS_ROUTES, CONTRACT_ROUTES, SETTINGS, SETTINGS_ROUTES } from "./routes";
+export {
+  ACCOUNTS,
+  ACCOUNTS_ROUTES,
+  CONTRACT_ROUTES,
+  SETTINGS,
+  SETTINGS_ROUTES,
+  TRANSACTIONS,
+  TRANSACTIONS_ROUTES,
+} from "./routes";
 export {
   LAST_DAY,
   MAX_RULES,
