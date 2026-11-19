@@ -11,8 +11,8 @@
       "queries": 14
     },
     "expensesView (tre anni)": {
-      "medianMs": 46.1,
-      "p95Ms": 51.7,
+      "medianMs": 49.9,
+      "p95Ms": 53.3,
       "queries": 14
     },
     "accountsView (24 mesi)": {

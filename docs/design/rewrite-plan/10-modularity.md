@@ -433,6 +433,18 @@ di mezzo.
 
 Nessun'altra riga del file è cambiata. La soglia del 10% resta.
 
+**Base cambiata al rilascio di R2 accounts, solo per «expensesView (tre anni)»** (decisione scritta di Mattia del
+19/11/2026, PERS-443). Con la procedura del gate (mediana migliore di 10 processi, su `ledgerly_1_test` come la suite
+notturna) la vista era fuori soglia anche su `v0.37.0`, la versione in produzione: nessun commit dopo `v0.37.0` la
+peggiora (51,0 ms su `v0.37.0`, 51,6 ms su `6bf4f85f`), e la base di N0 era più vecchia di quella versione. Rimisura
+su `v0.37.0`: tre misure di seguito (48,7, 49,9 e 55,1 ms), base = quella di mezzo.
+
+| Vista | Prima (N0) | Dopo la rimisura | Motivo |
+|---|---|---|---|
+| expensesView (tre anni) | 46,1 ms · p95 51,7 · 14 query | 49,9 ms · p95 53,3 · 14 query | La versione in produzione misura già così con il metodo del gate. Stesso numero di query |
+
+Nessun'altra riga del file è cambiata. La soglia del 10% resta.
+
 `POST /imports` non è misurata: chiede un documento, il bucket e `after()` di Next. Le pagine (tempo di risposta del
 server) non sono misurate in N0: l'utente pesante esiste solo in `ledgerly_test` e l'anteprima locale non accetta il
 login con password. Ogni «pagina» della tabella è l'insieme delle letture del suo `page.tsx`.
