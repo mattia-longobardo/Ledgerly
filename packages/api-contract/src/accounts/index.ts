@@ -6,5 +6,6 @@ import * as links from "./links";
 import * as removal from "./removal";
 import * as summary from "./summary";
 import * as accountSwitch from "./switch";
+import * as views from "./views";
 
-export { accounts, accountSwitch, balances, links, removal, summary };
+export { accounts, accountSwitch, balances, links, removal, summary, views };

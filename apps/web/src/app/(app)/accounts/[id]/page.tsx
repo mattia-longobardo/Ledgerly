@@ -130,7 +130,11 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const yoy = changeBetween(row.balance, row.series.at(-13) ?? null);
   // The share is of the net worth, so both sides are in the display currency (§1.8, D1).
   const share = shareOf(row.display.balance, view.total);
-  const counter = counterValue(row, view.currency, ctx.numberFormat);
+  const counter = counterValue(
+    { currency: row.account.currency, display: row.display },
+    view.currency,
+    ctx.numberFormat,
+  );
   // A service of Investments fed by a provider is synced, from its last reading (investments-ux §8).
   const service = (await syncedServicesOf(ctx, [id])).get(id) ?? null;
   const syncedAt = (service?.lastSyncedAt ?? account.lastSyncedAt)?.toISOString() ?? null;

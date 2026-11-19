@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 216,
+    "deepImports": 212,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -371,8 +371,6 @@
     "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/switch-check",
     "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/undo-switch",
     "app/(app)/accounts/new/page.tsx → modules/accounts/ui/account-form",
-    "app/(app)/accounts/page.tsx → modules/accounts/ui/display",
-    "app/(app)/accounts/page.tsx → modules/accounts/ui/net-worth-card",
     "app/(app)/budgets/[id]/page.tsx → modules/budgets/ui/alerts-form",
     "app/(app)/budgets/[id]/page.tsx → modules/budgets/ui/present",
     "app/(app)/budgets/page.tsx → modules/budgets/ui/add-budget",
@@ -456,8 +454,6 @@
     "app/(app)/investments/page.tsx → modules/investments/ui/chart-data",
     "app/(app)/investments/page.tsx → modules/investments/ui/period-control",
     "app/(app)/layout.tsx → modules/transactions/actions",
-    "app/(app)/page.tsx → modules/accounts/ui/display",
-    "app/(app)/page.tsx → modules/accounts/ui/net-worth-card",
     "app/(app)/page.tsx → modules/budgets/ui/overview-card",
     "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/auto-refresh",
     "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/present",

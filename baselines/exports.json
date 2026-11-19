@@ -29,7 +29,8 @@
     "balances",
     "links",
     "removal",
-    "summary"
+    "summary",
+    "views"
   ],
   "packages/api-contract/src/core/index.ts": [
     "RouteContract",

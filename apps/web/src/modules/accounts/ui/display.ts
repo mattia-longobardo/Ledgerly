@@ -1,5 +1,5 @@
-import { type NumberFormat, formatMoney } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/shared/money";
+import { type Cents, parseCents } from "@ledgerly/format/cents";
+import { type NumberFormat, formatMoney } from "@ledgerly/format/format";
 import { PALETTE } from "@ledgerly/design-tokens";
 
 export function colorFor(account: { color: string | null }, index: number): string {
@@ -24,15 +24,20 @@ export function colorField(
 // The change and the share are the domain's rule, the same one `/api/v1` answers.
 export { changeBetween, shareOf } from "@ledgerly/domain/accounts/client";
 
+/** An amount of `/api/v1` (a decimal, or null when unknown) as the cents the formatting reads. */
+export function centsOf(amount: string | null): Cents | null {
+  return amount === null ? null : parseCents(amount);
+}
+
 /**
  * An account's value in the display currency, for the line under its own (§1.8): `null` when the
  * account is already in that currency, so nothing is said twice. A missing rate is the dash.
  */
 export function counterValue(
-  row: { account: { currency: string }; display: { balance: Cents | null } },
+  row: { currency: string; display: { balance: Cents | null } },
   currency: string,
   format: NumberFormat,
 ): string | null {
-  if (row.account.currency === currency) return null;
+  if (row.currency === currency) return null;
   return `≈ ${formatMoney(row.display.balance, format, { currency })}`;
 }
