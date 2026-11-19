@@ -20,7 +20,7 @@ async function assertTestDatabase(db: Db): Promise<void> {
   const {
     rows: [{ current_database: database }],
   } = await db.query<{ current_database: string }>("SELECT current_database()");
-  if (!database.endsWith("_test")) {
+  if (!/_test(_\d+)?$/.test(database)) {
     throw new Error(`Refusing to truncate "${database}": not a _test database`);
   }
 }

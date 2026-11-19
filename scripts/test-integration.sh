@@ -15,6 +15,9 @@
 #
 # The databases are made once (/home/mattia/docker/AGENTS.md, Postgres). One run at a time uses
 # them: a second run waits for the first (lock below). LEDGERLY_TEST_SHARDS=<1-4> runs fewer shards.
+# LEDGERLY_INTEGRATION_DATABASE=ledgerly_test_2 runs one shard on that database instead, under the
+# prefix `tests/ledgerly_test_2/` and with its own lock: the database of the client stream
+# (docs/design/rewrite-plan/08-agents.md §8.6), so that its runs never wait for or reset the others.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -22,6 +25,12 @@ SHARDS="${LEDGERLY_TEST_SHARDS:-4}"
 case "$SHARDS" in
   1 | 2 | 3 | 4) ;;
   *) echo "LEDGERLY_TEST_SHARDS must be 1-4" >&2; exit 1 ;;
+esac
+database="${LEDGERLY_INTEGRATION_DATABASE:-}"
+case "$database" in
+  "") ;;
+  ledgerly_test_2) SHARDS=1 ;;
+  *) echo "LEDGERLY_INTEGRATION_DATABASE must be ledgerly_test_2 or unset" >&2; exit 1 ;;
 esac
 
 # LEDGERLY_ENV_FILE names the environment file of a checkout with no `.env.homelab` of its own.
@@ -37,7 +46,7 @@ TEST_S3_BUCKET=$(value S3_BUCKET)
 export TEST_S3_ENDPOINT TEST_S3_REGION TEST_S3_ACCESS_KEY_ID TEST_S3_SECRET_ACCESS_KEY TEST_S3_BUCKET
 
 # Two runs on the same databases would reset each other's schemas: the second one waits.
-exec 9>/run/lock/ledgerly-integration.lock
+exec 9>"/run/lock/ledgerly-integration${database:+-$database}.lock"
 if ! flock -n 9; then
   echo "another integration run uses the test databases: waiting for it" >&2
   flock -w 1800 9
@@ -45,7 +54,7 @@ fi
 
 # The output of each shard, printed when all of them are done: under `test-results/`, which the
 # repository ignores.
-logs=test-results/integration
+logs=test-results/integration${database:+-$database}
 rm -rf "$logs"
 mkdir -p "$logs"
 
@@ -53,7 +62,7 @@ mkdir -p "$logs"
 shard() {
   i=$1
   shift
-  TEST_DATABASE_URL="${database_url%/*}/ledgerly_${i}_test" TEST_S3_KEY_PREFIX="tests/$i/" \
+  TEST_DATABASE_URL="${database_url%/*}/${database:-ledgerly_${i}_test}" TEST_S3_KEY_PREFIX="tests/${database:-$i}/" \
     docker run --rm --network db_internal \
     --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$PWD":/app -w /app \
