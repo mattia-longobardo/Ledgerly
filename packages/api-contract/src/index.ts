@@ -16,3 +16,4 @@ export {
   SCHEDULE_PREVIEW_COUNT,
   syncScheduleSchema,
 } from "./settings/schedule";
+export { SESSION_HEADER } from "./session";

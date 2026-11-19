@@ -3,7 +3,15 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
-## 2026-11-19 · the preview of a schedule (release R2, users and settings)
+## 2026-11-19 · the preview of a schedule and the web's session (release R2, users and settings)
+
+- `/api/v1` also accepts the web's own session cookie, for the web of the same origin only: the
+  call carries the header `x-ledgerly-session` (`SESSION_HEADER` in the contract); a write also
+  carries `Origin` equal to the app's address. A cookie from another origin (`Origin` or
+  `Sec-Fetch-Site`), or a write without its `Origin`, answers `403`; a cookie without the header is
+  ignored, as before (`401`). There is no CORS for the cookie. The session has the person's scopes
+  `read`, `write`, `security`, and `admin` only for an admin (the role is checked at every call).
+  A token keeps only the scopes of its client: a Client API never gets `security` or `admin`.
 
 - New `POST /api/v1/connections/{id}/schedule/preview` (`read`, capability `connections`): the body
   is a schedule as `PUT /connections/{id}/schedule` takes it; the answer is `next` (the next 5

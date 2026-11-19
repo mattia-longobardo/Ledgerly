@@ -20,10 +20,14 @@ export { buildCtx as ctxFrom };
  * session is real but the person still has to set up TOTP (TWO_FACTOR_POLICY=required), so it opens
  * only the setup page and nothing else.
  */
-const getSignedIn = cache(async () => {
+const getSignedIn = cache(async () =>
   // Headers first: it marks the render as dynamic before Better Auth (and its env) is touched, so
   // pages Next.js tries to prerender at build time (e.g. /_not-found) never reach it.
-  const requestHeaders = await headers();
+  signedInWith(await headers()),
+);
+
+/** The person whose session cookie `requestHeaders` carry, as {@link getSignedIn} answers it. */
+async function signedInWith(requestHeaders: Headers) {
   const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
   if (!session) return null;
   const policy = readEnv().TWO_FACTOR_POLICY;
@@ -42,7 +46,7 @@ const getSignedIn = cache(async () => {
     preferences: await getPreferences({ userId: session.user.id }),
     setupPending,
   };
-});
+}
 
 /**
  * The signed-in user's context, or null. Cached per request. A session still waiting for its TOTP
@@ -52,6 +56,15 @@ export const getOptionalCtx = cache(async (): Promise<Ctx | null> => {
   const signedIn = await getSignedIn();
   return signedIn && !signedIn.setupPending ? buildCtx(signedIn.user, signedIn.preferences) : null;
 });
+
+/**
+ * The context of the session a request's cookie carries, or null — the same rule as
+ * {@link getOptionalCtx}, for a caller that holds the request (the guard of `/api/v1`).
+ */
+export async function sessionCtxOf(requestHeaders: Headers): Promise<Ctx | null> {
+  const signedIn = await signedInWith(requestHeaders);
+  return signedIn && !signedIn.setupPending ? buildCtx(signedIn.user, signedIn.preferences) : null;
+}
 
 /**
  * The signed-in user's context with the id of the session they hold, or null. For the one flow
