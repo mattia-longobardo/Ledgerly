@@ -337,7 +337,7 @@
   {
     "file": "packages/domain/src/platform/integrations/rules.test.ts",
     "decision": "R0",
-    "reason": "Q9, audit INTG-8 (05-refactor.md §5.3): `isDue` had no use outside its own test and is removed with it; the other assertions are the same"
+    "reason": "Q9, audit INTG-8 (05-refactor.md \u00a75.3): `isDue` had no use outside its own test and is removed with it; the other assertions are the same"
   },
   {
     "file": "apps/web/src/platform/integrations/jobs.itest.ts",
@@ -348,5 +348,25 @@
     "file": "packages/domain/src/modules/users/rules.test.ts",
     "decision": "USR-8",
     "reason": "the tests of initialsOf move, unchanged, with the function to packages/ui/src/initials.test.ts"
+  },
+  {
+    "file": "apps/web/src/modules/accounts/ui/display.test.ts",
+    "decision": "ACC-11",
+    "reason": "the tests of the period, the chart labels and since() move, with the same assertions, to packages/ui and packages/format with their functions (and UI-ACC-1: SyncStatus)"
+  },
+  {
+    "file": "apps/web/src/modules/transactions/ui/display.test.ts",
+    "decision": "ACC-11",
+    "reason": "the test of rangeLabel moves, unchanged, with the function to packages/format/src/ranges.test.ts; PALETTE is imported from the design tokens"
+  },
+  {
+    "file": "packages/ui/src/date-range-picker.test.tsx",
+    "decision": "ACC-11",
+    "reason": "moved from the ui of accounts to packages/ui: the path of the mocked router and the labels passed as props changed; the assertions are the same"
+  },
+  {
+    "file": "packages/ui/src/range-picker.test.tsx",
+    "decision": "ACC-11",
+    "reason": "moved from the ui of transactions to packages/ui: the path of the mocked router and the messages' path changed; the assertions are the same"
   }
 ]
