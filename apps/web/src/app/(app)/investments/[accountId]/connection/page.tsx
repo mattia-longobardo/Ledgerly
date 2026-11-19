@@ -23,7 +23,7 @@ import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { instantText, loadService, providerOf } from "../service-data";
-import { formatInstant } from "@/app/(app)/settings/integrations/format-instant";
+import { formatInstant } from "@ledgerly/format/format";
 import { recommendedSchedule } from "@/app/(app)/settings/integrations/recommended-schedule";
 import { ConnectionSchedule } from "@/ui/connection-schedule";
 import { listConnections } from "@ledgerly/domain/platform/integrations";

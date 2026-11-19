@@ -26,7 +26,7 @@ import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { RUNS_PER_CONNECTION, sourceSlugOf, statusOf } from "../connection-view";
-import { formatInstant } from "../format-instant";
+import { formatInstant } from "@ledgerly/format/format";
 import { ScheduleCell } from "../schedule-cell";
 import { ReportButton } from "./report-button";
 

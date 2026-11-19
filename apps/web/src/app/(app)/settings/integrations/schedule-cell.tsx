@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
 import type { Connection } from "@ledgerly/domain/platform/integrations";
-import { formatInstant } from "./format-instant";
+import { formatInstant } from "@ledgerly/format/format";
 import { recommendedSchedule } from "./recommended-schedule";
 import { ConnectionSchedule } from "@/ui/connection-schedule";
 

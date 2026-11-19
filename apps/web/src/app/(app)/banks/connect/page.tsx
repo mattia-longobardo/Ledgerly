@@ -34,7 +34,7 @@ import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { Page } from "@/ui/shell/page";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
-import { formatInstant } from "../../settings/integrations/format-instant";
+import { formatInstant } from "@ledgerly/format/format";
 import { BANK_PLUGIN_ID } from "../plugin";
 import { bankSink } from "../sink";
 import { AccountsStep } from "./accounts-step";

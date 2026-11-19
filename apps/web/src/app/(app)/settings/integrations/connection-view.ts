@@ -27,7 +27,7 @@ import {
   syncStatus,
 } from "@ledgerly/domain/platform/integrations";
 import type { ActionKind, ConnectionRowProps, HistoryItem, RowAction } from "./connection-row";
-import { formatInstant } from "./format-instant";
+import { formatInstant } from "@ledgerly/format/format";
 
 type Who = Pick<Ctx, "locale" | "timeZone">;
 

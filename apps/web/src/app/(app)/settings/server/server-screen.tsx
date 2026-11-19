@@ -9,7 +9,7 @@ import type { RouteOutput } from "@ledgerly/api-client";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import { formatInstant } from "../integrations/format-instant";
+import { formatInstant } from "@ledgerly/format/format";
 import { JobsCard } from "./jobs-card";
 import { LlmCard } from "./llm-card";
 import { MaintenanceCard } from "./maintenance-card";

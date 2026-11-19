@@ -1,5 +1,5 @@
 import { type Cents, centsToDecimal, parseCents } from "./cents";
-import { type CivilDate, isCivilDate } from "./dates";
+import { type CivilDate, civilDateIn, isCivilDate } from "./dates";
 
 /** The saved `number_format` preference: the locale whose conventions a number starts from. */
 type NumberFormatName = "it-IT" | "en-US" | "fr-FR";
@@ -275,4 +275,20 @@ export function parseAmount(input: string, format: NumberFormat): Cents {
   const { decimal, group } = numberSeparators(format);
   const plain = cleaned.split(group).join("").replace(decimal, ".");
   return parseCents(plain);
+}
+
+/**
+ * An instant as a connection or a job shows it: the civil day in the person's zone (spec §8.5) and
+ * the clock, because an hourly sync is told apart by its time of day. In 24 hours, as a schedule is
+ * written.
+ */
+export function formatInstant(instant: Date, where: { locale: UiLocale; timeZone: string }): string {
+  const day = formatDate(civilDateIn(instant, where.timeZone), "long", where.locale);
+  const clock = new Intl.DateTimeFormat(where.locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: where.timeZone,
+  }).format(instant);
+  return `${day}, ${clock}`;
 }
