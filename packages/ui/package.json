@@ -18,6 +18,7 @@
     "./composition-card": "./src/composition-card.tsx",
     "./connection-row": "./src/connection-row.tsx",
     "./data": "./src/data.ts",
+    "./data-table": "./src/data-table.tsx",
     "./date-range-picker": "./src/date-range-picker.tsx",
     "./detail-header": "./src/detail-header.tsx",
     "./dismissable-details": "./src/dismissable-details.tsx",

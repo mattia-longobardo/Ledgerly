@@ -1,11 +1,11 @@
 "use client";
 
+import { DataTable } from "@ledgerly/ui/data-table";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import type { ApiScope } from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";
-import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
 import { revokeConnectedAppAction } from "./calls";
 
@@ -53,59 +53,41 @@ export function ConnectedAppsTable({ apps }: { apps: ConnectedAppRow[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto max-md:hidden">
-        <Table>
-          <THead>
-            <Th>{t("columns.name")}</Th>
-            <Th>{t("columns.hosts")}</Th>
-            <Th>{t("columns.scopes")}</Th>
-            <Th>{t("columns.since")}</Th>
-            <Th align="right">
-              <span className="sr-only">{t("columns.actions")}</span>
-            </Th>
-          </THead>
-          <TBody>
-            {apps.map((app) => (
-              <Tr key={app.clientId}>
-                <Td className="font-medium">{name(app)}</Td>
-                <Td muted className="font-mono text-sm">
-                  {app.hosts.join(", ")}
-                </Td>
-                <Td className="text-sm">{access(app)}</Td>
-                <Td muted className="text-sm">
-                  {app.since}
-                </Td>
-                <Td align="right">
-                  <Button size="xs" variant="danger" disabled={pending} onClick={() => setConfirming(app)}>
-                    {t("revoke")}
-                  </Button>
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
-      </div>
-
-      <ul className="flex flex-col md:hidden">
-        {apps.map((app) => (
-          <li
-            key={app.clientId}
-            className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
-          >
-            <span className="min-w-0 font-medium break-words">{name(app)}</span>
-            <span className="font-mono text-sm break-all text-muted">{app.hosts.join(", ")}</span>
-            <span className="text-sm">{access(app)}</span>
-            <span className="text-sm text-muted">
-              {t("columns.since")} {app.since}
-            </span>
-            <div>
+      <DataTable
+        rows={apps}
+        rowKey={(app) => app.clientId}
+        columns={[
+          { key: "name", header: t("columns.name"), cell: name, className: "font-medium", card: "title" },
+          {
+            key: "hosts",
+            header: t("columns.hosts"),
+            cell: (app) => app.hosts.join(", "),
+            muted: true,
+            className: "font-mono text-sm",
+          },
+          { key: "scopes", header: t("columns.scopes"), cell: access, className: "text-sm" },
+          {
+            key: "since",
+            header: t("columns.since"),
+            cell: (app) => app.since,
+            muted: true,
+            className: "text-sm",
+            card: "labelled",
+          },
+          {
+            key: "actions",
+            header: t("columns.actions"),
+            hiddenHeader: true,
+            align: "right",
+            card: "action",
+            cell: (app) => (
               <Button size="xs" variant="danger" disabled={pending} onClick={() => setConfirming(app)}>
                 {t("revoke")}
               </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         open={confirming !== null}

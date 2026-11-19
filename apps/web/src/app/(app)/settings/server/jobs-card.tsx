@@ -1,12 +1,12 @@
 "use client";
 
+import { DataTable } from "@ledgerly/ui/data-table";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import type { Tier } from "@/platform/jobs/registry";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
-import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
 import { runJobAction } from "./calls";
 
@@ -40,73 +40,64 @@ export function JobsCard({ jobs }: { jobs: JobRow[] }) {
     });
   }
 
+  /** The state of the last run, and its error beside it when it failed. */
+  const result = (job: (typeof jobs)[number]) =>
+    job.status ? (
+      <span className="flex items-center gap-2">
+        <Badge tone={TONE[job.status]}>{t(`states.${job.status}`)}</Badge>
+        {job.error && (
+          <span className="max-w-60 truncate text-sm text-muted" title={job.error}>
+            {job.error}
+          </span>
+        )}
+      </span>
+    ) : null;
+
   return (
     <>
-      {/* Five columns and a button do not fit a phone: below `md` the same jobs are a list, with
-          the very same "Run now" beside each one (plan F9 §3.3). */}
-      <div className="overflow-x-auto max-md:hidden">
-        <Table>
-          <THead>
-            <Th>{t("columns.job")}</Th>
-            <Th>{t("columns.tier")}</Th>
-            <Th>{t("columns.lastRun")}</Th>
-            <Th>{t("columns.result")}</Th>
-            <Th align="right">
-              <span className="sr-only">{t("columns.actions")}</span>
-            </Th>
-          </THead>
-          <TBody>
-            {jobs.map((job) => (
-              <Tr key={job.name} className="h-9">
-                <Td className="font-mono text-sm">{job.name}</Td>
-                <Td muted className="text-sm">
-                  {t(`tiers.${job.tier}`)}
-                </Td>
-                <Td muted className="text-sm">
-                  {job.lastRun ?? t("never")}
-                </Td>
-                <Td>
-                  {job.status ? (
-                    <span className="flex items-center gap-2">
-                      <Badge tone={TONE[job.status]}>{t(`states.${job.status}`)}</Badge>
-                      {job.error && (
-                        <span className="max-w-60 truncate text-sm text-muted" title={job.error}>
-                          {job.error}
-                        </span>
-                      )}
-                    </span>
-                  ) : null}
-                </Td>
-                <Td align="right">
-                  <Button size="xs" disabled={pending} onClick={() => onRun(job)}>
-                    {t("runNow")}
-                  </Button>
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
-      </div>
-
-      <ul className="flex flex-col md:hidden">
-        {jobs.map((job) => (
-          <li key={job.name} className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0">
-            <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0 font-mono text-sm break-all">{job.name}</span>
-              {job.status && <Badge tone={TONE[job.status]}>{t(`states.${job.status}`)}</Badge>}
-            </div>
-            <span className="text-sm text-muted">
-              {t(`tiers.${job.tier}`)} · {job.lastRun ?? t("never")}
-            </span>
-            {job.error && <span className="text-sm break-words text-muted">{job.error}</span>}
-            <div>
+      <DataTable
+        rows={jobs}
+        rowKey={(job) => job.name}
+        rowClassName="h-9"
+        columns={[
+          {
+            key: "job",
+            header: t("columns.job"),
+            cell: (job) => job.name,
+            className: "font-mono text-sm",
+            card: "title",
+          },
+          {
+            key: "tier",
+            header: t("columns.tier"),
+            cell: (job) => t(`tiers.${job.tier}`),
+            muted: true,
+            className: "text-sm",
+            card: "labelled",
+          },
+          {
+            key: "lastRun",
+            header: t("columns.lastRun"),
+            cell: (job) => job.lastRun ?? t("never"),
+            muted: true,
+            className: "text-sm",
+            card: "labelled",
+          },
+          { key: "result", header: t("columns.result"), cell: result },
+          {
+            key: "actions",
+            header: t("columns.actions"),
+            hiddenHeader: true,
+            align: "right",
+            card: "action",
+            cell: (job) => (
               <Button size="xs" disabled={pending} onClick={() => onRun(job)}>
                 {t("runNow")}
               </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
+            ),
+          },
+        ]}
+      />
     </>
   );
 }

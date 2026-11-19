@@ -1,11 +1,11 @@
 "use client";
 
+import { DataTable } from "@ledgerly/ui/data-table";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import type { Scope } from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";
-import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
 import { deleteApiClientAction } from "./calls";
 
@@ -44,59 +44,47 @@ export function ApiClientsTable({ clients }: { clients: ApiClientRow[] }) {
 
   return (
     <>
-      <div className="overflow-x-auto max-md:hidden">
-        <Table>
-          <THead>
-            <Th>{t("columns.name")}</Th>
-            <Th>{t("columns.clientId")}</Th>
-            <Th>{t("columns.scopes")}</Th>
-            <Th>{t("columns.created")}</Th>
-            <Th align="right">
-              <span className="sr-only">{t("columns.actions")}</span>
-            </Th>
-          </THead>
-          <TBody>
-            {clients.map((client) => (
-              <Tr key={client.clientId}>
-                <Td className="font-medium">{client.name}</Td>
-                <Td muted className="font-mono text-sm">
-                  {client.clientId}
-                </Td>
-                <Td className="text-sm">{scopes(client)}</Td>
-                <Td muted className="text-sm">
-                  {client.created}
-                </Td>
-                <Td align="right">
-                  <Button size="xs" variant="danger" disabled={pending} onClick={() => setConfirming(client)}>
-                    {t("delete")}
-                  </Button>
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
-      </div>
-
-      <ul className="flex flex-col md:hidden">
-        {clients.map((client) => (
-          <li
-            key={client.clientId}
-            className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
-          >
-            <span className="min-w-0 font-medium break-words">{client.name}</span>
-            <span className="font-mono text-sm break-all text-muted">{client.clientId}</span>
-            <span className="text-sm">{scopes(client)}</span>
-            <span className="text-sm text-muted">
-              {t("columns.created")} {client.created}
-            </span>
-            <div>
+      <DataTable
+        rows={clients}
+        rowKey={(client) => client.clientId}
+        columns={[
+          {
+            key: "name",
+            header: t("columns.name"),
+            cell: (client) => client.name,
+            className: "font-medium",
+            card: "title",
+          },
+          {
+            key: "id",
+            header: t("columns.clientId"),
+            cell: (client) => client.clientId,
+            muted: true,
+            className: "font-mono text-sm",
+          },
+          { key: "scopes", header: t("columns.scopes"), cell: scopes, className: "text-sm" },
+          {
+            key: "created",
+            header: t("columns.created"),
+            cell: (client) => client.created,
+            muted: true,
+            className: "text-sm",
+            card: "labelled",
+          },
+          {
+            key: "actions",
+            header: t("columns.actions"),
+            hiddenHeader: true,
+            align: "right",
+            card: "action",
+            cell: (client) => (
               <Button size="xs" variant="danger" disabled={pending} onClick={() => setConfirming(client)}>
                 {t("delete")}
               </Button>
-            </div>
-          </li>
-        ))}
-      </ul>
+            ),
+          },
+        ]}
+      />
 
       <Modal
         open={confirming !== null}
