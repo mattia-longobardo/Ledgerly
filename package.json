@@ -34,7 +34,8 @@
     "user:create-api-client": "sh scripts/on-homelab.sh scripts/create-api-client.ts",
     "unused-exports": "tsx scripts/unused-exports.ts",
     "cleanliness": "tsx scripts/cleanliness.ts",
-    "tokens": "tsx scripts/tokens.ts"
+    "tokens": "tsx scripts/tokens.ts",
+    "static:build": "vite build --config apps/static/vite.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1131.0",

@@ -1,0 +1,8 @@
+/* The web app's styles, with the screens it still keeps in apps/web read by Tailwind too. */
+@import "@fontsource-variable/inter/wght.css";
+@import "../../web/src/app/globals.css";
+@source "../../web/src";
+
+:root {
+  --font-inter: "Inter Variable";
+}

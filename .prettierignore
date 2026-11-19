@@ -11,3 +11,4 @@ docs
 docker-compose.yml
 public/pdfjs
 baselines
+apps/static/dist

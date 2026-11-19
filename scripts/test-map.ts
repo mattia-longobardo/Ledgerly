@@ -579,6 +579,7 @@ export const MODULES: Module[] = [
       "packages/design-tokens/**",
       "packages/ui/**",
       "packages/api-client/**",
+      "apps/static/**",
       "apps/web/src/platform/route.ts",
       "apps/web/src/platform/router.tsx",
       "scripts/tokens.ts",
