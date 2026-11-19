@@ -25,6 +25,8 @@ export {
   isFutureDate,
   movementEffect,
   shareOf,
+  stepsOf,
+  windowChangeOf,
 } from "./rules";
 export type { AccountMode, Change, MovementEffect } from "./rules";
 export {

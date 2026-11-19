@@ -7,35 +7,59 @@ import { z } from "zod";
 import { type Account, getAccount, openSwitchOf } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { normalizeIban } from "@ledgerly/domain/platform/iban";
-import { listConnections } from "@ledgerly/domain/platform/integrations";
+import { isPluginProvider, listConnections } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin, isPluginActive, listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import { rulesOnAccount } from "@ledgerly/domain/interests";
 import { managedSinceOf, serviceAccountIds } from "@ledgerly/domain/investments";
 import { pocketsOnAccount } from "@ledgerly/domain/pockets";
 import { subscriptionsOnAccount } from "@ledgerly/domain/subscriptions";
 import { centsToDecimal } from "@ledgerly/domain/shared/money";
+import { connectionSharing } from "@ledgerly/plugin-host";
 import { bankKindLabel, labelOf } from "@/platform/integrations/registry";
 import { BANK_PLUGIN_ID } from "../../banks/plugin";
 import { providerName } from "../../banks/provider-name";
 import { freeBankAccounts, switchable } from "./switch/switch";
 
-/** What a switch counted when it was applied; only `transfers` is shown. */
-const counts = z.object({ transfers: z.number().int().optional() });
+/** What a switch counted when it was applied (`switch.ts`); a count it did not write is 0. */
+const count = z.number().int().catch(0);
+const counts = z.object({ matched: count, fresh: count, transfers: count, joined: count }).catch({
+  matched: 0,
+  fresh: 0,
+  transfers: 0,
+  joined: 0,
+});
 
 /** The switch to the bank as the page's «Data source» shows it (ux/n4-account-switch.md §2.2, §9.1). */
 async function switchOf(ctx: Ctx, account: Account) {
   const open = await openSwitchOf(ctx, account.id);
   if (open === null) return null;
+  const counted = counts.parse(open.counts ?? {});
   return {
     source: (await labelOf({ provider: open.fromProvider, instanceKey: "" }, ctx.locale)).name,
     appliedAt: open.appliedAt.toISOString(),
     cutDate: open.cutDate,
-    transfers: counts.safeParse(open.counts).data?.transfers ?? 0,
+    transfers: counted.transfers,
     publishes: (open.interestModes ?? []).length > 0,
     joined:
       open.mergedAccountId === null ? null : ((await getAccount(ctx, open.mergedAccountId))?.name ?? null),
     sourceConnected: (await listConnections(ctx)).some((one) => one.provider === open.fromProvider),
+    counts: counted,
   };
+}
+
+/**
+ * The connection the account comes from, by the rule of its page's row (`connection-status.ts`): a
+ * plugin's bank whose access shares the account, else the provider's one connection; null with none.
+ */
+async function connectionIdOf(ctx: Ctx, account: Account): Promise<string | null> {
+  const provider = account.provider;
+  if (provider === null) return null;
+  if (isPluginProvider(provider)) {
+    if (account.providerAccountId === null) return null;
+    const pluginId = provider.slice("plugin:".length);
+    return (await connectionSharing(ctx, pluginId, account.providerAccountId))?.connection.id ?? null;
+  }
+  return (await listConnections(ctx)).find((one) => one.provider === provider)?.id ?? null;
 }
 
 /** «Move to the bank» with no open switch: nothing unless the person turned the bank's plugin on. */
@@ -51,17 +75,20 @@ async function switchOfferOf(ctx: Ctx, account: Account): Promise<"none" | "conn
 }
 
 export async function accountContext(ctx: Ctx, account: Account) {
-  const [providerLabel, managed, inInvestments, pockets, paying, rules, open] = await Promise.all([
-    providerName(ctx, account.provider),
-    managedSinceOf(ctx, account.id),
-    serviceAccountIds(ctx, [account.id]),
-    pocketsOnAccount(ctx, account.id),
-    subscriptionsOnAccount(ctx, account.id),
-    rulesOnAccount(ctx, account.id),
-    switchOf(ctx, account),
-  ]);
+  const [providerLabel, connectionId, managed, inInvestments, pockets, paying, rules, open] =
+    await Promise.all([
+      providerName(ctx, account.provider),
+      connectionIdOf(ctx, account),
+      managedSinceOf(ctx, account.id),
+      serviceAccountIds(ctx, [account.id]),
+      pocketsOnAccount(ctx, account.id),
+      subscriptionsOnAccount(ctx, account.id),
+      rulesOnAccount(ctx, account.id),
+      switchOf(ctx, account),
+    ]);
   return {
     providerLabel,
+    connectionId,
     inInvestments: inInvestments.has(account.id),
     managed: managed !== null,
     pockets: pockets.map((pocket) => ({ id: pocket.id, name: pocket.name })),

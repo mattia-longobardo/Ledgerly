@@ -116,7 +116,7 @@ export function viewRow(
     missingRate: boolean;
     stale: boolean;
   },
-  extra: Pick<ViewRow, "change" | "yoy" | "share" | "service">,
+  extra: Pick<ViewRow, "change" | "seriesChange" | "yoy" | "share" | "service">,
 ): ViewRow {
   const { account } = row;
   return {

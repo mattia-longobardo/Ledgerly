@@ -3,6 +3,23 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · the last figures of accounts (release R2, accounts, completion)
+
+The changes of the charts, the connection an account comes from and the counts of a switch are
+fields of the API: the client works out no change between two points. A change is
+`{ amount, fraction }`, as below.
+
+- `GET /net-worth` adds `windowChange`: the last month's `netWorth` from the first known one of the
+  window. Each row of `accounts` adds `seriesChange`, one change per month of `series`, each from
+  the month before; the first is `{ amount: null, fraction: null }`.
+- `GET /net-worth/daily` adds `windowChange`: the last day's `total` from the first known one.
+- `GET /accounts/{id}/daily-balances` adds `changes`, one per day of `values`, each from the day
+  before; the first is `{ amount: null, fraction: null }`.
+- `GET /accounts/{id}/context` adds `connectionId`: the connection the account comes from (its row is
+  in `GET /connections`), or `null`. Its `switch` adds `counts`: `matched`, `fresh`, `transfers`,
+  `joined`, what «Apply» counted, 0 when it did not count one.
+- No route and no MCP tool is added. No IBAN, whole or masked, in any of them.
+
 ## 2026-11-19 · the figures of accounts (release R2, accounts, completion)
 
 Every change, share and conversion a screen of accounts shows is now a field of the API: the

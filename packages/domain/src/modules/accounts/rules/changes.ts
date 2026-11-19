@@ -15,6 +15,16 @@ export function changeBetween(current: Cents | null, earlier: Cents | null): Cha
   return { cents, fraction: earlier === 0n ? null : Number(cents) / Math.abs(Number(earlier)) };
 }
 
+/** Each value of a series from the one before it; the first has none before it in the window. */
+export function stepsOf(values: readonly (Cents | null)[]): Change[] {
+  return values.map((value, index) => changeBetween(value, index === 0 ? null : (values[index - 1] ?? null)));
+}
+
+/** A chart's window: its last value from its first known one. */
+export function windowChangeOf(values: readonly (Cents | null)[]): Change {
+  return changeBetween(values.at(-1) ?? null, values.find((value) => value !== null) ?? null);
+}
+
 /** An account's share of a total; `null` rather than a misleading 0 % when either is unknown. */
 export function shareOf(value: Cents | null, total: Cents | null): number | null {
   if (value === null || total === null || total === 0n) return null;

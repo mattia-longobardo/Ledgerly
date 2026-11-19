@@ -33,6 +33,8 @@ const viewRow = z.object({
   series: z.array(money().nullable()),
   /** Per month, whether the value stands on a month end rebuilt from the movements. */
   estimated: z.array(z.boolean()),
+  /** Each month end of `series` from the one before; the first has none (amount and fraction null). */
+  seriesChange: z.array(delta),
   /** The same months held, never interpolated: what the net worth sums. */
   held: z.array(money().nullable()),
   /** The same figures in the display currency, each at the rate of its day; null without a rate. */
@@ -69,6 +71,10 @@ const VIEW_ROW_EXAMPLE = {
   previous: "11545.84",
   series: ["11545.84", "11302.40"],
   estimated: [false, false],
+  seriesChange: [
+    { amount: null, fraction: null },
+    { amount: "-243.44", fraction: -0.0210849 },
+  ],
   held: ["11545.84", "11302.40"],
   display: { balance: "11302.40", previous: "11545.84", held: ["11545.84", "11302.40"] },
   missingRate: false,
@@ -106,6 +112,8 @@ export const getNetWorth = defineRoute({
     change: delta,
     /** `total` from the net worth at the end of December of the year before `through`; null outside the window. */
     yearToDate: delta,
+    /** The last month's `netWorth` from the first known one of the window: what the chart's header says. */
+    windowChange: delta,
     buckets: z.object({
       cash: bucketTotal,
       savings: bucketTotal,
@@ -133,6 +141,7 @@ export const getNetWorth = defineRoute({
       previousTotal: "11545.84",
       change: { amount: "-243.44", fraction: -0.0210849 },
       yearToDate: { amount: null, fraction: null },
+      windowChange: { amount: "-243.44", fraction: -0.0210849 },
       buckets: {
         cash: { total: "11302.40", partial: false, count: 1 },
         savings: { total: null, partial: false, count: 0 },
@@ -162,6 +171,8 @@ export const getAccountDailyBalances = defineRoute({
     values: z.array(money().nullable()),
     /** Per day, whether the value stands on its movements rather than on a reading. */
     estimated: z.array(z.boolean()),
+    /** Each day from the one before; the first has none (amount and fraction null). */
+    changes: z.array(delta),
   }),
   errors: ["invalid", "not_found"],
   example: {
@@ -171,6 +182,10 @@ export const getAccountDailyBalances = defineRoute({
       days: ["2026-11-01", "2026-11-02"],
       values: ["11302.40", "11250.00"],
       estimated: [false, true],
+      changes: [
+        { amount: null, fraction: null },
+        { amount: "-52.40", fraction: -0.0046363 },
+      ],
     },
   },
 });
@@ -194,6 +209,8 @@ export const getNetWorthDaily = defineRoute({
     total: z.array(money().nullable()),
     /** Per day, whether any account stands on its movements rather than on a reading. */
     estimated: z.array(z.boolean()),
+    /** The last day's `total` from the first known one of the window: what the chart's header says. */
+    windowChange: delta,
     accounts: z.array(
       z.object({ id: id(), values: z.array(money().nullable()), estimated: z.array(z.boolean()) }),
     ),
@@ -206,6 +223,7 @@ export const getNetWorthDaily = defineRoute({
       days: ["2026-11-01", "2026-11-02"],
       total: ["11302.40", "11250.00"],
       estimated: [false, true],
+      windowChange: { amount: "-52.40", fraction: -0.0046363 },
       accounts: [{ id: ACCOUNT_ID, values: ["11302.40", "11250.00"], estimated: [false, true] }],
     },
   },
@@ -226,6 +244,8 @@ export const getAccountContext = defineRoute({
   response: z.object({
     /** The provider's name as a person calls it; null for a manual account. */
     providerLabel: z.string().nullable(),
+    /** The connection the account comes from (its row is in `GET /connections`); null with none. */
+    connectionId: id().nullable(),
     /** A service of Investments: its page is in Investments. */
     inInvestments: z.boolean(),
     /** Investments writes its balances: no balance is recorded by hand. */
@@ -252,6 +272,13 @@ export const getAccountContext = defineRoute({
         joined: z.string().nullable(),
         /** The source of before is still connected: «Undo switch» can run. */
         sourceConnected: z.boolean(),
+        /** What «Apply» counted, for the step «Done»: movements matched, new, transfers, joined. */
+        counts: z.object({
+          matched: z.number().int(),
+          fresh: z.number().int(),
+          transfers: z.number().int(),
+          joined: z.number().int(),
+        }),
       })
       .nullable(),
     /** With no open switch: `offer` it can move to a connected bank, `connect_first` no bank yet, `none` not at all. */
@@ -262,6 +289,7 @@ export const getAccountContext = defineRoute({
     params: { id: ACCOUNT_ID },
     response: {
       providerLabel: null,
+      connectionId: null,
       inInvestments: false,
       managed: false,
       pockets: [],

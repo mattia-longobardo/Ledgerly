@@ -137,6 +137,11 @@ describe("the balances of an account", () => {
       days: ["2026-01-30", "2026-01-31", "2026-02-01"],
       values: [null, "50.00", "50.00"],
       estimated: [false, false, false],
+      changes: [
+        { amount: null, fraction: null },
+        { amount: null, fraction: null },
+        { amount: "0.00", fraction: 0 },
+      ],
     });
     const tooLong = await send(
       alice,
@@ -272,6 +277,46 @@ describe("the fields of R3 accounts: every figure a screen shows is the API's", 
     expect(view.yearToDate).toEqual(wire(changeBetween(page.total, page.netWorth[january - 1].total)));
   });
 
+  it("gives the charts' changes as the client's `changeOf` worked them out", async () => {
+    const { main } = await history();
+    const view = (await send(alice, "GET", "/net-worth?months=13&through=2026-02-01")).body;
+    const row = view.accounts.find((one: { id: string }) => one.id === main.id);
+    expect(view.windowChange).toEqual({ amount: "100.00", fraction: 1 });
+    expect(row.seriesChange.slice(-2)).toEqual([
+      { amount: "30.00", fraction: 0.25 },
+      { amount: "30.00", fraction: 0.2 },
+    ]);
+    const path = `/accounts/${main.id}/daily-balances?from=2026-02-19&to=2026-02-21`;
+    const daily = (await send(alice, "GET", path)).body;
+    expect(daily.changes).toEqual([
+      { amount: null, fraction: null },
+      { amount: "30.00", fraction: 0.2 },
+      { amount: "0.00", fraction: 0 },
+    ]);
+    const days = (await send(alice, "GET", "/net-worth/daily?from=2026-01-30&to=2026-02-21")).body;
+
+    // Parity with the client's shortcut `changeOf` (PERS-453), over the same wire figures: the
+    // window's last value from its first known one, and each point from the one before.
+    const cents = (value: string | null) => (value === null ? null : BigInt(Math.round(Number(value) * 100)));
+    const changeOf = (last: string | null, first: string | null) => {
+      const [end, start] = [cents(last), cents(first)];
+      if (end === null || start === null) return { amount: null, fraction: null };
+      const amount = end - start;
+      return {
+        amount: (Number(amount) / 100).toFixed(2),
+        fraction: start === 0n ? null : Number(amount) / Math.abs(Number(start)),
+      };
+    };
+    const firstKnown = (values: (string | null)[]) => values.find((value) => value !== null) ?? null;
+    const steps = (values: (string | null)[]) =>
+      values.map((value, index) => changeOf(value, index > 0 ? values[index - 1] : null));
+    const totals = view.netWorth.map((point: { total: string | null }) => point.total);
+    expect(view.windowChange).toEqual(changeOf(totals.at(-1) ?? null, firstKnown(totals)));
+    expect(days.windowChange).toEqual(changeOf(days.total.at(-1) ?? null, firstKnown(days.total)));
+    for (const one of view.accounts) expect(one.seriesChange).toEqual(steps(one.series));
+    expect(daily.changes).toEqual(steps(daily.values));
+  });
+
   it("gives each balance its change from the one before, also the oldest of a page", async () => {
     const { main } = await history();
     const two = (await send(alice, "GET", `/accounts/${main.id}/balances?limit=2`)).body.balances;
@@ -297,6 +342,7 @@ describe("the fields of R3 accounts: every figure a screen shows is the API's", 
       days: ["2026-01-30", "2026-01-31", "2026-02-01"],
       total: ["120.00", "170.00", "170.00"],
       estimated: [false, false, false],
+      windowChange: { amount: "50.00", fraction: 50 / 120 },
       accounts: [
         { id: main.id, values: ["120.00", "150.00", "150.00"], estimated: [false, false, false] },
         { id: side.id, values: [null, "20.00", "20.00"], estimated: [false, false, false] },
@@ -324,6 +370,7 @@ describe("the fields of R3 accounts: every figure a screen shows is the API's", 
       status: 200,
       body: {
         providerLabel: null,
+        connectionId: null,
         inInvestments: false,
         managed: false,
         pockets: [],

@@ -26,6 +26,7 @@ import {
 } from "@plugin-host/service";
 import { chooseAccounts, readBank, tieBack } from "@plugin-host/sync";
 import "@/app/plugin-wiring";
+import { accountContext } from "../context";
 import { closeDatabase, resetDatabase } from "../../../../../../../../test/db";
 import { createTestUser } from "../../../../../../../../test/users";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
@@ -395,6 +396,8 @@ describe("apply and undo (criteria 4, 5, 7)", () => {
   it("moves the account, writes the transfers and the new movements only, and the undo puts every number back", async () => {
     const w = await world();
     const numbersBefore = await incomeAndSpending(w.ctx);
+    // The source of test has no connection saved: the account comes from none.
+    expect((await accountContext(w.ctx, (await getAccount(w.ctx, w.accountId))!)).connectionId).toBeNull();
     const report = await checkSwitch(w.ctx, w.accountId, w.target, null, NOW, w.deps);
     const outcome = await applySwitch(
       w.ctx,
@@ -408,6 +411,19 @@ describe("apply and undo (criteria 4, 5, 7)", () => {
 
     const account = await getAccount(w.ctx, w.accountId);
     expect(account).toMatchObject({ provider: BANK_PROVIDER, providerAccountId: "acc-cur", iban: IBAN });
+    // What the account's page and the step «Done» read (`GET /accounts/{id}/context`), never the IBAN.
+    const context = await accountContext(w.ctx, account!);
+    expect(context.connectionId).toBe(w.target.connectionId);
+    // Parity with the step «Done» (`switch/page.tsx`): the counts it reads, a missing one as 0.
+    const recorded = (await openSwitchOf(w.ctx, w.accountId))!.counts as Record<string, number | undefined>;
+    expect(context.switch?.counts).toEqual({
+      matched: recorded.matched ?? 0,
+      fresh: recorded.fresh ?? 0,
+      transfers: recorded.transfers ?? 0,
+      joined: recorded.joined ?? 0,
+    });
+    expect(context.switch?.counts).toMatchObject({ matched: 2, fresh: 1 });
+    expect(JSON.stringify(context)).not.toContain(IBAN.slice(4));
     const { rows } = await getPool().query<{ payee: string; type: string; day: string }>(
       `select payee, type, to_char(occurred_at at time zone 'Europe/Rome', 'YYYY-MM-DD') as day
        from transactions where account_id = $1 and removed_upstream_at is null order by occurred_at, payee`,
@@ -664,6 +680,10 @@ describe("a bank's account already here (H39 for already imported accounts)", ()
       provider: BANK_PROVIDER,
       providerAccountId: "acc-cur",
     });
+    const joined = (await openSwitchOf(w.ctx, w.accountId))!.counts as { joined: number };
+    expect(joined.joined).toBeGreaterThan(0);
+    const switched = await accountContext(w.ctx, (await getAccount(w.ctx, w.accountId))!);
+    expect(switched.switch?.counts.joined).toBe(joined.joined);
     expect(await getAccount(w.ctx, w.doubleId)).toMatchObject({
       origin: "manual",
       provider: null,

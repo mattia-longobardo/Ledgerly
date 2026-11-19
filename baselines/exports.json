@@ -153,10 +153,12 @@
     "saveSourceIbans",
     "shareOf",
     "snapshotMonthFor",
+    "stepsOf",
     "takeOverEntries",
     "updateAccountSettings",
     "updateBalanceEntry",
     "updateConnection",
+    "windowChangeOf",
     "wireAccounts"
   ],
   "packages/domain/src/modules/budgets/client.ts": [

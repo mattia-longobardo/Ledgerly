@@ -2097,6 +2097,18 @@
                         "null"
                       ]
                     },
+                    "connectionId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "inInvestments": {
                       "type": "boolean"
                     },
@@ -2216,6 +2228,37 @@
                             },
                             "sourceConnected": {
                               "type": "boolean"
+                            },
+                            "counts": {
+                              "type": "object",
+                              "properties": {
+                                "matched": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "fresh": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "transfers": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "joined": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "matched",
+                                "fresh",
+                                "transfers",
+                                "joined"
+                              ]
                             }
                           },
                           "required": [
@@ -2225,7 +2268,8 @@
                             "transfers",
                             "publishes",
                             "joined",
-                            "sourceConnected"
+                            "sourceConnected",
+                            "counts"
                           ]
                         },
                         {
@@ -2244,6 +2288,7 @@
                   },
                   "required": [
                     "providerLabel",
+                    "connectionId",
                     "inInvestments",
                     "managed",
                     "pockets",
@@ -2383,12 +2428,42 @@
                       "items": {
                         "type": "boolean"
                       }
+                    },
+                    "changes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "amount": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fraction": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "amount",
+                          "fraction"
+                        ]
+                      }
                     }
                   },
                   "required": [
                     "days",
                     "values",
-                    "estimated"
+                    "estimated",
+                    "changes"
                   ]
                 }
               }
@@ -10095,6 +10170,32 @@
                         "fraction"
                       ]
                     },
+                    "windowChange": {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "fraction": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "fraction"
+                      ]
+                    },
                     "buckets": {
                       "type": "object",
                       "properties": {
@@ -10370,6 +10471,35 @@
                               "type": "boolean"
                             }
                           },
+                          "seriesChange": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "amount": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "fraction": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "amount",
+                                "fraction"
+                              ]
+                            }
+                          },
                           "held": {
                             "type": "array",
                             "items": {
@@ -10553,6 +10683,7 @@
                           "previous",
                           "series",
                           "estimated",
+                          "seriesChange",
                           "held",
                           "display",
                           "missingRate",
@@ -10575,6 +10706,7 @@
                     "previousTotal",
                     "change",
                     "yearToDate",
+                    "windowChange",
                     "buckets",
                     "alerts",
                     "missingRates",
@@ -10696,6 +10828,32 @@
                         "type": "boolean"
                       }
                     },
+                    "windowChange": {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "fraction": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "fraction"
+                      ]
+                    },
                     "accounts": {
                       "type": "array",
                       "items": {
@@ -10740,6 +10898,7 @@
                     "days",
                     "total",
                     "estimated",
+                    "windowChange",
                     "accounts"
                   ]
                 }

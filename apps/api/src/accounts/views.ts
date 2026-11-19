@@ -11,6 +11,8 @@ import {
   getAccount,
   listAccounts,
   shareOf,
+  stepsOf,
+  windowChangeOf,
 } from "@ledgerly/domain/accounts";
 import { syncedServicesOf } from "@ledgerly/domain/investments";
 import { addDays, type CivilDate, today } from "@ledgerly/domain/shared/dates";
@@ -51,6 +53,7 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
       yearToDate: delta(
         changeBetween(view.total, january > 0 ? (view.netWorth[january - 1]?.total ?? null) : null),
       ),
+      windowChange: delta(windowChangeOf(view.netWorth.map((point) => point.total))),
       buckets: {
         cash: { ...view.buckets.cash, total: money(view.buckets.cash.total) },
         savings: { ...view.buckets.savings, total: money(view.buckets.savings.total) },
@@ -64,6 +67,7 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
         const service = services.get(row.account.id) ?? null;
         return viewRow(row, {
           change: delta(changeBetween(row.balance, row.previous)),
+          seriesChange: stepsOf(row.series).map(delta),
           yoy: delta(changeBetween(row.balance, row.series.at(-13) ?? null)),
           // An archived account is outside the total: a share of it would be a wrong number.
           share: row.account.state === "archived" ? null : shareOf(row.display.balance, view.total),
@@ -90,6 +94,7 @@ export function serveViews(app: Hono<ApiEnv>, guard: Guard): void {
       days: daily.days,
       total: daily.total.map(money),
       estimated: daily.estimated,
+      windowChange: delta(windowChangeOf(daily.total)),
       accounts: daily.accounts.map((account) => ({ ...account, values: account.values.map(money) })),
     };
   });
@@ -99,6 +104,11 @@ export function serveViews(app: Hono<ApiEnv>, guard: Guard): void {
     const to: CivilDate = query.to < todayOn ? query.to : todayOn;
     if (query.from > to || addDays(query.from, MAX_DAYS - 1) < to) throw new ApiRefusal("invalid");
     const daily = await refusing(accountReconstructedBalances(ctx, params.id, { from: query.from, to }));
-    return { days: daily.days, values: daily.values.map(money), estimated: daily.estimated };
+    return {
+      days: daily.days,
+      values: daily.values.map(money),
+      estimated: daily.estimated,
+      changes: stepsOf(daily.values).map(delta),
+    };
   });
 }
