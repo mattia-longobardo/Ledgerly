@@ -46,13 +46,15 @@ const MONTH_OF = sql`date_trunc('month', ${balanceEntries.on})`;
 const WINDOW_MONTHS = 24;
 
 /**
- * The balance of each account on a day: its latest entry on or before it.
+ * The reading of each account at a day (ACC-4): its latest entry on or before it, what the
+ * Accounts pages, the API, MCP, pockets and subscriptions show. Not the balance rebuilt from the
+ * movements, which is `reconstructedBalances` (the daily chart, interests).
  *
  * `observed` leaves out the snapshot's own `system` rows. The monthly snapshot reads the balances
  * that way, so a second run copies the real balance again rather than the row its first run wrote
  * (which would freeze the month at whatever the first run happened to see).
  */
-export async function balancesOn(
+export async function readingsAt(
   ctx: Pick<Ctx, "userId">,
   accountIds: readonly string[],
   day: CivilDate,
@@ -215,7 +217,7 @@ export async function movementBasis(
 
 /**
  * Every day of each account with its balance, one row per day — the best source of that day, as
- * {@link balancesOn} picks it — in date order. `observed` says whether a person or a provider read
+ * {@link readingsAt} picks it — in date order. `observed` says whether a person or a provider read
  * it (not a snapshot copy, not a month end rebuilt from the movements). What Investments shows a
  * manual service's value from (docs/design/investments.md §1.3, PERS-342): the account's own
  * balance, the one the net worth counts.
@@ -345,8 +347,8 @@ export async function accountsView(
   const ids = open.map((account) => account.id);
   const previousMonthEnd = lastDayOfMonth(addMonths(end, -1));
   const [latest, previous] = await Promise.all([
-    balancesOn(ctx, ids, asOf),
-    balancesOn(ctx, ids, previousMonthEnd),
+    readingsAt(ctx, ids, asOf),
+    readingsAt(ctx, ids, previousMonthEnd),
   ]);
   // The day each month's value stands for, and so the day of its rate: today for a month still
   // running, its last day otherwise.

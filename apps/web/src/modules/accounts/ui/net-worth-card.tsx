@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { accountsView } from "@ledgerly/domain/accounts";
-import { dailyBalancesOf } from "@ledgerly/domain/accounts";
+import { reconstructedBalances } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { addDays, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
@@ -94,7 +94,7 @@ export async function NetWorthCard({
     const earliest = addDays(end, -365);
     const first = period.range.from > months[0] ? period.range.from : months[0];
     const start = first > earliest ? first : earliest;
-    const read = await dailyBalancesOf(
+    const read = await reconstructedBalances(
       ctx,
       stacked.map(({ row }) => row.account.id),
       { from: start, to: end },

@@ -19,8 +19,8 @@ export {
 } from "./balances";
 export type { ProviderBalanceInput } from "./balances";
 export {
-  dailyBalancesOf,
-  accountDailyBalances,
+  reconstructedBalances,
+  accountReconstructedBalances,
   rebuildDerivedBalances,
   replacePortfolioPoints,
   openedNoLaterThan,

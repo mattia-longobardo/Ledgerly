@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, exists, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
-import { type Account, balancesOn, listAccounts } from "../accounts/queries";
-import { dailyBalancesOf } from "../accounts/service";
+import { type Account, readingsAt, listAccounts } from "../accounts/queries";
+import { reconstructedBalances } from "../accounts/service";
 import { fundsOverview } from "../funds/overview";
 import { escapeLike, linkCandidates, movementsByAccount, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
@@ -461,7 +461,7 @@ export async function catalogView(ctx: Pick<Ctx, "userId" | "timeZone">): Promis
   const [investments, eligible] = await Promise.all([listInvestmentAccounts(ctx), eligibleAccounts(ctx)]);
   const accounts = new Map(eligible.map((one) => [one.account.id, one.account]));
   const candidates = eligible.filter((one) => one.reason !== "type" && one.account.state !== "archived");
-  const balances = await balancesOn(
+  const balances = await readingsAt(
     ctx,
     candidates.map((one) => one.account.id),
     today(ctx.timeZone),
@@ -1243,7 +1243,7 @@ async function pnlView(
   const { grain: barGrain, intervals } = barIntervals(span.from, span.to);
   const { grain: valueGrain, days } = valueDays(span.from, span.to);
 
-  const read = await dailyBalancesOf(
+  const read = await reconstructedBalances(
     ctx,
     live.map((one) => one.account.id),
     { from: days[0], to: days[days.length - 1] },

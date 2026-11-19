@@ -1,5 +1,5 @@
 import "server-only";
-import { balancesOn, listAccounts, listBalanceEntries } from "@ledgerly/domain/accounts";
+import { readingsAt, listAccounts, listBalanceEntries } from "@ledgerly/domain/accounts";
 import { budgetsView } from "@ledgerly/domain/budgets";
 import { fundsConfiguration, fundsOverview } from "@ledgerly/domain/funds";
 import { interestsView } from "@ledgerly/domain/interests";
@@ -71,7 +71,7 @@ async function allTransactions(ctx: Ctx): Promise<Row[]> {
 async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
   const month = monthKey(today(ctx.timeZone, now));
   const accounts = await listAccounts(ctx, { includeArchived: true });
-  const latest = await balancesOn(
+  const latest = await readingsAt(
     ctx,
     accounts.map((account) => account.id),
     today(ctx.timeZone, now),

@@ -19,12 +19,13 @@ import { accounts, balanceEntries, manualMovementAccounts } from "../schema";
 import { requireAccount } from "./guards";
 
 /**
- * Several accounts' balances on every day of a window, in one read (spec §7.1, F2.5): a synced
+ * The reconstructed balance (ACC-4), not the reading of `readingsAt`: several accounts' balances
+ * on every day of a window, in one read (spec §7.1, F2.5): a synced
  * account's from its readings and its movements, a manual one's held between entries
  * (`dailySeries`). Both ends included; a window reaching past today is the caller's to trim. An id
  * that is not one of this user's accounts is simply absent from `series`.
  */
-export async function dailyBalancesOf(
+export async function reconstructedBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountIds: readonly string[],
   window: { from: CivilDate; to: CivilDate },
@@ -59,14 +60,14 @@ export async function dailyBalancesOf(
   return { days, series };
 }
 
-/** One account day by day, for Account detail's day grain (see {@link dailyBalancesOf}). */
-export async function accountDailyBalances(
+/** One account day by day, for Account detail's day grain (see {@link reconstructedBalances}). */
+export async function accountReconstructedBalances(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountId: string,
   window: { from: CivilDate; to: CivilDate },
 ): Promise<{ days: CivilDate[]; values: (Cents | null)[]; estimated: boolean[] }> {
   const account = await requireAccount(ctx, accountId);
-  const { days, series } = await dailyBalancesOf(ctx, [account.id], window);
+  const { days, series } = await reconstructedBalances(ctx, [account.id], window);
   const one = series.get(account.id) ?? { values: days.map(() => null), estimated: days.map(() => false) };
   return { days, ...one };
 }

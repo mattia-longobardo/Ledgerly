@@ -6,11 +6,11 @@ import type { Hono } from "hono";
 import type { z } from "zod";
 import { ACCOUNTS, type RouteContract } from "@ledgerly/api-contract";
 import {
-  accountDailyBalances,
+  accountReconstructedBalances,
   accountsView,
   addConnection,
   archiveAccount,
-  balancesOn,
+  readingsAt,
   connectionsOf,
   createAccount,
   deleteBalanceEntry,
@@ -108,7 +108,7 @@ const MAX_DAYS = 1100;
 function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, accounts.listAccounts, async ({ ctx }) => {
     const rows = await listAccounts(ctx);
-    const latest = await balancesOn(
+    const latest = await readingsAt(
       ctx,
       rows.map((account) => account.id),
       today(ctx.timeZone),
@@ -300,7 +300,7 @@ function serveViews(app: Hono<ApiEnv>, guard: Guard): void {
     const todayOn = today(ctx.timeZone);
     const to: CivilDate = query.to < todayOn ? query.to : todayOn;
     if (query.from > to || addDays(query.from, MAX_DAYS - 1) < to) throw new ApiRefusal("invalid");
-    const daily = await refusing(accountDailyBalances(ctx, params.id, { from: query.from, to }));
+    const daily = await refusing(accountReconstructedBalances(ctx, params.id, { from: query.from, to }));
     return { days: daily.days, values: daily.values.map(money), estimated: daily.estimated };
   });
 }

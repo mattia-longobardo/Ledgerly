@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { balancesOn, listAccounts } from "@domain/modules/accounts/queries";
+import { readingsAt as balancesOn, listAccounts } from "@domain/modules/accounts/queries";
 import { createManualTransaction } from "@domain/modules/transactions/manual";
 import { listTransactions } from "@domain/modules/transactions/queries";
 import { updateTransaction } from "@domain/modules/transactions/service";

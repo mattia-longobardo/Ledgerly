@@ -438,7 +438,7 @@ if (plans) {
   for (const row of plan.rows) console.log("   " + row["QUERY PLAN"]);
 }
 
-// The shape `balancesOn` really sends: the account list is in the WHERE, which is what lets
+// The shape `readingsAt` really sends: the account list is in the WHERE, which is what lets
 // `balance_entries_account_on_idx` lead. Without it the planner has no choice but a seq scan —
 // measured, and the reason this EXPLAIN carries the IN.
 const ids = sql.join(

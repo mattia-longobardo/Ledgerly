@@ -1,12 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   accountsToRebuild,
-  balancesOn,
+  readingsAt as balancesOn,
   listAccounts,
   listBalanceEntries,
 } from "@domain/modules/accounts/queries";
 import {
-  accountDailyBalances,
+  accountReconstructedBalances as accountDailyBalances,
   applyProviderAccounts,
   archiveAccount,
   createAccount,

@@ -1,7 +1,7 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export {
   accountsView,
-  balancesOn,
+  readingsAt,
   firstBalanceDay,
   getAccount,
   listAccounts,
@@ -21,14 +21,14 @@ export {
 export type { AccountMode, MovementEffect } from "./rules";
 export {
   AccountError,
-  accountDailyBalances,
+  accountReconstructedBalances,
   accountsOfProvider,
   accountsOpenToProvider,
   addConnection,
   archiveAccount,
   connectionsOf,
   createAccount,
-  dailyBalancesOf,
+  reconstructedBalances,
   deleteBalanceEntry,
   ibanOwnersOf,
   linkProviderAccounts,

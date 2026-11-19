@@ -40,7 +40,7 @@ import { accountConnectionRow } from "./connection-status";
 import { DeleteAccount } from "./delete-account";
 import { AccountSettingsForm } from "@/modules/accounts/ui/settings-form";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
-import { accountDailyBalances, connectionsOf } from "@ledgerly/domain/accounts";
+import { accountReconstructedBalances, connectionsOf } from "@ledgerly/domain/accounts";
 import { LinkTabs } from "@/modules/accounts/ui/controls";
 import { periodEnd, periodMonths, parsePeriodQuery, type PeriodQuery } from "@/modules/accounts/ui/period";
 import { PeriodBar } from "@/modules/accounts/ui/period-bar";
@@ -134,7 +134,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
   const todayOn = today(ctx.timeZone, now);
   const daily =
     tab === "overview" && chart.grain === "day"
-      ? await accountDailyBalances(ctx, id, {
+      ? await accountReconstructedBalances(ctx, id, {
           from: period.range.from,
           to: periodEnd(period.range, todayOn),
         })
@@ -338,7 +338,7 @@ async function OverviewTab({
   /** Where the balance comes from: "Manual", or the provider that syncs it. */
   source: string;
   /** The window day by day, when the chart's grain is the day (F2.5). */
-  daily: Awaited<ReturnType<typeof accountDailyBalances>> | null;
+  daily: Awaited<ReturnType<typeof accountReconstructedBalances>> | null;
   /** The period of the chart (PERS-342), with its control. */
   period: PeriodQuery;
   yoy: ReturnType<typeof changeBetween>;

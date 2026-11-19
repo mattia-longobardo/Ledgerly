@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { balanceDays, balancesOn, getAccount, listAccounts } from "../accounts/queries";
+import { balanceDays, readingsAt, getAccount, listAccounts } from "../accounts/queries";
 import { replacePortfolioPoints, saveBalanceEntry } from "../accounts/service";
 import { valuationAccountIds } from "../funds/queries";
 import { getTransaction, movementsByAccount } from "../transactions/queries";
@@ -499,7 +499,7 @@ export async function createManualService(
   const eligible = (await eligibleAccounts(ctx)).find((one) => one.account.id === parsed.accountId);
   if (!eligible || eligible.reason !== null) throw new InvestmentError("not_eligible");
   const opening =
-    (await balancesOn(ctx, [parsed.accountId], addDays(todayOn, -1))).get(parsed.accountId) ?? null;
+    (await readingsAt(ctx, [parsed.accountId], addDays(todayOn, -1))).get(parsed.accountId) ?? null;
   return getDb().transaction(async (tx) => {
     const [investment] = await tx
       .insert(investmentAccounts)

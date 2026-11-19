@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ne } from "drizzle-orm";
-import { accountNames, accountOptions, balancesOn, listAccounts } from "../accounts/queries";
+import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts/queries";
 import { accruedInterest } from "../interests/service";
 import { chargeCandidates, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
@@ -218,7 +218,7 @@ export async function pocketsView(
     ...new Set(open.flatMap((pocket) => (pocket.backingAccountId ? [pocket.backingAccountId] : []))),
   ];
   const [balances, expenses] = await Promise.all([
-    balancesOn(ctx, backingIds, todayOn),
+    readingsAt(ctx, backingIds, todayOn),
     expensesByPocket(ctx, open, accountName, todayOn),
   ]);
 

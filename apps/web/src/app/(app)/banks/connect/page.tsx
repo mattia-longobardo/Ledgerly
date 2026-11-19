@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
-import { balancesOn, listAccounts } from "@ledgerly/domain/accounts";
+import { readingsAt, listAccounts } from "@ledgerly/domain/accounts";
 import { openSwitchOf } from "@ledgerly/domain/accounts";
 import { labelOf } from "@/platform/integrations/registry";
 import { switchable } from "../../accounts/[id]/switch/switch";
@@ -160,7 +160,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
     const ids = linked.map(([, account]) => account.id);
     const [spans, balances, job] = await Promise.all([
       movementSpanByAccount(ctx, ids),
-      balancesOn(ctx, ids, today(ctx.timeZone)),
+      readingsAt(ctx, ids, today(ctx.timeZone)),
       readSyncJob(ctx, connection.id, "transactions"),
     ]);
     // How the movements of this bank stand after the cascade read them (rewrite plan N3).

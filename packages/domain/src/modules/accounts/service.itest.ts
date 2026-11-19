@@ -7,7 +7,13 @@ import { resolveExternal } from "../../platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { getDb } from "../../platform/db/client";
-import { accountsView, balancesOn, getAccount, listBalanceEntries, listSnapshotRuns } from "./queries";
+import {
+  accountsView,
+  readingsAt as balancesOn,
+  getAccount,
+  listBalanceEntries,
+  listSnapshotRuns,
+} from "./queries";
 import { balanceEntries } from "./schema";
 import type { IncomingTransaction } from "../transactions/rules";
 import type { RemoteAccount } from "./rules";
@@ -19,8 +25,8 @@ import {
   connectionsByAccount,
   connectionsOf,
   createAccount,
-  accountDailyBalances,
-  dailyBalancesOf,
+  accountReconstructedBalances as accountDailyBalances,
+  reconstructedBalances as dailyBalancesOf,
   deleteBalanceEntry,
   rebuildDerivedBalances,
   removeAccount,

@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireOpenAccount } from "../accounts/queries";
-import { dailyBalancesOf } from "../accounts/service";
+import { reconstructedBalances } from "../accounts/service";
 import { listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
 import { addDays, type CivilDate, today } from "../../shared/dates";
@@ -245,7 +245,7 @@ async function accrueRule(
   if (start > end) return { written: 0 };
 
   const tiers = (await tiersOf(ctx, [id])).get(id) ?? [];
-  const { days, series } = await dailyBalancesOf(ctx, [rule.accountId], { from: start, to: end });
+  const { days, series } = await reconstructedBalances(ctx, [rule.accountId], { from: start, to: end });
   const values = series.get(rule.accountId)?.values ?? days.map(() => null);
   let carry: Fixed | null =
     last && last.on === addDays(start, -1) && last.status === "accrued" ? fixedFromDecimal(last.carry) : null;

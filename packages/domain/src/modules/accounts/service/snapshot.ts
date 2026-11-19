@@ -7,7 +7,7 @@ import { convertCents } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
 import { type Cents, sumCents } from "../../../shared/money";
 import { isStale } from "../rules";
-import { balancesOn } from "../queries";
+import { readingsAt } from "../queries";
 import { accounts, balanceEntries, snapshotRuns } from "../schema";
 
 export interface SnapshotOutcome {
@@ -47,7 +47,7 @@ export async function runSnapshot(
   const balances =
     open.length === 0
       ? new Map()
-      : await balancesOn(
+      : await readingsAt(
           ctx,
           open.map((a) => a.id),
           on,
