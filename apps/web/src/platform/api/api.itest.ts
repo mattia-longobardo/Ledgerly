@@ -178,6 +178,8 @@ describe("the gate", () => {
     for (let i = 0; i < MAX_PER_WINDOW; i += 1) await call("/summary", aliceToken);
     const response = await call("/summary", aliceToken);
     expect(response.status).toBe(429);
+    // A token keeps 120 a minute: the web session's own allowance (H57) is not a token's.
+    expect(response.headers.get("x-ratelimit-limit")).toBe("120");
     expect(Number(response.headers.get("retry-after"))).toBeGreaterThan(0);
     // Another token has its own window: one runaway script does not lock everyone out.
     expect((await call("/summary", bobToken)).status).toBe(200);

@@ -15,7 +15,7 @@ vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 const { api } = await import("@/app/api/v1/[[...route]]/composition");
-const { resetRateLimits } = await import("./rate-limit");
+const { MAX_PER_WINDOW, resetRateLimits, SESSION_MAX_PER_WINDOW, takeSlot } = await import("./rate-limit");
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClientWith } = await import("@/platform/auth/api-clients");
 const { readEnv } = await import("@domain/platform/env");
@@ -129,6 +129,20 @@ describe("the session cookie on /api/v1", () => {
     expect((await call("/sessions", alice)).status).toBe(200);
     expect((await call("/api-clients", alice)).status).toBe(200);
     expect((await call("/connections", alice)).status).toBe(200);
+  });
+
+  it("gives the session its own allowance: past a token's 120 a minute, stopped at 1200 (H57)", async () => {
+    for (let i = 0; i <= MAX_PER_WINDOW; i += 1) await takeSlot(`user:${alice.userId}`);
+    const past = await call("/profile", alice);
+    expect(past.status).toBe(200);
+    expect(past.headers.get("x-ratelimit-limit")).toBe(String(SESSION_MAX_PER_WINDOW));
+    // The window's other slots taken directly: 1200 requests through the app would only be slower.
+    const left = Number(past.headers.get("x-ratelimit-remaining"));
+    for (let i = 0; i < left; i += 1)
+      await takeSlot(`user:${alice.userId}`, new Date(), SESSION_MAX_PER_WINDOW);
+    const stopped = await call("/profile", alice);
+    expect(stopped.status).toBe(429);
+    expect(Number(stopped.headers.get("retry-after"))).toBeGreaterThan(0);
   });
 
   it("gives admin to an admin only", async () => {
