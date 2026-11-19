@@ -607,6 +607,8 @@ export const MODULES: Module[] = [
       "tools/release-script.test.ts",
       "tools/test-map.test.ts",
       "tools/contract.test.ts",
+      "tools/messages.test.ts",
+      "scripts/message-keys.ts",
       "scripts/openapi.ts",
       "baselines/modularity.json",
       "baselines/duplication.json",
@@ -726,7 +728,6 @@ export const MESSAGES: Record<string, string> = {
   unsaved: "interface",
   nav: "interface",
   shell: "interface",
-  gallery: "interface",
   errors: "interface",
   // `settings` is read one level down: each section of Settings belongs to a module.
   "settings.title": "interface",
