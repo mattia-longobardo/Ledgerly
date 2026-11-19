@@ -835,12 +835,12 @@
       },
       "log": {
         "title": "Snapshot log",
-        "description": "One row per monthly snapshot.",
+        "description": "One row per monthly snapshot. Its total counts the accounts included in the monthly snapshot, not the net worth.",
         "empty": "No snapshot has run yet.",
         "month": "Month",
         "result": "Result",
         "accounts": "Accounts",
-        "total": "Total",
+        "total": "Snapshot total",
         "detail": "Detail",
         "written": "{written} written · {skipped} skipped",
         "stale": "Stale when taken: {accounts}"

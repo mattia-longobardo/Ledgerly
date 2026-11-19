@@ -835,12 +835,12 @@
       },
       "log": {
         "title": "Registro degli snapshot",
-        "description": "Una riga per ogni snapshot mensile.",
+        "description": "Una riga per ogni snapshot mensile. Il totale conta i conti inclusi nello snapshot mensile, non il patrimonio netto.",
         "empty": "Nessuno snapshot eseguito.",
         "month": "Mese",
         "result": "Esito",
         "accounts": "Conti",
-        "total": "Totale",
+        "total": "Totale dello snapshot",
         "detail": "Dettaglio",
         "written": "{written} scritti · {skipped} saltati",
         "stale": "Non aggiornati al momento dello snapshot: {accounts}"
