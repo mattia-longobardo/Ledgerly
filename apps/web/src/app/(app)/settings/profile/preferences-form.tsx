@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, useRef, useState, useTransition } from "react";
-import { savePreferencesAction } from "@/modules/users/actions";
+import { savePreferencesAction } from "./calls";
 import type { Preferences } from "@ledgerly/domain/users/client";
 import { DISPLAY_CURRENCIES } from "@ledgerly/domain/platform/fx/client";
 import { CardFooter } from "@ledgerly/ui/card";

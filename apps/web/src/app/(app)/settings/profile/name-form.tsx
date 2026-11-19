@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { type FormEvent, useRef, useState, useTransition } from "react";
-import { updateNameAction } from "@/modules/users/actions";
+import { updateNameAction } from "./calls";
 import type { Role } from "@ledgerly/domain/platform/context";
 import { MAX_NAME_LENGTH } from "@ledgerly/domain/platform/auth/client";
 import { Avatar } from "@ledgerly/ui/avatar";

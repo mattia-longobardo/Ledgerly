@@ -70,7 +70,7 @@ export const updatePreferences = defineRoute({
   capability: "preferences",
   summary:
     "Changes some preferences; a field left out keeps its value. A new zone moves the sync times with it.",
-  actions: ["savePreferencesAction", "saveTimeOffPreferencesAction", "saveTheme"],
+  actions: ["saveTimeOffPreferencesAction", "saveTheme"],
   body: preferences.partial().strict(),
   response: preferences,
   errors: ["invalid"],
@@ -120,7 +120,7 @@ export const updateProfile = defineRoute({
   scope: "write",
   capability: "profile",
   summary: "Changes the person's name. Refused with `conflict` (`reason: sso`) when the provider manages it.",
-  actions: ["updateNameAction"],
+  actions: [],
   body: z.object({ name: z.string().trim().min(1).max(120) }).strict(),
   response: profile,
   errors: ["invalid", "conflict"],

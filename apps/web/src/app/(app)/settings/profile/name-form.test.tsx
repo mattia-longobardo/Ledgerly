@@ -7,7 +7,7 @@ import messages from "../../../../../../../messages/en.json";
 import { NameForm } from "./name-form";
 
 const update = vi.fn();
-vi.mock("@/modules/users/actions", () => ({ updateNameAction: (...a: unknown[]) => update(...a) }));
+vi.mock("./calls", () => ({ updateNameAction: (...a: unknown[]) => update(...a) }));
 
 function renderForm(sso = false) {
   render(

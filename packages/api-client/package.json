@@ -1,0 +1,13 @@
+{
+  "name": "@ledgerly/api-client",
+  "version": "0.37.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ledgerly/api-contract": "*",
+    "zod": "4.6.7"
+  }
+}

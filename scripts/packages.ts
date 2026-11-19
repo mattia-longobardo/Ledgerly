@@ -51,6 +51,7 @@ export const ALLOWED: Record<string, { only?: string[]; never?: string[]; typesO
   "@ledgerly/domain": { only: ["@ledgerly/api-contract", "drizzle-orm", "pg", "zod"] },
   "@ledgerly/api-contract": { only: ["zod"] },
   "@ledgerly/design-tokens": { only: [] },
+  "@ledgerly/api-client": { only: ["@ledgerly/api-contract", "zod"], typesOnly: ["zod"] },
   "@ledgerly/plugin-contract": { only: ["zod"] },
   "@ledgerly/plugin-host": {
     only: ["@ledgerly/plugin-contract", "@ledgerly/domain"],
@@ -87,7 +88,13 @@ export const FORBIDDEN_LAYERS: Record<string, RegExp> = {
 };
 
 /** The workspaces written for the browser only: a client component may import any of their entries. */
-const BROWSER_PACKAGES = ["@ledgerly/ui", "@ledgerly/design-tokens"];
+const BROWSER_PACKAGES = [
+  "@ledgerly/ui",
+  "@ledgerly/design-tokens",
+  "@ledgerly/api-client",
+  // The wire's shapes: zod schemas and constants, the same on both sides.
+  "@ledgerly/api-contract",
+];
 
 const ALIASES = /^@(domain|plugin-host|plugin-contract)\//;
 

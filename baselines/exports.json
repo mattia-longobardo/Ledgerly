@@ -21,6 +21,7 @@
     "undoMoveToMacro",
     "undoSourceCategoryChange"
   ],
+  "packages/api-client/src/index.ts": [],
   "packages/api-contract/src/index.ts": [
     "ACCOUNTS",
     "ACCOUNTS_ROUTES",

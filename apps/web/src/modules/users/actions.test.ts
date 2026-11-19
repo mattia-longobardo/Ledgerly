@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
-import { revokeOtherSessionsAction, revokeSessionAction, saveTheme, updateNameAction } from "./actions";
+import { revokeOtherSessionsAction, revokeSessionAction, saveTheme } from "./actions";
 
 const {
   requireSession,
@@ -60,33 +60,6 @@ describe("saveTheme", () => {
     await saveTheme("system");
     expect(updatePreferences).toHaveBeenCalledWith(CTX, { ...DEFAULT_PREFERENCES, theme: "system" });
     expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
-  });
-});
-
-describe("updateNameAction", () => {
-  beforeEach(() => {
-    requireSession.mockReset().mockResolvedValue(CTX);
-    hasSsoAccount.mockReset();
-    updateUser.mockReset();
-  });
-
-  it("refuses to rename an SSO-linked account, without calling Better Auth", async () => {
-    hasSsoAccount.mockResolvedValueOnce(true);
-    expect(await updateNameAction("New Name")).toEqual({ ok: false, error: "sso" });
-    expect(hasSsoAccount).toHaveBeenCalledWith(CTX.userId);
-    expect(updateUser).not.toHaveBeenCalled();
-  });
-
-  it("trims and saves a name when there is no SSO account", async () => {
-    hasSsoAccount.mockResolvedValueOnce(false);
-    expect(await updateNameAction("  Giulia Rossi  ")).toEqual({ ok: true });
-    expect(updateUser).toHaveBeenCalledWith(expect.objectContaining({ body: { name: "Giulia Rossi" } }));
-  });
-
-  it("refuses a whitespace-only name", async () => {
-    hasSsoAccount.mockResolvedValueOnce(false);
-    expect(await updateNameAction("   ")).toEqual({ ok: false, error: "invalid" });
-    expect(updateUser).not.toHaveBeenCalled();
   });
 });
 

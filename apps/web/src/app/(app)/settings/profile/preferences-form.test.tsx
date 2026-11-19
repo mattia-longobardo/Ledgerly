@@ -10,7 +10,7 @@ import { stubColorScheme } from "../../../../../../../test/color-scheme";
 import { PreferencesForm } from "./preferences-form";
 
 const save = vi.fn();
-vi.mock("@/modules/users/actions", () => ({ savePreferencesAction: (...a: unknown[]) => save(...a) }));
+vi.mock("./calls", () => ({ savePreferencesAction: (...a: unknown[]) => save(...a) }));
 
 function renderForm(initial = DEFAULT_PREFERENCES) {
   render(
