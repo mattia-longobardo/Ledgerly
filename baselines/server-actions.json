@@ -122,13 +122,6 @@
       "acceptInviteAction"
     ]
   },
-  "apps/web/src/modules/accounts/actions.ts": {
-    "closedBy": "R3 of accounts",
-    "actions": [
-      "createAccountAction",
-      "saveAccountSettingsAction"
-    ]
-  },
   "apps/web/src/modules/budgets/actions.ts": {
     "closedBy": "R3 of budgets",
     "actions": [

@@ -13,7 +13,7 @@ vi.mock("@/app/(app)/accounts/[id]/delete-actions", () => ({
   moveDependentAction: vi.fn(),
   deleteAccountAction: vi.fn(),
 }));
-vi.mock("../actions", () => ({
+vi.mock("../calls", () => ({
   archiveAccountAction: vi.fn(),
   restoreAccountAction: vi.fn(),
   saveAccountSettingsAction: vi.fn(),

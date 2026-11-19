@@ -6,6 +6,7 @@ import { profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
 import { numberStyle, parseAmount } from "@ledgerly/format/format";
+import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "@ledgerly/domain/accounts/client";
 import { read } from "@ledgerly/ui/data";
 
 export type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
@@ -14,12 +15,27 @@ export type ActionResult = { ok: true } | { ok: false; error: string; other?: st
 const codeOf = (error: unknown): string | null =>
   error instanceof ApiError && error.status < 500 ? (error.reason ?? error.code) : null;
 
-/** A refusal the form names; anything else is thrown, and the form says the save failed. */
-function refused(error: unknown): { ok: false; error: string } {
+/**
+ * A refusal the form names, with the account that already has the IBAN when that is the refusal
+ * (never the IBAN); anything else is thrown, and the form says the save failed.
+ */
+function refused(error: unknown): { ok: false; error: string; other?: string } {
   const code = codeOf(error);
   if (code === null) throw error;
-  return { ok: false, error: code };
+  return error instanceof ApiError && error.other !== null
+    ? { ok: false, error: code, other: error.other }
+    : { ok: false, error: code };
 }
+
+/** A value of a closed list, or the refusal the server would give it. */
+function oneOf<T extends string>(list: readonly T[], value: string): T {
+  const found = list.find((one) => one === value);
+  if (found === undefined) throw new RangeError(`not one of the list: ${value}`);
+  return found;
+}
+
+/** Text the form left empty is no value. */
+const textOrNull = (value: string) => (value.trim() === "" ? null : value);
 
 async function writing(work: () => Promise<unknown>): Promise<ActionResult> {
   try {
@@ -160,5 +176,91 @@ export async function undoSwitchAction(accountId: string) {
     return { ok: true as const };
   } catch (error) {
     return refusal(error);
+  }
+}
+
+// ——— The account itself ————————————————————————————————————————————————————————————————————————
+
+interface NewAccountInput {
+  name: string;
+  type: string;
+  currency: string;
+  color: string | null;
+  reference: string;
+  iban: string;
+  purpose: string;
+  openedOn: string | null;
+  notes: string;
+  openingBalance: { on: string; amount: string } | null;
+}
+
+/** Creates a manual account, with its opening balance when given; answers its id. */
+export async function createAccountAction(
+  input: NewAccountInput,
+): Promise<{ ok: true; id: string } | { ok: false; error: string; other?: string }> {
+  try {
+    const body = {
+      name: input.name,
+      type: oneOf(ACCOUNT_TYPES, input.type),
+      currency: input.currency,
+      color: input.color,
+      reference: textOrNull(input.reference),
+      iban: textOrNull(input.iban),
+      purpose: textOrNull(input.purpose),
+      openedOn: input.openedOn,
+      notes: textOrNull(input.notes),
+      openingBalance: input.openingBalance
+        ? { on: input.openingBalance.on, amount: await decimal(input.openingBalance.amount) }
+        : null,
+    };
+    const account = await call(accounts.createAccount, { body });
+    return { ok: true, id: account.id };
+  } catch (error) {
+    if (error instanceof RangeError) return { ok: false, error: "invalid" };
+    return refused(error);
+  }
+}
+
+interface AccountSettingsFormInput {
+  name: string;
+  type: string;
+  currency: string;
+  color: string | null;
+  reference: string;
+  iban: string;
+  purpose: string;
+  openedOn: string | null;
+  notes: string;
+  inNetWorth: boolean;
+  inSnapshot: boolean;
+  countsAsLiquid: boolean;
+  lowBalance: string | null;
+  staleAfterHours: number;
+  reminder: string;
+  betweenEntries: string;
+}
+
+/** Saves the account's settings: every field of the form. */
+export async function saveAccountSettingsAction(
+  id: string,
+  input: AccountSettingsFormInput,
+): Promise<ActionResult> {
+  try {
+    const body = {
+      ...input,
+      type: oneOf(ACCOUNT_TYPES, input.type),
+      reminder: oneOf(REMINDERS, input.reminder),
+      betweenEntries: oneOf(TRENDS, input.betweenEntries),
+      reference: textOrNull(input.reference),
+      iban: textOrNull(input.iban),
+      purpose: textOrNull(input.purpose),
+      notes: textOrNull(input.notes),
+      lowBalance: input.lowBalance ? await decimal(input.lowBalance) : null,
+    };
+    await call(accounts.updateAccount, { params: { id }, body });
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof RangeError) return { ok: false, error: "invalid" };
+    return refused(error);
   }
 }

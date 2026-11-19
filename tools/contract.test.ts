@@ -161,7 +161,7 @@ describe("the Server Actions of users and settings", () => {
 });
 
 /** The Server Actions of accounts (05-refactor.md §5.5) and their routes; no exclusion. */
-const ACCOUNTS_ACTION_FILES = ["apps/web/src/modules/accounts/actions.ts"];
+const ACCOUNTS_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of accounts", () => {
   const actions = ACCOUNTS_ACTION_FILES.flatMap((file) =>

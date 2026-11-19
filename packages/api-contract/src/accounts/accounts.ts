@@ -113,7 +113,7 @@ export const createAccount = defineRoute({
   scope: "write",
   capability: "accounts",
   summary: "Creates a manual account, with its opening balance when given.",
-  actions: ["createAccountAction"],
+  actions: [],
   body: z
     .object({
       name,
@@ -157,7 +157,7 @@ export const updateAccount = defineRoute({
   capability: "accounts",
   summary:
     "Changes an account's settings: a field left out keeps its value, `iban: null` removes the IBAN. A synced account keeps its currency.",
-  actions: ["saveAccountSettingsAction"],
+  actions: [],
   params: byAccount,
   body: z
     .object({

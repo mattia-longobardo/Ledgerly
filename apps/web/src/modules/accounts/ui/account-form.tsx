@@ -8,7 +8,7 @@ import { Button, ButtonLink } from "@ledgerly/ui/button";
 import { CardFooter } from "@ledgerly/ui/card";
 import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input, Select } from "@ledgerly/ui/input";
-import { createAccountAction } from "../actions";
+import { createAccountAction } from "../calls";
 import { colorField } from "./display";
 import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "@ledgerly/domain/accounts/client";
 import { ibanErrorText } from "./iban-field";
@@ -16,7 +16,7 @@ import { FIELD_GRID } from "@ledgerly/ui/section";
 
 /**
  * A new manual account, with the optional opening balance of spec §7.1. The amount stays text all
- * the way to the Server Action, which reads it in the user's own number format.
+ * the way to the call, which reads it in the user's own number format.
  */
 export function AccountForm({ today, index }: { today: string; index: number }) {
   const t = useTranslations("accounts.new");

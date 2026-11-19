@@ -139,3 +139,46 @@ describe("accounts, old Server Action = new call", () => {
     expect(await stateOf(now)).toBe(await stateOf(old));
   });
 });
+
+describe("the account itself, old Server Action = new call", () => {
+  it("creates and changes an account from the same typed text, and names the holder of an IBAN", async () => {
+    const typed = { name: "Bills", type: "checking", currency: "EUR", iban: "IT60X0542811101000000123456" };
+    const old = await accounts.createAccount(ctx, {
+      ...typed,
+      openingBalance: { on: "2026-10-31", cents: parseAmount("1.200,50", ctx.numberFormat) },
+    });
+    const created = await send("POST", "/accounts", {
+      ...typed,
+      name: "Bills 2",
+      iban: null,
+      openingBalance: { on: "2026-10-31", amount: decimal("1.200,50") },
+    });
+    expect(created).toBe(201);
+    const [now] = (await accounts.listAccounts(ctx)).filter((one) => one.id !== old.id);
+    expect(await entriesOf(now.id)).toEqual(await entriesOf(old.id));
+
+    const routes = apiRoutes({
+      ...adapters,
+      guard: () => async (context, next) => {
+        context.set("ctx", ctx);
+        await next();
+      },
+    });
+    const refused = await routes.request(`/accounts/${now.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ iban: typed.iban }),
+    });
+    expect(refused.status).toBe(409);
+    expect(await refused.json()).toMatchObject({ reason: "iban_exists", other: "Bills" });
+
+    await accounts.updateAccountSettings(ctx, old.id, {
+      ...old,
+      lowBalanceCents: parseAmount("50", ctx.numberFormat),
+      iban: old.iban,
+    });
+    expect(await send("PATCH", `/accounts/${now.id}`, { lowBalance: decimal("50") })).toBe(200);
+    const lowOf = async (id: string) => (await accounts.getAccount(ctx, id))?.lowBalanceCents;
+    expect(await lowOf(now.id)).toBe(await lowOf(old.id));
+  });
+});
