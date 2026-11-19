@@ -17,6 +17,7 @@ import { accountsView, listBalanceEntries } from "@ledgerly/domain/accounts";
 import { hasIbanField } from "@ledgerly/domain/accounts";
 import { changeBetween, colorFor, shareOf, counterValue } from "@/modules/accounts/ui/display";
 import { SyncStatus } from "@ledgerly/ui/sync-status";
+import { DetailHeader } from "@ledgerly/ui/detail-header";
 import {
   asNumbers,
   axisLabels,
@@ -161,33 +162,36 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
 
   return (
     <Page title={account.name} parent={{ href: "/accounts", label: t("title") }}>
-      <header className="flex flex-col gap-1">
-        <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-          <span aria-hidden className="size-2 rounded-full" style={{ background: color }} />
-          <span>{t(`types.${account.type}`)}</span>
-          <span aria-hidden>·</span>
-          {disconnected ? <Badge tone="warn">{source}</Badge> : <span>{source}</span>}
-          {(account.origin === "synced" || service !== null) && (
-            <>
-              <span aria-hidden>·</span>
-              <span>
-                <SyncStatus lastSyncedAt={syncedAt} now={now.toISOString()} />
-              </span>
-            </>
-          )}
-          {account.state !== "active" && <Badge tone="warn">{t(`states.${account.state}`)}</Badge>}
-          {row.stale && <Badge tone="warn">{t("stale")}</Badge>}
-          {inInvestments && (
-            <Link
-              href={`/investments/${id}` as Route}
-              className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
-            >
-              {td("managedInInvestments")}
-            </Link>
-          )}
-        </p>
-        {connection !== null && <ConnectionStatus {...connection} compact />}
-        <h1 className="text-title font-semibold tracking-title">{account.name}</h1>
+      <DetailHeader
+        meta={[
+          <>
+            <span aria-hidden className="size-2 rounded-full" style={{ background: color }} />
+            <span>{t(`types.${account.type}`)}</span>
+          </>,
+          disconnected ? <Badge tone="warn">{source}</Badge> : <span>{source}</span>,
+          (account.origin === "synced" || service !== null) && (
+            <span>
+              <SyncStatus lastSyncedAt={syncedAt} now={now.toISOString()} />
+            </span>
+          ),
+        ]}
+        tags={
+          <>
+            {account.state !== "active" && <Badge tone="warn">{t(`states.${account.state}`)}</Badge>}
+            {row.stale && <Badge tone="warn">{t("stale")}</Badge>}
+            {inInvestments && (
+              <Link
+                href={`/investments/${id}` as Route}
+                className="focus-ring inline-flex min-h-6 items-center rounded-sm text-accent hover:underline"
+              >
+                {td("managedInInvestments")}
+              </Link>
+            )}
+          </>
+        }
+        above={connection !== null && <ConnectionStatus {...connection} compact />}
+        title={account.name}
+      >
         <p className="flex flex-wrap items-baseline gap-3">
           <span className="text-hero-sm font-semibold tracking-title">
             {formatMoney(row.balance, ctx.numberFormat, { currency: account.currency })}
@@ -206,7 +210,7 @@ export default async function AccountDetailPage({ params, searchParams }: PagePr
             {td("shareOfNetWorth", { value: formatPercent(share, ctx.numberFormat) })}
           </span>
         </p>
-      </header>
+      </DetailHeader>
 
       <TabLinks label={td("tabs.label")} tabs={tabs} />
 

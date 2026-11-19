@@ -50,6 +50,7 @@ import {
 } from "@ledgerly/domain/platform/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@ledgerly/ui/badge";
+import { DetailHeader } from "@ledgerly/ui/detail-header";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
@@ -234,25 +235,24 @@ async function FundDetail({
   );
 
   const header = (
-    <div className="flex flex-col gap-1">
-      <p data-testid="fund-meta" className="text-sm text-muted">
-        {[
-          fund.provider,
-          detail.compartment ?? fund.compartment,
-          t("detail.since", { date: formatDate(fund.startOn, "monthYear", ctx.locale) }),
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-      </p>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="flex flex-wrap items-center gap-2 text-title font-semibold tracking-title">
+    <DetailHeader
+      metaTestId="fund-meta"
+      meta={[
+        fund.provider,
+        detail.compartment ?? fund.compartment,
+        t("detail.since", { date: formatDate(fund.startOn, "monthYear", ctx.locale) }),
+      ]}
+      title={
+        <>
           {fund.name}
           {archived && <Badge tone="neutral">{th("list.archived")}</Badge>}
-        </h1>
-        {/* On a phone the top bar has room for one command: the second sits beside the title (§11.1). */}
-        {byHand && <span className="md:hidden">{recordContribution("secondary", "lg")}</span>}
-      </div>
-    </div>
+        </>
+      }
+      titleAside={
+        // On a phone the top bar has room for one command: the second sits beside the title (§11.1).
+        byHand && <span className="md:hidden">{recordContribution("secondary", "lg")}</span>
+      }
+    />
   );
   const followsPeriod = tab !== "settings";
   const nav = (

@@ -9,6 +9,7 @@ import { ServicePeriodControl } from "./service-period";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { Badge } from "@ledgerly/ui/badge";
+import { DetailHeader } from "@ledgerly/ui/detail-header";
 import { Page } from "@ledgerly/ui/shell/page";
 import { alertsOf, firstDayOf, instantText, loadService, providerOf, serviceContextOf } from "./service-data";
 
@@ -86,38 +87,34 @@ export default async function InvestmentServiceLayout({
       title={<ServiceCrumb name={account.name} tabs={tabs} />}
       parent={{ href: "/investments" as Route, label: t("title") }}
     >
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted">
-            <span>{t(`categories.${summary.investment.category}`)}</span>
-            <span aria-hidden>·</span>
-            <span data-testid="sync-state" className={stateTone}>
-              {state}
-            </span>
-            {url && (
-              <>
-                <span aria-hidden>·</span>
-                <a
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={t("actions.openSite", { name: account.name })}
-                  className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-sm text-accent hover:underline"
-                >
-                  {t("header.openSite", { name: account.name })}
-                  <ExternalLink aria-hidden className="size-3.5" />
-                </a>
-              </>
-            )}
-          </p>
-          <h1 className="text-title font-semibold tracking-title">{account.name}</h1>
-        </div>
-        <ServiceActions
-          context={serviceContextOf(detail, ctx)}
-          provider={providerOf(detail)}
-          connected={synced && (sync?.connected ?? false)}
-        />
-      </header>
+      <DetailHeader
+        meta={[
+          <span key="category">{t(`categories.${summary.investment.category}`)}</span>,
+          <span key="state" data-testid="sync-state" className={stateTone}>
+            {state}
+          </span>,
+          url && (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t("actions.openSite", { name: account.name })}
+              className="focus-ring inline-flex min-h-6 items-center gap-1 rounded-sm text-accent hover:underline"
+            >
+              {t("header.openSite", { name: account.name })}
+              <ExternalLink aria-hidden className="size-3.5" />
+            </a>
+          ),
+        ]}
+        title={account.name}
+        actions={
+          <ServiceActions
+            context={serviceContextOf(detail, ctx)}
+            provider={providerOf(detail)}
+            connected={synced && (sync?.connected ?? false)}
+          />
+        }
+      />
 
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0 flex-1">

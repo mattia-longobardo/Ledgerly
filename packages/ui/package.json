@@ -19,6 +19,7 @@
     "./connection-row": "./src/connection-row.tsx",
     "./data": "./src/data.ts",
     "./date-range-picker": "./src/date-range-picker.tsx",
+    "./detail-header": "./src/detail-header.tsx",
     "./dismissable-details": "./src/dismissable-details.tsx",
     "./field": "./src/field.tsx",
     "./highlight": "./src/highlight.tsx",
