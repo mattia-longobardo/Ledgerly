@@ -17,7 +17,10 @@ const refresh = vi.fn();
 vi.mock("./connection-actions", () => ({
   runConnectionAction: (...args: unknown[]) => action(...args),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
+vi.mock("@ledgerly/ui/router", async (original) => ({
+  ...(await original<object>()),
+  useRouter: () => ({ push, refresh }),
+}));
 
 const C = messages.settings.connections;
 

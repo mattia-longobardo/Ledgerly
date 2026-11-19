@@ -64,3 +64,8 @@ export function Link(props: LinkProps) {
 export function usePathname(): string {
   return useContext(RouterContext).usePathname();
 }
+
+/** The router of the container: a screen pushes a page or reads its data again. */
+export function useRouter(): AppRouter {
+  return useContext(RouterContext).useRouter();
+}
