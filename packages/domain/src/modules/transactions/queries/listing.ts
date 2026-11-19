@@ -1,6 +1,6 @@
 import { and, asc, count, eq, ne, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
-import { listAccounts } from "../../accounts/queries";
+import { accountNames as namesOf, listAccounts } from "../../accounts/queries";
 import type { Ctx } from "../../../platform/context";
 import { civilDateIn, monthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
@@ -114,7 +114,7 @@ export async function listTransactions(
     ctx,
     rows.map((row) => row.transaction.id),
   );
-  const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
+  const accountNames = namesOf(accounts);
 
   return rows.map(({ transaction, categoryName, categoryColor }) => {
     const categoryState = categoryStateOf(transaction);

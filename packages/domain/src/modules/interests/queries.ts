@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
-import { listAccounts } from "../accounts/queries";
+import { accountNames, listAccounts } from "../accounts/queries";
 import { incomeCandidates } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";
@@ -77,7 +77,7 @@ export async function interestsView(
           )
           .groupBy(interestAccruals.ruleId),
   ]);
-  const accountName = new Map(accounts.map((account) => [account.id, account.name]));
+  const accountName = accountNames(accounts);
   const sumOf = new Map(sums.map((row) => [row.ruleId, row]));
   return rules.map((rule) => {
     const period = periodOf(rule.settlement, todayOn);

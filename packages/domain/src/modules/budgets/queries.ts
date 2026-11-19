@@ -1,5 +1,5 @@
 import { and, asc, lte, min } from "drizzle-orm";
-import { listAccounts } from "../accounts/queries";
+import { accountOptions, listAccounts } from "../accounts/queries";
 import { monthSpending } from "../transactions/queries";
 import { categoryOptions, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
@@ -103,9 +103,7 @@ export async function budgetsView(
       cents: spending.reduce((sum, row) => sum + row.waitingCents, 0n),
     },
     categories: options,
-    accounts: accounts
-      .filter((account) => account.state !== "archived")
-      .map((account) => ({ id: account.id, name: account.name })),
+    accounts: accountOptions(accounts),
     firstMonth: first[0]?.first ?? null,
   };
 }

@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
-import { getAccount } from "../accounts/queries";
+import { requireOpenAccount } from "../accounts/queries";
 import { transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
 import { isFutureDate } from "../accounts/rules";
@@ -44,8 +44,7 @@ async function requirePocket(ctx: Pick<Ctx, "userId">, id: string): Promise<Pock
 /** A pocket rests only on one of this user's own accounts, and not on an archived one. */
 async function requireBackingAccount(ctx: Pick<Ctx, "userId">, id: string | null): Promise<void> {
   if (id === null) return;
-  const account = await getAccount(ctx, id);
-  if (!account || account.state === "archived") throw new PocketError("invalid_account");
+  await requireOpenAccount(ctx, id, () => new PocketError("invalid_account"));
 }
 
 function duplicateName<T>(write: Promise<T>): Promise<T> {

@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
-import { getAccount } from "../accounts/queries";
+import { requireOpenAccount } from "../accounts/queries";
 import { chargeCandidates } from "../transactions/queries";
 import { getCategory, TaxonomyError } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
@@ -44,8 +44,7 @@ async function checkReferences(
   current?: Subscription,
 ): Promise<void> {
   if (input.paymentAccountId !== null && input.paymentAccountId !== current?.paymentAccountId) {
-    const account = await getAccount(ctx, input.paymentAccountId);
-    if (!account || account.state === "archived") throw new SubscriptionError("invalid_account");
+    await requireOpenAccount(ctx, input.paymentAccountId, () => new SubscriptionError("invalid_account"));
   }
   if (input.categoryId !== null && input.categoryId !== current?.categoryId) {
     try {

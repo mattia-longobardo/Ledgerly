@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, lte, min, notInArray, sql } from "drizzle-orm";
-import type { Ctx } from "../../platform/context";
+import type { Ctx } from "../../../platform/context";
 import {
   type CivilDate,
   addMonths,
@@ -8,28 +8,17 @@ import {
   monthKey,
   monthsBetween,
   today,
-} from "../../shared/dates";
-import { getDb } from "../../platform/db/client";
-import { userScoped } from "../../platform/db/scope";
-import { convertCents, type DisplayCurrency } from "../../platform/fx/rules";
-import { ratesOn } from "../../platform/fx/service";
-import type { Cents } from "../../shared/money";
-import {
-  type AccountAlert,
-  type BalancePoint,
-  type BalanceReading,
-  type Bucket,
-  alertsFor,
-  bucketOf,
-  estimatedMonths,
-  isStale,
-  monthEndSeries,
-  MOVEMENT_SOURCE,
-  SOURCE_PRECEDENCE,
-  totalSeries,
-} from "./rules";
-import { accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "./schema";
+} from "../../../shared/dates";
+import { getDb } from "../../../platform/db/client";
+import { userScoped } from "../../../platform/db/scope";
+import { convertCents } from "../../../platform/fx/rules";
+import { ratesOn } from "../../../platform/fx/service";
+import type { Cents } from "../../../shared/money";
+import { type BalancePoint, type BalanceReading, MOVEMENT_SOURCE, SOURCE_PRECEDENCE } from "../rules";
+import { accounts, balanceEntries, manualMovementAccounts, snapshotRuns } from "../schema";
+import { type AccountsView, viewRow, viewTotals } from "./view";
 
+export { accountNames, accountOptions, requireOpenAccount } from "./directory";
 export type Account = typeof accounts.$inferSelect;
 export type BalanceEntry = typeof balanceEntries.$inferSelect;
 type SnapshotRun = typeof snapshotRuns.$inferSelect;
@@ -66,7 +55,7 @@ const WINDOW_MONTHS = 24;
 export async function balancesOn(
   ctx: Pick<Ctx, "userId">,
   accountIds: readonly string[],
-  on: CivilDate,
+  day: CivilDate,
   options: { observed?: boolean } = {},
 ): Promise<Map<string, Cents>> {
   if (accountIds.length === 0) return new Map();
@@ -80,7 +69,7 @@ export async function balancesOn(
       and(
         userScoped(ctx).owns(balanceEntries),
         inArray(balanceEntries.accountId, [...accountIds]),
-        lte(balanceEntries.on, on),
+        lte(balanceEntries.on, day),
         options.observed ? notInArray(balanceEntries.source, [...NOT_OBSERVED]) : undefined,
       ),
     )
@@ -319,62 +308,6 @@ export async function listSnapshotRuns(ctx: Pick<Ctx, "userId">, limit = 24): Pr
     .limit(limit);
 }
 
-interface AccountRow {
-  account: Account;
-  /** The latest known balance, `null` while the account has none. */
-  balance: Cents | null;
-  /** The same account at the end of the previous month, for the monthly change. */
-  previous: Cents | null;
-  /** One month-end value per month of the window; `interpolate` applies here and nowhere else. */
-  series: (Cents | null)[];
-  /** Per month, whether the value stands on a month end rebuilt from the movements (F2.5). */
-  estimated: boolean[];
-  /**
-   * The same months held, never interpolated: what the net worth sums. The stacked Overview chart
-   * draws these, so its bands add up to its total exactly.
-   */
-  held: (Cents | null)[];
-  /**
-   * The same figures in the display currency (docs/design/investments.md §1.8, D1), each converted
-   * at the rate of its own day: what every total sums and the stacked chart draws. Equal to the
-   * native ones when the account is in the display currency; `null` where a rate is missing.
-   */
-  display: { balance: Cents | null; previous: Cents | null; held: (Cents | null)[] };
-  /** The account has a balance today and no rate to the display currency: it is out of the totals. */
-  missingRate: boolean;
-  stale: boolean;
-}
-
-type BucketTotals = Record<Bucket, { total: Cents | null; partial: boolean; count: number }>;
-
-interface AccountsView {
-  /** What every total below is in: the user's display currency. Each row's own fields are not. */
-  currency: DisplayCurrency;
-  months: MonthKey[];
-  rows: AccountRow[];
-  /** The net-worth series: the accounts included in it, held (never interpolated) and summed. */
-  netWorth: { total: Cents | null; partial: boolean }[];
-  /** Per month, whether any account in the net worth stands on a rebuilt month end (F2.5). */
-  netWorthEstimated: boolean[];
-  total: Cents | null;
-  totalPartial: boolean;
-  previousTotal: Cents | null;
-  buckets: BucketTotals;
-  alerts: AccountAlert[];
-  /** The currencies of accounts counted today that have no rate to `currency`, sorted. */
-  missingRates: string[];
-  lastSnapshot: SnapshotRun | null;
-}
-
-function emptyBuckets(): BucketTotals {
-  return {
-    cash: { total: null, partial: false, count: 0 },
-    savings: { total: null, partial: false, count: 0 },
-    investments: { total: null, partial: false, count: 0 },
-    other: { total: null, partial: false, count: 0 },
-  };
-}
-
 /**
  * Everything Overview and Accounts render, read once. Balances are the month-end series of spec
  * §7.1: held forward, `null` before an account's first balance, and a total that is `null` only
@@ -392,120 +325,53 @@ export async function accountsView(
   options: { months?: number; now?: Date; through?: MonthKey; includeArchived?: boolean } = {},
 ): Promise<AccountsView> {
   const now = options.now ?? new Date();
-  const span = options.months ?? WINDOW_MONTHS;
   const todayOn = today(ctx.timeZone, now);
   const thisMonth = monthKey(todayOn);
   // The window ends on the month asked for, or on the current one. A past month is read at its
   // last day; the current month is read at today, because its end has not happened yet.
   const end = options.through ? monthKey(options.through) : thisMonth;
-  const on = end >= thisMonth ? todayOn : lastDayOfMonth(end);
-  const months = monthsBetween(addMonths(end, -(span - 1)), end);
+  const asOf = end >= thisMonth ? todayOn : lastDayOfMonth(end);
+  const months = monthsBetween(addMonths(end, -((options.months ?? WINDOW_MONTHS) - 1)), end);
 
   // An archived account is off the list unless it is asked for. It never joins the totals either
-  // way (see `counted` below): the net worth of today is what you have today, and a closed account
+  // way (see `countedRows`): the net worth of today is what you have today, and a closed account
   // is not part of it — its balances stay counted in the months it was open, which is what the
   // series already does.
   const [open, points, snapshots] = await Promise.all([
     listAccounts(ctx, { includeArchived: options.includeArchived ?? false }),
-    monthlyPoints(ctx, on),
+    monthlyPoints(ctx, asOf),
     listSnapshotRuns(ctx, 1),
   ]);
-  const latest = await balancesOn(
-    ctx,
-    open.map((account) => account.id),
-    on,
-  );
+  const ids = open.map((account) => account.id);
   const previousMonthEnd = lastDayOfMonth(addMonths(end, -1));
-  const previous = await balancesOn(
-    ctx,
-    open.map((account) => account.id),
-    previousMonthEnd,
-  );
-
-  const currency = ctx.displayCurrency;
+  const [latest, previous] = await Promise.all([
+    balancesOn(ctx, ids, asOf),
+    balancesOn(ctx, ids, previousMonthEnd),
+  ]);
   // The day each month's value stands for, and so the day of its rate: today for a month still
   // running, its last day otherwise.
-  const daysOf = months.map((month, i) => (i === months.length - 1 ? on : lastDayOfMonth(month)));
+  const daysOf = months.map((month, index) => (index === months.length - 1 ? asOf : lastDayOfMonth(month)));
   const firstDay = daysOf[0] < previousMonthEnd ? daysOf[0] : previousMonthEnd;
+  const currency = ctx.displayCurrency;
   const rates = await ratesOn(
     open.some((account) => account.currency !== currency)
       ? [currency, ...open.map((account) => account.currency)]
       : [],
     firstDay,
-    on,
+    asOf,
   );
+  const window = { months, daysOf, asOf, previousMonthEnd, end, now };
   const convert = (cents: Cents | null, from: string, day: CivilDate): Cents | null =>
     cents === null ? null : convertCents(cents, from, currency, day, rates);
-
-  const rows: AccountRow[] = open.map((account) => {
-    const balance = latest.get(account.id) ?? null;
-    const before = previous.get(account.id) ?? null;
-    const held = monthEndSeries(points.get(account.id) ?? [], months, "hold");
-    const display = {
-      balance: convert(balance, account.currency, on),
-      previous: convert(before, account.currency, previousMonthEnd),
-      held: held.map((cents, i) => convert(cents, account.currency, daysOf[i])),
-    };
-    return {
-      account,
-      balance,
-      previous: before,
-      series: monthEndSeries(points.get(account.id) ?? [], months, account.betweenEntries),
-      estimated: estimatedMonths(points.get(account.id) ?? [], months),
-      held,
-      display,
-      missingRate: balance !== null && display.balance === null,
-      stale:
-        account.state !== "archived" &&
-        account.origin === "synced" &&
-        isStale(account.lastSyncedAt, account.staleAfterHours, now),
-    };
-  });
-
-  const counted = rows.filter((row) => row.account.inNetWorth && row.account.state !== "archived");
-  const netWorth = totalSeries(
-    counted.map((row) => row.display.held),
-    months.length,
+  const rows = open.map((account) =>
+    viewRow(account, { latest, previous, points: points.get(account.id) ?? [] }, window, convert),
   );
-  const current = netWorth.at(-1) ?? { total: null, partial: false };
-  // The net worth at the end of the month before `end`, whatever the window (decision D1, ACC-2):
-  // the same held value Overview's chart has there, so a one-month window is no longer `null`.
-  const heldBefore = (row: AccountRow) =>
-    monthEndSeries(points.get(row.account.id) ?? [], [addMonths(end, -1)], "hold")[0] ?? null;
-  const [previousNetWorth] = totalSeries(
-    counted.map((row) => [convert(heldBefore(row), row.account.currency, previousMonthEnd)]),
-    1,
-  );
-  const netWorthEstimated = months.map((_, i) => counted.some((row) => row.estimated[i]));
-
-  const buckets = emptyBuckets();
-  for (const row of counted) {
-    const bucket = buckets[bucketOf(row.account)];
-    bucket.count += 1;
-    if (row.display.balance === null) bucket.partial = true;
-    else bucket.total = (bucket.total ?? 0n) + row.display.balance;
-  }
-
-  // Nothing to warn about on an account you closed: no low balance, no reading gone stale.
-  const alerts = rows
-    .filter((row) => row.account.state !== "archived")
-    .flatMap((row) => alertsFor(row.account, row.balance, now));
-
   return {
     currency,
     months,
     rows,
-    netWorth,
-    netWorthEstimated,
-    total: current.total,
-    totalPartial: current.partial,
-    previousTotal: previousNetWorth?.total ?? null,
-    buckets,
-    alerts,
-    missingRates: [
-      ...new Set(counted.filter((row) => row.missingRate).map((row) => row.account.currency)),
-    ].sort(),
     lastSnapshot: snapshots[0] ?? null,
+    ...viewTotals(rows, window, points, convert),
   };
 }
 

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { z } from "zod";
-import { getAccount } from "../accounts/queries";
+import { requireOpenAccount } from "../accounts/queries";
 import { dailyBalancesOf } from "../accounts/service";
 import { listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
@@ -86,8 +86,7 @@ async function requireRule(ctx: Pick<Ctx, "userId">, id: string): Promise<Intere
  * publishes to Wallet, because the posting needs the provider's id of the account (spec §7.6).
  */
 async function checkAccount(ctx: Pick<Ctx, "userId">, accountId: string, mode: string): Promise<void> {
-  const account = await getAccount(ctx, accountId);
-  if (!account || account.state === "archived") throw new InterestError("invalid_account");
+  const account = await requireOpenAccount(ctx, accountId, () => new InterestError("invalid_account"));
   if (mode === "post_to_provider" && (account.origin !== "synced" || account.providerAccountId === null)) {
     throw new InterestError("not_synced");
   }

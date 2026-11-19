@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ne } from "drizzle-orm";
-import { balancesOn, listAccounts } from "../accounts/queries";
+import { accountNames, accountOptions, balancesOn, listAccounts } from "../accounts/queries";
 import { listRecurringPatterns, payeeSamples, transactionsByIds } from "../transactions/queries";
 import { colorOfCategory, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
@@ -148,7 +148,7 @@ export async function subscriptionsView(
     listAccounts(ctx, { includeArchived: true }),
   ]);
   const category = new Map(categories.map((row) => [row.id, row]));
-  const accountName = new Map(accounts.map((row) => [row.id, row.name]));
+  const accountName = accountNames(accounts);
   const matched = await transactionsByIds(
     ctx,
     charges.flatMap((charge) => (charge.transactionId ? [charge.transactionId] : [])),
@@ -261,9 +261,7 @@ export async function subscriptionsView(
       month: project(active, charges, balances, todayOn, MONTH_DAYS),
       year: project(active, charges, balances, todayOn, YEAR_DAYS),
     },
-    accounts: accounts
-      .filter((account) => account.state !== "archived")
-      .map((account) => ({ id: account.id, name: account.name })),
+    accounts: accountOptions(accounts),
   };
 }
 

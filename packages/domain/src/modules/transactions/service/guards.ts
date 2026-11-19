@@ -1,6 +1,6 @@
 import { and, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { getAccount, listAccounts } from "../../accounts/queries";
+import { listAccounts, requireOpenAccount } from "../../accounts/queries";
 import type { Ctx } from "../../../platform/context";
 import type { CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
@@ -107,8 +107,7 @@ export async function requireMovementAccount(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
 ): Promise<{ id: string; currency: string }> {
-  const account = await getAccount(ctx, accountId);
-  if (!account || account.state === "archived") throw new TransactionError("account_unavailable");
+  const account = await requireOpenAccount(ctx, accountId, () => new TransactionError("account_unavailable"));
   return { id: account.id, currency: account.currency };
 }
 

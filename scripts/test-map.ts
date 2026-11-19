@@ -541,7 +541,7 @@ export const MODULES: Module[] = [
     id: "shared-domain",
     files: [
       "packages/domain/src/modules/accounts/service/**",
-      "packages/domain/src/modules/accounts/queries.ts",
+      "packages/domain/src/modules/accounts/queries/**",
       "packages/domain/src/modules/accounts/rules.ts",
       "packages/domain/src/modules/transactions/service/**",
       "packages/domain/src/modules/transactions/queries/**",

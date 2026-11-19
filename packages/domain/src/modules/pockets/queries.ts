@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, ne } from "drizzle-orm";
-import { balancesOn, listAccounts } from "../accounts/queries";
+import { accountNames, accountOptions, balancesOn, listAccounts } from "../accounts/queries";
 import { accruedInterest } from "../interests/service";
 import { chargeCandidates, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
@@ -212,7 +212,7 @@ export async function pocketsView(
   for (const movement of movements) {
     byPocket.set(movement.pocketId, [...(byPocket.get(movement.pocketId) ?? []), movement]);
   }
-  const accountName = new Map(accounts.map((account) => [account.id, account.name]));
+  const accountName = accountNames(accounts);
   const open = rows.filter((pocket) => pocket.state !== "archived");
   const backingIds = [
     ...new Set(open.flatMap((pocket) => (pocket.backingAccountId ? [pocket.backingAccountId] : []))),
@@ -320,9 +320,7 @@ export async function pocketsView(
       .filter((pocket) => pocket.state === "active")
       .reduce<Cents>((sum, pocket) => sum + (pocket.monthlyCents ?? 0n), 0n),
     nextAccrual: addMonths(thisMonth, 1),
-    accounts: accounts
-      .filter((account) => account.state !== "archived")
-      .map((account) => ({ id: account.id, name: account.name })),
+    accounts: accountOptions(accounts),
   };
 }
 
@@ -361,7 +359,7 @@ export async function expenseLinkCandidates(
   ]);
   const taken = new Set(links.map((link) => link.transactionId));
   const backed = new Set(backing.flatMap((row) => (row.accountId ? [row.accountId] : [])));
-  const accountName = new Map(accounts.map((account) => [account.id, account.name]));
+  const accountName = accountNames(accounts);
   return charges
     .filter((charge) => !taken.has(charge.id) && !backed.has(charge.accountId))
     .map((charge) => ({

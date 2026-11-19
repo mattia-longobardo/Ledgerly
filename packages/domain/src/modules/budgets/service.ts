@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, lte } from "drizzle-orm";
-import { getAccount } from "../accounts/queries";
+import { requireOpenAccount } from "../accounts/queries";
 import { getCategory, TaxonomyError } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
 import type { MonthKey } from "../../shared/dates";
@@ -40,8 +40,7 @@ async function requireScope(ctx: Pick<Ctx, "userId">, scope: BudgetScope): Promi
     }
   }
   if (scope.accountId !== null) {
-    const account = await getAccount(ctx, scope.accountId);
-    if (!account || account.state === "archived") throw new BudgetError("not_found");
+    await requireOpenAccount(ctx, scope.accountId, () => new BudgetError("not_found"));
   }
 }
 
