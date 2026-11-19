@@ -1,15 +1,25 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { identityProviderUrl } from "@ledgerly/domain/platform/auth";
 import { buttonClassName } from "@ledgerly/ui/button";
 import { PasswordForm } from "./password-form";
 
 const strong = (chunks: ReactNode) => <span className="font-medium text-fg">{chunks}</span>;
 
 /** Settings › Security › Sign-in: how the account signs in, and the password change when it has one. */
-export async function SignInMethod({ sso, password }: { sso: boolean; password: boolean }) {
-  const t = await getTranslations("settings");
-  const provider = identityProviderUrl();
+export function SignInMethod({
+  sso,
+  password,
+  identityProvider,
+}: {
+  sso: boolean;
+  password: boolean;
+  /** The origin of the instance's identity provider, as `GET /security/sign-in` answers it. */
+  identityProvider: string | null;
+}) {
+  const t = useTranslations("settings");
+  const provider = identityProvider === null ? null : new URL(identityProvider);
   const method = sso && password ? "both" : sso ? "sso" : "password";
   return (
     <>

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { profile, security } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
-import { API_SCOPES, type Scope, type TwoFactorPolicy } from "@ledgerly/domain/platform/auth/client";
+import { API_SCOPES, type Scope } from "@ledgerly/domain/platform/auth/client";
 import { civilDateIn } from "@ledgerly/format/dates";
 import { formatDate } from "@ledgerly/format/format";
 import { type ApiState, useApi } from "@ledgerly/ui/data";
@@ -16,6 +16,7 @@ import { type ApiClientRow, ApiClientsTable } from "./api-clients-table";
 import { type ConnectedAppRow, ConnectedAppsTable } from "./connected-apps-table";
 import { NewApiClient } from "./new-api-client";
 import { type SessionRow, SessionsList } from "./sessions-list";
+import { SignInMethod } from "./sign-in-method";
 import { TwoFactorCard } from "./two-factor-card";
 
 type Preferences = RouteOutput<typeof profile.getPreferences>;
@@ -42,13 +43,7 @@ function Both<A, B>({
   );
 }
 
-function SessionsSection({
-  preferences,
-  current,
-}: {
-  preferences: ApiState<Preferences>;
-  current: string | null;
-}) {
+function SessionsSection({ preferences }: { preferences: ApiState<Preferences> }) {
   const text = useTranslations("settings");
   const sessions = useApi(security.listSessions, {});
   return (
@@ -57,7 +52,7 @@ function SessionsSection({
         {(prefs, { sessions: list }) => {
           const day = dayOf(prefs);
           const rows: SessionRow[] = list.map((session) => {
-            const isCurrent = session.id === current;
+            const isCurrent = session.current;
             return {
               id: session.id,
               device:
@@ -134,39 +129,37 @@ function ConnectedAppsSection({ preferences }: { preferences: ApiState<Preferenc
   );
 }
 
-export function SecurityScreen({
-  signIn,
-  currentSessionId,
-  hasPassword,
-  policy,
-}: {
-  /** How the account signs in: drawn by the server, which knows the identity provider's address. */
-  signIn: ReactNode;
-  currentSessionId: string | null;
-  hasPassword: boolean;
-  policy: TwoFactorPolicy;
-}) {
+export function SecurityScreen() {
   const text = useTranslations("settings");
   const person = useApi(profile.getProfile, {});
   const preferences = useApi(profile.getPreferences, {});
+  const signIn = useApi(security.getSignIn, {});
   return (
     <SettingsGrid>
       <SettingsSection title={text("signIn.title")} description={text("signIn.description")}>
-        {signIn}
+        <Loaded state={signIn}>
+          {(how) => (
+            <SignInMethod sso={how.sso} password={how.password} identityProvider={how.identityProvider} />
+          )}
+        </Loaded>
       </SettingsSection>
       {/* Password accounts only: an identity provider's user configures the second factor there. */}
-      {hasPassword && person.data && (
+      {signIn.data?.password && person.data && (
         <SettingsSection
           title={text("twoFactor.title")}
           description={text("twoFactor.description")}
           padded={false}
         >
-          <TwoFactorCard enabled={person.data.twoFactor} policy={policy} account={person.data.email} />
+          <TwoFactorCard
+            enabled={person.data.twoFactor}
+            policy={signIn.data.twoFactorPolicy}
+            account={person.data.email}
+          />
         </SettingsSection>
       )}
       <ApiClientsSection preferences={preferences} />
       <ConnectedAppsSection preferences={preferences} />
-      <SessionsSection preferences={preferences} current={currentSessionId} />
+      <SessionsSection preferences={preferences} />
     </SettingsGrid>
   );
 }
