@@ -8,7 +8,13 @@ import { createHash } from "node:crypto";
 import { getAccount } from "@ledgerly/domain/accounts";
 import { hasIbanField } from "@ledgerly/domain/accounts";
 import { rebuildDerivedBalances } from "@ledgerly/domain/accounts";
-import { closeSwitch, lastSourceBalance, openSwitchOf, recordSwitch } from "@ledgerly/domain/accounts";
+import {
+  addSwitchCounts,
+  closeSwitch,
+  lastSourceBalance,
+  openSwitchOf,
+  recordSwitch,
+} from "@ledgerly/domain/accounts";
 import { publishingRulesOn } from "@ledgerly/domain/interests";
 import { restorePublishing, stopPublishing } from "@ledgerly/domain/interests";
 import { pendingSends } from "@ledgerly/domain/transactions";
@@ -563,6 +569,7 @@ export async function applySwitch(
             );
       await linkFoundInBoth(tx, ctx, BANK_PROVIDER, matches, now);
       transfers = await writeTransferPairs(tx, ctx, switchId, plan.pairs);
+      await addSwitchCounts(ctx, switchId, { transfers }, tx);
     });
     if (plan.join !== null) await rebuildDerivedBalances(ctx, [plan.join.accountId]);
     // The new movements come with the bank's own reading: a movement up to the cut is not written

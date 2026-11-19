@@ -7,7 +7,7 @@
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import type { CivilDate } from "../../../shared/dates";
-import { getDb, type Tx } from "../../../platform/db/client";
+import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { normalizeIban } from "../../../platform/iban";
 import { hasIbanField } from "../rules";
@@ -237,11 +237,15 @@ export async function switchedAwayFrom(ctx: Who, provider: string): Promise<Set<
   return new Set(rows.map((row) => row.id));
 }
 
-/** The counts of a switch, written again when a later reading finds more transfers. */
+/**
+ * The counts of a switch, written again when a later reading finds more transfers, and by "Apply"
+ * once it wrote them (inside its transaction: `executor`).
+ */
 export async function addSwitchCounts(
   ctx: Who,
   switchId: string,
   more: Record<string, number>,
+  executor: Db | Tx = getDb(),
 ): Promise<void> {
   if (Object.keys(more).length === 0) return;
   const add = Object.entries(more)
@@ -250,7 +254,7 @@ export async function addSwitchCounts(
         sql`jsonb_build_object(${key}::text, coalesce((${accountSwitches.counts}->>${key})::int, 0) + ${value})`,
     )
     .reduce((left, right) => sql`${left} || ${right}`);
-  await getDb()
+  await executor
     .update(accountSwitches)
     .set({ counts: sql`${accountSwitches.counts} || ${add}` })
     .where(and(eq(accountSwitches.id, switchId), userScoped(ctx).owns(accountSwitches)));

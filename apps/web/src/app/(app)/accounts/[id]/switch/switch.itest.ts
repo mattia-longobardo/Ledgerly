@@ -422,7 +422,8 @@ describe("apply and undo (criteria 4, 5, 7)", () => {
       transfers: recorded.transfers ?? 0,
       joined: recorded.joined ?? 0,
     });
-    expect(context.switch?.counts).toMatchObject({ matched: 2, fresh: 1 });
+    // «Done» and «Undo switch» read the transfers the switch wrote, not a missing 0.
+    expect(context.switch?.counts).toMatchObject({ matched: 2, fresh: 1, transfers: 1 });
     expect(JSON.stringify(context)).not.toContain(IBAN.slice(4));
     const { rows } = await getPool().query<{ payee: string; type: string; day: string }>(
       `select payee, type, to_char(occurred_at at time zone 'Europe/Rome', 'YYYY-MM-DD') as day
