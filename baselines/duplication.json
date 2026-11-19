@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97233,
-    "duplicatedLines": 17134,
+    "lines": 97320,
+    "duplicatedLines": 17148,
     "percent": 17.62,
-    "blocks": 1257
+    "blocks": 1259
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 26
     },
     "app": {
-      "lines": 24342,
-      "duplicatedLines": 4360,
-      "percent": 17.91,
-      "blocks": 328
+      "lines": 24399,
+      "duplicatedLines": 4374,
+      "percent": 17.93,
+      "blocks": 330
     },
     "global.d": {
       "lines": 12,
@@ -35,9 +35,9 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 5116,
+      "lines": 5146,
       "duplicatedLines": 990,
-      "percent": 19.35,
+      "percent": 19.24,
       "blocks": 70
     },
     "modules/budgets": {
@@ -389,6 +389,7 @@
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 18,
     "api/transactions/rules.ts": 18,
+    "app/(app)/accounts/[id]/connection-status.tsx": 14,
     "app/(app)/accounts/[id]/delete-account.tsx": 16,
     "app/(app)/accounts/[id]/delete-actions.ts": 8,
     "app/(app)/accounts/[id]/delete.ts": 14,
