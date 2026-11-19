@@ -64,7 +64,10 @@ test("a Client API is shown once, gets a token, works on /api/v1 and stops the m
   await script.dispose();
 });
 
-test("/api/v1 refuses a call with no token at all, and says where to get one @smoke", async ({ request }) => {
+test("/api/v1 refuses a call with no token at all, and says where to get one @smoke", async () => {
+  // No session cookie either: since the web's session opens /api/v1 (R2), the file's signed-in
+  // state would be a credential.
+  const request = await http.newContext({ baseURL: BASE_URL, storageState: { cookies: [], origins: [] } });
   const response = await request.get("/api/v1/summary");
   expect(response.status()).toBe(401);
   expect(response.headers()["www-authenticate"]).toMatch(
@@ -80,6 +83,7 @@ test("/api/v1 refuses a call with no token at all, and says where to get one @sm
   expect(await server.json()).toMatchObject({
     grant_types_supported: expect.arrayContaining(["client_credentials"]),
   });
+  await request.dispose();
 });
 
 test("a user downloads everything they own as one ZIP", async ({ page }) => {
