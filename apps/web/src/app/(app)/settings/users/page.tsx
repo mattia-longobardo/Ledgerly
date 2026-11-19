@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { listPeople } from "@/modules/users/admin";
-import { initialsOf } from "@ledgerly/domain/users";
+import { initialsOf } from "@ledgerly/ui/initials";
 import { InvitePerson } from "@/modules/users/ui/invite-person";
 import { PeopleTable, type PersonView } from "@/modules/users/ui/people-table";
 import { requireAdmin } from "@/platform/auth/session";

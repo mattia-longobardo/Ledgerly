@@ -343,5 +343,10 @@
     "file": "apps/web/src/platform/integrations/jobs.itest.ts",
     "decision": "R0",
     "reason": "monorepo: the path of a migration from the app's folder changed"
+  },
+  {
+    "file": "packages/domain/src/modules/users/rules.test.ts",
+    "decision": "USR-8",
+    "reason": "the tests of initialsOf move, unchanged, with the function to packages/ui/src/initials.test.ts"
   }
 ]

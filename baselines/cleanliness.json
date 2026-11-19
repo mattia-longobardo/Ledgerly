@@ -61,8 +61,7 @@
     "packages/domain/src/modules/transactions/source-rules.ts": 1,
     "packages/domain/src/modules/transactions/switch-rules.ts": 1,
     "packages/domain/src/modules/transactions/switching.ts": 1,
-    "packages/domain/src/modules/transactions/taxonomy.ts": 1,
-    "packages/domain/src/modules/users/two-factor.ts": 1
+    "packages/domain/src/modules/transactions/taxonomy.ts": 1
   },
   "Q3 impure rules": {
     "packages/domain/src/modules/accounts/rules.ts": 1

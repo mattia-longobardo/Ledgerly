@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  DEFAULT_PREFERENCES,
-  describeUserAgent,
-  initialsOf,
-  personActionRefusal,
-  preferencesInputSchema,
-} from "./rules";
+import { DEFAULT_PREFERENCES, describeUserAgent, personActionRefusal, preferencesInputSchema } from "./rules";
 
 describe("preferencesInputSchema", () => {
   it("accepts a complete, valid preference set", () => {
@@ -143,20 +137,5 @@ describe("personActionRefusal", () => {
     expect(
       personActionRefusal("demote", { ...other, targetId: "a", targetRole: "admin", adminCount: 1 }),
     ).toBe("last_admin");
-  });
-});
-
-describe("initialsOf", () => {
-  it("takes the first and last word of a name", () => {
-    expect(initialsOf("Anna Bianchi", "m@example.test")).toBe("AB");
-  });
-
-  it("takes two letters of a single word", () => {
-    expect(initialsOf("Ada", "ada@example.test")).toBe("AD");
-  });
-
-  it("falls back to the address when there is no name yet", () => {
-    expect(initialsOf("", "invited@example.test")).toBe("IN");
-    expect(initialsOf("   ", "z@example.test")).toBe("Z");
   });
 });

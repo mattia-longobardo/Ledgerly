@@ -15,6 +15,7 @@
     "./dismissable-details": "./src/dismissable-details.tsx",
     "./field": "./src/field.tsx",
     "./highlight": "./src/highlight.tsx",
+    "./initials": "./src/initials.ts",
     "./input": "./src/input.tsx",
     "./kbd": "./src/kbd.tsx",
     "./kpi-tile": "./src/kpi-tile.tsx",
@@ -37,6 +38,7 @@
     "./theme-provider": "./src/theme-provider.tsx",
     "./toast": "./src/toast.tsx",
     "./tone": "./src/tone.ts",
+    "./two-factor": "./src/two-factor.ts",
     "./unsaved-changes": "./src/unsaved-changes.tsx",
     "./week-start": "./src/week-start.tsx"
   },

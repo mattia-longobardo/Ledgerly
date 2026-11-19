@@ -12,7 +12,7 @@ import {
   totpSecretOf,
   type TwoFactorErrorKey,
   twoFactorErrorKey,
-} from "@ledgerly/domain/users/client";
+} from "@ledgerly/ui/two-factor";
 import { RecoveryCodes } from "./recovery-codes";
 
 type Enrollment = { totpURI: string; backupCodes: string[] };

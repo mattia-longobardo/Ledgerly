@@ -1,5 +1,5 @@
-// Client-safe helpers for the TOTP screens (docs/auth-design.md D2). No `server-only`: the setup
-// and challenge forms run in the browser.
+// Presentation helpers for the TOTP screens (docs/auth-design.md D2): pure, so the setup and
+// challenge forms run them in the browser (audit USR-8: presentation, not domain).
 
 /** Message keys under `auth.twoFactor.errors`. */
 export type TwoFactorErrorKey =

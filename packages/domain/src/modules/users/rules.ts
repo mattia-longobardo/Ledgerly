@@ -105,22 +105,6 @@ export { personActionRefusal } from "../../platform/auth/people-rules";
 export type { PersonAction, PersonRefusal } from "../../platform/auth/people-rules";
 
 /**
- * The two letters of the round badge in Admin › Users (design row 874). A name gives its first
- * and last word's initials, an address falls back to the first two letters of its local part —
- * an invitation has no name yet, and an empty circle reads as a missing avatar rather than a
- * person who has not arrived.
- */
-export function initialsOf(name: string, email: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  if (words.length > 0) {
-    const first = words[0][0];
-    const last = words.length > 1 ? words[words.length - 1][0] : (words[0][1] ?? "");
-    return (first + last).toUpperCase();
-  }
-  return (email.split("@")[0] || "?").slice(0, 2).toUpperCase();
-}
-
-/**
  * The context a person acts in (audit USR-3): their role, language, zone, number format and display
  * currency. The session, an API token and a job all build it here; a job passes no role and acts
  * as a user.

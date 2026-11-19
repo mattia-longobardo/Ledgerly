@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
-import { type TwoFactorErrorKey, twoFactorErrorKey } from "@ledgerly/domain/users/client";
+import { type TwoFactorErrorKey, twoFactorErrorKey } from "@ledgerly/ui/two-factor";
 import { RecoveryCodes } from "@/modules/users/ui/recovery-codes";
 import { TwoFactorSetup } from "@/modules/users/ui/two-factor-setup";
 import { authClient } from "@/platform/auth/client";

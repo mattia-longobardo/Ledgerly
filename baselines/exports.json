@@ -698,12 +698,7 @@
     "writeTransferPairs"
   ],
   "packages/domain/src/modules/users/client.ts": [
-    "Preferences",
-    "TwoFactorErrorKey",
-    "normalizeTotp",
-    "recoveryCodesFile",
-    "totpSecretOf",
-    "twoFactorErrorKey"
+    "Preferences"
   ],
   "packages/domain/src/modules/users/index.ts": [
     "Person",
@@ -716,7 +711,6 @@
     "findSessionToken",
     "forEachUser",
     "getPreferences",
-    "initialsOf",
     "listOwnSessions",
     "personById",
     "profileChange",
