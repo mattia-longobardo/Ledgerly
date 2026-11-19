@@ -92,6 +92,25 @@ export const listAccounts = defineRoute({
   example: { response: { accounts: [ACCOUNT_ROW_EXAMPLE] } },
 });
 
+/**
+ * The IBAN of an account, for its own page only (H45): scope `session`, which the web's session has
+ * and no token is ever granted. Not an MCP tool, not in any export.
+ */
+export const getAccountIban = defineRoute({
+  id: "get_account_iban",
+  method: "GET",
+  path: "/accounts/{id}/iban",
+  scope: "session",
+  capability: "accounts",
+  summary:
+    "The IBAN of an account, grouped by four as its page shows it; null when it has none. Only the web's own session reads it (H45): a token gets 403.",
+  actions: [],
+  params: byAccount,
+  response: z.object({ iban: z.string().nullable() }),
+  errors: ["invalid", "not_found"],
+  example: { params: { id: ACCOUNT_ID }, response: { iban: "IT60 X054 2811 1010 0000 0123 456" } },
+});
+
 export const getAccount = defineRoute({
   id: "get_account",
   method: "GET",

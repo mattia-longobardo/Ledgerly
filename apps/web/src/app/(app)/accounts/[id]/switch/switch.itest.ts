@@ -26,7 +26,7 @@ import {
 } from "@plugin-host/service";
 import { chooseAccounts, readBank, tieBack } from "@plugin-host/sync";
 import "@/app/plugin-wiring";
-import { accountContext } from "../context";
+import { accountContext, switchCandidates, switchIdentifiers } from "../context";
 import { closeDatabase, resetDatabase } from "../../../../../../../../test/db";
 import { createTestUser } from "../../../../../../../../test/users";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
@@ -396,6 +396,18 @@ describe("apply and undo (criteria 4, 5, 7)", () => {
   it("moves the account, writes the transfers and the new movements only, and the undo puts every number back", async () => {
     const w = await world();
     const numbersBefore = await incomeAndSpending(w.ctx);
+    // The step «Account»: the session's masked identifier of each candidate, as the page masked it;
+    // the candidates themselves carry no IBAN, whole or masked (H45).
+    const before = (await getAccount(w.ctx, w.accountId))!;
+    const masked = await switchIdentifiers(w.ctx, before);
+    expect(masked.identifiers).toContainEqual({
+      connectionId: w.target.connectionId,
+      bankAccountId: "acc-cur",
+      masked: "IT60 •••• 3456",
+    });
+    const candidates = JSON.stringify(await switchCandidates(w.ctx, before));
+    expect(candidates).not.toContain("3456");
+    expect(candidates).not.toContain(IBAN.slice(4));
     // The source of test has no connection saved: the account comes from none.
     expect((await accountContext(w.ctx, (await getAccount(w.ctx, w.accountId))!)).connectionId).toBeNull();
     const report = await checkSwitch(w.ctx, w.accountId, w.target, null, NOW, w.deps);

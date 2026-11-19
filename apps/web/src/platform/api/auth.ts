@@ -25,8 +25,11 @@ interface ApiIdentity {
   limit: number;
 }
 
-/** What the web's session may do: everything the person may, `admin` only for an admin. */
-const SESSION_SCOPES: readonly ContractScope[] = ["read", "write", "security"];
+/**
+ * What the web's session may do: everything the person may, `admin` only for an admin, and `session`,
+ * what only the pages of Ledgerly read (the IBAN, H45) and no token is ever granted.
+ */
+const SESSION_SCOPES: readonly ContractScope[] = ["read", "write", "security", "session"];
 
 /** The methods that change nothing: the only ones a session may call without the CSRF proof. */
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);

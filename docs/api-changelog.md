@@ -3,6 +3,18 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · the IBAN for the web's pages only (decision H45, option A)
+
+- New scope `session`: the web's own session has it, and no token is ever granted it. A route that
+  asks for it answers `403 insufficient_scope` to every Bearer token, whatever its scopes, also next
+  to a valid cookie. No MCP tool has it (an MCP tool is a read with scope `read`).
+- New, scope `session`: `GET /accounts/{id}/iban` (the account's IBAN grouped by four, or `null`) and
+  `GET /accounts/{id}/switch/identifiers` (the bank's identifier of each candidate of the switch,
+  masked as `IT60 •••• 3456`). Every other answer, the MCP tools and the exports still carry no IBAN,
+  whole or masked.
+- The enum of scopes in `GET /api-clients` and `GET /connected-apps` names `session` too; no client
+  can have it.
+
 ## 2026-11-19 · the web session's own rate limit (decision H57)
 
 - The web's session cookie on `/api/v1` has 1200 calls per minute per person; a token (Client API,
