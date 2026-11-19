@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 18,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 281,
+    "deepImports": 280,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -536,9 +536,8 @@
     "app/(app)/settings/security/calls.ts → modules/users/actions",
     "app/(app)/settings/security/two-factor-card.tsx → modules/users/ui/recovery-codes",
     "app/(app)/settings/security/two-factor-card.tsx → modules/users/ui/two-factor-setup",
-    "app/(app)/settings/users/page.tsx → modules/users/admin",
-    "app/(app)/settings/users/page.tsx → modules/users/ui/invite-person",
-    "app/(app)/settings/users/page.tsx → modules/users/ui/people-table",
+    "app/(app)/settings/users/users-screen.tsx → modules/users/ui/invite-person",
+    "app/(app)/settings/users/users-screen.tsx → modules/users/ui/people-table",
     "app/(app)/subscriptions/page.tsx → modules/accounts/ui/controls",
     "app/(app)/subscriptions/page.tsx → modules/subscriptions/ui/present",
     "app/(app)/subscriptions/page.tsx → modules/subscriptions/ui/subscription-dialog",

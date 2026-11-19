@@ -8,7 +8,7 @@ import { Field } from "@ledgerly/ui/field";
 import { Input, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import { invitePersonAction } from "../actions";
+import { invitePersonAction } from "../calls";
 
 /**
  * "Invite user" (design row 873): the button the design puts under the section's description, with

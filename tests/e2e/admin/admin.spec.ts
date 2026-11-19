@@ -32,13 +32,13 @@ test("an admin invites someone and withdraws the invitation", async ({ page }) =
 });
 
 /**
- * A Server Action posts to the page's own URL. Reloading without waiting for that answer races it:
- * this spec failed about one full run in two, and never on its own (F9 P3, rilievo C1).
+ * The screen changes a person with `PATCH /api/v1/people/{id}`. Reloading without waiting for that
+ * answer races it: this spec failed about one full run in two, and never on its own (F9 P3, rilievo C1).
  */
 async function afterAction(page: Page, act: () => Promise<unknown>): Promise<void> {
   await Promise.all([
     page.waitForResponse(
-      (response) => response.request().method() === "POST" && response.url().includes("/settings/users"),
+      (response) => response.request().method() === "PATCH" && response.url().includes("/api/v1/people/"),
       { timeout: 15_000 },
     ),
     act(),

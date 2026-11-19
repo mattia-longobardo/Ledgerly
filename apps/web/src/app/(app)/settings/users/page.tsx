@@ -1,50 +1,15 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { listPeople } from "@/modules/users/admin";
-import { initialsOf } from "@ledgerly/ui/initials";
-import { InvitePerson } from "@/modules/users/ui/invite-person";
-import { PeopleTable, type PersonView } from "@/modules/users/ui/people-table";
 import { requireAdmin } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/shared/dates";
-import { formatDate, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
+import { UsersScreen } from "./users-screen";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
   return { title: `${t("tabs.users")} · ${t("title")}` };
 }
 
-/** Admin › Users (spec §7.10): who may sign in, how, and with what role. */
+/** Admin › Users (spec §7.10): the page answers 404 to anyone but an admin; the screen reads `/api/v1/people`. */
 export default async function SettingsUsersPage() {
-  const ctx = await requireAdmin();
-  const [t, people] = await Promise.all([getTranslations("settings.people"), listPeople(ctx)]);
-
-  const rows: PersonView[] = people.map((person) => ({
-    kind: person.kind,
-    id: person.id,
-    name: person.name,
-    initials: initialsOf(person.name, person.email),
-    email: person.email,
-    method: person.method,
-    role: person.role,
-    lastSignIn: person.lastSignInAt
-      ? formatDate(civilDateIn(person.lastSignInAt, ctx.timeZone), "long", ctx.locale)
-      : NULL_DISPLAY,
-    status: person.status,
-    self: person.self,
-    twoFactor: person.twoFactor,
-  }));
-
-  return (
-    <SettingsGrid>
-      <SettingsSection
-        title={t("title")}
-        description={t("description")}
-        action={<InvitePerson />}
-        padded={false}
-      >
-        <PeopleTable people={rows} />
-      </SettingsSection>
-    </SettingsGrid>
-  );
+  await requireAdmin();
+  return <UsersScreen />;
 }

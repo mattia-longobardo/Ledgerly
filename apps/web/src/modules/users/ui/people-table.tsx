@@ -17,7 +17,7 @@ import {
   sendPersonResetAction,
   setPersonBlockedAction,
   setPersonRoleAction,
-} from "../actions";
+} from "../calls";
 
 /** One row of the table, already formatted in the reader's language and time zone. */
 export interface PersonView {
