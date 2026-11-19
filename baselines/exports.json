@@ -158,6 +158,7 @@
     "snapshotMonthFor",
     "stepsOf",
     "takeOverEntries",
+    "twinAccount",
     "updateAccountSettings",
     "updateBalanceEntry",
     "updateConnection",

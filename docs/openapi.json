@@ -4687,6 +4687,124 @@
         "x-scope": "session"
       }
     },
+    "/accounts/{id}/twin": {
+      "get": {
+        "operationId": "get_account_twin",
+        "summary": "The account this one doubles (decision H58): every movement of it is one of the twin's. Open, what archiving it would record; archived, what was recorded. An archived double counts in no month.",
+        "tags": [
+          "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "twin": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "twin"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
     "/api-clients": {
       "get": {
         "operationId": "list_api_clients",
@@ -7919,6 +8037,59 @@
                               "historyMonths"
                             ]
                           },
+                          "status": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "enum": [
+                                  "ok",
+                                  "running",
+                                  "late",
+                                  "action",
+                                  "paused"
+                                ]
+                              },
+                              "text": {
+                                "type": "string",
+                                "enum": [
+                                  "ok",
+                                  "running",
+                                  "late",
+                                  "lateNever",
+                                  "lateLimit",
+                                  "consentExpired",
+                                  "keyInvalid",
+                                  "pending",
+                                  "pausedSchedule",
+                                  "pausedProvider"
+                                ]
+                              },
+                              "action": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "update",
+                                      "renew",
+                                      "replaceKey",
+                                      "chooseAccounts",
+                                      "resume",
+                                      "enable"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "text",
+                              "action"
+                            ]
+                          },
                           "runs": {
                             "type": "array",
                             "items": {
@@ -8001,6 +8172,7 @@
                           "keyRefused",
                           "ibanConflicts",
                           "capabilities",
+                          "status",
                           "runs"
                         ]
                       }

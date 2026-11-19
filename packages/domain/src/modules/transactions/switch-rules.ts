@@ -227,6 +227,17 @@ export function matchDoubles(
   return outcome;
 }
 
+/**
+ * Whether an account is a double of another (decision H58): it has movements, none written by hand,
+ * and every one of them is one of the other account's, by the rule of the switch (`matchDoubles`).
+ */
+export function isDoubleOf(
+  account: { movements: number; manual: number },
+  comparison: Pick<DoubleComparison, "unmatched">,
+): boolean {
+  return account.manual === 0 && account.movements > 0 && comparison.unmatched.length === 0;
+}
+
 /* Transfers between the accounts of one bank, on the whole history (decision H40) */
 
 /** A movement as the transfer rule reads it. */

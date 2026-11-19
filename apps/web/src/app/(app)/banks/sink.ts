@@ -67,7 +67,12 @@ function toIncoming(movement: ReadingMovement, timeZone: string): IncomingTransa
 
 export const bankSink: BankSink = {
   async openAccounts(ctx) {
-    return (await accountsOpenToProvider(ctx)).map(({ id, name, currency }) => ({ id, name, currency }));
+    return (await accountsOpenToProvider(ctx)).map(({ id, name, currency, state }) => ({
+      id,
+      name,
+      currency,
+      archived: state === "archived",
+    }));
   },
 
   async linkAccounts(ctx, provider, choices, now) {

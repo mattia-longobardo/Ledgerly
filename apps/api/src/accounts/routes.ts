@@ -20,6 +20,7 @@ import {
   removeConnection,
   restoreAccount,
   runSnapshot,
+  twinAccount,
   saveBalanceEntry,
   snapshotMonthFor,
   updateAccountSettings,
@@ -325,6 +326,15 @@ function serveRemovalAndSwitch(app: Hono<ApiEnv>, guard: Guard, cases: AccountCa
   });
 }
 
+/** The account an account doubles (decision H58): what the dialog of "Archive" reads first. */
+function serveTwin(app: Hono<ApiEnv>, guard: Guard): void {
+  serve(app, guard, accounts.getAccountTwin, async ({ ctx, params }) => {
+    await requireOwn(ctx, params.id);
+    const twin = await twinAccount(ctx, params.id);
+    return { twin: twin === null ? null : { id: twin.id, name: twin.name } };
+  });
+}
+
 /** Every route of accounts; `/meta` lists their capability. */
 export function serveAccounts(
   app: Hono<ApiEnv>,
@@ -332,6 +342,7 @@ export function serveAccounts(
   cases: AccountCases,
 ): readonly RouteContract[] {
   serveAccountsProper(app, guard);
+  serveTwin(app, guard);
   serveBalances(app, guard);
   serveLinks(app, guard);
   serveFigures(app, guard, cases);

@@ -3,6 +3,16 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · archived doubles and the state of a connection (decision H58)
+
+- `GET /accounts/{id}/twin` (new, `read`): `{ twin: { id, name } | null }`, the account this one
+  doubles. Open: the twin that `POST /accounts/{id}/archive` would record; archived: the twin recorded.
+- `POST /accounts/{id}/archive` of a double records its twin: its movements leave every total of the
+  months (`GET /summary`, `GET /transactions`' summary, the MCP tools), as a hidden row does, until
+  `POST /accounts/{id}/restore`. A filter on the account itself still lists and sums them.
+- `GET /connections` adds `status` to each connection: `{ value, text, action }`, by the same rule as
+  the web's row (`value` one of `ok`, `running`, `late`, `action`, `paused`; `action` or `null`).
+
 ## 2026-11-19 · the IBAN for the web's pages only (decision H45, option A)
 
 - New scope `session`: the web's own session has it, and no token is ever granted it. A route that

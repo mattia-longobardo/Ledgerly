@@ -5,6 +5,7 @@ export {
   updateAccountSettings,
   archiveAccount,
   restoreAccount,
+  twinAccount,
   removeAccount,
   releaseSourceAccounts,
   restoreSourceAccounts,

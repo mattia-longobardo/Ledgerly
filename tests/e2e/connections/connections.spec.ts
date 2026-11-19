@@ -413,6 +413,36 @@ test.describe("the rows of the connections", () => {
     await expect(page.getByTestId("connection-status")).toHaveCount(0);
   });
 
+  test("Wallet's Disconnect says no account moves to a bank; a bank offers an archived account (H58)", async ({
+    page,
+  }) => {
+    await page.goto(WALLET);
+    const wallet = page.getByTestId("connection-row").first();
+    await hydrated(wallet.getByRole("button").first());
+    await wallet
+      .getByRole("button", { name: /Wallet/ })
+      .first()
+      .click();
+    await page.getByRole("menuitem", { name: "Disconnect" }).click();
+    const dialog = page.getByRole("dialog", { name: /^Disconnect .*Wallet\?$/ });
+    await expect(dialog).toContainText("with its balance and transactions, and stops updating");
+    await expect(dialog).toContainText("It does not move to a bank by itself");
+    await dialog.getByRole("button", { name: "Keep connected" }).click();
+    await expect(dialog).toBeHidden();
+
+    // Zeta Bank's accounts are not chosen yet. Nothing is imported here: a reading would call the bank.
+    await page.goto(BANKS);
+    await page
+      .getByRole("region", { name: "Accounts" })
+      .getByRole("link", { name: "Choose accounts of Zeta Bank" })
+      .click();
+    const target = page.getByRole("combobox", { name: "In Ledgerly" }).first();
+    await hydrated(target);
+    await expect(target.getByRole("option", { name: 'Use "Old savings" (archived)' })).toHaveCount(1);
+    await target.selectOption({ label: 'Use "Old savings" (archived)' });
+    await expect(page.getByText('"Old savings" is archived: it comes back to the lists')).toBeVisible();
+  });
+
   test("Trek turned off: its page starts empty, with no connection and no setting", async ({ page }) => {
     // Disconnected first, so the last reading of §3.2 calls nobody.
     await page.goto(TREK);

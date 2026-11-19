@@ -3,6 +3,7 @@
 export {
   addDays,
   addMonths,
+  clock,
   type CivilDate,
   civilDateIn,
   dayNumber,
@@ -15,6 +16,8 @@ export {
   type MonthKey,
   monthsApart,
   monthsBetween,
+  relativeNext,
+  relativePast,
   startOfDayIn,
   today,
   utcOffsetLabel,

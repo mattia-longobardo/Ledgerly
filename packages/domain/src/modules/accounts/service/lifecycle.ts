@@ -21,7 +21,7 @@ import {
   isFutureDate,
   settingsForSynced,
 } from "../rules";
-import { type Account } from "../queries";
+import { type Account, listAccounts } from "../queries";
 import { accounts, accountSwitches, balanceEntries } from "../schema";
 import { AccountError, hasBalanceEntries, nextSortOrder, personIban, requireAccount } from "./guards";
 
@@ -135,12 +135,40 @@ export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown
   return saved;
 }
 
-export async function archiveAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
-  await requireAccount(ctx, id);
+/**
+ * The account this one doubles (decision H58). Open: the first account here, open and in the same
+ * currency, whose movements hold every movement of this one, as the dialog of "Archive" says it
+ * before. Archived: the twin recorded when it was archived. `null` when it doubles none.
+ */
+export async function twinAccount(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  id: string,
+): Promise<Account | null> {
+  const account = await requireAccount(ctx, id);
+  const all = await listAccounts(ctx, { includeArchived: true });
+  if (account.state === "archived") {
+    const recorded = (await movements().duplicatesOf(ctx, [id])).get(id);
+    return all.find((one) => one.id === recorded) ?? null;
+  }
+  const open = all.filter(
+    (one) => one.id !== id && one.state !== "archived" && one.currency === account.currency,
+  );
+  const twinId = await movements().twinOf(
+    ctx,
+    id,
+    open.map((one) => one.id),
+  );
+  return open.find((one) => one.id === twinId) ?? null;
+}
+
+/** Archives an account; a double of another stops counting in the months (H58) until it is restored. */
+export async function archiveAccount(ctx: Pick<Ctx, "userId" | "timeZone">, id: string): Promise<void> {
+  const twin = await twinAccount(ctx, id);
   await getDb()
     .update(accounts)
     .set({ state: "archived", archivedAt: new Date() })
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  await movements().markDuplicate(ctx, id, twin?.id ?? null);
 }
 
 export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<void> {
@@ -149,6 +177,7 @@ export async function restoreAccount(ctx: Pick<Ctx, "userId">, id: string): Prom
     .update(accounts)
     .set({ state: "active", archivedAt: null })
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+  await movements().markDuplicate(ctx, id, null);
 }
 
 /** The source an account came from, as a deletion leaves it for the caller to tell that source. */

@@ -6,7 +6,7 @@
  * Pure rules: no database, no network, no provider's name. The pages translate what these
  * functions return; nothing here builds a sentence.
  */
-import { addDays, civilDateIn, daysBetween, minutesOfDayIn } from "../../shared/dates";
+import { civilDateIn, daysBetween } from "../../shared/dates";
 
 /* The error codes */
 
@@ -259,48 +259,9 @@ export function warningFor(status: SyncStatus, facts: StatusFacts, now: Date): W
   return null;
 }
 
-/* Times as a person says them (ux §2.3) */
+/* Times as a person says them (ux §2.3): in `packages/format`, which a client shares (19/11/2026). */
 
-/** The time of day of an instant in a zone, as "HH:MM" in 24 hours. */
-export function clock(instant: Date, timeZone: string): string {
-  const minutes = minutesOfDayIn(instant, timeZone);
-  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
-}
-
-type RelativePast =
-  | { key: "now" }
-  | { key: "minutes"; count: number }
-  | { key: "hours"; count: number }
-  | { key: "yesterday"; time: string }
-  | { key: "date"; date: string; time: string };
-
-/** How long ago an instant was: "now", minutes, hours of today, yesterday, or a day. */
-export function relativePast(at: Date, now: Date, timeZone: string): RelativePast {
-  const seconds = Math.max(0, Math.floor((now.getTime() - at.getTime()) / 1000));
-  if (seconds < 60) return { key: "now" };
-  if (seconds < 3600) return { key: "minutes", count: Math.floor(seconds / 60) };
-  const day = civilDateIn(at, timeZone);
-  const today = civilDateIn(now, timeZone);
-  if (day === today) return { key: "hours", count: Math.floor(seconds / 3600) };
-  const time = clock(at, timeZone);
-  return day === addDays(today, -1) ? { key: "yesterday", time } : { key: "date", date: day, time };
-}
-
-type RelativeNext =
-  | { key: "soon" }
-  | { key: "today"; time: string }
-  | { key: "tomorrow"; time: string }
-  | { key: "date"; date: string; time: string };
-
-/** When the next attempt comes: shortly, at a time of today, tomorrow, or a day. */
-export function relativeNext(at: Date | null, now: Date, timeZone: string): RelativeNext {
-  if (at === null || at.getTime() - now.getTime() < 60_000) return { key: "soon" };
-  const day = civilDateIn(at, timeZone);
-  const today = civilDateIn(now, timeZone);
-  const time = clock(at, timeZone);
-  if (day === today) return { key: "today", time };
-  return day === addDays(today, 1) ? { key: "tomorrow", time } : { key: "date", date: day, time };
-}
+export { clock, relativeNext, relativePast } from "../../shared/dates";
 
 /* The history (ux §4) */
 

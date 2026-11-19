@@ -175,6 +175,8 @@ describe("WalletCard", () => {
     expect(dialog).toHaveTextContent(`Access to ${NAME} is closed. The 2 accounts stay in Ledgerly`);
     expect(dialog).toHaveTextContent("The account choice and the schedule stay");
     expect(dialog).toHaveTextContent("1 excluded account stays excluded.");
+    // No switch to a bank happens by itself (H58).
+    expect(dialog).toHaveTextContent("They do not move to a bank by themselves");
     // The way to stop for good is on the source's page (plugin-settings.md §4.2).
     expect(screen.getByRole("link", { name: `Want to stop using ${NAME}? Turn it off` })).toHaveAttribute(
       "href",

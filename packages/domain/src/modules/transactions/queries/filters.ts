@@ -1,4 +1,19 @@
-import { and, asc, desc, eq, exists, ilike, inArray, isNull, lt, gte, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  gte,
+  notInArray,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
 import { type Account } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
@@ -7,7 +22,7 @@ import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { Cents } from "../../../shared/money";
 import { type CategoryState, type TransactionType } from "../rules";
-import { categories, labels, transactionLabels, transactions } from "../schema";
+import { categories, duplicateAccounts, labels, transactionLabels, transactions } from "../schema";
 import { type Label, type TreeCategory } from "../taxonomy";
 import { type WaitingForCategory } from "./listing";
 
@@ -316,10 +331,35 @@ export function conditions(ctx: Pick<Ctx, "userId" | "timeZone">, filters: Trans
   const payee = filters.payee?.trim();
   if (payee) parts.push(ilike(transactions.payee, `%${escapeLike(payee)}%`));
   if (!filters.includeHidden) {
-    parts.push(isNull(transactions.hiddenAt), isNull(transactions.removedUpstreamAt));
+    parts.push(
+      isNull(transactions.hiddenAt),
+      isNull(transactions.removedUpstreamAt),
+      notDoubled(ctx, filters),
+    );
   }
 
   return and(...parts) as SQL;
+}
+
+/**
+ * The movements of an archived double are counted once, on its twin (decision H58): out of every
+ * total and of the list, like a hidden row. An account the filter names keeps its own: its page
+ * shows its history. A sub-query of the same statement, not a query more (G9).
+ */
+function notDoubled(ctx: Pick<Ctx, "userId">, filters: TransactionFilters): SQL {
+  const named = filters.accountIds ?? [];
+  return notInArray(
+    transactions.accountId,
+    getDb()
+      .select({ id: duplicateAccounts.accountId })
+      .from(duplicateAccounts)
+      .where(
+        and(
+          userScoped(ctx).owns(duplicateAccounts),
+          named.length > 0 ? notInArray(duplicateAccounts.accountId, [...named]) : undefined,
+        ),
+      ),
+  );
 }
 
 /**

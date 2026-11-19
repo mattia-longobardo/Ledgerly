@@ -251,6 +251,7 @@
       "disconnect": {
         "title": "Scollegare {name}?",
         "description": "L'accesso a {name} si chiude. {count, plural, =0 {} one {Il conto resta in Ledgerly come “Scollegato”, con saldi e movimenti, e non si aggiorna più. } other {I # conti restano in Ledgerly come “Scollegati”, con saldi e movimenti, e non si aggiornano più. }}La scelta dei conti e la pianificazione restano: se ricolleghi, ogni conto torna al suo posto.",
+        "noSwitch": "{count, plural, =0 {} one {Non passa da solo a una banca: per tenerlo aggiornato, aprilo e scegli «Passa alla banca».} other {Non passano da soli a una banca: per tenerne uno aggiornato, aprilo e scegli «Passa alla banca».}}",
         "confirm": "Scollega",
         "cancel": "Resta collegato",
         "excluded": "{count, plural, one {# conto escluso resta escluso.} other {# conti esclusi restano esclusi.}}"
@@ -5804,11 +5805,13 @@
         "new": "Crea un conto nuovo",
         "existingGroup": "Usa un conto esistente",
         "existing": "Usa «{account}»",
+        "existingArchived": "Usa «{account}» (archiviato)",
         "skip": "Non importare",
         "name": "Nome",
         "type": "Tipo",
         "unnamed": "Conto",
         "existingNote": "Da ora saldo e movimenti di «{account}» arrivano dalla banca. I saldi già inseriti restano.",
+        "existingArchivedNote": "«{account}» è archiviato: torna negli elenchi e da ora saldo e movimenti arrivano dalla banca. I saldi già inseriti restano.",
         "duplicate": "Questo conto è già scelto per un altro conto della banca.",
         "none": "Scegli almeno un conto.",
         "hurry": "Conferma subito: una banca dà lo storico completo solo nei primi minuti dopo l'accesso.",
