@@ -3,9 +3,8 @@
 import { useTranslations } from "next-intl";
 import { type FormEvent, type Ref, useId, useRef, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
-import { Field } from "@ledgerly/ui/field";
-import { Input } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
+import { ValueEntryFields } from "@ledgerly/ui/value-entry";
 import { notify } from "@ledgerly/ui/toast";
 import {
   type ActionResult,
@@ -96,25 +95,14 @@ export interface ValuationDraft extends ValuationFormInput {
 function ValuationFields({ id, today, draft }: { id: string; today: string; draft?: ValuationDraft }) {
   const t = useTranslations("funds.valuations.form");
   return (
-    <>
-      <Field label={t("date")} htmlFor={`${id}-on`}>
-        <Input id={`${id}-on`} name="on" type="date" max={today} defaultValue={draft?.on ?? today} required />
-      </Field>
-      <Field label={t("value")} htmlFor={`${id}-value`}>
-        <Input
-          id={`${id}-value`}
-          name="value"
-          inputMode="decimal"
-          numeric
-          required
-          autoFocus
-          defaultValue={draft?.value ?? ""}
-        />
-      </Field>
-      <Field label={t("note")} htmlFor={`${id}-note`}>
-        <Input id={`${id}-note`} name="note" maxLength={200} defaultValue={draft?.note ?? ""} />
-      </Field>
-    </>
+    <ValueEntryFields
+      idPrefix={id}
+      today={today}
+      labels={{ date: t("date"), value: t("value"), note: t("note") }}
+      valueName="value"
+      initial={draft}
+      autoFocus
+    />
   );
 }
 

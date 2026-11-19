@@ -9,6 +9,7 @@ import { Card, CardHeader } from "@ledgerly/ui/card";
 import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
+import { ValueEntryFields } from "@ledgerly/ui/value-entry";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
@@ -50,27 +51,13 @@ function formValues(form: HTMLFormElement): BalanceEntryFormInput {
 function EntryFields({ prefix, entry, today }: { prefix: string; entry: EntryRow | null; today: string }) {
   const t = useTranslations("accounts.entries");
   return (
-    <>
-      <Field label={t("add.date")} htmlFor={`${prefix}-on`}>
-        <Input
-          id={`${prefix}-on`}
-          name="on"
-          type="date"
-          max={today}
-          defaultValue={entry?.on ?? today}
-          required
-        />
-      </Field>
-      <Field label={t("add.balance")} htmlFor={`${prefix}-amount`}>
-        <Input
-          id={`${prefix}-amount`}
-          name="amount"
-          inputMode="decimal"
-          defaultValue={entry?.amountInput ?? ""}
-          required
-          numeric
-        />
-      </Field>
+    <ValueEntryFields
+      idPrefix={prefix}
+      today={today}
+      labels={{ date: t("add.date"), value: t("add.balance"), note: t("add.note") }}
+      valueName="amount"
+      initial={entry === null ? undefined : { on: entry.on, value: entry.amountInput, note: entry.note }}
+    >
       <Field label={t("add.available")} htmlFor={`${prefix}-available`} hint={t("add.availableHint")}>
         <Input
           id={`${prefix}-available`}
@@ -80,10 +67,7 @@ function EntryFields({ prefix, entry, today }: { prefix: string; entry: EntryRow
           numeric
         />
       </Field>
-      <Field label={t("add.note")} htmlFor={`${prefix}-note`}>
-        <Input id={`${prefix}-note`} name="note" maxLength={200} defaultValue={entry?.note ?? ""} />
-      </Field>
-    </>
+    </ValueEntryFields>
   );
 }
 
