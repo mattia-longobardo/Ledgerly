@@ -193,15 +193,14 @@ describe("the Server Actions of accounts", () => {
 });
 
 /**
- * The Server Actions of transactions (05-refactor.md §5.5), Expenses' manual movement and the ⌘K
- * palette, and their routes; no exclusion. `name:variant` is one action that calls two use cases.
+ * The Server Actions of transactions (05-refactor.md §5.5) and Expenses' manual movement, and their
+ * routes; no exclusion. The palette's two searches have no action left: it calls `/api/v1`. `name:variant` is one action that calls two use cases.
  */
 const TRANSACTIONS_ACTION_FILES = [
   "apps/web/src/modules/transactions/actions.ts",
   "apps/web/src/modules/transactions/categorize/actions.ts",
   "apps/web/src/modules/transactions/categorize/user-rules-actions.ts",
   "apps/web/src/app/(app)/expenses/manual-actions.ts",
-  "apps/web/src/app/(app)/palette-actions.ts",
 ];
 
 describe("the Server Actions of transactions", () => {

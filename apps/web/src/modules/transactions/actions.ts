@@ -10,7 +10,6 @@ import { parseAmount } from "@ledgerly/domain/platform/format";
 import { requireSession } from "@/platform/auth/session";
 import { WALLET_RECORD_TEXT_MAX, editWalletTransaction } from "@ledgerly/domain/platform/integrations/wallet";
 import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
-import { searchPayees } from "@ledgerly/domain/transactions";
 import {
   TransactionError,
   deleteHiddenTransactions,
@@ -111,20 +110,6 @@ export async function deleteHiddenTransactionsAction(ids: string[]): Promise<Cou
   } catch (error) {
     return failed(error);
   }
-}
-
-/**
- * The payees of the ⌘K palette (spec §7.2). A read, not a write: it revalidates nothing, and a
- * malformed term answers with an empty list rather than an error a palette cannot show.
- */
-export async function searchPayeesAction(
-  query: string,
-  limit?: number,
-): Promise<{ payee: string; count: number }[]> {
-  const ctx = await requireSession();
-  const term = z.string().max(200).safeParse(query);
-  if (!term.success) return [];
-  return searchPayees(ctx, term.data, limit);
 }
 
 const editSchema = z.object({

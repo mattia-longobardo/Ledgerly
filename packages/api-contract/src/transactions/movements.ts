@@ -255,7 +255,7 @@ export const searchPayees = defineRoute({
   scope: "read",
   capability: "transactions",
   summary: "The payees whose name contains the text, with how many movements each has (the ⌘K palette).",
-  actions: ["searchPayeesAction"],
+  actions: [],
   query: z.object({
     q: z.string().max(200),
     limit: z.coerce.number().int().min(1).max(50).optional(),

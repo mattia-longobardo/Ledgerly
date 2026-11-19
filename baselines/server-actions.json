@@ -31,14 +31,8 @@
       "saveSourceAction"
     ]
   },
-  "apps/web/src/app/(app)/palette-actions.ts": {
-    "closedBy": "the route of the search across modules, before the end of R3 (searchRecordsAction, injected in the palette)",
-    "actions": [
-      "searchRecordsAction"
-    ]
-  },
   "apps/web/src/app/(app)/settings/categories/actions.ts": {
-    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
+    "closedBy": "R3 of transactions (Settings › Categories is that module's)",
     "actions": [
       "archiveWithUndoAction",
       "createCategoryAction",
@@ -58,7 +52,7 @@
     ]
   },
   "apps/web/src/app/(app)/settings/categories/source-actions.ts": {
-    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
+    "closedBy": "R3 of transactions (Settings › Categories is that module's)",
     "actions": [
       "keepSourceCategoryAction",
       "setSourceCategoryAction",
@@ -95,7 +89,7 @@
     ]
   },
   "apps/web/src/app/(app)/settings/security/actions.ts": {
-    "closedBy": "POST /api-clients, with git-policy \u00a76 #4",
+    "closedBy": "POST /api-clients, with git-policy §6 #4",
     "actions": [
       "createApiClientAction"
     ]
@@ -224,13 +218,12 @@
     ]
   },
   "apps/web/src/modules/transactions/actions.ts": {
-    "closedBy": "R2/R3 of transactions (searchPayeesAction is injected in the palette)",
+    "closedBy": "R3 of transactions",
     "actions": [
       "deleteHiddenTransactionsAction",
       "editWalletTransactionAction",
       "hideTransactionsAction",
       "restoreTransactionsAction",
-      "searchPayeesAction",
       "setTransactionCategoryAction",
       "setTransactionLabelsAction",
       "setTransactionNoteAction"

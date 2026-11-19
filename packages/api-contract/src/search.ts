@@ -14,7 +14,7 @@ export const searchRecords = defineRoute({
   scope: "read",
   capability: "search",
   summary: "The person's pockets, funds and subscriptions whose name contains the text.",
-  actions: ["searchRecordsAction"],
+  actions: [],
   query: z.object({ q: z.string().max(200) }),
   response: z.object({
     records: z.array(z.object({ kind: z.enum(RECORD_KINDS), id: id(), name: z.string() })),

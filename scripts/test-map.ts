@@ -612,7 +612,6 @@ export const MODULES: Module[] = [
       "scripts/icons.mjs",
       // Each release adds its own entries here: the shell's screens show them.
       "apps/web/src/app/(app)/navigation*",
-      "apps/web/src/app/(app)/palette-actions.ts",
       "apps/web/src/app/(app)/palette-commands*",
     ],
     flows: ["shell"],
