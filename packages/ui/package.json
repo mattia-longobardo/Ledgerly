@@ -13,6 +13,7 @@
     "./chart-hover": "./src/chart-hover.tsx",
     "./chart-labels": "./src/chart-labels.ts",
     "./cn": "./src/cn.ts",
+    "./composition-card": "./src/composition-card.tsx",
     "./connection-row": "./src/connection-row.tsx",
     "./data": "./src/data.ts",
     "./date-range-picker": "./src/date-range-picker.tsx",

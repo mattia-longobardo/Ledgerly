@@ -42,7 +42,7 @@ import type { Cents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@ledgerly/ui/badge";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card, CardHeader } from "@ledgerly/ui/card";
-import { CompositionBar } from "@ledgerly/ui/chart";
+import { CompositionCard } from "@ledgerly/ui/composition-card";
 import { cn } from "@ledgerly/ui/cn";
 import { HighlightScope, SeriesToggle } from "@ledgerly/ui/highlight";
 import { Popover } from "@ledgerly/ui/popover";
@@ -829,37 +829,16 @@ async function FundsHome({
       share: paidTotal > 0n ? Number(part.cents) / Number(paidTotal) : 0,
     }));
   const whoCard = (
-    <Card data-testid="who-paid" className="flex min-w-0 flex-col gap-3">
-      <h2 className="text-lg font-semibold">{th("who.title", { when })}</h2>
-      {whoParts.length === 0 ? (
-        <p className="text-sm text-muted">{th("who.empty")}</p>
-      ) : (
-        <>
-          <CompositionBar parts={whoParts} />
-          <ul className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 text-sm">
-            {whoParts.map((part) => (
-              <li
-                key={part.key}
-                data-origin={part.key}
-                data-cents={String(part.cents)}
-                className="col-span-3 grid min-h-8 grid-cols-subgrid items-center border-b border-border last:border-0"
-              >
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ background: part.color }}
-                  />
-                  <span className="truncate">{part.label}</span>
-                </span>
-                <span className="text-right tabular-nums">{money(part.cents)}</span>
-                <span className="text-right text-muted tabular-nums">{percent(part.share, false)}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </Card>
+    <CompositionCard
+      data-testid="who-paid"
+      title={th("who.title", { when })}
+      parts={whoParts.map((part) => ({
+        ...part,
+        cells: [money(part.cents), percent(part.share, false)],
+        data: { "data-origin": part.key, "data-cents": String(part.cents) },
+      }))}
+      empty={th("who.empty")}
+    />
   );
 
   return (

@@ -15,7 +15,8 @@ import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Badge } from "@ledgerly/ui/badge";
 import { Card } from "@ledgerly/ui/card";
-import { CompositionBar, Sparkline } from "@ledgerly/ui/chart";
+import { Sparkline } from "@ledgerly/ui/chart";
+import { CompositionCard } from "@ledgerly/ui/composition-card";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
@@ -330,54 +331,37 @@ export default async function AccountsPage({ searchParams }: PageProps<"/account
           now={now}
         />
 
-        <Card padded={false} className="flex flex-col gap-3 p-4">
-          <h2 className="text-lg font-semibold">{t("composition.title")}</h2>
-          <CompositionBar
-            parts={rows.map((row) => ({
-              label: row.account.name,
-              share: row.share ?? 0,
-              color: row.color,
-            }))}
-          />
-          {/* One grid for every row, so the percentages and the amounts each keep one column. */}
-          <ul className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 text-sm">
-            {rows.map((row) => (
-              <li
-                key={row.account.id}
-                className="col-span-3 grid min-h-9 grid-cols-subgrid items-center border-b border-border last:border-0"
-              >
-                <span className="flex min-w-0 items-center gap-1.5">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ background: row.color }}
-                  />
-                  <span className="truncate">{row.account.name}</span>
-                </span>
-                <span className="text-right tabular-nums text-muted">
-                  {formatPercent(row.share, ctx.numberFormat)}
-                </span>
-                <span className="text-right tabular-nums">
-                  {formatMoney(row.display.balance, ctx.numberFormat, total)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
-            <div>
-              <dt className="text-muted">{t("composition.liquid")}</dt>
-              <dd className="font-medium tabular-nums">
-                {formatMoney(view.buckets.cash.total, ctx.numberFormat, total)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted">{t("composition.invested")}</dt>
-              <dd className="font-medium tabular-nums">
-                {formatMoney(view.buckets.investments.total, ctx.numberFormat, total)}
-              </dd>
-            </div>
-          </dl>
-        </Card>
+        <CompositionCard
+          title={t("composition.title")}
+          tall
+          muted={0}
+          parts={rows.map((row) => ({
+            key: row.account.id,
+            label: row.account.name,
+            color: row.color,
+            share: row.share ?? 0,
+            cells: [
+              formatPercent(row.share, ctx.numberFormat),
+              formatMoney(row.display.balance, ctx.numberFormat, total),
+            ],
+          }))}
+          footer={
+            <dl className="mt-auto grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
+              <div>
+                <dt className="text-muted">{t("composition.liquid")}</dt>
+                <dd className="font-medium tabular-nums">
+                  {formatMoney(view.buckets.cash.total, ctx.numberFormat, total)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">{t("composition.invested")}</dt>
+                <dd className="font-medium tabular-nums">
+                  {formatMoney(view.buckets.investments.total, ctx.numberFormat, total)}
+                </dd>
+              </div>
+            </dl>
+          }
+        />
       </div>
     </Page>
   );

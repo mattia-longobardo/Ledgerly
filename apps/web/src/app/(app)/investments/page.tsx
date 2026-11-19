@@ -27,7 +27,8 @@ import { type Cents, sumCents } from "@ledgerly/domain/shared/money";
 import { Badge } from "@ledgerly/ui/badge";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card, CardHeader } from "@ledgerly/ui/card";
-import { CompositionBar, StackedArea, StackedBars, stackLayers } from "@ledgerly/ui/chart";
+import { StackedArea, StackedBars, stackLayers } from "@ledgerly/ui/chart";
+import { CompositionCard } from "@ledgerly/ui/composition-card";
 import { cn } from "@ledgerly/ui/cn";
 import { HighlightScope, SeriesToggle } from "@ledgerly/ui/highlight";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
@@ -761,9 +762,9 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
             </ul>
           </Card>
 
-          <Card className="flex min-w-0 flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">{t("home.composition.title")}</h2>
+          <CompositionCard
+            title={t("home.composition.title")}
+            actions={
               <LinkTabs
                 label={t("home.composition.by")}
                 path="/investments"
@@ -776,35 +777,14 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
                   { value: "ccy", label: t("home.composition.ccy") },
                 ]}
               />
-            </div>
-            {composition.length === 0 ? (
-              <p className="text-sm text-muted">{t("allocation.empty")}</p>
-            ) : (
-              <>
-                <CompositionBar parts={composition} />
-                <ul className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 text-sm">
-                  {composition.map((part) => (
-                    <li
-                      key={part.key}
-                      className="col-span-3 grid min-h-8 grid-cols-subgrid items-center border-b border-border last:border-0"
-                    >
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          aria-hidden
-                          className="size-2 shrink-0 rounded-full"
-                          style={{ background: part.color }}
-                        />
-                        <span className="truncate">{part.label}</span>
-                      </span>
-                      <span className="text-right tabular-nums">{money(part.cents)}</span>
-                      <span className="text-right text-muted tabular-nums">{percent(part.share, false)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            <p className="text-sm text-muted">{t("home.composition.note")}</p>
-          </Card>
+            }
+            parts={composition.map((part) => ({
+              ...part,
+              cells: [money(part.cents), percent(part.share, false)],
+            }))}
+            empty={t("allocation.empty")}
+            footer={<p className="text-sm text-muted">{t("home.composition.note")}</p>}
+          />
         </div>
       </HighlightScope>
     </Page>
