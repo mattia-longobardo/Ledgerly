@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
-import { getDb } from "../../../platform/db/client";
+import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { normalizeIban } from "../../../platform/iban";
 import { managedAccounts } from "../ports";
 import {
   type AccountType,
   hasIbanField,
+  type IbanHolder,
   ibanConflict,
   DEFAULT_STALE_AFTER_HOURS,
   type RemoteAccount,
@@ -15,7 +16,7 @@ import {
 } from "../rules";
 import { type Account, listAccounts } from "../queries";
 import { accounts } from "../schema";
-import { switchedAwayFrom } from "../switching";
+import { switchedAwayFrom } from "./switching";
 import { AccountError, ibanHolders, lockIbans, nextSortOrder } from "./guards";
 
 /* Accounts a person ties to a provider by hand (rewrite plan N1: the accounts of a bank) */
@@ -79,72 +80,87 @@ export async function linkProviderAccounts(
     throw new AccountError("invalid");
   }
   const open = new Map((await accountsOpenToProvider(ctx)).map((account) => [account.id, account]));
-  const already = new Map(
-    (await listAccounts(ctx, { includeArchived: true }))
-      .filter((account) => account.provider === provider && account.providerAccountId !== null)
-      .map((account) => [account.providerAccountId as string, account.id]),
-  );
+  const already = await accountsOfProvider(ctx, provider);
   let sortOrder = await nextSortOrder(ctx);
 
-  await getDb().transaction(async (tx) => {
-    await lockIbans(tx, ctx);
-    const holders = await ibanHolders(tx, ctx);
+  await getDb().transaction(async (trx) => {
+    await lockIbans(trx, ctx);
+    const holders = await ibanHolders(trx, ctx);
     for (const choice of choices) {
       const known = already.get(choice.providerAccountId);
-      if (known !== undefined) {
-        linked.set(choice.providerAccountId, known);
-        continue;
-      }
-      const iban = normalizeIban(choice.iban);
       const tie = {
         origin: "synced" as const,
         provider,
         providerAccountId: choice.providerAccountId,
         lastSyncedAt: now,
       };
-      if (choice.target.kind === "existing") {
-        const account = open.get(choice.target.accountId);
-        if (!account || account.currency !== choice.currency) throw new AccountError("invalid");
-        // The source writes the IBAN it gives on the account it is tied to (§2.4.3).
-        const fromSource = iban !== null && hasIbanField(account.type) ? { iban, ibanFromSource: true } : {};
-        await tx
-          .update(accounts)
-          .set({ ...tie, ...fromSource })
-          .where(and(eq(accounts.id, account.id), userScoped(ctx).owns(accounts)));
-        linked.set(choice.providerAccountId, account.id);
-        continue;
-      }
-      const name = choiceNameSchema.safeParse(choice.target.name);
-      if (!name.success) throw new AccountError("invalid");
-      const type = choice.target.type;
-      // One IBAN, one account (H39): a new account never takes an IBAN an open account has.
-      const conflict = iban === null ? null : ibanConflict(iban, holders);
-      if (conflict !== null && conflict.kind === "exists")
-        throw new AccountError("iban_exists", conflict.name);
-      const withIban = iban !== null && hasIbanField(type) ? { iban, ibanFromSource: true } : {};
-      const [row] = await tx
-        .insert(accounts)
-        .values(
-          userScoped(ctx).stamp({
-            ...tie,
-            ...withIban,
-            name: name.data,
-            type,
-            currency: choice.currency,
-            state: "active" as const,
-            countsAsLiquid: type === "checking" || type === "cash" || type === "savings",
-            staleAfterHours: DEFAULT_STALE_AFTER_HOURS,
-            sortOrder: sortOrder++,
-          }),
-        )
-        .returning({ id: accounts.id });
-      linked.set(choice.providerAccountId, row.id);
-      if (withIban.iban !== undefined) {
-        holders.push({ id: row.id, name: name.data, iban: withIban.iban, state: "active" });
-      }
+      const accountId =
+        known?.id ??
+        (choice.target.kind === "existing"
+          ? await tieExisting(trx, ctx, { choice, tie, open })
+          : await tieNew(trx, ctx, { choice, tie, holders, sortOrder: sortOrder++ }));
+      linked.set(choice.providerAccountId, accountId);
     }
   });
   return linked;
+}
+
+type Tie = { origin: "synced"; provider: string; providerAccountId: string; lastSyncedAt: Date };
+
+/** An account kept by hand, tied to the provider's: its balances stay (decision H26). */
+async function tieExisting(
+  trx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  input: { choice: ProviderAccountChoice; tie: Tie; open: ReadonlyMap<string, Account> },
+): Promise<string> {
+  const { choice, tie, open } = input;
+  const account = choice.target.kind === "existing" ? open.get(choice.target.accountId) : undefined;
+  if (!account || account.currency !== choice.currency) throw new AccountError("invalid");
+  // The source writes the IBAN it gives on the account it is tied to (§2.4.3).
+  const iban = normalizeIban(choice.iban);
+  const fromSource = iban !== null && hasIbanField(account.type) ? { iban, ibanFromSource: true } : {};
+  await trx
+    .update(accounts)
+    .set({ ...tie, ...fromSource })
+    .where(and(eq(accounts.id, account.id), userScoped(ctx).owns(accounts)));
+  return account.id;
+}
+
+/** A new account for the provider's: never with an IBAN an open account has (H39). */
+async function tieNew(
+  trx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  input: { choice: ProviderAccountChoice; tie: Tie; holders: IbanHolder[]; sortOrder: number },
+): Promise<string> {
+  const { choice, tie, holders } = input;
+  if (choice.target.kind !== "new") throw new AccountError("invalid");
+  const name = choiceNameSchema.safeParse(choice.target.name);
+  if (!name.success) throw new AccountError("invalid");
+  const type = choice.target.type;
+  const iban = normalizeIban(choice.iban);
+  const conflict = iban === null ? null : ibanConflict(iban, holders);
+  if (conflict !== null && conflict.kind === "exists") throw new AccountError("iban_exists", conflict.name);
+  const withIban = iban !== null && hasIbanField(type) ? { iban, ibanFromSource: true } : {};
+  const [row] = await trx
+    .insert(accounts)
+    .values(
+      userScoped(ctx).stamp({
+        ...tie,
+        ...withIban,
+        name: name.data,
+        type,
+        currency: choice.currency,
+        state: "active" as const,
+        countsAsLiquid: type === "checking" || type === "cash" || type === "savings",
+        staleAfterHours: DEFAULT_STALE_AFTER_HOURS,
+        sortOrder: input.sortOrder,
+      }),
+    )
+    .returning({ id: accounts.id });
+  if (withIban.iban !== undefined) {
+    holders.push({ id: row.id, name: name.data, iban: withIban.iban, state: "active" });
+  }
+  return row.id;
 }
 
 /** The accounts tied to a provider, by the provider's own id of each. */
@@ -153,9 +169,11 @@ export async function accountsOfProvider(
   provider: string,
 ): Promise<Map<string, Account>> {
   return new Map(
-    (await listAccounts(ctx, { includeArchived: true }))
-      .filter((account) => account.provider === provider && account.providerAccountId !== null)
-      .map((account) => [account.providerAccountId as string, account]),
+    (await listAccounts(ctx, { includeArchived: true })).flatMap((account) =>
+      account.provider === provider && account.providerAccountId !== null
+        ? [[account.providerAccountId, account] as const]
+        : [],
+    ),
   );
 }
 
@@ -191,80 +209,80 @@ export async function applyProviderAccounts(
     return { ibanConflicts };
   }
   let sortOrder = await nextSortOrder(ctx);
-  const sourceIban = (remote: RemoteAccount) =>
-    remote.iban != null && hasIbanField(remote.type) ? { iban: remote.iban, ibanFromSource: true } : {};
-
-  await getDb().transaction(async (tx) => {
-    await lockIbans(tx, ctx);
+  await getDb().transaction(async (trx) => {
+    await lockIbans(trx, ctx);
     for (const step of steps) {
-      switch (step.action) {
-        case "ibanExists":
-          break;
-        case "iban":
-          await tx
-            .update(accounts)
-            .set({ iban: step.iban, ibanFromSource: true })
-            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
-          break;
-        case "create":
-          await tx.insert(accounts).values(
-            userScoped(ctx).stamp({
-              ...sourceIban(step.remote),
-              name: step.remote.name,
-              type: step.remote.type,
-              currency: step.remote.currency,
-              origin: "synced" as const,
-              provider: step.remote.provider,
-              providerAccountId: step.remote.providerAccountId,
-              state: "active" as const,
-              staleAfterHours: DEFAULT_STALE_AFTER_HOURS,
-              lastSyncedAt: now,
-              sortOrder: sortOrder++,
-            }),
-          );
-          break;
-        case "adopt":
-          await tx
-            .update(accounts)
-            .set({
-              ...sourceIban(step.remote),
-              origin: "synced",
-              provider: step.remote.provider,
-              providerAccountId: step.remote.providerAccountId,
-              type: step.remote.type,
-              currency: step.remote.currency,
-              lastSyncedAt: now,
-            })
-            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
-          break;
-        case "retype":
-          await tx
-            .update(accounts)
-            .set({ type: step.type, lastSyncedAt: now })
-            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
-          break;
-        case "rename":
-          await tx
-            .update(accounts)
-            .set({ name: step.name, lastSyncedAt: now })
-            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
-          break;
-        case "reappear":
-          await tx
-            .update(accounts)
-            .set({ state: "active", lastSyncedAt: now })
-            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
-          break;
-        case "unavailable":
-          await tx
-            .update(accounts)
-            .set({ state: "unavailable" })
-            .where(and(eq(accounts.id, step.id), userScoped(ctx).owns(accounts)));
-          break;
-      }
+      await applyStep(trx, ctx, step, { now, nextSort: () => sortOrder++ });
     }
   });
   return { ibanConflicts };
+}
+
+type Step = ReturnType<typeof reconcileProviderAccounts>[number];
+
+/** The IBAN the source gives, on a type of account that has the field (H47). */
+const sourceIban = (remote: RemoteAccount) =>
+  remote.iban != null && hasIbanField(remote.type) ? { iban: remote.iban, ibanFromSource: true } : {};
+
+/** One step of a reading of the provider's accounts, inside its transaction. */
+async function applyStep(
+  trx: Tx,
+  ctx: Pick<Ctx, "userId">,
+  step: Step,
+  run: { now: Date; nextSort: () => number },
+): Promise<void> {
+  const mine = (id: string) => and(eq(accounts.id, id), userScoped(ctx).owns(accounts));
+  const now = run.now;
+  switch (step.action) {
+    case "ibanExists":
+      return;
+    case "iban":
+      await trx.update(accounts).set({ iban: step.iban, ibanFromSource: true }).where(mine(step.id));
+      return;
+    case "create":
+      await trx.insert(accounts).values(
+        userScoped(ctx).stamp({
+          ...sourceIban(step.remote),
+          name: step.remote.name,
+          type: step.remote.type,
+          currency: step.remote.currency,
+          origin: "synced" as const,
+          provider: step.remote.provider,
+          providerAccountId: step.remote.providerAccountId,
+          state: "active" as const,
+          staleAfterHours: DEFAULT_STALE_AFTER_HOURS,
+          lastSyncedAt: now,
+          sortOrder: run.nextSort(),
+        }),
+      );
+      return;
+    case "adopt":
+      await trx
+        .update(accounts)
+        .set({
+          ...sourceIban(step.remote),
+          origin: "synced",
+          provider: step.remote.provider,
+          providerAccountId: step.remote.providerAccountId,
+          type: step.remote.type,
+          currency: step.remote.currency,
+          lastSyncedAt: now,
+        })
+        .where(mine(step.id));
+      return;
+    case "retype":
+      await trx.update(accounts).set({ type: step.type, lastSyncedAt: now }).where(mine(step.id));
+      return;
+    case "rename":
+      await trx.update(accounts).set({ name: step.name, lastSyncedAt: now }).where(mine(step.id));
+      return;
+    case "reappear":
+      await trx.update(accounts).set({ state: "active", lastSyncedAt: now }).where(mine(step.id));
+      return;
+    case "unavailable":
+      await trx.update(accounts).set({ state: "unavailable" }).where(mine(step.id));
+      return;
+  }
 }
 
 /**
@@ -319,17 +337,17 @@ export async function saveSourceIbans(
     if (iban !== null) wanted.set(one.accountId, iban);
   }
   if (wanted.size === 0) return 0;
-  return getDb().transaction(async (tx) => {
-    await lockIbans(tx, ctx);
-    const rows = await tx
+  return getDb().transaction(async (trx) => {
+    await lockIbans(trx, ctx);
+    const rows = await trx
       .select({ id: accounts.id, type: accounts.type, iban: accounts.iban, from: accounts.ibanFromSource })
       .from(accounts)
       .where(and(userScoped(ctx).owns(accounts), inArray(accounts.id, [...wanted.keys()])));
     let written = 0;
     for (const row of rows) {
-      const iban = wanted.get(row.id) as string;
-      if (!hasIbanField(row.type) || (row.iban === iban && row.from)) continue;
-      await tx
+      const iban = wanted.get(row.id);
+      if (iban === undefined || !hasIbanField(row.type) || (row.iban === iban && row.from)) continue;
+      await trx
         .update(accounts)
         .set({ iban, ibanFromSource: true })
         .where(and(eq(accounts.id, row.id), userScoped(ctx).owns(accounts)));

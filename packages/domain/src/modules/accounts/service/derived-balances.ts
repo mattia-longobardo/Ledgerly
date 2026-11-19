@@ -136,8 +136,8 @@ async function rebuildMovementBalances(
       }),
     );
   });
-  await getDb().transaction(async (tx) => {
-    await tx
+  await getDb().transaction(async (trx) => {
+    await trx
       .delete(balanceEntries)
       .where(
         and(
@@ -146,17 +146,17 @@ async function rebuildMovementBalances(
           inArray(balanceEntries.accountId, ids),
         ),
       );
-    if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
+    if (rows.length > 0) await trx.insert(balanceEntries).values(rows);
     const marked = wanted.filter((account) => manual.has(account.id) && !account.marked);
     if (marked.length > 0) {
-      await tx
+      await trx
         .insert(manualMovementAccounts)
         .values(marked.map((account) => userScoped(ctx).stamp({ accountId: account.id })))
         .onConflictDoNothing();
     }
     const unmarked = wanted.filter((account) => !manual.has(account.id) && account.marked);
     if (unmarked.length > 0) {
-      await tx.delete(manualMovementAccounts).where(
+      await trx.delete(manualMovementAccounts).where(
         and(
           userScoped(ctx).owns(manualMovementAccounts),
           inArray(
@@ -194,8 +194,8 @@ async function rebuildMonthEnds(
       }),
     ),
   );
-  await getDb().transaction(async (tx) => {
-    await tx
+  await getDb().transaction(async (trx) => {
+    await trx
       .delete(balanceEntries)
       .where(
         and(
@@ -204,7 +204,7 @@ async function rebuildMonthEnds(
           eq(balanceEntries.source, "derived"),
         ),
       );
-    if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
+    if (rows.length > 0) await trx.insert(balanceEntries).values(rows);
   });
   return { written: rows.length };
 }
@@ -216,13 +216,12 @@ async function rebuildMonthEnds(
  */
 export async function replacePortfolioPoints(
   ctx: Pick<Ctx, "userId">,
-  accountId: string,
-  from: CivilDate,
-  points: readonly { on: CivilDate; cents: Cents }[],
-  tx: Tx,
+  change: { accountId: string; from: CivilDate; points: readonly { on: CivilDate; cents: Cents }[] },
+  trx: Tx,
 ): Promise<{ written: number }> {
-  await requireAccount(ctx, accountId, tx);
-  await tx
+  const { accountId, from, points } = change;
+  await requireAccount(ctx, accountId, trx);
+  await trx
     .delete(balanceEntries)
     .where(
       and(
@@ -244,7 +243,7 @@ export async function replacePortfolioPoints(
         capturedAt,
       }),
     );
-  if (rows.length > 0) await tx.insert(balanceEntries).values(rows);
+  if (rows.length > 0) await trx.insert(balanceEntries).values(rows);
   return { written: rows.length };
 }
 
@@ -255,17 +254,17 @@ export async function replacePortfolioPoints(
 export async function openedNoLaterThan(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
-  on: CivilDate,
-  tx: Tx,
+  day: CivilDate,
+  trx: Tx,
 ): Promise<void> {
-  await tx
+  await trx
     .update(accounts)
-    .set({ openedOn: on })
+    .set({ openedOn: day })
     .where(
       and(
         eq(accounts.id, accountId),
         userScoped(ctx).owns(accounts),
-        or(isNull(accounts.openedOn), gt(accounts.openedOn, on)),
+        or(isNull(accounts.openedOn), gt(accounts.openedOn, day)),
       ),
     );
 }
@@ -279,9 +278,9 @@ export async function takeOverEntries(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
   from: CivilDate,
-  tx: Tx,
+  trx: Tx,
 ): Promise<BalanceEntry[]> {
-  return tx
+  return trx
     .delete(balanceEntries)
     .where(
       and(

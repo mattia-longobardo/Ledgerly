@@ -35,11 +35,11 @@ export async function createAccount(ctx: Ctx, input: unknown, outer?: Tx): Promi
     throw new AccountError("future_date");
   }
   const sortOrder = await nextSortOrder(ctx);
-  const run = <T>(work: (tx: Tx) => Promise<T>): Promise<T> =>
+  const run = <T>(work: (trx: Tx) => Promise<T>): Promise<T> =>
     outer ? work(outer) : getDb().transaction(work);
-  return run(async (tx) => {
-    const iban = await personIban(tx, ctx, parsed.iban, parsed.type, null);
-    const [account] = await tx
+  return run(async (trx) => {
+    const iban = await personIban(trx, ctx, { typed: parsed.iban, type: parsed.type }, null);
+    const [account] = await trx
       .insert(accounts)
       .values(
         userScoped(ctx).stamp({
@@ -62,7 +62,7 @@ export async function createAccount(ctx: Ctx, input: unknown, outer?: Tx): Promi
       )
       .returning();
     if (parsed.openingBalance) {
-      await tx.insert(balanceEntries).values(
+      await trx.insert(balanceEntries).values(
         userScoped(ctx).stamp({
           accountId: account.id,
           on: parsed.openingBalance.on,
@@ -98,9 +98,9 @@ export async function updateAccountSettings(ctx: Ctx, id: string, input: unknown
   ) {
     throw new AccountError("managed_locked");
   }
-  const saved = await getDb().transaction(async (tx) => {
-    const iban = await personIban(tx, ctx, settings.iban, settings.type, current);
-    const [row] = await tx
+  const saved = await getDb().transaction(async (trx) => {
+    const iban = await personIban(trx, ctx, { typed: settings.iban, type: settings.type }, current);
+    const [row] = await trx
       .update(accounts)
       .set({
         name: settings.name,
@@ -232,12 +232,12 @@ export async function removeAccount(ctx: Pick<Ctx, "userId">, id: string): Promi
  * again ties the same account back (§3.4) instead of making a second one. Returns the accounts.
  */
 export async function releaseSourceAccounts(
-  tx: Tx,
+  trx: Tx,
   ctx: Pick<Ctx, "userId">,
   provider: string,
   now: Date = new Date(),
 ): Promise<{ id: string; providerAccountId: string }[]> {
-  const rows = await tx
+  const rows = await trx
     .select({ id: accounts.id, providerAccountId: accounts.providerAccountId })
     .from(accounts)
     .where(and(eq(accounts.provider, provider), userScoped(ctx).owns(accounts)))
@@ -253,7 +253,7 @@ export async function releaseSourceAccounts(
     provider,
     "account",
     released.map((one) => one.id),
-    tx,
+    trx,
   );
   for (const one of released) {
     await linkExternal(
@@ -266,12 +266,12 @@ export async function releaseSourceAccounts(
         metadata: null,
       },
       now,
-      tx,
+      trx,
     );
   }
   if (rows.length > 0) {
     // The IBAN stays, now the person's to change: no source writes it any more.
-    await tx
+    await trx
       .update(accounts)
       .set({
         origin: "manual",
@@ -303,10 +303,10 @@ export async function restoreSourceAccounts(
   );
   if (links.size === 0) return 0;
   let restored = 0;
-  await getDb().transaction(async (tx) => {
+  await getDb().transaction(async (trx) => {
     const taken = new Set(
       (
-        await tx
+        await trx
           .select({ id: accounts.providerAccountId })
           .from(accounts)
           .where(and(eq(accounts.provider, provider), userScoped(ctx).owns(accounts)))
@@ -314,7 +314,7 @@ export async function restoreSourceAccounts(
     );
     for (const [externalId, accountId] of links) {
       if (taken.has(externalId)) continue;
-      const back = await tx
+      const back = await trx
         .update(accounts)
         .set({ origin: "synced", provider, providerAccountId: externalId, updatedAt: now })
         .where(and(eq(accounts.id, accountId), isNull(accounts.provider), userScoped(ctx).owns(accounts)))

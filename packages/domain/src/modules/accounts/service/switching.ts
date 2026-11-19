@@ -5,13 +5,13 @@
  * (`app/(app)/accounts/[id]/switch/switch.ts`); every write here takes its transaction.
  */
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
-import type { Ctx } from "../../platform/context";
-import type { CivilDate } from "../../shared/dates";
-import { getDb, type Tx } from "../../platform/db/client";
-import { userScoped } from "../../platform/db/scope";
-import { normalizeIban } from "../../platform/iban";
-import { hasIbanField } from "./rules";
-import { accounts, accountSwitches, balanceEntries } from "./schema";
+import type { Ctx } from "../../../platform/context";
+import type { CivilDate } from "../../../shared/dates";
+import { getDb, type Tx } from "../../../platform/db/client";
+import { userScoped } from "../../../platform/db/scope";
+import { normalizeIban } from "../../../platform/iban";
+import { hasIbanField } from "../rules";
+import { accounts, accountSwitches, balanceEntries } from "../schema";
 
 type Who = Pick<Ctx, "userId">;
 
@@ -62,7 +62,7 @@ export async function lastSourceBalance(
     )
     .orderBy(desc(balanceEntries.on))
     .limit(1);
-  return row ? { on: row.on as CivilDate, cents: row.cents } : null;
+  return row ? { on: row.on, cents: row.cents } : null;
 }
 
 interface SwitchRecord {
@@ -88,8 +88,8 @@ interface SwitchRecord {
  * it change, the switch is recorded with what was there before. Inside the caller's transaction.
  * Returns the id of the switch.
  */
-export async function recordSwitch(tx: Tx, ctx: Who, input: SwitchRecord, now: Date): Promise<string> {
-  const [account] = await tx
+export async function recordSwitch(trx: Tx, ctx: Who, input: SwitchRecord, now: Date): Promise<string> {
+  const [account] = await trx
     .select()
     .from(accounts)
     .where(and(eq(accounts.id, input.accountId), userScoped(ctx).owns(accounts)))
@@ -97,10 +97,10 @@ export async function recordSwitch(tx: Tx, ctx: Who, input: SwitchRecord, now: D
   if (!account || account.provider === null || account.providerAccountId === null) {
     throw new Error("the account has no source to switch from");
   }
-  const merged = input.mergedAccountId === null ? null : await releaseJoined(tx, ctx, input, now);
+  const merged = input.mergedAccountId === null ? null : await releaseJoined(trx, ctx, input, now);
   const iban = normalizeIban(input.identifier);
   const ibanTaken = account.iban === null && iban !== null && hasIbanField(account.type);
-  await tx
+  await trx
     .update(accounts)
     .set({
       provider: input.toProvider,
@@ -110,7 +110,7 @@ export async function recordSwitch(tx: Tx, ctx: Who, input: SwitchRecord, now: D
       ...(ibanTaken ? { iban, ibanFromSource: true } : {}),
     })
     .where(and(eq(accounts.id, account.id), userScoped(ctx).owns(accounts)));
-  const [row] = await tx
+  const [row] = await trx
     .insert(accountSwitches)
     .values(
       userScoped(ctx).stamp({
@@ -139,15 +139,18 @@ export async function recordSwitch(tx: Tx, ctx: Who, input: SwitchRecord, now: D
  * archived, so it leaves the lists and the net worth and keeps every row. Returns what it was.
  */
 async function releaseJoined(
-  tx: Tx,
+  trx: Tx,
   ctx: Who,
   input: SwitchRecord,
   now: Date,
 ): Promise<{ id: string; state: string }> {
-  const [joined] = await tx
+  const mergedId = input.mergedAccountId;
+  // Called only for a switch that joined an account (`releaseSwitch`).
+  if (mergedId === null) throw new Error("releaseJoined: the switch joined no account");
+  const [joined] = await trx
     .select()
     .from(accounts)
-    .where(and(eq(accounts.id, input.mergedAccountId as string), userScoped(ctx).owns(accounts)))
+    .where(and(eq(accounts.id, mergedId), userScoped(ctx).owns(accounts)))
     .for("update");
   if (
     !joined ||
@@ -158,7 +161,7 @@ async function releaseJoined(
   ) {
     throw new Error("the account to join is not the bank's account");
   }
-  await tx
+  await trx
     .update(accounts)
     .set({
       origin: "manual",
@@ -177,8 +180,8 @@ async function releaseJoined(
  * IBAN the switch gave it goes; the switch is closed. Inside the caller's transaction. Returns the
  * switch as it was, for the other modules' part of the undo.
  */
-export async function closeSwitch(tx: Tx, ctx: Who, switchId: string, now: Date): Promise<AccountSwitch> {
-  const [row] = await tx
+export async function closeSwitch(trx: Tx, ctx: Who, switchId: string, now: Date): Promise<AccountSwitch> {
+  const [row] = await trx
     .update(accountSwitches)
     .set({ undoneAt: now })
     .where(
@@ -190,7 +193,7 @@ export async function closeSwitch(tx: Tx, ctx: Who, switchId: string, now: Date)
     )
     .returning();
   if (!row) throw new Error("no open switch");
-  await tx
+  await trx
     .update(accounts)
     .set({
       provider: row.fromProvider,
@@ -202,7 +205,7 @@ export async function closeSwitch(tx: Tx, ctx: Who, switchId: string, now: Date)
   // The account the switch joined takes its bank back, as it was, unless the person gave it another
   // source meanwhile (or deleted it: the column is then `null`).
   if (row.mergedAccountId !== null) {
-    await tx
+    await trx
       .update(accounts)
       .set({
         origin: "synced",

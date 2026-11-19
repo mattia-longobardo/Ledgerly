@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts } from "@domain/modules/accounts/queries";
 import { applyProviderAccounts, saveProviderBalance } from "@domain/modules/accounts/service";
-import { openSwitchOf } from "@domain/modules/accounts/switching";
+import { openSwitchOf } from "@domain/modules/accounts/service/switching";
 import type { IncomingTransaction } from "@domain/modules/transactions/rules";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import type { Ctx } from "@domain/platform/context";

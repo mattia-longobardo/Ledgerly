@@ -404,7 +404,7 @@ export async function rebuild(
   const todayOn = today(ctx.timeZone);
   const rates = await ratesFor(book, todayOn);
   const points = computePoints(book, rates, todayOn, from);
-  await replacePortfolioPoints(ctx, investment.accountId, from, points, tx);
+  await replacePortfolioPoints(ctx, { accountId: investment.accountId, from, points }, tx);
 }
 
 export async function currencyOf(ctx: Pick<Ctx, "userId">, accountId: string): Promise<string> {

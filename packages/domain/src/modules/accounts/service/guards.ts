@@ -40,13 +40,13 @@ export class AccountError extends Error {
  * One writer of IBANs at a time for a person (04-now.md §4.6.1, point 2): the check "one IBAN, one
  * account" and the write that follows it run inside the same transaction, after this lock.
  */
-export async function lockIbans(tx: Tx, ctx: Pick<Ctx, "userId">): Promise<void> {
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`accounts-iban:${ctx.userId}`}))`);
+export async function lockIbans(trx: Tx, ctx: Pick<Ctx, "userId">): Promise<void> {
+  await trx.execute(sql`select pg_advisory_xact_lock(hashtext(${`accounts-iban:${ctx.userId}`}))`);
 }
 
 /** The person's accounts as the rule "one IBAN, one account" reads them, inside the lock. */
-export async function ibanHolders(tx: Tx, ctx: Pick<Ctx, "userId">) {
-  return tx
+export async function ibanHolders(trx: Tx, ctx: Pick<Ctx, "userId">) {
+  return trx
     .select({ id: accounts.id, name: accounts.name, iban: accounts.iban, state: accounts.state })
     .from(accounts)
     .where(and(userScoped(ctx).owns(accounts), sql`${accounts.iban} is not null`))
@@ -59,19 +59,19 @@ export async function ibanHolders(tx: Tx, ctx: Pick<Ctx, "userId">) {
  * (read-only); otherwise the typed value, checked, and refused when another account has it.
  */
 export async function personIban(
-  tx: Tx,
+  trx: Tx,
   ctx: Pick<Ctx, "userId">,
-  typed: string | null,
-  type: AccountType,
+  wanted: { typed: string | null; type: AccountType },
   current: { id: string; iban: string | null; ibanFromSource: boolean } | null,
 ): Promise<{ iban: string | null; ibanFromSource: boolean }> {
+  const { typed, type } = wanted;
   if (!hasIbanField(type)) return { iban: null, ibanFromSource: false };
   if (current?.ibanFromSource && current.iban !== null) return { iban: current.iban, ibanFromSource: true };
   if (typed === null) return { iban: null, ibanFromSource: false };
   const iban = normalizeIban(typed);
   if (iban === null) throw new AccountError("iban_invalid");
-  await lockIbans(tx, ctx);
-  const conflict = ibanConflict(iban, await ibanHolders(tx, ctx), current?.id ?? null);
+  await lockIbans(trx, ctx);
+  const conflict = ibanConflict(iban, await ibanHolders(trx, ctx), current?.id ?? null);
   if (conflict !== null) {
     throw new AccountError(conflict.kind === "exists" ? "iban_exists" : "iban_archived", conflict.name);
   }
@@ -108,10 +108,10 @@ export async function requireAccount(
 export async function refuseManaged(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
-  on: CivilDate,
+  day: CivilDate,
 ): Promise<void> {
   const since = await managedAccounts().managedSinceOf(ctx, accountId);
-  if (since !== null && on >= since) throw new AccountError("managed_locked");
+  if (since !== null && day >= since) throw new AccountError("managed_locked");
 }
 
 /**

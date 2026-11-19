@@ -7,7 +7,7 @@ import { convertCents } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
 import type { Cents } from "../../../shared/money";
 import { isStale, netWorth } from "../rules";
-import { readingsAt } from "../queries";
+import { type Account, readingsAt } from "../queries";
 import { accounts, balanceEntries, snapshotRuns } from "../schema";
 
 export interface SnapshotOutcome {
@@ -36,75 +36,28 @@ export async function runSnapshot(
   month: MonthKey,
   now: Date = new Date(),
 ): Promise<SnapshotOutcome> {
-  const on = lastDayOfMonth(month);
+  const monthEnd = lastDayOfMonth(month);
   const included = await getDb()
     .select()
     .from(accounts)
     .where(and(userScoped(ctx).owns(accounts), eq(accounts.inSnapshot, true)))
     .orderBy(asc(accounts.sortOrder), asc(accounts.id));
   const open = included.filter((account) => account.state !== "archived");
-
   const balances =
     open.length === 0
-      ? new Map()
+      ? new Map<string, Cents>()
       : await readingsAt(
           ctx,
-          open.map((a) => a.id),
-          on,
+          open.map((account) => account.id),
+          monthEnd,
           { observed: true },
         );
-  const warnings: string[] = [];
-  const values: (typeof balanceEntries.$inferInsert)[] = [];
-  for (const account of open) {
-    const balance = balances.get(account.id);
-    if (balance === undefined) continue;
-    if (account.origin === "synced" && isStale(account.lastSyncedAt, account.staleAfterHours, now)) {
-      warnings.push(account.name);
-    }
-    values.push(
-      userScoped(ctx).stamp({
-        accountId: account.id,
-        on,
-        balanceCents: balance,
-        source: "system" as const,
-        capturedAt: now,
-      }),
-    );
-  }
-
-  if (values.length > 0) {
-    await getDb()
-      .insert(balanceEntries)
-      .values(values)
-      .onConflictDoUpdate({
-        target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
-        set: { balanceCents: sql`excluded.balance_cents`, capturedAt: now },
-      });
-  }
-
-  const currency = ctx.displayCurrency;
-  const rates = await ratesOn(
-    open.some((account) => account.currency !== currency)
-      ? [currency, ...open.map((account) => account.currency)]
-      : [],
-    on,
-    on,
-  );
-  // The one total of the accounts (ACC-3), with the filter of the snapshot (decision D2): the
-  // accounts «in the snapshot» that have a balance, each converted at the month end's rate.
-  const { total } = netWorth(
-    open.flatMap((account) => {
-      const balance = balances.get(account.id);
-      return balance === undefined
-        ? []
-        : [{ account, cents: convertCents(balance, account.currency, currency, on, rates) }];
-    }),
-    "inSnapshot",
-  );
+  const { written, warnings } = await writeMonthEnds(ctx, open, balances, { monthEnd, now });
+  const { currency, total } = await snapshotTotal(ctx, open, balances, monthEnd);
   const outcome: SnapshotOutcome = {
     month: monthKey(month),
-    written: values.length,
-    skipped: open.length - values.length,
+    written,
+    skipped: open.length - written,
     total,
     currency,
     warnings,
@@ -125,7 +78,74 @@ export async function runSnapshot(
   return outcome;
 }
 
-/** The month the snapshot of `on` covers: the month before it (spec §10.2, the 1st at 00:05). */
-export function snapshotMonthFor(on: CivilDate): MonthKey {
-  return addMonths(monthKey(on), -1);
+/** The `system` balance of each account that has one at the month end; the stale ones, by name. */
+async function writeMonthEnds(
+  ctx: Pick<Ctx, "userId">,
+  open: readonly Account[],
+  balances: ReadonlyMap<string, Cents>,
+  when: { monthEnd: CivilDate; now: Date },
+): Promise<{ written: number; warnings: string[] }> {
+  const warnings: string[] = [];
+  const values: (typeof balanceEntries.$inferInsert)[] = [];
+  for (const account of open) {
+    const balance = balances.get(account.id);
+    if (balance === undefined) continue;
+    if (account.origin === "synced" && isStale(account.lastSyncedAt, account.staleAfterHours, when.now)) {
+      warnings.push(account.name);
+    }
+    values.push(
+      userScoped(ctx).stamp({
+        accountId: account.id,
+        on: when.monthEnd,
+        balanceCents: balance,
+        source: "system" as const,
+        capturedAt: when.now,
+      }),
+    );
+  }
+  if (values.length > 0) {
+    await getDb()
+      .insert(balanceEntries)
+      .values(values)
+      .onConflictDoUpdate({
+        target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
+        set: { balanceCents: sql`excluded.balance_cents`, capturedAt: when.now },
+      });
+  }
+  return { written: values.length, warnings };
+}
+
+/**
+ * The one total of the accounts (ACC-3), with the filter of the snapshot (decision D2): the
+ * accounts «in the snapshot» that have a balance, each converted at the month end's rate.
+ */
+async function snapshotTotal(
+  ctx: Pick<Ctx, "displayCurrency">,
+  open: readonly Account[],
+  balances: ReadonlyMap<string, Cents>,
+  monthEnd: CivilDate,
+): Promise<{ currency: string; total: Cents | null }> {
+  const currency = ctx.displayCurrency;
+  const rates = await ratesOn(
+    open.some((account) => account.currency !== currency)
+      ? [currency, ...open.map((account) => account.currency)]
+      : [],
+    monthEnd,
+    monthEnd,
+  );
+  const { total } = netWorth(
+    open.flatMap((account) => {
+      const balance = balances.get(account.id);
+      return balance === undefined
+        ? []
+        : [{ account, cents: convertCents(balance, account.currency, currency, monthEnd, rates) }];
+    }),
+    "inSnapshot",
+  );
+  return { currency, total };
+}
+
+/** The month the snapshot of `day` covers: the month before it (spec §10.2, the 1st at 00:05). */
+export function snapshotMonthFor(day: CivilDate): MonthKey {
+  return addMonths(monthKey(day), -1);
 }

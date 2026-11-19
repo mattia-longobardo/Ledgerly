@@ -75,9 +75,9 @@ export async function updateBalanceEntry(
     note: parsed.note,
     capturedAt: new Date(),
   };
-  const row = await getDb().transaction(async (tx) => {
+  const row = await getDb().transaction(async (trx) => {
     if (parsed.on !== current.on) {
-      await tx
+      await trx
         .delete(balanceEntries)
         .where(
           and(
@@ -88,7 +88,7 @@ export async function updateBalanceEntry(
           ),
         );
     }
-    const [updated] = await tx
+    const [updated] = await trx
       .update(balanceEntries)
       .set(values)
       .where(and(eq(balanceEntries.id, id), userScoped(ctx).owns(balanceEntries)))
@@ -99,7 +99,7 @@ export async function updateBalanceEntry(
   return row;
 }
 
-/** A provider's reading of a balance, as the Wallet sync hands it over (spec §9.1). */
+/** A provider's reading of a balance, as a provider's sync hands it over (spec §9.1). */
 export interface ProviderBalanceInput {
   /** The civil date of the reading **in the user's zone** (spec §9.1): the caller's to compute. */
   on: CivilDate;
@@ -108,7 +108,7 @@ export interface ProviderBalanceInput {
 }
 
 /**
- * A balance Wallet published, stored as its own `provider` row (spec §9.1).
+ * A balance a provider published, stored as its own `provider` row (spec §9.1).
  *
  * Deliberately separate from {@link saveBalanceEntry}, which writes `manual` and only ever that:
  * the unique key is `(account, on, source)`, so the two never collide, and a manual balance stays
@@ -122,7 +122,7 @@ export interface ProviderBalanceInput {
  * unchanged would otherwise go stale while being read every hour. Same transaction as the balance,
  * so the two facts cannot disagree.
  *
- * An account Investments manages (a Wallet account handed over to a service, §1.3, A4) takes no
+ * An account Investments manages (a provider's account handed over to a service, §1.3, A4) takes no
  * provider balance from `managed_since` on: its value there is the `portfolio` source alone. The
  * reading still happened, so `last_synced_at` moves and the account does not go stale; `null` says
  * no balance was written.
@@ -148,9 +148,9 @@ export async function saveProviderBalance(
     availableCents: input.availableCents ?? null,
     capturedAt: now,
   };
-  return getDb().transaction(async (tx) => {
-    const row = await writeBalanceEntry(tx, ctx, { accountId, on: input.on, source: "provider" }, values);
-    await tx
+  return getDb().transaction(async (trx) => {
+    const row = await writeBalanceEntry(trx, ctx, { accountId, on: input.on, source: "provider" }, values);
+    await trx
       .update(accounts)
       .set({ lastSyncedAt: now })
       .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
@@ -167,12 +167,12 @@ export async function saveImportBalance(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
   input: { on: CivilDate; cents: Cents; note: string | null },
-  tx: Tx,
+  trx: Tx,
 ): Promise<BalanceEntry> {
   if (!isCivilDate(input.on)) throw new RangeError(`Not a civil date: "${input.on}"`);
-  await requireAccount(ctx, accountId, tx);
+  await requireAccount(ctx, accountId, trx);
   const values = { balanceCents: input.cents, note: input.note, capturedAt: new Date() };
-  return writeBalanceEntry(tx, ctx, { accountId, on: input.on, source: "import" }, values);
+  return writeBalanceEntry(trx, ctx, { accountId, on: input.on, source: "import" }, values);
 }
 
 export async function deleteBalanceEntry(

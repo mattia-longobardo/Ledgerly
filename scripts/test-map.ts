@@ -545,7 +545,7 @@ export const MODULES: Module[] = [
     files: [
       "packages/domain/src/modules/accounts/service/**",
       "packages/domain/src/modules/accounts/queries/**",
-      "packages/domain/src/modules/accounts/rules.ts",
+      "packages/domain/src/modules/accounts/rules/**",
       "packages/domain/src/modules/transactions/service/**",
       "packages/domain/src/modules/transactions/queries/**",
       "packages/domain/src/modules/transactions/rules/**",
