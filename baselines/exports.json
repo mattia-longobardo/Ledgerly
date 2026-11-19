@@ -34,6 +34,12 @@
     "metaRoute",
     "openApiDocument"
   ],
+  "packages/design-tokens/src/index.ts": [
+    "COLORS",
+    "TONE_TEXT",
+    "tokensCss",
+    "type Tone"
+  ],
   "packages/domain/src/modules/accounts/client.ts": [
     "ACCOUNT_TYPES",
     "AccountType",

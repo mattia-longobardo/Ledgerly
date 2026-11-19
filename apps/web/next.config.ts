@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@ledgerly/api",
     "@ledgerly/api-contract",
+    "@ledgerly/design-tokens",
     "@ledgerly/domain",
     "@ledgerly/plugin-contract",
     "@ledgerly/plugin-host",

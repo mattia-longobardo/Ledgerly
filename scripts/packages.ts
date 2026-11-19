@@ -48,6 +48,7 @@ export function workspaces(repo: string): Workspace[] {
 export const ALLOWED: Record<string, { only?: string[]; never?: string[]; typesOnly?: string[] }> = {
   "@ledgerly/domain": { only: ["drizzle-orm", "pg", "zod"] },
   "@ledgerly/api-contract": { only: ["zod"] },
+  "@ledgerly/design-tokens": { only: [] },
   "@ledgerly/plugin-contract": { only: ["zod"] },
   "@ledgerly/plugin-host": {
     only: ["@ledgerly/plugin-contract", "@ledgerly/domain"],
