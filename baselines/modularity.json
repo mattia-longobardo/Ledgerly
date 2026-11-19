@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 212,
+    "deepImports": 206,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -362,12 +362,6 @@
     "packages/domain/src/platform/auth/emails.ts → messages/it.json"
   ],
   "deepImports": [
-    "app/(app)/accounts/[id]/page.tsx → modules/accounts/ui/balance-entries",
-    "app/(app)/accounts/[id]/page.tsx → modules/accounts/ui/connections",
-    "app/(app)/accounts/[id]/page.tsx → modules/accounts/ui/display",
-    "app/(app)/accounts/[id]/page.tsx → modules/accounts/ui/settings-form",
-    "app/(app)/accounts/[id]/page.tsx → modules/accounts/ui/switch/undo-switch",
-    "app/(app)/accounts/[id]/page.tsx → modules/interests/ui/present",
     "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/switch-check",
     "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/undo-switch",
     "app/(app)/accounts/new/page.tsx → modules/accounts/ui/account-form",

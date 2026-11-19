@@ -113,6 +113,7 @@ export const MODULES: Module[] = [
       "packages/domain/src/modules/accounts/**",
       page("accounts"),
       "apps/web/src/app/(app)/page.tsx",
+      "apps/web/src/app/(app)/overview-screen.tsx",
       "packages/domain/src/platform/iban*",
     ],
     integration: [

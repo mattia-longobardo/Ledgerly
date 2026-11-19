@@ -1,10 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
+import { accounts, views } from "@ledgerly/api-contract/accounts";
 import { Button } from "@ledgerly/ui/button";
 import { CardFooter } from "@ledgerly/ui/card";
+import { invalidate } from "@ledgerly/ui/data";
 import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input, Select } from "@ledgerly/ui/input";
 import { SettingsSection, FIELD_GRID } from "@ledgerly/ui/section";
@@ -69,7 +70,6 @@ export function AccountSettingsForm({
   const t = useTranslations("accounts.settings");
   const types = useTranslations("accounts.types");
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [ibanError, setIbanError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -131,7 +131,7 @@ export function AccountSettingsForm({
         return;
       }
       notify(t("danger.archivedToast", { name: account.name }));
-      router.refresh();
+      invalidate(accounts.getAccount, views.getNetWorth, views.getAccountContext);
     });
   }
 
@@ -143,7 +143,7 @@ export function AccountSettingsForm({
         return;
       }
       notify(t("restored"));
-      router.refresh();
+      invalidate(accounts.getAccount, views.getNetWorth, views.getAccountContext);
     });
   }
 

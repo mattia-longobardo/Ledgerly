@@ -24,7 +24,7 @@ import { periodEnd as lastDayOf, periodMonths, type PeriodQuery } from "@ledgerl
 import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import type { Params } from "@ledgerly/ui/url";
-import { centsOf, colorFor } from "./display";
+import { centsOf, changeOf, colorFor } from "./display";
 
 type NetWorth = RouteOutput<typeof views.getNetWorth>;
 type Daily = RouteOutput<typeof views.getNetWorthDaily>;
@@ -182,19 +182,6 @@ function dayPlot(daily: Daily, bands: Layer[], months: string[], locale: UiLocal
   };
 }
 
-/**
- * shortcut: the API answers no change across the chart's window yet, so this is the domain's
- * `changeBetween` over two of its figures; drop it once `/net-worth` and `/net-worth/daily` answer it.
- */
-function windowChange(
-  last: Cents | null,
-  first: Cents | null,
-): { cents: Cents | null; fraction: number | null } {
-  if (last === null || first === null) return { cents: null, fraction: null };
-  const cents = last - first;
-  return { cents, fraction: first === 0n ? null : Number(cents) / Math.abs(Number(first)) };
-}
-
 /** The lowest edge of the pile at each step, as the chart draws it: the bottom of its scale. */
 function bottomOf(plot: Plot): (Cents | null)[] {
   const { bottom } = stackLayers(
@@ -217,7 +204,7 @@ function CardBody({
   const accountsText = useTranslations("accounts");
   const currency = { currency: plot.currency };
   const end = plot.total[plot.total.length - 1] ?? null;
-  const change = windowChange(end, plot.total.find((value) => value !== null) ?? null);
+  const change = changeOf(end, plot.total.find((value) => value !== null) ?? null);
   /** What the grain control carries: the page's own parameters and the period. */
   const carried = { ...carry, ...period.params };
   const money = (value: Cents | null, signed = false) =>

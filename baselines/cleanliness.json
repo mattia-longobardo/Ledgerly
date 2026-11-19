@@ -64,7 +64,6 @@
   },
   "complexity": {
     "apps/web/src/app/(app)/accounts/[id]/connection-status.ts": 1,
-    "apps/web/src/app/(app)/accounts/[id]/page.tsx": 2,
     "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 1,
     "apps/web/src/app/(app)/banks/connect/accounts-step.tsx": 2,
@@ -199,7 +198,6 @@
   },
   "id-length": {
     "apps/web/src/app/(app)/accounts/[id]/delete-account.tsx": 1,
-    "apps/web/src/app/(app)/accounts/[id]/page.tsx": 10,
     "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 5,
     "apps/web/src/app/(app)/accounts/new/page.tsx": 1,
@@ -555,7 +553,6 @@
     "plugins/enablebanking/src/handlers.ts": 2
   },
   "max-lines": {
-    "apps/web/src/app/(app)/accounts/[id]/page.tsx": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 1,
     "apps/web/src/app/(app)/expenses/categories/board.tsx": 1,
     "apps/web/src/app/(app)/expenses/page.tsx": 1,
@@ -602,7 +599,6 @@
   "max-lines-per-function": {
     "apps/web/src/app/(app)/accounts/[id]/connection-status.ts": 1,
     "apps/web/src/app/(app)/accounts/[id]/delete-account.tsx": 1,
-    "apps/web/src/app/(app)/accounts/[id]/page.tsx": 3,
     "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 2,
     "apps/web/src/app/(app)/banks/connect/accounts-step.tsx": 2,
@@ -844,8 +840,7 @@
   "no-restricted-syntax": {
     "apps/web/src/app/.well-known/oauth-protected-resource/[[...resource]]/route.ts": 1,
     "apps/web/src/app/(app)/accounts/[id]/delete-account.tsx": 3,
-    "apps/web/src/app/(app)/accounts/[id]/page.tsx": 9,
-    "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 8,
+    "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 6,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 1,
     "apps/web/src/app/(app)/banks/connect/accounts-step.tsx": 2,
     "apps/web/src/app/(app)/banks/connect/page.tsx": 7,

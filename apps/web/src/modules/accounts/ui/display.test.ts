@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PALETTE } from "@ledgerly/design-tokens";
-import { changeBetween, colorField, colorFor, shareOf } from "./display";
+import { shareOf } from "@ledgerly/domain/accounts";
+import { changeOf as changeBetween, colorField, colorFor } from "./display";
 
 describe("changeBetween", () => {
   it("is unknown when either end is unknown, never zero", () => {

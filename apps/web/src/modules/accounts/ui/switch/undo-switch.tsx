@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
+import { accounts, views } from "@ledgerly/api-contract/accounts";
 import { Button } from "@ledgerly/ui/button";
+import { invalidate } from "@ledgerly/ui/data";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import { undoSwitchAction } from "../../calls";
@@ -52,6 +54,8 @@ export function UndoSwitch({
       }
       setOpen(false);
       notify(t("done"));
+      // The settings tab reads the account from `/api/v1`; the page of the switch is drawn on the server.
+      invalidate(accounts.getAccount, views.getAccountContext, views.getNetWorth);
       router.refresh();
     });
   }

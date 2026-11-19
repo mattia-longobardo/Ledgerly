@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { balances, views } from "@ledgerly/api-contract/accounts";
 import { type FormEvent, useId, useRef, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
+import { invalidate } from "@ledgerly/ui/data";
 import { Badge } from "@ledgerly/ui/badge";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { Field } from "@ledgerly/ui/field";
@@ -35,6 +36,11 @@ export interface EntryRow {
   /** The amounts as the person would type them back, for the correction form. */
   amountInput: string;
   availableInput: string;
+}
+
+/** A balance changed: the entries, the figures and the charts of the account are read again. */
+function reread() {
+  invalidate(balances.getAccountBalances, views.getNetWorth, views.getAccountDailyBalances);
 }
 
 /** What the form reads out of itself, the shape both Server Actions take. */
@@ -86,7 +92,6 @@ function EditEntryDialog({
   const t = useTranslations("accounts.entries");
   const prefix = useId();
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -101,7 +106,7 @@ function EditEntryDialog({
         }
         notify(t("updated"));
         onClose();
-        router.refresh();
+        reread();
       } catch {
         setError(t("errors.failed"));
       }
@@ -168,7 +173,6 @@ export function BalanceEntries({
   const form = useRef<HTMLFormElement>(null);
   const prefix = useId();
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<EntryRow | null>(null);
 
@@ -185,7 +189,7 @@ export function BalanceEntries({
         setError(null);
         form.current?.reset();
         notify(t("saved"));
-        router.refresh();
+        reread();
       } catch {
         setError(t("errors.failed"));
       }
@@ -200,7 +204,7 @@ export function BalanceEntries({
         return;
       }
       notify(t("deleted"));
-      router.refresh();
+      reread();
     });
   }
 

@@ -259,7 +259,7 @@ describe("the fields of R3 accounts: every figure a screen shows is the API's", 
 
     // Parity: what the pages work out today from the same view (`accounts/page.tsx`, `(app)/page.tsx`).
     const { accountsView } = await import("@ledgerly/domain/accounts");
-    const { changeBetween, shareOf } = await import("@/modules/accounts/ui/display");
+    const { changeBetween, shareOf } = await import("@ledgerly/domain/accounts");
     const page = await accountsView(alice, { through: "2026-02-01", months: 13, includeArchived: true });
     const wire = (change: { cents: bigint | null; fraction: number | null }) => ({
       amount: change.cents === null ? null : (Number(change.cents) / 100).toFixed(2),
@@ -327,7 +327,7 @@ describe("the fields of R3 accounts: every figure a screen shows is the API's", 
     const all = (await send(alice, "GET", `/accounts/${main.id}/balances`)).body.balances;
     expect(all.at(-1).change).toEqual({ amount: null, fraction: null });
     // Parity with the page's table (`entryRows`): each entry from the next older one.
-    const { changeBetween } = await import("@/modules/accounts/ui/display");
+    const { changeBetween } = await import("@ledgerly/domain/accounts");
     const amounts = ["180", "150", "120", "100"].map((value) => BigInt(value) * 100n);
     expect(all.map((entry: { change: { fraction: number | null } }) => entry.change.fraction)).toEqual(
       amounts.map((cents, index) => changeBetween(cents, amounts[index + 1] ?? null).fraction),

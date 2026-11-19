@@ -8,19 +8,17 @@ import { UndoSwitch } from "@/modules/accounts/ui/switch/undo-switch";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
-import { normalizeIban } from "@ledgerly/domain/platform/iban";
 import { labelOf } from "@/platform/integrations/registry";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin, isPluginActive } from "@ledgerly/domain/platform/plugins";
 import { maskIdentifier } from "@ledgerly/domain/platform/plugins";
-import { Badge } from "@ledgerly/ui/badge";
-import { Button, ButtonLink } from "@ledgerly/ui/button";
+import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { Page } from "@ledgerly/ui/shell/page";
-import { EmptyState } from "@ledgerly/ui/states";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
 import { freeBankAccounts, switchable } from "./switch";
+import { SwitchChoices } from "./switch-choices";
 
 export const metadata: Metadata = { title: "Switch account" };
 
@@ -142,101 +140,24 @@ export default async function SwitchAccountPage({
     );
   }
 
-  // Step "Account" (§4): the accounts of the person's banks not yet in Ledgerly, in its currency.
-  const accountTypes = await getTranslations("accounts.types");
-  const banks = await freeBankAccounts(ctx, account.id, account.currency, (type) => accountTypes(type));
-  const own = account.iban;
-  const choices = banks.flatMap((bank) => bank.accounts);
-  if (banks.length === 0 || choices.length === 0) {
-    return frame(
-      "account",
-      banks.length === 0 ? (
-        <EmptyState
-          title={t("account.noBank")}
-          description={t("account.noBankText")}
-          actions={<ButtonLink href={"/banks/connect" as Route}>{t("account.connect")}</ButtonLink>}
-        />
-      ) : (
-        <EmptyState
-          title={t("account.noFree")}
-          description={t("account.noFreeText", { currency: account.currency })}
-          actions={
-            <ButtonLink href={"/settings/integrations" as Route}>{t("account.integrations")}</ButtonLink>
-          }
-        />
-      ),
-    );
-  }
-  const sameIban = (identifier: string | null) => own !== null && normalizeIban(identifier) === own;
-  const otherIban = (identifier: string | null) =>
-    own !== null && normalizeIban(identifier) !== null && normalizeIban(identifier) !== own;
-  const preselected =
-    choices.find((choice) => sameIban(choice.identifier)) ??
-    (choices.filter((choice) => !otherIban(choice.identifier)).length === 1
-      ? choices.find((choice) => !otherIban(choice.identifier))
-      : undefined);
+  // Step "Account" (§4): the choices are read from `/api/v1`. Their masked identifier is read here,
+  // since no answer carries an IBAN, even masked (H45); the names are the API's, so `String`.
+  const banks = await freeBankAccounts(ctx, account.id, account.currency, String);
+  const masked = Object.fromEntries(
+    banks.flatMap((bank) =>
+      bank.accounts.map((choice) => [
+        `${bank.connectionId}:${choice.providerAccountId}`,
+        maskIdentifier(choice.identifier),
+      ]),
+    ),
+  );
   return frame(
     "account",
-    <Card>
-      <form method="get" action={here} className="flex flex-col gap-3.5">
-        <input type="hidden" name="step" value="check" />
-        <fieldset className="flex flex-col gap-3">
-          <legend className="text-xl font-semibold">
-            {t("account.question", { account: account.name })}
-          </legend>
-          <p className="text-sm text-muted">{t("account.explain", { currency: account.currency })}</p>
-          {banks.map((bank) => (
-            <fieldset key={bank.connectionId} className="flex flex-col gap-1.5">
-              <legend className="font-medium">{bank.bank}</legend>
-              {bank.expired && (
-                <p className="text-sm text-warn">{t("account.expired", { bank: bank.bank })}</p>
-              )}
-              {bank.accounts.map((choice) => {
-                const value = `${bank.connectionId}:${choice.providerAccountId}`;
-                const disabled = bank.expired || otherIban(choice.identifier);
-                const reason = `why-${choice.providerAccountId}`;
-                return (
-                  <label key={value} className="flex min-h-6 flex-wrap items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name="t"
-                      value={value}
-                      required
-                      disabled={disabled}
-                      defaultChecked={preselected === choice && !disabled}
-                      aria-describedby={disabled ? reason : undefined}
-                    />
-                    <span className="break-words">
-                      {[
-                        choice.name ?? t("account.unnamed"),
-                        maskIdentifier(choice.identifier),
-                        choice.currency,
-                      ]
-                        .filter((part) => part !== null)
-                        .join(" · ")}
-                    </span>
-                    {sameIban(choice.identifier) && <Badge tone="pos">{t("account.sameIban")}</Badge>}
-                    {choice.here !== null && (
-                      <Badge tone="neutral">{t("account.alreadyHere", { account: choice.here.name })}</Badge>
-                    )}
-                    {otherIban(choice.identifier) && (
-                      <span id={reason} className="text-muted">
-                        {t("account.otherIban")}
-                      </span>
-                    )}
-                  </label>
-                );
-              })}
-            </fieldset>
-          ))}
-        </fieldset>
-        <div className="flex justify-end gap-2 max-[480px]:flex-col-reverse">
-          <ButtonLink href={settings}>{t("actions.cancel")}</ButtonLink>
-          <Button type="submit" variant="primary">
-            {t("account.start")}
-          </Button>
-        </div>
-      </form>
-    </Card>,
+    <SwitchChoices
+      account={{ id: account.id, name: account.name, currency: account.currency }}
+      settings={settings}
+      here={here}
+      masked={masked}
+    />,
   );
 }
