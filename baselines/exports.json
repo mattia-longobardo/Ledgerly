@@ -33,11 +33,13 @@
     "MIN_SYNC_GAP_MINUTES",
     "RouteContract",
     "SCHEDULE_PREVIEW_COUNT",
+    "SESSION_CSRF_HEADER",
     "SETTINGS",
     "SETTINGS_ROUTES",
     "civilDate",
     "metaRoute",
     "openApiDocument",
+    "syncRuleSchema",
     "syncScheduleSchema"
   ],
   "packages/design-tokens/src/index.ts": [

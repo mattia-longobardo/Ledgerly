@@ -1,7 +1,8 @@
 // When a connection syncs, as the wire carries it (docs/scheduler.md): the limits and the shape a
 // client checks a schedule against before it asks the server. The next times and the problems of a
 // schedule are the server's (`POST /connections/{id}/schedule/preview`): a client computes nothing.
-// The domain keeps its own copy (it does not import the contract); `apps/api` holds the two equal.
+// One source: the domain imports these limits and derives its schema from `syncRuleSchema`, adding
+// the order of the lists and the check of a cron's values (`@ledgerly/domain/platform/integrations`).
 import { z } from "zod";
 
 /** The shortest gap between two passes of one connection, over all its rules together. */
@@ -35,7 +36,8 @@ const days = z.discriminatedUnion("kind", [
   }),
 ]);
 
-const syncRule = z.union([
+/** One rule of a schedule as the wire carries it. */
+export const syncRuleSchema = z.union([
   z
     .object({
       kind: z.literal("interval"),
@@ -58,4 +60,4 @@ const syncRule = z.union([
 ]);
 
 /** A schedule a client may send: the shape and the limits. `rules: []` is «only by hand». */
-export const syncScheduleSchema = z.object({ rules: z.array(syncRule).max(MAX_RULES) });
+export const syncScheduleSchema = z.object({ rules: z.array(syncRuleSchema).max(MAX_RULES) });

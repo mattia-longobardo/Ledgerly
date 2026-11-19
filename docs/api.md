@@ -41,6 +41,17 @@ TOKEN=$(curl -sS -u "$CLIENT_ID:$CLIENT_SECRET" https://dash.longobardo.me/api/a
 curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/summary
 ```
 
+### The web's session
+
+The web app of the instance calls `/api/v1` with its session cookie, from the same origin. A session
+gets the scopes `read`, `write` and `security`, and `admin` for an admin. It follows the rules of
+every page: a session that still owes its TOTP setup, a revoked session or a blocked person gets
+`401`. A write (any method but `GET`, `HEAD`, `OPTIONS`) by cookie must carry `Origin` equal to the
+instance's address and the header `X-Ledgerly-CSRF` (any value; `SESSION_CSRF_HEADER` of
+`@ledgerly/api-contract`), otherwise `403`. `/api/v1` answers no CORS request, so no other origin
+reads an answer made with the cookie. With an `Authorization` header the cookie is not read: the
+token alone decides, and a bad token is `401` even next to a valid cookie.
+
 ### Routes
 
 | Route                                      | Scope              |

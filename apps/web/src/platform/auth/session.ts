@@ -3,46 +3,20 @@ import type { Route } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
-import { getPreferences } from "@ledgerly/domain/users";
-import type { Preferences } from "@ledgerly/domain/users";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { readEnv } from "@ledgerly/domain/platform/env";
-import { hasPasswordAccount } from "@ledgerly/domain/platform/auth";
 import { getAuth } from "@ledgerly/domain/platform/auth";
-import { TWO_FACTOR_SETUP_PATH, twoFactorSetupRequired } from "@ledgerly/domain/platform/auth";
-import { buildCtx } from "@ledgerly/domain/users";
+import { TWO_FACTOR_SETUP_PATH } from "@ledgerly/domain/platform/auth";
+import { buildCtx, type Preferences, signedInFrom } from "./signed-in";
 
 /** The session's context: the one mapping of the domain (audit USR-3). */
 export { buildCtx as ctxFrom };
 
-/**
- * The signed-in user and their saved preferences, or null. Cached per request. `setupPending`: the
- * session is real but the person still has to set up TOTP (TWO_FACTOR_POLICY=required), so it opens
- * only the setup page and nothing else.
- */
-const getSignedIn = cache(async () => {
+/** The signed-in user of this render, cached per request (`signedInFrom`). */
+const getSignedIn = cache(async () =>
   // Headers first: it marks the render as dynamic before Better Auth (and its env) is touched, so
   // pages Next.js tries to prerender at build time (e.g. /_not-found) never reach it.
-  const requestHeaders = await headers();
-  const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
-  if (!session) return null;
-  const policy = readEnv().TWO_FACTOR_POLICY;
-  const twoFactorEnabled = session.user.twoFactorEnabled === true;
-  // The account lookup only when it can change the answer: most requests skip it.
-  const setupPending =
-    policy === "required" &&
-    !twoFactorEnabled &&
-    twoFactorSetupRequired({
-      policy,
-      twoFactorEnabled,
-      hasPassword: await hasPasswordAccount(session.user.id),
-    });
-  return {
-    user: session.user,
-    preferences: await getPreferences({ userId: session.user.id }),
-    setupPending,
-  };
-});
+  signedInFrom(await headers()),
+);
 
 /**
  * The signed-in user's context, or null. Cached per request. A session still waiting for its TOTP

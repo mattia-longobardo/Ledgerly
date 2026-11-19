@@ -3,6 +3,16 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-19 · the web's session (release R2, users and settings)
+
+- `/api/v1` also accepts the session cookie of the web, same origin: scopes `read`, `write`,
+  `security`, and `admin` for an admin. A session that owes its TOTP setup, a revoked session or a
+  blocked person answers `401`. A write by cookie needs `Origin` equal to the instance and the
+  header `X-Ledgerly-CSRF` (`SESSION_CSRF_HEADER` of the contract), otherwise `403`. The Bearer token
+  works as before and, when it is there, decides alone. No answer carries
+  `Access-Control-Allow-Credentials`.
+- The contract also exports `syncRuleSchema`, the shape of one rule of a schedule.
+
 ## 2026-11-19 · the preview of a schedule (release R2, users and settings)
 
 - New `POST /api/v1/connections/{id}/schedule/preview` (`read`, capability `connections`): the body

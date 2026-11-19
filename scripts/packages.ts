@@ -46,7 +46,9 @@ export function workspaces(repo: string): Workspace[] {
  * the known list of M1, not here.
  */
 export const ALLOWED: Record<string, { only?: string[]; never?: string[]; typesOnly?: string[] }> = {
-  "@ledgerly/domain": { only: ["drizzle-orm", "pg", "zod"] },
+  // `api-contract` (zod only): the limits and the shape of what comes over the wire have one source,
+  // which the domain computes from (the schedule of a connection). The contract never imports the domain.
+  "@ledgerly/domain": { only: ["@ledgerly/api-contract", "drizzle-orm", "pg", "zod"] },
   "@ledgerly/api-contract": { only: ["zod"] },
   "@ledgerly/design-tokens": { only: [] },
   "@ledgerly/plugin-contract": { only: ["zod"] },

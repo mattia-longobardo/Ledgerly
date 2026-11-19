@@ -9,6 +9,12 @@
  */
 import { z } from "zod";
 import {
+  LAST_DAY,
+  MAX_RULES,
+  MIN_SYNC_GAP_MINUTES,
+  syncRuleSchema as wireRuleSchema,
+} from "@ledgerly/api-contract";
+import {
   addDays,
   type CivilDate,
   civilDateIn,
@@ -18,81 +24,41 @@ import {
   wallClockIn,
 } from "../../shared/dates";
 
-/**
- * The shortest gap between two passes of one connection, over all its rules together. Every pass
- * is several calls to the provider (Wallet: accounts, then the records window page by page), and
- * Wallet's API is unofficial and publishes no quota: 15 minutes is the floor D7 already ran on
- * without a 429, and at most 96 passes a day per connection.
- */
-export const MIN_SYNC_GAP_MINUTES = 15;
-/** The longest interval a rule may repeat at: a rule restarts every day at its `from`. */
-const MAX_INTERVAL_MINUTES = 24 * 60;
-export const MAX_RULES = 8;
-/** One rule's times: as many as the gap allows in a day. */
-export const MAX_TIMES = (24 * 60) / MIN_SYNC_GAP_MINUTES;
+// The limits and the shape of a rule are the contract's (`@ledgerly/api-contract`, one source for
+// the web, the apps and the domain); the domain adds what it computes from: sorted lists without
+// repeats, a cron written with single spaces, and a cron whose fields name real values.
+export { LAST_DAY, MAX_RULES, MAX_TIMES, MIN_SYNC_GAP_MINUTES } from "@ledgerly/api-contract";
+
 /** How far ahead a schedule is looked at: a cron that names 29 February runs once in four years. */
 const HORIZON_DAYS = 4 * 366 + 7;
 /** How far ahead the gap between passes is checked: every weekday of every kind of month. */
 const GAP_CHECK_DAYS = 400;
 
-const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
-const timeOfDay = z.string().regex(TIME_OF_DAY);
-export const LAST_DAY = -1;
-
 const sortedUnique = <T extends number | string>(values: T[]): T[] =>
-  [...new Set(values)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  [...new Set(values)].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
 
-const daysSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("every") }),
-  z.object({
-    kind: z.literal("weekdays"),
-    weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7).transform(sortedUnique),
-  }),
-  z.object({
-    kind: z.literal("monthDays"),
-    monthDays: z
-      .array(
-        z
-          .number()
-          .int()
-          .refine((day) => day === LAST_DAY || (day >= 1 && day <= 31)),
-      )
-      .min(1)
-      .max(32)
-      .transform(sortedUnique),
-  }),
-]);
-export type SyncDays = z.output<typeof daysSchema>;
+type WireRule = z.output<typeof wireRuleSchema>;
+type WireDays = Extract<WireRule, { days: unknown }>["days"];
 
-const intervalRuleSchema = z
-  .object({
-    kind: z.literal("interval"),
-    everyMinutes: z.number().int().min(MIN_SYNC_GAP_MINUTES).max(MAX_INTERVAL_MINUTES),
-    from: timeOfDay,
-    until: timeOfDay,
-    days: daysSchema,
-  })
-  .refine((rule) => rule.until >= rule.from, { path: ["until"] });
+function normalisedDays(days: WireDays): WireDays {
+  if (days.kind === "weekdays") return { ...days, weekdays: sortedUnique(days.weekdays) };
+  if (days.kind === "monthDays") return { ...days, monthDays: sortedUnique(days.monthDays) };
+  return days;
+}
 
-const timesRuleSchema = z.object({
-  kind: z.literal("times"),
-  times: z.array(timeOfDay).min(1).max(MAX_TIMES).transform(sortedUnique),
-  days: daysSchema,
-});
+function normalisedRule(rule: WireRule): WireRule {
+  if (rule.kind === "cron") return { ...rule, expression: rule.expression.split(/\s+/).join(" ") };
+  if (rule.kind === "times")
+    return { ...rule, times: sortedUnique(rule.times), days: normalisedDays(rule.days) };
+  return { ...rule, days: normalisedDays(rule.days) };
+}
 
-const cronRuleSchema = z.object({
-  kind: z.literal("cron"),
-  expression: z
-    .string()
-    .trim()
-    .max(120)
-    .transform((value) => value.split(/\s+/).join(" "))
-    .refine((value) => parseCron(value) !== null),
-});
-
-export const syncRuleSchema = z.union([intervalRuleSchema, timesRuleSchema, cronRuleSchema]);
+export const syncRuleSchema = wireRuleSchema
+  .transform(normalisedRule)
+  .refine((rule) => rule.kind !== "cron" || parseCron(rule.expression) !== null);
 export type SyncRule = z.output<typeof syncRuleSchema>;
 export type RuleKind = SyncRule["kind"];
+export type SyncDays = Extract<SyncRule, { days: unknown }>["days"];
 
 /** The shape a stored or submitted schedule must have. `rules: []` is "manual". */
 export const syncScheduleSchema = z.object({ rules: z.array(syncRuleSchema).max(MAX_RULES) });
