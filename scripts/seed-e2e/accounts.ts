@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { BANK_PLUGIN_ID as BANK_PLUGIN } from "../../apps/web/src/app/(app)/banks/plugin";
 import { accounts } from "@domain/modules/accounts/schema";
 import { createAccount } from "@domain/modules/accounts/service";
+import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { parseKeyRing, sealJson } from "@domain/platform/crypto";
 import { addDays, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
@@ -14,7 +15,7 @@ import { findInstancePlugin } from "@domain/platform/plugins/queries";
 import { pluginUserCredentials } from "@domain/platform/plugins/schema";
 import { connectionBag, setPluginActive } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
-import { contextOf, syncedAccount } from "./common";
+import { contextOf, syncedAccount, walletMovement } from "./common";
 
 /**
  * The display-currency journey (docs/design/investments.md §1.8): one account in EUR and one in
@@ -60,6 +61,20 @@ export async function seedSwitching(email: string = USERS.switching.email): Prom
   const iban = "IT60X0542811101000000123456";
   const current = await syncedAccount(ctx, "e2e-switching-1", "Conto da passare");
   await getDb().update(accounts).set({ iban, ibanFromSource: true }).where(eq(accounts.id, current));
+  // Decision H58: an account whose every movement is also another open account's, archived through
+  // its dialog. Two Wallet accounts with the same movements; neither is a bank's, so the switch's
+  // journey does not see them.
+  const on = today(ctx.timeZone);
+  for (const [providerAccountId, name] of [
+    ["e2e-switching-twin", "Conto gemello"],
+    ["e2e-switching-double", "Conto doppio"],
+  ] as const) {
+    const account = await syncedAccount(ctx, providerAccountId, name);
+    await upsertFromProvider(ctx, account, [
+      walletMovement(`${providerAccountId}-1`, addDays(on, -6), -4550n, "Esselunga", null),
+      walletMovement(`${providerAccountId}-2`, addDays(on, -3), -1299n, "Netflix", null),
+    ]);
+  }
   if (!(await findInstancePlugin(BANK_PLUGIN))) return;
   await setPluginActive(ctx, { pluginId: BANK_PLUGIN, active: true });
   await getDb()

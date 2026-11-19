@@ -21,10 +21,7 @@ import { SyncStatus } from "@ledgerly/ui/sync-status";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type CardFormat, centsOf, colorFor, counterValue } from "@/modules/accounts/client";
-import {
-  ConnectionRow as ConnectionStatus,
-  type ConnectionRowProps,
-} from "../../settings/integrations/connection-row";
+import { AccountConnection } from "./connection-status";
 import { EntriesTab } from "./entries-tab";
 import { OverviewTab } from "./overview-tab";
 import { SettingsTab } from "./settings-tab";
@@ -47,15 +44,7 @@ export interface AccountPage {
   color: string;
 }
 
-interface ServerProps {
-  id: string;
-  /** The IBAN, grouped, on the settings tab only: no answer of `/api/v1` carries it (H45). */
-  iban: string | null;
-  /** The row of the connection the account comes from (ux n2 §3.3), or null. */
-  connection: ConnectionRowProps | null;
-}
-
-export function AccountScreen({ id, iban, connection }: ServerProps) {
+export function AccountScreen({ id }: { id: string }) {
   const text = useTranslations("accounts");
   const preferences = useApi(profile.getPreferences, {});
   const account = useApi(accountRoutes.getAccount, { params: { id } });
@@ -84,8 +73,6 @@ export function AccountScreen({ id, iban, connection }: ServerProps) {
                             numberFormat: numberStyle(prefs),
                           },
                         }}
-                        iban={iban}
-                        connection={connection}
                       />
                     )}
                   </Loaded>
@@ -102,9 +89,7 @@ export function AccountScreen({ id, iban, connection }: ServerProps) {
 function AccountView({
   view,
   page: read,
-  iban,
-  connection,
-}: Omit<ServerProps, "id"> & {
+}: {
   view: NetWorth;
   page: Pick<AccountPage, "account" | "context" | "format">;
 }) {
@@ -117,7 +102,8 @@ function AccountView({
   const row = view.accounts[index];
   // Still tied to its source, with no connection to it: the source was disconnected, and a new
   // connection to it ties the account again (ux n1 §5.4).
-  const disconnected = row.service === null && account.origin === "synced" && connection === null;
+  const disconnected =
+    row.service === null && account.origin === "synced" && read.context.connectionId === null;
   const source = sourceOf(text, { ...read, row }, disconnected);
   const page: AccountPage = { ...read, row, index, source, color: colorFor(account, index) };
   const requested = search.get("tab");
@@ -129,7 +115,7 @@ function AccountView({
   }));
   return (
     <>
-      <Header page={page} view={view} disconnected={disconnected} connection={connection} />
+      <Header page={page} view={view} disconnected={disconnected} />
       <TabLinks label={detailText("tabs.label")} tabs={tabs} />
       {tab === "overview" && <OverviewTab page={page} />}
       {tab === "transactions" && (
@@ -139,7 +125,7 @@ function AccountView({
         />
       )}
       {tab === "entries" && <EntriesTab page={page} />}
-      {tab === "settings" && <SettingsTab page={page} iban={iban} />}
+      {tab === "settings" && <SettingsTab page={page} />}
     </>
   );
 }
@@ -159,17 +145,7 @@ function sourceOf(
   });
 }
 
-function Header({
-  page,
-  view,
-  disconnected,
-  connection,
-}: {
-  page: AccountPage;
-  view: NetWorth;
-  disconnected: boolean;
-  connection: ConnectionRowProps | null;
-}) {
+function Header({ page, view, disconnected }: { page: AccountPage; view: NetWorth; disconnected: boolean }) {
   const text = useTranslations("accounts");
   const detailText = useTranslations("accounts.detail");
   const { account, row } = page;
@@ -204,7 +180,16 @@ function Header({
           )}
         </>
       }
-      above={connection !== null && <ConnectionStatus {...connection} compact />}
+      above={
+        page.context.connectionId !== null && (
+          <AccountConnection
+            connectionId={page.context.connectionId}
+            // A service of Investments fed by a provider has its key replaced on its own page.
+            keyHref={row.service !== null ? `/investments/${account.id}/connection` : null}
+            format={page.format}
+          />
+        )
+      }
       title={account.name}
     >
       <Figures page={page} view={view} />

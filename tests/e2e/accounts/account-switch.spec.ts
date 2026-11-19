@@ -44,3 +44,35 @@ test("another person does not reach the page of the switch", async ({ page, brow
   expect((await other.goto(path))?.status()).toBe(404);
   await context.close();
 });
+
+/** Decision H58: archiving a double asks first and says, in its Danger zone, that it counts in no month. */
+test("archiving an account that doubles another asks first, and its Danger zone says so", async ({
+  page,
+}) => {
+  await page.goto("/accounts");
+  await page.getByRole("link", { name: "Conto doppio" }).first().click();
+  await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
+  const account = new URL(page.url()).pathname;
+  await page.goto(`${account}?tab=settings`);
+  const archive = page.getByRole("button", { name: "Archive account" });
+  await hydrated(archive);
+
+  // Cancel changes nothing.
+  await archive.click();
+  const dialog = page.getByRole("dialog", { name: "Archive Conto doppio?" });
+  await expect(dialog).toContainText("Conto doppio is a double of “Conto gemello”");
+  await dialog.getByRole("button", { name: "Keep it" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("button", { name: "Restore account" })).toHaveCount(0);
+
+  await archive.click();
+  await dialog.getByRole("button", { name: "Archive account" }).click();
+  await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Conto doppio archived");
+  await expect(
+    page.getByText("Archived as a double of “Conto gemello”: its movements count in no month."),
+  ).toBeVisible();
+
+  // Restored, it is an open account again: the next run finds it as the seed left it.
+  await page.getByRole("button", { name: "Restore account" }).click();
+  await expect(page.getByRole("button", { name: "Archive account" })).toBeVisible();
+});

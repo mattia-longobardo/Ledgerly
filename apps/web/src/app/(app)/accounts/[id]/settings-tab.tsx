@@ -1,68 +1,88 @@
 "use client";
 
 // The tab «Settings» of an account's page: its connections, its settings form, the switch to the
-// bank and the Danger zone. It reads nothing of its own: the account and its context are the
-// page's, the connections are read by their section, and the IBAN comes from the server (H45).
+// bank and the Danger zone. The account and its context are the page's, the connections are read by
+// their section; the tab reads the IBAN (H45) and the twin of a double (H58), which only it shows.
 import { useTranslations } from "next-intl";
+import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { hasIbanField } from "@ledgerly/domain/accounts/client";
 import { civilDateIn, today } from "@ledgerly/format/dates";
 import { formatDate } from "@ledgerly/format/format";
 import { ButtonLink } from "@ledgerly/ui/button";
+import { useApi } from "@ledgerly/ui/data";
+import { Loaded } from "@ledgerly/ui/loaded";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { AccountSettingsForm, ConnectionsSection, UndoSwitch } from "@/modules/accounts/client";
 import type { AccountPage } from "./account-screen";
 import { DeleteAccount } from "./delete-account";
 
-export function SettingsTab({ page, iban }: { page: AccountPage; iban: string | null }) {
-  const { account, context } = page;
-  const providerLabel = context.providerLabel;
+export function SettingsTab({ page }: { page: AccountPage }) {
+  const input = { params: { id: page.account.id } };
+  // Only the web's own session reads the IBAN (scope `session`, H45).
+  const iban = useApi(accountRoutes.getAccountIban, input);
+  const twin = useApi(accountRoutes.getAccountTwin, input);
   return (
     // Save and Discard for the settings live in the banner, which appears with a change: above the
     // connections, the first section of the tab, so it is seen where the tab starts.
     <UnsavedChangesProvider>
-      <ConnectionsSection accountId={account.id} />
-      <AccountSettingsForm
-        sourceExtra={
-          context.switch !== null || context.switchOffer !== "none" ? <SwitchBlock page={page} /> : null
-        }
-        deleteControl={
-          <DeleteAccount
-            accountId={account.id}
-            name={account.name}
-            source={account.origin === "synced" ? providerLabel : null}
-          />
-        }
-        today={today(page.format.timeZone)}
-        // The place the account holds in the list, so the colour control shows the colour the
-        // charts and the list really draw it with (`colorFor`) rather than a fixed blue.
-        index={page.index}
-        account={{
-          id: account.id,
-          name: account.name,
-          type: account.type,
-          currency: account.currency,
-          provider: providerLabel,
-          origin: account.origin,
-          state: account.state,
-          color: account.color,
-          reference: account.reference,
-          // The IBAN is shown in full only here, on the person's own page (H45).
-          iban,
-          ibanFromSource: account.ibanFromSource,
-          ibanField: hasIbanField(account.type),
-          purpose: account.purpose,
-          openedOn: account.openedOn,
-          notes: account.notes,
-          inNetWorth: account.inNetWorth,
-          inSnapshot: account.inSnapshot,
-          countsAsLiquid: account.countsAsLiquid,
-          lowBalance: account.lowBalance ?? "",
-          staleAfterHours: account.staleAfterHours,
-          reminder: account.reminder,
-          betweenEntries: account.betweenEntries,
-        }}
-      />
+      <ConnectionsSection accountId={page.account.id} />
+      <Loaded state={iban}>
+        {(own) => (
+          <Loaded state={twin}>
+            {(double) => <Settings page={page} iban={own.iban} twin={double.twin?.name ?? null} />}
+          </Loaded>
+        )}
+      </Loaded>
     </UnsavedChangesProvider>
+  );
+}
+
+function Settings({ page, iban, twin }: { page: AccountPage; iban: string | null; twin: string | null }) {
+  const { account, context } = page;
+  const providerLabel = context.providerLabel;
+  return (
+    <AccountSettingsForm
+      twin={twin}
+      sourceExtra={
+        context.switch !== null || context.switchOffer !== "none" ? <SwitchBlock page={page} /> : null
+      }
+      deleteControl={
+        <DeleteAccount
+          accountId={account.id}
+          name={account.name}
+          source={account.origin === "synced" ? providerLabel : null}
+        />
+      }
+      today={today(page.format.timeZone)}
+      // The place the account holds in the list, so the colour control shows the colour the
+      // charts and the list really draw it with (`colorFor`) rather than a fixed blue.
+      index={page.index}
+      account={{
+        id: account.id,
+        name: account.name,
+        type: account.type,
+        currency: account.currency,
+        provider: providerLabel,
+        origin: account.origin,
+        state: account.state,
+        color: account.color,
+        reference: account.reference,
+        // The IBAN is shown in full only here, on the person's own page (H45).
+        iban,
+        ibanFromSource: account.ibanFromSource,
+        ibanField: hasIbanField(account.type),
+        purpose: account.purpose,
+        openedOn: account.openedOn,
+        notes: account.notes,
+        inNetWorth: account.inNetWorth,
+        inSnapshot: account.inSnapshot,
+        countsAsLiquid: account.countsAsLiquid,
+        lowBalance: account.lowBalance ?? "",
+        staleAfterHours: account.staleAfterHours,
+        reminder: account.reminder,
+        betweenEntries: account.betweenEntries,
+      }}
+    />
   );
 }
 

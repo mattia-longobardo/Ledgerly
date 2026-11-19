@@ -64,6 +64,21 @@ const OVERLAYS: Screen[] = [
       await settledDialog(page);
     },
   },
+  {
+    // Decision H58: the confirmation before an account that doubles another is archived. Opened only.
+    name: "the dialog of archiving a double",
+    session: "switching",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/accounts");
+      await page.getByRole("link", { name: "Conto doppio" }).first().click();
+      await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
+      await page.goto(`${new URL(page.url()).pathname}?tab=settings`);
+      await settled(page);
+      await page.getByRole("button", { name: "Archive account" }).click();
+      await settledDialog(page);
+    },
+  },
 ];
 
 test.describe("every screen", () => audit(PAGES));

@@ -63,7 +63,6 @@
     "packages/domain/src/modules/transactions/taxonomy.ts": 1
   },
   "complexity": {
-    "apps/web/src/app/(app)/accounts/[id]/connection-status.ts": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 1,
     "apps/web/src/app/(app)/banks/connect/accounts-step.tsx": 2,
@@ -595,7 +594,6 @@
     "packages/ui/src/chart.tsx": 1
   },
   "max-lines-per-function": {
-    "apps/web/src/app/(app)/accounts/[id]/connection-status.ts": 1,
     "apps/web/src/app/(app)/accounts/[id]/delete-account.tsx": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/page.tsx": 1,
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 2,

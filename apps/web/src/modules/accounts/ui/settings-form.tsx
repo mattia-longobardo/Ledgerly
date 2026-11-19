@@ -7,6 +7,7 @@ import { Button } from "@ledgerly/ui/button";
 import { CardFooter } from "@ledgerly/ui/card";
 import { invalidate } from "@ledgerly/ui/data";
 import { Field } from "@ledgerly/ui/field";
+import { Modal } from "@ledgerly/ui/modal";
 import { Checkbox, Input, Select } from "@ledgerly/ui/input";
 import { SettingsSection, FIELD_GRID } from "@ledgerly/ui/section";
 import { notify } from "@ledgerly/ui/toast";
@@ -59,8 +60,11 @@ export function AccountSettingsForm({
   today,
   sourceExtra,
   deleteControl,
+  twin = null,
 }: {
   account: SettingsValues;
+  /** The name of the account this one doubles (H58, `GET /accounts/{id}/twin`), or null. */
+  twin?: string | null;
   /** The account's place in the list, the one `colorFor` colours it by. */
   index: number;
   today: string;
@@ -74,6 +78,7 @@ export function AccountSettingsForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [ibanError, setIbanError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const unsaved = useUnsavedForm(formRef, pending);
   const synced = account.origin === "synced";
@@ -126,6 +131,7 @@ export function AccountSettingsForm({
 
   /** Archiving is the safe half: it never deletes, and `onRestore` undoes it. */
   function onArchive() {
+    setConfirming(false);
     startTransition(async () => {
       const result = await archiveAccountAction(account.id);
       if (!result.ok) {
@@ -133,7 +139,7 @@ export function AccountSettingsForm({
         return;
       }
       notify(t("danger.archivedToast", { name: account.name }));
-      invalidate(accounts.getAccount, views.getNetWorth, views.getAccountContext);
+      invalidate(accounts.getAccount, accounts.getAccountTwin, views.getNetWorth, views.getAccountContext);
     });
   }
 
@@ -145,7 +151,7 @@ export function AccountSettingsForm({
         return;
       }
       notify(t("restored"));
-      invalidate(accounts.getAccount, views.getNetWorth, views.getAccountContext);
+      invalidate(accounts.getAccount, accounts.getAccountTwin, views.getNetWorth, views.getAccountContext);
     });
   }
 
@@ -315,7 +321,11 @@ export function AccountSettingsForm({
       <SettingsSection title={t("danger.title")} description={t("danger.description")}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted">
-            {account.state === "archived" ? t("danger.archived") : t("danger.explain")}
+            {account.state !== "archived"
+              ? t("danger.explain")
+              : twin === null
+                ? t("danger.archived")
+                : t("danger.archivedDouble", { twin })}
           </p>
           <div className="flex flex-wrap gap-2">
             {/* Two intentions, two buttons: archiving keeps everything and can be undone, and
@@ -326,13 +336,35 @@ export function AccountSettingsForm({
                 {t("danger.restore")}
               </Button>
             ) : (
-              <Button size="sm" onClick={onArchive} disabled={pending}>
+              // A double is archived only after the dialog says what changes (H58).
+              <Button
+                size="sm"
+                onClick={twin === null ? onArchive : () => setConfirming(true)}
+                disabled={pending}
+              >
                 {t("danger.archive")}
               </Button>
             )}
             {deleteControl}
           </div>
         </div>
+        {twin !== null && (
+          <Modal
+            open={confirming}
+            onOpenChange={setConfirming}
+            title={t("danger.doubleTitle", { name: account.name })}
+            footer={
+              <>
+                <Button onClick={() => setConfirming(false)}>{t("danger.cancel")}</Button>
+                <Button variant="primary" onClick={onArchive}>
+                  {t("danger.archive")}
+                </Button>
+              </>
+            }
+          >
+            <p className="text-sm">{t("danger.doubleBody", { name: account.name, twin })}</p>
+          </Modal>
+        )}
       </SettingsSection>
     </form>
   );
