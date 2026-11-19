@@ -133,6 +133,9 @@ test("Settings gives each section the whole row, its card against the right edge
 
   for (const width of [2560, 1280] as const) {
     await openAt(page, width, "expanded", "/settings/profile");
+    // The sections are drawn from `/api/v1` once the page is there: measure them once they are.
+    await page.getByLabel("Full name").waitFor();
+    await page.getByLabel("Timezone").waitFor();
     const [first, second] = [await box(page, account), await box(page, preferences)];
     // One under the other, never side by side.
     expect(second.y, `at ${width}px`).toBeGreaterThan(first.y + 100);
