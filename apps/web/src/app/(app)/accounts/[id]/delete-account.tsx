@@ -109,6 +109,7 @@ export function DeleteAccount({
       setErrors((before) => Object.fromEntries(Object.entries(before).filter(([one]) => one !== key)));
       notify(t("movedToast", { what: describe(one) }));
       load();
+      router.refresh();
     });
   }
 

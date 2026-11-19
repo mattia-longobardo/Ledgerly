@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
 import { Badge } from "@ledgerly/ui/badge";
@@ -11,6 +11,7 @@ import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { Modal } from "@ledgerly/ui/modal";
 import { ProgressBar } from "@ledgerly/ui/progress-bar";
+import { applySwitchAction, checkSwitchAction } from "../../calls";
 
 /** One movement of the report, as the server gives it. */
 interface SwitchRow {
@@ -71,6 +72,18 @@ interface SwitchCommands {
   apply(fingerprint: string): Promise<{ ok: true } | Refusal>;
 }
 
+/** The two calls of the step for one account and one bank account. */
+function useCommands(accountId: string, connectionId: string, bankAccountId: string): SwitchCommands {
+  return useMemo(
+    () => ({
+      check: () => checkSwitchAction(accountId, { connectionId, bankAccountId }),
+      apply: (fingerprint: string) =>
+        applySwitchAction(accountId, { connectionId, bankAccountId, fingerprint }),
+    }),
+    [accountId, connectionId, bankAccountId],
+  );
+}
+
 const PAGE = 20;
 const KNOWN_ERRORS = [
   "source_unavailable",
@@ -92,7 +105,8 @@ export function SwitchCheck({
   source,
   numberFormat,
   locale,
-  commands,
+  accountId,
+  target,
   leaveHref,
   doneHref,
 }: {
@@ -100,12 +114,14 @@ export function SwitchCheck({
   source: string;
   numberFormat: NumberFormat;
   locale: UiLocale;
-  commands: SwitchCommands;
+  accountId: string;
+  target: { connectionId: string; bankAccountId: string };
   leaveHref: Route;
   doneHref: Route;
 }) {
   const t = useTranslations("accounts.switch");
   const router = useRouter();
+  const commands = useCommands(accountId, target.connectionId, target.bankAccountId);
   const [state, setState] = useState<
     | { kind: "loading" }
     | { kind: "report"; report: SwitchReportView }

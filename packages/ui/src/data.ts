@@ -97,6 +97,16 @@ function isOutput<R extends RouteContract>(data: unknown): data is RouteOutput<R
   return data !== undefined;
 }
 
+/** The answer of one route as a write needs it: the one in the cache, or a read of it. */
+export async function read<R extends RouteContract>(route: R, input: RouteInput<R>): Promise<RouteOutput<R>> {
+  const entry = entryOf(route, input);
+  if (isOutput<R>(entry.snapshot.data)) return entry.snapshot.data;
+  const data = await call(route, input);
+  publish(entry, { data, error: null, loading: false });
+  entry.loaded = true;
+  return data;
+}
+
 /** Reads again every cached read of these routes; a read nobody shows any more is dropped. */
 export function invalidate(...routes: RouteContract[]): void {
   const ids = new Set(routes.map((route) => route.id));

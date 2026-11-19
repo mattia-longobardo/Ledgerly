@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
@@ -9,7 +10,7 @@ import { Checkbox, Input, Select } from "@ledgerly/ui/input";
 import { SettingsSection, FIELD_GRID } from "@ledgerly/ui/section";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
-import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../actions";
+import { archiveAccountAction, restoreAccountAction, saveAccountSettingsAction } from "../calls";
 import { colorField } from "./display";
 import { ibanErrorText } from "./iban-field";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "@ledgerly/domain/accounts/client";
@@ -68,6 +69,7 @@ export function AccountSettingsForm({
   const t = useTranslations("accounts.settings");
   const types = useTranslations("accounts.types");
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [ibanError, setIbanError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -129,14 +131,19 @@ export function AccountSettingsForm({
         return;
       }
       notify(t("danger.archivedToast", { name: account.name }));
+      router.refresh();
     });
   }
 
   function onRestore() {
     startTransition(async () => {
       const result = await restoreAccountAction(account.id);
-      if (!result.ok) setError(t("errors.failed"));
-      else notify(t("restored"));
+      if (!result.ok) {
+        setError(t("errors.failed"));
+        return;
+      }
+      notify(t("restored"));
+      router.refresh();
     });
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
@@ -8,7 +9,7 @@ import { Input, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { SettingsSection } from "@ledgerly/ui/section";
 import { notify } from "@ledgerly/ui/toast";
-import { addConnectionAction, removeConnectionAction, updateConnectionAction } from "../actions";
+import { addConnectionAction, removeConnectionAction, updateConnectionAction } from "../calls";
 import { CONNECTION_CHANNELS, type ConnectionChannel } from "@ledgerly/domain/accounts/client";
 
 /** One thing hanging off the account, as the browser gets it. */
@@ -48,6 +49,7 @@ export function ConnectionsSection({ accountId, rows }: { accountId: string; row
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function messageFor(code: string): string {
     if (code === "duplicate_connection") return t("errors.duplicate");
@@ -85,6 +87,7 @@ export function ConnectionsSection({ accountId, rows }: { accountId: string; row
       }
       notify(t(draft.id === null ? "added" : "saved", { name: input.name.trim() }));
       setDraft(null);
+      router.refresh();
     });
   }
 
@@ -99,6 +102,7 @@ export function ConnectionsSection({ accountId, rows }: { accountId: string; row
       }
       notify(t("removed", { name }), "success");
       setDraft(null);
+      router.refresh();
     });
   }
 

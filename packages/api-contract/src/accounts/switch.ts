@@ -83,7 +83,7 @@ export const checkAccountSwitch = defineRoute({
   capability: "accounts",
   summary:
     "The dry run of moving the account to a bank's account: the report the person reads before «Apply».",
-  actions: ["checkSwitchAction"],
+  actions: [],
   params: byAccount,
   body: z.object(target).strict(),
   response: report,
@@ -122,7 +122,7 @@ export const applyAccountSwitch = defineRoute({
   capability: "accounts",
   summary:
     "Applies the switch the report described: only with the report's `fingerprint` (`conflict`, reason `stale`).",
-  actions: ["applySwitchAction"],
+  actions: [],
   params: byAccount,
   body: z.object({ ...target, fingerprint: z.string().min(1) }).strict(),
   response: z.object({ matched: z.number().int(), transfers: z.number().int(), fresh: z.number().int() }),
@@ -141,7 +141,7 @@ export const undoAccountSwitch = defineRoute({
   scope: "write",
   capability: "accounts",
   summary: "«Undo switch»: the account goes back to its source of before.",
-  actions: ["undoSwitchAction"],
+  actions: [],
   params: byAccount,
   response: null,
   status: 204,

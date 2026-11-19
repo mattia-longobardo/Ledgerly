@@ -1,10 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
+import { undoSwitchAction } from "../../calls";
 
 /**
  * "Undo switch" (ux/n4-account-switch.md §10): a confirmation that says what goes back and what to
@@ -19,7 +21,7 @@ export function UndoSwitch({
   publishes,
   joined = null,
   available,
-  undo,
+  accountId,
 }: {
   account: string;
   source: string;
@@ -32,23 +34,25 @@ export function UndoSwitch({
   joined?: string | null;
   /** False when the source of before is no longer connected (§10.4). */
   available: boolean;
-  undo(): Promise<{ ok: boolean }>;
+  accountId: string;
 }) {
   const t = useTranslations("accounts.switch.undo");
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function confirm() {
     setFailed(false);
     startTransition(async () => {
-      const result = await undo().catch(() => ({ ok: false }));
+      const result = await undoSwitchAction(accountId).catch(() => ({ ok: false }));
       if (!result.ok) {
         setFailed(true);
         return;
       }
       setOpen(false);
       notify(t("done"));
+      router.refresh();
     });
   }
 

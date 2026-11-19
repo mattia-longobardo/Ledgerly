@@ -34,7 +34,7 @@ export const listAccountDependents = defineRoute({
   capability: "accounts",
   summary:
     "What rests on the account and has to move before it can be deleted, and the open accounts it can move to.",
-  actions: ["accountDependentsAction"],
+  actions: [],
   params: byAccount,
   response: z.object({
     dependents: z.array(dependent),
@@ -58,7 +58,7 @@ export const moveAccountDependent = defineRoute({
   scope: "write",
   capability: "accounts",
   summary: "Moves one thing that rests on the account to another open account.",
-  actions: ["moveDependentAction"],
+  actions: [],
   params: byAccount,
   body: z.object({ kind: z.enum(DEPENDENT_KINDS), id: z.union([id(), z.literal("")]), to: id() }).strict(),
   response: null,
@@ -78,7 +78,7 @@ export const deleteAccount = defineRoute({
   capability: "accounts",
   summary:
     "Deletes the account with its movements and balances, only when nothing rests on it (`conflict`, reason `in_use`).",
-  actions: ["deleteAccountAction"],
+  actions: [],
   params: byAccount,
   response: null,
   status: 204,

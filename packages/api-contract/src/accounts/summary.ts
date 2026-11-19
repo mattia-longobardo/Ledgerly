@@ -108,7 +108,7 @@ export const runSnapshot = defineRoute({
   capability: "accounts",
   summary:
     "«Take snapshot now»: the run the monthly job does, for the month of `on` (the previous month when missing). It replaces that month's snapshot.",
-  actions: ["runSnapshotNowAction"],
+  actions: [],
   body: z.object({ on: civilDate().optional() }).strict(),
   response: snapshot,
   status: 201,

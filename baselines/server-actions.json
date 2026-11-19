@@ -1,20 +1,4 @@
 {
-  "apps/web/src/app/(app)/accounts/[id]/delete-actions.ts": {
-    "closedBy": "R3 of accounts",
-    "actions": [
-      "accountDependentsAction",
-      "deleteAccountAction",
-      "moveDependentAction"
-    ]
-  },
-  "apps/web/src/app/(app)/accounts/[id]/switch/actions.ts": {
-    "closedBy": "R3 of accounts",
-    "actions": [
-      "applySwitchAction",
-      "checkSwitchAction",
-      "undoSwitchAction"
-    ]
-  },
   "apps/web/src/app/(app)/banks/connect/actions.ts": {
     "closedBy": "R3 of the connections (bank procedure)",
     "actions": [
@@ -141,17 +125,8 @@
   "apps/web/src/modules/accounts/actions.ts": {
     "closedBy": "R3 of accounts",
     "actions": [
-      "addConnectionAction",
-      "archiveAccountAction",
       "createAccountAction",
-      "deleteBalanceEntryAction",
-      "removeConnectionAction",
-      "restoreAccountAction",
-      "runSnapshotNowAction",
-      "saveAccountSettingsAction",
-      "saveBalanceEntryAction",
-      "updateBalanceEntryAction",
-      "updateConnectionAction"
+      "saveAccountSettingsAction"
     ]
   },
   "apps/web/src/modules/budgets/actions.ts": {

@@ -1,15 +1,17 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { notify } from "@ledgerly/ui/toast";
-import { runSnapshotNowAction } from "../actions";
+import { runSnapshotNowAction } from "../calls";
 
 /** Settings › Data: runs the caller's own monthly snapshot at once (spec §10.3). */
 export function SnapshotButton() {
   const t = useTranslations("settings.snapshots");
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   function onClick() {
@@ -22,6 +24,7 @@ export function SnapshotButton() {
         }
         setError(null);
         notify(t("taken"));
+        router.refresh();
       } catch {
         setError(t("failed"));
       }

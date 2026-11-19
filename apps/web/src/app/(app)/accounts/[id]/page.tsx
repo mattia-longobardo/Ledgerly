@@ -12,7 +12,6 @@ import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin, isPluginActive, listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { BANK_PLUGIN_ID } from "../../banks/plugin";
-import { undoSwitchAction } from "./switch/actions";
 import { switchable } from "./switch/switch";
 import { accountsView, listBalanceEntries } from "@ledgerly/domain/accounts";
 import { hasIbanField } from "@ledgerly/domain/accounts";
@@ -638,7 +637,7 @@ async function switchBlock(ctx: Ctx, account: Account): Promise<React.ReactNode>
               : ((await getAccount(ctx, open.mergedAccountId))?.name ?? null)
           }
           available={(await listConnections(ctx)).some((one) => one.provider === open.fromProvider)}
-          undo={undoSwitchAction.bind(null, account.id)}
+          accountId={account.id}
         />
       </>
     );

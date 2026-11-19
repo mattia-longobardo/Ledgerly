@@ -1,7 +1,7 @@
 // src/app/(app)/accounts/api-cases.ts — the use cases of accounts that the web process lends
 // `/api/v1` (rewrite plan R2), as it lends its guard: the deletion joins six modules from here, the
 // switch needs the web's registry of providers and its bank sink, the monthly figures are the
-// web's report, until R4. The Server Actions of these pages call the same functions.
+// web's report, until R4. The screens reach them through `/api/v1` only.
 import "server-only";
 import { z } from "zod";
 import type { AccountCases } from "@ledgerly/api";
@@ -41,7 +41,7 @@ function switchRefusal(error: unknown): SwitchRefusal {
 }
 
 /** What the dialog shows when it opens: what rests on the account, and where it can go. */
-export async function dependentsOf(ctx: Ctx, accountId: string) {
+async function dependentsOf(ctx: Ctx, accountId: string) {
   const id = z.uuid().safeParse(accountId);
   if (!id.success) return { ok: false as const, error: "not_found" as const };
   try {
@@ -67,7 +67,7 @@ const moveSchema = z.object({
   to: z.uuid(),
 });
 
-export async function moveDependentOf(
+async function moveDependentOf(
   ctx: Ctx,
   input: { accountId: string; kind: string; id: string; to: string },
 ): Promise<{ ok: true; accountId: string; to: string } | DeleteFailure> {
@@ -81,7 +81,7 @@ export async function moveDependentOf(
   }
 }
 
-export async function deleteAccountOf(ctx: Ctx, accountId: string): Promise<{ ok: true } | DeleteFailure> {
+async function deleteAccountOf(ctx: Ctx, accountId: string): Promise<{ ok: true } | DeleteFailure> {
   const id = z.uuid().safeParse(accountId);
   if (!id.success) return { ok: false, error: "not_found" };
   try {
@@ -93,7 +93,7 @@ export async function deleteAccountOf(ctx: Ctx, accountId: string): Promise<{ ok
 }
 
 /** The dry run (§6): nothing is written but the normal update of the source of before. */
-export async function checkSwitchOf(
+async function checkSwitchOf(
   ctx: Ctx,
   accountId: string,
   target: { connectionId: string; bankAccountId: string },
@@ -107,7 +107,7 @@ export async function checkSwitchOf(
 }
 
 /** "Apply" (§8): only with the print of the report the person read. */
-export async function applySwitchOf(
+async function applySwitchOf(
   ctx: Ctx,
   accountId: string,
   target: { connectionId: string; bankAccountId: string; fingerprint: string },
@@ -123,7 +123,7 @@ export async function applySwitchOf(
 }
 
 /** "Undo switch" (§10). */
-export async function undoSwitchOf(ctx: Ctx, accountId: string): Promise<{ ok: true } | SwitchRefusal> {
+async function undoSwitchOf(ctx: Ctx, accountId: string): Promise<{ ok: true } | SwitchRefusal> {
   try {
     await undoSwitch(ctx, accountId);
     await enqueue(tasks.afterSync("manual"));

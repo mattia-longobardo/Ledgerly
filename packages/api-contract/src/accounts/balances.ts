@@ -65,7 +65,7 @@ export const recordAccountBalance = defineRoute({
   capability: "accounts",
   summary:
     "Records the balance of a day, as the form does: a second reading of the same day replaces the first.",
-  actions: ["saveBalanceEntryAction"],
+  actions: [],
   params: z.object({ id: id() }),
   body: entryInput,
   response: z.object({
@@ -92,7 +92,7 @@ export const updateBalanceEntry = defineRoute({
   scope: "write",
   capability: "accounts",
   summary: "Corrects a balance a person recorded; any other source is `conflict`.",
-  actions: ["updateBalanceEntryAction"],
+  actions: [],
   params: byEntry,
   body: entryInput,
   response: balanceEntry,
@@ -111,7 +111,7 @@ export const deleteBalanceEntry = defineRoute({
   scope: "write",
   capability: "accounts",
   summary: "Deletes a balance a person recorded.",
-  actions: ["deleteBalanceEntryAction"],
+  actions: [],
   params: byEntry,
   response: null,
   status: 204,

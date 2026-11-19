@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useRef, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
@@ -17,7 +18,7 @@ import {
   deleteBalanceEntryAction,
   saveBalanceEntryAction,
   updateBalanceEntryAction,
-} from "../actions";
+} from "../calls";
 import type { EntrySource } from "@ledgerly/domain/accounts/client";
 
 export interface EntryRow {
@@ -101,6 +102,7 @@ function EditEntryDialog({
   const t = useTranslations("accounts.entries");
   const prefix = useId();
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -115,6 +117,7 @@ function EditEntryDialog({
         }
         notify(t("updated"));
         onClose();
+        router.refresh();
       } catch {
         setError(t("errors.failed"));
       }
@@ -181,6 +184,7 @@ export function BalanceEntries({
   const form = useRef<HTMLFormElement>(null);
   const prefix = useId();
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<EntryRow | null>(null);
 
@@ -197,6 +201,7 @@ export function BalanceEntries({
         setError(null);
         form.current?.reset();
         notify(t("saved"));
+        router.refresh();
       } catch {
         setError(t("errors.failed"));
       }
@@ -206,8 +211,12 @@ export function BalanceEntries({
   function onDelete(id: string) {
     startTransition(async () => {
       const result = await deleteBalanceEntryAction(accountId, id);
-      if (!result.ok) setError(t("errors.failed"));
-      else notify(t("deleted"));
+      if (!result.ok) {
+        setError(t("errors.failed"));
+        return;
+      }
+      notify(t("deleted"));
+      router.refresh();
     });
   }
 

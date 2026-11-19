@@ -1,35 +1,20 @@
-// src/modules/accounts/actions.ts — the accounts module's Server Actions (spec §3):
-// validate → service → revalidate. Amounts arrive as typed text and become cents here.
+// src/modules/accounts/actions.ts — the two Server Actions of accounts left (spec §3): creating an
+// account and saving its settings, until a refusal of `/api/v1` names the account that already has
+// the IBAN. Validate → service → revalidate; amounts arrive as typed text and become cents here.
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { parseAmount } from "@ledgerly/domain/platform/format";
-import {
-  AccountError,
-  addConnection,
-  archiveAccount,
-  type ConnectionInput,
-  createAccount,
-  deleteBalanceEntry,
-  restoreAccount,
-  runSnapshot,
-  saveBalanceEntry,
-  snapshotMonthFor,
-  removeConnection,
-  updateAccountSettings,
-  updateBalanceEntry,
-  updateConnection,
-} from "@ledgerly/domain/accounts";
+import { AccountError, createAccount, updateAccountSettings } from "@ledgerly/domain/accounts";
 
 /**
  * Forms call these inside a transition with no error boundary, so a rejected input comes back as a
  * message key under the calling component's own namespace instead of throwing (as in users).
  */
-export type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
+type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
 type CreateResult = { ok: true; id: string } | { ok: false; error: string; other?: string };
 
 function amount(value: string, ctx: Ctx): bigint {
@@ -111,162 +96,6 @@ export async function saveAccountSettingsAction(
     revalidatePath(`/accounts/${id}`);
     revalidatePath("/accounts");
     revalidatePath("/");
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-/** What the balance-entry form sends, for both the new entry and the correction of one. */
-export interface BalanceEntryFormInput {
-  on: string;
-  amount: string;
-  /** What was spendable that day, blank when unknown (the column is nullable). */
-  available: string;
-  note: string;
-}
-
-function entryValues(input: BalanceEntryFormInput, ctx: Ctx) {
-  return {
-    on: input.on,
-    cents: amount(input.amount, ctx),
-    availableCents: input.available.trim() === "" ? null : amount(input.available, ctx),
-    note: input.note,
-  };
-}
-
-export async function saveBalanceEntryAction(
-  accountId: string,
-  input: BalanceEntryFormInput,
-): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await saveBalanceEntry(ctx, accountId, entryValues(input, ctx));
-    revalidatePath(`/accounts/${accountId}`);
-    revalidatePath("/accounts");
-    revalidatePath("/");
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-/** The same form again on a `manual` entry already stored; the service refuses any other source. */
-export async function updateBalanceEntryAction(
-  accountId: string,
-  entryId: string,
-  input: BalanceEntryFormInput,
-): Promise<ActionResult> {
-  const ctx = await requireSession();
-  const parsed = z.uuid().safeParse(entryId);
-  if (!parsed.success) return { ok: false, error: "invalid" };
-  try {
-    await updateBalanceEntry(ctx, parsed.data, entryValues(input, ctx), accountId);
-    revalidatePath(`/accounts/${accountId}`);
-    revalidatePath("/accounts");
-    revalidatePath("/");
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export async function deleteBalanceEntryAction(accountId: string, entryId: string): Promise<ActionResult> {
-  const ctx = await requireSession();
-  const parsed = z.uuid().safeParse(entryId);
-  if (!parsed.success) return { ok: false, error: "invalid" };
-  await deleteBalanceEntry(ctx, parsed.data, accountId);
-  revalidatePath(`/accounts/${accountId}`);
-  revalidatePath("/accounts");
-  revalidatePath("/");
-  return { ok: true };
-}
-
-/**
- * Archiving is the reversible half of §7.1, and it has its own button because "keep it, but out of
- * my way" is a different intention from "delete it" (`app/(app)/accounts/[id]/delete-actions.ts`),
- * which never archives. `restoreAccountAction` is the way back.
- */
-export async function archiveAccountAction(id: string): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await archiveAccount(ctx, id);
-    revalidatePath(`/accounts/${id}`);
-    revalidatePath("/accounts");
-    revalidatePath("/");
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export async function restoreAccountAction(id: string): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await restoreAccount(ctx, id);
-    revalidatePath(`/accounts/${id}`);
-    revalidatePath("/accounts");
-    revalidatePath("/");
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-/** "Take snapshot now" (spec §10.3): the same run the monthly job does, for the caller alone. */
-export async function runSnapshotNowAction(month?: string): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    const chosen = month ? monthKey(month) : snapshotMonthFor(today(ctx.timeZone));
-    await runSnapshot(ctx, chosen);
-    revalidatePath("/settings/data");
-    revalidatePath("/accounts");
-    revalidatePath("/");
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-// ——— What hangs off an account (owner, 2026-09-21) ———————————————————————————————————————————
-
-/** Both tabs of the account's page show them, and Overview shows the same list read-only. */
-function revalidateConnections(accountId: string): void {
-  revalidatePath(`/accounts/${accountId}`);
-  revalidatePath("/accounts");
-}
-
-export async function addConnectionAction(accountId: string, input: ConnectionInput): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await addConnection(ctx, accountId, input);
-    revalidateConnections(accountId);
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export async function updateConnectionAction(
-  accountId: string,
-  id: string,
-  input: ConnectionInput,
-): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await updateConnection(ctx, id, input);
-    revalidateConnections(accountId);
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export async function removeConnectionAction(accountId: string, id: string): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await removeConnection(ctx, id);
-    revalidateConnections(accountId);
     return { ok: true };
   } catch (error) {
     return failed(error);

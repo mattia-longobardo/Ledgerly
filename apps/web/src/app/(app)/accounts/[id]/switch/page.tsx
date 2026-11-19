@@ -20,7 +20,6 @@ import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { BANK_PLUGIN_ID } from "../../../banks/plugin";
-import { applySwitchAction, checkSwitchAction, undoSwitchAction } from "./actions";
 import { freeBankAccounts, switchable } from "./switch";
 
 export const metadata: Metadata = { title: "Switch account" };
@@ -113,7 +112,7 @@ export default async function SwitchAccountPage({
                 : ((await getAccount(ctx, open.mergedAccountId))?.name ?? null)
             }
             available={sourceThere}
-            undo={undoSwitchAction.bind(null, account.id)}
+            accountId={account.id}
           />
           <ButtonLink href={`/accounts/${account.id}` as Route} variant="primary">
             {t("done.goToAccount")}
@@ -135,13 +134,8 @@ export default async function SwitchAccountPage({
         source={source}
         numberFormat={ctx.numberFormat}
         locale={ctx.locale}
-        commands={{
-          check: checkSwitchAction.bind(null, account.id, where),
-          apply: async (fingerprint: string) => {
-            "use server";
-            return applySwitchAction(account.id, { ...where, fingerprint });
-          },
-        }}
+        accountId={account.id}
+        target={where}
         leaveHref={settings}
         doneHref={`${here}?step=done` as Route}
       />,
