@@ -24,7 +24,7 @@ vi.mock("next/server", () => ({ after: () => {} }));
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClient } = await import("@/platform/auth/api-clients");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
-const { api } = await import("@/platform/api/app");
+const { api, reads } = await import("@/app/api/v1/[[...route]]/composition");
 const { handleMcp } = await import("@/platform/mcp/handler");
 const { recordOperation } = await import("@domain/modules/investments/service");
 const { connectTarget, engineService } = await import("../../../../../test/investments");
@@ -193,6 +193,7 @@ async function rpc(token: string, method: string, params: unknown = {}) {
       headers: { accept: ACCEPT, "content-type": "application/json", authorization: `Bearer ${token}` },
       body: JSON.stringify({ jsonrpc: "2.0", id: ++rpcId, method, params }),
     }),
+    reads,
   );
 }
 
@@ -422,10 +423,15 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
     expect(await toolNames(both)).toEqual([
       "get_account_balances",
       "get_investment_holdings",
+      "get_preferences",
+      "get_profile",
       "get_summary",
       "list_accounts",
       "list_budgets",
+      "list_categories",
+      "list_connections",
       "list_investments",
+      "list_labels",
       "list_transactions",
     ]);
   });

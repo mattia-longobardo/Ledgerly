@@ -16,7 +16,7 @@ vi.mock("next/server", () => ({ after: () => {} }));
 const { getAuth, invalidateAuth } = await import("./auth");
 const { createApiClient, deleteApiClient, listApiClients, ApiClientError } =
   await import("../../../../../apps/web/src/platform/auth/api-clients");
-const { api } = await import("@/platform/api/app");
+const { api } = await import("@/app/api/v1/[[...route]]/composition");
 const { resetRateLimits } = await import("@/platform/api/rate-limit");
 
 const ORIGIN = "http://127.0.0.1:3000";
