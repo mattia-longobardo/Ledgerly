@@ -25,8 +25,5 @@ export function windowChangeOf(values: readonly (Cents | null)[]): Change {
   return changeBetween(values.at(-1) ?? null, values.find((value) => value !== null) ?? null);
 }
 
-/** An account's share of a total; `null` rather than a misleading 0 % when either is unknown. */
-export function shareOf(value: Cents | null, total: Cents | null): number | null {
-  if (value === null || total === null || total === 0n) return null;
-  return Number(value) / Number(total);
-}
+/** An account's share of a total: the domain's `share`, under the name accounts' callers use. */
+export { share as shareOf } from "../../../shared/money";

@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
 import { formatMoney, formatPercent, type NumberFormat } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/shared/money";
+import { type Cents, share } from "@ledgerly/domain/shared/money";
 import { Card } from "@ledgerly/ui/card";
 import { StackedArea } from "@ledgerly/ui/chart";
 import type { Params } from "@ledgerly/ui/url";
@@ -128,7 +128,7 @@ export async function SpendingCard({
                 <span className="min-w-0 truncate">{band.name}</span>
                 <span className="ml-auto shrink-0 tabular-nums">{formatMoney(band.total, numberFormat)}</span>
                 <span className="w-14 shrink-0 text-right text-muted tabular-nums">
-                  {formatPercent(Number(band.total) / Number(spent), numberFormat)}
+                  {formatPercent(share(band.total, spent) ?? 0, numberFormat)}
                 </span>
               </li>
             ))}

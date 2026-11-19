@@ -85,3 +85,17 @@ export function percentToFraction(plain: string): string {
 export function abs(value: bigint): bigint {
   return value < 0n ? -value : value;
 }
+
+/**
+ * `part` as a share of `whole`: the one rule behind every share of a total (audit TRX-3). `null`
+ * when either side is unknown or the whole is zero, rather than a misleading 0 % or a share of
+ * infinity. Plain, it is the exact fraction (`0.25`), signs kept. With `percentDecimals` it is a
+ * percentage truncated to that many decimals, worked out on the integer cents so a rounding cannot
+ * drift (spec §4.3).
+ */
+export function share(part: Cents | null, whole: Cents | null, percentDecimals?: number): number | null {
+  if (part === null || whole === null || whole === 0n) return null;
+  if (percentDecimals === undefined) return Number(part) / Number(whole);
+  const scale = 10n ** BigInt(percentDecimals);
+  return Number((part * 100n * scale) / whole) / Number(scale);
+}

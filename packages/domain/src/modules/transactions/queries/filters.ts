@@ -20,7 +20,7 @@ import type { Ctx } from "../../../platform/context";
 import { addDays, type CivilDate, type MonthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import type { Cents } from "../../../shared/money";
+import { abs, type Cents, share } from "../../../shared/money";
 import { type CategoryState, type TransactionType } from "../rules";
 import { categories, duplicateAccounts, labels, transactionLabels, transactions } from "../schema";
 import { type Label, type TreeCategory } from "../taxonomy";
@@ -250,10 +250,7 @@ export function escapeLike(term: string): string {
  * rounding cannot drift (spec §4.3).
  */
 export function shareOf(part: Cents, whole: Cents): number {
-  const total = whole < 0n ? -whole : whole;
-  if (total === 0n) return 0;
-  const value = part < 0n ? -part : part;
-  return Number((value * 1000n) / total) / 10;
+  return share(abs(part), abs(whole), 1) ?? 0;
 }
 
 /** Midnight of a civil date in the user's own zone, as the instant the column is compared to. */

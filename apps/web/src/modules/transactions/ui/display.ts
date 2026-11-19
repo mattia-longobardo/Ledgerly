@@ -12,7 +12,7 @@ import type {
 } from "@ledgerly/domain/transactions/client";
 import type { MonthKey } from "@ledgerly/domain/shared/dates";
 import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/shared/money";
+import { type Cents, share } from "@ledgerly/domain/shared/money";
 import { type Tone, toneOfSign } from "@ledgerly/ui/tone";
 
 /** A category's own colour wins; the ones without get a stable one from the shared palette. */
@@ -145,8 +145,8 @@ export function categoryBreakdown(items: readonly BreakdownInput[]): Breakdown {
   return {
     bars: sorted.map((item) => ({
       ...item,
-      share: total === 0n ? 0 : Number(magnitude(item.cents)) / Number(total),
-      width: largest === 0n ? 0 : Number(magnitude(item.cents)) / Number(largest),
+      share: share(magnitude(item.cents), total) ?? 0,
+      width: share(magnitude(item.cents), largest) ?? 0,
     })),
     totalCents: total,
   };
