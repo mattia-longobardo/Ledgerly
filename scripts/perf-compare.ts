@@ -21,6 +21,15 @@ const BASELINE = "baselines/performance.json";
 /** A median this many ms over its baseline is noise, whatever the percentage says. */
 const NOISE_MS = 3;
 const WORSE = 1.1;
+/**
+ * Slower times Mattia accepted, each until the step that has to take it back (a written decision,
+ * not a baseline): the time is printed and not held, the queries still are. The step named here
+ * removes its entry; a later run that still needs it asks again.
+ */
+const ACCEPTED_TIMES: Record<string, string> = {
+  // 9.6 → 12.7-13.1 ms, the same on v0.37.0 in production: accepted on 2026-11-19.
+  "GET /transactions": "fino al passo R2 transactions",
+};
 
 type Measure = { medianMs: number; p95Ms: number; queries: number };
 type Group = Record<string, Measure>;
@@ -64,18 +73,21 @@ for (const group of ["views", "routes"] as const) {
   );
   for (const [name, now] of Object.entries(measured[group])) {
     const before = baseline?.[group][name];
-    const slower =
+    const beyond =
       !queriesOnly &&
       before &&
       now.medianMs > before.medianMs * WORSE &&
       now.medianMs - before.medianMs > NOISE_MS;
+    const accepted = beyond ? ACCEPTED_TIMES[name] : undefined;
+    const slower = beyond && accepted === undefined;
     const more = before && now.queries > before.queries;
     if (slower) worse.push(`${name}: mediana ${before.medianMs} → ${now.medianMs} ms`);
     if (more) worse.push(`${name}: query ${before.queries} → ${now.queries}`);
     console.log(
       `PERF ${name.padEnd(36)} ${now.medianMs.toFixed(1).padStart(7)} ${now.p95Ms.toFixed(1).padStart(7)} ${String(now.queries).padStart(6)}` +
         (before
-          ? `   (${before.medianMs}, ${before.queries})${slower || more ? "  PEGGIO" : ""}`
+          ? `   (${before.medianMs}, ${before.queries})${slower || more ? "  PEGGIO" : ""}` +
+            (accepted ? `  ACCETTATA ${accepted}` : "")
           : "   (nuova)"),
     );
   }

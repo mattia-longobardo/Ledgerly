@@ -187,7 +187,10 @@ written by a command and checked by another.
   steady, so more runs in one process did not help. When a round fails, one second round of 5
   tells a busy host from a slower step. The run takes about 75 s. The 10% and the baseline did not
   change. `npm run perf -- --queries` runs one process and holds the number of queries only (about
-  15 s): it is the part that runs at every release ([testing.md](testing.md)).
+  15 s): it is the part that runs at every release ([testing.md](testing.md)). A slower time
+  Mattia accepted is in `ACCEPTED_TIMES` of `scripts/perf-compare.ts`, with the step that takes it
+  back: printed, not held; its queries still are. Today: `GET /transactions` until the R2 step of
+  transactions, which removes the entry.
 - **Numbers and contract:** what the read services, the REST API and the MCP tools answer about the
   reference user (`test/reference-user.ts`) with the clock stopped. Byte for byte.
 - **Numbers of production:** `npm run numbers`, before and after a deploy. See above.
