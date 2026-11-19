@@ -1,12 +1,12 @@
 import { and, asc, eq, max, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { type CivilDate } from "../../../shared/dates";
-import { getDb, type Tx } from "../../../platform/db/client";
+import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { normalizeIban } from "../../../platform/iban";
 import { managedSinceOf } from "../../investments/managed";
 import { type AccountType, hasIbanField, ibanConflict } from "../rules";
-import { type Account } from "../queries";
+import { type Account, type BalanceEntry } from "../queries";
 import { accounts, balanceEntries } from "../schema";
 
 /** Every service failure a caller is expected to handle carries one of these codes. */
@@ -87,8 +87,13 @@ export async function hasBalanceEntries(ctx: Pick<Ctx, "userId">, accountId: str
   return row !== undefined;
 }
 
-export async function requireAccount(ctx: Pick<Ctx, "userId">, id: string): Promise<Account> {
-  const [row] = await getDb()
+/** The person's account, or `not_found`: the one check of ownership of the module (ACC-6). */
+export async function requireAccount(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  executor: Db | Tx = getDb(),
+): Promise<Account> {
+  const [row] = await executor
     .select()
     .from(accounts)
     .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
@@ -107,6 +112,32 @@ export async function refuseManaged(
 ): Promise<void> {
   const since = await managedSinceOf(ctx, accountId);
   if (since !== null && on >= since) throw new AccountError("managed_locked");
+}
+
+/**
+ * Writes the balance of a day from one source: a second write of the same day and source replaces
+ * the first (the unique key). The one upsert of `balance_entries` (ACC-6).
+ */
+export async function writeBalanceEntry(
+  executor: Db | Tx,
+  ctx: Pick<Ctx, "userId">,
+  entry: { accountId: string; on: CivilDate; source: "manual" | "provider" | "import" },
+  values: {
+    balanceCents: bigint;
+    availableCents?: bigint | null;
+    note?: string | null;
+    capturedAt: Date;
+  },
+): Promise<BalanceEntry> {
+  const [row] = await executor
+    .insert(balanceEntries)
+    .values(userScoped(ctx).stamp({ ...entry, ...values }))
+    .onConflictDoUpdate({
+      target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
+      set: values,
+    })
+    .returning();
+  return row;
 }
 
 export async function nextSortOrder(ctx: Pick<Ctx, "userId">): Promise<number> {

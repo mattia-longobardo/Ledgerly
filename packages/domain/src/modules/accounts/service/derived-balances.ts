@@ -16,7 +16,7 @@ import {
   observedDays,
 } from "../queries";
 import { accounts, balanceEntries, manualMovementAccounts } from "../schema";
-import { AccountError, requireAccount } from "./guards";
+import { requireAccount } from "./guards";
 
 /**
  * Several accounts' balances on every day of a window, in one read (spec §7.1, F2.5): a synced
@@ -217,11 +217,7 @@ export async function replacePortfolioPoints(
   points: readonly { on: CivilDate; cents: Cents }[],
   tx: Tx,
 ): Promise<{ written: number }> {
-  const [owned] = await tx
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
-  if (!owned) throw new AccountError("not_found");
+  await requireAccount(ctx, accountId, tx);
   await tx
     .delete(balanceEntries)
     .where(

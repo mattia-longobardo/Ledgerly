@@ -9,7 +9,7 @@ import { type BalanceEntryInput, balanceEntrySchema, isFutureDate } from "../rul
 import { type BalanceEntry } from "../queries";
 import { accounts, balanceEntries } from "../schema";
 import { rebuildDerivedBalances } from "./derived-balances";
-import { AccountError, refuseManaged, requireAccount } from "./guards";
+import { AccountError, refuseManaged, requireAccount, writeBalanceEntry } from "./guards";
 
 /**
  * A manual balance for a date. On a synced account it is a correction that wins for that date, so
@@ -26,14 +26,7 @@ export async function saveBalanceEntry(ctx: Ctx, accountId: string, input: unkno
     note: parsed.note,
     capturedAt: new Date(),
   };
-  const [row] = await getDb()
-    .insert(balanceEntries)
-    .values(userScoped(ctx).stamp({ accountId, on: parsed.on, source: "manual" as const, ...values }))
-    .onConflictDoUpdate({
-      target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
-      set: values,
-    })
-    .returning();
+  const row = await writeBalanceEntry(getDb(), ctx, { accountId, on: parsed.on, source: "manual" }, values);
   // A correction on a synced account moves the month ends rebuilt before it (F2.5).
   await rebuildDerivedBalances(ctx, [accountId]);
   return row;
@@ -156,14 +149,7 @@ export async function saveProviderBalance(
     capturedAt: now,
   };
   return getDb().transaction(async (tx) => {
-    const [row] = await tx
-      .insert(balanceEntries)
-      .values(userScoped(ctx).stamp({ accountId, on: input.on, source: "provider" as const, ...values }))
-      .onConflictDoUpdate({
-        target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
-        set: values,
-      })
-      .returning();
+    const row = await writeBalanceEntry(tx, ctx, { accountId, on: input.on, source: "provider" }, values);
     await tx
       .update(accounts)
       .set({ lastSyncedAt: now })
@@ -184,21 +170,9 @@ export async function saveImportBalance(
   tx: Tx,
 ): Promise<BalanceEntry> {
   if (!isCivilDate(input.on)) throw new RangeError(`Not a civil date: "${input.on}"`);
-  const [owned] = await tx
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(and(eq(accounts.id, accountId), userScoped(ctx).owns(accounts)));
-  if (!owned) throw new AccountError("not_found");
+  await requireAccount(ctx, accountId, tx);
   const values = { balanceCents: input.cents, note: input.note, capturedAt: new Date() };
-  const [row] = await tx
-    .insert(balanceEntries)
-    .values(userScoped(ctx).stamp({ accountId, on: input.on, source: "import" as const, ...values }))
-    .onConflictDoUpdate({
-      target: [balanceEntries.accountId, balanceEntries.on, balanceEntries.source],
-      set: values,
-    })
-    .returning();
-  return row;
+  return writeBalanceEntry(tx, ctx, { accountId, on: input.on, source: "import" }, values);
 }
 
 export async function deleteBalanceEntry(
