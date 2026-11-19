@@ -174,6 +174,8 @@ export interface PackageMeasure {
   aliases: string[];
   /** Must be empty: a client component that reaches the server side of the domain. */
   clientReach: string[];
+  /** Must be empty: a browser file that reaches `platform/db` or `pg` through any chain of imports. */
+  clientDatabase: string[];
   /** Must be empty: two workspaces that import each other, directly or not. */
   packageCycles: string[];
   /** Must be empty: an entry with `export *`. */
@@ -207,6 +209,7 @@ export function measurePackages(repo: string): PackageMeasure {
     layers: [],
     aliases: [],
     clientReach: [],
+    clientDatabase: [],
     packageCycles: [],
     starExports: [],
     duplicateNames: [],
@@ -327,9 +330,89 @@ export function measurePackages(repo: string): PackageMeasure {
     if (distinct.length > 1) measure.duplicateNames.push(`${key} (${distinct.join(", ")})`);
   }
 
+  measure.clientDatabase = findClientDatabaseReach(new Map(files.map((one) => [one.path, one.text])), spaces);
+
   for (const key of Object.keys(measure) as (keyof PackageMeasure)[])
     measure[key] = [...new Set(measure[key])].sort();
   return measure;
+}
+
+/** The file's directive (`"use client"`, `"use server"`), read past the comments that head it. */
+const hasDirective = (text: string, directive: string) =>
+  new RegExp(`^(?:\\s|//[^\\n]*|/\\*[\\s\\S]*?\\*/)*["']${directive}["']`).test(text);
+
+/** The file a specifier names from `from`, or the bare package it names when it is not one of ours. */
+function resolveImport(
+  from: string,
+  specifier: string,
+  files: ReadonlyMap<string, string>,
+  spaces: readonly Workspace[],
+): { file: string } | { bare: string } | null {
+  let base: string | null = null;
+  if (specifier.startsWith(".")) base = posix.normalize(posix.join(posix.dirname(from), specifier));
+  else if (specifier.startsWith("@/")) base = `apps/web/src/${specifier.slice(2)}`;
+  else if (specifier.startsWith("@domain/")) base = `packages/domain/src/${specifier.slice(8)}`;
+  else {
+    const name = packageOf(specifier);
+    const space = spaces.find((one) => one.name === name);
+    if (!space) return { bare: name };
+    const target = space.exports[`.${specifier.slice(name.length)}`];
+    if (target === undefined) return null;
+    base = posix.join(space.folder, target);
+  }
+  for (const end of ["", ".ts", ".tsx", "/index.ts", "/index.tsx"])
+    if (files.has(base + end)) return { file: base + end };
+  return null;
+}
+
+/**
+ * A browser file — `"use client"`, `packages/ui`, `apps/static` — that reaches the database through
+ * any chain of value imports: `<browser file> → <file that opens it>`. The bundler follows every file,
+ * so the rule follows them too: a pure file between the two (a helper that re-exports from a domain
+ * entry) does not hide the reach. A `"use server"` file stops the walk: the bundle holds a reference.
+ */
+export function findClientDatabaseReach(
+  files: ReadonlyMap<string, string>,
+  spaces: readonly Workspace[],
+): string[] {
+  const found = new Set<string>();
+  const opensDatabase = new Map<string, boolean>();
+  const edges = new Map<string, string[]>();
+  for (const [path, text] of files) {
+    const next: string[] = [];
+    let pg = path.startsWith("packages/domain/src/platform/db/");
+    for (const { specifier, typeOnly } of importsOf(path, text)) {
+      if (typeOnly || specifier.startsWith("node:")) continue;
+      const target = resolveImport(path, specifier, files, spaces);
+      if (target === null) continue;
+      if ("bare" in target) pg ||= target.bare === "pg";
+      else next.push(target.file);
+    }
+    edges.set(path, next);
+    opensDatabase.set(path, pg);
+  }
+  const browser = (path: string) =>
+    /^(packages\/ui|apps\/static)\//.test(path) || hasDirective(files.get(path)!, "use client");
+  for (const root of [...files.keys()].filter(browser)) {
+    const seen = new Set([root]);
+    const stack = [root];
+    while (stack.length > 0) {
+      const path = stack.pop()!;
+      if (opensDatabase.get(path)) {
+        found.add(`${root} → ${path}`);
+        continue;
+      }
+      // A Server Action is a reference in the bundle, not its code.
+      if (path !== root && hasDirective(files.get(path)!, "use server")) continue;
+      for (const next of edges.get(path) ?? []) {
+        if (!seen.has(next)) {
+          seen.add(next);
+          stack.push(next);
+        }
+      }
+    }
+  }
+  return [...found].sort();
 }
 
 function* readProductFilesOf(repo: string, spaces: Workspace[]) {

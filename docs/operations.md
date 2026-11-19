@@ -170,7 +170,8 @@ written by a command and checked by another.
   (M7): a change of a package's interface changes it in the same commit. What has no list must
   hold everywhere: a package imports only what its `package.json` declares, the domain never
   reaches Next.js, React or Hono, no package cycle, a client component only the `client.ts`
-  entries, one name declared once in a unit of the domain, every package at the root's version.
+  entries, no browser file (`"use client"`, `packages/ui`, `apps/static`) that reaches `platform/db`
+  or `pg` through any chain of imports (a `"use server"` file stops the walk), one name declared once in a unit of the domain, every package at the root's version.
 - **Cleanliness (R0):** rules Q1-Q3 (the names and the purity of a module's files) and Q5-Q8, Q10
   (names, size of a file and of a function, complexity, `any` and `as`) with ESLint, thresholds of
   decision I15 in `scripts/cleanliness-rules.json`. `eslint.config.mjs` turns a rule off for the

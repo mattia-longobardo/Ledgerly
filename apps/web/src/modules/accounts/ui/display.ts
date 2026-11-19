@@ -22,7 +22,7 @@ export function colorField(
 }
 
 // The change and the share are the domain's rule, the same one `/api/v1` answers.
-export { changeBetween, shareOf } from "@ledgerly/domain/accounts";
+export { changeBetween, shareOf } from "@ledgerly/domain/accounts/client";
 
 /**
  * An account's value in the display currency, for the line under its own (§1.8): `null` when the

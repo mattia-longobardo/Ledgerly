@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { entryExports, measureModularity, type ModularityBaseline } from "../scripts/modularity";
-import { measurePackages, workspaces } from "../scripts/packages";
+import { findClientDatabaseReach, measurePackages, workspaces } from "../scripts/packages";
 import {
   asOneFile,
   cycleGroups,
@@ -288,6 +288,10 @@ describe("the packages", () => {
     expect(measure.clientReach).toEqual([]);
   });
 
+  it("give a browser file nothing that reaches the database, through any chain of imports", () => {
+    expect(measure.clientDatabase).toEqual([]);
+  });
+
   it("export named names from every entry, no `export *` (M7)", () => {
     expect(measure.starExports).toEqual([]);
   });
@@ -315,5 +319,65 @@ describe("the packages", () => {
 
   it("declare a name once in a unit of the domain (Q4)", () => {
     expect(measure.duplicateNames).toEqual([]);
+  });
+});
+
+describe("findClientDatabaseReach", () => {
+  const spaces = [
+    {
+      name: "@ledgerly/domain",
+      folder: "packages/domain",
+      dependencies: ["pg"],
+      exports: {
+        "./accounts": "./src/modules/accounts/index.ts",
+        "./accounts/client": "./src/modules/accounts/client.ts",
+      },
+    },
+  ];
+  // The chain that broke the image's build: a client form, a pure helper of the web app that
+  // re-exports from the domain's server entry, the queries, the database client.
+  const chain = (entry: string) =>
+    new Map([
+      ["apps/web/src/modules/accounts/ui/form.tsx", `"use client";\nimport { shareOf } from "./display";`],
+      ["apps/web/src/modules/accounts/ui/display.ts", `export { shareOf } from "@ledgerly/domain/${entry}";`],
+      [
+        "packages/domain/src/modules/accounts/index.ts",
+        `export { shareOf } from "./rules";\nexport { list } from "./queries";`,
+      ],
+      ["packages/domain/src/modules/accounts/client.ts", `export { shareOf } from "./rules";`],
+      ["packages/domain/src/modules/accounts/rules.ts", `export const shareOf = 1;`],
+      [
+        "packages/domain/src/modules/accounts/queries/index.ts",
+        `import { db } from "../../../platform/db/client";`,
+      ],
+      ["packages/domain/src/platform/db/client.ts", `import { Pool } from "pg";`],
+    ]);
+
+  it("finds a client file that reaches platform/db through a pure file in between", () => {
+    expect(findClientDatabaseReach(chain("accounts"), spaces)).toEqual([
+      "apps/web/src/modules/accounts/ui/form.tsx → packages/domain/src/platform/db/client.ts",
+    ]);
+  });
+
+  it("stops at a Server Action: the bundle holds a reference, not its code", () => {
+    const files = chain("accounts");
+    files.set("apps/web/src/modules/accounts/ui/display.ts", `export { save } from "./actions";`);
+    files.set(
+      "apps/web/src/modules/accounts/ui/actions.ts",
+      `"use server";\nexport { list } from "@ledgerly/domain/accounts";`,
+    );
+    expect(findClientDatabaseReach(files, spaces)).toEqual([]);
+  });
+
+  it("lets a client file read the domain's browser entry", () => {
+    expect(findClientDatabaseReach(chain("accounts/client"), spaces)).toEqual([]);
+  });
+
+  it("finds a file of packages/ui or apps/static that imports pg, and ignores types", () => {
+    const files = new Map([
+      ["packages/ui/src/a.ts", `import { Pool } from "pg";`],
+      ["apps/static/src/b.ts", `import type { Pool } from "pg";`],
+    ]);
+    expect(findClientDatabaseReach(files, spaces)).toEqual(["packages/ui/src/a.ts → packages/ui/src/a.ts"]);
   });
 });
