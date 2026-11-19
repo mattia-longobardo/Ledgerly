@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
-import { revokeOtherSessionsAction, revokeSessionAction } from "@/modules/users/actions";
+import { revokeOtherSessionsAction, revokeSessionAction } from "./calls";
 import { Button } from "@ledgerly/ui/button";
 
 /** What the browser gets per session: an id, never the bearer token. */

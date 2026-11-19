@@ -7,7 +7,7 @@ import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
-import { deleteApiClientAction } from "./actions";
+import { deleteApiClientAction } from "./calls";
 
 /** One Client API as the table shows it: the date already formatted for the reader. */
 export interface ApiClientRow {

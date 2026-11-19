@@ -4,13 +4,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  ApiClientError,
-  createApiClient,
-  deleteApiClient,
-  type MintedClient,
-} from "@/platform/auth/api-clients";
-import { GrantError, revokeConnectedApp } from "@ledgerly/domain/platform/auth";
+import { ApiClientError, createApiClient, type MintedClient } from "@/platform/auth/api-clients";
 import { requireSession } from "@/platform/auth/session";
 
 export type ApiClientMinted = MintedClient;
@@ -32,35 +26,5 @@ export async function createApiClientAction(input: {
     if (error instanceof ApiClientError) return { ok: false, error: "invalid" };
     console.error("[security] could not create a Client API", error instanceof Error ? error.name : "error");
     return { ok: false, error: "failed" };
-  }
-}
-
-/** Deletes one of the person's own clients; its tokens stop working at once. */
-export async function deleteApiClientAction(
-  clientId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const ctx = await requireSession();
-  try {
-    await deleteApiClient(ctx, clientId);
-    revalidatePath("/settings/security");
-    return { ok: true };
-  } catch (error) {
-    if (error instanceof ApiClientError) return { ok: false, error: error.code };
-    throw error;
-  }
-}
-
-/** Takes back a consent: the app's refresh tokens go, and the next authorize asks again. */
-export async function revokeConnectedAppAction(
-  clientId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const ctx = await requireSession();
-  try {
-    await revokeConnectedApp(ctx, clientId);
-    revalidatePath("/settings/security");
-    return { ok: true };
-  } catch (error) {
-    if (error instanceof GrantError) return { ok: false, error: error.code };
-    throw error;
   }
 }

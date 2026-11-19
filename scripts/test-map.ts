@@ -356,6 +356,7 @@ export const MODULES: Module[] = [
       "apps/web/src/modules/users",
       "packages/domain/src/modules/users",
       "apps/web/src/app/(app)/settings/profile",
+      "apps/web/src/app/(app)/settings/security",
     ],
     flows: ["auth", "admin"],
     usedBy: ["integration:*", "e2e:timeoff"],

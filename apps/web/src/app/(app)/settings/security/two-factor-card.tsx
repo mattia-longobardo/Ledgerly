@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState } from "react";
+import { SETTINGS } from "@ledgerly/api-contract";
+import { invalidate } from "@ledgerly/ui/data";
 import { type TwoFactorErrorKey, twoFactorErrorKey } from "@ledgerly/ui/two-factor";
 import { RecoveryCodes } from "@/modules/users/ui/recovery-codes";
 import { TwoFactorSetup } from "@/modules/users/ui/two-factor-setup";
@@ -61,6 +63,7 @@ export function TwoFactorCard({
       if (failed) return setError(twoFactorErrorKey(failed));
       close();
       notify(t("disabled"), "success");
+      invalidate(SETTINGS.profile.getProfile);
       router.refresh();
     } catch {
       setError("generic");
@@ -103,6 +106,7 @@ export function TwoFactorCard({
           onDone={() => {
             close();
             notify(t("enabled"), "success");
+            invalidate(SETTINGS.profile.getProfile);
             router.refresh();
           }}
         />

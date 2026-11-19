@@ -23,12 +23,7 @@ import {
   setPersonRole,
 } from "./admin";
 import type { TimeOffPreferences } from "@ledgerly/domain/users";
-import {
-  findSessionToken,
-  getPreferences,
-  updatePreferences,
-  updateTimeOffPreferences,
-} from "@ledgerly/domain/users";
+import { getPreferences, updatePreferences, updateTimeOffPreferences } from "@ledgerly/domain/users";
 
 const YEAR = 60 * 60 * 24 * 365;
 
@@ -58,22 +53,6 @@ export async function saveTimeOffPreferencesAction(input: TimeOffPreferences): P
   } catch (error) {
     if (error instanceof z.ZodError) return { ok: false, error: "invalid" };
     throw error;
-  }
-}
-
-/** Takes a session id from the browser; the token is looked up server-side, by id AND the caller's user id. */
-export async function revokeSessionAction(sessionId: string): Promise<ActionResult> {
-  const ctx = await requireSession();
-  const parsed = z.uuid().safeParse(sessionId);
-  if (!parsed.success) return { ok: false, error: "failed" };
-  try {
-    const token = await findSessionToken(ctx, parsed.data);
-    if (!token) return { ok: true };
-    await (await getAuth()).api.revokeSession({ body: { token }, headers: await headers() });
-    revalidatePath("/settings/security");
-    return { ok: true };
-  } catch (error) {
-    return revocationFailed(error);
   }
 }
 

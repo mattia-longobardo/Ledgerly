@@ -1,22 +1,10 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { describeUserAgent } from "@ledgerly/domain/users";
-import { listOwnSessions } from "@ledgerly/domain/users";
-import { hasPasswordAccount, hasSsoAccount } from "@ledgerly/domain/platform/auth";
-import { getAuth } from "@ledgerly/domain/platform/auth";
-import { requireSession } from "@/platform/auth/session";
-import { civilDateIn } from "@ledgerly/domain/shared/dates";
-import { formatDate } from "@ledgerly/domain/platform/format";
+import { getAuth, hasPasswordAccount, hasSsoAccount } from "@ledgerly/domain/platform/auth";
 import { readEnv } from "@ledgerly/domain/platform/env";
-import { listApiClients } from "@/platform/auth/api-clients";
-import { listConnectedApps } from "@ledgerly/domain/platform/auth";
-import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import { type ApiClientRow, ApiClientsTable } from "./api-clients-table";
-import { type ConnectedAppRow, ConnectedAppsTable } from "./connected-apps-table";
-import { NewApiClient } from "./new-api-client";
-import { type SessionRow, SessionsList } from "./sessions-list";
-import { TwoFactorCard } from "./two-factor-card";
+import { requireSession } from "@/platform/auth/session";
+import { SecurityScreen } from "./security-screen";
 import { SignInMethod } from "./sign-in-method";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,82 +12,24 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `${t("tabs.security")} · ${t("title")}` };
 }
 
+/**
+ * The screen reads the person, the Client APIs, the connected apps and the sessions from `/api/v1`.
+ * The rest is still the server's until the contract carries it: which session is this browser's,
+ * the sign-in methods with the identity provider's address, and the instance's second-factor policy.
+ */
 export default async function SecurityPage() {
   const ctx = await requireSession();
-  const [current, sessions, clients, apps, hasPassword, sso] = await Promise.all([
+  const [current, hasPassword, sso] = await Promise.all([
     (await getAuth()).api.getSession({ headers: await headers() }),
-    listOwnSessions(ctx),
-    listApiClients(ctx),
-    listConnectedApps(ctx),
     hasPasswordAccount(ctx.userId),
     hasSsoAccount(ctx.userId),
   ]);
-  const t = await getTranslations("settings");
-
-  const day = (at: Date) => formatDate(civilDateIn(at, ctx.timeZone), "long", ctx.locale);
-
-  const clientRows: ApiClientRow[] = clients.map((client) => ({
-    clientId: client.clientId,
-    name: client.name,
-    scopes: client.scopes,
-    created: day(client.createdAt),
-  }));
-
-  const appRows: ConnectedAppRow[] = apps.map((app) => ({
-    clientId: app.clientId,
-    name: app.name,
-    hosts: app.hosts,
-    verified: app.verified,
-    scopes: app.scopes,
-    offline: app.offline,
-    since: day(app.createdAt),
-  }));
-
-  const rows: SessionRow[] = sessions.map((session) => {
-    const { browser, os } = describeUserAgent(session.userAgent);
-    const isCurrent = session.id === current?.session.id;
-    return {
-      id: session.id,
-      device: browser && os ? `${browser} · ${os}` : t("sessions.unknownDevice"),
-      detail: [session.ipAddress, isCurrent && t("sessions.thisDevice")].filter(Boolean).join(" · "),
-      status: isCurrent ? t("sessions.activeNow") : t("sessions.since", { date: day(session.createdAt) }),
-      current: isCurrent,
-    };
-  });
-
   return (
-    <SettingsGrid>
-      <SettingsSection title={t("signIn.title")} description={t("signIn.description")}>
-        <SignInMethod sso={sso} password={hasPassword} />
-      </SettingsSection>
-      {/* Password accounts only: an Authentik user's second factor is configured in Authentik. */}
-      {hasPassword && current && (
-        <SettingsSection title={t("twoFactor.title")} description={t("twoFactor.description")} padded={false}>
-          <TwoFactorCard
-            enabled={current.user.twoFactorEnabled === true}
-            policy={readEnv().TWO_FACTOR_POLICY}
-            account={current.user.email}
-          />
-        </SettingsSection>
-      )}
-      <SettingsSection
-        title={t("apiClients.title")}
-        description={t("apiClients.description")}
-        action={<NewApiClient />}
-        padded={false}
-      >
-        <ApiClientsTable clients={clientRows} />
-      </SettingsSection>
-      <SettingsSection
-        title={t("connectedApps.title")}
-        description={t("connectedApps.description")}
-        padded={false}
-      >
-        <ConnectedAppsTable apps={appRows} />
-      </SettingsSection>
-      <SettingsSection title={t("sessions.title")} description={t("sessions.description")} padded={false}>
-        <SessionsList sessions={rows} />
-      </SettingsSection>
-    </SettingsGrid>
+    <SecurityScreen
+      signIn={<SignInMethod sso={sso} password={hasPassword} />}
+      currentSessionId={current?.session.id ?? null}
+      hasPassword={hasPassword}
+      policy={readEnv().TWO_FACTOR_POLICY}
+    />
   );
 }

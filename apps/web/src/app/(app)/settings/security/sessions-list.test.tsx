@@ -7,7 +7,7 @@ import { SessionsList } from "./sessions-list";
 
 const revokeSession = vi.fn();
 const revokeOtherSessions = vi.fn();
-vi.mock("@/modules/users/actions", () => ({
+vi.mock("./calls", () => ({
   revokeSessionAction: (...a: unknown[]) => revokeSession(...a),
   revokeOtherSessionsAction: (...a: unknown[]) => revokeOtherSessions(...a),
 }));
