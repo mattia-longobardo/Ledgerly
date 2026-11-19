@@ -38,6 +38,7 @@
     "civilDate",
     "metaRoute",
     "openApiDocument",
+    "syncRuleSchema",
     "syncScheduleSchema"
   ],
   "packages/design-tokens/src/index.ts": [

@@ -42,7 +42,7 @@ Le dipendenze ammesse sono le sole voci del suo `package.json`; ogni altro impor
 
 | Pacchetto | Responsabilità unica | Interfaccia pubblica | Dipendenze ammesse | Dipendenze vietate |
 |---|---|---|---|---|
-| `packages/domain` | Le regole e i totali di Ledgerly: ogni numero ha un solo calcolo | Un ingresso per modulo (`domain/<modulo>`, §10.3) e `domain/shared` | `drizzle-orm`, `pg`, `zod` | `next`, `react`, `hono`, `api-contract`, `ui`, `plugin-host`, ogni `apps/*` |
+| `packages/domain` | Le regole e i totali di Ledgerly: ogni numero ha un solo calcolo | Un ingresso per modulo (`domain/<modulo>`, §10.3) e `domain/shared` | `drizzle-orm`, `pg`, `zod`, `api-contract` (solo limiti e forme del filo con una sola sorgente, es. la pianificazione delle connessioni) | `next`, `react`, `hono`, `ui`, `plugin-host`, ogni `apps/*` |
 | `packages/api-contract` | La forma dei dati sul filo: schemi, DTO, errori, scope | Primitive zod, schemi delle rotte, DTO, `Result`, codici di errore, scope per risorsa | `zod` | `domain`, `drizzle-orm`, `next`, `react`, `hono` |
 | `packages/api-client` | Le chiamate a `/api/v1` da un client | Una funzione tipizzata per rotta, la gestione del token, la chiave di idempotenza | `api-contract` | `domain`, `ui`, `next`, `react` |
 | `packages/design-tokens` | I valori visivi: colori, raggi, spazi, ombre, scala `z` | Variabili CSS e costanti TypeScript | Nessuna | Ogni altro pacchetto |

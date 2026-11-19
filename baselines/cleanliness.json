@@ -550,7 +550,7 @@
     "packages/domain/src/platform/integrations/ccxt/source.ts": 6,
     "packages/domain/src/platform/integrations/etoro/client.ts": 3,
     "packages/domain/src/platform/integrations/etoro/mapping.ts": 10,
-    "packages/domain/src/platform/integrations/schedule.ts": 11,
+    "packages/domain/src/platform/integrations/schedule.ts": 9,
     "packages/domain/src/platform/integrations/service/connections.ts": 2,
     "packages/domain/src/platform/integrations/service/external.ts": 2,
     "packages/domain/src/platform/integrations/service/runs.ts": 2,
