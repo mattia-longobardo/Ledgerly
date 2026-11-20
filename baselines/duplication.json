@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97678,
-    "duplicatedLines": 16827,
-    "percent": 17.23,
-    "blocks": 1231
+    "lines": 97573,
+    "duplicatedLines": 16789,
+    "percent": 17.21,
+    "blocks": 1227
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 26
     },
     "app": {
-      "lines": 24471,
-      "duplicatedLines": 4393,
-      "percent": 17.95,
-      "blocks": 332
+      "lines": 24237,
+      "duplicatedLines": 4352,
+      "percent": 17.96,
+      "blocks": 329
     },
     "global.d": {
       "lines": 12,
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12598,
-      "duplicatedLines": 1647,
-      "percent": 13.07,
-      "blocks": 130
+      "lines": 12727,
+      "duplicatedLines": 1650,
+      "percent": 12.96,
+      "blocks": 129
     },
     "modules/users": {
       "lines": 874,
@@ -414,17 +414,16 @@
     "app/(app)/banks/connect/outcome-actions.tsx": 17,
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/budgets/page.tsx": 8,
-    "app/(app)/expenses/categories/[id]/page.tsx": 57,
+    "app/(app)/expenses/categories/[id]/page.tsx": 56,
     "app/(app)/expenses/categories/board.tsx": 241,
     "app/(app)/expenses/categories/macro-dialog.tsx": 32,
-    "app/(app)/expenses/categories/page.tsx": 22,
-    "app/(app)/expenses/manual-actions.ts": 14,
+    "app/(app)/expenses/categories/page.tsx": 21,
     "app/(app)/expenses/manual.ts": 9,
-    "app/(app)/expenses/page.tsx": 62,
-    "app/(app)/expenses/review/page.tsx": 58,
+    "app/(app)/expenses/page.tsx": 56,
+    "app/(app)/expenses/review/page.tsx": 51,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
     "app/(app)/funds/[id]/page.tsx": 126,
-    "app/(app)/funds/fund-setup.ts": 22,
+    "app/(app)/funds/fund-setup.ts": 11,
     "app/(app)/funds/home-skeleton.tsx": 20,
     "app/(app)/funds/page.tsx": 214,
     "app/(app)/interests/[id]/page.tsx": 64,
@@ -449,7 +448,7 @@
     "app/(app)/settings/categories/delete-dialog.tsx": 13,
     "app/(app)/settings/categories/labels-card.tsx": 104,
     "app/(app)/settings/categories/merge-proposals.tsx": 8,
-    "app/(app)/settings/categories/page.tsx": 17,
+    "app/(app)/settings/categories/page.tsx": 16,
     "app/(app)/settings/categories/source-actions.ts": 13,
     "app/(app)/settings/categories/source-categories.tsx": 22,
     "app/(app)/settings/data/page.tsx": 26,
@@ -624,7 +623,6 @@
     "modules/timeoff/ui/leave-board.tsx": 68,
     "modules/timeoff/ui/leave-panel.tsx": 48,
     "modules/timeoff/ui/settings-forms.tsx": 45,
-    "modules/transactions/categorize/actions.ts": 24,
     "modules/transactions/categorize/review/changes.ts": 72,
     "modules/transactions/categorize/review/merges.ts": 59,
     "modules/transactions/categorize/service.ts": 50,
@@ -659,6 +657,7 @@
     "modules/transactions/taxonomy/category-reads.ts": 50,
     "modules/transactions/taxonomy/category-writes.ts": 29,
     "modules/transactions/taxonomy/labels.ts": 49,
+    "modules/transactions/ui/api-commands.tsx": 27,
     "modules/transactions/ui/breakdown-card.tsx": 6,
     "modules/transactions/ui/category-cell.tsx": 9,
     "modules/transactions/ui/default-groups-form.tsx": 17,

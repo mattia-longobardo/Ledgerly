@@ -47,7 +47,7 @@ export const getManualForm = defineRoute({
   summary:
     "What the dialog of a manual movement offers: the accounts that take one, in the order of Accounts, " +
     "with the source a «read and write» account sends it to, and today where the person is.",
-  actions: ["manualFormAction"],
+  actions: [],
   response: z.object({
     accounts: z.array(
       z.object({
@@ -79,7 +79,7 @@ export const createManualMovement = defineRoute({
     "Writes a manual movement. `key` is the dialog's own: a second request with it answers with the row " +
     "already written (`created: false`). `invalid` with `reason` `amount` or `future_date`; `conflict` " +
     "with `reason` `account_unavailable`.",
-  actions: ["createManualAction"],
+  actions: [],
   body: movement.extend({ key: id() }),
   response: written,
   status: 201,
@@ -94,7 +94,7 @@ export const updateManualMovement = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "Changes a manual movement; a movement of a source is `conflict`, `reason` `not_manual`.",
-  actions: ["updateManualAction"],
+  actions: [],
   params: byTransaction,
   body: movement,
   response: written,
@@ -113,7 +113,7 @@ export const deleteManualMovement = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "Deletes a manual movement and rebuilds its account's balance.",
-  actions: ["deleteManualAction"],
+  actions: [],
   params: byTransaction,
   response: null,
   status: 204,
@@ -130,7 +130,7 @@ export const retryManualSend = defineRoute({
   summary:
     "«Retry sending» a manual movement its source did not take: the source is updated now. `sent` says " +
     "whether it went; why not is the connection's state.",
-  actions: ["retrySendAction"],
+  actions: [],
   params: byTransaction,
   response: z.object({ sent: z.boolean() }),
   errors: TRANSACTION_ERRORS,
@@ -146,7 +146,7 @@ export const previewManualMovement = defineRoute({
   summary:
     "Today's balance of the account before and after the movement being written, or the day of the " +
     "reading that keeps it unchanged; null when there is nothing to say. Writes nothing.",
-  actions: ["previewManualAction"],
+  actions: [],
   body: movement.pick({ kind: true, amount: true, on: true, accountId: true }).extend({
     editingId: id().optional(),
   }),
@@ -174,7 +174,7 @@ export const suggestManualCategory = defineRoute({
   summary:
     "The category the cascade would give the movement being written, from what is already known; null " +
     "for none. Nothing is learnt or written.",
-  actions: ["suggestManualAction"],
+  actions: [],
   body: movement.pick({ kind: true, amount: true, accountId: true, payee: true, note: true }),
   response: z.object({ categoryId: id().nullable() }),
   errors: ["invalid"],

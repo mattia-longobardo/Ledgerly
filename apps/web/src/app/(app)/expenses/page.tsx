@@ -19,15 +19,8 @@ import {
 } from "@/modules/transactions/ui/display";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
-import {
-  chooseCategoryAction,
-  confirmCategoriesAction,
-  similarMovementsAction,
-  undoCategoriesAction,
-} from "@/modules/transactions/categorize/actions";
-import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
-import { AddMovementButton, ManualMovement } from "@/modules/transactions/ui/manual-movement";
-import type { ManualCommands } from "@/modules/transactions/ui/manual-types";
+import { ApiCategoryActions, ApiManualMovement } from "@/modules/transactions/client";
+import { AddMovementButton } from "@/modules/transactions/ui/manual-movement";
 import { ShortcutsCard } from "@/modules/transactions/ui/shortcuts-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import type {
@@ -49,38 +42,6 @@ import { Card } from "@ledgerly/ui/card";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import {
-  changeVisibilityAction,
-  createManualAction,
-  deleteManualAction,
-  manualFormAction,
-  previewManualAction,
-  retrySendAction,
-  suggestManualAction,
-  updateManualAction,
-} from "./manual-actions";
-
-/**
- * The writes and the reads of the manual movement, handed to the components: each joins the
- * accounts and the movements, so it is an action of the application (`manual.ts`).
- */
-const MANUAL_COMMANDS: ManualCommands = {
-  form: manualFormAction,
-  preview: previewManualAction,
-  suggest: suggestManualAction,
-  create: createManualAction,
-  update: updateManualAction,
-  remove: deleteManualAction,
-  retrySend: retrySendAction,
-};
-
-/** The writes and the read of the automatic categories, handed to the components. */
-const CATEGORY_COMMANDS: CategoryCommands = {
-  confirm: confirmCategoriesAction,
-  choose: chooseCategoryAction,
-  undo: undoCategoriesAction,
-  similar: similarMovementsAction,
-};
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("expenses"))("title") };
@@ -276,7 +237,6 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
 
   /** What the manual movement's dialog offers and what it needs to say where a new movement went. */
   const manual = {
-    commands: MANUAL_COMMANDS,
     categories: view.categories.map((category) => ({
       id: category.id,
       name: category.name,
@@ -297,7 +257,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
 
   if (!view.hasAny) {
     return (
-      <ManualMovement {...manual}>
+      <ApiManualMovement {...manual}>
         <Page title={t("title")}>
           <h1 className="text-title font-semibold tracking-title max-md:sr-only">{t("title")}</h1>
           <EmptyState
@@ -311,13 +271,13 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
             }
           />
         </Page>
-      </ManualMovement>
+      </ApiManualMovement>
     );
   }
 
   return (
-    <ManualMovement {...manual}>
-      <CategoryActions commands={CATEGORY_COMMANDS} categories={pickerOptions}>
+    <ApiManualMovement {...manual}>
+      <ApiCategoryActions categories={pickerOptions}>
         <Page title={t("title")} actions={<AddMovementButton short />}>
           {/* Income and spending leave the giroconti out: moving money between two of the person's own
           accounts is neither (spec §7.2, F2.5). The net is the cash flow, every movement summed, as
@@ -439,7 +399,6 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
                     params={query.params}
                     sort={query.sort}
                     direction={query.direction}
-                    visibility={changeVisibilityAction}
                   />
                 </Card>
                 {/* The read stops at its own page size: say so rather than let the header's count
@@ -466,7 +425,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
             </div>
           </div>
         </Page>
-      </CategoryActions>
-    </ManualMovement>
+      </ApiCategoryActions>
+    </ApiManualMovement>
   );
 }

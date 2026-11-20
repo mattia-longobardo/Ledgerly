@@ -2,13 +2,6 @@ import { Check } from "lucide-react";
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { listAccounts } from "@ledgerly/domain/accounts";
-import {
-  chooseCategoryAction,
-  confirmCategoriesAction,
-  createDefaultGroupsAction,
-  similarMovementsAction,
-  undoCategoriesAction,
-} from "@/modules/transactions/categorize/actions";
 import { categoryCounts, listMergeProposals, reviewOf } from "@ledgerly/domain/transactions";
 import type { ReviewGroup } from "@ledgerly/domain/transactions";
 import { isPreparing } from "@ledgerly/domain/transactions";
@@ -16,14 +9,13 @@ import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
 import { listTransactions } from "@ledgerly/domain/transactions";
 import { categorisableAccountIds } from "@ledgerly/domain/transactions";
 import { listCategories, listLabels } from "@ledgerly/domain/transactions";
-import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
+import { ApiCategoryActions } from "@/modules/transactions/client";
 import { categoryColor, categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { presetRange, RANGE_PRESETS } from "@/modules/transactions/ui/filters";
 import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guide";
 import { type ReviewGroupView, ReviewList } from "@/modules/transactions/ui/review-list";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
-import { changeVisibilityAction } from "../manual-actions";
 import { requireSession } from "@/platform/auth/session";
 import { isCivilDate, today } from "@ledgerly/domain/shared/dates";
 import { shiftRange } from "@ledgerly/domain/platform/ranges";
@@ -42,13 +34,6 @@ const HERE = "/expenses/review";
 /** The four windows of Expenses, and "All" — the default: the page empties a queue, it reads no month. */
 const PRESETS = [...RANGE_PRESETS, "all"] as const;
 type Preset = (typeof PRESETS)[number];
-
-const COMMANDS: CategoryCommands = {
-  confirm: confirmCategoriesAction,
-  choose: chooseCategoryAction,
-  undo: undoCategoriesAction,
-  similar: similarMovementsAction,
-};
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("expenses.review"))("title") };
@@ -223,7 +208,6 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
             color: categoryColor(null, index),
           }))}
           next={link({ step: "categories" })}
-          create={createDefaultGroupsAction}
         />
       </Page>
     );
@@ -386,7 +370,6 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
               direction="desc"
               path={HERE}
               sortable={false}
-              visibility={changeVisibilityAction}
             />
           </Card>
         }
@@ -395,7 +378,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
   }
 
   return (
-    <CategoryActions commands={COMMANDS} categories={options}>
+    <ApiCategoryActions categories={options}>
       <Page title={title} parent={parent}>
         {heading}
         {indicator}
@@ -423,6 +406,6 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
         {controls}
         {body}
       </Page>
-    </CategoryActions>
+    </ApiCategoryActions>
   );
 }

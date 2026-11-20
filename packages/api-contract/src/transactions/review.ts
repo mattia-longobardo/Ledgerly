@@ -114,7 +114,7 @@ export const confirmCategories = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "«Confirm»: an automatic category or a suggestion becomes the person's own choice. With «Undo».",
-  actions: ["confirmCategoriesAction"],
+  actions: [],
   body: z.object({ ids: selection(MAX_REVIEW_SELECTION) }),
   response: changedWithUndo,
   errors: TRANSACTION_ERRORS,
@@ -128,7 +128,7 @@ export const chooseCategory = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "The category chosen for a group or for similar movements: all of them or none. With «Undo».",
-  actions: ["chooseCategoryAction"],
+  actions: [],
   body: z.object({ ids: selection(MAX_REVIEW_SELECTION), categoryId: id().nullable() }),
   response: changedWithUndo,
   errors: TRANSACTION_ERRORS,
@@ -145,7 +145,7 @@ export const undoCategories = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "«Undo» of a confirmation or a choice.",
-  actions: ["undoCategoriesAction"],
+  actions: [],
   params: z.object({ undoId: id() }),
   response: changed,
   errors: TRANSACTION_ERRORS,
@@ -161,7 +161,7 @@ export const listSimilarMovements = defineRoute({
   summary:
     "The movements with the same text as this one that may take `categoryId` too (decision K3). Writes " +
     "nothing.",
-  actions: ["similarMovementsAction"],
+  actions: [],
   params: byTransaction,
   query: z.object({ categoryId: id() }),
   response: z.object({
@@ -206,7 +206,7 @@ export const dismissMergeProposal = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "«They are different»: the pair is not proposed again.",
-  actions: ["dismissMergeAction:dismiss"],
+  actions: [],
   body: pair,
   response: null,
   status: 204,
@@ -221,7 +221,7 @@ export const restoreMergeProposal = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "«Undo» of «They are different».",
-  actions: ["dismissMergeAction:restore"],
+  actions: [],
   body: pair,
   response: null,
   status: 204,
@@ -238,7 +238,7 @@ export const createDefaultGroups = defineRoute({
   summary:
     "The default groups the person chose, in their language, then a pass of the cascade after the answer; " +
     "answers how many were made.",
-  actions: ["createDefaultGroupsAction"],
+  actions: [],
   body: z.object({ keys: z.array(z.string().max(40)).min(1).max(20) }),
   response: changed,
   status: 201,

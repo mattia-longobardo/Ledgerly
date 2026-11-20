@@ -214,7 +214,7 @@ export const changeTransactionsVisibility = defineRoute({
     "Hides, restores or deletes for good (hidden rows only) a selection, and rebuilds the balance of " +
     "each manual movement's account. `rebuildBalances` is accepted and has no effect: the balance is " +
     "always rebuilt. A synced row deleted is never imported again.",
-  actions: ["changeVisibilityAction"],
+  actions: [],
   body: z.object({
     ids: selection(MAX_SELECTION),
     change: z.enum(VISIBILITY_CHANGES),

@@ -51,7 +51,7 @@ describe("what the automatic categories keep to themselves", () => {
     "modules/transactions/ui/category-actions.tsx",
     "modules/transactions/ui/review-list.tsx",
     "modules/transactions/ui/similar-dialog.tsx",
-    "modules/transactions/categorize/actions.ts",
+    "modules/transactions/category-calls.ts",
   ])("is in no shape %s hands a browser", (path) => {
     const source = read(path);
     for (const name of PRIVATE) expect(source).not.toContain(name);

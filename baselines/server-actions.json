@@ -10,19 +10,6 @@
       "startBankAccessAction"
     ]
   },
-  "apps/web/src/app/(app)/expenses/manual-actions.ts": {
-    "closedBy": "R3 of transactions",
-    "actions": [
-      "changeVisibilityAction",
-      "createManualAction",
-      "deleteManualAction",
-      "manualFormAction",
-      "previewManualAction",
-      "retrySendAction",
-      "suggestManualAction",
-      "updateManualAction"
-    ]
-  },
   "apps/web/src/app/(app)/funds/fund-setup.ts": {
     "closedBy": "R3 of funds",
     "actions": [
@@ -215,17 +202,6 @@
       "saveAllowanceAction",
       "saveLeaveRangeAction",
       "undoLeaveAction"
-    ]
-  },
-  "apps/web/src/modules/transactions/categorize/actions.ts": {
-    "closedBy": "R3 of transactions",
-    "actions": [
-      "chooseCategoryAction",
-      "confirmCategoriesAction",
-      "createDefaultGroupsAction",
-      "dismissMergeAction",
-      "similarMovementsAction",
-      "undoCategoriesAction"
     ]
   },
   "apps/web/src/modules/users/actions.ts": {

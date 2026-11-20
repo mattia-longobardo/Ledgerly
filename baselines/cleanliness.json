@@ -364,7 +364,6 @@
     "apps/web/src/modules/timeoff/ui/leave-panel.tsx": 4,
     "apps/web/src/modules/timeoff/ui/settings-forms.tsx": 10,
     "apps/web/src/modules/timeoff/ui/year-calendar.tsx": 3,
-    "apps/web/src/modules/transactions/categorize/actions.ts": 2,
     "apps/web/src/modules/transactions/jobs.ts": 1,
     "apps/web/src/modules/transactions/ui/breakdown-card.tsx": 1,
     "apps/web/src/modules/transactions/ui/category-actions.tsx": 1,
@@ -548,7 +547,6 @@
   "max-lines": {
     "apps/web/src/app/(app)/accounts/[id]/switch/switch.ts": 1,
     "apps/web/src/app/(app)/expenses/categories/board.tsx": 1,
-    "apps/web/src/app/(app)/expenses/page.tsx": 1,
     "apps/web/src/app/(app)/funds/[id]/page.tsx": 1,
     "apps/web/src/app/(app)/funds/page.tsx": 1,
     "apps/web/src/app/(app)/investments/[accountId]/activity/page.tsx": 1,

@@ -1,5 +1,7 @@
 // Transactions, the entry of what the screens of `app` use (rule M3): the calls to `/api/v1` of the
-// rules and the colours of the categories.
+// rules, the automatic categories and the manual movement, and the colours of the categories.
+export { ApiCategoryActions, ApiManualMovement } from "./ui/api-commands";
+export { createDefaultGroups, dismissMerge } from "./category-calls";
 export {
   applyRuleAction,
   deleteRuleAction,

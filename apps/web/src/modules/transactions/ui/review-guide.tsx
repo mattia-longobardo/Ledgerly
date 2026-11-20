@@ -1,5 +1,6 @@
 "use client";
 
+import { createDefaultGroups } from "../category-calls";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -73,12 +74,10 @@ export function PreparingCard({ count }: { count: number }) {
 export function GroupsStep({
   groups,
   next,
-  create,
 }: {
   groups: readonly DefaultGroupView[];
   /** Where the step of the categories is. */
   next: string;
-  create: (keys: string[]) => Promise<{ ok: true; count: number } | { ok: false; error: string }>;
 }) {
   const router = useRouter();
   const go = () => {
@@ -90,7 +89,7 @@ export function GroupsStep({
       <DefaultGroupsForm
         groups={groups}
         onCreate={async (keys) => {
-          const result = await create(keys);
+          const result = await createDefaultGroups(keys);
           return result.ok ? result.count : null;
         }}
         onLater={go}

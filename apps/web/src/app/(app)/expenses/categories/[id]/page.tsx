@@ -6,22 +6,15 @@ import { periodEnd, periodMonths } from "@ledgerly/ui/period";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { dayLabels, monthLabels } from "@ledgerly/ui/chart-labels";
 import { budgetDetail } from "@ledgerly/domain/budgets";
-import {
-  chooseCategoryAction,
-  confirmCategoriesAction,
-  similarMovementsAction,
-  undoCategoriesAction,
-} from "@/modules/transactions/categorize/actions";
 import { rulesForCategory } from "@ledgerly/domain/transactions";
 import { categoryMacroTotals, listTransactions, spendingOverTime } from "@ledgerly/domain/transactions";
 import { getCategory, listCategories, listLabels, TaxonomyError } from "@ledgerly/domain/transactions";
-import { CategoryActions, type CategoryCommands } from "@/modules/transactions/ui/category-actions";
+import { ApiCategoryActions } from "@/modules/transactions/client";
 import { categoryColors, spendingLayers, withMacroTitles } from "@/modules/transactions/ui/display";
 import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
 import { macroViews } from "@/modules/transactions/ui/macros";
 import { SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
-import { changeVisibilityAction } from "../../manual-actions";
 import { requireSession } from "@/platform/auth/session";
 import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
@@ -36,13 +29,6 @@ import { sourceNotes } from "../../../settings/categories/source";
 import { sourceHref } from "../../../settings/integrations/connection-view";
 import { rowViewOf } from "../../row-view";
 import { RestoreButton } from "./restore-button";
-
-const COMMANDS: CategoryCommands = {
-  confirm: confirmCategoriesAction,
-  choose: chooseCategoryAction,
-  undo: undoCategoriesAction,
-  similar: similarMovementsAction,
-};
 
 /** The rows of the table on this page (categories-and-rules.md §5.4): the rest is in Expenses. */
 const ROWS = 50;
@@ -215,7 +201,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           direction="desc"
           path={here}
           sortable={false}
-          visibility={changeVisibilityAction}
         />
       )}
     </Card>
@@ -239,7 +224,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           ?.groups.find((line) => line.category.id === category.id)?.children ?? []);
 
   return (
-    <CategoryActions commands={COMMANDS} categories={options}>
+    <ApiCategoryActions categories={options}>
       <Page title={category.name} parent={{ href: listHref(category.type), label: t("categories.title") }}>
         <div className="flex flex-col gap-1">
           <nav
@@ -402,6 +387,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           </Card>
         </div>
       </Page>
-    </CategoryActions>
+    </ApiCategoryActions>
   );
 }

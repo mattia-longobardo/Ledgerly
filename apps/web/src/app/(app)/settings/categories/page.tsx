@@ -2,7 +2,6 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { colorOfCategory, listCategoriesWithUsage, listLabelsWithUsage } from "@ledgerly/domain/transactions";
-import { createDefaultGroupsAction, dismissMergeAction } from "@/modules/transactions/categorize/actions";
 import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
 import { categoryColor } from "@/modules/transactions/ui/display";
 import { requireSession } from "@/platform/auth/session";
@@ -79,7 +78,6 @@ export default async function SettingsCategoriesPage() {
               sumsBudgets: proposal.sumsBudgets,
             }))}
             merge={mergeCategoriesAction}
-            dismiss={dismissMergeAction}
           />
         </SettingsSection>
       )}
@@ -113,7 +111,6 @@ export default async function SettingsCategoriesPage() {
                 examples: group.examples[ctx.locale],
                 color: categoryColor(null, index),
               }))}
-              create={createDefaultGroupsAction}
             />
           </div>
         )}

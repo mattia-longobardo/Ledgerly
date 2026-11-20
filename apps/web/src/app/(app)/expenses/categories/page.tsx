@@ -3,7 +3,6 @@ import { getTranslations } from "next-intl/server";
 import { budgetsView } from "@ledgerly/domain/budgets";
 import { periodEnd } from "@ledgerly/ui/period";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
-import { createDefaultGroupsAction } from "@/modules/transactions/categorize/actions";
 import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
 import { categoryMacroTotals, facetCounts } from "@ledgerly/domain/transactions";
 import { colorOfCategory, listCategoriesWithUsage } from "@ledgerly/domain/transactions";
@@ -202,7 +201,6 @@ export default async function CategoriesPage({ searchParams }: PageProps<"/expen
                     examples: group.examples[ctx.locale],
                     color: categoryColor(null, index),
                   }))}
-                  create={createDefaultGroupsAction}
                 />
               }
             />

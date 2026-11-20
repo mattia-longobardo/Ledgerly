@@ -196,10 +196,7 @@ describe("the Server Actions of accounts", () => {
  * The Server Actions of transactions (05-refactor.md §5.5) and Expenses' manual movement, and their
  * routes; no exclusion. The palette's two searches have no action left: it calls `/api/v1`. `name:variant` is one action that calls two use cases.
  */
-const TRANSACTIONS_ACTION_FILES = [
-  "apps/web/src/modules/transactions/categorize/actions.ts",
-  "apps/web/src/app/(app)/expenses/manual-actions.ts",
-];
+const TRANSACTIONS_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of transactions", () => {
   const actions = TRANSACTIONS_ACTION_FILES.flatMap((file) =>

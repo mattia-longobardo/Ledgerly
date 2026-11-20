@@ -1,5 +1,6 @@
 "use client";
 
+import { dismissMerge } from "@/modules/transactions/client";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -44,14 +45,12 @@ function Name({ side }: { side: MergeSide }) {
 export function MergeProposals({
   proposals,
   merge,
-  dismiss,
 }: {
   proposals: readonly MergeProposalRow[];
   merge: (
     keepId: string,
     dropId: string,
   ) => Promise<{ ok: true; moved: number } | { ok: false; error: string }>;
-  dismiss: (a: string, b: string, dismissed: boolean) => Promise<{ ok: boolean }>;
 }) {
   const t = useTranslations("settings.categories.merge");
   const router = useRouter();
@@ -62,14 +61,14 @@ export function MergeProposals({
 
   function onDismiss(proposal: MergeProposalRow) {
     const pair = [proposal.first.id, proposal.second.id] as const;
-    dismiss(...pair, true)
+    dismissMerge(...pair, true)
       .then((result) => {
         if (!result.ok) return;
         router.refresh();
         notify(t("dismissed"), "success", {
           label: t("undo"),
           onClick: () => {
-            dismiss(...pair, false)
+            dismissMerge(...pair, false)
               .then(() => router.refresh())
               .catch(() => undefined);
           },
