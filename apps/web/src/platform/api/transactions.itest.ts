@@ -198,30 +198,29 @@ describe("the movements", () => {
     ]);
   });
 
-  it("keeps each visibility action's effect on a manual account's balance (rebuildBalances)", async () => {
-    const kept = await newAccount(alice, "Kept");
-    const rebuilt = await newAccount(alice, "Rebuilt");
-    const a = await manual(alice, kept);
-    const b = await manual(alice, rebuilt);
-    // The actions of the other pages leave the balance as it is, as `hideTransactions` does today.
-    const before = await balanceOf(alice, kept);
-    for (const change of ["hide", "restore", "hide", "delete"]) {
-      const done = await send(alice, "POST", "/transactions/visibility", {
-        ids: [a.id],
-        change,
-        rebuildBalances: false,
-      });
-      expect(done.body).toEqual({ count: 1 });
-      expect(await balanceOf(alice, kept), change).toBe(before);
+  it("rebuilds a manual account's balance on every visibility action, whatever rebuildBalances says", async () => {
+    // Every page now does what Expenses did: a hidden manual movement is out of the balance.
+    for (const rebuildBalances of [false, true]) {
+      const account = await newAccount(alice, `Manual ${rebuildBalances}`);
+      const one = await manual(alice, account);
+      const counted = await balanceOf(alice, account);
+      for (const [change, expected] of [
+        ["hide", "100.00"],
+        ["restore", counted],
+        ["hide", "100.00"],
+        ["delete", "100.00"],
+      ]) {
+        const done = await send(alice, "POST", "/transactions/visibility", {
+          ids: [one.id],
+          change,
+          rebuildBalances,
+        });
+        expect(done.body).toEqual({ count: 1 });
+        expect(await balanceOf(alice, account), `${change}, rebuildBalances ${rebuildBalances}`).toBe(
+          expected,
+        );
+      }
     }
-    // Expenses rebuilds it, as `changeVisibility` does today.
-    const hidden = await send(alice, "POST", "/transactions/visibility", {
-      ids: [b.id],
-      change: "hide",
-      rebuildBalances: true,
-    });
-    expect(hidden.body).toEqual({ count: 1 });
-    expect(await balanceOf(alice, rebuilt)).toBe("100.00");
   });
 });
 

@@ -18,7 +18,7 @@ import { TONE_TEXT } from "@ledgerly/ui/tone";
 import { CategoryPicker } from "@ledgerly/ui/category-picker";
 import { useCategoryActions } from "./category-actions";
 import { CategoryCell, CHIP } from "./category-cell";
-import { type CommandResult, hide, removeHidden, restore, setCategory } from "./commands";
+import { type CommandResult, setCategory } from "./commands";
 import { TransactionDetails } from "./details-modal";
 import type { RowBadge } from "./display";
 import { useManualMovement } from "./manual-movement";
@@ -101,6 +101,7 @@ export function TransactionsTable({
   direction,
   path = "/expenses",
   sortable = true,
+  visibility,
 }: {
   groups: readonly GroupView[];
   categories: readonly CategoryOption[];
@@ -112,6 +113,11 @@ export function TransactionsTable({
   path?: string;
   /** `false` where the order is the page's own and no heading changes it ("To review"). */
   sortable?: boolean;
+  /**
+   * Hide, restore and delete: the application's action, which also rebuilds a manual movement's
+   * balance (it joins the accounts, so the page hands it over).
+   */
+  visibility: (ids: string[], change: "hide" | "restore" | "delete") => Promise<CommandResult>;
 }) {
   const t = useTranslations("expenses");
   const router = useRouter();
@@ -254,13 +260,13 @@ export function TransactionsTable({
   function onVisibility(ids: readonly string[], hidden: boolean) {
     if (hidden) {
       run(
-        () => (manual ? manual.visibility(ids, "restore") : restore(ids)),
+        () => visibility([...ids], "restore"),
         (count) => t("toasts.restored", { count }),
       );
       return;
     }
     run(
-      () => (manual ? manual.visibility(ids, "hide") : hide(ids)),
+      () => visibility([...ids], "hide"),
       (count) => t("toasts.hidden", { count }),
     );
   }
@@ -430,7 +436,7 @@ export function TransactionsTable({
                 setDeleting(null);
                 if (id)
                   run(
-                    () => (manual ? manual.visibility([id], "delete") : removeHidden([id])),
+                    () => visibility([id], "delete"),
                     (count) => t("toasts.deleted", { count }),
                   );
               }}

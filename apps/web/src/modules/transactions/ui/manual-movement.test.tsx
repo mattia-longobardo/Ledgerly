@@ -16,11 +16,11 @@ const setLabels = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }) }));
 vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
+/** The page's own hide, restore and delete, which keeps the balance right. */
+const visibility = vi.fn(async () => ({ ok: true as const, count: 1 }));
+
 vi.mock("./commands", () => ({
   setCategory: vi.fn(),
-  hide: vi.fn(),
-  restore: vi.fn(),
-  removeHidden: vi.fn(),
   setNote: vi.fn(),
   setLabels: (...args: unknown[]) => setLabels(...args),
 }));
@@ -53,7 +53,6 @@ function commandsWith(overrides: Partial<ManualCommands> = {}): ManualCommands {
     create: vi.fn(async () => SAVED),
     update: vi.fn(async () => ({ ...SAVED, created: false, id: "tx-manual" })),
     remove: vi.fn(async () => ({ ok: true as const, count: 1 })),
-    visibility: vi.fn(async () => ({ ok: true as const, count: 1 })),
     ...overrides,
   };
 }
@@ -98,6 +97,7 @@ function renderScreen(commands: ManualCommands, options: { shown?: ShownRange; o
           params={{}}
           sort="date"
           direction="desc"
+          visibility={visibility}
         />
       </ManualMovement>
     </NextIntlClientProvider>,
@@ -380,6 +380,6 @@ describe("a manual movement in the table", () => {
     await user.click(within(screen.getByRole("table")).getByRole("button", { name: "Row actions" }));
     await user.click(await screen.findByRole("menuitem", { name: "Hide" }));
 
-    await waitFor(() => expect(commands.visibility).toHaveBeenCalledWith(["tx-manual"], "hide"));
+    await waitFor(() => expect(visibility).toHaveBeenCalledWith(["tx-manual"], "hide"));
   });
 });

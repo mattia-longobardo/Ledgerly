@@ -62,8 +62,6 @@ export interface ManualCommands {
    * Left out where the page offers no sending.
    */
   retrySend?(id: string): Promise<{ ok: true; sent: boolean } | { ok: false }>;
-  /** Hide, restore and delete of a selection, with the balance of a manual movement kept right. */
-  visibility(ids: string[], change: "hide" | "restore" | "delete"): Promise<CommandResult>;
 }
 
 /** What the page says about the list on screen, to tell whether a new movement is in it. */

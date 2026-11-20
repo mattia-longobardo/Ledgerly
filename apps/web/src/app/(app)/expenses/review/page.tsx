@@ -23,6 +23,7 @@ import { presetRange, RANGE_PRESETS } from "@/modules/transactions/ui/filters";
 import { GroupsStep, PreparingCard } from "@/modules/transactions/ui/review-guide";
 import { type ReviewGroupView, ReviewList } from "@/modules/transactions/ui/review-list";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
+import { changeVisibilityAction } from "../manual-actions";
 import { requireSession } from "@/platform/auth/session";
 import { isCivilDate, today } from "@ledgerly/domain/shared/dates";
 import { shiftRange } from "@ledgerly/domain/platform/ranges";
@@ -384,6 +385,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
               direction="desc"
               path={HERE}
               sortable={false}
+              visibility={changeVisibilityAction}
             />
           </Card>
         }

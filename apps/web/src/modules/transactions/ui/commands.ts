@@ -9,9 +9,6 @@
 import {
   type ActionResult,
   type CountResult,
-  deleteHiddenTransactionsAction,
-  hideTransactionsAction,
-  restoreTransactionsAction,
   setTransactionCategoryAction,
   setTransactionLabelsAction,
   setTransactionNoteAction,
@@ -30,21 +27,6 @@ export type CommandResult = CountResult;
 /** Spec §7.2: the category is user-owned, so this also marks the rows `locally_edited`. */
 export function setCategory(ids: readonly string[], categoryId: string | null): Promise<CommandResult> {
   return setTransactionCategoryAction([...ids], categoryId);
-}
-
-/** Spec §7.2 and D10: the design's "Delete" is this — `hidden_at`, never a deletion. */
-export function hide(ids: readonly string[]): Promise<CommandResult> {
-  return hideTransactionsAction([...ids]);
-}
-
-/** What "Show hidden" is for: bringing a hidden row back into the totals (spec §7.2). */
-export function restore(ids: readonly string[]): Promise<CommandResult> {
-  return restoreTransactionsAction([...ids]);
-}
-
-/** "Delete" under "Restore": only for hidden rows, and for good. */
-export function removeHidden(ids: readonly string[]): Promise<CommandResult> {
-  return deleteHiddenTransactionsAction([...ids]);
 }
 
 /** One row at a time, and no count to report: what the details panel saves. */

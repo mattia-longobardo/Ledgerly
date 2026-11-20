@@ -17,9 +17,6 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: 
 vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
 vi.mock("./commands", () => ({
   setCategory: vi.fn(),
-  hide: vi.fn(),
-  restore: vi.fn(),
-  removeHidden: vi.fn(),
   setNote: vi.fn(),
   setLabels: vi.fn(),
 }));
@@ -50,7 +47,6 @@ function commandsWith(overrides: Partial<ManualCommands> = {}): ManualCommands {
     create: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(async () => ({ ok: true as const, count: 1 })),
-    visibility: vi.fn(async () => ({ ok: true as const, count: 1 })),
     ...overrides,
   };
 }
@@ -95,6 +91,7 @@ function renderScreen(commands: ManualCommands, send: RowView["send"] = null) {
           params={{}}
           sort="date"
           direction="desc"
+          visibility={vi.fn()}
         />
       </ManualMovement>
     </NextIntlClientProvider>,

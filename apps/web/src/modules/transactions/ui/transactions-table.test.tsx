@@ -11,6 +11,9 @@ const setCategory = vi.fn();
 const hide = vi.fn();
 const restore = vi.fn();
 const removeHidden = vi.fn();
+/** The page's action, one change at a time, so each test reads the change it made. */
+const visibility = (ids: string[], change: "hide" | "restore" | "delete") =>
+  ({ hide, restore, delete: removeHidden })[change](ids);
 const setNote = vi.fn();
 const setLabels = vi.fn();
 const notify = vi.fn();
@@ -19,9 +22,6 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 vi.mock("./commands", () => ({
   setCategory: (...args: unknown[]) => setCategory(...args),
-  hide: (...args: unknown[]) => hide(...args),
-  restore: (...args: unknown[]) => restore(...args),
-  removeHidden: (...args: unknown[]) => removeHidden(...args),
   setNote: (...args: unknown[]) => setNote(...args),
   setLabels: (...args: unknown[]) => setLabels(...args),
 }));
@@ -86,6 +86,7 @@ function renderTable(groups: GroupView[] = GROUPS) {
         params={{ preset: "lastMonth" }}
         sort="date"
         direction="desc"
+        visibility={visibility}
       />
     </NextIntlClientProvider>,
   );
@@ -273,6 +274,7 @@ describe("TransactionsTable", () => {
           params={{}}
           sort="date"
           direction="desc"
+          visibility={visibility}
         />
       </NextIntlClientProvider>,
     );
@@ -359,6 +361,7 @@ describe("TransactionsTable", () => {
           params={{}}
           sort="amount"
           direction="desc"
+          visibility={visibility}
         />
       </NextIntlClientProvider>,
     );

@@ -72,7 +72,6 @@ const MANUAL_COMMANDS: ManualCommands = {
   update: updateManualAction,
   remove: deleteManualAction,
   retrySend: retrySendAction,
-  visibility: changeVisibilityAction,
 };
 
 /** The writes and the read of the automatic categories, handed to the components. */
@@ -440,6 +439,7 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
                     params={query.params}
                     sort={query.sort}
                     direction={query.direction}
+                    visibility={changeVisibilityAction}
                   />
                 </Card>
                 {/* The read stops at its own page size: say so rather than let the header's count

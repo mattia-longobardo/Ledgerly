@@ -21,6 +21,7 @@ import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
 import { macroViews } from "@/modules/transactions/ui/macros";
 import { SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
+import { changeVisibilityAction } from "../../manual-actions";
 import { requireSession } from "@/platform/auth/session";
 import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
@@ -214,6 +215,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
           direction="desc"
           path={here}
           sortable={false}
+          visibility={changeVisibilityAction}
         />
       )}
     </Card>

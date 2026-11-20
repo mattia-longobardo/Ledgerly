@@ -202,18 +202,14 @@ export const changeTransactionsVisibility = defineRoute({
   scope: "write",
   capability: "transactions",
   summary:
-    "Hides, restores or deletes for good (hidden rows only) a selection. With `rebuildBalances`, the " +
-    "balance of each manual movement's account is rebuilt, as Expenses does; without, it is left as it is, " +
-    "as the other pages do today. A synced row deleted is never imported again.",
-  actions: [
-    "changeVisibilityAction",
-    "hideTransactionsAction",
-    "restoreTransactionsAction",
-    "deleteHiddenTransactionsAction",
-  ],
+    "Hides, restores or deletes for good (hidden rows only) a selection, and rebuilds the balance of " +
+    "each manual movement's account. `rebuildBalances` is accepted and has no effect: the balance is " +
+    "always rebuilt. A synced row deleted is never imported again.",
+  actions: ["changeVisibilityAction"],
   body: z.object({
     ids: selection(MAX_SELECTION),
     change: z.enum(VISIBILITY_CHANGES),
+    /** No effect since 0.42.0: every action rebuilds the balances. Kept so no client breaks. */
     rebuildBalances: z.boolean(),
   }),
   response: changed,

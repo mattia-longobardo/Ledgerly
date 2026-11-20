@@ -19,9 +19,6 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh }
 vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
 vi.mock("./commands", () => ({
   setCategory: (...args: unknown[]) => setCategory(...args),
-  hide: vi.fn(),
-  restore: vi.fn(),
-  removeHidden: vi.fn(),
   setNote: vi.fn(),
   setLabels: vi.fn(),
 }));
@@ -183,6 +180,7 @@ describe("the table with the automatic categories", () => {
             params={{}}
             sort="date"
             direction="desc"
+            visibility={vi.fn()}
           />
         </CategoryActions>,
       ),

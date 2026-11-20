@@ -9,11 +9,8 @@ import { searchFunds } from "@ledgerly/domain/funds";
 import { searchPockets } from "@ledgerly/domain/pockets";
 import { searchSubscriptions } from "@ledgerly/domain/subscriptions";
 import {
-  deleteHiddenTransactions,
   expensesView,
-  hideTransactions,
   listTransactions,
-  restoreTransactions,
   searchPayees,
   setCategory,
   spending,
@@ -125,18 +122,10 @@ function serveWrites(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): 
   serve(app, guard, movements.setTransactionsCategory, async ({ ctx, body }) => ({
     count: await refusing(setCategory(ctx, body.ids, body.categoryId)),
   }));
-  serve(app, guard, movements.changeTransactionsVisibility, async ({ ctx, body }) => {
-    // Each action keeps its effect of today: Expenses rebuilds the balances, the other pages do not.
-    if (body.rebuildBalances)
-      return { count: await refusing(cases.changeVisibility(ctx, body.ids, body.change)) };
-    const change =
-      body.change === "hide"
-        ? hideTransactions
-        : body.change === "restore"
-          ? restoreTransactions
-          : deleteHiddenTransactions;
-    return { count: await refusing(change(ctx, body.ids)) };
-  });
+  // Every action rebuilds the balance of a manual movement's account; `rebuildBalances` is read no more.
+  serve(app, guard, movements.changeTransactionsVisibility, async ({ ctx, body }) => ({
+    count: await refusing(cases.changeVisibility(ctx, body.ids, body.change)),
+  }));
 }
 
 function serveOne(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): void {

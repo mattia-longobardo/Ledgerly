@@ -17,7 +17,6 @@ import {
 import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import type { CommandResult } from "./commands";
 import { type ManualCategoryOption, ManualTransactionDialog } from "./manual-dialog";
 import type { ManualCommands, ShownRange } from "./manual-types";
 import type { LabelOption, RowView } from "./view";
@@ -29,7 +28,6 @@ interface ManualMovementApi {
   openDelete(row: RowView): void;
   /** "Retry sending", where the page offers it: `null` otherwise. */
   retrySend: ((row: RowView) => void) | null;
-  visibility(ids: readonly string[], change: "hide" | "restore" | "delete"): Promise<CommandResult>;
 }
 
 const ManualMovementContext = createContext<ManualMovementApi | null>(null);
@@ -111,7 +109,6 @@ export function ManualMovement({
             });
           }
         : null,
-      visibility: (ids, change) => commands.visibility([...ids], change),
     }),
     [open, commands, t],
   );

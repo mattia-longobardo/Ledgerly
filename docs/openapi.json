@@ -23803,7 +23803,7 @@
     "/transactions/visibility": {
       "post": {
         "operationId": "change_transactions_visibility",
-        "summary": "Hides, restores or deletes for good (hidden rows only) a selection. With `rebuildBalances`, the balance of each manual movement's account is rebuilt, as Expenses does; without, it is left as it is, as the other pages do today. A synced row deleted is never imported again.",
+        "summary": "Hides, restores or deletes for good (hidden rows only) a selection, and rebuilds the balance of each manual movement's account. `rebuildBalances` is accepted and has no effect: the balance is always rebuilt. A synced row deleted is never imported again.",
         "tags": [
           "transactions"
         ],

@@ -220,10 +220,7 @@
   "apps/web/src/modules/transactions/actions.ts": {
     "closedBy": "R3 of transactions",
     "actions": [
-      "deleteHiddenTransactionsAction",
       "editWalletTransactionAction",
-      "hideTransactionsAction",
-      "restoreTransactionsAction",
       "setTransactionCategoryAction",
       "setTransactionLabelsAction",
       "setTransactionNoteAction"

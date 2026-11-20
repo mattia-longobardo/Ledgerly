@@ -10,14 +10,7 @@ import { parseAmount } from "@ledgerly/domain/platform/format";
 import { requireSession } from "@/platform/auth/session";
 import { WALLET_RECORD_TEXT_MAX, editWalletTransaction } from "@ledgerly/domain/platform/integrations/wallet";
 import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions";
-import {
-  TransactionError,
-  deleteHiddenTransactions,
-  hideTransactions,
-  restoreTransactions,
-  setCategory,
-  updateTransaction,
-} from "@ledgerly/domain/transactions";
+import { TransactionError, setCategory, updateTransaction } from "@ledgerly/domain/transactions";
 
 /**
  * Forms call these inside a transition with no error boundary, so a refusal comes back as a
@@ -69,44 +62,6 @@ export async function setTransactionLabelsAction(id: string, labelIds: string[])
     await updateTransaction(ctx, id, { labelIds: z.array(z.uuid()).max(50).parse(labelIds) });
     revalidatePath("/expenses");
     return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-/** "Hide" — the design's "Delete" (spec §7.2, D10). The rows stay and can be restored. */
-export async function hideTransactionsAction(ids: string[]): Promise<CountResult> {
-  const ctx = await requireSession();
-  try {
-    const count = await hideTransactions(ctx, idsSchema.parse(ids));
-    revalidatePath("/expenses");
-    revalidatePath("/");
-    return { ok: true, count };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-export async function restoreTransactionsAction(ids: string[]): Promise<CountResult> {
-  const ctx = await requireSession();
-  try {
-    const count = await restoreTransactions(ctx, idsSchema.parse(ids));
-    revalidatePath("/expenses");
-    revalidatePath("/");
-    return { ok: true, count };
-  } catch (error) {
-    return failed(error);
-  }
-}
-
-/** "Delete" on hidden rows: gone for good, and a synced one is never imported again. */
-export async function deleteHiddenTransactionsAction(ids: string[]): Promise<CountResult> {
-  const ctx = await requireSession();
-  try {
-    const count = await deleteHiddenTransactions(ctx, idsSchema.parse(ids));
-    revalidatePath("/expenses");
-    revalidatePath("/");
-    return { ok: true, count };
   } catch (error) {
     return failed(error);
   }
