@@ -3,10 +3,10 @@
 // pages do not load these components.
 export { CATEGORY_CALLS } from "./category-calls";
 export { MANUAL_CALLS } from "./manual-calls";
-export { monthLabel } from "./ui/display";
+export { monthLabel, sourcePageOf } from "./ui/display";
 export { type BreakdownGroup, BreakdownCard } from "./ui/breakdown-card";
 export { CategoryActions } from "./ui/category-actions";
-export { FilterBar } from "./ui/filter-bar";
+export { AccountsMenu, FilterBar } from "./ui/filter-bar";
 export {
   filtersOf,
   parseExpensesQuery,

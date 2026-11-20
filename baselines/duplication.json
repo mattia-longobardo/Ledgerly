@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 99241,
-    "duplicatedLines": 16623,
-    "percent": 16.75,
+    "lines": 99363,
+    "duplicatedLines": 16617,
+    "percent": 16.72,
     "blocks": 1233
   },
   "units": {
     "api": {
       "lines": 2741,
-      "duplicatedLines": 342,
-      "percent": 12.48,
-      "blocks": 35
+      "duplicatedLines": 331,
+      "percent": 12.08,
+      "blocks": 34
     },
     "app": {
-      "lines": 24959,
-      "duplicatedLines": 4150,
-      "percent": 16.63,
-      "blocks": 322
+      "lines": 25085,
+      "duplicatedLines": 4153,
+      "percent": 16.56,
+      "blocks": 323
     },
     "global.d": {
       "lines": 12,
@@ -41,9 +41,9 @@
       "blocks": 70
     },
     "modules/budgets": {
-      "lines": 1537,
+      "lines": 1525,
       "duplicatedLines": 221,
-      "percent": 14.38,
+      "percent": 14.49,
       "blocks": 19
     },
     "modules/funds": {
@@ -95,9 +95,9 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 13016,
-      "duplicatedLines": 1649,
-      "percent": 12.67,
+      "lines": 13024,
+      "duplicatedLines": 1651,
+      "percent": 12.68,
       "blocks": 132
     },
     "modules/users": {
@@ -391,7 +391,6 @@
     "api/pockets/dto.ts": 31,
     "api/pockets/routes.ts": 13,
     "api/settings/categories.ts": 39,
-    "api/settings/category-board.ts": 11,
     "api/settings/category-moves.ts": 6,
     "api/settings/connections.ts": 16,
     "api/settings/security.ts": 33,
@@ -417,25 +416,26 @@
     "app/(app)/banks/connect/accounts-step.tsx": 46,
     "app/(app)/banks/connect/bank-step.tsx": 13,
     "app/(app)/banks/connect/outcome-actions.tsx": 17,
-    "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/expenses/categories/[id]/category-blocks.tsx": 9,
     "app/(app)/expenses/categories/[id]/category-screen.tsx": 29,
     "app/(app)/expenses/categories/board-dialogs.tsx": 108,
     "app/(app)/expenses/categories/board-rows.tsx": 20,
+    "app/(app)/expenses/categories/board-screen.tsx": 17,
+    "app/(app)/expenses/categories/board-view.ts": 14,
     "app/(app)/expenses/categories/board-writes.ts": 14,
     "app/(app)/expenses/categories/board.tsx": 34,
     "app/(app)/expenses/categories/macro-dialog.tsx": 11,
-    "app/(app)/expenses/categories/page.tsx": 21,
     "app/(app)/expenses/expenses-blocks.tsx": 9,
     "app/(app)/expenses/expenses-screen.tsx": 17,
     "app/(app)/expenses/manual.ts": 9,
+    "app/(app)/expenses/review/review-blocks.tsx": 9,
     "app/(app)/expenses/review/review-screen.tsx": 28,
     "app/(app)/expenses/row-view.ts": 6,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
     "app/(app)/funds/[id]/page.tsx": 126,
     "app/(app)/funds/fund-setup.ts": 11,
     "app/(app)/funds/home-skeleton.tsx": 20,
-    "app/(app)/funds/page.tsx": 214,
+    "app/(app)/funds/page.tsx": 213,
     "app/(app)/interests/[id]/page.tsx": 64,
     "app/(app)/interests/page.tsx": 69,
     "app/(app)/investments/[accountId]/activity/page.tsx": 95,
@@ -452,7 +452,7 @@
     "app/(app)/payroll/page.tsx": 19,
     "app/(app)/payroll/settings/code-map-card.tsx": 8,
     "app/(app)/payroll/settings/page.tsx": 17,
-    "app/(app)/pockets/[id]/page.tsx": 80,
+    "app/(app)/pockets/[id]/page.tsx": 76,
     "app/(app)/pockets/page.tsx": 23,
     "app/(app)/settings/categories/labels-card.tsx": 104,
     "app/(app)/settings/categories/merge-proposals.tsx": 8,
@@ -641,7 +641,7 @@
     "modules/transactions/categorize/user-rules-service/previews.ts": 25,
     "modules/transactions/categorize/user-rules-service/rules.ts": 11,
     "modules/transactions/categorize/user-rules.ts": 6,
-    "modules/transactions/category-calls.ts": 24,
+    "modules/transactions/category-calls.ts": 25,
     "modules/transactions/jobs.ts": 57,
     "modules/transactions/manual.ts": 6,
     "modules/transactions/queries/candidates.ts": 20,
@@ -665,7 +665,7 @@
     "modules/transactions/switch-rules.ts": 40,
     "modules/transactions/switching/doubles.ts": 64,
     "modules/transactions/switching/transfers.ts": 45,
-    "modules/transactions/taxonomy-calls.ts": 29,
+    "modules/transactions/taxonomy-calls.ts": 30,
     "modules/transactions/taxonomy/category-adoption.ts": 20,
     "modules/transactions/taxonomy/category-reads.ts": 50,
     "modules/transactions/taxonomy/category-writes.ts": 29,

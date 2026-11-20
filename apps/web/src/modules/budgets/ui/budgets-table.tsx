@@ -15,7 +15,7 @@ import { TONE_TEXT } from "@ledgerly/ui/tone";
 import { setBudgetLimit, stopBudget } from "../calls";
 import type { BudgetScope, BudgetStatus } from "@ledgerly/domain/budgets/client";
 
-/** One budget as the table draws it: every amount already formatted by the server (spec §8.5). */
+/** One budget as the table draws it: every amount already formatted (spec §8.5). */
 export interface BudgetRowView {
   key: string;
   /** The budget's own page: this month, the months before and its alerts. */
@@ -53,7 +53,6 @@ function LimitCell({ row, month }: { row: BudgetRowView; month: string }) {
   const t = useTranslations("budgets");
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function save(value: string) {
     setEditing(false);
@@ -61,7 +60,6 @@ function LimitCell({ row, month }: { row: BudgetRowView; month: string }) {
     startTransition(async () => {
       const result = await setBudgetLimit(row.scope, month, value);
       notify(result.ok ? t("toasts.saved") : t("errors.invalid"), result.ok ? "success" : "error");
-      if (result.ok) router.refresh();
     });
   }
 
@@ -115,13 +113,12 @@ export function BudgetsTable({
   const router = useRouter();
 
   function remove(row: BudgetRowView) {
-    void stopBudget(row.scope, month).then((result) => {
+    void stopBudget(row.scope, month).then((result) =>
       notify(
         result.ok ? t("toasts.removed", { month: monthLabel }) : t("errors.failed"),
         result.ok ? "success" : "error",
-      );
-      if (result.ok) router.refresh();
-    });
+      ),
+    );
   }
 
   const menu = (row: BudgetRowView) => (

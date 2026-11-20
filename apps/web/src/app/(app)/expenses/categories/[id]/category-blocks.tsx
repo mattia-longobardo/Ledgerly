@@ -28,6 +28,7 @@ import {
   lineViewOf,
   SpendingCard,
   TransactionsTable,
+  sourcePageOf,
 } from "@/modules/transactions/client";
 import { RestoreButton } from "./restore-button";
 
@@ -54,15 +55,6 @@ export interface CategoryPage {
 
 const money = (amount: string, page: CategoryPage) => formatMoney(parseCents(amount), page.numberFormat);
 const linkClass = "focus-ring inline-flex min-h-6 items-center rounded-xs hover:underline";
-
-/**
- * Where a source's categories are matched: a plugin's page is its name, a core source's is its id.
- * shortcut: mirrors the server-only `sourceSlugOf` for the only sources that give categories (a
- * plugin, a core bank source); upgrade when the summary answers the source's page itself.
- */
-function sourcePageOf(provider: string): string {
-  return `/settings/integrations/${provider.replace(/^plugin:/, "")}`;
-}
 
 export function CategoryHeading({ page, source }: { page: CategoryPage; source: Summary["source"] }) {
   const text = useTranslations("expenses");

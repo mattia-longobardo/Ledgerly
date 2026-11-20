@@ -1,7 +1,7 @@
 // The automatic categories' calls to `/api/v1` (rewrite plan R3): «Confirm», a choice for a group, its
 // «Undo», the similar movements, the merge proposals and the default groups, with the answers of the
 // Server Actions they replace. The similar movements come back with their day and amount formatted.
-import { categories, profile } from "@ledgerly/api-contract/settings";
+import { categories, categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { movements, review, rules, spending } from "@ledgerly/api-contract/transactions";
 import { ApiError, call } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
@@ -24,6 +24,7 @@ function changed(): void {
     rules.listRules,
     categories.listCategories,
     categories.getCategorySummary,
+    categoryBoard.getCategoriesBoard,
   );
 }
 

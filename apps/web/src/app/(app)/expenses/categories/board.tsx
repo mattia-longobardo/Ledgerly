@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useId, useState } from "react";
 import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { Checkbox } from "@ledgerly/ui/input";
+import { Link } from "@ledgerly/ui/router";
 import { Segmented } from "@ledgerly/ui/segmented";
 import { DeleteCategoryDialog } from "../../settings/categories/delete-dialog";
 import {

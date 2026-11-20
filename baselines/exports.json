@@ -83,6 +83,7 @@
     "MAX_TIMES",
     "MIN_SYNC_GAP_MINUTES",
     "categories",
+    "categoryBoard",
     "connections",
     "labels",
     "people",

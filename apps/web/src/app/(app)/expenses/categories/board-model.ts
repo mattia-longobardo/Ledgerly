@@ -1,7 +1,6 @@
 // What the board of the categories draws (categories-and-rules.md §5.2): a macro, its groups and their
 // categories with every amount already formatted, the dialog open on it, and the groups this browser
 // keeps open.
-import type { Route } from "next";
 import { useMemo, useSyncExternalStore } from "react";
 import type { CategoryType } from "@ledgerly/domain/transactions/client";
 
@@ -29,13 +28,13 @@ export interface BoardLine {
   shareText: string;
   inTotal: string;
   outTotal: string;
-  href: Route;
+  href: string;
   budget: { limit: string; status: "on_track" | "near" | "over" } | null;
-  source: { text: string; href: Route | null } | null;
+  source: { text: string; href: string | null } | null;
 }
 
 export interface BoardGroup extends BoardLine {
-  only: { total: string; count: number; href: Route } | null;
+  only: { total: string; count: number; href: string } | null;
   children: BoardLine[];
 }
 
@@ -46,7 +45,7 @@ export interface BoardMacro {
   inTotal: string;
   outTotal: string;
   groups: BoardGroup[];
-  rest: { count: number; total: string; inTotal: string; outTotal: string; href: Route } | null;
+  rest: { count: number; total: string; inTotal: string; outTotal: string; href: string } | null;
 }
 
 export type Dialog =

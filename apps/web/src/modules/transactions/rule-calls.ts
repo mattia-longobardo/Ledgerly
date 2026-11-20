@@ -1,7 +1,7 @@
 // The calls of Settings › Rules to `/api/v1` (rewrite plan R3): each keeps the name and the answer of
 // the Server Action of `categorize/user-rules-actions.ts` it replaces, so the board reads one shape.
 // A preview comes back formatted in the person's own format, as the action gave it.
-import { categories, profile } from "@ledgerly/api-contract/settings";
+import { categories, categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { movements, review, rules, spending } from "@ledgerly/api-contract/transactions";
 import { ApiError, call, type RouteInput, type RouteOutput } from "@ledgerly/api-client";
 import { centsToDecimal, parseCents } from "@ledgerly/format/cents";
@@ -64,6 +64,7 @@ function changed(): void {
     spending.getSpending,
     review.getReview,
     categories.listCategories,
+    categoryBoard.getCategoriesBoard,
   );
 }
 

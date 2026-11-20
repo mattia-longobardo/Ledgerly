@@ -3,7 +3,7 @@
 // number format and travels as the decimal of its size; the dialog gets dates and money formatted.
 import { manual, movements, review, spending } from "@ledgerly/api-contract/transactions";
 import { views } from "@ledgerly/api-contract/accounts";
-import { profile } from "@ledgerly/api-contract/settings";
+import { categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { centsToDecimal, parseCents } from "@ledgerly/format/cents";
 import { formatDate, formatMoney, numberStyle, parseAmount } from "@ledgerly/format/format";
@@ -23,6 +23,7 @@ function changed(): void {
     spending.getSpendingSeries,
     review.getReview,
     views.getNetWorth,
+    categoryBoard.getCategoriesBoard,
   );
 }
 

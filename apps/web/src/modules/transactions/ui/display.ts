@@ -68,3 +68,12 @@ export function withMacroTitles<T extends { type: "income" | "expense" | "transf
     options.filter((option) => option.type === type).map((option) => ({ ...option, section: titles[type] })),
   );
 }
+
+/**
+ * Where a source's categories are matched: a plugin's page is its name, a core source's is its id.
+ * shortcut: mirrors the server-only `sourceSlugOf` for the only sources that give categories (a
+ * plugin, a core bank source); upgrade when the API answers the source's page itself.
+ */
+export function sourcePageOf(provider: string): string {
+  return `/settings/integrations/${provider.replace(/^plugin:/, "")}`;
+}

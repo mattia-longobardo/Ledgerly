@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 157,
+    "deepImports": 149,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -356,14 +356,6 @@
   "deepImports": [
     "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/switch-check",
     "app/(app)/accounts/new/page.tsx → modules/accounts/ui/account-form",
-    "app/(app)/budgets/[id]/page.tsx → modules/budgets/ui/alerts-form",
-    "app/(app)/budgets/[id]/page.tsx → modules/budgets/ui/present",
-    "app/(app)/budgets/page.tsx → modules/budgets/ui/add-budget",
-    "app/(app)/budgets/page.tsx → modules/budgets/ui/budgets-table",
-    "app/(app)/budgets/page.tsx → modules/budgets/ui/present",
-    "app/(app)/expenses/categories/page.tsx → modules/transactions/ui/display",
-    "app/(app)/expenses/categories/page.tsx → modules/transactions/ui/filter-bar",
-    "app/(app)/expenses/categories/page.tsx → modules/transactions/ui/filters",
     "app/(app)/expenses/row-view.ts → modules/transactions/ui/display",
     "app/(app)/expenses/row-view.ts → modules/transactions/ui/view",
     "app/(app)/funds/[id]/page.tsx → modules/accounts/ui/display",

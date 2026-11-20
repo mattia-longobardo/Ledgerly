@@ -1,7 +1,6 @@
 // The writes of the board of the categories (categories-and-rules.md §5.5, §5.6) on `/api/v1`: each one
 // says what it did in a toast, with «Undo» where the plan has one, or names the refusal in the open
-// dialog. The page is still read on the server until its read moves to the API: a write reads it again.
-import { useRouter } from "next/navigation";
+// dialog. Each call drops the answers it changes from the cache: the board reads them again.
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { NAME_MAX } from "@ledgerly/domain/transactions/client";
@@ -25,10 +24,9 @@ interface WriteContext {
   settingsText: ReturnType<typeof useTranslations<"settings.categories">>;
   lines: readonly BoardLine[];
   run: (work: () => Promise<void>) => void;
-  /** After a write: the dialog closes and the page is read again. */
+  /** After a write: the dialog closes. */
   done: () => void;
   fail: (message: string) => void;
-  refresh: () => void;
 }
 
 /** What the board's state gives the writes. */
@@ -62,7 +60,6 @@ function undoable(write: WriteContext, message: string, undo: () => Promise<Outc
     label: write.text("undo"),
     onClick: () =>
       void undo().then((undone) => {
-        if (undone.ok) write.refresh();
         notify(
           undone.ok ? write.text("undone") : (failure ?? messageFor(write, undone.error)),
           undone.ok ? "success" : "error",
@@ -90,7 +87,6 @@ function rename(write: WriteContext, line: BoardLine, name: string, stop: () => 
       return;
     }
     stop();
-    write.refresh();
     notify(write.text("renamed", { name }));
   });
 }
@@ -165,7 +161,6 @@ function archive(write: WriteContext, line: BoardLine) {
 function restore(write: WriteContext, line: BoardLine) {
   write.run(async () => {
     const result = await restoreCategories([line.id]);
-    if (result.ok) write.refresh();
     notify(
       result.ok ? write.settingsText("restoredToast") : messageFor(write, result.error),
       result.ok ? "success" : "error",
@@ -175,19 +170,14 @@ function restore(write: WriteContext, line: BoardLine) {
 
 /** The writes of the board, bound to its state; `pending` while one runs. */
 export function useBoardWrites(state: BoardState) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const write: WriteContext = {
     text: useTranslations("expenses.categories"),
     settingsText: useTranslations("settings.categories"),
     lines: state.lines,
     run: (work) => startTransition(work),
-    done: () => {
-      state.close();
-      router.refresh();
-    },
+    done: state.close,
     fail: state.fail,
-    refresh: () => router.refresh(),
   };
   return {
     pending,

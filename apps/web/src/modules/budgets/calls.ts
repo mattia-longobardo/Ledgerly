@@ -2,7 +2,7 @@
 // replaces, so the screens read one shape. The limit is read in the person's number format here, on
 // the client, and goes on the wire as a decimal string (`amountInput`).
 import { budgets } from "@ledgerly/api-contract/budgets";
-import { categories as categoryRoutes, profile } from "@ledgerly/api-contract/settings";
+import { categories as categoryRoutes, categoryBoard, profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
 import { numberStyle, parseAmount } from "@ledgerly/format/format";
@@ -27,6 +27,7 @@ function changed(): void {
     budgets.getBudgetsOverview,
     budgets.getBudget,
     categoryRoutes.getCategorySummary,
+    categoryBoard.getCategoriesBoard,
   );
 }
 

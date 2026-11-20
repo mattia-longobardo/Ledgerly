@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
@@ -25,7 +24,6 @@ export function DeleteCategoryDialog({
 }) {
   const t = useTranslations("settings.categories");
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   function onDelete(id: string, name: string) {
     startTransition(async () => {
@@ -35,7 +33,6 @@ export function DeleteCategoryDialog({
         notify(t("errors.failed"), "error");
         return;
       }
-      router.refresh();
       notify(t("deletedToast", { name, count: result.uncategorised }));
       const wallet = result.external;
       if (wallet.state === "deleted") notify(t("wallet.deleted", { count: wallet.count }));

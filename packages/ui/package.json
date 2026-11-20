@@ -61,6 +61,7 @@
     "./shell/topbar": "./src/shell/topbar.tsx",
     "./skeleton": "./src/skeleton.tsx",
     "./source-link-row": "./src/source-link-row.tsx",
+    "./stat": "./src/stat.tsx",
     "./states": "./src/states.tsx",
     "./step-indicator": "./src/step-indicator.tsx",
     "./switch": "./src/switch.tsx",

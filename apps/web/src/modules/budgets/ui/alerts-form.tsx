@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button, Chip } from "@ledgerly/ui/button";
@@ -37,7 +36,6 @@ export function AlertsForm({
   const [custom, setCustom] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
 
   const shown = [...new Set([...ALERT_PRESETS, ...thresholds])].sort((a, b) => a - b);
   const label = (percent: number) =>
@@ -82,7 +80,6 @@ export function AlertsForm({
       }
       setError(null);
       notify(t("saved"), "success");
-      router.refresh();
     });
   }
 

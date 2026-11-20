@@ -1,8 +1,6 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { NAME_MAX } from "@ledgerly/domain/transactions/client";
 import { Badge } from "@ledgerly/ui/badge";
@@ -11,6 +9,7 @@ import { ColorDot } from "@ledgerly/ui/color-picker";
 import { Input } from "@ledgerly/ui/input";
 import { ActionMenu } from "@ledgerly/ui/menu";
 import { ProgressBar } from "@ledgerly/ui/progress-bar";
+import { Link, useRouter } from "@ledgerly/ui/router";
 import type { BoardGroup, BoardLine, Dialog } from "./board-model";
 
 const BUDGET_DOT = { on_track: "bg-pos", near: "bg-warn", over: "bg-neg" } as const;

@@ -24,7 +24,7 @@ import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type CardFormat, centsOf, counterValue, NetWorthCard } from "@/modules/accounts/client";
-import { BudgetsOverviewCard } from "@/modules/budgets/client";
+import { BudgetsOverviewCard } from "@/modules/budgets";
 
 type NetWorth = RouteOutput<typeof views.getNetWorth>;
 type ViewRow = NetWorth["accounts"][number];

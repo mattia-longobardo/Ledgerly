@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, useTransition } from "react";
 import type { CategoryType } from "@ledgerly/domain/transactions/client";
@@ -39,7 +38,6 @@ export function MacroMoveDialog({
   const [failed, setFailed] = useState(false);
   const [to, setTo] = useState<CategoryType>(() => MACROS.find((macro) => macro !== line.type) ?? "expense");
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
   const lineId = line.id;
 
   // Mounted once per opening (the board keys it on the category): read what the move changes.
@@ -71,15 +69,13 @@ export function MacroMoveDialog({
         return;
       }
       onClose();
-      router.refresh();
       const undo = result.undo;
       notify(t("macroMove.done", { name: moved.name, macro: macroName(to) }), "success", {
         label: t("undo"),
         onClick: () =>
-          void undoMoveToMacro(undo).then((undone) => {
-            if (undone.ok) router.refresh();
-            notify(undone.ok ? t("undone") : ts("errors.failed"), undone.ok ? "success" : "error");
-          }),
+          void undoMoveToMacro(undo).then((undone) =>
+            notify(undone.ok ? t("undone") : ts("errors.failed"), undone.ok ? "success" : "error"),
+          ),
       });
     });
   }

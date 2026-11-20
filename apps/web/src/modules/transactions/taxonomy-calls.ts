@@ -3,7 +3,7 @@
 // of the Server Action of `settings/categories/actions.ts` it replaces, so the board reads one shape;
 // a refusal comes back as the use case's code (`duplicate`, `invalid_parent`, `not_found`…).
 import { budgets as budgetRoutes } from "@ledgerly/api-contract/budgets";
-import { categories, labels, profile } from "@ledgerly/api-contract/settings";
+import { categories, categoryBoard, labels, profile } from "@ledgerly/api-contract/settings";
 import { movements, review, rules, spending } from "@ledgerly/api-contract/transactions";
 import { ApiError, call, type RouteOutput } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
@@ -32,6 +32,7 @@ function changed(): void {
   invalidate(
     categories.listCategories,
     categories.getCategorySummary,
+    categoryBoard.getCategoriesBoard,
     labels.listSourceCategories,
     movements.getTransactionsView,
     movements.listTransactions,

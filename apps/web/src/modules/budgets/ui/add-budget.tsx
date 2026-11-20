@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
@@ -39,7 +38,6 @@ export function AddBudget({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
   const chosen = categories.find((option) => option.id === categoryId) ?? null;
 
   function change(next: boolean) {
@@ -61,8 +59,6 @@ export function AddBudget({
       if (!result.ok) return setError(t(`errors.${result.error === "not_found" ? "not_found" : "invalid"}`));
       notify(t("toasts.added"));
       setOpen(false);
-      // The page is still drawn on the server until its read moves to `/api/v1`.
-      router.refresh();
     });
   }
 
