@@ -498,5 +498,20 @@
     "file": "packages/domain/src/shared/collections.test.ts",
     "decision": "SUB-9",
     "reason": "tests added for searchByName (SUB-9); no existing test or assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/transactions/ui/filter-bar.test.tsx",
+    "decision": "UI-EXP-3, Mattia 20/11",
+    "reason": "the accounts and types menus of Expenses open in a popover (decision of Mattia, 20/11/2026): the expectation follows the popover's button and aria-expanded instead of a <details>; nothing else changed"
+  },
+  {
+    "file": "packages/ui/src/dismissable-details.test.tsx",
+    "decision": "UI-EXP-3, Mattia 20/11",
+    "reason": "DismissableDetails has no user left and goes; the test keeps the same assertions of useDismiss on a <details> it binds"
+  },
+  {
+    "file": "tests/e2e/categories/keyboard.spec.ts",
+    "decision": "UI-EXP-3, Mattia 20/11",
+    "reason": "the accounts menu is now a closed button ahead of the groups, so the group is looked for in the board's section; the assertions are the same"
   }
 ]
