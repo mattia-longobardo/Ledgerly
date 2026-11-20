@@ -45,7 +45,8 @@ import {
   listProviderCategories,
   type ProviderCategory,
   settleProviderCategoryName,
-} from "../../../modules/transactions/service";
+  type TransactionsProvider,
+} from "../../../modules/transactions";
 import type { Ctx } from "../../context";
 import { WALLET_PROVIDER } from "../rules";
 import { listConnections, readCredentials } from "../service";
@@ -889,3 +890,12 @@ export async function deleteWalletCategories(
   if (refused.length > 0) return { state: "refused", reasons: [...new Set(refused)] };
   return { state: "deleted", count: deleted };
 }
+
+/**
+ * Wallet as the port `TransactionsProvider` of transactions (audit TRX-6): its provider id and the
+ * deletion of its categories. The application passes it where transactions needs a source.
+ */
+export const walletTransactions: TransactionsProvider<WalletDeletionOutcome> = {
+  provider: WALLET_PROVIDER,
+  deleteCategories: (ctx, externalIds) => deleteWalletCategories(ctx, externalIds),
+};

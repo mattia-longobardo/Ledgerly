@@ -26,6 +26,7 @@ import { AFTER_SYNC_JOBS, runAfterSync } from "./after-sync";
 import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "@domain/platform/jobs/schema";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 // Each test reads "today", and the code under it reads it again: one day for both (S-8).
 dayClock();
@@ -147,10 +148,14 @@ describe("runAfterSync", () => {
     const accountId = await anAccount(ctx);
     const month = monthKey(today(ctx.timeZone));
     await setLimit(ctx, { categoryId: null, accountId, month, cents: 10_000n });
-    await upsertFromProvider(ctx, accountId, [movement({ amountCents: -9_000n, occurredAt: new Date() })]);
+    await upsertFromProvider(ctx, accountId, [movement({ amountCents: -9_000n, occurredAt: new Date() })], {
+      provider: WALLET_PROVIDER,
+    });
     await walletRun(NEW_MOVEMENT);
     await runAfterSync("minute");
-    await upsertFromProvider(ctx, accountId, [movement({ amountCents: -100n, occurredAt: new Date() })]);
+    await upsertFromProvider(ctx, accountId, [movement({ amountCents: -100n, occurredAt: new Date() })], {
+      provider: WALLET_PROVIDER,
+    });
     await walletRun(NEW_MOVEMENT);
     await runAfterSync("minute");
     expect(await runsOf("budgets-alerts")).toHaveLength(2);

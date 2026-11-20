@@ -5,6 +5,7 @@ import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { addDays, today } from "@domain/shared/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 /**
  * Pockets (F3): a synced savings account holding 10.000 €, a pocket with a target resting on it
@@ -17,14 +18,20 @@ export async function seedPockets(): Promise<void> {
   const on = today(ctx.timeZone);
   const account = await syncedAccount(ctx, "e2e-pockets-1", "Revolut Saving");
   await saveBalanceEntry(ctx, account, { on, cents: 1_000_000n });
-  await upsertFromProvider(ctx, account, [
-    walletMovement("e2e-pockets-tx-1", on, -85_000n, "Ischia — hotel + traghetto", null),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    account,
+    [walletMovement("e2e-pockets-tx-1", on, -85_000n, "Ischia — hotel + traghetto", null)],
+    { provider: WALLET_PROVIDER },
+  );
   const main = await syncedAccount(ctx, "e2e-pockets-2", "Revolut Main");
   await saveBalanceEntry(ctx, main, { on, cents: 200_000n });
-  await upsertFromProvider(ctx, main, [
-    walletMovement("e2e-pockets-tx-2", on, -3_000n, "Libreria Feltrinelli", null),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    main,
+    [walletMovement("e2e-pockets-tx-2", on, -3_000n, "Libreria Feltrinelli", null)],
+    { provider: WALLET_PROVIDER },
+  );
   const startMonth = `${thisMonthOf(ctx)}-01`;
   const holidays = await createPocket(ctx, {
     name: "Holidays",

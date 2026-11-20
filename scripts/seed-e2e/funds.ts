@@ -17,6 +17,7 @@ import {
 } from "../../test/funds";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 /**
  * Funds (F4): a synced current account with two Fideuram direct debits of 251,00 €, on the 5th of
@@ -26,22 +27,27 @@ export async function seedFunds(): Promise<void> {
   const ctx = await contextOf(USERS.funds.email);
   const accountId = await syncedAccount(ctx, "e2e-fund-1", "ING Conto Arancio");
   const thisMonth = monthKey(today(ctx.timeZone));
-  await upsertFromProvider(ctx, accountId, [
-    walletMovement(
-      "e2e-fund-tx-1",
-      `${addMonths(thisMonth, -2).slice(0, 7)}-05`,
-      -25100n,
-      "FIDEURAM PAC SDD",
-      "Investimenti",
-    ),
-    walletMovement(
-      "e2e-fund-tx-2",
-      `${addMonths(thisMonth, -1).slice(0, 7)}-05`,
-      -25100n,
-      "FIDEURAM PAC SDD",
-      "Investimenti",
-    ),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    accountId,
+    [
+      walletMovement(
+        "e2e-fund-tx-1",
+        `${addMonths(thisMonth, -2).slice(0, 7)}-05`,
+        -25100n,
+        "FIDEURAM PAC SDD",
+        "Investimenti",
+      ),
+      walletMovement(
+        "e2e-fund-tx-2",
+        `${addMonths(thisMonth, -1).slice(0, 7)}-05`,
+        -25100n,
+        "FIDEURAM PAC SDD",
+        "Investimenti",
+      ),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
 }
 
 /**

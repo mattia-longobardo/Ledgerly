@@ -23,22 +23,20 @@ import {
   rebuildDerivedBalances,
   saveProviderBalance,
 } from "../../../modules/accounts/service";
-import { transactionsInWindow } from "../../../modules/transactions/queries";
-import type {
-  IncomingTransaction,
-  TransactionState,
-  TransactionType,
-} from "../../../modules/transactions/rules";
 import {
+  type IncomingTransaction,
+  type TransactionState,
+  type TransactionType,
+  alignCategoryTypesToMovements,
   markNotSent,
   pendingSends,
   purgeRemovedUpstream,
   recordSourceCategories,
   settleSent,
   sourceCategoryFor,
+  transactionsInWindow,
   upsertFromProvider,
-} from "../../../modules/transactions/service";
-import { alignCategoryTypesToMovements } from "../../../modules/transactions/taxonomy";
+} from "../../../modules/transactions";
 import type { Ctx } from "../../context";
 import { civilDateIn, startOfDayIn, today } from "../../../shared/dates";
 import { withJobLock } from "../../jobs/lock";
@@ -735,7 +733,7 @@ async function syncTransactions(
 
   // What a trusted window declared gone is deleted, with its link (and so is anything an earlier
   // pass had only marked).
-  await purgeRemovedUpstream(ctx);
+  await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER });
 
   // Everything the answers carried is written by now. The refusal comes here, before the cursor:
   // a pass whose verdict was not trusted is repeated whole rather than downgraded to seven days.

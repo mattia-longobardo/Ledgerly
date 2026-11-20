@@ -19,7 +19,7 @@ import { requireCategory } from "../taxonomy";
 
 /**
  * Every failure a caller is expected to handle. `provider_owned` is the refusal of §7.2: payee,
- * amount and date belong to Wallet and no local edit may claim them. `invalid_reference` is a
+ * amount and date belong to the provider and no local edit may claim them. `invalid_reference` is a
  * category or label that is not this user's — the isolation of §4.4 seen from the write side.
  */
 type TransactionErrorCode =
@@ -71,8 +71,8 @@ export interface UpsertOutcome {
 }
 
 export interface UpsertOptions {
-  /** Which provider these movements came from; Wallet is the only one F2 speaks to (§9.1). */
-  provider?: string;
+  /** Which provider these movements came from: always the caller's to say (audit TRX-6). */
+  provider: string;
   now?: Date;
   /**
    * The re-read window the provider was asked about, if it was asked about one. Without it no row

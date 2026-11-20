@@ -2,7 +2,6 @@ import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { WALLET_PROVIDER } from "../../../platform/integrations/rules";
 import { unlinkEntities } from "../../../platform/integrations/service";
 import {
   type MergeableField,
@@ -12,6 +11,7 @@ import {
   planUserEdit,
 } from "../rules";
 import { retypeMovements } from "../macro";
+import type { TransactionsProvider } from "../ports";
 import { type Transaction, transactionsByIds } from "../queries";
 import { transactions } from "../schema";
 import {
@@ -64,8 +64,8 @@ export async function updateTransaction(
 
 /**
  * Hands fields back to the provider (owner, 2026-09-24): called after a person's edit has been
- * written **to Wallet** and accepted there, so the two sides agree again and the field goes on
- * following Wallet — a marker left behind would freeze it at this value for good. The only place
+ * written **to the provider** and accepted there, so the two sides agree again and the field goes on
+ * following the provider — a marker left behind would freeze it at this value for good. The only place
  * a `locally_edited` marker is ever removed, and only for fields the provider now holds.
  */
 export async function releaseLocalEdits(
@@ -144,7 +144,7 @@ export async function hideTransactions(
 }
 
 /**
- * "Restore" from the "Show hidden" filter. Only `hidden_at` is cleared: a movement Wallet has
+ * "Restore" from the "Show hidden" filter. Only `hidden_at` is cleared: a movement the provider has
  * stopped returning is not something a person can un-disappear, and the next sync that sees it
  * again is what clears `removed_upstream_at`.
  */
@@ -213,7 +213,7 @@ export async function deleteHiddenTransactions(
  */
 export async function purgeRemovedUpstream(
   ctx: Pick<Ctx, "userId">,
-  provider = WALLET_PROVIDER,
+  source: Pick<TransactionsProvider, "provider">,
 ): Promise<number> {
   const gone = await getDb()
     .select({ id: transactions.id })
@@ -225,7 +225,7 @@ export async function purgeRemovedUpstream(
     gone.map((row) => row.id),
     isNotNull(transactions.removedUpstreamAt),
   );
-  if (deleted.length > 0) await unlinkEntities(ctx, provider, TRANSACTION_ENTITY, deleted);
+  if (deleted.length > 0) await unlinkEntities(ctx, source.provider, TRANSACTION_ENTITY, deleted);
   return deleted.length;
 }
 

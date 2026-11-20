@@ -4,9 +4,9 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97351,
+    "lines": 97369,
     "duplicatedLines": 17052,
-    "percent": 17.52,
+    "percent": 17.51,
     "blocks": 1249
   },
   "units": {
@@ -95,9 +95,9 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12403,
+      "lines": 12413,
       "duplicatedLines": 1855,
-      "percent": 14.96,
+      "percent": 14.94,
       "blocks": 148
     },
     "modules/users": {
@@ -221,9 +221,9 @@
       "blocks": 6
     },
     "platform/integrations/wallet": {
-      "lines": 2332,
+      "lines": 2340,
       "duplicatedLines": 213,
-      "percent": 9.13,
+      "percent": 9.1,
       "blocks": 18
     },
     "platform/jobs": {

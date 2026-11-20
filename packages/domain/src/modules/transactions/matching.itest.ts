@@ -6,6 +6,7 @@ import { createTestUser } from "../../../../../test/users";
 import { matchMovements, type MovementRule } from "./index";
 import type { IncomingTransaction } from "./rules";
 import { hideTransactions, upsertFromProvider } from "./service";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 // The movement matcher (rewrite plan §10.11, E7) against the database: the account, the way, the
 // types and the window go to the query; the text, the identifier and the amount to the rule.
@@ -69,20 +70,25 @@ beforeEach(async () => {
   ctx = await newContext();
   bank = await anAccount(ctx, "Bank");
   other = await anAccount(ctx, "Other");
-  await upsertFromProvider(ctx, bank, [
-    movement("debit"),
-    movement("transfer", { type: "transfer", occurredAt: new Date("2026-03-12T09:00:00Z") }),
-    movement("shop", { payee: "Esselunga", note: null, amountCents: -25_00n }),
-    movement("refund", {
-      type: "income",
-      amountCents: 100_00n,
-      occurredAt: new Date("2026-03-11T09:00:00Z"),
-    }),
-    // 23:30 UTC on 31 March is 1 April in Rome: outside the window.
-    movement("april", { occurredAt: new Date("2026-03-31T23:30:00Z") }),
-    movement("hidden", { occurredAt: new Date("2026-03-13T09:00:00Z") }),
-  ]);
-  await upsertFromProvider(ctx, other, [movement("elsewhere")]);
+  await upsertFromProvider(
+    ctx,
+    bank,
+    [
+      movement("debit"),
+      movement("transfer", { type: "transfer", occurredAt: new Date("2026-03-12T09:00:00Z") }),
+      movement("shop", { payee: "Esselunga", note: null, amountCents: -25_00n }),
+      movement("refund", {
+        type: "income",
+        amountCents: 100_00n,
+        occurredAt: new Date("2026-03-11T09:00:00Z"),
+      }),
+      // 23:30 UTC on 31 March is 1 April in Rome: outside the window.
+      movement("april", { occurredAt: new Date("2026-03-31T23:30:00Z") }),
+      movement("hidden", { occurredAt: new Date("2026-03-13T09:00:00Z") }),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
+  await upsertFromProvider(ctx, other, [movement("elsewhere")], { provider: WALLET_PROVIDER });
   const [hidden] = await matchMovements(ctx, {
     accountId: bank,
     sign: "out",

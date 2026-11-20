@@ -3,7 +3,6 @@ import { getAccount, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { WALLET_PROVIDER } from "../../../platform/integrations/rules";
 import { linkExternal, resolveExternal } from "../../../platform/integrations/service";
 import {
   type IncomingTransaction,
@@ -55,9 +54,9 @@ export async function upsertFromProvider(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountId: string,
   incoming: IncomingTransaction[],
-  options: UpsertOptions = {},
+  options: UpsertOptions,
 ): Promise<UpsertOutcome> {
-  const provider = options.provider ?? WALLET_PROVIDER;
+  const provider = options.provider;
   const now = options.now ?? new Date();
   const outcome: UpsertOutcome = { created: 0, updated: 0, skipped: 0, removed: 0, restored: 0 };
 

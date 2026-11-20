@@ -18,6 +18,7 @@ import { createTestUser } from "../../../../../test/users";
 import { categoryMacroTotals, listTransactions, monthlyTotals, transactionsSummary } from "./queries";
 import type { IncomingTransaction } from "./rules";
 import { upsertFromProvider } from "./service";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 let ctx: Ctx;
 
@@ -69,7 +70,7 @@ async function threeAccounts() {
     ctx,
     twin,
     [movement("w-1", "2026-03-10", -2_500n, "Grocery"), movement("w-2", "2026-03-15", 100_000n, "Salary")],
-    { window: MARCH },
+    { provider: WALLET_PROVIDER, window: MARCH },
   );
   await upsertFromProvider(
     ctx,
@@ -78,9 +79,10 @@ async function threeAccounts() {
       movement("b-1", "2026-03-11", -2_500n, "GROCERY POS"),
       movement("b-2", "2026-03-15", 100_000n, "SALARY"),
     ],
-    { window: MARCH },
+    { provider: WALLET_PROVIDER, window: MARCH },
   );
   await upsertFromProvider(ctx, closed, [movement("c-1", "2026-03-20", -50_000n, "Transfer out")], {
+    provider: WALLET_PROVIDER,
     window: MARCH,
   });
   return { twin, double, closed };

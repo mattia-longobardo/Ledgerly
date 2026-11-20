@@ -887,7 +887,7 @@ describe("deleteCategory", () => {
     const category = await createCategory(ctx, GROCERIES);
     const movement = await addTransaction(ctx, accountId, category.id);
 
-    const deletion = await deleteCategory(ctx, category.id);
+    const deletion = await deleteCategory(ctx, category.id, { provider: WALLET_PROVIDER });
 
     expect(deletion.removed.map((one) => one.name)).toEqual(["Groceries"]);
     expect(deletion.uncategorised).toBe(1);
@@ -905,7 +905,7 @@ describe("deleteCategory", () => {
     const child = await createCategory(ctx, { name: "Rent", type: "expense", parentId: group.id });
     const other = await createCategory(ctx, { name: "Water", type: "expense", parentId: group.id });
 
-    const deletion = await deleteCategory(ctx, group.id);
+    const deletion = await deleteCategory(ctx, group.id, { provider: WALLET_PROVIDER });
 
     expect(deletion.removed.map((one) => one.id).sort()).toEqual([group.id, child.id, other.id].sort());
     expect(await listCategories(ctx, { includeArchived: true })).toEqual([]);
@@ -928,7 +928,7 @@ describe("deleteCategory", () => {
       externalId: "w-group",
     });
 
-    const deletion = await deleteCategory(ctx, group.id);
+    const deletion = await deleteCategory(ctx, group.id, { provider: WALLET_PROVIDER });
 
     expect(deletion.externalIds.sort()).toEqual(["w-child", "w-group"]);
     // A link left behind would make the next pass adopt a category that no longer exists.
@@ -939,14 +939,16 @@ describe("deleteCategory", () => {
   it("says there is nothing to tell Wallet about a category it never knew", async () => {
     const ctx = await newContext();
     const category = await createCategory(ctx, GROCERIES);
-    expect((await deleteCategory(ctx, category.id)).externalIds).toEqual([]);
+    expect((await deleteCategory(ctx, category.id, { provider: WALLET_PROVIDER })).externalIds).toEqual([]);
   });
 
   it("refuses an id that is not this user's, and touches nothing", async () => {
     const mine = await newContext();
     const theirs = await newContext();
     const category = await createCategory(theirs, GROCERIES);
-    await expect(deleteCategory(mine, category.id)).rejects.toMatchObject({ code: "not_found" });
+    await expect(deleteCategory(mine, category.id, { provider: WALLET_PROVIDER })).rejects.toMatchObject({
+      code: "not_found",
+    });
     expect((await getCategory(theirs, category.id)).name).toBe("Groceries");
   });
 
@@ -959,7 +961,7 @@ describe("deleteCategory", () => {
     const theirCategory = await createCategory(theirs, GROCERIES);
     await addTransaction(mine, account, category.id);
     await addTransaction(theirs, theirAccount, theirCategory.id);
-    expect((await deleteCategory(mine, category.id)).uncategorised).toBe(1);
+    expect((await deleteCategory(mine, category.id, { provider: WALLET_PROVIDER })).uncategorised).toBe(1);
   });
 
   it("is the irreversible move beside archiving, which stays reversible", async () => {
@@ -969,7 +971,7 @@ describe("deleteCategory", () => {
     await restoreCategory(ctx, kept.id);
     expect((await getCategory(ctx, kept.id)).archivedAt).toBeNull();
 
-    await deleteCategory(ctx, kept.id);
+    await deleteCategory(ctx, kept.id, { provider: WALLET_PROVIDER });
     await expect(getCategory(ctx, kept.id)).rejects.toMatchObject({ code: "not_found" });
   });
 });

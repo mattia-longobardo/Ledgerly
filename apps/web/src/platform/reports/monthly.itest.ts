@@ -11,6 +11,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { monthlySummaryJob } from "./jobs";
 import { monthlyFigures } from "./monthly";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 function contextFor(userId: string): Ctx {
   return {
@@ -75,12 +76,17 @@ describe("monthlyFigures", () => {
     const ctx = await newContext();
     const accountId = await anAccount(ctx);
     await saveBalanceEntry(ctx, accountId, { on: "2026-08-31", cents: 10_000_00n });
-    await upsertFromProvider(ctx, accountId, [
-      movement({}),
-      movement({ externalId: "w-2", amountCents: 250_000n, type: "income", payee: "Payroll" }),
-      // September: outside the month asked for, so it counts in neither total.
-      movement({ externalId: "w-3", occurredAt: new Date("2026-09-02T09:00:00Z"), amountCents: -100n }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({}),
+        movement({ externalId: "w-2", amountCents: 250_000n, type: "income", payee: "Payroll" }),
+        // September: outside the month asked for, so it counts in neither total.
+        movement({ externalId: "w-3", occurredAt: new Date("2026-09-02T09:00:00Z"), amountCents: -100n }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
 
     const figures = await monthlyFigures(ctx, AUGUST, NOW);
     expect(figures.month).toBe(AUGUST);

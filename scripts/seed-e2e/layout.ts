@@ -31,6 +31,7 @@ import { addDeposit, debitFund, importedOperation, importedPosition, payrollFund
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, lastMonthOf, syncedAccount, thisMonthOf, walletMovement, workingDay } from "./common";
 import { seedBinance, seedEtoro } from "./investments";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 export async function seedLayout(): Promise<void> {
   const ctx = await contextOf(USERS.layout.email);
@@ -53,19 +54,24 @@ export async function seedLayout(): Promise<void> {
   // ——— Accounts, movements and categories: Overview, Accounts, Expenses, Categories ———
   const current = await syncedAccount(ctx, "e2e-layout-1", "ING Conto Arancio");
   await saveBalanceEntry(ctx, current, { on, cents: 412_350n });
-  await upsertFromProvider(ctx, current, [
-    walletMovement("e2e-layout-tx-1", `${thisMonth}-02`, -1299n, "Netflix", "Abbonamenti"),
-    walletMovement("e2e-layout-tx-2", `${thisMonth}-03`, -8750n, "Esselunga Superstore", "Spesa"),
-    walletMovement("e2e-layout-tx-3", `${thisMonth}-05`, -2100n, "Trenitalia", "Trasporti"),
-    walletMovement("e2e-layout-tx-4", `${thisMonth}-07`, -4800n, "Ristorante Da Mario", "Ristoranti"),
-    walletMovement("e2e-layout-tx-5", `${thisMonth}-09`, -6500n, "Farmacia Comunale 3", "Salute"),
-    walletMovement("e2e-layout-tx-6", `${thisMonth}-11`, 210_000n, "Stipendio", null),
-    walletMovement("e2e-layout-tx-7", `${thisMonth}-14`, -3490n, "Amazon Marketplace", "Casa"),
-    walletMovement("e2e-layout-tx-8", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
-    walletMovement("e2e-layout-tx-9", `${lastMonth}-18`, -9120n, "Esselunga Superstore", "Spesa"),
-    // An unpaired giroconto leg: flagged in the list and counted in no total (F2.5).
-    walletMovement("e2e-layout-tx-10", `${lastMonth}-22`, -50_000n, "Revolut", null, "e2e-layout-tx-11"),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    current,
+    [
+      walletMovement("e2e-layout-tx-1", `${thisMonth}-02`, -1299n, "Netflix", "Abbonamenti"),
+      walletMovement("e2e-layout-tx-2", `${thisMonth}-03`, -8750n, "Esselunga Superstore", "Spesa"),
+      walletMovement("e2e-layout-tx-3", `${thisMonth}-05`, -2100n, "Trenitalia", "Trasporti"),
+      walletMovement("e2e-layout-tx-4", `${thisMonth}-07`, -4800n, "Ristorante Da Mario", "Ristoranti"),
+      walletMovement("e2e-layout-tx-5", `${thisMonth}-09`, -6500n, "Farmacia Comunale 3", "Salute"),
+      walletMovement("e2e-layout-tx-6", `${thisMonth}-11`, 210_000n, "Stipendio", null),
+      walletMovement("e2e-layout-tx-7", `${thisMonth}-14`, -3490n, "Amazon Marketplace", "Casa"),
+      walletMovement("e2e-layout-tx-8", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
+      walletMovement("e2e-layout-tx-9", `${lastMonth}-18`, -9120n, "Esselunga Superstore", "Spesa"),
+      // An unpaired giroconto leg: flagged in the list and counted in no total (F2.5).
+      walletMovement("e2e-layout-tx-10", `${lastMonth}-22`, -50_000n, "Revolut", null, "e2e-layout-tx-11"),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
 
   const savings = await createAccount(ctx, {
     name: "Revolut Saving",
@@ -159,21 +165,31 @@ export async function seedLayout(): Promise<void> {
   });
   const fineco = await syncedAccount(ctx, "e2e-layout-fineco", "Fineco Conto Deposito", "investment");
   await saveProviderBalance(ctx, fineco, { on: addDays(on, -1), cents: 0n });
-  await upsertFromProvider(ctx, fineco, [
-    walletMovement("e2e-layout-fineco-1", on, 500_000n, "Bonifico in entrata", null),
-    walletMovement("e2e-layout-fineco-2", on, -100_000n, "Bonifico in uscita", null),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    fineco,
+    [
+      walletMovement("e2e-layout-fineco-1", on, 500_000n, "Bonifico in entrata", null),
+      walletMovement("e2e-layout-fineco-2", on, -100_000n, "Bonifico in uscita", null),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
   await saveProviderBalance(ctx, fineco, { on, cents: 412_340n });
   await createManualService(ctx, { accountId: fineco, category: "accounts", url: null });
   await seedEtoro(ctx, on);
   await seedBinance(ctx, on);
 
   // ——— Subscriptions ———
-  await upsertFromProvider(ctx, current, [
-    walletMovement("e2e-layout-sub-1", addDays(on, -90), -2990n, "FitActive", "Sport"),
-    walletMovement("e2e-layout-sub-2", addDays(on, -60), -2990n, "FitActive", "Sport"),
-    walletMovement("e2e-layout-sub-3", addDays(on, -30), -2990n, "FitActive", "Sport"),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    current,
+    [
+      walletMovement("e2e-layout-sub-1", addDays(on, -90), -2990n, "FitActive", "Sport"),
+      walletMovement("e2e-layout-sub-2", addDays(on, -60), -2990n, "FitActive", "Sport"),
+      walletMovement("e2e-layout-sub-3", addDays(on, -30), -2990n, "FitActive", "Sport"),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
   await refreshRecurrences(ctx);
   const streaming = (await listCategories(ctx)).find((one) => one.name === "Abbonamenti");
   const plan = { categoryId: streaming?.id ?? null, paymentAccountId: current, tolerance: "0.05" };

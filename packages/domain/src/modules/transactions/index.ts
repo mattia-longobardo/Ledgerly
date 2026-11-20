@@ -43,6 +43,7 @@ export {
   chargeCandidates,
   expensesView,
   facetCounts,
+  getTransaction,
   listTransactions,
   manualMovementsByAccount,
   matchMovements,
@@ -53,6 +54,7 @@ export {
   spending,
   spendingOverTime,
   transactionsByIds,
+  transactionsInWindow,
   transactionsSummary,
 } from "./queries";
 export type { CategoryMacroTotal, SpendingGroup, Transaction, TransactionRow } from "./queries";
@@ -69,21 +71,35 @@ export type {
   IncomingTransaction,
   MovementRule,
   RecurrenceInput,
+  TransactionState,
   TransactionType,
 } from "./rules";
 export { recurringPatterns, transactions } from "./schema";
 export { forgetSends, pendingSends } from "./sending";
 export {
+  CATEGORY_NAME_MAX,
   TransactionError,
+  adoptProviderCategory,
   categorisableAccountIds,
   deleteHiddenTransactions,
+  followProviderCategoryName,
   hideTransactions,
   linkOwnTransfers,
+  linkProviderCategory,
+  listProviderCategories,
+  markNotSent,
+  purgeRemovedUpstream,
+  recordSourceCategories,
+  releaseLocalEdits,
   restoreTransactions,
   setCategory,
+  settleProviderCategoryName,
+  settleSent,
+  sourceCategoryFor,
   updateTransaction,
   upsertFromProvider,
 } from "./service";
+export type { ProviderCategory } from "./service";
 export {
   SourceCategoryError,
   chooseSourceCategory,
@@ -117,6 +133,7 @@ export {
 } from "./switching";
 export {
   TaxonomyError,
+  alignCategoryTypesToMovements,
   archiveCategory,
   categoryOptions,
   colorOfCategory,
@@ -140,3 +157,4 @@ export {
 } from "./taxonomy";
 export type { MacroPlace } from "./taxonomy";
 export { movementsOfAccounts } from "./ports";
+export type { TransactionsProvider } from "./ports";

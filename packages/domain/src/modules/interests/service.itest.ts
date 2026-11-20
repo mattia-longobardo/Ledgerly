@@ -8,6 +8,7 @@ import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { interestsAccrualJob } from "../../../../../apps/web/src/modules/interests/jobs";
 import { interestsView, ruleDetail, rulesOnAccount } from "./queries";
 import { accruedInterest, createRule, InterestError, setRuleState, updateRule } from "./service";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 let ctx: Ctx;
 let accountId: string;
@@ -120,15 +121,20 @@ describe("accrual and settlement (spec §7.6)", () => {
 
 describe("reconciliation (spec §7.6)", () => {
   it("matches the interest the bank paid, and tells a missing one", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({
-        type: "income",
-        amountCents: 3_101n,
-        payee: "Interessi creditori",
-        categoryName: "Interest",
-        occurredAt: new Date("2026-02-03T10:00:00Z"),
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({
+          type: "income",
+          amountCents: 3_101n,
+          payee: "Interessi creditori",
+          categoryName: "Interest",
+          occurredAt: new Date("2026-02-03T10:00:00Z"),
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const created = await createRule(ctx, rule());
     const byPeriod = new Map(
       (await ruleDetail(ctx, created.id)).settlements.map((row) => [row.entry.periodFrom, row]),
@@ -149,6 +155,7 @@ describe("reconciliation (spec §7.6)", () => {
           occurredAt: new Date(`${on}T10:00:00Z`),
         }),
       ),
+      { provider: WALLET_PROVIDER },
     );
     const created = await createRule(ctx, rule({ settlement: "daily", validTo: "2026-01-03" }));
     const settlements = (await ruleDetail(ctx, created.id)).settlements;

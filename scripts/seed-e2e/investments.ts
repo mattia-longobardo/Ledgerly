@@ -7,6 +7,7 @@ import { addDays, today } from "@domain/shared/dates";
 import { listConnections, saveSchedule } from "@domain/platform/integrations/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 /**
  * Investments (PERS-342): no service yet — the journey adds two from Accounts — a manual investment
@@ -22,9 +23,12 @@ export async function seedInvestments(): Promise<void> {
   await saveBalanceEntry(ctx, directa.id, { on: addDays(on, -1), cents: 800_000n });
   const fineco = await syncedAccount(ctx, "e2e-investments-2", "Fineco", "investment");
   await saveProviderBalance(ctx, fineco, { on: addDays(on, -1), cents: 0n });
-  await upsertFromProvider(ctx, fineco, [
-    walletMovement("e2e-investments-tx-3", on, 800_000n, "MARIO ROSSI", null),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    fineco,
+    [walletMovement("e2e-investments-tx-3", on, 800_000n, "MARIO ROSSI", null)],
+    { provider: WALLET_PROVIDER },
+  );
   await saveProviderBalance(ctx, fineco, { on, cents: 800_000n });
 }
 

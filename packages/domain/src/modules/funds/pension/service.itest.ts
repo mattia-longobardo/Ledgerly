@@ -38,6 +38,7 @@ import {
   payrollFund,
   replaceCompetences,
 } from "./service";
+import { WALLET_PROVIDER } from "../../../platform/integrations/rules";
 
 let ctx: Ctx;
 
@@ -204,7 +205,7 @@ describe("a voluntary contribution tied to a movement", () => {
   const paid = (transactionId: string) => ({ on: "2031-02-01", amountCents: 100_00n, transactionId });
   async function aMovement(who: Ctx): Promise<string> {
     const accountId = await anAccount(who);
-    await upsertFromProvider(who, accountId, [movement()]);
+    await upsertFromProvider(who, accountId, [movement()], { provider: WALLET_PROVIDER });
     const [found] = await chargeCandidates(who, { accountId, from: "2026-03-01", to: "2026-03-31" });
     return found.id;
   }

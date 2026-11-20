@@ -15,6 +15,7 @@ import { userScoped } from "@domain/platform/db/scope";
 import { pluginProvider } from "@domain/platform/integrations/rules";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, lastMonthOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 export async function seedExpenses(): Promise<void> {
   const ctx = await contextOf(USERS.expenses.email);
@@ -27,16 +28,21 @@ export async function seedExpenses(): Promise<void> {
     const on = today(ctx.timeZone);
     return date < on ? date : on;
   };
-  await upsertFromProvider(ctx, accountId, [
-    walletMovement("e2e-tx-1", upToToday("02"), -1299n, "Netflix", "Abbonamenti"),
-    walletMovement("e2e-tx-2", upToToday("04"), -4550n, "Esselunga", "Spesa"),
-    walletMovement("e2e-tx-3", upToToday("09"), -2100n, "Trenitalia", "Trasporti"),
-    walletMovement("e2e-tx-4", upToToday("11"), 210000n, "Stipendio", null),
-    walletMovement("e2e-tx-5", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
-    // One leg of a giroconto whose other account is not linked here (F2.5): in the list, flagged as
-    // unpaired, and in no total. Last month, so this month's figures stay what they were.
-    walletMovement("e2e-tx-6", `${lastMonth}-15`, -50000n, "Revolut", null, "e2e-tx-7"),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    accountId,
+    [
+      walletMovement("e2e-tx-1", upToToday("02"), -1299n, "Netflix", "Abbonamenti"),
+      walletMovement("e2e-tx-2", upToToday("04"), -4550n, "Esselunga", "Spesa"),
+      walletMovement("e2e-tx-3", upToToday("09"), -2100n, "Trenitalia", "Trasporti"),
+      walletMovement("e2e-tx-4", upToToday("11"), 210000n, "Stipendio", null),
+      walletMovement("e2e-tx-5", `${lastMonth}-12`, -1299n, "Netflix", "Abbonamenti"),
+      // One leg of a giroconto whose other account is not linked here (F2.5): in the list, flagged as
+      // unpaired, and in no total. Last month, so this month's figures stay what they were.
+      walletMovement("e2e-tx-6", `${lastMonth}-15`, -50000n, "Revolut", null, "e2e-tx-7"),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
 }
 
 /**
@@ -93,14 +99,19 @@ export async function seedSources(email: string = USERS.sources.email): Promise<
     openingBalance: { on: addDays(on, -5), cents: 8_000n },
   });
   const current = await syncedAccount(ctx, "e2e-sources-1", "Conto corrente app");
-  await upsertFromProvider(ctx, current, [
-    walletMovement("e2e-sources-tx-1", addDays(on, -20), -8750n, "Esselunga Superstore", "Spesa"),
-    walletMovement("e2e-sources-tx-2", addDays(on, -16), -4310n, "Mercato rionale", "Spesa"),
-    walletMovement("e2e-sources-tx-3", addDays(on, -12), -1200n, "Tabaccheria Centrale", "Tabacchi"),
-    walletMovement("e2e-sources-tx-4", addDays(on, -9), -600n, "Tabaccheria Centrale", "Tabacchi"),
-    walletMovement("e2e-sources-tx-5", addDays(on, -8), -2300n, "Enoteca Rossi", "Alcolici e tabacchi"),
-    walletMovement("e2e-sources-tx-6", addDays(on, -4), -3500n, "Zoo Market", "Animali"),
-  ]);
+  await upsertFromProvider(
+    ctx,
+    current,
+    [
+      walletMovement("e2e-sources-tx-1", addDays(on, -20), -8750n, "Esselunga Superstore", "Spesa"),
+      walletMovement("e2e-sources-tx-2", addDays(on, -16), -4310n, "Mercato rionale", "Spesa"),
+      walletMovement("e2e-sources-tx-3", addDays(on, -12), -1200n, "Tabaccheria Centrale", "Tabacchi"),
+      walletMovement("e2e-sources-tx-4", addDays(on, -9), -600n, "Tabaccheria Centrale", "Tabacchi"),
+      walletMovement("e2e-sources-tx-5", addDays(on, -8), -2300n, "Enoteca Rossi", "Alcolici e tabacchi"),
+      walletMovement("e2e-sources-tx-6", addDays(on, -4), -3500n, "Zoo Market", "Animali"),
+    ],
+    { provider: WALLET_PROVIDER },
+  );
   await saveProviderBalance(ctx, current, { on: addDays(on, -1), cents: 50_000n });
   const categories = await listCategories(ctx);
   const sourceCategories = await listSourceCategories(ctx);

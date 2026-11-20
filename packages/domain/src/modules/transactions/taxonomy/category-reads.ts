@@ -184,7 +184,7 @@ const TYPE_EVIDENCE_SHARE = 0.8;
  * `null` when they are too few or too divided to say. Pure, so the threshold is testable on its
  * own.
  *
- * Not "all of them": Wallet lets a refund be filed under an income category, and one stray
+ * Not "all of them": a source may let a refund be filed under an income category, and one stray
  * movement out of seventy-eight is noise, not a disagreement. Four out of ten is a disagreement,
  * and then nothing is decided.
  */
@@ -202,8 +202,8 @@ export function typeFromMovements(counts: Readonly<Record<CategoryType, number>>
  * (spec §7.2). Since N3.3 the macro is the person's choice (categories-and-rules.md CR8): only a
  * category a source brought in this pass is aligned, once, at its creation.
  *
- * Wallet publishes no type on a category — the OpenAPI has none — so every category adopted from
- * it was born an expense, salary and interest included. The movements know better: they carry
+ * A source may publish no type on a category (the current one publishes none), so every
+ * category adopted from it was born an expense, salary and interest included. The movements know better: they carry
  * their own type, and a category under which thirty-two income movements are filed is an income
  * category. Until this ran, the owner's "Interest, dividends" was an expense and so could not be
  * offered as the category an interest payout is filed under (owner, 2026-09-20).

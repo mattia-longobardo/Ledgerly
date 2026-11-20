@@ -12,13 +12,13 @@ import { parseId } from "./guards";
 /* Categories, seen from the provider sync (spec §9.1, §7.2) */
 
 /**
- * One local category as the two-way category sync needs it: what it is called here, what Wallet
+ * One local category as the two-way category sync needs it: what it is called here, what the provider
  * called it when the two last agreed, whether the person has touched it, and the provider's own
- * ids — its own, and its group's, which is what a category created in Wallet has to hang from.
+ * ids — its own, and its group's, which is what a category created at the provider has to hang from.
  *
- * `externalId` is `null` for a category Wallet has never seen: those are the ones the pass offers
+ * `externalId` is `null` for a category the provider has never seen: those are the ones the pass offers
  * to create there. `groupExternalId` is this row's link as one of the provider's **groups** (F2.5
- * files a Wallet category's group as a parent category here), which is a different link from
+ * files a provider category's group as a parent category here), which is a different link from
  * `externalId` and may sit beside it on the same row.
  */
 export interface ProviderCategory {
@@ -33,7 +33,7 @@ export interface ProviderCategory {
   groupExternalId: string | null;
 }
 
-/** What `categories.name` holds here: Wallet allows eighty characters, this app sixty (spec §6). */
+/** What `categories.name` holds here: the provider may allow more (eighty), this app sixty (spec §6). */
 export const CATEGORY_NAME_MAX = NAME_MAX;
 
 /**
@@ -69,7 +69,7 @@ export async function listProviderCategories(
 }
 
 /**
- * Wallet renamed a category and nothing here disagreed, so the local row follows it (spec §9.1)
+ * The provider renamed a category and nothing here disagreed, so the local row follows it (spec §9.1)
  * and the baseline moves with it — the next pass sees the two agreeing rather than a name that
  * changed on its own.
  *
@@ -80,15 +80,15 @@ export async function listProviderCategories(
  */
 /**
  * A category the provider publishes that nothing here mirrors yet (spec §9.1): it is taken on as
- * soon as the list is read, rather than waiting for a movement to be filed under it. Wallet's
- * `GET /categories` publishes the whole list, so a category added there appears here at the next
+ * soon as the list is read, rather than waiting for a movement to be filed under it. The
+ * provider publishes the whole list, so a category added there appears here at the next
  * sync even if nobody has spent anything in it — which is what makes the two lists match and what
  * lets a budget or a filter name it straight away (owner, 2026-09-20).
  *
  * The same `adoptOrCreateCategory` the movements go through, so a name that already exists here is
- * adopted and linked rather than duplicated, and the provider's group becomes the parent. Wallet
- * publishes no type on a category, so a new one starts as its group's and can be corrected here;
- * a name this app's column cannot hold is refused rather than failing the pass.
+ * adopted and linked rather than duplicated, and the provider's group becomes the parent. The
+ * provider publishes no type on a category, so a new one starts as its group's and can be
+ * corrected here; a name this app's column cannot hold is refused rather than failing the pass.
  */
 export async function adoptProviderCategory(
   ctx: Pick<Ctx, "userId">,
@@ -140,7 +140,7 @@ export async function followProviderCategoryName(
  * The provider now holds `providerName` for this category — either because it was just written
  * there, or because the two turned out to agree already. Recording it is what closes the loop:
  * the baseline stops the next pass seeing a change that has already been settled, and dropping the
- * `name` marker lets a later rename *in Wallet* come back here (spec §9.1, two-way since F6).
+ * `name` marker lets a later rename *at the provider* come back here (spec §9.1, two-way since F6).
  */
 export async function settleProviderCategoryName(
   ctx: Pick<Ctx, "userId">,

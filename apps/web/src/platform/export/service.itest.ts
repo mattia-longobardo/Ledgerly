@@ -9,6 +9,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { debitFund, payrollFund } from "../../../../../test/funds";
 import { createTestUser } from "../../../../../test/users";
 import { readZip } from "../../../../../test/zip";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 
@@ -79,7 +80,7 @@ describe("exportUser", () => {
     const ctx = await newContext();
     const accountId = await anAccount(ctx, "ING Conto Arancio");
     await saveBalanceEntry(ctx, accountId, { on: "2026-03-31", cents: 1_234_56n });
-    await upsertFromProvider(ctx, accountId, [movement("Esselunga")]);
+    await upsertFromProvider(ctx, accountId, [movement("Esselunga")], { provider: WALLET_PROVIDER });
     const { document } = await uploadPayslip(ctx, aPayslip("mine"));
 
     const zip = await readZip(await exportUserBytes(ctx, NOW));
@@ -133,8 +134,8 @@ describe("exportUser", () => {
     const theirs = await newContext();
     const myAccount = await anAccount(mine, "Mine");
     const theirAccount = await anAccount(theirs, "Theirs");
-    await upsertFromProvider(mine, myAccount, [movement("MyShop")]);
-    await upsertFromProvider(theirs, theirAccount, [movement("TheirShop")]);
+    await upsertFromProvider(mine, myAccount, [movement("MyShop")], { provider: WALLET_PROVIDER });
+    await upsertFromProvider(theirs, theirAccount, [movement("TheirShop")], { provider: WALLET_PROVIDER });
     await uploadPayslip(mine, aPayslip("mine"));
     const { document: other } = await uploadPayslip(theirs, aPayslip("theirs"));
 

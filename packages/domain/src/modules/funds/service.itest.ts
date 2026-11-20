@@ -42,6 +42,7 @@ import {
   updateFund,
   updateValuation,
 } from "./service";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 let ctx: Ctx;
 
@@ -283,20 +284,25 @@ describe("a PAC (spec §7.7)", () => {
 describe("deposits from movements (spec §7.7)", () => {
   it("turns the matching debits into deposits once, with the fund's fee, and keeps them from being deleted", async () => {
     const bank = await anAccount(ctx, "ING Conto Arancio");
-    await upsertFromProvider(ctx, bank, [
-      movement({
-        payee: "FIDEURAM PAC — addebito SDD",
-        amountCents: -25_100n,
-        occurredAt: new Date("2026-02-05T10:00:00Z"),
-      }),
-      movement({
-        payee: "Fideuram",
-        amountCents: -25_100n,
-        type: "transfer",
-        occurredAt: new Date("2026-03-05T10:00:00Z"),
-      }),
-      movement({ payee: "Esselunga", amountCents: -2_000n, occurredAt: new Date("2026-03-06T10:00:00Z") }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      bank,
+      [
+        movement({
+          payee: "FIDEURAM PAC — addebito SDD",
+          amountCents: -25_100n,
+          occurredAt: new Date("2026-02-05T10:00:00Z"),
+        }),
+        movement({
+          payee: "Fideuram",
+          amountCents: -25_100n,
+          type: "transfer",
+          occurredAt: new Date("2026-03-05T10:00:00Z"),
+        }),
+        movement({ payee: "Esselunga", amountCents: -2_000n, occurredAt: new Date("2026-03-06T10:00:00Z") }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const fund = await debitFund(ctx, input({ initialCents: null }));
     await saveDepositRule(ctx, fund.id, { payeeMatch: "fideuram", accountId: bank, active: true });
     expect(await matchDebits(ctx)).toEqual({ written: 0 });
@@ -324,11 +330,16 @@ describe("deposits from movements (spec §7.7)", () => {
         amountCents: -25_100n,
         occurredAt: new Date(`${on}T10:00:00Z`),
       });
-    await upsertFromProvider(ctx, bank, [
-      debit("2026-02-05", "SDD FIDEURAM 02/26"),
-      debit("2026-03-05", "SDD FIDEURAM 03/26"),
-      movement({ payee: "Esselunga", amountCents: -2_000n, occurredAt: new Date("2026-03-06T10:00:00Z") }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      bank,
+      [
+        debit("2026-02-05", "SDD FIDEURAM 02/26"),
+        debit("2026-03-05", "SDD FIDEURAM 03/26"),
+        movement({ payee: "Esselunga", amountCents: -2_000n, occurredAt: new Date("2026-03-06T10:00:00Z") }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const fund = await debitFund(ctx, input({ initialCents: null, debitAccountId: bank }));
     const charges = await chargeCandidates(ctx, {
       accountId: bank,
@@ -376,13 +387,13 @@ describe("deposits from movements (spec §7.7)", () => {
         occurredAt: new Date("2026-10-19T10:00:00Z"),
       });
 
-    await upsertFromProvider(ctx, bank, [debit("wallet-1")]);
+    await upsertFromProvider(ctx, bank, [debit("wallet-1")], { provider: WALLET_PROVIDER });
     await matchDebits(ctx);
     const [first] = await depositsOf(fund.id);
     for (const next of ["wallet-2", "wallet-3"]) {
       await markRemovedUpstream(ctx, [(await depositsOf(fund.id))[0].transactionId!]);
-      await purgeRemovedUpstream(ctx);
-      await upsertFromProvider(ctx, bank, [debit(next)]);
+      await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER });
+      await upsertFromProvider(ctx, bank, [debit(next)], { provider: WALLET_PROVIDER });
       expect(await matchDebits(ctx)).toEqual({ written: 0 });
     }
 
@@ -396,9 +407,12 @@ describe("deposits from movements (spec §7.7)", () => {
   it("matches nothing while the rule is off or on another account", async () => {
     const bank = await anAccount(ctx, "ING Conto Arancio");
     const other = await anAccount(ctx, "Revolut");
-    await upsertFromProvider(ctx, bank, [
-      movement({ payee: "FIDEURAM", amountCents: -25_100n, occurredAt: new Date("2026-02-05T10:00:00Z") }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      bank,
+      [movement({ payee: "FIDEURAM", amountCents: -25_100n, occurredAt: new Date("2026-02-05T10:00:00Z") })],
+      { provider: WALLET_PROVIDER },
+    );
     const fund = await debitFund(ctx, input({ initialCents: null }));
     await saveDepositRule(ctx, fund.id, { payeeMatch: "fideuram", accountId: other, active: true });
     await saveDepositRule(ctx, fund.id, { payeeMatch: "fideuram", accountId: bank, active: false });
@@ -590,12 +604,14 @@ describe("the debits found among the movements, run twice (release N6)", () => {
     const fund = await createFund(ctx, { ...bare(), sources: [debit({ accountId: bank })] });
     const [source] = await sourcesOf(ctx, [fund.id]);
 
-    await upsertFromProvider(ctx, bank, [charge("2026-02-05"), charge("2026-03-05")]);
+    await upsertFromProvider(ctx, bank, [charge("2026-02-05"), charge("2026-03-05")], {
+      provider: WALLET_PROVIDER,
+    });
     expect(await matchDebits(ctx)).toEqual({ written: 2 });
     expect(await matchDebits(ctx)).toEqual({ written: 0 });
     expect(await matchDebits(ctx, [fund.id])).toEqual({ written: 0 });
 
-    await upsertFromProvider(ctx, bank, [charge("2026-04-05")]);
+    await upsertFromProvider(ctx, bank, [charge("2026-04-05")], { provider: WALLET_PROVIDER });
     expect(await fundsDepositsJob.run()).toMatchObject({ failed: 0, depositsWritten: 1 });
     expect(await fundsDepositsJob.run()).toMatchObject({ failed: 0, depositsWritten: 0 });
 
@@ -626,6 +642,7 @@ describe("a debit every N weeks, months or years, with a start and an end (owner
       ["2026-02-05", "2026-03-01", "2026-04-05", "2026-05-31", "2026-06-01"].map((on) =>
         movement({ payee: "Fondo Alfa", amountCents: -10_000n, occurredAt: new Date(`${on}T10:00:00Z`) }),
       ),
+      { provider: WALLET_PROVIDER },
     );
     const fund = await createFund(ctx, {
       ...bare(),
@@ -819,9 +836,18 @@ describe("the sources of a fund (release N6)", () => {
     const fund = await createFund(ctx, { ...bare(), sources: [debit({ accountId: bank })] });
     const [source] = await sourcesOf(ctx, [fund.id]);
     await setSourceState(ctx, source.id, "paused");
-    await upsertFromProvider(ctx, bank, [
-      movement({ payee: "Fondo Alfa", amountCents: -10_000n, occurredAt: new Date("2026-02-05T10:00:00Z") }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      bank,
+      [
+        movement({
+          payee: "Fondo Alfa",
+          amountCents: -10_000n,
+          occurredAt: new Date("2026-02-05T10:00:00Z"),
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     expect(await matchDebits(ctx)).toEqual({ written: 0 });
     const paused = await fundDetail(ctx, fund.id, at("2026-02-20"));
     expect(paused.debits[0]).toMatchObject({ source: { state: "paused" }, status: { kind: "none" } });
@@ -841,9 +867,18 @@ describe("the sources of a fund (release N6)", () => {
 
   it("does not remove a source with contributions, removes one without, and restores it as it was", async () => {
     const bank = await anAccount(ctx, "ING Conto Arancio");
-    await upsertFromProvider(ctx, bank, [
-      movement({ payee: "Fondo Alfa", amountCents: -10_000n, occurredAt: new Date("2026-02-05T10:00:00Z") }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      bank,
+      [
+        movement({
+          payee: "Fondo Alfa",
+          amountCents: -10_000n,
+          occurredAt: new Date("2026-02-05T10:00:00Z"),
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const fund = await createFund(ctx, { ...bare(), sources: [debit({ accountId: bank })] });
     const [used] = await sourcesOf(ctx, [fund.id]);
     expect((await fundDetail(ctx, fund.id)).sourceContributions.get(used.id)).toBe(1);

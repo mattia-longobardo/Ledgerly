@@ -10,6 +10,7 @@ import { getDb } from "@domain/platform/db/client";
 import { deleteFolder, listFolder } from "@domain/platform/storage";
 import { saveConnection } from "@domain/platform/integrations/service/connections";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
 // about — the upload's ownership is — so it is a no-op here, deterministically.
@@ -251,7 +252,7 @@ describe("POST /accounts/:id/balances", () => {
 
 describe("GET /transactions", () => {
   beforeEach(async () => {
-    await upsertFromProvider(alice, aliceAccount, [movement()]);
+    await upsertFromProvider(alice, aliceAccount, [movement()], { provider: WALLET_PROVIDER });
   });
 
   it("shows B nothing of A's, even asking for A's account by id", async () => {

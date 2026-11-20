@@ -26,6 +26,7 @@ import {
   undoSourceCategory,
 } from "./source-categories";
 import { createCategory, deleteCategory, listCategories } from "./taxonomy";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 /** A provider of the core that gives a category with each movement. */
 const SOURCE = "wallet";
@@ -348,7 +349,7 @@ describe("a category the person deletes", () => {
     await read([first, incoming(GROCERIES)]);
     const vices = await createCategory(ctx, { name: "Vices", type: "expense" });
     await choose((await sourceNamed("Tobacco")).id, vices.id);
-    await deleteCategory(ctx, vices.id);
+    await deleteCategory(ctx, vices.id, { provider: WALLET_PROVIDER });
 
     await read([first]);
     const own = await categoryNamed("Tobacco");

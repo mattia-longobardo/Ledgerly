@@ -23,6 +23,7 @@ import {
   SubscriptionError,
   updateSubscription,
 } from "./service";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 let ctx: Ctx;
 let accountId: string;
@@ -61,9 +62,12 @@ afterAll(closeDatabase);
 
 describe("the payment check (spec §7.5)", () => {
   it("pays this period with a matching expense on the paying account", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ payee: "NETFLIX.COM", amountCents: -1_299n, occurredAt: noon(todayOn) }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ payee: "NETFLIX.COM", amountCents: -1_299n, occurredAt: noon(todayOn) })],
+      { provider: WALLET_PROVIDER },
+    );
     const sub = await createSubscription(ctx, input());
     const row = await rowOf(sub.id);
     expect(row.current).toMatchObject({ state: "paid", actualCents: 1_299n });
@@ -87,9 +91,12 @@ describe("the payment check (spec §7.5)", () => {
     expect(charges).toContainEqual([lastCycle, "not_found"]);
 
     await updateSubscription(ctx, sub.id, input({ priceCents: 1_799n }));
-    await upsertFromProvider(ctx, accountId, [
-      movement({ payee: "Netflix", amountCents: -1_299n, occurredAt: noon(lastCycle) }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ payee: "Netflix", amountCents: -1_299n, occurredAt: noon(lastCycle) })],
+      { provider: WALLET_PROVIDER },
+    );
     await checkSubscriptions(ctx);
     charges = (await subscriptionsView(ctx)).alerts.map((alert) => [alert.charge.dueOn, alert.charge.state]);
     expect(charges).not.toContainEqual([lastCycle, "not_found"]);
@@ -98,9 +105,12 @@ describe("the payment check (spec §7.5)", () => {
   });
 
   it("lets the period under way follow a new price, which clears an amount that differs", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ payee: "Netflix", amountCents: -1_499n, occurredAt: noon(todayOn) }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ payee: "Netflix", amountCents: -1_499n, occurredAt: noon(todayOn) })],
+      { provider: WALLET_PROVIDER },
+    );
     const sub = await createSubscription(ctx, input());
     expect((await rowOf(sub.id)).current?.state).toBe("amount_differs");
     await updateSubscription(ctx, sub.id, input({ priceCents: 1_499n }));
@@ -109,21 +119,32 @@ describe("the payment check (spec §7.5)", () => {
 
   it("never matches a hidden movement, a giroconto, another account, or an amount off by more than the tolerance", async () => {
     const other = await anAccount(ctx, "Other");
-    await upsertFromProvider(ctx, accountId, [
-      movement({ payee: "Netflix hidden", amountCents: -1_299n, occurredAt: noon(todayOn) }),
-      movement({ payee: "Netflix", amountCents: -1_299n, type: "transfer", occurredAt: noon(todayOn) }),
-    ]);
-    await upsertFromProvider(ctx, other, [
-      movement({ payee: "Netflix", amountCents: -1_299n, occurredAt: noon(todayOn) }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({ payee: "Netflix hidden", amountCents: -1_299n, occurredAt: noon(todayOn) }),
+        movement({ payee: "Netflix", amountCents: -1_299n, type: "transfer", occurredAt: noon(todayOn) }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
+    await upsertFromProvider(
+      ctx,
+      other,
+      [movement({ payee: "Netflix", amountCents: -1_299n, occurredAt: noon(todayOn) })],
+      { provider: WALLET_PROVIDER },
+    );
     const hidden = (await listTransactions(ctx, {})).find((row) => row.payee === "Netflix hidden")!;
     await hideTransaction(ctx, hidden.id);
     const sub = await createSubscription(ctx, input());
     expect((await rowOf(sub.id)).current?.state).toBe("due");
 
-    await upsertFromProvider(ctx, accountId, [
-      movement({ payee: "Netflix", amountCents: -1_499n, occurredAt: noon(todayOn) }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ payee: "Netflix", amountCents: -1_499n, occurredAt: noon(todayOn) })],
+      { provider: WALLET_PROVIDER },
+    );
     await checkSubscriptions(ctx);
     expect((await rowOf(sub.id)).current).toMatchObject({ state: "amount_differs", actualCents: 1_499n });
   });
@@ -204,6 +225,7 @@ describe("the page's figures", () => {
           occurredAt: noon(addDays(todayOn, days - 100)),
         }),
       ),
+      { provider: WALLET_PROVIDER },
     );
     await refreshRecurrences(ctx);
     expect(await suggestions(ctx)).toEqual([
@@ -221,9 +243,12 @@ describe("the page's figures", () => {
 
 describe("isolation between users (spec §4.4, §11)", () => {
   it("never reads, changes or checks against another user's data", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ payee: "Netflix", amountCents: -1_299n, occurredAt: noon(todayOn) }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ payee: "Netflix", amountCents: -1_299n, occurredAt: noon(todayOn) })],
+      { provider: WALLET_PROVIDER },
+    );
     const fun = await createCategory(ctx, { name: "Fun" });
     const sub = await createSubscription(ctx, input());
     const other = await newContext();
@@ -253,9 +278,12 @@ describe("isolation between users (spec §4.4, §11)", () => {
 
 describe("deleteSubscription (owner, 2026-09-21)", () => {
   it("throws away a cancelled subscription and the periods it had checked", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ payee: "NETFLIX.COM", amountCents: -1_299n, occurredAt: noon(todayOn) }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ payee: "NETFLIX.COM", amountCents: -1_299n, occurredAt: noon(todayOn) })],
+      { provider: WALLET_PROVIDER },
+    );
     const sub = await createSubscription(ctx, input());
     await checkSubscriptions(ctx);
     expect((await subscriptionsView(ctx)).rows).toHaveLength(1);

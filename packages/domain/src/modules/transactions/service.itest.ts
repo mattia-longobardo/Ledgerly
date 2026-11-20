@@ -108,19 +108,24 @@ afterAll(closeDatabase);
 
 describe("upsertFromProvider", () => {
   it("creates the movements, adopts their category and labels, and files their external ids", async () => {
-    const outcome = await upsertFromProvider(ctx, accountId, [
-      movement(),
-      movement({
-        externalId: "w-2",
-        occurredAt: new Date("2026-03-11T09:00:00Z"),
-        amountCents: 250_000n,
-        type: "income",
-        payee: "Acme Payroll",
-        categoryExternalId: "wc-2",
-        categoryName: "Salary",
-        labels: [],
-      }),
-    ]);
+    const outcome = await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement(),
+        movement({
+          externalId: "w-2",
+          occurredAt: new Date("2026-03-11T09:00:00Z"),
+          amountCents: 250_000n,
+          type: "income",
+          payee: "Acme Payroll",
+          categoryExternalId: "wc-2",
+          categoryName: "Salary",
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
 
     expect(outcome).toEqual({ created: 2, updated: 0, skipped: 0, removed: 0, restored: 0 });
 
@@ -152,10 +157,13 @@ describe("upsertFromProvider", () => {
       movement(),
       movement({ externalId: "w-2", payee: "Netflix", amountCents: -1_299n, labels: ["Fun"] }),
     ];
-    await upsertFromProvider(ctx, accountId, answer, { window: MARCH });
+    await upsertFromProvider(ctx, accountId, answer, { provider: WALLET_PROVIDER, window: MARCH });
     const before = await listTransactions(ctx, {});
 
-    const second = await upsertFromProvider(ctx, accountId, answer, { window: MARCH });
+    const second = await upsertFromProvider(ctx, accountId, answer, {
+      provider: WALLET_PROVIDER,
+      window: MARCH,
+    });
     expect(second).toEqual({ created: 0, updated: 0, skipped: 2, removed: 0, restored: 0 });
 
     const after = await listTransactions(ctx, {});
@@ -166,10 +174,13 @@ describe("upsertFromProvider", () => {
   });
 
   it("writes the provider's changes to a movement it has already seen", async () => {
-    await upsertFromProvider(ctx, accountId, [movement()]);
-    const outcome = await upsertFromProvider(ctx, accountId, [
-      movement({ amountCents: -3_100n, payee: "  Esselunga Centro  ", state: "pending" }),
-    ]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
+    const outcome = await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ amountCents: -3_100n, payee: "  Esselunga Centro  ", state: "pending" })],
+      { provider: WALLET_PROVIDER },
+    );
 
     expect(outcome).toMatchObject({ created: 0, updated: 1, skipped: 0 });
     const [row] = await listTransactions(ctx, {});
@@ -182,7 +193,7 @@ describe("upsertFromProvider", () => {
   });
 
   it("never overwrites a field the person has edited, and still follows the rest", async () => {
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
     const [created] = await listTransactions(ctx, {});
     const mine = await createCategory(ctx, {
       name: "Mine",
@@ -198,15 +209,20 @@ describe("upsertFromProvider", () => {
       labelIds: [tag.id],
     });
 
-    await upsertFromProvider(ctx, accountId, [
-      movement({
-        amountCents: -9_900n,
-        categoryExternalId: "wc-9",
-        categoryName: "Something else",
-        note: "provider note",
-        labels: ["Food", "Travel"],
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({
+          amountCents: -9_900n,
+          categoryExternalId: "wc-9",
+          categoryName: "Something else",
+          note: "provider note",
+          labels: ["Food", "Travel"],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
 
     const row = await getTransaction(ctx, created.id);
     expect(row).toMatchObject({
@@ -219,10 +235,12 @@ describe("upsertFromProvider", () => {
   });
 
   it("keeps the last of two pages that repeat the same external id", async () => {
-    const outcome = await upsertFromProvider(ctx, accountId, [
-      movement({ amountCents: -1_000n }),
-      movement({ amountCents: -1_500n }),
-    ]);
+    const outcome = await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ amountCents: -1_000n }), movement({ amountCents: -1_500n })],
+      { provider: WALLET_PROVIDER },
+    );
     expect(outcome).toMatchObject({ created: 1, updated: 0, skipped: 0 });
     const rows = await listTransactions(ctx, {});
     expect(rows).toHaveLength(1);
@@ -234,9 +252,9 @@ describe("upsertFromProvider", () => {
     // writes inside the transaction that created the row, the row goes with it. A movement with
     // no link is exactly what must never survive — the next pass would create it again.
     const tooLong = "w-".padEnd(220, "x");
-    await expect(upsertFromProvider(ctx, accountId, [movement({ externalId: tooLong })])).rejects.toThrow(
-      IntegrationError,
-    );
+    await expect(
+      upsertFromProvider(ctx, accountId, [movement({ externalId: tooLong })], { provider: WALLET_PROVIDER }),
+    ).rejects.toThrow(IntegrationError);
 
     expect(await listTransactions(ctx, { includeHidden: true })).toEqual([]);
     expect(await countAllTransactions(ctx)).toBe(0);
@@ -248,9 +266,12 @@ describe("upsertFromProvider", () => {
   });
 
   it("files a movement with a counterpart as a transfer whatever the provider called it", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ externalId: "w-1", counterpartExternalId: "w-2", type: "expense" }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ externalId: "w-1", counterpartExternalId: "w-2", type: "expense" })],
+      { provider: WALLET_PROVIDER },
+    );
     const [row] = await listTransactions(ctx, {});
     expect(row.type).toBe("transfer");
     expect(row.transferGroupId).toBeNull();
@@ -258,20 +279,28 @@ describe("upsertFromProvider", () => {
 
   it("pairs the two legs of a transfer even when they arrive in different syncs", async () => {
     const other = await anAccount(ctx, "Revolut");
-    await upsertFromProvider(ctx, accountId, [
-      movement({ externalId: "w-1", counterpartExternalId: "w-2", amountCents: -50_000n }),
-    ]);
-    await upsertFromProvider(ctx, other, [
-      movement({
-        externalId: "w-2",
-        counterpartExternalId: "w-1",
-        amountCents: 50_000n,
-        payee: "Revolut",
-        categoryExternalId: null,
-        categoryName: null,
-        labels: [],
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ externalId: "w-1", counterpartExternalId: "w-2", amountCents: -50_000n })],
+      { provider: WALLET_PROVIDER },
+    );
+    await upsertFromProvider(
+      ctx,
+      other,
+      [
+        movement({
+          externalId: "w-2",
+          counterpartExternalId: "w-1",
+          amountCents: 50_000n,
+          payee: "Revolut",
+          categoryExternalId: null,
+          categoryName: null,
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
 
     const rows = await listTransactions(ctx, {});
     const groups = rows.map((row) => row.transferGroupId);
@@ -279,23 +308,31 @@ describe("upsertFromProvider", () => {
     expect(groups[0]).toBe([...rows.map((row) => row.id)].sort()[0]);
 
     // And pairing again decides the same group, so a re-read writes nothing.
-    const again = await upsertFromProvider(ctx, accountId, [
-      movement({ externalId: "w-1", counterpartExternalId: "w-2", amountCents: -50_000n }),
-    ]);
+    const again = await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ externalId: "w-1", counterpartExternalId: "w-2", amountCents: -50_000n })],
+      { provider: WALLET_PROVIDER },
+    );
     expect(again).toMatchObject({ created: 0, updated: 0, skipped: 1 });
     expect((await listTransactions(ctx, {})).map((row) => row.transferGroupId)).toEqual(groups);
   });
 
   it("pairs a leg whose twin only one side names", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ externalId: "w-1", counterpartExternalId: null, amountCents: -50_000n }),
-      movement({
-        externalId: "w-2",
-        counterpartExternalId: "w-1",
-        amountCents: 50_000n,
-        payee: "Revolut",
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({ externalId: "w-1", counterpartExternalId: null, amountCents: -50_000n }),
+        movement({
+          externalId: "w-2",
+          counterpartExternalId: "w-1",
+          amountCents: 50_000n,
+          payee: "Revolut",
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const rows = await listTransactions(ctx, {});
     expect(new Set(rows.map((row) => row.transferGroupId)).size).toBe(1);
     expect(rows.every((row) => row.transferGroupId !== null)).toBe(true);
@@ -313,9 +350,12 @@ describe("upsertFromProvider", () => {
       occurredAt: new Date("2026-03-20T09:00:00Z"),
       payee: "Vanished",
     });
-    await upsertFromProvider(ctx, accountId, [january, kept, gone]);
+    await upsertFromProvider(ctx, accountId, [january, kept, gone], { provider: WALLET_PROVIDER });
 
-    const first = await upsertFromProvider(ctx, accountId, [kept], { window: MARCH });
+    const first = await upsertFromProvider(ctx, accountId, [kept], {
+      provider: WALLET_PROVIDER,
+      window: MARCH,
+    });
     expect(first).toMatchObject({ created: 0, updated: 0, skipped: 1, removed: 1, restored: 0 });
 
     const hiddenRow = (await listTransactions(ctx, { includeHidden: true })).find(
@@ -326,14 +366,20 @@ describe("upsertFromProvider", () => {
     expect((await listTransactions(ctx, {})).map((row) => row.payee)).toEqual(["Esselunga", "Old"]);
 
     const stamped = hiddenRow?.removedUpstreamAt;
-    const second = await upsertFromProvider(ctx, accountId, [kept], { window: MARCH });
+    const second = await upsertFromProvider(ctx, accountId, [kept], {
+      provider: WALLET_PROVIDER,
+      window: MARCH,
+    });
     expect(second.removed).toBe(0);
     const still = (await listTransactions(ctx, { includeHidden: true })).find(
       (row) => row.payee === "Vanished",
     );
     expect(still?.removedUpstreamAt).toEqual(stamped);
 
-    const third = await upsertFromProvider(ctx, accountId, [kept, gone], { window: MARCH });
+    const third = await upsertFromProvider(ctx, accountId, [kept, gone], {
+      provider: WALLET_PROVIDER,
+      window: MARCH,
+    });
     expect(third).toMatchObject({ restored: 1 });
     const back = (await listTransactions(ctx, {})).find((row) => row.payee === "Vanished");
     expect(back?.removedUpstreamAt).toBeNull();
@@ -345,8 +391,11 @@ describe("upsertFromProvider", () => {
       occurredAt: new Date("2026-01-05T09:00:00Z"),
       payee: "Old",
     });
-    await upsertFromProvider(ctx, accountId, [january]);
-    const outcome = await upsertFromProvider(ctx, accountId, [], { window: MARCH });
+    await upsertFromProvider(ctx, accountId, [january], { provider: WALLET_PROVIDER });
+    const outcome = await upsertFromProvider(ctx, accountId, [], {
+      provider: WALLET_PROVIDER,
+      window: MARCH,
+    });
     expect(outcome).toEqual({ created: 0, updated: 0, skipped: 0, removed: 0, restored: 0 });
     const [row] = await listTransactions(ctx, {});
     expect(row.removedUpstreamAt).toBeNull();
@@ -359,16 +408,19 @@ describe("upsertFromProvider", () => {
       type: "expense",
       color: "#2563eb",
     });
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
     const [row] = await listTransactions(ctx, {});
     expect(row.categoryId).toBe(existing.id);
     expect(await listCategories(ctx)).toHaveLength(1);
   });
 
   it("leaves a movement uncategorised when the provider names no category at all", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ categoryExternalId: null, categoryName: null, labels: [] }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ categoryExternalId: null, categoryName: null, labels: [] })],
+      { provider: WALLET_PROVIDER },
+    );
     const [row] = await listTransactions(ctx, {});
     expect(row.categoryId).toBeNull();
     expect(row.categoryName).toBeNull();
@@ -377,7 +429,9 @@ describe("upsertFromProvider", () => {
 
   it("refuses an account that is not the caller's", async () => {
     const other = await newContext();
-    await expect(upsertFromProvider(other, accountId, [movement()])).rejects.toThrow(TransactionError);
+    await expect(
+      upsertFromProvider(other, accountId, [movement()], { provider: WALLET_PROVIDER }),
+    ).rejects.toThrow(TransactionError);
     expect(await listTransactions(ctx, {})).toEqual([]);
   });
 });
@@ -386,7 +440,7 @@ describe("updateTransaction", () => {
   let id: string;
 
   beforeEach(async () => {
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
     id = (await listTransactions(ctx, {}))[0].id;
   });
 
@@ -437,7 +491,9 @@ describe("updateTransaction", () => {
   });
 
   it("sets a category over a selection and counts the rows it changed", async () => {
-    await upsertFromProvider(ctx, accountId, [movement({ externalId: "w-2", payee: "Coop" })]);
+    await upsertFromProvider(ctx, accountId, [movement({ externalId: "w-2", payee: "Coop" })], {
+      provider: WALLET_PROVIDER,
+    });
     const rows = await listTransactions(ctx, {});
     const mine = await createCategory(ctx, {
       name: "Mine",
@@ -468,7 +524,7 @@ describe("updateTransaction", () => {
 
 describe("a deleted label (review B12)", () => {
   it("never comes back onto a movement the person cleared it from", async () => {
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
     const [food] = await listLabels(ctx);
     expect(food.name).toBe("Food");
     expect((await listTransactions(ctx, {}))[0].labels).toMatchObject([{ id: food.id }]);
@@ -477,7 +533,7 @@ describe("a deleted label (review B12)", () => {
     expect((await listTransactions(ctx, {}))[0].labels).toEqual([]);
 
     // The hour after: Wallet still sends the movement with the same label name.
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
 
     const row = (await listTransactions(ctx, {}))[0];
     expect(row.labels).toEqual([]);
@@ -492,11 +548,13 @@ describe("a deleted label (review B12)", () => {
   });
 
   it("leaves the movement following the provider's other fields", async () => {
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
     const [food] = await listLabels(ctx);
     await deleteLabel(ctx, food.id);
 
-    await upsertFromProvider(ctx, accountId, [movement({ amountCents: -3_000n, payee: "Esselunga Bis" })]);
+    await upsertFromProvider(ctx, accountId, [movement({ amountCents: -3_000n, payee: "Esselunga Bis" })], {
+      provider: WALLET_PROVIDER,
+    });
 
     const row = (await listTransactions(ctx, {}))[0];
     expect(row).toMatchObject({ amountCents: -3_000n, payee: "Esselunga Bis" });
@@ -508,7 +566,7 @@ describe("visibility", () => {
   let id: string;
 
   beforeEach(async () => {
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
     id = (await listTransactions(ctx, {}))[0].id;
   });
 
@@ -527,16 +585,21 @@ describe("visibility", () => {
     // budgets, the subscription check and recurrence detection. Before the fix the header's
     // `{count} · {total}` and the "By category" card counted them back in as soon as the filter
     // was switched on, so the same range answered two different amounts.
-    await upsertFromProvider(ctx, accountId, [
-      movement({
-        externalId: "w-2",
-        amountCents: -1_000n,
-        payee: "Enel",
-        categoryExternalId: "wc-9",
-        categoryName: "Utilities",
-        labels: [],
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({
+          externalId: "w-2",
+          amountCents: -1_000n,
+          payee: "Enel",
+          categoryExternalId: "wc-9",
+          categoryName: "Utilities",
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     await hideTransaction(ctx, id);
 
     expect(await listTransactions(ctx, { includeHidden: true })).toHaveLength(2);
@@ -591,46 +654,51 @@ describe("visibility", () => {
 
 describe("reads", () => {
   beforeEach(async () => {
-    await upsertFromProvider(ctx, accountId, [
-      // 00:30 on the 2nd in Rome, 23:30 on the 1st in UTC: the user's day is what counts (§4.3).
-      movement({
-        externalId: "w-1",
-        occurredAt: new Date("2026-03-01T23:30:00Z"),
-        amountCents: -1_000n,
-        payee: "Late Night",
-        categoryExternalId: "wc-1",
-        categoryName: "Groceries",
-        labels: [],
-      }),
-      movement({
-        externalId: "w-2",
-        occurredAt: new Date("2026-03-10T09:00:00Z"),
-        amountCents: -4_000n,
-        payee: "Esselunga",
-        categoryExternalId: "wc-1",
-        categoryName: "Groceries",
-        labels: ["Food"],
-      }),
-      movement({
-        externalId: "w-3",
-        occurredAt: new Date("2026-02-20T09:00:00Z"),
-        amountCents: -6_000n,
-        payee: "Enel",
-        categoryExternalId: "wc-3",
-        categoryName: "Utilities",
-        labels: [],
-      }),
-      movement({
-        externalId: "w-4",
-        occurredAt: new Date("2026-03-12T09:00:00Z"),
-        amountCents: -20_000n,
-        payee: "Revolut",
-        counterpartExternalId: "w-5",
-        categoryExternalId: null,
-        categoryName: null,
-        labels: [],
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        // 00:30 on the 2nd in Rome, 23:30 on the 1st in UTC: the user's day is what counts (§4.3).
+        movement({
+          externalId: "w-1",
+          occurredAt: new Date("2026-03-01T23:30:00Z"),
+          amountCents: -1_000n,
+          payee: "Late Night",
+          categoryExternalId: "wc-1",
+          categoryName: "Groceries",
+          labels: [],
+        }),
+        movement({
+          externalId: "w-2",
+          occurredAt: new Date("2026-03-10T09:00:00Z"),
+          amountCents: -4_000n,
+          payee: "Esselunga",
+          categoryExternalId: "wc-1",
+          categoryName: "Groceries",
+          labels: ["Food"],
+        }),
+        movement({
+          externalId: "w-3",
+          occurredAt: new Date("2026-02-20T09:00:00Z"),
+          amountCents: -6_000n,
+          payee: "Enel",
+          categoryExternalId: "wc-3",
+          categoryName: "Utilities",
+          labels: [],
+        }),
+        movement({
+          externalId: "w-4",
+          occurredAt: new Date("2026-03-12T09:00:00Z"),
+          amountCents: -20_000n,
+          payee: "Revolut",
+          counterpartExternalId: "w-5",
+          categoryExternalId: null,
+          categoryName: null,
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
   });
 
   it("filters on the user's own civil dates, both ends included", async () => {
@@ -723,19 +791,24 @@ describe("reads", () => {
     // The other leg lands on a second account, so the pair is complete: filtering on the first
     // account used to show −200,00 € of "spending" that was only money changing pockets.
     const savings = await anAccount(ctx, "Revolut Savings");
-    await upsertFromProvider(ctx, savings, [
-      movement({
-        externalId: "w-5",
-        occurredAt: new Date("2026-03-12T09:00:00Z"),
-        amountCents: 20_000n,
-        type: "income",
-        payee: "Revolut",
-        counterpartExternalId: "w-4",
-        categoryExternalId: null,
-        categoryName: null,
-        labels: [],
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      savings,
+      [
+        movement({
+          externalId: "w-5",
+          occurredAt: new Date("2026-03-12T09:00:00Z"),
+          amountCents: 20_000n,
+          type: "income",
+          payee: "Revolut",
+          counterpartExternalId: "w-4",
+          categoryExternalId: null,
+          categoryName: null,
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
 
     const checkingOnly = await transactionsSummary(ctx, { ...MARCH, accountIds: [accountId] });
     expect(checkingOnly).toEqual({
@@ -828,9 +901,12 @@ describe("reads", () => {
   });
 
   it("searches the payees for the palette, ignoring case and hidden movements", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ externalId: "w-6", payee: "esselunga", amountCents: -1_100n }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ externalId: "w-6", payee: "esselunga", amountCents: -1_100n })],
+      { provider: WALLET_PROVIDER },
+    );
     // Both spellings come back, each with its own count; which of the two comes first is the
     // database's collation and not this module's business.
     const found = await searchPayees(ctx, "essel");
@@ -858,37 +934,52 @@ describe("ordering", () => {
   beforeEach(async () => {
     const zulu = await anAccount(ctx, "Zulu Bank");
     const alpha = await anAccount(ctx, "Alpha Bank");
-    await upsertFromProvider(ctx, zulu, [
-      movement({
-        externalId: "z-1",
-        payee: "Zeta",
-        amountCents: -3_000n,
-        categoryExternalId: "c-z",
-        categoryName: "Zulu",
-        labels: [],
-      }),
-    ]);
-    await upsertFromProvider(ctx, alpha, [
-      movement({
-        externalId: "a-1",
-        payee: "Alfa",
-        amountCents: -2_000n,
-        categoryExternalId: "c-a",
-        categoryName: "Alpha",
-        labels: [],
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      zulu,
+      [
+        movement({
+          externalId: "z-1",
+          payee: "Zeta",
+          amountCents: -3_000n,
+          categoryExternalId: "c-z",
+          categoryName: "Zulu",
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
+    await upsertFromProvider(
+      ctx,
+      alpha,
+      [
+        movement({
+          externalId: "a-1",
+          payee: "Alfa",
+          amountCents: -2_000n,
+          categoryExternalId: "c-a",
+          categoryName: "Alpha",
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     // The account of the outer `beforeEach`, "ING Conto Arancio": no payee, no category.
-    await upsertFromProvider(ctx, accountId, [
-      movement({
-        externalId: "i-1",
-        payee: null,
-        amountCents: -1_000n,
-        categoryExternalId: null,
-        categoryName: null,
-        labels: [],
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({
+          externalId: "i-1",
+          payee: null,
+          amountCents: -1_000n,
+          categoryExternalId: null,
+          categoryName: null,
+          labels: [],
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
   });
 
   it("orders by the account's name, not its id, in both directions", async () => {
@@ -942,7 +1033,7 @@ describe("isolation between users (spec §4.4, §11)", () => {
   let intruder: Ctx;
 
   beforeEach(async () => {
-    await upsertFromProvider(ctx, accountId, [movement()]);
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER });
     id = (await listTransactions(ctx, {}))[0].id;
     intruder = await newContext();
   });
@@ -985,7 +1076,9 @@ describe("isolation between users (spec §4.4, §11)", () => {
 
   it("lets nobody sync into another user's account", async () => {
     await expect(
-      upsertFromProvider(intruder, accountId, [movement({ externalId: "w-9" })]),
+      upsertFromProvider(intruder, accountId, [movement({ externalId: "w-9" })], {
+        provider: WALLET_PROVIDER,
+      }),
     ).rejects.toMatchObject({ code: "not_found" });
     expect(await listTransactions(ctx, {})).toHaveLength(1);
     expect(await listTransactions(intruder, {})).toEqual([]);
@@ -993,7 +1086,9 @@ describe("isolation between users (spec §4.4, §11)", () => {
 
   it("keeps two users' identical external ids apart", async () => {
     const theirAccount = await anAccount(intruder, "Their bank");
-    await upsertFromProvider(intruder, theirAccount, [movement({ payee: "Their Esselunga" })]);
+    await upsertFromProvider(intruder, theirAccount, [movement({ payee: "Their Esselunga" })], {
+      provider: WALLET_PROVIDER,
+    });
 
     const mine = await listTransactions(ctx, {});
     const theirs = await listTransactions(intruder, {});
@@ -1015,14 +1110,22 @@ describe("linkOwnTransfers (F2.5)", () => {
     const ing = await anAccount(ctx, "ING", "IT60 X054 2811 1010 0000 0123 456");
     const revolut = await anAccount(ctx, "Revolut", "GB82WEST12345698765432");
     const out = { amountCents: -50_000n, payee: "Bonifico", note: "A GB82 WEST 1234 5698 7654 32" };
-    await upsertFromProvider(ctx, ing, [
-      movement({ externalId: "w-out", type: "transfer", ...out }),
-      // Names Revolut's IBAN too, but Wallet counts it as spending: so does the app.
-      movement({ externalId: "w-gift", amountCents: -2_500n, note: "GB82WEST12345698765432" }),
-    ]);
-    await upsertFromProvider(ctx, revolut, [
-      movement({ externalId: "w-in", type: "transfer", amountCents: 50_000n, payee: "Mario", note: null }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      ing,
+      [
+        movement({ externalId: "w-out", type: "transfer", ...out }),
+        // Names Revolut's IBAN too, but Wallet counts it as spending: so does the app.
+        movement({ externalId: "w-gift", amountCents: -2_500n, note: "GB82WEST12345698765432" }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
+    await upsertFromProvider(
+      ctx,
+      revolut,
+      [movement({ externalId: "w-in", type: "transfer", amountCents: 50_000n, payee: "Mario", note: null })],
+      { provider: WALLET_PROVIDER },
+    );
     expect((await transactionsSummary(ctx)).unpairedTransferCount).toBe(2);
 
     expect(await linkOwnTransfers(ctx)).toBe(2);
@@ -1037,10 +1140,15 @@ describe("linkOwnTransfers (F2.5)", () => {
 
 describe("deleting for good", () => {
   it("deletes hidden rows only, and a deleted synced movement is not imported again", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement(),
-      movement({ externalId: "w-2", payee: "Bar", occurredAt: new Date("2026-03-12T09:00:00Z") }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement(),
+        movement({ externalId: "w-2", payee: "Bar", occurredAt: new Date("2026-03-12T09:00:00Z") }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const rows = await listTransactions(ctx, {});
     const bar = rows.find((row) => row.payee === "Bar")!;
     const shop = rows.find((row) => row.payee === "Esselunga")!;
@@ -1053,10 +1161,15 @@ describe("deleting for good", () => {
     ]);
 
     // Wallet keeps sending it: the link left behind says it was deleted on purpose.
-    const again = await upsertFromProvider(ctx, accountId, [
-      movement(),
-      movement({ externalId: "w-2", payee: "Bar", occurredAt: new Date("2026-03-12T09:00:00Z") }),
-    ]);
+    const again = await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement(),
+        movement({ externalId: "w-2", payee: "Bar", occurredAt: new Date("2026-03-12T09:00:00Z") }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     expect(again.created).toBe(0);
     expect(await countAllTransactions(ctx)).toBe(1);
   });
@@ -1067,16 +1180,19 @@ describe("deleting for good", () => {
       payee: "Vanished",
       occurredAt: new Date("2026-03-20T09:00:00Z"),
     });
-    await upsertFromProvider(ctx, accountId, [movement(), gone]);
-    await upsertFromProvider(ctx, accountId, [movement()], { window: MARCH });
-    expect(await purgeRemovedUpstream(ctx)).toBe(1);
+    await upsertFromProvider(ctx, accountId, [movement(), gone], { provider: WALLET_PROVIDER });
+    await upsertFromProvider(ctx, accountId, [movement()], { provider: WALLET_PROVIDER, window: MARCH });
+    expect(await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER })).toBe(1);
     expect((await listTransactions(ctx, { includeHidden: true })).map((row) => row.payee)).toEqual([
       "Esselunga",
     ]);
     expect((await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-2"])).size).toBe(0);
-    expect(await purgeRemovedUpstream(ctx)).toBe(0);
+    expect(await purgeRemovedUpstream(ctx, { provider: WALLET_PROVIDER })).toBe(0);
 
-    const back = await upsertFromProvider(ctx, accountId, [movement(), gone], { window: MARCH });
+    const back = await upsertFromProvider(ctx, accountId, [movement(), gone], {
+      provider: WALLET_PROVIDER,
+      window: MARCH,
+    });
     expect(back.created).toBe(1);
     expect((await listTransactions(ctx, {})).map((row) => row.payee).sort()).toEqual([
       "Esselunga",
@@ -1086,22 +1202,32 @@ describe("deleting for good", () => {
 
   it("unpairs the other leg of a transfer whose leg is deleted, and touches no one else's rows", async () => {
     const savings = await anAccount(ctx, "Conto Deposito");
-    await upsertFromProvider(ctx, accountId, [
-      movement({
-        externalId: "t-out",
-        type: "transfer",
-        amountCents: -10_000n,
-        counterpartExternalId: "t-in",
-      }),
-    ]);
-    await upsertFromProvider(ctx, savings, [
-      movement({
-        externalId: "t-in",
-        type: "transfer",
-        amountCents: 10_000n,
-        counterpartExternalId: "t-out",
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({
+          externalId: "t-out",
+          type: "transfer",
+          amountCents: -10_000n,
+          counterpartExternalId: "t-in",
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
+    await upsertFromProvider(
+      ctx,
+      savings,
+      [
+        movement({
+          externalId: "t-in",
+          type: "transfer",
+          amountCents: 10_000n,
+          counterpartExternalId: "t-out",
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const legs = await listTransactions(ctx, { includeHidden: true });
     expect(legs.every((row) => row.transferGroupId !== null)).toBe(true);
     const out = legs.find((row) => row.amountCents < 0n)!;

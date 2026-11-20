@@ -16,6 +16,7 @@ import { pluginUserCredentials } from "@domain/platform/plugins/schema";
 import { connectionBag, setPluginActive } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 /**
  * The display-currency journey (docs/design/investments.md §1.8): one account in EUR and one in
@@ -70,10 +71,15 @@ export async function seedSwitching(email: string = USERS.switching.email): Prom
     ["e2e-switching-double", "Conto doppio"],
   ] as const) {
     const account = await syncedAccount(ctx, providerAccountId, name);
-    await upsertFromProvider(ctx, account, [
-      walletMovement(`${providerAccountId}-1`, addDays(on, -6), -4550n, "Esselunga", null),
-      walletMovement(`${providerAccountId}-2`, addDays(on, -3), -1299n, "Netflix", null),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      account,
+      [
+        walletMovement(`${providerAccountId}-1`, addDays(on, -6), -4550n, "Esselunga", null),
+        walletMovement(`${providerAccountId}-2`, addDays(on, -3), -1299n, "Netflix", null),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
   }
   if (!(await findInstancePlugin(BANK_PLUGIN))) return;
   await setPluginActive(ctx, { pluginId: BANK_PLUGIN, active: true });

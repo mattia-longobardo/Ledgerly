@@ -3,10 +3,10 @@ import { z } from "zod";
 import type { Ctx } from "../../../platform/context";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { WALLET_PROVIDER } from "../../../platform/integrations/rules";
 import { externalIdsOf, unlinkEntities } from "../../../platform/integrations/service";
 import { CATEGORY_TYPES, type CategoryType, markCategoryEdited } from "../rules";
 import { retypeMovements } from "../macro";
+import type { TransactionsProvider } from "../ports";
 import { categories, transactions } from "../schema";
 import {
   CATEGORY_ENTITY,
@@ -65,11 +65,11 @@ export async function updateCategory(
   // must not undo (spec §7.2); a rename that leaves the group alone is not that choice.
   const parentSetLocally = current.parentSetLocally || current.parentId !== values.parentId;
   // A name or a type changed *here* is marked the way §7.2 marks a movement's fields. For the name
-  // that is not only "never overwrite it": the next Wallet pass writes it to Wallet and clears the
-  // marker (`platform/integrations/wallet/categories.ts`), which is what makes the two-way sync
+  // that is not only "never overwrite it": the next pass of the provider writes it there and clears
+  // the marker (its integration's category sync), which is what makes the two-way sync
   // settle instead of swinging between the two names. The baseline is deliberately left alone:
-  // it still holds the name Wallet last published, which is how the pass tells a rename that only
-  // happened here from one that happened on both sides.
+  // it still holds the name the provider last published, which is how the pass tells a rename
+  // that only happened here from one that happened on both sides.
   const edited = [
     ...(values.name === current.name ? [] : (["name"] as const)),
     ...(type === current.type ? [] : (["type"] as const)),
@@ -346,7 +346,11 @@ interface CategoryDeletion {
  * call that would spend them has no business inside this transaction (spec §4.3), and the caller
  * is the one that knows whether the person asked for it.
  */
-export async function deleteCategory(ctx: Pick<Ctx, "userId">, id: string): Promise<CategoryDeletion> {
+export async function deleteCategory(
+  ctx: Pick<Ctx, "userId">,
+  id: string,
+  source: Pick<TransactionsProvider, "provider">,
+): Promise<CategoryDeletion> {
   const categoryId = parsed(idSchema, id);
   const category = await categoryById(ctx, categoryId);
   if (!category) throw new TaxonomyError("not_found");
@@ -359,8 +363,8 @@ export async function deleteCategory(ctx: Pick<Ctx, "userId">, id: string): Prom
   const ids = doomed.map((one) => one.id);
 
   const [links, groupLinks, [counted]] = await Promise.all([
-    externalIdsOf(ctx, WALLET_PROVIDER, CATEGORY_ENTITY, ids),
-    externalIdsOf(ctx, WALLET_PROVIDER, GROUP_ENTITY, ids),
+    externalIdsOf(ctx, source.provider, CATEGORY_ENTITY, ids),
+    externalIdsOf(ctx, source.provider, GROUP_ENTITY, ids),
     getDb()
       .select({ n: count() })
       .from(transactions)
@@ -388,7 +392,7 @@ export async function deleteCategory(ctx: Pick<Ctx, "userId">, id: string): Prom
   // they are cleared here. A link left behind would make the next pass adopt a category that is
   // gone and file movements under nothing.
   for (const entity of [CATEGORY_ENTITY, GROUP_ENTITY]) {
-    await unlinkEntities(ctx, WALLET_PROVIDER, entity, ids);
+    await unlinkEntities(ctx, source.provider, entity, ids);
   }
 
   return {

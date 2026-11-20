@@ -25,6 +25,7 @@ import {
   unlinkExpense,
   updatePocket,
 } from "./service";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 let ctx: Ctx;
 let thisMonth: string;
@@ -59,6 +60,7 @@ async function spend(
         type: row.type ?? "expense",
       }),
     ),
+    { provider: WALLET_PROVIDER },
   );
 }
 

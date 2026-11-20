@@ -26,10 +26,13 @@
  * The network is used outside any transaction (spec §4.3): read the record, patch it, then apply
  * the answer in the module's own short writes.
  */
-import type { TransactionType } from "../../../modules/transactions/rules";
-import { displayPayee } from "../../../modules/transactions/rules";
-import { getTransaction } from "../../../modules/transactions/queries";
-import { releaseLocalEdits, upsertFromProvider } from "../../../modules/transactions/service";
+import {
+  type TransactionType,
+  displayPayee,
+  getTransaction,
+  releaseLocalEdits,
+  upsertFromProvider,
+} from "../../../modules/transactions";
 import type { Ctx } from "../../context";
 import type { Cents } from "../../../shared/money";
 import { WALLET_PROVIDER } from "../rules";
@@ -224,9 +227,12 @@ export async function editWalletTransaction(
   // way a sync would apply it. A missing answer leaves the row to the next pass, which reads it.
   await releaseLocalEdits(ctx, row.id, PUSHED_FIELDS);
   if (saved) {
-    await upsertFromProvider(ctx, row.accountId, [
-      toIncomingTransaction(saved.movement, new Map(), ctx.timeZone),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      row.accountId,
+      [toIncomingTransaction(saved.movement, new Map(), ctx.timeZone)],
+      { provider: WALLET_PROVIDER },
+    );
   }
   return { state: "saved" };
 }

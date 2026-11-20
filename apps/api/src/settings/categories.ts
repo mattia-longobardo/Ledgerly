@@ -4,7 +4,7 @@
 import type { Hono } from "hono";
 import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { deleteWalletCategories } from "@ledgerly/domain/platform/integrations/wallet";
+import { transactionsSource } from "@ledgerly/domain/platform/integrations/source";
 import {
   archiveCategory,
   createCategory,
@@ -31,8 +31,8 @@ type Who = Pick<Ctx, "userId">;
  * says so. The other order would let the source lose a category for a deletion that never happened.
  */
 export async function deleteCategoryEverywhere(ctx: Who, id: string) {
-  const deletion = await deleteCategory(ctx, id);
-  const external = await deleteWalletCategories(ctx, deletion.externalIds);
+  const deletion = await deleteCategory(ctx, id, transactionsSource);
+  const external = await transactionsSource.deleteCategories(ctx, deletion.externalIds);
   return { removed: deletion.removed.length, uncategorised: deletion.uncategorised, external };
 }
 

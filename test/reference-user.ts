@@ -26,6 +26,7 @@ import { twinPdf } from "./fixtures/payroll/twin";
 import { anAccount, movement } from "./fixtures";
 import { addDeposit, debitFund } from "./funds";
 import { accountMovement, manualService } from "./investments";
+import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
 export const REFERENCE_NOW = new Date("2031-10-15T10:00:00Z");
 
@@ -109,7 +110,10 @@ export async function seedReferenceUser(ctx: Ctx, setClock: (instant: Date) => v
     await saveBalanceEntry(ctx, savings.id, { on, cents: saved });
   }
 
-  await upsertFromProvider(ctx, checkingId, MONTHS.flatMap(monthOf), { now: REFERENCE_NOW });
+  await upsertFromProvider(ctx, checkingId, MONTHS.flatMap(monthOf), {
+    provider: WALLET_PROVIDER,
+    now: REFERENCE_NOW,
+  });
   const categoryId = async (name: string) =>
     (await listCategories(ctx)).find((category) => category.name === name)!.id;
   for (const month of ["2031-09-01", "2031-10-01"]) {

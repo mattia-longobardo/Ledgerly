@@ -509,24 +509,29 @@ describe("removeAccount", () => {
   // row that no longer exists.
   it("forgets the provider links of the movements it takes with it", async () => {
     const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
-    await upsertFromProvider(ctx, account.id, [
-      {
-        externalId: "w-1",
-        counterpartExternalId: null,
-        occurredAt: new Date("2026-01-10T09:00:00Z"),
-        amountCents: -2_500n,
-        currency: "EUR",
-        type: "expense",
-        state: "cleared",
-        payee: "Esselunga",
-        note: null,
-        categoryExternalId: null,
-        categoryName: null,
-        categoryGroupExternalId: null,
-        categoryGroupName: null,
-        labels: [],
-      },
-    ]);
+    await upsertFromProvider(
+      ctx,
+      account.id,
+      [
+        {
+          externalId: "w-1",
+          counterpartExternalId: null,
+          occurredAt: new Date("2026-01-10T09:00:00Z"),
+          amountCents: -2_500n,
+          currency: "EUR",
+          type: "expense",
+          state: "cleared",
+          payee: "Esselunga",
+          note: null,
+          categoryExternalId: null,
+          categoryName: null,
+          categoryGroupExternalId: null,
+          categoryGroupName: null,
+          labels: [],
+        },
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const linked = await resolveExternal(ctx, WALLET_PROVIDER, "transaction", ["w-1"]);
     expect(linked.size).toBe(1);
 
@@ -645,12 +650,17 @@ describe("rebuildDerivedBalances", () => {
     ]);
     const [row] = (await accountsView(ctx)).rows;
     await saveProviderBalance(ctx, row.account.id, { on: "2026-09-16", cents: 500_000n });
-    await upsertFromProvider(ctx, row.account.id, [
-      spent("w-1", "2026-07-03", -10_000n),
-      spent("w-2", "2026-08-10", 250_000n),
-      spent("w-3", "2026-08-20", -30_000n),
-      spent("w-4", "2026-09-02", -20_000n),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      row.account.id,
+      [
+        spent("w-1", "2026-07-03", -10_000n),
+        spent("w-2", "2026-08-10", 250_000n),
+        spent("w-3", "2026-08-20", -30_000n),
+        spent("w-4", "2026-09-02", -20_000n),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     return row.account.id;
   }
 
@@ -771,7 +781,9 @@ describe("rebuildDerivedBalances", () => {
     ]);
     const binance = (await accountsView(ctx)).rows.find((row) => row.account.provider === "ccxt:binance");
     await saveProviderBalance(ctx, binance!.account.id, { on: "2026-09-16", cents: 100_000n });
-    await upsertFromProvider(ctx, binance!.account.id, [spent("b-1", "2026-07-03", -10_000n)]);
+    await upsertFromProvider(ctx, binance!.account.id, [spent("b-1", "2026-07-03", -10_000n)], {
+      provider: WALLET_PROVIDER,
+    });
 
     expect(await rebuildDerivedBalances(ctx)).toEqual({ written: 3 });
     expect(await rebuilt(binance!.account.id)).toEqual([]);

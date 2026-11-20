@@ -8,6 +8,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { budgetsView } from "./queries";
 import { BudgetError, setLimit, stopLimit } from "./service";
+import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 let ctx: Ctx;
 let accountId: string;
@@ -28,14 +29,19 @@ afterAll(closeDatabase);
 
 describe("spent (spec §7.3)", () => {
   it("counts the month's visible expenses of the category and nothing else", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({ amountCents: -10_000n }),
-      movement({ amountCents: -2_550n, occurredAt: new Date("2026-03-31T22:30:00Z") }), // 00:30 on 1 April in Rome (CEST)
-      movement({ amountCents: -1_000n, occurredAt: new Date("2026-02-28T23:30:00Z") }), // 00:30 on 1 March in Rome (CET)
-      movement({ amountCents: 3_000n, type: "income", payee: "Refund" }),
-      movement({ amountCents: -7_000n, type: "transfer", payee: "Giroconto" }),
-      movement({ amountCents: -500n, payee: "Hidden" }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({ amountCents: -10_000n }),
+        movement({ amountCents: -2_550n, occurredAt: new Date("2026-03-31T22:30:00Z") }), // 00:30 on 1 April in Rome (CEST)
+        movement({ amountCents: -1_000n, occurredAt: new Date("2026-02-28T23:30:00Z") }), // 00:30 on 1 March in Rome (CET)
+        movement({ amountCents: 3_000n, type: "income", payee: "Refund" }),
+        movement({ amountCents: -7_000n, type: "transfer", payee: "Giroconto" }),
+        movement({ amountCents: -500n, payee: "Hidden" }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const hidden = (await listTransactions(ctx, {})).find((row) => row.payee === "Hidden");
     await hideTransaction(ctx, hidden!.id);
     const groceries = await categoryId("Groceries");
@@ -53,20 +59,25 @@ describe("spent (spec §7.3)", () => {
   });
 
   it("gives a group the spending of its sub-categories", async () => {
-    await upsertFromProvider(ctx, accountId, [
-      movement({
-        amountCents: -4_000n,
-        categoryName: "Rent",
-        categoryGroupName: "Home",
-        categoryGroupExternalId: "g-1",
-      }),
-      movement({
-        amountCents: -1_500n,
-        categoryName: "Bills",
-        categoryGroupName: "Home",
-        categoryGroupExternalId: "g-1",
-      }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [
+        movement({
+          amountCents: -4_000n,
+          categoryName: "Rent",
+          categoryGroupName: "Home",
+          categoryGroupExternalId: "g-1",
+        }),
+        movement({
+          amountCents: -1_500n,
+          categoryName: "Bills",
+          categoryGroupName: "Home",
+          categoryGroupExternalId: "g-1",
+        }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     await setLimit(ctx, {
       categoryId: await categoryId("Home"),
       accountId: null,
@@ -135,13 +146,21 @@ describe("versions", () => {
 describe("budgets on an account (F3)", () => {
   it("counts only the account's spending, whole or in one category, and archives the account it points at", async () => {
     const other = await anAccount(ctx, "Revolut");
-    await upsertFromProvider(ctx, accountId, [
-      movement({ amountCents: -4_000n, occurredAt: new Date("2026-03-10T10:00:00Z") }),
-    ]);
-    await upsertFromProvider(ctx, other, [
-      movement({ amountCents: -1_500n, occurredAt: new Date("2026-03-11T10:00:00Z") }),
-      movement({ amountCents: -700n, categoryName: "Fun", occurredAt: new Date("2026-03-12T10:00:00Z") }),
-    ]);
+    await upsertFromProvider(
+      ctx,
+      accountId,
+      [movement({ amountCents: -4_000n, occurredAt: new Date("2026-03-10T10:00:00Z") })],
+      { provider: WALLET_PROVIDER },
+    );
+    await upsertFromProvider(
+      ctx,
+      other,
+      [
+        movement({ amountCents: -1_500n, occurredAt: new Date("2026-03-11T10:00:00Z") }),
+        movement({ amountCents: -700n, categoryName: "Fun", occurredAt: new Date("2026-03-12T10:00:00Z") }),
+      ],
+      { provider: WALLET_PROVIDER },
+    );
     const groceries = await categoryId("Groceries");
     await setLimit(ctx, { categoryId: groceries, accountId: other, month: "2026-03-01", cents: 2_000n });
     await setLimit(ctx, { categoryId: null, accountId: other, month: "2026-03-01", cents: 3_000n });
