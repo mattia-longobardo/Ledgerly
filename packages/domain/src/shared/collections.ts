@@ -23,3 +23,17 @@ export function groupBy<T, K, V>(
   }
   return groups;
 }
+
+/**
+ * The first `limit` rows whose name contains `term`, ignoring case, for the ⌘K palette (spec §8.2;
+ * audit SUB-9: one search for every module). An empty term loads nothing.
+ */
+export async function searchByName<R extends { name: string }>(
+  term: string,
+  load: () => Promise<readonly R[]>,
+  limit = 5,
+): Promise<R[]> {
+  const needle = term.trim().toLocaleLowerCase();
+  if (needle === "") return [];
+  return (await load()).filter((row) => row.name.toLocaleLowerCase().includes(needle)).slice(0, limit);
+}

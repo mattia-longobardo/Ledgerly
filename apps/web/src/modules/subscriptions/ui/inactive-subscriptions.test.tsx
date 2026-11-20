@@ -11,7 +11,6 @@ vi.mock("@ledgerly/ui/toast", () => ({ notify: (...a: unknown[]) => notify(...a)
 const deleteSubscription = vi.fn();
 vi.mock("../actions", () => ({
   deleteSubscriptionAction: (...a: unknown[]) => deleteSubscription(...a),
-  setUtilityAction: vi.fn(),
   setSubscriptionStateAction: vi.fn(),
   updateSubscriptionAction: vi.fn(),
   createSubscriptionAction: vi.fn(),

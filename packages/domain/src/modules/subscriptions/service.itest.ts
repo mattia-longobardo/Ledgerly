@@ -19,7 +19,6 @@ import {
   createSubscription,
   deleteSubscription,
   setSubscriptionState,
-  setUtility,
   SubscriptionError,
   updateSubscription,
 } from "./service";
@@ -169,7 +168,7 @@ describe("the page's figures", () => {
     await saveBalanceEntry(ctx, accountId, { on: todayOn, cents: 100_000n });
     const fun = await createCategory(ctx, { name: "Fun" });
     await createSubscription(ctx, input({ nextChargeOn: addDays(todayOn, 3), categoryId: fun.id }));
-    const prime = await createSubscription(
+    await createSubscription(
       ctx,
       input({
         name: "Prime",
@@ -184,7 +183,6 @@ describe("the page's figures", () => {
       ctx,
       input({ name: "Gym", paymentAccountId: null, payeeMatch: null, nextChargeOn: addDays(todayOn, 40) }),
     );
-    await setUtility(ctx, prime.id, 3);
 
     const view = await subscriptionsView(ctx);
     expect(view).toMatchObject({
@@ -258,7 +256,6 @@ describe("isolation between users (spec §4.4, §11)", () => {
     expect(await subscriptionsOnAccount(other, accountId)).toEqual({ count: 0, monthlyCents: 0n });
     for (const attempt of [
       () => updateSubscription(other, sub.id, input()),
-      () => setUtility(other, sub.id, 1),
       () => setSubscriptionState(other, sub.id, "cancelled"),
     ]) {
       await expect(attempt()).rejects.toMatchObject({ code: "not_found" });

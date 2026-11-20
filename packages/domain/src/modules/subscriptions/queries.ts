@@ -7,13 +7,16 @@ import { addDays, type CivilDate, civilDateIn, today } from "../../shared/dates"
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
+import { groupBy, searchByName } from "../../shared/collections";
 import {
-  dueDates,
+  foundCharges,
   LOW_UTILITY,
+  monthlyCost,
   monthlyEquivalent,
   nextCharge,
   type Suggestion,
   suggestionsFrom,
+  upcomingCharges,
   yearlyEquivalent,
 } from "./rules";
 import { subscriptionCharges, subscriptions } from "./schema";
@@ -75,64 +78,166 @@ interface SubscriptionsView {
   accounts: { id: string; name: string }[];
 }
 
+/** A row as `upcomingCharges` reads it. */
+const planOf = (row: SubscriptionRow) => ({
+  id: row.subscription.id,
+  priceCents: row.subscription.priceCents,
+  cycle: row.subscription.cycle,
+  anchor: row.subscription.nextChargeOn,
+  row,
+});
+
+const sum = (values: Cents[]) => values.reduce<Cents>((total, value) => total + value, 0n);
+
+/** What the projections read besides the rows: the charges found and the paying accounts' balances. */
+interface Commitments {
+  found: ReadonlyMap<string, ReadonlySet<CivilDate>>;
+  balances: ReadonlyMap<string, Cents>;
+}
+
 /**
  * What an account will have once the active subscriptions it pays have been charged (spec §7.5):
- * its latest balance minus the charges due in `(today, today + days]` that have not been found
- * already. `null` while the account has no balance. The subscriptions with no paying account are
- * one group of their own, with no balance.
+ * its latest balance minus the charges due in `[from, to]` that have not been found already. `null`
+ * while the account has no balance. The subscriptions with no paying account are one group of their
+ * own, with no balance.
  */
 function project(
   rows: readonly SubscriptionRow[],
-  charges: readonly SubscriptionCharge[],
-  balances: ReadonlyMap<string, Cents>,
-  todayOn: CivilDate,
-  days: number,
+  { found, balances }: Commitments,
+  window: { from: CivilDate; to: CivilDate },
 ): Projection[] {
-  const found = new Set(
-    charges
-      .filter((charge) => charge.state === "paid" || charge.state === "amount_differs")
-      .map((charge) => `${charge.subscriptionId}|${charge.dueOn}`),
+  const commits = groupBy(
+    upcomingCharges(rows.map(planOf), found, window.from, window.to),
+    ({ plan }) => plan.row.subscription.paymentAccountId,
+    ({ plan }) => plan.priceCents,
   );
-  const groups = new Map<string | null, Projection>();
-  for (const row of rows) {
-    const id = row.subscription.paymentAccountId;
-    const group = groups.get(id) ?? {
-      accountId: id,
-      accountName: row.accountName,
-      count: 0,
-      balanceCents: id === null ? null : (balances.get(id) ?? null),
-      commitCents: 0n,
-      projectedCents: null,
-    };
-    group.count += 1;
-    for (const due of dueDates(
-      row.subscription.nextChargeOn,
-      row.subscription.cycle,
-      addDays(todayOn, 1),
-      addDays(todayOn, days),
-    )) {
-      if (!found.has(`${row.subscription.id}|${due}`)) group.commitCents += row.subscription.priceCents;
-    }
-    groups.set(id, group);
-  }
-  return [...groups.values()]
-    .map((group) => ({
-      ...group,
-      projectedCents: group.balanceCents === null ? null : group.balanceCents - group.commitCents,
-    }))
+  return [...groupBy(rows, (row) => row.subscription.paymentAccountId).entries()]
+    .map(([id, group]) => {
+      const balanceCents = id === null ? null : (balances.get(id) ?? null);
+      const commitCents = sum(commits.get(id) ?? []);
+      return {
+        accountId: id,
+        accountName: group[0].accountName,
+        count: group.length,
+        balanceCents,
+        commitCents,
+        projectedCents: balanceCents === null ? null : balanceCents - commitCents,
+      };
+    })
     .sort(
-      (a, b) =>
-        Number(a.accountId === null) - Number(b.accountId === null) ||
-        (a.accountName ?? "").localeCompare(b.accountName ?? ""),
+      (left, right) =>
+        Number(left.accountId === null) - Number(right.accountId === null) ||
+        (left.accountName ?? "").localeCompare(right.accountName ?? ""),
     );
 }
 
-/** Everything the Subscriptions page renders (spec §7.5), read once. */
-export async function subscriptionsView(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  now: Date = new Date(),
-): Promise<SubscriptionsView> {
-  const todayOn = today(ctx.timeZone, now);
+type Charge = SubscriptionCharge;
+type CategoryRow = Awaited<ReturnType<typeof listCategories>>[number];
+
+/** The category of a row, its colour and the group it counts under. */
+function categoryOf(
+  categoryId: string | null,
+  category: ReadonlyMap<string, CategoryRow>,
+): Pick<SubscriptionRow, "categoryName" | "categoryColor" | "groupId" | "groupName"> {
+  const cat = categoryId ? category.get(categoryId) : undefined;
+  if (!cat) return { categoryName: null, categoryColor: null, groupId: null, groupName: null };
+  const group = (cat.parentId ? category.get(cat.parentId) : undefined) ?? cat;
+  return {
+    categoryName: cat.name,
+    categoryColor: colorOfCategory(cat, category),
+    groupId: group.id,
+    groupName: group.name,
+  };
+}
+
+/** The last charge found, on the day of its movement. */
+function lastMatchOf(
+  own: readonly Charge[],
+  matched: Awaited<ReturnType<typeof transactionsByIds>>,
+  timeZone: string,
+): SubscriptionRow["lastMatch"] {
+  for (const charge of own) {
+    const movement = charge.transactionId === null ? undefined : matched.get(charge.transactionId);
+    if (!movement) continue;
+    // A movement is held by a paid or differing charge only, which always has its amount.
+    return charge.actualCents === null
+      ? null
+      : { on: civilDateIn(movement.occurredAt, timeZone), cents: charge.actualCents };
+  }
+  return null;
+}
+
+/** What the rows are made from: the reads of the page, the charges by subscription, the found set. */
+interface Sources {
+  todayOn: CivilDate;
+  timeZone: string;
+  category: ReadonlyMap<string, CategoryRow>;
+  accountName: ReadonlyMap<string, string>;
+  bySubscription: ReadonlyMap<string, Charge[]>;
+  found: ReadonlyMap<string, ReadonlySet<CivilDate>>;
+  matched: Awaited<ReturnType<typeof transactionsByIds>>;
+}
+
+function rowOf(subscription: Subscription, sources: Sources): SubscriptionRow {
+  const { todayOn } = sources;
+  const own = sources.bySubscription.get(subscription.id) ?? [];
+  const current =
+    own.find((charge) => charge.periodFrom <= todayOn && todayOn <= charge.periodTo) ??
+    own.find((charge) => charge.state === "due") ??
+    null;
+  const paid = sources.found.get(subscription.id) ?? new Set<CivilDate>();
+  return {
+    subscription,
+    ...categoryOf(subscription.categoryId, sources.category),
+    accountName: subscription.paymentAccountId
+      ? (sources.accountName.get(subscription.paymentAccountId) ?? null)
+      : null,
+    monthlyCents: monthlyEquivalent(subscription.priceCents, subscription.cycle),
+    yearlyCents: yearlyEquivalent(subscription.priceCents, subscription.cycle),
+    nextChargeOn: nextCharge(subscription.nextChargeOn, subscription.cycle, todayOn, paid),
+    current,
+    lastMatch: lastMatchOf(own, sources.matched, sources.timeZone),
+  };
+}
+
+/** A missing charge of a period closed in the last month, and the one under way when it needs a look. */
+function alertsOf(active: readonly SubscriptionRow[], sources: Sources): Alert[] {
+  const recentlyClosed = addDays(sources.todayOn, -ALERT_DAYS);
+  return active.flatMap((row) => {
+    const own = sources.bySubscription.get(row.subscription.id) ?? [];
+    const missing = own.find((charge) => charge.state === "not_found" && charge.periodTo >= recentlyClosed);
+    const state = row.current?.state;
+    const picked = [
+      ...(missing ? [missing] : []),
+      ...(row.current && (state === "due" || state === "amount_differs") ? [row.current] : []),
+    ];
+    return picked.map((charge) => ({
+      subscriptionId: row.subscription.id,
+      name: row.subscription.name,
+      charge,
+      accountName: row.accountName,
+      payeeMatch: row.subscription.payeeMatch,
+    }));
+  });
+}
+
+/** The yearly cost of the active ones by category group, largest first. */
+function byCategoryOf(active: readonly SubscriptionRow[]): SubscriptionsView["byCategory"] {
+  return [...groupBy(active, (row) => row.groupId).values()]
+    .map((group) => ({
+      groupId: group[0].groupId,
+      name: group[0].groupName,
+      color: group[0].categoryColor,
+      yearlyCents: sum(group.map((row) => row.yearlyCents)),
+    }))
+    .sort(
+      (left, right) =>
+        Number(right.yearlyCents - left.yearlyCents) || (left.name ?? "").localeCompare(right.name ?? ""),
+    );
+}
+
+/** The reads of the page, at once, and the movements of the charges found. */
+async function sourcesOf(ctx: Pick<Ctx, "userId" | "timeZone">, todayOn: CivilDate) {
   const [all, charges, categories, accounts] = await Promise.all([
     getDb()
       .select()
@@ -147,119 +252,54 @@ export async function subscriptionsView(
     listCategories(ctx, { includeArchived: true }),
     listAccounts(ctx, { includeArchived: true }),
   ]);
-  const category = new Map(categories.map((row) => [row.id, row]));
-  const accountName = accountNames(accounts);
   const matched = await transactionsByIds(
     ctx,
     charges.flatMap((charge) => (charge.transactionId ? [charge.transactionId] : [])),
   );
+  const sources: Sources = {
+    todayOn,
+    timeZone: ctx.timeZone,
+    category: new Map(categories.map((row) => [row.id, row])),
+    accountName: accountNames(accounts),
+    bySubscription: groupBy(charges, (charge) => charge.subscriptionId),
+    found: foundCharges(charges),
+    matched,
+  };
+  return { all, accounts, sources };
+}
 
-  const rows: SubscriptionRow[] = all.map((subscription) => {
-    const own = charges.filter((charge) => charge.subscriptionId === subscription.id);
-    const cat = subscription.categoryId ? category.get(subscription.categoryId) : undefined;
-    const parent = cat?.parentId ? category.get(cat.parentId) : undefined;
-    const paid = new Set(
-      own
-        .filter((charge) => charge.state === "paid" || charge.state === "amount_differs")
-        .map((charge) => charge.dueOn),
-    );
-    const current =
-      own.find((charge) => charge.periodFrom <= todayOn && todayOn <= charge.periodTo) ??
-      own.find((charge) => charge.state === "due") ??
-      null;
-    const last = own.find((charge) => charge.transactionId !== null && matched.has(charge.transactionId));
-    const lastMovement = last ? matched.get(last.transactionId as string) : undefined;
-    return {
-      subscription,
-      categoryName: cat?.name ?? null,
-      categoryColor: cat ? colorOfCategory(cat, category) : null,
-      groupId: (parent ?? cat)?.id ?? null,
-      groupName: (parent ?? cat)?.name ?? null,
-      accountName: subscription.paymentAccountId
-        ? (accountName.get(subscription.paymentAccountId) ?? null)
-        : null,
-      monthlyCents: monthlyEquivalent(subscription.priceCents, subscription.cycle),
-      yearlyCents: yearlyEquivalent(subscription.priceCents, subscription.cycle),
-      nextChargeOn: nextCharge(subscription.nextChargeOn, subscription.cycle, todayOn, paid),
-      current,
-      lastMatch:
-        last && lastMovement
-          ? { on: civilDateIn(lastMovement.occurredAt, ctx.timeZone), cents: last.actualCents as Cents }
-          : null,
-    };
-  });
+/** Everything the Subscriptions page renders (spec §7.5), read once. */
+export async function subscriptionsView(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  now: Date = new Date(),
+): Promise<SubscriptionsView> {
+  const todayOn = today(ctx.timeZone, now);
+  const { all, accounts, sources } = await sourcesOf(ctx, todayOn);
+  const rows = all.map((subscription) => rowOf(subscription, sources));
   const active = rows.filter((row) => row.subscription.state === "active");
-  const sum = (values: Cents[]) => values.reduce<Cents>((total, value) => total + value, 0n);
-
-  const recentlyClosed = addDays(todayOn, -ALERT_DAYS);
-  const alerts: Alert[] = active.flatMap((row) => {
-    const own = charges.filter((charge) => charge.subscriptionId === row.subscription.id);
-    const missing = own.find((charge) => charge.state === "not_found" && charge.periodTo >= recentlyClosed);
-    const picked = [
-      ...(missing ? [missing] : []),
-      ...(row.current && (row.current.state === "due" || row.current.state === "amount_differs")
-        ? [row.current]
-        : []),
-    ];
-    return picked.map((charge) => ({
-      subscriptionId: row.subscription.id,
-      name: row.subscription.name,
-      charge,
-      accountName: row.accountName,
-      payeeMatch: row.subscription.payeeMatch,
-    }));
-  });
-
-  const byCategory = new Map<string | null, SubscriptionsView["byCategory"][number]>();
-  for (const row of active) {
-    const entry = byCategory.get(row.groupId) ?? {
-      groupId: row.groupId,
-      name: row.groupName,
-      color: row.categoryColor,
-      yearlyCents: 0n,
-    };
-    entry.yearlyCents += row.yearlyCents;
-    byCategory.set(row.groupId, entry);
-  }
-
   const next30Until = addDays(todayOn, MONTH_DAYS);
-  const found = new Set(
-    charges
-      .filter((charge) => charge.state === "paid" || charge.state === "amount_differs")
-      .map((charge) => `${charge.subscriptionId}|${charge.dueOn}`),
-  );
-  const next30Cents = sum(
-    active.flatMap((row) =>
-      dueDates(row.subscription.nextChargeOn, row.subscription.cycle, todayOn, next30Until)
-        .filter((due) => !found.has(`${row.subscription.id}|${due}`))
-        .map(() => row.subscription.priceCents),
-    ),
-  );
-
-  const paying = [
-    ...new Set(
-      active.flatMap((row) => (row.subscription.paymentAccountId ? [row.subscription.paymentAccountId] : [])),
-    ),
-  ];
-  const balances = await readingsAt(ctx, paying, todayOn);
+  const paying = [...new Set(active.flatMap((row) => row.subscription.paymentAccountId ?? []))];
+  const commitments = { found: sources.found, balances: await readingsAt(ctx, paying, todayOn) };
   const low = active.filter((row) => row.subscription.utility <= LOW_UTILITY);
-
+  const tomorrow = addDays(todayOn, 1);
   return {
     rows: active,
     inactive: rows.filter((row) => row.subscription.state !== "active"),
-    monthlyCents: sum(active.map((row) => row.monthlyCents)),
+    monthlyCents: monthlyCost(active.map((row) => row.subscription)),
     yearlyCents: sum(active.map((row) => row.yearlyCents)),
     lowUtilityYearlyCents: sum(low.map((row) => row.yearlyCents)),
     lowUtilityCount: low.length,
-    next30Cents,
-    next30Until,
-    alerts,
-    byCategory: [...byCategory.values()].sort(
-      (a, b) => Number(b.yearlyCents - a.yearlyCents) || (a.name ?? "").localeCompare(b.name ?? ""),
+    next30Cents: sum(
+      upcomingCharges(active.map(planOf), sources.found, todayOn, next30Until).map(
+        ({ plan }) => plan.priceCents,
+      ),
     ),
+    next30Until,
+    alerts: alertsOf(active, sources),
+    byCategory: byCategoryOf(active),
     projections: {
-      month: project(active, charges, balances, todayOn, MONTH_DAYS),
-      year: project(active, charges, balances, todayOn, YEAR_DAYS),
+      month: project(active, commitments, { from: tomorrow, to: next30Until }),
+      year: project(active, commitments, { from: tomorrow, to: addDays(todayOn, YEAR_DAYS) }),
     },
     accounts: accountOptions(accounts),
   };
@@ -298,10 +338,7 @@ export async function subscriptionsOnAccount(
         eq(subscriptions.state, "active"),
       ),
     );
-  return {
-    count: rows.length,
-    monthlyCents: rows.reduce<Cents>((sum, row) => sum + monthlyEquivalent(row.priceCents, row.cycle), 0n),
-  };
+  return { count: rows.length, monthlyCents: monthlyCost(rows) };
 }
 
 /** Subscriptions by name, for the ⌘K palette (spec §8.2). */
@@ -309,12 +346,11 @@ export async function searchSubscriptions(
   ctx: Pick<Ctx, "userId">,
   term: string,
 ): Promise<{ id: string; name: string }[]> {
-  const needle = term.trim().toLocaleLowerCase();
-  if (needle === "") return [];
-  const rows = await getDb()
-    .select({ id: subscriptions.id, name: subscriptions.name })
-    .from(subscriptions)
-    .where(and(userScoped(ctx).owns(subscriptions), ne(subscriptions.state, "cancelled")))
-    .orderBy(asc(subscriptions.name), asc(subscriptions.id));
-  return rows.filter((row) => row.name.toLocaleLowerCase().includes(needle)).slice(0, 5);
+  return searchByName(term, () =>
+    getDb()
+      .select({ id: subscriptions.id, name: subscriptions.name })
+      .from(subscriptions)
+      .where(and(userScoped(ctx).owns(subscriptions), ne(subscriptions.state, "cancelled")))
+      .orderBy(asc(subscriptions.name), asc(subscriptions.id)),
+  );
 }

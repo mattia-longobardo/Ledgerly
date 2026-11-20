@@ -5,12 +5,16 @@ import {
   cadenceOf,
   type CheckedSubscription,
   dueDates,
+  foundCharges,
+  monthlyCost,
   monthlyEquivalent,
   nextCharge,
   periodOf,
   planCharges,
   suggestionsFrom,
+  toleranceOf,
   toleranceParts,
+  upcomingCharges,
   withinTolerance,
   yearlyEquivalent,
 } from "./rules";
@@ -347,5 +351,63 @@ describe("dueMoment", () => {
     // 2026-09-21 is a Monday.
     expect(dueMoment("weekly", "2026-09-21")).toEqual({ kind: "weekday", weekday: 1 });
     expect(dueMoment("weekly", "2026-09-20")).toEqual({ kind: "weekday", weekday: 0 });
+  });
+});
+
+describe("monthlyCost, foundCharges and upcomingCharges (SUB-1, SUB-2, SUB-3)", () => {
+  it("sums the monthly equivalents of some plans", () => {
+    expect(monthlyCost([])).toBe(0n);
+    expect(
+      monthlyCost([
+        { priceCents: 1_299n, cycle: "monthly" },
+        { priceCents: 4_990n, cycle: "yearly" },
+      ]),
+    ).toBe(1_299n + 416n);
+  });
+
+  it("keeps the paid and the differing charges, by subscription", () => {
+    const found = foundCharges([
+      { subscriptionId: "a", dueOn: "2026-01-15", state: "paid" },
+      { subscriptionId: "a", dueOn: "2026-02-15", state: "due" },
+      { subscriptionId: "b", dueOn: "2026-01-03", state: "amount_differs" },
+      { subscriptionId: "b", dueOn: "2025-12-03", state: "not_found" },
+    ]);
+    expect([...found.entries()].map(([id, days]) => [id, [...days]])).toEqual([
+      ["a", ["2026-01-15"]],
+      ["b", ["2026-01-03"]],
+    ]);
+  });
+
+  it("lists the charges due in the window that were not found, both ends included", () => {
+    const plans = [
+      { id: "a", priceCents: 1_000n, cycle: "monthly" as const, anchor: "2026-01-15" },
+      { id: "b", priceCents: 500n, cycle: "weekly" as const, anchor: "2026-01-01" },
+    ];
+    const found = new Map([["a", new Set(["2026-02-15"])]]);
+    const due = upcomingCharges(plans, found, "2026-02-01", "2026-03-15");
+    expect(due.map(({ plan, dueOn }) => `${plan.id} ${dueOn}`)).toEqual([
+      "a 2026-03-15",
+      "b 2026-02-05",
+      "b 2026-02-12",
+      "b 2026-02-19",
+      "b 2026-02-26",
+      "b 2026-03-05",
+      "b 2026-03-12",
+    ]);
+  });
+});
+
+describe("toleranceOf (SUB-7)", () => {
+  it("turns a plain percentage into the stored fraction, 5 % when empty", () => {
+    expect(toleranceOf("5")).toBe("0.050000");
+    expect(toleranceOf("2.5")).toBe("0.025000");
+    expect(toleranceOf("100")).toBe("1.000000");
+    expect(toleranceOf(undefined)).toBe("0.050000");
+    expect(toleranceOf(" ")).toBe("0.050000");
+    expect(toleranceParts(toleranceOf("0.25"))).toBe(toleranceParts("0.0025"));
+  });
+
+  it("refuses what is not a percentage between 0 and 100", () => {
+    for (const bad of ["100.01", "-1", "2,5", "abc"]) expect(() => toleranceOf(bad)).toThrow(RangeError);
   });
 });

@@ -85,16 +85,6 @@ export async function updateSubscription(
   return row;
 }
 
-/** The design's "n/10" button: the utility alone. */
-export async function setUtility(ctx: Pick<Ctx, "userId">, id: string, utility: number): Promise<void> {
-  await requireSubscription(ctx, id);
-  const parsed = subscriptionInputSchema.shape.utility.parse(utility);
-  await getDb()
-    .update(subscriptions)
-    .set({ utility: parsed })
-    .where(and(eq(subscriptions.id, id), userScoped(ctx).owns(subscriptions)));
-}
-
 /** Pause, resume, cancel (design: "Cancel subscription") or bring back a cancelled one. */
 export async function setSubscriptionState(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -128,6 +118,145 @@ export async function deleteSubscription(ctx: Pick<Ctx, "userId">, id: string): 
     .where(and(eq(subscriptions.id, id), userScoped(ctx).owns(subscriptions)));
 }
 
+type Db = ReturnType<typeof getDb>;
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/** The subscriptions in scope (all of this user's, or only `ids`). */
+async function subscriptionsIn(
+  ctx: Pick<Ctx, "userId">,
+  ids: readonly string[] | undefined,
+): Promise<Subscription[]> {
+  if (ids !== undefined && ids.length === 0) return [];
+  return getDb()
+    .select()
+    .from(subscriptions)
+    .where(
+      and(
+        userScoped(ctx).owns(subscriptions),
+        ids === undefined ? undefined : inArray(subscriptions.id, [...ids]),
+      ),
+    )
+    .orderBy(asc(subscriptions.id));
+}
+
+/**
+ * What the check needs of the stored charges (SUB-9: read for the checked subscriptions only): the
+ * amounts their closed periods were written with, and the movements other subscriptions hold.
+ */
+async function storedCharges(ctx: Pick<Ctx, "userId">, checkedIds: readonly string[]) {
+  const scope = userScoped(ctx).owns(subscriptionCharges);
+  const [own, held] = await Promise.all([
+    getDb()
+      .select({
+        subscriptionId: subscriptionCharges.subscriptionId,
+        dueOn: subscriptionCharges.dueOn,
+        periodTo: subscriptionCharges.periodTo,
+        expectedCents: subscriptionCharges.expectedCents,
+      })
+      .from(subscriptionCharges)
+      .where(and(scope, inArray(subscriptionCharges.subscriptionId, [...checkedIds]))),
+    getDb()
+      .select({ transactionId: subscriptionCharges.transactionId })
+      .from(subscriptionCharges)
+      .where(
+        and(
+          scope,
+          notInArray(subscriptionCharges.subscriptionId, [...checkedIds]),
+          isNotNull(subscriptionCharges.transactionId),
+        ),
+      ),
+  ]);
+  return { own, takenElsewhere: new Set(held.flatMap((row) => row.transactionId ?? [])) };
+}
+
+/** The plan of the checkable subscriptions over the movements no other subscription holds. */
+async function chargePlan(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  checkable: readonly Subscription[],
+  todayOn: CivilDate,
+): Promise<ReturnType<typeof planCharges>> {
+  if (checkable.length === 0) return [];
+  const { own, takenElsewhere } = await storedCharges(
+    ctx,
+    checkable.map((row) => row.id),
+  );
+  const checked: CheckedSubscription[] = checkable.map((row) => ({
+    id: row.id,
+    priceCents: row.priceCents,
+    cycle: row.cycle,
+    anchor: row.nextChargeOn,
+    paymentAccountId: row.paymentAccountId,
+    payeeMatch: row.payeeMatch ?? "", // only the checkable ones, which have it
+    tolerance: row.tolerance,
+    createdOn: civilDateIn(row.createdAt, ctx.timeZone),
+    // A closed period keeps the amount it was written with, so a price rise does not rewrite the
+    // past; the period under way follows the price (the design's "Update price").
+    expected: new Map(
+      own
+        .filter((charge) => charge.subscriptionId === row.id && charge.periodTo < todayOn)
+        .map((charge) => [charge.dueOn, charge.expectedCents]),
+    ),
+  }));
+  const earliest = checked.reduce<CivilDate>((first, row) => {
+    const start = periodOf(addCycles(row.createdOn, row.cycle, -1), row.cycle).from;
+    return start < first ? start : first;
+  }, todayOn);
+  const candidates = (
+    await chargeCandidates(ctx, { accountId: null, from: addDays(earliest, -31), to: todayOn })
+  ).filter((candidate) => !takenElsewhere.has(candidate.id));
+  return planCharges(checked, candidates, todayOn);
+}
+
+/** Writes the plan of the checked subscriptions, in place of the rows it replaces. */
+async function writePlan(
+  writer: Tx,
+  ctx: Pick<Ctx, "userId">,
+  checkedIds: readonly string[],
+  plan: ReturnType<typeof planCharges>,
+): Promise<void> {
+  const scope = userScoped(ctx).owns(subscriptionCharges);
+  // Free every movement first: one may move from one period to another in this pass, and the
+  // unique key on `transaction_id` would refuse it while the old row still held it.
+  await writer
+    .update(subscriptionCharges)
+    .set({ transactionId: null })
+    .where(
+      and(
+        scope,
+        inArray(subscriptionCharges.subscriptionId, [...checkedIds]),
+        isNotNull(subscriptionCharges.transactionId),
+      ),
+    );
+  for (const id of checkedIds) {
+    const keep = plan.filter((row) => row.subscriptionId === id).map((row) => row.dueOn);
+    await writer
+      .delete(subscriptionCharges)
+      .where(
+        and(
+          scope,
+          eq(subscriptionCharges.subscriptionId, id),
+          keep.length > 0 ? notInArray(subscriptionCharges.dueOn, keep) : undefined,
+        ),
+      );
+  }
+  if (plan.length === 0) return;
+  await writer
+    .insert(subscriptionCharges)
+    .values(plan.map((row) => userScoped(ctx).stamp(row)))
+    .onConflictDoUpdate({
+      target: [subscriptionCharges.subscriptionId, subscriptionCharges.dueOn],
+      set: {
+        periodFrom: sql`excluded.period_from`,
+        periodTo: sql`excluded.period_to`,
+        transactionId: sql`excluded.transaction_id`,
+        // The plan carries the stored amount for a closed period and the price for an open one.
+        expectedCents: sql`excluded.expected_cents`,
+        actualCents: sql`excluded.actual_cents`,
+        state: sql`excluded.state`,
+      },
+    });
+}
+
 /**
  * The payment check of spec §7.5 for this user's subscriptions (or only `ids`), from scratch every
  * time: the periods are recomputed by `planCharges` over the stored movements, so a movement that
@@ -143,60 +272,11 @@ export async function checkSubscriptions(
   options: { ids?: readonly string[]; now?: Date } = {},
 ): Promise<{ checked: number; written: number }> {
   const todayOn = today(ctx.timeZone, options.now ?? new Date());
-  const all = await getDb()
-    .select()
-    .from(subscriptions)
-    .where(userScoped(ctx).owns(subscriptions))
-    .orderBy(asc(subscriptions.id));
-  const inScope = options.ids === undefined ? all : all.filter((row) => options.ids?.includes(row.id));
+  const inScope = await subscriptionsIn(ctx, options.ids);
   if (inScope.length === 0) return { checked: 0, written: 0 };
   const checkable = inScope.filter((row) => row.state === "active" && row.payeeMatch !== null);
   const checkedIds = checkable.map((row) => row.id);
-
-  const existing = await getDb()
-    .select({
-      subscriptionId: subscriptionCharges.subscriptionId,
-      dueOn: subscriptionCharges.dueOn,
-      periodTo: subscriptionCharges.periodTo,
-      expectedCents: subscriptionCharges.expectedCents,
-      transactionId: subscriptionCharges.transactionId,
-    })
-    .from(subscriptionCharges)
-    .where(userScoped(ctx).owns(subscriptionCharges));
-  const takenElsewhere = new Set(
-    existing
-      .filter((row) => !checkedIds.includes(row.subscriptionId) && row.transactionId !== null)
-      .map((row) => row.transactionId as string),
-  );
-
-  const checked: CheckedSubscription[] = checkable.map((row) => ({
-    id: row.id,
-    priceCents: row.priceCents,
-    cycle: row.cycle,
-    anchor: row.nextChargeOn,
-    paymentAccountId: row.paymentAccountId,
-    payeeMatch: row.payeeMatch as string,
-    tolerance: row.tolerance,
-    createdOn: civilDateIn(row.createdAt, ctx.timeZone),
-    // A closed period keeps the amount it was written with, so a price rise does not rewrite the
-    // past; the period under way follows the price (the design's "Update price").
-    expected: new Map(
-      existing
-        .filter((charge) => charge.subscriptionId === row.id && charge.periodTo < todayOn)
-        .map((charge) => [charge.dueOn, charge.expectedCents]),
-    ),
-  }));
-  const earliest = checked.reduce<CivilDate>((first, row) => {
-    const start = periodOf(addCycles(row.createdOn, row.cycle, -1), row.cycle).from;
-    return start < first ? start : first;
-  }, todayOn);
-  const candidates =
-    checked.length === 0
-      ? []
-      : (await chargeCandidates(ctx, { accountId: null, from: addDays(earliest, -31), to: todayOn })).filter(
-          (candidate) => !takenElsewhere.has(candidate.id),
-        );
-  const plan = planCharges(checked, candidates, todayOn);
+  const plan = await chargePlan(ctx, checkable, todayOn);
 
   const uncheckable = inScope.filter((row) => row.payeeMatch === null).map((row) => row.id);
   const idle = inScope
@@ -216,48 +296,7 @@ export async function checkSubscriptions(
           and(scope, inArray(subscriptionCharges.subscriptionId, idle), eq(subscriptionCharges.state, "due")),
         );
     }
-    if (checkedIds.length === 0) return;
-    // Free every movement first: one may move from one period to another in this pass, and the
-    // unique key on `transaction_id` would refuse it while the old row still held it.
-    await tx
-      .update(subscriptionCharges)
-      .set({ transactionId: null })
-      .where(
-        and(
-          scope,
-          inArray(subscriptionCharges.subscriptionId, checkedIds),
-          isNotNull(subscriptionCharges.transactionId),
-        ),
-      );
-    for (const id of checkedIds) {
-      const keep = plan.filter((row) => row.subscriptionId === id).map((row) => row.dueOn);
-      await tx
-        .delete(subscriptionCharges)
-        .where(
-          and(
-            scope,
-            eq(subscriptionCharges.subscriptionId, id),
-            keep.length > 0 ? notInArray(subscriptionCharges.dueOn, keep) : undefined,
-          ),
-        );
-    }
-    if (plan.length > 0) {
-      await tx
-        .insert(subscriptionCharges)
-        .values(plan.map((row) => userScoped(ctx).stamp(row)))
-        .onConflictDoUpdate({
-          target: [subscriptionCharges.subscriptionId, subscriptionCharges.dueOn],
-          set: {
-            periodFrom: sql`excluded.period_from`,
-            periodTo: sql`excluded.period_to`,
-            transactionId: sql`excluded.transaction_id`,
-            // The plan carries the stored amount for a closed period and the price for an open one.
-            expectedCents: sql`excluded.expected_cents`,
-            actualCents: sql`excluded.actual_cents`,
-            state: sql`excluded.state`,
-          },
-        });
-    }
+    if (checkedIds.length > 0) await writePlan(tx, ctx, checkedIds, plan);
   });
   return { checked: checkedIds.length, written: plan.length };
 }

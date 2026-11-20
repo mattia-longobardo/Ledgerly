@@ -7,7 +7,8 @@ import { z } from "zod";
 import { parseAmount } from "@ledgerly/domain/platform/format";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { CYCLES } from "@ledgerly/domain/subscriptions";
+import { centsToDecimal } from "@ledgerly/domain/shared/money";
+import { CYCLES, toleranceOf } from "@ledgerly/domain/subscriptions";
 import {
   createSubscription,
   deleteSubscription,
@@ -42,14 +43,9 @@ interface SubscriptionFormInput {
   utility: number;
 }
 
-/**
- * A typed percentage as the stored fraction, exactly: "2,5" % is "0.0250". Read as an amount with
- * two decimals, so the same parser (and the same number format) as every other figure applies.
- */
-function toleranceFraction(percent: string, ctx: Ctx): string {
-  const hundredths = parseAmount(percent.trim() === "" ? "5" : percent, ctx.numberFormat);
-  if (hundredths < 0n || hundredths > 10_000n) throw new RangeError("Tolerance out of range");
-  return `${hundredths / 10_000n}.${(hundredths % 10_000n).toString().padStart(4, "0")}`;
+/** A percentage typed in the user's number format, in plain decimal form for the domain (SUB-7). */
+function plainPercent(percent: string, ctx: Ctx): string | undefined {
+  return percent.trim() === "" ? undefined : centsToDecimal(parseAmount(percent, ctx.numberFormat));
 }
 
 function toInput(input: SubscriptionFormInput, ctx: Ctx) {
@@ -61,7 +57,7 @@ function toInput(input: SubscriptionFormInput, ctx: Ctx) {
     cycle: z.enum(CYCLES).parse(input.cycle),
     nextChargeOn: input.nextChargeOn,
     payeeMatch: input.payeeMatch,
-    tolerance: toleranceFraction(input.tolerance, ctx),
+    tolerance: toleranceOf(plainPercent(input.tolerance, ctx)),
     utility: input.utility,
   };
 }

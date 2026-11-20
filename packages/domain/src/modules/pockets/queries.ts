@@ -16,6 +16,7 @@ import {
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
+import { searchByName } from "../../shared/collections";
 import {
   etaMonths,
   freeBalance,
@@ -438,8 +439,5 @@ export async function searchPockets(
   ctx: Pick<Ctx, "userId">,
   term: string,
 ): Promise<{ id: string; name: string }[]> {
-  const needle = term.trim().toLocaleLowerCase();
-  if (needle === "") return [];
-  const rows = await openPocketNames(ctx);
-  return rows.filter((row) => row.name.toLocaleLowerCase().includes(needle)).slice(0, 5);
+  return searchByName(term, () => openPocketNames(ctx));
 }

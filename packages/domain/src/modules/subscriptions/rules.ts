@@ -2,7 +2,7 @@ import { z } from "zod";
 import { cadenceOfInterval, payeeKeyOf } from "../transactions/rules";
 import { addDays, type CivilDate, dayOfWeek, lastDayOfMonth, monthKey } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
-import { divRound } from "../../shared/money";
+import { divRound, percentToFraction } from "../../shared/money";
 import { dayNumber } from "../../shared/dates";
 import { civilDate, optionalText } from "../../shared/inputs";
 
@@ -42,6 +42,45 @@ export function monthlyEquivalent(price: Cents, cycle: Cycle): Cents {
 /** Spec §7.5: what a plan costs per year — ×52, ×12, ×4, ×1. */
 export function yearlyEquivalent(price: Cents, cycle: Cycle): Cents {
   return price * { weekly: 52n, monthly: 12n, quarterly: 4n, yearly: 1n }[cycle];
+}
+
+/** What some plans cost per month together (SUB-3: the page's total and an account's row alike). */
+export function monthlyCost(plans: readonly { priceCents: Cents; cycle: Cycle }[]): Cents {
+  return plans.reduce<Cents>((sum, plan) => sum + monthlyEquivalent(plan.priceCents, plan.cycle), 0n);
+}
+
+/**
+ * The charges already found (`paid` or `amount_differs`), by subscription: the one set the next
+ * charge, "Next 30 days" and the projections all skip (SUB-2: computed once per read).
+ */
+export function foundCharges(
+  charges: readonly { subscriptionId: string; dueOn: CivilDate; state: ChargeState }[],
+): Map<string, Set<CivilDate>> {
+  const found = new Map<string, Set<CivilDate>>();
+  for (const charge of charges) {
+    if (charge.state !== "paid" && charge.state !== "amount_differs") continue;
+    const days = found.get(charge.subscriptionId) ?? new Set<CivilDate>();
+    days.add(charge.dueOn);
+    found.set(charge.subscriptionId, days);
+  }
+  return found;
+}
+
+/**
+ * The charges of some plans due in `[from, to]` that have not been found yet (SUB-1: one list
+ * under "Next 30 days" and under every projection).
+ */
+export function upcomingCharges<P extends { id: string; priceCents: Cents; cycle: Cycle; anchor: CivilDate }>(
+  plans: readonly P[],
+  found: ReadonlyMap<string, ReadonlySet<CivilDate>>,
+  from: CivilDate,
+  to: CivilDate,
+): { plan: P; dueOn: CivilDate }[] {
+  return plans.flatMap((plan) =>
+    dueDates(plan.anchor, plan.cycle, from, to)
+      .filter((due) => !found.get(plan.id)?.has(due))
+      .map((dueOn) => ({ plan, dueOn })),
+  );
 }
 
 function parts(date: CivilDate): [number, number, number] {
@@ -206,6 +245,60 @@ function matchKeyOf(candidate: Candidate): string {
   return payeeKeyOf(`${candidate.payee ?? ""} ${candidate.note ?? ""}`) ?? "";
 }
 
+/** Every period to check, in date order and then by subscription id. */
+function slotsOf(subscriptions: readonly CheckedSubscription[], today: CivilDate) {
+  const horizon = addDays(today, DUE_WITHIN_DAYS);
+  const slots = subscriptions.flatMap((subscription) => {
+    const start = addCycles(subscription.createdOn, subscription.cycle, -1);
+    // From the period under way when the subscription was created: one paid earlier that month
+    // shows as paid, and a yearly plan added today is not held to last year's renewal.
+    const dues = dueDates(subscription.anchor, subscription.cycle, start, horizon)
+      .filter((due) => periodOf(due, subscription.cycle).to >= subscription.createdOn)
+      .slice(-MAX_CHECKED_PERIODS);
+    return dues.map((dueOn) => ({ subscription, dueOn, period: periodOf(dueOn, subscription.cycle) }));
+  });
+  return slots.sort((a, b) =>
+    a.dueOn < b.dueOn ? -1 : a.dueOn > b.dueOn ? 1 : a.subscription.id < b.subscription.id ? -1 : 1,
+  );
+}
+
+/**
+ * The movement that pays one period, among those no earlier period took: in its window, on the
+ * paying account, matching the text; the amount closest to the expected one wins, then the date.
+ */
+function bestMatch(
+  slot: {
+    subscription: CheckedSubscription;
+    dueOn: CivilDate;
+    period: { from: CivilDate; to: CivilDate };
+    expectedCents: Cents;
+  },
+  candidates: readonly Candidate[],
+  taken: ReadonlySet<string>,
+): Candidate | undefined {
+  const { subscription, dueOn, period, expectedCents } = slot;
+  const needle = payeeKeyOf(subscription.payeeMatch) ?? "";
+  return candidates
+    .filter(
+      (candidate) =>
+        !taken.has(candidate.id) &&
+        candidate.on >= period.from &&
+        candidate.on <= period.to &&
+        (subscription.paymentAccountId === null || candidate.accountId === subscription.paymentAccountId) &&
+        needle !== "" &&
+        matchKeyOf(candidate).includes(needle),
+    )
+    .sort((a, b) => {
+      const byAmount = Number(
+        (a.cents > expectedCents ? a.cents - expectedCents : expectedCents - a.cents) -
+          (b.cents > expectedCents ? b.cents - expectedCents : expectedCents - b.cents),
+      );
+      const byDate =
+        Math.abs(dayNumber(a.on) - dayNumber(dueOn)) - Math.abs(dayNumber(b.on) - dayNumber(dueOn));
+      return byAmount || byDate || (a.id < b.id ? -1 : 1);
+    })[0];
+}
+
 /**
  * The payment check of spec §7.5 (plan F3 §3.4.4), for every period of every subscription given:
  * the charges from the period under way when the subscription was created up to a week from today,
@@ -226,43 +319,12 @@ export function planCharges(
   candidates: readonly Candidate[],
   today: CivilDate,
 ): PlannedCharge[] {
-  const horizon = addDays(today, DUE_WITHIN_DAYS);
-  const slots = subscriptions.flatMap((subscription) => {
-    const start = addCycles(subscription.createdOn, subscription.cycle, -1);
-    // From the period under way when the subscription was created: one paid earlier that month
-    // shows as paid, and a yearly plan added today is not held to last year's renewal.
-    const dues = dueDates(subscription.anchor, subscription.cycle, start, horizon)
-      .filter((due) => periodOf(due, subscription.cycle).to >= subscription.createdOn)
-      .slice(-MAX_CHECKED_PERIODS);
-    return dues.map((dueOn) => ({ subscription, dueOn, period: periodOf(dueOn, subscription.cycle) }));
-  });
-  slots.sort((a, b) =>
-    a.dueOn < b.dueOn ? -1 : a.dueOn > b.dueOn ? 1 : a.subscription.id < b.subscription.id ? -1 : 1,
-  );
+  const slots = slotsOf(subscriptions, today);
 
   const taken = new Set<string>();
   const planned = slots.map(({ subscription, dueOn, period }): PlannedCharge & { claimed: boolean } => {
     const expectedCents = subscription.expected.get(dueOn) ?? subscription.priceCents;
-    const needle = payeeKeyOf(subscription.payeeMatch) ?? "";
-    const found = candidates
-      .filter(
-        (candidate) =>
-          !taken.has(candidate.id) &&
-          candidate.on >= period.from &&
-          candidate.on <= period.to &&
-          (subscription.paymentAccountId === null || candidate.accountId === subscription.paymentAccountId) &&
-          needle !== "" &&
-          matchKeyOf(candidate).includes(needle),
-      )
-      .sort((a, b) => {
-        const byAmount = Number(
-          (a.cents > expectedCents ? a.cents - expectedCents : expectedCents - a.cents) -
-            (b.cents > expectedCents ? b.cents - expectedCents : expectedCents - b.cents),
-        );
-        const byDate =
-          Math.abs(dayNumber(a.on) - dayNumber(dueOn)) - Math.abs(dayNumber(b.on) - dayNumber(dueOn));
-        return byAmount || byDate || (a.id < b.id ? -1 : 1);
-      })[0];
+    const found = bestMatch({ subscription, dueOn, period, expectedCents }, candidates, taken);
     if (found) taken.add(found.id);
     const state: ChargeState = found
       ? withinTolerance(found.cents, expectedCents, subscription.tolerance)
@@ -374,6 +436,17 @@ export function suggestionsFrom(
       ];
     })
     .sort((a, b) => a.name.localeCompare(b.name) || a.payeeKey.localeCompare(b.payeeKey));
+}
+
+/**
+ * A tolerance typed as a percentage in plain decimal form ("5", "2.5") as the stored fraction
+ * ("0.050000"), 0 to 100 % (SUB-7: the conversion is the domain's, not the form's). Empty is 5 %.
+ */
+export function toleranceOf(percent: string | undefined): string {
+  const plain = percent === undefined || percent.trim() === "" ? "5" : percent;
+  const fraction = percentToFraction(plain);
+  if (toleranceParts(fraction) > PARTS_PER_UNIT) throw new RangeError("Tolerance out of range");
+  return fraction;
 }
 
 export const subscriptionInputSchema = z.object({
