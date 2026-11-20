@@ -11,6 +11,6 @@ export {
   RULE_SOURCES,
   TEXT_OPS,
 } from "./categorize/user-rules";
-export type { RuleCondition, RuleField } from "./categorize/user-rules";
+export type { RuleField } from "./categorize/user-rules";
 export { CATEGORY_COLORS, NAME_MAX, TRANSACTION_TYPES } from "./rules";
 export type { CategoryType, TransactionOrigin, TransactionState, TransactionType } from "./rules";

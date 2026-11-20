@@ -228,19 +228,6 @@
       "undoCategoriesAction"
     ]
   },
-  "apps/web/src/modules/transactions/categorize/user-rules-actions.ts": {
-    "closedBy": "R3 of transactions",
-    "actions": [
-      "applyRuleAction",
-      "deleteRuleAction",
-      "previewRuleAction",
-      "previewSavedRuleAction",
-      "reorderRulesAction",
-      "saveRuleAction",
-      "setRuleActiveAction",
-      "undoRuleApplyAction"
-    ]
-  },
   "apps/web/src/modules/users/actions.ts": {
     "closedBy": "revokeOtherSessionsAction kept (web cookie); saveTimeOffPreferencesAction with R3 timeoff",
     "actions": [

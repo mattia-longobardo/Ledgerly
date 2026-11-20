@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97600,
-    "duplicatedLines": 16867,
-    "percent": 17.28,
-    "blocks": 1234
+    "lines": 97678,
+    "duplicatedLines": 16827,
+    "percent": 17.23,
+    "blocks": 1231
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 26
     },
     "app": {
-      "lines": 24402,
-      "duplicatedLines": 4377,
-      "percent": 17.94,
-      "blocks": 330
+      "lines": 24471,
+      "duplicatedLines": 4393,
+      "percent": 17.95,
+      "blocks": 332
     },
     "global.d": {
       "lines": 12,
@@ -72,9 +72,9 @@
     },
     "modules/payroll": {
       "lines": 3404,
-      "duplicatedLines": 824,
-      "percent": 24.21,
-      "blocks": 46
+      "duplicatedLines": 807,
+      "percent": 23.71,
+      "blocks": 45
     },
     "modules/pockets": {
       "lines": 1676,
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12589,
-      "duplicatedLines": 1686,
-      "percent": 13.39,
-      "blocks": 134
+      "lines": 12598,
+      "duplicatedLines": 1647,
+      "percent": 13.07,
+      "blocks": 130
     },
     "modules/users": {
       "lines": 874,
@@ -395,6 +395,7 @@
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 18,
     "api/transactions/rules.ts": 18,
+    "app/(app)/accounts/[id]/account-screen.tsx": 11,
     "app/(app)/accounts/[id]/connection-status.tsx": 14,
     "app/(app)/accounts/[id]/delete-account.tsx": 16,
     "app/(app)/accounts/[id]/delete-actions.ts": 8,
@@ -420,7 +421,7 @@
     "app/(app)/expenses/manual-actions.ts": 14,
     "app/(app)/expenses/manual.ts": 9,
     "app/(app)/expenses/page.tsx": 62,
-    "app/(app)/expenses/review/page.tsx": 60,
+    "app/(app)/expenses/review/page.tsx": 58,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
     "app/(app)/funds/[id]/page.tsx": 126,
     "app/(app)/funds/fund-setup.ts": 22,
@@ -467,8 +468,9 @@
     "app/(app)/settings/profile/page.tsx": 8,
     "app/(app)/settings/profile/preferences-form.tsx": 103,
     "app/(app)/settings/profile/profile-screen.tsx": 14,
-    "app/(app)/settings/rules/page.tsx": 15,
+    "app/(app)/settings/rules/page.tsx": 8,
     "app/(app)/settings/rules/rules-board.tsx": 113,
+    "app/(app)/settings/rules/rules-screen.tsx": 14,
     "app/(app)/settings/security/api-clients-table.tsx": 72,
     "app/(app)/settings/security/calls.ts": 25,
     "app/(app)/settings/security/connected-apps-table.tsx": 59,
@@ -586,7 +588,7 @@
     "modules/investments/sync/sources.ts": 18,
     "modules/investments/sync/status.ts": 30,
     "modules/investments/ui/dialogs.tsx": 419,
-    "modules/payroll/actions.ts": 87,
+    "modules/payroll/actions.ts": 70,
     "modules/payroll/fields.ts": 56,
     "modules/payroll/parse/reply-teamsystem.ts": 51,
     "modules/payroll/pension.ts": 20,
@@ -622,11 +624,10 @@
     "modules/timeoff/ui/leave-board.tsx": 68,
     "modules/timeoff/ui/leave-panel.tsx": 48,
     "modules/timeoff/ui/settings-forms.tsx": 45,
-    "modules/transactions/categorize/actions.ts": 33,
+    "modules/transactions/categorize/actions.ts": 24,
     "modules/transactions/categorize/review/changes.ts": 72,
     "modules/transactions/categorize/review/merges.ts": 59,
     "modules/transactions/categorize/service.ts": 50,
-    "modules/transactions/categorize/user-rules-actions.ts": 30,
     "modules/transactions/categorize/user-rules-service/applying.ts": 67,
     "modules/transactions/categorize/user-rules-service/previews.ts": 25,
     "modules/transactions/categorize/user-rules-service/rules.ts": 11,

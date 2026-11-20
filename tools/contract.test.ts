@@ -198,7 +198,6 @@ describe("the Server Actions of accounts", () => {
  */
 const TRANSACTIONS_ACTION_FILES = [
   "apps/web/src/modules/transactions/categorize/actions.ts",
-  "apps/web/src/modules/transactions/categorize/user-rules-actions.ts",
   "apps/web/src/app/(app)/expenses/manual-actions.ts",
 ];
 

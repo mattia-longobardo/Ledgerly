@@ -5,7 +5,6 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useEffect, useId, useRef, useState } from "react";
-import { parseAmount } from "@ledgerly/domain/platform/format";
 import {
   AMOUNT_OPS,
   COUNTERPARTY_OPS,
@@ -15,10 +14,11 @@ import {
   NOTE_MAX,
   RULE_FIELDS,
   RULE_SOURCES,
-  type RuleCondition,
   type RuleField,
   TEXT_OPS,
 } from "@ledgerly/domain/transactions/client";
+import { parseCents } from "@ledgerly/format/cents";
+import { formatAmountInput, type NumberFormat } from "@ledgerly/format/format";
 import {
   applyRuleAction,
   deleteRuleAction,
@@ -26,11 +26,13 @@ import {
   previewRuleAction,
   previewSavedRuleAction,
   reorderRulesAction,
+  type RuleCondition,
+  type RuleInput,
+  ruleAmount,
   saveRuleAction,
   setRuleActiveAction,
   undoRuleApplyAction,
-} from "@/modules/transactions/categorize/user-rules-actions";
-import { formatAmountInput, type NumberFormat } from "@ledgerly/domain/platform/format";
+} from "@/modules/transactions/client";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
@@ -115,8 +117,8 @@ function lineOf(condition: RuleCondition, format: NumberFormat): Line {
       return {
         ...base,
         op: condition.op,
-        value: formatAmountInput(BigInt(condition.cents), format),
-        to: condition.toCents === undefined ? "" : formatAmountInput(BigInt(condition.toCents), format),
+        value: formatAmountInput(parseCents(condition.amount), format),
+        to: condition.toAmount === undefined ? "" : formatAmountInput(parseCents(condition.toAmount), format),
       };
     case "direction":
     case "source":
@@ -140,35 +142,31 @@ function blankLine(field: RuleField, currency: string): Line {
   };
 }
 
-function cents(text: string, format: NumberFormat): number | null {
-  try {
-    const value = parseAmount(text, format);
-    return value < 0n ? null : Number(value);
-  } catch {
-    return null;
-  }
-}
-
 /** The rule the editor holds, as the server reads it; `null` while a value is missing. */
-function inputOf(editing: Editing, format: NumberFormat) {
+function inputOf(editing: Editing, format: NumberFormat): RuleInput | null {
   if (editing.name.trim() === "" || editing.categoryId === null || editing.lines.length === 0) return null;
-  const conditions: RuleCondition[] = [];
+  const conditions: RuleInput["conditions"] = [];
   for (const line of editing.lines) {
     switch (line.field) {
       case "text":
       case "counterparty":
         if (line.value.trim() === "") return null;
-        conditions.push({ field: line.field, op: line.op, value: line.value.trim() } as RuleCondition);
+        conditions.push({
+          field: line.field,
+          op: line.op,
+          value: line.value.trim(),
+        } as RuleInput["conditions"][number]);
         break;
       case "amount": {
-        const from = cents(line.value, format);
-        const to = line.op === "between" ? cents(line.to, format) : undefined;
-        if (from === null || to === null || (to !== undefined && to < from)) return null;
+        const from = ruleAmount(line.value, format);
+        const to = line.op === "between" ? ruleAmount(line.to, format) : undefined;
+        if (from === null || to === null || (to !== undefined && parseCents(to) < parseCents(from)))
+          return null;
         conditions.push({
           field: "amount",
           op: line.op as (typeof AMOUNT_OPS)[number],
-          cents: from,
-          ...(to === undefined ? {} : { toCents: to }),
+          amount: from,
+          ...(to === undefined ? {} : { toAmount: to }),
         });
         break;
       }
@@ -180,7 +178,7 @@ function inputOf(editing: Editing, format: NumberFormat) {
         conditions.push({ field: "ownAccount" });
         break;
       default:
-        conditions.push({ field: line.field, value: line.value } as RuleCondition);
+        conditions.push({ field: line.field, value: line.value } as RuleInput["conditions"][number]);
     }
   }
   return {
@@ -292,7 +290,6 @@ export function RulesBoard({
       note: rule.note,
     });
     if (!result.ok) notify(result.error === "limit" ? t("limit") : t("error"), "error");
-    else router.refresh();
   }
 
   async function move(index: number, to: number) {
@@ -331,15 +328,11 @@ export function RulesBoard({
             label: t("undo"),
             onClick: () => {
               undoRuleApplyAction(undoId)
-                .then((done) => {
-                  if (!done.ok) notify(t("apply.failed"), "error");
-                  router.refresh();
-                })
+                .then((done) => !done.ok && notify(t("apply.failed"), "error"))
                 .catch(() => notify(t("apply.failed"), "error"));
             },
           },
     );
-    router.refresh();
   }
 
   return (
@@ -468,7 +461,6 @@ export function RulesBoard({
                 : undefined,
             );
             if (draft !== null) router.replace("/settings/rules" as Route);
-            router.refresh();
           }}
         />
       )}
@@ -510,12 +502,9 @@ export function RulesBoard({
                   notify(t("deleted"), "success", {
                     label: t("undo"),
                     onClick: () => {
-                      deleteRuleAction(rule.id, false)
-                        .then(() => router.refresh())
-                        .catch(() => notify(t("error"), "error"));
+                      deleteRuleAction(rule.id, false).catch(() => notify(t("error"), "error"));
                     },
                   });
-                  router.refresh();
                 }}
               >
                 {t("delete.confirm")}
@@ -542,9 +531,9 @@ function summaryOf(condition: RuleCondition, t: Translate, accounts: Named[], fo
     case "ownAccount":
       return field;
     case "amount": {
-      const from = formatAmountInput(BigInt(condition.cents), format);
+      const from = formatAmountInput(parseCents(condition.amount), format);
       return condition.op === "between"
-        ? `${field} ${t("op.between")} ${from} – ${formatAmountInput(BigInt(condition.toCents ?? condition.cents), format)}`
+        ? `${field} ${t("op.between")} ${from} – ${formatAmountInput(parseCents(condition.toAmount ?? condition.amount), format)}`
         : `${field} ${t(`op.${condition.op}`)} ${from}`;
     }
     case "direction":

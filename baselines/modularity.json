@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 195,
+    "deepImports": 193,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -457,8 +457,6 @@
     "app/(app)/settings/categories/page.tsx → modules/transactions/categorize/actions",
     "app/(app)/settings/categories/page.tsx → modules/transactions/ui/display",
     "app/(app)/settings/data/page.tsx → modules/accounts/ui/snapshot-button",
-    "app/(app)/settings/rules/page.tsx → modules/transactions/ui/display",
-    "app/(app)/settings/rules/rules-board.tsx → modules/transactions/categorize/user-rules-actions",
     "app/(app)/settings/security/calls.ts → modules/users/actions",
     "app/(app)/settings/security/two-factor-card.tsx → modules/users/ui/recovery-codes",
     "app/(app)/settings/security/two-factor-card.tsx → modules/users/ui/two-factor-setup",

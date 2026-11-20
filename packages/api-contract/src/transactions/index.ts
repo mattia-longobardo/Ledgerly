@@ -2,6 +2,7 @@
 // leaves the others out. An area joins when a client calls it.
 import * as movements from "./movements";
 import * as review from "./review";
+import * as rules from "./rules";
 import * as spending from "./spending";
 
-export { movements, review, spending };
+export { movements, review, rules, spending };

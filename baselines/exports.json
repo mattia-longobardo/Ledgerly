@@ -74,7 +74,9 @@
     "MAX_RULES",
     "MAX_TIMES",
     "MIN_SYNC_GAP_MINUTES",
+    "categories",
     "connections",
+    "labels",
     "people",
     "profile",
     "security",
@@ -85,6 +87,7 @@
   "packages/api-contract/src/transactions/index.ts": [
     "movements",
     "review",
+    "rules",
     "spending"
   ],
   "packages/design-tokens/src/index.ts": [
@@ -630,7 +633,6 @@
     "NOTE_MAX",
     "RULE_FIELDS",
     "RULE_SOURCES",
-    "RuleCondition",
     "RuleField",
     "TEXT_OPS",
     "TRANSACTION_TYPES",
