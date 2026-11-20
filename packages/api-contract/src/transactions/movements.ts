@@ -178,7 +178,7 @@ export const updateTransaction = defineRoute({
   summary:
     "The fields a person owns on a movement: its note (trimmed; empty is none) and its labels. Payee, " +
     "amount and date belong to the source (`conflict`, reason `provider_owned`).",
-  actions: ["setTransactionNoteAction", "setTransactionLabelsAction"],
+  actions: [],
   params: byTransaction,
   body: z
     .object({ note: z.string().max(2000), labelIds: z.array(id()).max(50) })
@@ -197,7 +197,7 @@ export const setTransactionsCategory = defineRoute({
   scope: "write",
   capability: "transactions",
   summary: "One category, or none, for a selection of movements; answers how many changed.",
-  actions: ["setTransactionCategoryAction"],
+  actions: [],
   body: z.object({ ids: selection(MAX_SELECTION), categoryId: id().nullable() }),
   response: changed,
   errors: TRANSACTION_ERRORS,
@@ -236,7 +236,7 @@ export const editAtSource = defineRoute({
     "Type, amount, payee and note of a movement its source lets change: written there first, then here. " +
     "`conflict` with `reason` `not_linked` or `no_transfer_category`, or the source's own words when it " +
     "refused; `unavailable` with its words when it could not be reached.",
-  actions: ["editWalletTransactionAction"],
+  actions: [],
   params: byTransaction,
   body: z.object({
     type: z.enum(TRANSACTION_TYPES),

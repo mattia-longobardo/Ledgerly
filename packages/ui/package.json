@@ -74,6 +74,7 @@
     "./two-factor": "./src/two-factor.ts",
     "./unsaved-changes": "./src/unsaved-changes.tsx",
     "./url": "./src/url.ts",
+    "./use-selection": "./src/use-selection.ts",
     "./value-entry": "./src/value-entry.tsx",
     "./week-start": "./src/week-start.tsx"
   },

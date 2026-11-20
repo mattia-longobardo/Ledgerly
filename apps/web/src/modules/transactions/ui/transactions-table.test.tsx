@@ -18,7 +18,7 @@ const setNote = vi.fn();
 const setLabels = vi.fn();
 const notify = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("@ledgerly/ui/router", () => ({ useRouter: () => ({ push, refresh: vi.fn() }) }));
 
 vi.mock("./commands", () => ({
   setCategory: (...args: unknown[]) => setCategory(...args),

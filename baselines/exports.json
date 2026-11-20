@@ -83,7 +83,9 @@
     "syncScheduleSchema"
   ],
   "packages/api-contract/src/transactions/index.ts": [
-    "movements"
+    "movements",
+    "review",
+    "spending"
   ],
   "packages/design-tokens/src/index.ts": [
     "COLORS",
@@ -1004,14 +1006,12 @@
   ],
   "packages/domain/src/platform/integrations/wallet/index.ts": [
     "BACKFILL_CHOICES",
-    "WALLET_RECORD_TEXT_MAX",
     "WalletDeletionOutcome",
     "WalletError",
     "backfillDepth",
     "chooseWalletAccounts",
     "createWalletClient",
     "editAtSource",
-    "editWalletTransaction",
     "editableAtSource",
     "isSyncBusy",
     "isTokenRejected",

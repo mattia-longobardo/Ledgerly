@@ -15,6 +15,10 @@ const notify = vi.fn();
 const setLabels = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }) }));
+vi.mock("@ledgerly/ui/router", async (original) => ({
+  ...(await original<object>()),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+}));
 vi.mock("@ledgerly/ui/toast", () => ({ notify: (...args: unknown[]) => notify(...args) }));
 /** The page's own hide, restore and delete, which keeps the balance right. */
 const visibility = vi.fn(async () => ({ ok: true as const, count: 1 }));

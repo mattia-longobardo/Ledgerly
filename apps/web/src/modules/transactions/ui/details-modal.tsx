@@ -7,6 +7,7 @@ import { cn } from "@ledgerly/ui/cn";
 import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input, Select, Textarea } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
+import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
 import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions/client";
 import { editInWallet, setLabels, setNote } from "./commands";
@@ -46,6 +47,7 @@ export function TransactionDetails({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("expenses");
+  const router = useRouter();
   const [chosen, setChosen] = useState<readonly string[]>(row.labelIds);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -88,6 +90,8 @@ export function TransactionDetails({
     }
 
     startTransition(async () => {
+      // The pages still hand the rows down from the server: after any write they draw them again.
+      let wrote = false;
       try {
         if (walletChanged) {
           const result = await editInWallet(row.id, { type, amount, payee, note });
@@ -95,6 +99,7 @@ export function TransactionDetails({
             setError(walletMessage(result.error, result.reason));
             return;
           }
+          wrote = true;
           notify(t(result.state === "saved" ? "wallet.saved" : "wallet.unchanged"));
         } else if (noteChanged) {
           const result = await setNote(row.id, note);
@@ -102,6 +107,7 @@ export function TransactionDetails({
             setError(messageFor(result.error));
             return;
           }
+          wrote = true;
           notify(t("toasts.noteSaved"));
         }
         if (labelsChanged) {
@@ -110,12 +116,15 @@ export function TransactionDetails({
             setError(messageFor(result.error));
             return;
           }
+          wrote = true;
           notify(t("toasts.labelsSaved"));
         }
         setError(null);
         onOpenChange(false);
       } catch {
         setError(t("errors.failed"));
+      } finally {
+        if (wrote) router.refresh();
       }
     });
   }
