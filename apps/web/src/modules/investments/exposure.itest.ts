@@ -425,6 +425,7 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
       "get_investment_holdings",
       "get_preferences",
       "get_profile",
+      "get_spending",
       "get_summary",
       "list_accounts",
       "list_budgets",
