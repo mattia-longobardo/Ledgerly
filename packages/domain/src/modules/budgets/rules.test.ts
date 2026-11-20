@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  budgetName,
   budgetRows,
   budgetSlug,
   budgetStatus,
   limitFor,
   parseBudgetSlug,
+  familiesOf,
   percentOf,
+  ratio,
   reachedThreshold,
   saveAlertsSchema,
   setLimitSchema,
+  spentFor,
   thresholdReached,
 } from "./rules";
 
@@ -216,5 +220,49 @@ describe("budgetSlug", () => {
     expect(parseBudgetSlug("nope")).toBeNull();
     expect(parseBudgetSlug(`${category}_all_all`)).toBeNull();
     expect(parseBudgetSlug(`${category.toUpperCase()}_all`)).toBeNull();
+  });
+});
+
+describe("ratio (BUD-4)", () => {
+  it("gives the status, the percentage and the thresholds from one comparison", () => {
+    const share = ratio(8_500n, 10_000n);
+    expect([share.reaches(85), share.passes(85), share.percent]).toEqual([true, false, 85]);
+    expect(budgetStatus(8_500n, 10_000n)).toBe("near");
+    expect(thresholdReached(8_500n, 10_000n, 85)).toBe(true);
+    expect(ratio(10_000n, 10_000n).passes(100)).toBe(false);
+    expect(ratio(1n, 0n).percent).toBe(0);
+  });
+});
+
+describe("spentFor (BUD-3, BUD-5)", () => {
+  const group = "01a0aba3-7a14-7ec1-9296-c9b01d414b40";
+  const child = "01a0aba3-7a14-7ec1-9296-c9b01d414b41";
+  const other = "01a0aba3-7a14-7ec1-9296-c9b01d414b42";
+  const tree = [
+    { id: group, parentId: null },
+    { id: child, parentId: group },
+    { id: other, parentId: null },
+  ];
+  const spending = [
+    { categoryId: group, accountId: "a1", cents: 100n },
+    { categoryId: child, accountId: "a2", cents: 20n },
+    { categoryId: other, accountId: "a1", cents: 7n },
+    { categoryId: null, accountId: "a1", cents: 3n },
+  ];
+
+  it("counts a group with its sub-categories, on one account or on all", () => {
+    const scope = { categoryId: group, accountId: null };
+    const families = familiesOf([scope], tree);
+    expect(spentFor(scope, spending, families)).toBe(120n);
+    expect(spentFor({ categoryId: group, accountId: "a1" }, spending, families)).toBe(100n);
+    expect(spentFor({ categoryId: null, accountId: "a1" }, spending, families)).toBe(110n);
+  });
+});
+
+describe("budgetName (BUD-6)", () => {
+  it("names a sub-category on its own with its group, and none for a whole account", () => {
+    expect(budgetName({ name: "Food", groupName: "Home", depth: 0 })).toBe("Home › Food");
+    expect(budgetName({ name: "Food", groupName: "Home", depth: 1 })).toBe("Food");
+    expect(budgetName({ name: null, groupName: null, depth: 0 })).toBeNull();
   });
 });
