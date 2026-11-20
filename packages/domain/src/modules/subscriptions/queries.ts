@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, ne } from "drizzle-orm";
 import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts";
-import { listRecurringPatterns, payeeSamples, transactionsByIds } from "../transactions/queries";
+import { payeeSamples, recurrences, transactionsByIds } from "../transactions/queries";
 import { colorOfCategory, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
 import { addDays, type CivilDate, civilDateIn, today } from "../../shared/dates";
@@ -268,13 +268,14 @@ export async function subscriptionsView(
 /** "Suggest from recurring payments" (spec §7.5): the detected patterns no subscription covers. */
 export async function suggestions(ctx: Pick<Ctx, "userId" | "timeZone">): Promise<Suggestion[]> {
   const [patterns, existing] = await Promise.all([
-    listRecurringPatterns(ctx),
+    recurrences(ctx),
     getDb()
       .select({ payeeMatch: subscriptions.payeeMatch })
       .from(subscriptions)
       .where(userScoped(ctx).owns(subscriptions)),
   ]);
-  const outgoing = patterns.filter((pattern) => pattern.sign < 0);
+  // A pattern with no cadence can be no subscription: its payee is not even looked up.
+  const outgoing = patterns.filter((pattern) => pattern.sign < 0 && pattern.cadence !== null);
   const samples = await payeeSamples(
     ctx,
     outgoing.map((pattern) => pattern.payeeKey),

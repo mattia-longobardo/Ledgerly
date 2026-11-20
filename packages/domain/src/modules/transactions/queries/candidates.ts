@@ -4,7 +4,7 @@ import { type CivilDate, civilDateIn, lastDayOfMonth, type MonthKey } from "../.
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { Cents } from "../../../shared/money";
-import { type TransactionType } from "../rules";
+import { type Cadence, cadenceOfInterval, type TransactionType } from "../rules";
 import { categories, recurringPatterns, transactions } from "../schema";
 import { WAITING_FOR_CATEGORY, cents, conditions, payeeKeyExpression } from "./filters";
 
@@ -182,11 +182,18 @@ export async function payeeSamples(
 
 type RecurringPattern = typeof recurringPatterns.$inferSelect;
 
-/** The recurring patterns `refreshRecurrences` last stored (spec §7.2), soonest expected first. */
-export async function listRecurringPatterns(ctx: Pick<Ctx, "userId">): Promise<RecurringPattern[]> {
-  return getDb()
+/**
+ * The recurring patterns `refreshRecurrences` last stored (spec §7.2), soonest expected first, each
+ * with the cadence its interval falls in: what another module reads instead of the table and the
+ * bands (audit SUB-8).
+ */
+export async function recurrences(
+  ctx: Pick<Ctx, "userId">,
+): Promise<(RecurringPattern & { cadence: Cadence | null })[]> {
+  const rows = await getDb()
     .select()
     .from(recurringPatterns)
     .where(userScoped(ctx).owns(recurringPatterns))
     .orderBy(asc(recurringPatterns.nextExpectedOn), asc(recurringPatterns.id));
+  return rows.map((row) => ({ ...row, cadence: cadenceOfInterval(row.intervalDays) }));
 }

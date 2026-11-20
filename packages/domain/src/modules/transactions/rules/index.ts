@@ -25,6 +25,7 @@ export type {
   CategoryState,
   CategoryType,
   MergeableField,
+  Cadence,
 } from "./vocabulary";
 export {
   displayPayee,
@@ -50,7 +51,7 @@ export {
   planUpstreamRemovals,
 } from "./merges";
 export type { UserEdit, WindowRow } from "./merges";
-export { detectRecurrences } from "./recurrences";
+export { cadenceOfInterval, detectRecurrences } from "./recurrences";
 export type { RecurrenceInput } from "./recurrences";
 export { typeByMacro, typeMarkerByMacro, macrosFor } from "./macros";
 export type { TypedMovement } from "./macros";

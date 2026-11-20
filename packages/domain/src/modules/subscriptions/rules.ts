@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { payeeKeyOf, RECURRENCE_BANDS } from "../transactions/rules";
+import { cadenceOfInterval, payeeKeyOf } from "../transactions/rules";
 import { addDays, type CivilDate, dayOfWeek, lastDayOfMonth, monthKey } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
 import { divRound } from "../../shared/money";
@@ -316,9 +316,8 @@ export function planCharges(
 
 /** The subscription cycle of a detected interval; biweekly and anything else has none. */
 export function cadenceOf(intervalDays: number): Cycle | null {
-  const band = RECURRENCE_BANDS.find((one) => intervalDays >= one.min && intervalDays <= one.max);
-  if (!band || band.cadence === "biweekly") return null;
-  return band.cadence;
+  const cadence = cadenceOfInterval(intervalDays);
+  return cadence === "biweekly" ? null : cadence;
 }
 
 export interface Suggestion {

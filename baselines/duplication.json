@@ -4,8 +4,8 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97297,
-    "duplicatedLines": 17049,
+    "lines": 97304,
+    "duplicatedLines": 17052,
     "percent": 17.52,
     "blocks": 1249
   },
@@ -83,9 +83,9 @@
       "blocks": 42
     },
     "modules/subscriptions": {
-      "lines": 1879,
+      "lines": 1878,
       "duplicatedLines": 479,
-      "percent": 25.49,
+      "percent": 25.51,
       "blocks": 33
     },
     "modules/timeoff": {
@@ -95,9 +95,9 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12348,
+      "lines": 12356,
       "duplicatedLines": 1855,
-      "percent": 15.02,
+      "percent": 15.01,
       "blocks": 148
     },
     "modules/users": {
@@ -192,8 +192,8 @@
     },
     "platform/integrations": {
       "lines": 2211,
-      "duplicatedLines": 441,
-      "percent": 19.95,
+      "duplicatedLines": 444,
+      "percent": 20.08,
       "blocks": 35
     },
     "platform/integrations/ccxt": {
@@ -699,7 +699,7 @@
     "platform/integrations/service/connections.ts": 39,
     "platform/integrations/service/external.ts": 69,
     "platform/integrations/service/runs.ts": 40,
-    "platform/integrations/service/schedule.ts": 28,
+    "platform/integrations/service/schedule.ts": 31,
     "platform/integrations/service/sources.ts": 82,
     "platform/integrations/status.ts": 20,
     "platform/integrations/trek/client.ts": 64,

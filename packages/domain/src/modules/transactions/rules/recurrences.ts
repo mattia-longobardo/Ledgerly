@@ -53,9 +53,15 @@ function median(sorted: readonly Cents[]): Cents {
   return (sorted[middle - 1] + sorted[middle] + 1n) / 2n;
 }
 
+/** The cadence of an interval in days (spec §7.2): the band it falls in, or none between bands. */
+export function cadenceOfInterval(days: number): Cadence | null {
+  return RECURRENCE_BANDS.find((one) => days >= one.min && days <= one.max)?.cadence ?? null;
+}
+
+/** The cadence every gap shares; `gaps` is never empty (a pattern has at least three movements). */
 function cadenceFor(gaps: readonly number[]): Cadence | null {
-  const band = RECURRENCE_BANDS.find((one) => gaps.every((gap) => gap >= one.min && gap <= one.max));
-  return band ? band.cadence : null;
+  const cadence = cadenceOfInterval(gaps[0]);
+  return gaps.every((gap) => cadenceOfInterval(gap) === cadence) ? cadence : null;
 }
 
 /** The mean gap in whole days, rounded half-up: the column is an integer number of days. */
