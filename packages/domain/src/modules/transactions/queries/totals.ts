@@ -13,20 +13,39 @@ interface Split {
 }
 
 /**
- * The two columns that split a total by currency, placed **last** in its select so `GROUP BY` can
- * name them by position (`splitPositions`). The day only for a currency that is not the display
- * one: a range all in the display currency stays one row a group, as before the split.
+ * The columns that split a total by currency, placed **last** in its select so `GROUP BY` can name
+ * them by position (`splitPositions`). Unsplit, they are constants — every row taken as in the
+ * display currency — and the select keeps the plain aggregate it had before the split; `foreign`
+ * counts the movements that are not, so the caller knows whether to read again split
+ * (`splitIfForeign`). Split, the day only for a currency that is not the display one.
  */
-export function splitColumns(ctx: Pick<Ctx, "timeZone" | "displayCurrency">) {
+export function splitColumns(ctx: Pick<Ctx, "timeZone" | "displayCurrency">, split: boolean) {
+  const foreign = sql<string>`count(*) filter (where ${transactions.currency} <> ${ctx.displayCurrency})`;
+  if (!split) {
+    return { currency: sql<string>`${ctx.displayCurrency}::text`, on: sql<CivilDate | null>`null`, foreign };
+  }
   return {
-    currency: transactions.currency,
+    currency: sql<string>`${transactions.currency}`,
     on: sql<CivilDate | null>`case when ${transactions.currency} <> ${ctx.displayCurrency} then ${dayExpression(ctx.timeZone)} end`,
+    foreign,
   };
 }
 
-/** The `GROUP BY` positions of `splitColumns` after `before` other columns of the select. */
-export function splitPositions(before: number) {
-  return [sql.raw(String(before + 1)), sql.raw(String(before + 2))];
+/** The `GROUP BY` positions of split `splitColumns` after `before` other columns; none unsplit. */
+export function splitPositions(before: number, split: boolean) {
+  return split ? [sql.raw(String(before + 1)), sql.raw(String(before + 2))] : [];
+}
+
+/**
+ * The rows of a total: the plain aggregate first, and only when it counted a movement in another
+ * currency the split one (audit TR-4). A person all in the display currency pays one query, as
+ * before the split.
+ */
+export async function splitIfForeign<Row extends { foreign: string }>(
+  read: (split: boolean) => PromiseLike<Row[]>,
+): Promise<Row[]> {
+  const plain = await read(false);
+  return plain.some((row) => Number(row.foreign) > 0) ? read(true) : plain;
 }
 
 /** Adds up split amounts into one total in the display currency. */

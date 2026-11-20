@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97483,
-    "duplicatedLines": 17021,
-    "percent": 17.46,
-    "blocks": 1246
+    "lines": 97507,
+    "duplicatedLines": 17012,
+    "percent": 17.45,
+    "blocks": 1245
   },
   "units": {
     "api": {
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12483,
-      "duplicatedLines": 1831,
-      "percent": 14.67,
-      "blocks": 145
+      "lines": 12507,
+      "duplicatedLines": 1822,
+      "percent": 14.57,
+      "blocks": 144
     },
     "modules/users": {
       "lines": 874,
@@ -636,9 +636,9 @@
     "modules/transactions/manual.ts": 6,
     "modules/transactions/queries/candidates.ts": 20,
     "modules/transactions/queries/filters.ts": 26,
-    "modules/transactions/queries/listing.ts": 17,
+    "modules/transactions/queries/listing.ts": 7,
     "modules/transactions/queries/movements.ts": 53,
-    "modules/transactions/queries/views.ts": 51,
+    "modules/transactions/queries/views.ts": 52,
     "modules/transactions/rules/vocabulary.ts": 7,
     "modules/transactions/schema/categories.ts": 105,
     "modules/transactions/schema/duplicates.ts": 19,

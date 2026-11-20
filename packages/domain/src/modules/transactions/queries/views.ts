@@ -32,7 +32,7 @@ import {
   monthlyTotals,
   transactionsSummary,
 } from "./listing";
-import { gather, totallerFor, splitColumns, splitPositions } from "./totals";
+import { gather, splitColumns, splitIfForeign, splitPositions, totallerFor } from "./totals";
 
 /** The money of one category in one macro (categories-and-rules.md §5.3): `null` is no category. */
 export interface CategoryMacroTotal {
@@ -55,24 +55,26 @@ export async function categoryMacroTotals(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters = {},
 ): Promise<CategoryMacroTotal[]> {
-  const rows = await getDb()
-    .select({
-      categoryId: transactions.categoryId,
-      type: transactions.type,
-      total: count(),
-      totalCents: sum(transactions.amountCents),
-      inCents: sum(
-        sql`case when ${transactions.amountCents} > 0 then ${transactions.amountCents} else 0 end`,
-      ),
-      outCents: sum(
-        sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`,
-      ),
-      ...splitColumns(ctx),
-    })
-    .from(transactions)
-    .where(conditions(ctx, withoutHidden(filters)))
-    .groupBy(transactions.categoryId, transactions.type, ...splitPositions(6))
-    .orderBy(asc(transactions.categoryId), asc(transactions.type));
+  const rows = await splitIfForeign((split) =>
+    getDb()
+      .select({
+        categoryId: transactions.categoryId,
+        type: transactions.type,
+        total: count(),
+        totalCents: sum(transactions.amountCents),
+        inCents: sum(
+          sql`case when ${transactions.amountCents} > 0 then ${transactions.amountCents} else 0 end`,
+        ),
+        outCents: sum(
+          sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`,
+        ),
+        ...splitColumns(ctx, split),
+      })
+      .from(transactions)
+      .where(conditions(ctx, withoutHidden(filters)))
+      .groupBy(transactions.categoryId, transactions.type, ...splitPositions(6, split))
+      .orderBy(asc(transactions.categoryId), asc(transactions.type)),
+  );
   const groups = gather(rows, (row) => `${row.categoryId}|${row.type}`, await totallerFor(ctx, rows));
   return groups.map(({ row, count, sum }) => ({
     categoryId: row.categoryId,
@@ -113,27 +115,31 @@ export async function spendingOverTime(
 ): Promise<SpendingPoint[]> {
   const parents = alias(categories, "spending_parents");
   const bucket = grain === "day" ? dayExpression(ctx.timeZone) : monthExpression(ctx.timeZone);
-  const rows = await getDb()
-    .select({
-      bucket,
-      groupId: sql<string | null>`coalesce(${categories.parentId}, ${transactions.categoryId})`,
-      groupName: sql<string | null>`coalesce(${parents.name}, ${categories.name})`,
-      groupColor: sql<
-        string | null
-      >`case when ${categories.parentId} is null then ${categories.color} else ${parents.color} end`,
-      cents:
-        type === "transfer"
-          ? sum(sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`)
-          : sum(transactions.amountCents),
-      ...splitColumns(ctx),
-    })
-    .from(transactions)
-    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
-    .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
-    .where(and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, type)))
-    // By position, for the same reason as `monthlyTotals`.
-    .groupBy(sql`1`, sql`2`, sql`3`, sql`4`, ...splitPositions(5))
-    .orderBy(sql`1`, sql`2`);
+  const rows = await splitIfForeign((split) =>
+    getDb()
+      .select({
+        bucket,
+        groupId: sql<string | null>`coalesce(${categories.parentId}, ${transactions.categoryId})`,
+        groupName: sql<string | null>`coalesce(${parents.name}, ${categories.name})`,
+        groupColor: sql<
+          string | null
+        >`case when ${categories.parentId} is null then ${categories.color} else ${parents.color} end`,
+        cents:
+          type === "transfer"
+            ? sum(sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`)
+            : sum(transactions.amountCents),
+        ...splitColumns(ctx, split),
+      })
+      .from(transactions)
+      .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+      .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
+      .where(
+        and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, type)),
+      )
+      // By position, for the same reason as `monthlyTotals`.
+      .groupBy(sql`1`, sql`2`, sql`3`, sql`4`, ...splitPositions(5, split))
+      .orderBy(sql`1`, sql`2`),
+  );
   const points = gather(rows, (row) => `${row.bucket}|${row.groupId}`, await totallerFor(ctx, rows));
   return points.map(({ row, sum }) => ({
     bucket: row.bucket,

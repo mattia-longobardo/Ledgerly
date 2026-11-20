@@ -25,7 +25,7 @@ import {
   withoutHidden,
 } from "./filters";
 import { abs } from "../../../shared/money";
-import { gather, totallerFor, splitColumns, splitPositions } from "./totals";
+import { gather, splitColumns, splitIfForeign, splitPositions, totallerFor } from "./totals";
 
 /** The movements of a range that wait for a category: how many, how many with a suggestion, their sum. */
 export interface WaitingForCategory {
@@ -181,23 +181,25 @@ export async function transactionsSummary(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters = {},
 ): Promise<TransactionsSummary> {
-  const rows = await getDb()
-    .select({
-      total: count(),
-      incomeCents: sum(
-        sql`case when ${transactions.type} = 'income' then ${transactions.amountCents} else 0 end`,
-      ),
-      expenseCents: sum(
-        sql`case when ${transactions.type} = 'expense' then ${transactions.amountCents} else 0 end`,
-      ),
-      netCents: sum(transactions.amountCents),
-      transfers: sql<string>`count(*) filter (where ${transactions.type} = 'transfer')`,
-      unpaired: sql<string>`count(*) filter (where ${transactions.type} = 'transfer' and ${transactions.transferGroupId} is null)`,
-      ...splitColumns(ctx),
-    })
-    .from(transactions)
-    .where(conditions(ctx, withoutHidden(filters)))
-    .groupBy(...splitPositions(6));
+  const rows = await splitIfForeign((split) =>
+    getDb()
+      .select({
+        total: count(),
+        incomeCents: sum(
+          sql`case when ${transactions.type} = 'income' then ${transactions.amountCents} else 0 end`,
+        ),
+        expenseCents: sum(
+          sql`case when ${transactions.type} = 'expense' then ${transactions.amountCents} else 0 end`,
+        ),
+        netCents: sum(transactions.amountCents),
+        transfers: sql<string>`count(*) filter (where ${transactions.type} = 'transfer')`,
+        unpaired: sql<string>`count(*) filter (where ${transactions.type} = 'transfer' and ${transactions.transferGroupId} is null)`,
+        ...splitColumns(ctx, split),
+      })
+      .from(transactions)
+      .where(conditions(ctx, withoutHidden(filters)))
+      .groupBy(...splitPositions(6, split)),
+  );
   const [range] = gather(rows, () => "range", await totallerFor(ctx, rows));
   const counted = (key: "transfers" | "unpaired") => rows.reduce((sum, row) => sum + Number(row[key]), 0);
   return {
@@ -223,20 +225,22 @@ export async function monthlyTotals(
   filters: TransactionFilters = {},
 ): Promise<MonthTotal[]> {
   const month = monthExpression(ctx.timeZone);
-  const rows = await getDb()
-    .select({
-      month,
-      total: count(),
-      // The month's cash flow, as the header's net: a paired giroconto cancels itself out.
-      netCents: sum(transactions.amountCents),
-      ...splitColumns(ctx),
-    })
-    .from(transactions)
-    .where(conditions(ctx, withoutHidden(filters)))
-    // By position: the same expression is written differently in a select list and in a
-    // `GROUP BY`, and Postgres compares the two textually.
-    .groupBy(sql`1`, ...splitPositions(3))
-    .orderBy(sql`1 desc`);
+  const rows = await splitIfForeign((split) =>
+    getDb()
+      .select({
+        month,
+        total: count(),
+        // The month's cash flow, as the header's net: a paired giroconto cancels itself out.
+        netCents: sum(transactions.amountCents),
+        ...splitColumns(ctx, split),
+      })
+      .from(transactions)
+      .where(conditions(ctx, withoutHidden(filters)))
+      // By position: the same expression is written differently in a select list and in a
+      // `GROUP BY`, and Postgres compares the two textually.
+      .groupBy(sql`1`, ...splitPositions(3, split))
+      .orderBy(sql`1 desc`),
+  );
   const months = gather(rows, (row) => row.month, await totallerFor(ctx, rows));
   return months.map(({ row, count, sum }) => ({
     month: monthKey(row.month),
@@ -257,32 +261,34 @@ export async function categoryTotals(
   // The slice's group comes along (F2.5), archived or not: a movement filed under a sub-category of
   // an archived group still belongs to that group in the card.
   const parents = alias(categories, "parents");
-  const rows = await getDb()
-    .select({
-      categoryId: transactions.categoryId,
-      name: categories.name,
-      color: categories.color,
-      parentId: categories.parentId,
-      parentName: parents.name,
-      parentColor: parents.color,
-      total: count(),
-      totalCents: sum(transactions.amountCents),
-      ...splitColumns(ctx),
-    })
-    .from(transactions)
-    .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
-    .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
-    .where(and(conditions(ctx, withoutHidden(filters)), ne(transactions.type, "transfer")))
-    .groupBy(
-      transactions.categoryId,
-      categories.name,
-      categories.color,
-      categories.parentId,
-      parents.name,
-      parents.color,
-      ...splitPositions(8),
-    )
-    .orderBy(asc(categories.name), asc(transactions.categoryId));
+  const rows = await splitIfForeign((split) =>
+    getDb()
+      .select({
+        categoryId: transactions.categoryId,
+        name: categories.name,
+        color: categories.color,
+        parentId: categories.parentId,
+        parentName: parents.name,
+        parentColor: parents.color,
+        total: count(),
+        totalCents: sum(transactions.amountCents),
+        ...splitColumns(ctx, split),
+      })
+      .from(transactions)
+      .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
+      .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
+      .where(and(conditions(ctx, withoutHidden(filters)), ne(transactions.type, "transfer")))
+      .groupBy(
+        transactions.categoryId,
+        categories.name,
+        categories.color,
+        categories.parentId,
+        parents.name,
+        parents.color,
+        ...splitPositions(8, split),
+      )
+      .orderBy(asc(categories.name), asc(transactions.categoryId)),
+  );
 
   const groups = gather(rows, (row) => String(row.categoryId), await totallerFor(ctx, rows));
   const slices = groups.map(({ row, count, sum }) => ({
