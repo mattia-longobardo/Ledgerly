@@ -734,6 +734,8 @@ export const CRITICAL: { files: string[]; why: string }[] = [
       "scripts/migrate.ts",
       "scripts/test-integration.sh",
       "apps/web/src/global.d.ts",
+      "Makefile",
+      ".github/workflows/ci.yml",
     ],
   },
   {

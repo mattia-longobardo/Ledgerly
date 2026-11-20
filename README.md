@@ -40,6 +40,12 @@ migrations are in `drizzle/`), `packages/api-contract` (the zod primitives of th
 `plugins/enablebanking`. The rules between them are in
 [`docs/design/rewrite-plan/10-modularity.md`](docs/design/rewrite-plan/10-modularity.md).
 
+## Commands
+
+`make help` lists them: `make lint` (format check, ESLint, cleanliness, type check), `make test` (unit tests),
+`make ci` (install, lint and test: what GitHub Actions runs) and `make deploy ID=<release id>`
+(`scripts/release.sh`). The other suites and when they run: [`docs/testing.md`](docs/testing.md).
+
 ## Documentation
 
 | Guide                                | For                                                            |
