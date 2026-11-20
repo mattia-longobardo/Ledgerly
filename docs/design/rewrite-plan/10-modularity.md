@@ -459,6 +459,30 @@ misura di mezzo di `v0.40.0`, la versione in produzione; p95 della serie di `v0.
 
 Nessun'altra riga del file è cambiata.
 
+**Misura con la versione di riferimento, per le viste rumorose** (decisione di Mattia del 20/11/2026, PERS-473). Da
+una sessione all'altra «expensesView (tre anni)», l'unica vista che la sonda misura da heap pulito (il suo tempo lo
+decide il collector), si sposta di più del 10% senza cambi al codice (49-65 ms su `v0.40.0`). Ora `npm run perf`:
+
+- prima di ogni processo fa `VACUUM (FULL, ANALYZE)` sul database di test (`scripts/perf-vacuum.ts`): i giri ripetuti
+  gonfiavano gli indici di `transactions` fino a 103-116 MB e rallentavano ogni misura dopo;
+- alterna ogni processo del codice con uno della versione di riferimento (il tag di rilascio più alto, o
+  `LEDGERLY_PERF_REFERENCE=<tag>`), preso dal suo worktree in `test-results/perf-reference/`: A B A B, mai una serie
+  dopo l'altra;
+- tiene le viste di `ALTERNATED` (`scripts/perf-compare.ts`) contro la mediana migliore del riferimento della stessa
+  sessione, con la stessa soglia del 10% (e 3 ms); le query e tutte le altre misure restano contro questo file.
+
+Il tempo del gate passa da circa 75 s a circa 3 minuti (10 processi e i vuoti). Nessuna riga del file è cambiata.
+
+**Da dove vengono i ~3 ms di `GET /transactions` tra la base del 14/11 e `v0.37.0`** (PERS-473). Bisezione con la
+procedura del gate (`ledgerly_2_test` azzerato e migrato a ogni commit, vuoto prima di ogni processo): la base
+`6fa3a059` misura 10,1 ms, `v0.35.3` (prima di R1) 13,5 ms, `v0.37.0` 13,2 ms. Nessun commit fa un salto più grande
+del rumore (±2 ms tra processi): la salita è graduale lungo 138 commit tra il 14 e il 18/11. Tempo per query,
+`6fa3a059` → `v0.35.3` sulla stessa sessione: la lista dei movimenti 2,1 → 2,8 ms (le colonne lette passano da 19 a
+36, per i campi delle funzioni nuove: stato e motivo della categoria, suggerimento, origine, invio, modifiche locali),
+il riepilogo 0,9 → 1,1-1,2 ms; le altre query uguali. Il resto, circa 1,5-2 ms, è fuori dalle query: lettura e
+mappatura delle righe più larghe. Una correzione che non cambia il comportamento chiederebbe una seconda forma della
+query della lista solo per la riga F8, contro la priorità della modularità: non fatta.
+
 `POST /imports` non è misurata: chiede un documento, il bucket e `after()` di Next. Le pagine (tempo di risposta del
 server) non sono misurate in N0: l'utente pesante esiste solo in `ledgerly_test` e l'anteprima locale non accetta il
 login con password. Ogni «pagina» della tabella è l'insieme delle letture del suo `page.tsx`.

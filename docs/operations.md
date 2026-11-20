@@ -186,12 +186,15 @@ written by a command and checked by another.
   best median of 5 processes (`scripts/perf-on-test.sh` runs `scripts/perf-probe.ts` 5 times,
   `scripts/perf-compare.ts` compares): the same code gave one process 45 ms and the next 55, each
   steady, so more runs in one process did not help. When a round fails, one second round of 5
-  tells a busy host from a slower step. The run takes about 75 s. The 10% and the baseline did not
-  change. `npm run perf -- --queries` runs one process and holds the number of queries only (about
+  tells a busy host from a slower step. Before every process the test database is vacuumed
+  (`scripts/perf-vacuum.ts`), and every process alternates with one of the reference version (the
+  highest release tag, or `LEDGERLY_PERF_REFERENCE=<tag>`, checked out under `test-results/`): the
+  views in `ALTERNATED` of `scripts/perf-compare.ts` (today «expensesView (tre anni)», whose time the
+  collector decides) are held to the reference's best median of the same session, not to the file.
+  The run takes about 3 minutes. The 10% and the baseline did not change. `npm run perf -- --queries` runs one process and holds the number of queries only (about
   15 s): it is the part that runs at every release ([testing.md](testing.md)). A slower time
   Mattia accepted is in `ACCEPTED_TIMES` of `scripts/perf-compare.ts`, with the step that takes it
-  back: printed, not held; its queries still are. Today: `GET /transactions` until the R2 step of
-  transactions, which removes the entry.
+  back: printed, not held; its queries still are. Today: none.
 - **Numbers and contract:** what the read services, the REST API and the MCP tools answer about the
   reference user (`test/reference-user.ts`) with the clock stopped. Byte for byte.
 - **Numbers of production:** `npm run numbers`, before and after a deploy. See above.

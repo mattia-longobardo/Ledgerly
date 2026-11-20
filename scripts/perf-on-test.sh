@@ -31,31 +31,61 @@ samples=test-results/perf
 rm -rf "$samples"
 mkdir -p "$samples"
 
+# The reference the noisy views are held to (perf-compare.ts, `ALTERNATED`): the highest release
+# tag, or LEDGERLY_PERF_REFERENCE=<tag>, checked out with its own dependencies under `test-results/`.
+# Its samples alternate with the code's, on the same database and the same minute of the host.
+reference=
+if [ -z "$queries_only" ]; then
+  tag="${LEDGERLY_PERF_REFERENCE:-$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)}"
+  reference="test-results/perf-reference/$tag"
+  if [ ! -f "$reference/node_modules/.package-lock.json" ]; then
+    git worktree remove --force "$reference" 2>/dev/null || rm -rf "$reference"
+    git worktree add --detach "$reference" "$tag" >&2
+    (cd "$reference" && npm ci --ignore-scripts --no-audit --no-fund >&2)
+  fi
+fi
+
 # `docker run --env-file` keeps the quotes around a quoted value, which Compose drops: the file is
 # passed on stdin with one pair of quotes removed (as in `scripts/on-homelab.sh`). `-e DATABASE_URL`
 # comes after it and wins: the test database, never the one in the file.
+# script [-C <checkout>] <file> …: a script of this checkout, or of another one (the reference).
 script() {
+  checkout="$PWD"
+  if [ "$1" = "-C" ]; then
+    checkout="$PWD/$2"
+    shift 2
+  fi
   sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" "$env_file" |
     docker run --rm -i --network db_internal \
     --user "$(id -u):$(id -g)" -e HOME=/tmp \
     --env-file /dev/stdin -e DATABASE_URL \
-    -v "$PWD":/app -w /app \
+    -v "$checkout":/app -w /app \
     node:26-bookworm-slim node --expose-gc --conditions=react-server --import tsx "$@"
 }
 probe() { script scripts/perf-probe.ts "$@"; }
+# Each sample on a vacuumed database (perf-vacuum.ts says why).
+vacuum() { script scripts/perf-vacuum.ts; }
 
 # The integration tests run on their own databases (scripts/test-integration.sh): the schema of
 # `ledgerly_test` is brought to the checkout's migrations here, as the preview's seed does.
 script scripts/migrate.ts
 
-# One round: PROCESSES more samples, numbered after the ones that are there.
+# One round: PROCESSES more samples, numbered after the ones that are there, each followed by one
+# of the reference (`ref-<n>.json`): A B A B, never a series of one and then a series of the other.
 round() {
   last=$(($1 + PROCESSES))
   process=$(($1 + 1))
   while [ "$process" -le "$last" ]; do
     # The two query plans are the same in every process: the first round's last one prints them.
     if [ "$process" -eq "$PROCESSES" ]; then plans=--plans; else plans=; fi
+    vacuum
     probe --out "$samples/$process.json" $plans
+    if [ -n "$reference" ]; then
+      vacuum
+      # The reference sees its own checkout only: it writes there, and the sample is moved here.
+      script -C "$reference" scripts/perf-probe.ts --out sample.json
+      mv "$reference/sample.json" "$samples/ref-$process.json"
+    fi
     process=$((process + 1))
   done
 }

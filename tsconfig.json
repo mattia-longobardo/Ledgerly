@@ -32,5 +32,11 @@
     "apps/web/.next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "Fondo Cometa", "Payroll", "UI Recreation and branding decisions"]
+  "exclude": [
+    "node_modules",
+    "test-results",
+    "Fondo Cometa",
+    "Payroll",
+    "UI Recreation and branding decisions"
+  ]
 }

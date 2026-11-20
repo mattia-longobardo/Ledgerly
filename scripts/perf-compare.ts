@@ -15,7 +15,13 @@
 // (the collector and the compiler of the runtime settle differently every time it starts). More runs
 // in one process do not average that out; more processes do. A step that is really slower is slower
 // in every process, so the best of them still shows it. The queries are exact and must agree.
+//
+// A sample named `ref-<n>.json` is of the reference version (the last release), taken by
+// `scripts/perf-on-test.sh` in turn with the code's. The views in `ALTERNATED` are held to it and
+// not to the baseline: their time moves with the host and the database by more than 10% from one
+// session to the next, so only a reference measured in the same minutes says what the code changed.
 import { readFileSync, writeFileSync } from "node:fs";
+import { basename } from "node:path";
 
 const BASELINE = "baselines/performance.json";
 /** A median this many ms over its baseline is noise, whatever the percentage says. */
@@ -27,6 +33,8 @@ const WORSE = 1.1;
  * removes its entry; a later run that still needs it asks again.
  */
 const ACCEPTED_TIMES: Record<string, string> = {};
+/** The views whose time the collector decides (perf-probe.ts, `fromCleanHeap`): held to the reference. */
+const ALTERNATED = new Set(["expensesView (tre anni)"]);
 
 type Measure = { medianMs: number; p95Ms: number; queries: number };
 type Group = Record<string, Measure>;
@@ -37,10 +45,13 @@ const queriesOnly = process.argv.includes("--queries");
 if (write && queriesOnly) throw new Error("--queries measures no time: it cannot write a baseline");
 const files = process.argv.slice(2).filter((one) => !one.startsWith("--"));
 if (files.length === 0) throw new Error("usage: perf-compare.ts [--write] <sample.json> …");
-const samples = files.map((file) => JSON.parse(readFileSync(file, "utf8")) as Sample);
+const read = (file: string) => JSON.parse(readFileSync(file, "utf8")) as Sample;
+const isReference = (file: string) => basename(file).startsWith("ref-");
+const samples = files.filter((file) => !isReference(file)).map(read);
+const references = files.filter(isReference).map(read);
 
 /** The best median of every measure, with the p95 of the same sample and the most queries seen. */
-function best(group: "views" | "routes"): Group {
+function best(group: "views" | "routes", samples: readonly Sample[]): Group {
   const result: Group = {};
   for (const sample of samples) {
     for (const [name, measure] of Object.entries(sample[group])) {
@@ -54,7 +65,8 @@ function best(group: "views" | "routes"): Group {
   }
   return result;
 }
-const measured = { views: best("views"), routes: best("routes") };
+const measured = { views: best("views", samples), routes: best("routes", samples) };
+const reference = { views: best("views", references), routes: best("routes", references) };
 
 const baseline = (() => {
   try {
@@ -69,7 +81,10 @@ for (const group of ["views", "routes"] as const) {
     `\n${group === "views" ? "VISTE" : "ROTTE /api/v1"}${" ".repeat(26)}mediana    p95   query   (partenza: mediana, query)`,
   );
   for (const [name, now] of Object.entries(measured[group])) {
-    const before = baseline?.[group][name];
+    const held = baseline?.[group][name];
+    // The time of an alternated view against the reference's; its queries against the baseline still.
+    const versus = ALTERNATED.has(name) ? reference[group][name] : undefined;
+    const before = held && versus ? { ...held, medianMs: versus.medianMs } : held;
     const beyond =
       !queriesOnly &&
       before &&
@@ -83,13 +98,16 @@ for (const group of ["views", "routes"] as const) {
     console.log(
       `PERF ${name.padEnd(36)} ${now.medianMs.toFixed(1).padStart(7)} ${now.p95Ms.toFixed(1).padStart(7)} ${String(now.queries).padStart(6)}` +
         (before
-          ? `   (${before.medianMs}, ${before.queries})${slower || more ? "  PEGGIO" : ""}` +
+          ? `   (${before.medianMs}${versus ? " riferimento" : ""}, ${before.queries})${slower || more ? "  PEGGIO" : ""}` +
             (accepted ? `  ACCETTATA ${accepted}` : "")
           : "   (nuova)"),
     );
   }
 }
-console.log(`\nmisura: la mediana migliore di ${samples.length} processi`);
+console.log(
+  `\nmisura: la mediana migliore di ${samples.length} processi` +
+    (references.length > 0 ? `, alternati con ${references.length} della versione di riferimento` : ""),
+);
 
 if (write) {
   // `production` (job durations, image) is read by hand at a deploy and kept as it is.
