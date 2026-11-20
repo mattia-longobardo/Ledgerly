@@ -68,6 +68,7 @@ const one = (value: string | string[] | undefined) => (Array.isArray(value) ? va
 export default async function ReviewPage({ searchParams }: PageProps<"/expenses/review">) {
   const ctx = await requireSession();
   const t = await getTranslations("expenses");
+  const period = await getTranslations("common.period");
   const raw = await searchParams;
   const todayOn = today(ctx.timeZone);
 
@@ -273,7 +274,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
           carry={{ acc: params.acc }}
           locale={ctx.locale}
           presets={PRESETS}
-          whole={{ range: whole, text: t("filters.presets.all") }}
+          whole={{ range: whole, text: period("presets.all") }}
         />
       )}
       {!guided && eligible.length > 1 && (

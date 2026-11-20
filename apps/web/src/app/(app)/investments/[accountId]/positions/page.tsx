@@ -58,7 +58,7 @@ export default async function InvestmentServicePositions({
   const by: "asset" | "class" = one(query.by) === "class" ? "class" : "asset";
   const t = await getTranslations("investments.positions");
   const ti = await getTranslations("investments");
-  const tp = await getTranslations("investments.period");
+  const tp = await getTranslations("common.period");
   const [detail, view] = await Promise.all([
     loadService(accountId),
     servicePositions(ctx, accountId, sectionPeriod(query, civilToday(ctx.timeZone)).period),

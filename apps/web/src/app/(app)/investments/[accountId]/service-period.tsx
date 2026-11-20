@@ -27,7 +27,7 @@ export function ServicePeriodControl({
   /** The tabs that are always "today" (Connection, §2.3): no period to pick there. */
   hiddenOn: string[];
 }) {
-  const tp = useTranslations("investments.period");
+  const tp = useTranslations("common.period");
   const pathname = usePathname();
   const search = useSearchParams();
   if (hiddenOn.includes(pathname)) return null;

@@ -57,7 +57,7 @@ export default async function InvestmentServiceOverview({
   if (legacy) permanentRedirect(appRoute(withParams(base, {}, legacy)));
 
   const t = await getTranslations("investments");
-  const tp = await getTranslations("investments.period");
+  const tp = await getTranslations("common.period");
   const ta = await getTranslations("investments.activity");
   const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "pnl";
   const [detail, pnl] = await Promise.all([

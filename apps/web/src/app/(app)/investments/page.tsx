@@ -55,7 +55,7 @@ const one = (value: string | string[] | undefined) => (Array.isArray(value) ? va
 export default async function InvestmentsPage({ searchParams }: PageProps<"/investments">) {
   const ctx = await requireSession();
   const t = await getTranslations("investments");
-  const tp = await getTranslations("investments.period");
+  const tp = await getTranslations("common.period");
   const query = (await searchParams) as Query;
   const todayOn = today(ctx.timeZone);
 

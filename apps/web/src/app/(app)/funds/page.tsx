@@ -103,7 +103,7 @@ async function FundsHome({
 }) {
   const t = await getTranslations("funds");
   const th = await getTranslations("funds.home");
-  const tp = await getTranslations("investments.period");
+  const tp = await getTranslations("common.period");
   const tf = await getTranslations("funds.fund");
   const ts = await getTranslations("funds.sources");
   const rows = await fundsHomeRows(ctx);

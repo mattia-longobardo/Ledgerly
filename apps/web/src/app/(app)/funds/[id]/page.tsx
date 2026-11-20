@@ -153,7 +153,7 @@ async function FundDetail({
   const tf = await getTranslations("funds.fund");
   const tp = await getTranslations("funds.pension");
   const ts = await getTranslations("funds.sources");
-  const tPeriod = await getTranslations("investments.period");
+  const tPeriod = await getTranslations("common.period");
   const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "gain";
   const row = await fundHomeRow(ctx, id);
   const { detail } = row;

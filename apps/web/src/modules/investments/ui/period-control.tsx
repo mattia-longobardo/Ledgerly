@@ -4,7 +4,7 @@ import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
 
 /** The words of the period: the server's `getTranslations` or the client's `useTranslations`. */
-type PeriodT = ReturnType<typeof useTranslations<"investments.period">>;
+type PeriodT = ReturnType<typeof useTranslations<"common.period">>;
 type T = PeriodT;
 
 /** The period in words (§2.1): "2026 · year to date", "2025", "since 28 Oct 2024", or the days. */
@@ -21,5 +21,8 @@ export function periodText(
       : String(period.year);
   }
   if (period.kind === "all") return t("since", { date: formatDate(span.from, "long", locale) });
-  return t("range", { from: formatDate(span.from, "long", locale), to: formatDate(span.to, "long", locale) });
+  return t("between", {
+    from: formatDate(span.from, "long", locale),
+    to: formatDate(span.to, "long", locale),
+  });
 }

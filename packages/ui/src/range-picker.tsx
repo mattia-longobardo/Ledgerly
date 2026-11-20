@@ -29,7 +29,7 @@ export function RangePicker({
   label: string;
   path?: string;
 }) {
-  const words = useTranslations("expenses.filters.range");
+  const words = useTranslations("common.period");
   return (
     <DateRangePicker
       grain="day"

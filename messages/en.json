@@ -6,7 +6,31 @@
     "retry": "Try again",
     "or": "or",
     "loading": "Loading…",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "period": {
+      "label": "Date range",
+      "previous": "Previous period",
+      "next": "Next period",
+      "latest": "Latest",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "pickEnd": "Pick the end date",
+      "hint": "{from} – {to} · {count, plural, one {# day} other {# days}}",
+      "presets": {
+        "thisMonth": "This month",
+        "lastMonth": "Last month",
+        "last3Months": "Last 3 months",
+        "ytd": "Year to date",
+        "all": "All"
+      },
+      "yearToDate": "{year} · year to date",
+      "since": "since {date}",
+      "between": "{from} – {to}"
+    }
   },
   "unsaved": {
     "banner": "{count, plural, one {A section has changes that are not saved} other {# sections have changes that are not saved}}",
@@ -1583,27 +1607,6 @@
     "countTransactions": "{count, plural, =0 {no transactions} one {# transaction} other {# transactions}}",
     "filters": {
       "label": "Filters",
-      "range": {
-        "label": "Date range",
-        "previous": "Previous period",
-        "next": "Next period",
-        "latest": "Latest",
-        "previousMonth": "Previous month",
-        "nextMonth": "Next month",
-        "from": "From",
-        "to": "To",
-        "apply": "Apply",
-        "cancel": "Cancel",
-        "pickEnd": "Pick the end date",
-        "hint": "{from} – {to} · {count, plural, one {# day} other {# days}}"
-      },
-      "presets": {
-        "thisMonth": "This month",
-        "lastMonth": "Last month",
-        "last3Months": "Last 3 months",
-        "ytd": "Year to date",
-        "all": "All"
-      },
       "categories": {
         "title": "Categories",
         "all": "All categories",
@@ -4666,11 +4669,6 @@
       "description": "A withdrawal and a deposit of the same amount between two of your services within 3 days. Linked, they count for each service but not for the portfolio. Linking changes no P&L: each service keeps both as flows, and the portfolio leaves them out.",
       "out": "Out on {date} → {name}, in on {other}",
       "in": "In on {date} ← {name}, out on {other}"
-    },
-    "period": {
-      "yearToDate": "{year} · year to date",
-      "since": "since {date}",
-      "range": "{from} – {to}"
     },
     "home": {
       "empty": "Connect eToro or Binance, or create a manual account.",

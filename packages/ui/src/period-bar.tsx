@@ -42,7 +42,7 @@ export function PeriodBar({
   /** Under a preset with no window: the days it really spans, and the words for them. */
   whole?: { range: DateRange; text: string };
 }) {
-  const words = useTranslations("expenses.filters");
+  const words = useTranslations("common.period");
   /** What a preset or a picked range starts from: the page's parameters and the chart's grain. */
   const kept = { ...carry, ...period.stepperParams, preset: undefined, from: undefined, to: undefined };
   const picker = (range: DateRange, rangeText: string) => (
@@ -51,7 +51,7 @@ export function PeriodBar({
       text={rangeText}
       params={kept}
       locale={locale}
-      label={words("range.label")}
+      label={words("label")}
       path={path}
     />
   );
@@ -59,7 +59,7 @@ export function PeriodBar({
     <div className="flex flex-wrap items-center gap-2 text-sm">
       {period.range !== null ? (
         <PeriodStepper
-          label={words("range.label")}
+          label={words("label")}
           path={path}
           params={{ ...carry, ...period.stepperParams }}
           offset={period.offset}
@@ -68,9 +68,9 @@ export function PeriodBar({
               {picker(period.range, name ?? rangeLabel(period.range, locale))}
             </span>
           }
-          previousLabel={words("range.previous")}
-          nextLabel={words("range.next")}
-          latestLabel={words("range.latest")}
+          previousLabel={words("previous")}
+          nextLabel={words("next")}
+          latestLabel={words("latest")}
         />
       ) : (
         whole && (
@@ -80,7 +80,7 @@ export function PeriodBar({
         )
       )}
       <LinkTabs
-        label={words("range.label")}
+        label={words("label")}
         path={path}
         params={kept}
         name="preset"

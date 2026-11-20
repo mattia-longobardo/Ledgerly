@@ -138,6 +138,7 @@ export async function FilterBar({
   path?: string;
 }) {
   const t = await getTranslations("expenses.filters");
+  const period = await getTranslations("common.period");
   const selected = query.categorySelection;
   const accountSelection = query.accountSelection;
   const typeSelection = query.typeSelection;
@@ -155,7 +156,7 @@ export async function FilterBar({
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <PeriodStepper
-        label={t("range.label")}
+        label={period("label")}
         path={path}
         params={query.stepperParams}
         offset={query.offset}
@@ -165,22 +166,22 @@ export async function FilterBar({
             text={rangeLabel(query.range, locale)}
             params={query.presetParams}
             locale={locale}
-            label={t("range.label")}
+            label={period("label")}
             path={path}
           />
         }
-        previousLabel={t("range.previous")}
-        nextLabel={t("range.next")}
-        latestLabel={t("range.latest")}
+        previousLabel={period("previous")}
+        nextLabel={period("next")}
+        latestLabel={period("latest")}
       />
 
       <LinkTabs
-        label={t("range.label")}
+        label={period("label")}
         path={path}
         params={query.presetParams}
         name="preset"
         current={query.preset ?? ""}
-        options={RANGE_PRESETS.map((preset) => ({ value: preset, label: t(`presets.${preset}`) }))}
+        options={RANGE_PRESETS.map((preset) => ({ value: preset, label: period(`presets.${preset}`) }))}
       />
 
       <span aria-hidden className="mx-1 h-[18px] w-px bg-border max-md:hidden" />

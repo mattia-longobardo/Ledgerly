@@ -6,7 +6,31 @@
     "retry": "Riprova",
     "or": "oppure",
     "loading": "Caricamento…",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "period": {
+      "label": "Intervallo di date",
+      "previous": "Periodo precedente",
+      "next": "Periodo successivo",
+      "latest": "Ultimo",
+      "previousMonth": "Mese precedente",
+      "nextMonth": "Mese successivo",
+      "from": "Da",
+      "to": "A",
+      "apply": "Applica",
+      "cancel": "Annulla",
+      "pickEnd": "Scegli la data di fine",
+      "hint": "{from} – {to} · {count, plural, one {# giorno} other {# giorni}}",
+      "presets": {
+        "thisMonth": "Questo mese",
+        "lastMonth": "Mese scorso",
+        "last3Months": "Ultimi 3 mesi",
+        "ytd": "Da inizio anno",
+        "all": "Tutto"
+      },
+      "yearToDate": "{year} · da inizio anno",
+      "since": "dal {date}",
+      "between": "{from} – {to}"
+    }
   },
   "unsaved": {
     "banner": "{count, plural, one {Una sezione ha modifiche non salvate} other {# sezioni hanno modifiche non salvate}}",
@@ -1583,27 +1607,6 @@
     "countTransactions": "{count, plural, =0 {nessun movimento} one {# movimento} other {# movimenti}}",
     "filters": {
       "label": "Filtri",
-      "range": {
-        "label": "Intervallo di date",
-        "previous": "Periodo precedente",
-        "next": "Periodo successivo",
-        "latest": "Ultimo",
-        "previousMonth": "Mese precedente",
-        "nextMonth": "Mese successivo",
-        "from": "Da",
-        "to": "A",
-        "apply": "Applica",
-        "cancel": "Annulla",
-        "pickEnd": "Scegli la data di fine",
-        "hint": "{from} – {to} · {count, plural, one {# giorno} other {# giorni}}"
-      },
-      "presets": {
-        "thisMonth": "Questo mese",
-        "lastMonth": "Mese scorso",
-        "last3Months": "Ultimi 3 mesi",
-        "ytd": "Da inizio anno",
-        "all": "Tutto"
-      },
       "categories": {
         "title": "Categorie",
         "all": "Tutte le categorie",
@@ -4666,11 +4669,6 @@
       "description": "Un prelievo e un versamento dello stesso importo tra due tuoi servizi entro 3 giorni. Collegati, contano per ogni servizio ma non per il portafoglio. Il collegamento non cambia nessun P&L: ogni servizio li tiene come flussi e il portafoglio li esclude.",
       "out": "Uscita il {date} → {name}, entrata il {other}",
       "in": "Entrata il {date} ← {name}, uscita il {other}"
-    },
-    "period": {
-      "yearToDate": "{year} · da inizio anno",
-      "since": "dal {date}",
-      "range": "{from} – {to}"
     },
     "home": {
       "empty": "Collega eToro o Binance, o crea un conto manuale.",
