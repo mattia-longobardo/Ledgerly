@@ -7,6 +7,7 @@ import {
   BUDGETS_ROUTES,
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
+  INTERESTS_ROUTES,
   POCKETS_ROUTES,
   SETTINGS_ROUTES,
   SUBSCRIPTIONS_ROUTES,
@@ -22,6 +23,8 @@ import * as pocketsWire from "../packages/api-contract/src/pockets/shared";
 import * as pocketsDomain from "@domain/modules/pockets/rules";
 import * as subscriptionsWire from "../packages/api-contract/src/subscriptions/shared";
 import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
+import * as interestsWire from "../packages/api-contract/src/interests/shared";
+import * as interestsDomain from "@domain/modules/interests/rules";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -315,6 +318,33 @@ describe("the Server Actions of subscriptions", () => {
     expect(fields.name.maxLength).toBe(subscriptionsWire.MAX_NAME);
     expect(fields.utility.unwrap().minValue).toBe(subscriptionsWire.MIN_UTILITY);
     expect(fields.utility.unwrap().maxValue).toBe(subscriptionsWire.MAX_UTILITY);
+  });
+});
+
+/**
+ * The Server Actions of interests (05-refactor.md §5.5) and their routes; no exclusion. The two pages
+ * read routes of their own, with no action.
+ */
+const INTERESTS_ACTION_FILES = ["apps/web/src/modules/interests/actions.ts"];
+
+describe("the Server Actions of interests", () => {
+  const actions = INTERESTS_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(INTERESTS_ROUTES.flatMap((route) => route.actions));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(interestsWire.DAY_BASES).toEqual(interestsDomain.DAY_BASES);
+    expect(interestsWire.SETTLEMENTS).toEqual(interestsDomain.SETTLEMENTS);
+    expect(interestsWire.RULE_MODES).toEqual(interestsDomain.RULE_MODES);
+    expect(interestsWire.RULE_STATES).toEqual(interestsDomain.RULE_STATES);
+    expect(interestsWire.ACCRUAL_STATUSES).toEqual(interestsDomain.ACCRUAL_STATUSES);
+    expect(interestsWire.POSTING_STATES).toEqual(interestsDomain.POSTING_STATES);
   });
 });
 

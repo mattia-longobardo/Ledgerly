@@ -29,16 +29,6 @@ export const CHARGE_ID = "7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f";
 
 export const bySubscription = z.object({ id: id() });
 
-/**
- * A tolerance on the wire: a percentage in plain decimal form ("5", "2.5"), 0 to 100, up to four
- * decimals; the domain stores the fraction (SUB-7: the conversion is the domain's, not the form's).
- */
-export const tolerancePercent = () =>
-  z
-    .string()
-    .regex(/^\s*\d{1,3}(\.\d{1,4})?\s*$/)
-    .refine((value) => Number(value) <= 100, "At most 100 %");
-
 /** The check of one expected charge: the period under way, or one due within a week. */
 const chargeCheck = z.object({
   id: id(),

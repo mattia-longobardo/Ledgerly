@@ -55,6 +55,8 @@
     "CONTRACT_ROUTES",
     "CONTRACT_SCOPES",
     "ContractScope",
+    "INTERESTS",
+    "INTERESTS_ROUTES",
     "LAST_DAY",
     "MAX_RULES",
     "MAX_TIMES",

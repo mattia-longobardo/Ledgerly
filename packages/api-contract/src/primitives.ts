@@ -41,3 +41,13 @@ export const monthStart = () => z.string().regex(/^\d{4}-(0[1-9]|1[0-2])-01$/);
 
 /** A colour the person chose: `#rrggbb`. */
 export const hexColor = () => z.string().regex(/^#[0-9a-fA-F]{6}$/);
+
+/**
+ * A percentage a caller sends: plain decimal form ("5", "2.75"), 0 to 100, up to four decimals; the
+ * domain stores the fraction (SUB-7, INT-5: the conversion is the domain's, not the form's).
+ */
+export const percentInput = () =>
+  z
+    .string()
+    .regex(/^\s*\d{1,3}(\.\d{1,4})?\s*$/)
+    .refine((value) => Number(value) <= 100, "At most 100 %");

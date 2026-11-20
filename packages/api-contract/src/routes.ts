@@ -8,6 +8,7 @@ import * as accountSummary from "./accounts/summary";
 import * as accountSwitch from "./accounts/switch";
 import * as views from "./accounts/views";
 import * as budgets from "./budgets/budgets";
+import * as interests from "./interests/interests";
 import { metaRoute } from "./meta";
 import * as pockets from "./pockets/pockets";
 import * as search from "./search";
@@ -101,6 +102,12 @@ export const SUBSCRIPTIONS = { subscriptions } as const;
 /** Subscriptions, the sixth module of R2 (05-refactor.md §5.2). */
 export const SUBSCRIPTIONS_ROUTES: readonly RouteContract[] = Object.values(subscriptions);
 
+/** Interests by area, for `apps/api` to serve each one by name. */
+export const INTERESTS = { interests } as const;
+
+/** Interests, the seventh module of R2 (05-refactor.md §5.2). */
+export const INTERESTS_ROUTES: readonly RouteContract[] = Object.values(interests);
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
@@ -109,4 +116,5 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...BUDGETS_ROUTES,
   ...POCKETS_ROUTES,
   ...SUBSCRIPTIONS_ROUTES,
+  ...INTERESTS_ROUTES,
 ];

@@ -5,7 +5,7 @@
 // format stays with the client, the one from a percentage to the stored fraction is the domain's.
 import { z } from "zod";
 import { defineRoute } from "../route";
-import { amountInput, civilDate, hexColor, id, money } from "../primitives";
+import { amountInput, civilDate, hexColor, id, money, percentInput } from "../primitives";
 import {
   ACCOUNT_ID,
   alert,
@@ -23,7 +23,6 @@ import {
   SUBSCRIPTION_ROW_EXAMPLE,
   SUBSCRIPTION_STATES,
   subscriptionRow,
-  tolerancePercent,
 } from "./shared";
 
 export const listSubscriptions = defineRoute({
@@ -176,7 +175,7 @@ const subscriptionBody = z
     cycle: z.enum(CYCLES),
     chargeOn: civilDate(),
     payeeMatch: z.string().trim().max(MAX_MATCH).nullable(),
-    tolerance: tolerancePercent().optional(),
+    tolerance: percentInput().optional(),
     utility: z.number().int().min(MIN_UTILITY).max(MAX_UTILITY),
   })
   .strict();
