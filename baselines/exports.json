@@ -46,6 +46,8 @@
     "API_ERRORS",
     "API_LEVEL",
     "ApiErrorCode",
+    "BUDGETS",
+    "BUDGETS_ROUTES",
     "CONNECTION_REFUSALS",
     "CONTRACT_ROUTES",
     "CONTRACT_SCOPES",

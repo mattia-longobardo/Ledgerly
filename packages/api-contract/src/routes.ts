@@ -7,6 +7,7 @@ import * as removal from "./accounts/removal";
 import * as accountSummary from "./accounts/summary";
 import * as accountSwitch from "./accounts/switch";
 import * as views from "./accounts/views";
+import * as budgets from "./budgets/budgets";
 import { metaRoute } from "./meta";
 import * as search from "./search";
 import type { RouteContract } from "./route";
@@ -77,9 +78,16 @@ export const TRANSACTIONS_ROUTES: readonly RouteContract[] = [
   search.searchRecords,
 ];
 
+/** Budgets by area, for `apps/api` to serve each one by name. */
+export const BUDGETS = { budgets } as const;
+
+/** Budgets, the fourth module of R2 (05-refactor.md §5.2). */
+export const BUDGETS_ROUTES: readonly RouteContract[] = Object.values(budgets);
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
   ...ACCOUNTS_ROUTES,
   ...TRANSACTIONS_ROUTES,
+  ...BUDGETS_ROUTES,
 ];

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   ACCOUNTS_ROUTES,
+  BUDGETS_ROUTES,
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
   SETTINGS_ROUTES,
@@ -13,6 +14,8 @@ import {
 import * as wire from "../packages/api-contract/src/accounts/shared";
 import * as transactionsWire from "../packages/api-contract/src/transactions/shared";
 import * as rulesWire from "../packages/api-contract/src/transactions/rules";
+import * as budgetsWire from "../packages/api-contract/src/budgets/shared";
+import * as budgetsDomain from "@domain/modules/budgets/rules";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -228,6 +231,29 @@ describe("the Server Actions of transactions", () => {
     expect(rulesWire.DIRECTIONS).toEqual(rulesDomain.DIRECTIONS);
     expect(rulesWire.RULE_SOURCES).toEqual(rulesDomain.RULE_SOURCES);
     expect(rulesWire.MAX_CONDITIONS).toEqual(rulesDomain.MAX_CONDITIONS);
+  });
+});
+
+/**
+ * The Server Actions of budgets (05-refactor.md §5.5) and their routes; no exclusion. Overview's card
+ * and a budget's page read routes of their own, with no action.
+ */
+const BUDGETS_ACTION_FILES = ["apps/web/src/modules/budgets/actions.ts"];
+
+describe("the Server Actions of budgets", () => {
+  const actions = BUDGETS_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(BUDGETS_ROUTES.flatMap((route) => route.actions));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(budgetsWire.ALERT_PRESETS).toEqual(budgetsDomain.ALERT_PRESETS);
+    expect(budgetsWire.MAX_ALERT_THRESHOLDS).toEqual(budgetsDomain.MAX_ALERT_THRESHOLDS);
   });
 });
 

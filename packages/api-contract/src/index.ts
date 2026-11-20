@@ -10,6 +10,8 @@ export { openApiDocument } from "./openapi";
 export {
   ACCOUNTS,
   ACCOUNTS_ROUTES,
+  BUDGETS,
+  BUDGETS_ROUTES,
   CONTRACT_ROUTES,
   SETTINGS,
   SETTINGS_ROUTES,
