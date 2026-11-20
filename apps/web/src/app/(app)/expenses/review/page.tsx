@@ -2,7 +2,7 @@ import { Check } from "lucide-react";
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { listAccounts } from "@ledgerly/domain/accounts";
-import { categoryCounts, listMergeProposals, reviewOf } from "@ledgerly/domain/transactions";
+import { categoryCounts, listMergeProposals, reviewOf, reviewTotals } from "@ledgerly/domain/transactions";
 import type { ReviewGroup } from "@ledgerly/domain/transactions";
 import { isPreparing } from "@ledgerly/domain/transactions";
 import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
@@ -100,10 +100,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
       ? { suggested: [], unsuggested: [], singles: [] }
       : await reviewOf(ctx, { ...range, accountIds });
   const groups = [...review.suggested, ...review.unsuggested];
-  const total =
-    groups.reduce((sum, group) => sum + group.totalCents, 0n) +
-    review.singles.reduce((sum, row) => sum + row.amountCents, 0n);
-  const count = groups.reduce((sum, group) => sum + group.count, 0) + review.singles.length;
+  const { count, totalCents: total } = reviewTotals(review);
 
   const colorOf = categoryColors(categories);
   // Under the title of their macro, in every picker of the page (categories-and-rules.md §2.4).

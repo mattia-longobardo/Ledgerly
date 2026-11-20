@@ -66,6 +66,10 @@ export {
   displayPayee,
   isHidden,
   macrosFor,
+  groupedBreakdown,
+  spendingLayers,
+  spendingBuckets,
+  reviewTotals,
 } from "./rules";
 export type {
   CategoryType,

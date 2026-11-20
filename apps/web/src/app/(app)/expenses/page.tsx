@@ -12,11 +12,10 @@ import { BreakdownCard } from "@/modules/transactions/ui/breakdown-card";
 import {
   categoryColor,
   categoryColors,
-  groupedBreakdown,
   monthLabel,
-  spendingLayers,
   withMacroTitles,
 } from "@/modules/transactions/ui/display";
+import { groupedBreakdown, spendingBuckets, spendingLayers } from "@ledgerly/domain/transactions";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
 import { ApiCategoryActions, ApiManualMovement } from "@/modules/transactions/client";
@@ -33,7 +32,7 @@ import { requireSession } from "@/platform/auth/session";
 import { sendSourceNames } from "./manual";
 import { ExpensesTabs } from "./tabs";
 import { rowViewOf } from "./row-view";
-import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/shared/dates";
+import { today } from "@ledgerly/domain/shared/dates";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { walletEditableIds } from "@ledgerly/domain/platform/integrations/wallet";
 import type { Cents } from "@ledgerly/domain/shared/money";
@@ -207,18 +206,8 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
     }),
   );
 
-  /**
-   * The spending chart's steps (F2.5): every day, or every month, from the start of the range to
-   * today at the latest — a day that has not happened spent nothing, and drawing it as zero would
-   * read as a quiet day.
-   */
-  const lastDay = query.range.to < todayOn ? query.range.to : todayOn;
-  const buckets: string[] = [];
-  if (query.grain === "day") {
-    for (let day = query.range.from; day <= lastDay; day = addDays(day, 1)) buckets.push(day);
-  } else if (query.range.from <= lastDay) {
-    buckets.push(...monthsBetween(monthKey(query.range.from), monthKey(lastDay)));
-  }
+  /** The spending chart's steps (F2.5): `spendingBuckets` says which. */
+  const buckets = spendingBuckets(query.range, query.grain, todayOn);
   const layers = spendingLayers(spending, buckets);
   const bands: SpendingBand[] = layers.groups.map((group) => {
     const point = spending.find((one) => one.groupId === group.id);

@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97555,
-    "duplicatedLines": 16761,
-    "percent": 17.18,
-    "blocks": 1226
+    "lines": 97571,
+    "duplicatedLines": 16744,
+    "percent": 17.16,
+    "blocks": 1225
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 26
     },
     "app": {
-      "lines": 24237,
-      "duplicatedLines": 4352,
-      "percent": 17.96,
-      "blocks": 329
+      "lines": 24222,
+      "duplicatedLines": 4335,
+      "percent": 17.9,
+      "blocks": 328
     },
     "global.d": {
       "lines": 12,
@@ -95,9 +95,9 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12709,
+      "lines": 12740,
       "duplicatedLines": 1622,
-      "percent": 12.76,
+      "percent": 12.73,
       "blocks": 128
     },
     "modules/users": {
@@ -414,12 +414,12 @@
     "app/(app)/banks/connect/outcome-actions.tsx": 17,
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/budgets/page.tsx": 8,
-    "app/(app)/expenses/categories/[id]/page.tsx": 56,
+    "app/(app)/expenses/categories/[id]/page.tsx": 48,
     "app/(app)/expenses/categories/board.tsx": 241,
     "app/(app)/expenses/categories/macro-dialog.tsx": 32,
     "app/(app)/expenses/categories/page.tsx": 21,
     "app/(app)/expenses/manual.ts": 9,
-    "app/(app)/expenses/page.tsx": 56,
+    "app/(app)/expenses/page.tsx": 47,
     "app/(app)/expenses/review/page.tsx": 51,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
     "app/(app)/funds/[id]/page.tsx": 126,

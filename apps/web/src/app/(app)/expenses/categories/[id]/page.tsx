@@ -10,13 +10,14 @@ import { rulesForCategory } from "@ledgerly/domain/transactions";
 import { categoryMacroTotals, listTransactions, spendingOverTime } from "@ledgerly/domain/transactions";
 import { getCategory, listCategories, listLabels, TaxonomyError } from "@ledgerly/domain/transactions";
 import { ApiCategoryActions } from "@/modules/transactions/client";
-import { categoryColors, spendingLayers, withMacroTitles } from "@/modules/transactions/ui/display";
+import { categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
+import { spendingBuckets, spendingLayers } from "@ledgerly/domain/transactions";
 import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
 import { macroViews } from "@/modules/transactions/ui/macros";
 import { SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
-import { addDays, monthKey, monthsBetween, today } from "@ledgerly/domain/shared/dates";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
 import { shiftRange } from "@ledgerly/domain/platform/ranges";
 import { Badge } from "@ledgerly/ui/badge";
@@ -130,13 +131,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
   );
 
   // The chart of Expenses, on this category alone.
-  const lastDay = query.range.to < todayOn ? query.range.to : todayOn;
-  const buckets: string[] = [];
-  if (query.grain === "day") {
-    for (let day = query.range.from; day <= lastDay; day = addDays(day, 1)) buckets.push(day);
-  } else if (query.range.from <= lastDay) {
-    buckets.push(...monthsBetween(monthKey(query.range.from), monthKey(lastDay)));
-  }
+  const buckets = spendingBuckets(query.range, query.grain, todayOn);
   const layers = spendingLayers(spending, buckets);
   const color = colorOf.get(category.id) ?? "var(--accent)";
   const bands = layers.groups.map((band) => ({

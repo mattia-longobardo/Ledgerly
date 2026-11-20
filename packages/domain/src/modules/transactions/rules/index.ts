@@ -57,4 +57,12 @@ export { matchesMovement } from "./matching";
 export type { MovementRule } from "./matching";
 export { typeByMacro, typeMarkerByMacro, macrosFor } from "./macros";
 export type { TypedMovement } from "./macros";
+export {
+  categoryBreakdown,
+  groupedBreakdown,
+  spendingLayers,
+  spendingBuckets,
+  reviewTotals,
+} from "./breakdown";
+export type { BreakdownBar, BreakdownGroup } from "./breakdown";
 export { normalizeIban } from "../../../platform/iban";

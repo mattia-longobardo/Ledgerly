@@ -370,7 +370,6 @@
     "apps/web/src/modules/transactions/ui/category-cell.tsx": 2,
     "apps/web/src/modules/transactions/ui/default-groups-form.tsx": 1,
     "apps/web/src/modules/transactions/ui/details-modal.tsx": 1,
-    "apps/web/src/modules/transactions/ui/display.ts": 5,
     "apps/web/src/modules/transactions/ui/filter-bar.tsx": 2,
     "apps/web/src/modules/transactions/ui/macros.ts": 4,
     "apps/web/src/modules/transactions/ui/manual-dialog.tsx": 1,
