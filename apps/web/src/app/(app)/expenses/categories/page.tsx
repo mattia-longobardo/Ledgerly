@@ -21,7 +21,8 @@ import { DefaultGroupsButton } from "../../settings/categories/default-groups";
 import { sourceNotes } from "../../settings/categories/source";
 import { sourceHref } from "../../settings/integrations/connection-view";
 import { ExpensesTabs } from "../tabs";
-import { type BoardLine, type BoardMacro, CategoriesBoard } from "./board";
+import { CategoriesBoard } from "./board";
+import type { BoardLine, BoardMacro } from "./board-model";
 
 const HERE = "/expenses/categories";
 

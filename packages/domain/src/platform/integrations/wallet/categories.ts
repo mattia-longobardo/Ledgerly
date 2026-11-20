@@ -837,7 +837,7 @@ export async function syncWalletCategories(
 /* Deleting on request (owner, 2026-09-21) */
 
 /** What became of a deletion Wallet was asked to mirror; never thrown, always reported. */
-export type WalletDeletionOutcome =
+type WalletDeletionOutcome =
   /** No Wallet connection, or none of the categories was ever linked to one: nothing to do. */
   | { state: "not_linked" }
   | { state: "deleted"; count: number }

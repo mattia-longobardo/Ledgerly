@@ -1034,7 +1034,6 @@
   ],
   "packages/domain/src/platform/integrations/wallet/index.ts": [
     "BACKFILL_CHOICES",
-    "WalletDeletionOutcome",
     "WalletError",
     "backfillDepth",
     "chooseWalletAccounts",

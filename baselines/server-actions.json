@@ -21,21 +21,9 @@
   "apps/web/src/app/(app)/settings/categories/actions.ts": {
     "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
     "actions": [
-      "archiveWithUndoAction",
-      "createCategoryAction",
       "createLabelAction",
-      "deleteCategoryAction",
       "deleteLabelAction",
-      "macroMoveFactsAction",
-      "mergeCategoriesAction",
-      "moveCategoryAction",
-      "moveToMacroAction",
-      "restoreCategoriesAction",
-      "restoreCategoryAction",
-      "saveCategoryAction",
-      "saveLabelAction",
-      "undoMergeAction",
-      "undoMoveToMacroAction"
+      "saveLabelAction"
     ]
   },
   "apps/web/src/app/(app)/settings/categories/source-actions.ts": {

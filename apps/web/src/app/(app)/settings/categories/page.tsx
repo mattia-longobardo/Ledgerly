@@ -6,7 +6,6 @@ import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
 import { categoryColor } from "@/modules/transactions/ui/display";
 import { requireSession } from "@/platform/auth/session";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import { mergeCategoriesAction } from "./actions";
 import { DefaultGroupsButton } from "./default-groups";
 import { type LabelRow, LabelsCard } from "./labels-card";
 import { mergeProposalsView } from "./merge";
@@ -77,7 +76,6 @@ export default async function SettingsCategoriesPage() {
               second: side(proposal.second, proposal.first),
               sumsBudgets: proposal.sumsBudgets,
             }))}
-            merge={mergeCategoriesAction}
           />
         </SettingsSection>
       )}

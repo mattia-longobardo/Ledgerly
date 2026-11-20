@@ -1,6 +1,6 @@
 "use client";
 
-import { dismissMerge } from "@/modules/transactions";
+import { dismissMerge, mergeCategories } from "@/modules/transactions";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -42,16 +42,7 @@ function Name({ side }: { side: MergeSide }) {
  * says every effect before it does anything: a merge moves movements, sub-categories and budgets
  * together and has no "Undo".
  */
-export function MergeProposals({
-  proposals,
-  merge,
-}: {
-  proposals: readonly MergeProposalRow[];
-  merge: (
-    keepId: string,
-    dropId: string,
-  ) => Promise<{ ok: true; moved: number } | { ok: false; error: string }>;
-}) {
+export function MergeProposals({ proposals }: { proposals: readonly MergeProposalRow[] }) {
   const t = useTranslations("settings.categories.merge");
   const router = useRouter();
   const [open, setOpen] = useState<MergeProposalRow | null>(null);
@@ -92,7 +83,7 @@ export function MergeProposals({
     const drop = open.first.id === keepId ? open.second : open.first;
     setSaving(true);
     setFailed(false);
-    merge(keepId, drop.id)
+    mergeCategories(keepId, drop.id)
       .then((result) => {
         if (!result.ok) {
           setFailed(true);

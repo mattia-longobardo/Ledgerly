@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 99010,
-    "duplicatedLines": 16715,
-    "percent": 16.88,
-    "blocks": 1235
+    "lines": 99241,
+    "duplicatedLines": 16623,
+    "percent": 16.75,
+    "blocks": 1233
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 35
     },
     "app": {
-      "lines": 24835,
-      "duplicatedLines": 4287,
-      "percent": 17.26,
-      "blocks": 327
+      "lines": 24959,
+      "duplicatedLines": 4150,
+      "percent": 16.63,
+      "blocks": 322
     },
     "global.d": {
       "lines": 12,
@@ -42,9 +42,9 @@
     },
     "modules/budgets": {
       "lines": 1537,
-      "duplicatedLines": 229,
-      "percent": 14.9,
-      "blocks": 20
+      "duplicatedLines": 221,
+      "percent": 14.38,
+      "blocks": 19
     },
     "modules/funds": {
       "lines": 10576,
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12909,
-      "duplicatedLines": 1596,
-      "percent": 12.36,
-      "blocks": 128
+      "lines": 13016,
+      "duplicatedLines": 1649,
+      "percent": 12.67,
+      "blocks": 132
     },
     "modules/users": {
       "lines": 874,
@@ -420,8 +420,11 @@
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/expenses/categories/[id]/category-blocks.tsx": 9,
     "app/(app)/expenses/categories/[id]/category-screen.tsx": 29,
-    "app/(app)/expenses/categories/board.tsx": 242,
-    "app/(app)/expenses/categories/macro-dialog.tsx": 32,
+    "app/(app)/expenses/categories/board-dialogs.tsx": 108,
+    "app/(app)/expenses/categories/board-rows.tsx": 20,
+    "app/(app)/expenses/categories/board-writes.ts": 14,
+    "app/(app)/expenses/categories/board.tsx": 34,
+    "app/(app)/expenses/categories/macro-dialog.tsx": 11,
     "app/(app)/expenses/categories/page.tsx": 21,
     "app/(app)/expenses/expenses-blocks.tsx": 9,
     "app/(app)/expenses/expenses-screen.tsx": 17,
@@ -451,8 +454,6 @@
     "app/(app)/payroll/settings/page.tsx": 17,
     "app/(app)/pockets/[id]/page.tsx": 80,
     "app/(app)/pockets/page.tsx": 23,
-    "app/(app)/settings/categories/actions.ts": 37,
-    "app/(app)/settings/categories/delete-dialog.tsx": 13,
     "app/(app)/settings/categories/labels-card.tsx": 104,
     "app/(app)/settings/categories/merge-proposals.tsx": 8,
     "app/(app)/settings/categories/page.tsx": 16,
@@ -528,7 +529,7 @@
     "modules/budgets/queries.ts": 23,
     "modules/budgets/schema.ts": 34,
     "modules/budgets/service.ts": 49,
-    "modules/budgets/ui/add-budget.tsx": 53,
+    "modules/budgets/ui/add-budget.tsx": 45,
     "modules/budgets/ui/budgets-table.tsx": 48,
     "modules/budgets/ui/overview-card.tsx": 10,
     "modules/funds/actions.ts": 44,
@@ -640,6 +641,7 @@
     "modules/transactions/categorize/user-rules-service/previews.ts": 25,
     "modules/transactions/categorize/user-rules-service/rules.ts": 11,
     "modules/transactions/categorize/user-rules.ts": 6,
+    "modules/transactions/category-calls.ts": 24,
     "modules/transactions/jobs.ts": 57,
     "modules/transactions/manual.ts": 6,
     "modules/transactions/queries/candidates.ts": 20,
@@ -663,6 +665,7 @@
     "modules/transactions/switch-rules.ts": 40,
     "modules/transactions/switching/doubles.ts": 64,
     "modules/transactions/switching/transfers.ts": 45,
+    "modules/transactions/taxonomy-calls.ts": 29,
     "modules/transactions/taxonomy/category-adoption.ts": 20,
     "modules/transactions/taxonomy/category-reads.ts": 50,
     "modules/transactions/taxonomy/category-writes.ts": 29,
