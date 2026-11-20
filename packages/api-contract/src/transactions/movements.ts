@@ -78,7 +78,16 @@ export const listTransactions = defineRoute({
 });
 
 /** A month header of Expenses: the month of the whole filtered range, not the page's. */
-const monthTotal = z.object({ month: civilDate(), count: z.number().int(), net: money() });
+const monthTotal = z.object({
+  month: civilDate(),
+  count: z.number().int(),
+  net: money(),
+  /**
+   * Present only when the total left movements out: those in another currency with no exchange rate
+   * for their day (D4), never counted 1:1. The money is then partial.
+   */
+  excludedCount: z.number().int().positive().optional(),
+});
 
 /** The counts behind the chips of the filter bar, each dimension without its own filter. */
 const facets = z.object({

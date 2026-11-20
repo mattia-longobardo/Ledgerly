@@ -57,6 +57,8 @@ export interface MonthlyFigures {
   incomeCents: Cents;
   expenseCents: Cents;
   netCents: Cents;
+  /** The movements income, expense and net left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
   transactions: number;
   accounts: number;
   lastSnapshotMonth: string | null;
@@ -276,6 +278,7 @@ function serveFigures(app: Hono<ApiEnv>, guard: Guard, cases: AccountCases): voi
       expense: moneyOf(figures.expenseCents),
       net: moneyOf(figures.netCents),
       incomeLessExpense: moneyOf(incomeLessExpense(figures)),
+      ...(figures.excludedCount === undefined ? {} : { excludedCount: figures.excludedCount }),
       transactions: figures.transactions,
       accounts: figures.accounts,
       lastSnapshotMonth: figures.lastSnapshotMonth,

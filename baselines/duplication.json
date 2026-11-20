@@ -4,21 +4,21 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97507,
-    "duplicatedLines": 17012,
-    "percent": 17.45,
-    "blocks": 1245
+    "lines": 97500,
+    "duplicatedLines": 16962,
+    "percent": 17.4,
+    "blocks": 1243
   },
   "units": {
     "api": {
-      "lines": 2190,
+      "lines": 2192,
       "duplicatedLines": 256,
-      "percent": 11.69,
+      "percent": 11.68,
       "blocks": 26
     },
     "app": {
-      "lines": 24399,
-      "duplicatedLines": 4374,
+      "lines": 24401,
+      "duplicatedLines": 4376,
       "percent": 17.93,
       "blocks": 330
     },
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12507,
-      "duplicatedLines": 1822,
-      "percent": 14.57,
-      "blocks": 144
+      "lines": 12493,
+      "duplicatedLines": 1770,
+      "percent": 14.17,
+      "blocks": 142
     },
     "modules/users": {
       "lines": 874,
@@ -287,7 +287,7 @@
       "blocks": 0
     },
     "platform/reports": {
-      "lines": 95,
+      "lines": 98,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -413,14 +413,14 @@
     "app/(app)/banks/connect/outcome-actions.tsx": 17,
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/budgets/page.tsx": 8,
-    "app/(app)/expenses/categories/[id]/page.tsx": 56,
+    "app/(app)/expenses/categories/[id]/page.tsx": 57,
     "app/(app)/expenses/categories/board.tsx": 241,
     "app/(app)/expenses/categories/macro-dialog.tsx": 32,
     "app/(app)/expenses/categories/page.tsx": 22,
     "app/(app)/expenses/manual-actions.ts": 14,
     "app/(app)/expenses/manual.ts": 9,
     "app/(app)/expenses/page.tsx": 62,
-    "app/(app)/expenses/review/page.tsx": 59,
+    "app/(app)/expenses/review/page.tsx": 60,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
     "app/(app)/funds/[id]/page.tsx": 126,
     "app/(app)/funds/fund-setup.ts": 22,
@@ -622,8 +622,8 @@
     "modules/timeoff/ui/leave-board.tsx": 68,
     "modules/timeoff/ui/leave-panel.tsx": 48,
     "modules/timeoff/ui/settings-forms.tsx": 45,
-    "modules/transactions/actions.ts": 56,
-    "modules/transactions/categorize/actions.ts": 45,
+    "modules/transactions/actions.ts": 16,
+    "modules/transactions/categorize/actions.ts": 33,
     "modules/transactions/categorize/review/changes.ts": 72,
     "modules/transactions/categorize/review/merges.ts": 59,
     "modules/transactions/categorize/service.ts": 50,

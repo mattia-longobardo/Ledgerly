@@ -132,6 +132,31 @@ describe("a movement with no rate for its day", () => {
       netCents: 900_00n,
     });
   });
+
+  it("says how many movements each total left out (excludedCount)", async () => {
+    await usdRates();
+    await accountWith("EUR", EUR_MOVEMENTS);
+    await accountWith("USD", [
+      movement("usd-early", "2026-03-02", -50_00n, "USD"), // before the first rate: left out
+      movement("usd-later", "2026-03-09", -10_00n, "USD"), // at 0.90: -9.00 EUR
+    ]);
+    expect(await transactionsSummary(ctx, MARCH)).toMatchObject({ expenseCents: -109_00n, excludedCount: 1 });
+    expect(await monthlyTotals(ctx, MARCH)).toEqual([
+      { month: "2026-03-01", count: 4, netCents: 891_00n, excludedCount: 1 },
+    ]);
+    expect((await categoryTotals(ctx, MARCH)).map((slice) => slice.excludedCount)).toEqual([1]);
+    expect((await categoryMacroTotals(ctx, MARCH)).map((row) => [row.type, row.excludedCount])).toEqual([
+      ["expense", 1],
+      ["income", undefined],
+    ]);
+    expect(
+      (await spendingOverTime(ctx, MARCH, "day")).map((point) => [point.bucket, point.excludedCount]),
+    ).toEqual([
+      ["2026-03-02", 1],
+      ["2026-03-09", undefined],
+      ["2026-03-10", undefined],
+    ]);
+  });
 });
 
 describe("every movement in EUR", () => {

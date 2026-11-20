@@ -32,7 +32,7 @@ import {
   monthlyTotals,
   transactionsSummary,
 } from "./listing";
-import { gather, splitColumns, splitIfForeign, splitPositions, totallerFor } from "./totals";
+import { excludedOf, gather, splitColumns, splitIfForeign, splitPositions, totallerFor } from "./totals";
 
 /** The money of one category in one macro (categories-and-rules.md §5.3): `null` is no category. */
 export interface CategoryMacroTotal {
@@ -44,6 +44,8 @@ export interface CategoryMacroTotal {
   /** The positive and the negative movements apart: what Transfers shows as "In" and "Out". */
   inCents: Cents;
   outCents: Cents;
+  /** The movements left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
 }
 
 /**
@@ -76,13 +78,14 @@ export async function categoryMacroTotals(
       .orderBy(asc(transactions.categoryId), asc(transactions.type)),
   );
   const groups = gather(rows, (row) => `${row.categoryId}|${row.type}`, await totallerFor(ctx, rows));
-  return groups.map(({ row, count, sum }) => ({
+  return groups.map(({ row, count, excluded, sum }) => ({
     categoryId: row.categoryId,
     type: row.type,
     count,
     totalCents: sum((row) => row.totalCents),
     inCents: sum((row) => row.inCents),
     outCents: sum((row) => row.outCents),
+    ...excludedOf(excluded),
   }));
 }
 
@@ -96,6 +99,8 @@ interface SpendingPoint {
   groupColor: string | null;
   /** What was spent, as a positive amount. */
   cents: Cents;
+  /** The movements left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
 }
 
 /**
@@ -128,6 +133,7 @@ export async function spendingOverTime(
           type === "transfer"
             ? sum(sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`)
             : sum(transactions.amountCents),
+        total: count(),
         ...splitColumns(ctx, split),
       })
       .from(transactions)
@@ -137,16 +143,17 @@ export async function spendingOverTime(
         and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, type)),
       )
       // By position, for the same reason as `monthlyTotals`.
-      .groupBy(sql`1`, sql`2`, sql`3`, sql`4`, ...splitPositions(5, split))
+      .groupBy(sql`1`, sql`2`, sql`3`, sql`4`, ...splitPositions(6, split))
       .orderBy(sql`1`, sql`2`),
   );
   const points = gather(rows, (row) => `${row.bucket}|${row.groupId}`, await totallerFor(ctx, rows));
-  return points.map(({ row, sum }) => ({
+  return points.map(({ row, excluded, sum }) => ({
     bucket: row.bucket,
     groupId: row.groupId,
     groupName: row.groupName,
     groupColor: row.groupColor,
     cents: type === "income" ? sum((row) => row.cents) : -sum((row) => row.cents),
+    ...excludedOf(excluded),
   }));
 }
 
@@ -249,6 +256,7 @@ export function monthGroups(rows: readonly TransactionRow[], totals: readonly Mo
       month,
       count: range?.count ?? 0,
       netCents: range?.netCents ?? 0n,
+      ...excludedOf(range?.excludedCount ?? 0),
       rows: [row],
     });
   }
@@ -399,6 +407,8 @@ export interface SpendingGroup {
   inCents: Cents | null;
   outCents: Cents | null;
   share: number | null;
+  /** The movements left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
 }
 
 const NO_GROUP = {
@@ -440,5 +450,6 @@ export async function spending(
     name: point.groupName,
     color: point.groupColor,
     totalCents: point.cents,
+    ...excludedOf(point.excludedCount ?? 0),
   }));
 }

@@ -31,6 +31,11 @@ const spendingGroup = z.object({
   out: money().nullable(),
   /** Percentage of the card, one decimal, over the absolute values; by `category` only. */
   share: z.number().nullable(),
+  /**
+   * Present only when the total left movements out: those in another currency with no exchange rate
+   * for their day (D4), never counted 1:1. The money is then partial.
+   */
+  excludedCount: z.number().int().positive().optional(),
 });
 
 export const getSpending = defineRoute({

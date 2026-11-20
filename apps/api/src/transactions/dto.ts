@@ -84,12 +84,18 @@ export function transactionLine(row: TransactionRow, extras: LineExtras): Line {
   };
 }
 
+/** `excludedCount` only where a total left movements out (D4), as the contract says. */
+export function excludedOf(excludedCount: number | undefined) {
+  return excludedCount === undefined ? {} : { excludedCount };
+}
+
 /** The money of a range: income and spending without the giroconti, `net` every movement (D3). */
 export function summaryOf(summary: {
   count: number;
   incomeCents: Cents;
   expenseCents: Cents;
   netCents: Cents;
+  excludedCount?: number;
 }) {
   return {
     count: summary.count,
@@ -97,6 +103,7 @@ export function summaryOf(summary: {
     expense: money(summary.expenseCents),
     net: money(summary.netCents),
     incomeLessExpense: money(incomeLessExpense(summary)),
+    ...excludedOf(summary.excludedCount),
   };
 }
 

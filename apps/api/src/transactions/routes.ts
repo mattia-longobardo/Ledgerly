@@ -23,7 +23,15 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { refusing, type TransactionCases } from "./cases";
-import { filtersOf, money, spendingGroup, summaryOf, transactionLine, transactionRow } from "./dto";
+import {
+  excludedOf,
+  filtersOf,
+  money,
+  spendingGroup,
+  summaryOf,
+  transactionLine,
+  transactionRow,
+} from "./dto";
 import { serveManual } from "./manual";
 import { serveReview } from "./review";
 import { serveRules } from "./rules";
@@ -60,6 +68,7 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): v
         month: month.month,
         count: month.count,
         net: money(month.netCents),
+        ...excludedOf(month.excludedCount),
       })),
       summary: {
         ...summaryOf(view.summary),

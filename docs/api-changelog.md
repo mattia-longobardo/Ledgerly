@@ -3,6 +3,20 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-20 · three fixes of transactions (0.42.0)
+
+- `excludedCount` (new, optional): how many movements in another currency a total left out because
+  there is no exchange rate for their day (decision D4); the money is then partial. Present only when
+  it is above zero, in the `summary` of `GET /transactions` and of `list_transactions`, in the
+  `summary` and in each month of `GET /transactions/view`, in each group of
+  `GET /transactions/spending` and `get_spending`, and in `GET /summary` and `get_summary` (income,
+  spending and net).
+- `POST /transactions/visibility` now rebuilds the balance of each manual movement's account for every
+  action, as Expenses always did. `rebuildBalances` is still accepted and has no effect: a client that
+  sends it keeps working.
+- The search of a payee by its key (suggestions, recurrences) gives the same key in the database as in
+  the server for a no-break space (U+00A0, U+202F, U+FEFF) and a dotted capital I (U+0130).
+
 ## 2026-11-20 · the routes of transactions (rewrite plan R2)
 
 - `GET /transactions` is served from the contract with the answer of F8. New optional filters:

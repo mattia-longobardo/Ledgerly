@@ -128,6 +128,11 @@ export const transactionsSummary = z.object({
   net: money(),
   /** Income less spending, giroconti out (D3): differs from `net` when a giroconto has no counterpart. */
   incomeLessExpense: money(),
+  /**
+   * Present only when the total left movements out: those in another currency with no exchange rate
+   * for their day (D4), never counted 1:1. The money is then partial.
+   */
+  excludedCount: z.number().int().positive().optional(),
 });
 
 /** What the pages add to the summary: how many giroconti the totals leave out. */

@@ -25,7 +25,7 @@ import {
   withoutHidden,
 } from "./filters";
 import { abs } from "../../../shared/money";
-import { gather, splitColumns, splitIfForeign, splitPositions, totallerFor } from "./totals";
+import { excludedOf, gather, splitColumns, splitIfForeign, splitPositions, totallerFor } from "./totals";
 
 /** The movements of a range that wait for a category: how many, how many with a suggestion, their sum. */
 export interface WaitingForCategory {
@@ -209,6 +209,7 @@ export async function transactionsSummary(
     netCents: range?.sum((row) => row.netCents) ?? 0n,
     transferCount: counted("transfers"),
     unpairedTransferCount: counted("unpaired"),
+    ...excludedOf(range?.excluded ?? 0),
   };
 }
 
@@ -242,10 +243,11 @@ export async function monthlyTotals(
       .orderBy(sql`1 desc`),
   );
   const months = gather(rows, (row) => row.month, await totallerFor(ctx, rows));
-  return months.map(({ row, count, sum }) => ({
+  return months.map(({ row, count, excluded, sum }) => ({
     month: monthKey(row.month),
     count,
     netCents: sum((row) => row.netCents),
+    ...excludedOf(excluded),
   }));
 }
 
@@ -291,7 +293,7 @@ export async function categoryTotals(
   );
 
   const groups = gather(rows, (row) => String(row.categoryId), await totallerFor(ctx, rows));
-  const slices = groups.map(({ row, count, sum }) => ({
+  const slices = groups.map(({ row, count, excluded, sum }) => ({
     categoryId: row.categoryId,
     name: row.name,
     color: row.color,
@@ -300,6 +302,7 @@ export async function categoryTotals(
     parentColor: row.parentColor,
     count,
     totalCents: sum((row) => row.totalCents),
+    ...excludedOf(excluded),
   }));
   const whole = slices.reduce<Cents>((sum, slice) => sum + abs(slice.totalCents), 0n);
   return slices

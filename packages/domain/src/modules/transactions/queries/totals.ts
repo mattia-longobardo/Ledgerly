@@ -48,8 +48,16 @@ export async function splitIfForeign<Row extends { foreign: string }>(
   return plain.some((row) => Number(row.foreign) > 0) ? read(true) : plain;
 }
 
-/** Adds up split amounts into one total in the display currency. */
-type Totaller = (amounts: readonly DatedMoney[]) => Cents;
+/** Adds up split amounts into one total in the display currency, and says which rows it can convert. */
+interface Totaller {
+  sum: (amounts: readonly DatedMoney[]) => Cents;
+  converts: (split: Split) => boolean;
+}
+
+/** The field a total adds when it left movements out for want of a rate (D4): none when it left none. */
+export function excludedOf(excluded: number): { excludedCount?: number } {
+  return excluded > 0 ? { excludedCount: excluded } : {};
+}
 
 /**
  * The one way the totals of movements add amounts up (audit TR-4, decision D4): `sumMoney` into the
@@ -69,18 +77,23 @@ export async function totallerFor(
       : await ratesOn([into, ...rows.map((row) => row.currency)], days[0], days[days.length - 1]);
   const convert: Converter = (money, day) =>
     day === null ? null : convertCents(money.cents, money.currency, into, day, rates);
-  return (amounts) => sumMoney(amounts, into, convert).total;
+  return {
+    sum: (amounts) => sumMoney(amounts, into, convert).total,
+    converts: (split) =>
+      split.currency === into || convert({ cents: 0n, currency: split.currency }, split.on) !== null,
+  };
 }
 
 /**
  * Split rows gathered back into one per `keyOf`, in the order they come, with the counts (`total`)
- * added and `sum(column)` the money of one column through `totalOf`.
+ * added, `excluded` the movements of the rows with no rate, and `sum(column)` the money of one
+ * column through `totalOf`.
  */
 export function gather<Row extends Split & { total?: number | string }>(
   rows: readonly Row[],
   keyOf: (row: Row) => string,
   totalOf: Totaller,
-): { row: Row; count: number; sum: (money: (row: Row) => string | null) => Cents }[] {
+): { row: Row; count: number; excluded: number; sum: (money: (row: Row) => string | null) => Cents }[] {
   const groups = new Map<string, Row[]>();
   for (const row of rows) {
     const key = keyOf(row);
@@ -91,8 +104,9 @@ export function gather<Row extends Split & { total?: number | string }>(
   return [...groups.values()].map((group) => ({
     row: group[0],
     count: group.reduce((sum, row) => sum + Number(row.total ?? 0), 0),
+    excluded: group.reduce((sum, row) => sum + (totalOf.converts(row) ? 0 : Number(row.total ?? 0)), 0),
     sum: (money) =>
-      totalOf(
+      totalOf.sum(
         group.map((row) => ({ money: { cents: cents(money(row)), currency: row.currency }, on: row.on })),
       ),
   }));

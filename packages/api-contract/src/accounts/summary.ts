@@ -31,6 +31,11 @@ export const getSummary = defineRoute({
     net: money(),
     /** Income less spending, giroconti out (D3); `net` keeps every movement. */
     incomeLessExpense: money(),
+    /**
+     * Present only when the total left movements out: those in another currency with no exchange rate
+     * for their day (D4), never counted 1:1. The money is then partial.
+     */
+    excludedCount: z.number().int().positive().optional(),
     transactions: z.number().int(),
     accounts: z.number().int(),
     lastSnapshotMonth: monthStart().nullable(),
@@ -43,7 +48,8 @@ export const getSummary = defineRoute({
       "`currency` is the user's display currency, which netWorth, previousNetWorth and cash are " +
       "converted to at the ECB rate of their day. " +
       "`netWorthPartial`/`cashPartial` are true when an account counted has no balance yet, or no " +
-      "exchange rate to that currency.",
+      "exchange rate to that currency. `excludedCount`, when present, is how many movements in another " +
+      "currency income, spending and net left out for want of a rate.",
   },
   example: {
     response: {

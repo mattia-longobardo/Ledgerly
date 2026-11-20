@@ -144,6 +144,8 @@ export interface TransactionsSummary {
   transferCount: number;
   /** Of those, the legs with no counterpart here: usually the other account is not linked. */
   unpairedTransferCount: number;
+  /** The movements left out of the money for want of a rate (D4); absent when none. */
+  excludedCount?: number;
 }
 
 /**
@@ -160,6 +162,8 @@ export interface MonthTotal {
   count: number;
   /** The month's cash flow, every movement summed like the header's net. */
   netCents: Cents;
+  /** The movements left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
 }
 
 /** One slice of the "By category" card: `null` everywhere is the uncategorised slice. */
@@ -175,6 +179,8 @@ export interface CategoryTotal {
   totalCents: Cents;
   /** Percentage of the card, one decimal, over the absolute values of the slices. */
   share: number;
+  /** The movements left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
 }
 
 /**
@@ -202,6 +208,8 @@ export interface MonthGroup {
   count: number;
   /** Their net, over the range and not over `rows`, transfers left out. */
   netCents: Cents;
+  /** The movements left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
   /** The rows of this month the page carries: `rows.length <= count` when `limit` cut in. */
   rows: TransactionRow[];
 }

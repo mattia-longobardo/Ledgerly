@@ -236,6 +236,34 @@ describe("the money of a range (decision D3)", () => {
   });
 });
 
+describe("a total with a movement in another currency and no rate (decision D4)", () => {
+  it("says how many movements it left out, in the answers and in the MCP tool", async () => {
+    const created = await send(alice, "POST", "/accounts", {
+      name: "Dollars",
+      type: "cash",
+      currency: "USD",
+      openingBalance: { on: "2026-01-01", amount: "100" },
+    });
+    expect(created.status).toBe(201);
+    // No rate is stored in the test database: the movement cannot be converted into EUR.
+    await manual(alice, created.body.id, { on: "2026-03-10" });
+    const range = "from=2026-03-01&to=2026-03-31";
+    expect((await send(alice, "GET", `/transactions?${range}`)).body.summary).toMatchObject({
+      count: 1,
+      net: "0.00",
+      excludedCount: 1,
+    });
+    const view = (await send(alice, "GET", `/transactions/view?${range}`)).body;
+    expect(view.summary.excludedCount).toBe(1);
+    expect(view.months).toEqual([{ month: "2026-03-01", count: 1, net: "0.00", excludedCount: 1 }]);
+    const spending = (await send(alice, "GET", `/transactions/spending?${range}&groupBy=category`)).body;
+    expect(spending.groups.map((group: { excludedCount?: number }) => group.excludedCount)).toEqual([1]);
+    const tool = reads.find((one) => one.name === "list_transactions")!;
+    const listed = (await tool.run(alice, { account_id: created.body.id })) as { summary: object };
+    expect(listed.summary).toMatchObject({ excludedCount: 1 });
+  });
+});
+
 describe("the rules", () => {
   it("saves, previews, applies and undoes a rule, with its amounts as decimals", async () => {
     const account = await newAccount(alice);

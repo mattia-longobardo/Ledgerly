@@ -30,6 +30,8 @@ interface MonthlyFigures {
   incomeCents: Cents;
   expenseCents: Cents;
   netCents: Cents;
+  /** The movements income, expense and net left out for want of a rate (D4); absent when none. */
+  excludedCount?: number;
   transactions: number;
   accounts: number;
   lastSnapshotMonth: MonthKey | null;
@@ -55,6 +57,7 @@ export async function monthlyFigures(
     incomeCents: movements.incomeCents,
     expenseCents: movements.expenseCents,
     netCents: movements.netCents,
+    ...(movements.excludedCount === undefined ? {} : { excludedCount: movements.excludedCount }),
     transactions: movements.count,
     accounts: accounts.rows.length,
     lastSnapshotMonth: accounts.lastSnapshot?.month ?? null,
