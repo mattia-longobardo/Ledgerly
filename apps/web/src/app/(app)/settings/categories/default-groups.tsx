@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { createDefaultGroups } from "@/modules/transactions/client";
+import { createDefaultGroups } from "@/modules/transactions";
 import { type DefaultGroupView, DefaultGroupsForm } from "@/modules/transactions/ui/default-groups-form";
 import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";

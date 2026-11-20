@@ -633,8 +633,6 @@
   ],
   "packages/domain/src/modules/transactions/client.ts": [
     "AMOUNT_OPS",
-    "BreakdownBar",
-    "BreakdownGroup",
     "CATEGORY_COLORS",
     "COUNTERPARTY_OPS",
     "CategoryType",
@@ -1047,8 +1045,7 @@
     "syncSourceNow",
     "syncWalletNow",
     "transactionsSource",
-    "walletAccountChoices",
-    "walletEditableIds"
+    "walletAccountChoices"
   ],
   "packages/domain/src/platform/jobs/index.ts": [
     "JobDetail",

@@ -10,7 +10,6 @@ import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input, Select, Textarea } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { Segmented } from "@ledgerly/ui/segmented";
-import { useRouter } from "@ledgerly/ui/router";
 import { setLabels } from "./commands";
 import type {
   ManualAccountView,
@@ -81,7 +80,6 @@ export function ManualTransactionDialog({
   onSaved: (result: Extract<ManualSaveResult, { ok: true }>, categoryChanged: boolean) => void;
 }) {
   const t = useTranslations("expenses");
-  const router = useRouter();
   const ids = useId();
   const editing = row?.manual ?? null;
   const [accounts, setAccounts] = useState<readonly ManualAccountView[] | null>(null);
@@ -223,8 +221,6 @@ export function ManualTransactionDialog({
         setFormError(t("manual.errors.failed"));
         return;
       }
-      // shortcut: the rows are still drawn by a server page; this goes when the page reads them itself.
-      router.refresh();
     }
     rememberAccount(form.accountId);
     onSaved(result, row !== null && row.categoryId !== form.categoryId);

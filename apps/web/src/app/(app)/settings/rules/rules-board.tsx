@@ -32,7 +32,7 @@ import {
   saveRuleAction,
   setRuleActiveAction,
   undoRuleApplyAction,
-} from "@/modules/transactions/client";
+} from "@/modules/transactions";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";

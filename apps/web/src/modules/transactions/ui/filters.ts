@@ -223,6 +223,22 @@ export function filtersOf(query: ExpensesQuery): ReadFilters {
   };
 }
 
+/**
+ * The same filters as the query of `/api/v1` (`transactionFilters`): lists comma-separated, the
+ * «Uncategorised» choice as `none`, hidden rows as `hidden=true`.
+ */
+export function routeFiltersOf(filters: ReadFilters) {
+  return {
+    from: filters.from,
+    to: filters.to,
+    accounts: filters.accountIds?.join(","),
+    categories: filters.categoryIds?.map((id) => id ?? UNCATEGORISED).join(","),
+    types: filters.types?.join(","),
+    payee: filters.payee,
+    hidden: filters.includeHidden ? ("true" as const) : undefined,
+  };
+}
+
 /** A multiple-choice filter with one entry toggled, as the menus' links need it. */
 export function toggle<T extends string>(selection: readonly T[], id: T): T[] {
   return selection.includes(id) ? selection.filter((current) => current !== id) : [...selection, id];

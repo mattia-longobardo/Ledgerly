@@ -1,7 +1,6 @@
 // src/app/(app)/expenses/row-view.ts — one movement as the table of Expenses draws it, built on the
-// server: every text already formatted, every colour already decided. Shared by Expenses and by
-// "To review", which shows its single movements in the same table. What only one source can do
-// with a row is added by the page that knows that source.
+// server: every text already formatted, every colour already decided. Used by "To review" and a
+// category's page until they read `/api/v1`; Expenses draws its rows with `lineViewOf`.
 import type { TransactionRow } from "@ledgerly/domain/transactions";
 import { displayPayee, isHidden, macrosFor } from "@ledgerly/domain/transactions";
 import { amountToneOf } from "@/modules/transactions/ui/display";

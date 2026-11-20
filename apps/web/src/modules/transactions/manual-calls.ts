@@ -19,6 +19,8 @@ function changed(): void {
     movements.listTransactions,
     movements.getTransaction,
     spending.getSpending,
+    spending.getSpendingBreakdown,
+    spending.getSpendingSeries,
     review.getReview,
     views.getNetWorth,
   );

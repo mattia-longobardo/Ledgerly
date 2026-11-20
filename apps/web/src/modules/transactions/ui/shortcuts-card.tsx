@@ -1,4 +1,6 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Fragment } from "react";
 import { Card } from "@ledgerly/ui/card";
 import { Kbd } from "@ledgerly/ui/kbd";
@@ -9,8 +11,8 @@ import { Kbd } from "@ledgerly/ui/kbd";
  * J and K move the cursor. Hidden below 768 px, where there is no keyboard to speak of and the
  * table is a list.
  */
-export async function ShortcutsCard() {
-  const t = await getTranslations("expenses.shortcuts");
+export function ShortcutsCard() {
+  const t = useTranslations("expenses.shortcuts");
   const rows: { key: string; label: string }[] = [
     { key: "E", label: t("editCategory") },
     { key: "Space", label: t("selectRow") },

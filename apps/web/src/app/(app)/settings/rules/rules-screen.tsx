@@ -16,7 +16,7 @@ import type { RouteOutput } from "@ledgerly/api-client";
 import { numberStyle } from "@ledgerly/format/format";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
-import { categoryColors, withMacroTitles } from "@/modules/transactions/client";
+import { categoryColors, withMacroTitles } from "@/modules/transactions";
 import { type RuleDraft, RulesBoard } from "./rules-board";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

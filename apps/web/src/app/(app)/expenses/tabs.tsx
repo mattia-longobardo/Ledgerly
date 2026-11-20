@@ -1,5 +1,7 @@
+"use client";
+
 import type { Route } from "next";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { type Params, withParams } from "@ledgerly/ui/url";
 
@@ -13,14 +15,8 @@ const TABS = [
  * The three pages of Expenses (categories-and-rules.md §5.1): the movements, the categories and
  * "To review", with the period and the accounts carried from one to the other.
  */
-export async function ExpensesTabs({
-  current,
-  params,
-}: {
-  current: (typeof TABS)[number]["id"];
-  params: Params;
-}) {
-  const t = await getTranslations("expenses.tabs");
+export function ExpensesTabs({ current, params }: { current: (typeof TABS)[number]["id"]; params: Params }) {
+  const t = useTranslations("expenses.tabs");
   return (
     <TabLinks
       label={t("label")}

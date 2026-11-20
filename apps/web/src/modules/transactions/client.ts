@@ -1,17 +1,29 @@
-// Transactions, the entry of what the screens of `app` use (rule M3): the calls to `/api/v1` of the
-// rules, the automatic categories and the manual movement, and the colours of the categories.
-export { ApiCategoryActions, ApiManualMovement } from "./ui/api-commands";
-export { createDefaultGroups, dismissMerge } from "./category-calls";
+// Transactions, the entry of the screens of `app` that list movements (rule M3): Expenses, «To review»
+// and a category's page. The light calls and helpers of the settings are in `index.ts`, so their
+// pages do not load these components.
+export { CATEGORY_CALLS } from "./category-calls";
+export { MANUAL_CALLS } from "./manual-calls";
+export { monthLabel } from "./ui/display";
+export { type BreakdownGroup, BreakdownCard } from "./ui/breakdown-card";
+export { CategoryActions } from "./ui/category-actions";
+export { FilterBar } from "./ui/filter-bar";
 export {
-  applyRuleAction,
-  deleteRuleAction,
-  previewRuleAction,
-  previewSavedRuleAction,
-  reorderRulesAction,
-  ruleAmount,
-  saveRuleAction,
-  setRuleActiveAction,
-  undoRuleApplyAction,
-} from "./rule-calls";
-export type { PreviewView, RuleCondition, RuleInput } from "./rule-calls";
-export { categoryColors, withMacroTitles } from "./ui/display";
+  filtersOf,
+  parseExpensesQuery,
+  routeFiltersOf,
+  UNCATEGORISED,
+  type ExpensesQuery,
+} from "./ui/filters";
+export { AddMovementButton, ManualMovement } from "./ui/manual-movement";
+export { ShortcutsCard } from "./ui/shortcuts-card";
+export { SpendingCard } from "./ui/spending-card";
+export { TransactionsTable } from "./ui/transactions-table";
+export {
+  type AccountFilterOption,
+  type CategoryFilterOption,
+  type GroupView,
+  lineViewOf,
+  type TransactionLine,
+} from "./ui/view";
+export { GroupsStep, PreparingCard } from "./ui/review-guide";
+export { type ReviewGroupView, ReviewList } from "./ui/review-list";

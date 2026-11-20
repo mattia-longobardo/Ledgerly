@@ -1,20 +1,24 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
-import { formatMoney, formatPercent, type NumberFormat } from "@ledgerly/domain/platform/format";
-import { type Cents, share } from "@ledgerly/domain/shared/money";
+import type { Cents } from "@ledgerly/format/cents";
+import { formatMoney, formatPercent, type NumberFormat } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
 import { StackedArea } from "@ledgerly/ui/chart";
 import type { Params } from "@ledgerly/ui/url";
 import type { ChartGrain } from "./filters";
 
 /** A group of categories as the chart draws it: its name and colour, and what it spent each step. */
-export interface SpendingBand {
+interface SpendingBand {
   id: string;
   name: string;
   color: string;
   values: Cents[];
   total: Cents;
+  /** Of the whole range, 0-1, as the API gives it. */
+  share: number;
 }
 
 /**
@@ -23,8 +27,9 @@ export interface SpendingBand {
  * the total as the line on top — then a legend with what each group spent and its share. Day by
  * day or month by month, as the grain says; giroconti and hidden movements are in no band.
  */
-export async function SpendingCard({
+export function SpendingCard({
   bands,
+  total: spent,
   totals,
   labels,
   xLabels,
@@ -36,6 +41,8 @@ export async function SpendingCard({
 }: {
   /** Biggest spender first. */
   bands: readonly SpendingBand[];
+  /** What the whole range spent: the API's total of the series. */
+  total: Cents;
   totals: readonly Cents[];
   /** One per step, as the tooltip names it. */
   labels: readonly string[];
@@ -48,8 +55,8 @@ export async function SpendingCard({
   /** The macro drawn: the page of one category of Income or Transfers says what came in or moved. */
   kind?: "income" | "expense" | "transfer";
 }) {
-  const spending = await getTranslations("expenses.spending");
-  const words = await getTranslations("expenses.categories.chart");
+  const spending = useTranslations("expenses.spending");
+  const words = useTranslations("expenses.categories.chart");
   // The heading's own words for the macro; the rest of the card is the same for all three.
   const t = (
     key: "title" | "inRange" | "empty" | "summary" | "legend" | "grain" | "grains.month" | "grains.day",
@@ -58,7 +65,6 @@ export async function SpendingCard({
     kind !== "expense" && (key === "title" || key === "inRange" || key === "empty" || key === "summary")
       ? words(`${kind}.${key}`, values)
       : spending(key, values);
-  const spent = totals.reduce((sum, value) => sum + value, 0n);
 
   return (
     <Card padded={false} className="flex flex-col gap-4 p-4">
@@ -128,7 +134,7 @@ export async function SpendingCard({
                 <span className="min-w-0 truncate">{band.name}</span>
                 <span className="ml-auto shrink-0 tabular-nums">{formatMoney(band.total, numberFormat)}</span>
                 <span className="w-14 shrink-0 text-right text-muted tabular-nums">
-                  {formatPercent(share(band.total, spent) ?? 0, numberFormat)}
+                  {formatPercent(band.share, numberFormat)}
                 </span>
               </li>
             ))}

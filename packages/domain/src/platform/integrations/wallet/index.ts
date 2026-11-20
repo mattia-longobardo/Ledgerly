@@ -9,7 +9,6 @@ export {
   syncWalletNow,
   walletAccountChoices,
 } from "./sync";
-export { walletEditableIds } from "./records";
 // The source of a movement (rewrite plan R2, port of transactions until R5c), by names that are no
 // provider's: `/api/v1` imports them from `@ledgerly/domain/platform/integrations/source` (rule M12).
 export { walletTransactions as transactionsSource } from "./categories";

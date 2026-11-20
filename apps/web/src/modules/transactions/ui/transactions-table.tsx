@@ -137,8 +137,6 @@ export function TransactionsTable({
         selection.clear();
         setEditing(null);
         notify(done(result.count));
-        // The pages still hand the rows down from the server: they draw them again.
-        router.refresh();
       } catch {
         notify(t("errors.failed"), "error");
       }

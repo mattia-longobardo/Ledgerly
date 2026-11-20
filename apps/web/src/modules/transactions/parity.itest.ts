@@ -199,4 +199,53 @@ describe("transactions, old Server Action = new call", () => {
     });
     expect(await rowsOf(now)).toEqual(await rowsOf(old));
   });
+
+  it("«To review»: the route's count, total and what is left equal the old page's sums, not zero", async () => {
+    // Read movements on an account no source categorises: they wait in «To review» (the fixture of
+    // the cascade's tests, on an account kept by hand, which every page counts as categorisable).
+    const bank = "plugin:testbank";
+    await transactions.createDefaultGroups(ctx, ["groceries", "shopping", "other"], "en");
+    const zeta = (await pair()).old;
+    const incoming = (payee: string, day: number, cents: bigint) => ({
+      externalId: `${payee}-${day}`,
+      counterpartExternalId: null,
+      occurredAt: new Date(Date.UTC(2026, 9, day, 11)),
+      amountCents: cents,
+      currency: "EUR",
+      type: "expense" as const,
+      state: "cleared" as const,
+      payee,
+      note: null,
+      categoryExternalId: null,
+      categoryName: null,
+      categoryGroupExternalId: null,
+      categoryGroupName: null,
+      labels: [],
+    });
+    await transactions.upsertFromProvider(
+      ctx,
+      zeta,
+      [
+        incoming("AMZN Mktp IT", 10, -1_250n),
+        incoming("AMZN Mktp IT 22", 11, -700n),
+        incoming("Xyz Qwerty", 12, -10_000n),
+      ],
+      { provider: bank },
+    );
+    await transactions.categorise(ctx, [zeta]);
+    const accountIds = await transactions.categorisableAccountIds(ctx);
+    expect(accountIds).toContain(zeta);
+    const review = await transactions.reviewOf(ctx, { accountIds });
+    const totals = transactions.reviewTotals(review);
+    const counts = await transactions.categoryCounts(ctx, accountIds);
+    const answer = (await send("GET", "/transactions/review")).body;
+
+    expect(totals.count).toBeGreaterThan(0);
+    expect(counts.suggested + counts.open).toBeGreaterThan(0);
+    expect({ count: answer.count, total: answer.total }).toEqual({
+      count: totals.count,
+      total: centsToDecimal(totals.totalCents),
+    });
+    expect(answer.counts).toEqual({ ...counts, left: counts.suggested + counts.open });
+  });
 });

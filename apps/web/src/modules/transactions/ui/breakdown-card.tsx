@@ -1,22 +1,39 @@
+"use client";
+
 import { ChevronRight } from "lucide-react";
-import { getTranslations } from "next-intl/server";
-import { formatMoney, type NumberFormat } from "@ledgerly/domain/platform/format";
+import { useTranslations } from "next-intl";
 import { Card } from "@ledgerly/ui/card";
 import { CompositionBar } from "@ledgerly/ui/chart";
-import type { BreakdownBar, BreakdownGroup } from "@ledgerly/domain/transactions/client";
+
+/** One bar of the card as `GET /transactions/spending/breakdown` sizes it, coloured and formatted. */
+interface BreakdownBar {
+  /** The category, or `none` for «Uncategorised». */
+  id: string;
+  name: string;
+  color: string;
+  /** The amount, formatted. */
+  amount: string;
+  /** Of the whole (of the group, for a sub-category), 0-1. */
+  share: number;
+  /** Against the largest bar of its level, 0-1. */
+  width: number;
+}
+
+/** A group of the card: its own bar, and its sub-categories' bars measured within it. */
+export interface BreakdownGroup extends BreakdownBar {
+  children: readonly BreakdownBar[];
+}
 
 const ROW = "grid grid-cols-[minmax(0,100px)_minmax(0,1fr)_80px] items-center gap-2.5 text-sm";
 
 /** One row of the card: the swatch and name, the bar against the largest sibling, the amount. */
 function Row({
   bar,
-  numberFormat,
   shareLabel,
   child = false,
   expandable = false,
 }: {
   bar: BreakdownBar;
-  numberFormat: NumberFormat;
   shareLabel: string;
   child?: boolean;
   /** A group with sub-categories: the arrow turns when its `<details>` is open. */
@@ -44,7 +61,7 @@ function Row({
           style={{ width: `${(bar.width * 100).toFixed(1)}%`, background: bar.color }}
         />
       </span>
-      <span className="text-right tabular-nums">{formatMoney(bar.cents, numberFormat)}</span>
+      <span className="text-right tabular-nums">{bar.amount}</span>
     </>
   );
 }
@@ -58,10 +75,9 @@ function Row({
  * A group with sub-categories (F2.5) is a `<details>`: it opens without JavaScript, and inside it
  * the sub-categories are measured against each other, so their shares are of the group.
  */
-export async function BreakdownCard({
+export function BreakdownCard({
   groups,
   total,
-  numberFormat,
 }: {
   groups: readonly BreakdownGroup[];
   /**
@@ -69,9 +85,8 @@ export async function BreakdownCard({
    * It is the sum the bars are drawn against, so it says what the rows say (review B2).
    */
   total: string;
-  numberFormat: NumberFormat;
 }) {
-  const t = await getTranslations("expenses.breakdown");
+  const t = useTranslations("expenses.breakdown");
   const share = (bar: BreakdownBar) => t("share", { share: Math.round(bar.share * 100) });
 
   return (
@@ -99,7 +114,7 @@ export async function BreakdownCard({
             {groups.map((group) =>
               group.children.length === 0 ? (
                 <li key={group.id} className={ROW}>
-                  <Row bar={group} numberFormat={numberFormat} shareLabel={share(group)} />
+                  <Row bar={group} shareLabel={share(group)} />
                 </li>
               ) : (
                 <li key={group.id}>
@@ -108,12 +123,12 @@ export async function BreakdownCard({
                       className={`${ROW} focus-ring -mx-1 cursor-pointer list-none rounded-sm px-1 hover:bg-hover [&::-webkit-details-marker]:hidden`}
                       title={t("expand", { name: group.name })}
                     >
-                      <Row bar={group} numberFormat={numberFormat} shareLabel={share(group)} expandable />
+                      <Row bar={group} shareLabel={share(group)} expandable />
                     </summary>
                     <ul className="mt-2 flex flex-col gap-2 border-l border-border pl-3">
                       {group.children.map((child) => (
                         <li key={child.id} className={ROW}>
-                          <Row bar={child} numberFormat={numberFormat} shareLabel={share(child)} child />
+                          <Row bar={child} shareLabel={share(child)} child />
                         </li>
                       ))}
                     </ul>

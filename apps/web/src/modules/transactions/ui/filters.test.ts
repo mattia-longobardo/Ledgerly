@@ -5,6 +5,7 @@ import {
   isWholeMonths,
   parseExpensesQuery,
   presetRange,
+  routeFiltersOf,
   shiftRange,
   toggle,
   UNCATEGORISED,
@@ -288,5 +289,43 @@ describe("toggle", () => {
     expect(toggle(["a", "b"], "a")).toEqual(["b"]);
     expect(listParam(toggle(["a"], "b"))).toBe("a,b");
     expect(listParam(toggle(["a"], "a"))).toBe("");
+  });
+});
+
+describe("routeFiltersOf", () => {
+  it("writes the filters as the query of /api/v1", () => {
+    const query = parseExpensesQuery(
+      {
+        from: "2026-09-01",
+        to: "2026-09-16",
+        acc: ACCOUNT,
+        cat: `${CATEGORY_A},${UNCATEGORISED}`,
+        type: "expense",
+        q: "shop",
+        hidden: "1",
+      },
+      TODAY,
+    );
+    expect(routeFiltersOf(filtersOf(query))).toEqual({
+      from: "2026-09-01",
+      to: "2026-09-16",
+      accounts: ACCOUNT,
+      categories: `${CATEGORY_A},none`,
+      types: "expense",
+      payee: "shop",
+      hidden: "true",
+    });
+  });
+
+  it("leaves out what does not narrow", () => {
+    expect(routeFiltersOf(filtersOf(parseExpensesQuery({}, TODAY)))).toEqual({
+      from: "2026-09-01",
+      to: "2026-09-30",
+      accounts: undefined,
+      categories: undefined,
+      types: undefined,
+      payee: undefined,
+      hidden: undefined,
+    });
   });
 });

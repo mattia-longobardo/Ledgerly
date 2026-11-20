@@ -1,6 +1,6 @@
 "use client";
 
-import { dismissMerge } from "@/modules/transactions/client";
+import { dismissMerge } from "@/modules/transactions";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

@@ -6,7 +6,7 @@
  */
 
 import { movements, review, spending } from "@ledgerly/api-contract/transactions";
-import { profile } from "@ledgerly/api-contract/settings";
+import { categories as categoryRoutes, profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call, type RouteInput } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
 import { numberStyle, parseAmount } from "@ledgerly/format/format";
@@ -31,6 +31,10 @@ function changedMovements(): void {
     spending.getSpending,
     review.getReview,
   );
+  // The two cards of Expenses, read by their own routes.
+  invalidate(spending.getSpendingBreakdown, spending.getSpendingSeries);
+  // The figures of a category's page.
+  invalidate(categoryRoutes.getCategorySummary);
 }
 
 /** The service's code: the route names it as the refusal's reason, or as the refusal itself. */

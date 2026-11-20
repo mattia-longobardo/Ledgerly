@@ -6,7 +6,7 @@
 // it had meanwhile.
 import { type RouteContract } from "@ledgerly/api-contract/core";
 import { call, type RouteInput, type RouteOutput } from "@ledgerly/api-client";
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 
 interface Snapshot {
   data: unknown;
@@ -92,6 +92,17 @@ export function useApi<R extends RouteContract>(route: R, input: RouteInput<R>):
     loading: snapshot.loading,
     reload: () => load(entry),
   };
+}
+
+/**
+ * The read with what it showed last while a new input is read: a filter that changes keeps the screen
+ * on the previous answer until the new one arrives, as a page drawn on the server did on navigation.
+ */
+export function useLatest<T>(state: ApiState<T>): ApiState<T> {
+  // The answer of an earlier render, kept as React keeps information from previous renders.
+  const [last, setLast] = useState(state.data);
+  if (state.data !== undefined && state.data !== last) setLast(state.data);
+  return state.data !== undefined || state.error ? state : { ...state, data: last };
 }
 
 /** The cache holds only what `call` answered for that route: its declared output. */

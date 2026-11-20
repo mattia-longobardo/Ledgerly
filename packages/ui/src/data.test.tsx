@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { profile } from "@ledgerly/api-contract/settings";
+import type { ApiState } from "./data";
 
 const answers = vi.hoisted(() => ({ calls: 0 }));
 vi.mock("@ledgerly/api-client", () => ({
@@ -10,7 +11,7 @@ vi.mock("@ledgerly/api-client", () => ({
   },
 }));
 
-const { useApi } = await import("./data");
+const { useApi, useLatest } = await import("./data");
 
 function Name() {
   const state = useApi(profile.getProfile, {});
@@ -28,5 +29,25 @@ describe("useApi", () => {
     expect(screen.getByText(/read 1/)).toBeInTheDocument();
     await screen.findByText(/read 2/);
     expect(answers.calls).toBe(2);
+  });
+});
+
+describe("useLatest", () => {
+  it("keeps the last answer while a new input is read, and gives way to an error or a new answer", () => {
+    const reload = () => {};
+    const states: ApiState<string>[] = [
+      { data: "first", error: null, loading: false, reload },
+      { data: undefined, error: null, loading: true, reload },
+      { data: undefined, error: new Error("refused"), loading: false, reload },
+      { data: "second", error: null, loading: false, reload },
+    ];
+    const seen: (string | undefined)[] = [];
+    function Probe({ state }: { state: ApiState<string> }) {
+      seen.push(useLatest(state).data);
+      return null;
+    }
+    const { rerender } = render(<Probe state={states[0]} />);
+    for (const state of states.slice(1)) rerender(<Probe state={state} />);
+    expect(seen.filter((one, index) => one !== seen[index - 1])).toEqual(["first", undefined, "second"]);
   });
 });

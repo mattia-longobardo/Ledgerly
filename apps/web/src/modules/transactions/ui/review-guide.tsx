@@ -15,13 +15,12 @@ const POLL_MS = 5_000;
 const GIVE_UP_MS = 120_000;
 
 /**
- * "Ledgerly is looking for a category…" (ux/n3-categories-manual.md §8.4): the page is read again
- * every five seconds while a pass of the cascade runs, for two minutes at most. Reading again
+ * "Ledgerly is looking for a category…" (ux/n3-categories-manual.md §8.4): `reload` reads the review
+ * again every five seconds while a pass of the cascade runs, for two minutes at most. Reading again
  * moves no focus; after two minutes the card says the person can come back later.
  */
-export function PreparingCard({ count }: { count: number }) {
+export function PreparingCard({ count, reload }: { count: number; reload: () => void }) {
   const t = useTranslations("expenses.review.guide");
-  const router = useRouter();
   const [slow, setSlow] = useState(false);
 
   useEffect(() => {
@@ -29,10 +28,10 @@ export function PreparingCard({ count }: { count: number }) {
     const started = Date.now();
     const timer = window.setInterval(() => {
       if (Date.now() - started >= GIVE_UP_MS) setSlow(true);
-      else router.refresh();
+      else reload();
     }, POLL_MS);
     return () => window.clearInterval(timer);
-  }, [router, slow]);
+  }, [reload, slow]);
 
   return (
     <Card className="flex flex-col gap-2">
@@ -53,7 +52,7 @@ export function PreparingCard({ count }: { count: number }) {
             size="sm"
             onClick={() => {
               setSlow(false);
-              router.refresh();
+              reload();
             }}
           >
             {t("preparing.retry")}
@@ -80,10 +79,8 @@ export function GroupsStep({
   next: string;
 }) {
   const router = useRouter();
-  const go = () => {
-    router.push(next as Route);
-    router.refresh();
-  };
+  // The groups made invalidate the reads of the screen; the step only moves.
+  const go = () => router.push(next as Route);
   return (
     <Card>
       <DefaultGroupsForm
