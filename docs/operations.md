@@ -79,10 +79,9 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
 
 ### Network access
 
-`dash.longobardo.me` is public through the Cloudflare tunnel only. Traefik has two routers:
-
-- `ledgerly-router` (entrypoint `web`): the target of the Cloudflare tunnel.
-- `ledgerly-secure-router` (entrypoint `websecure`, port 443): LAN only (`lan-only@file`).
+`dash.longobardo.me` is public through the Cloudflare tunnel only. Traefik has one router,
+`ledgerly-router` (entrypoint `web`), the target of the Cloudflare tunnel. There is no `websecure`
+router: Pi-hole has no local record for `dash`, so the LAN also goes through Cloudflare.
 
 Port 80 is not forwarded, so the tunnel is the only public entrance. Never publish port 3000 on the
 host.
