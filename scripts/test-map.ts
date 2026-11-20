@@ -775,6 +775,7 @@ export const CRITICAL: { files: string[]; why: string }[] = [
       "tests/e2e/_shared/global-setup.ts",
       "tests/e2e/_shared/global-teardown.ts",
       "tests/e2e/_shared/homelab.ts",
+      "tests/e2e/_shared/origin.ts",
       "tests/e2e/_shared/totp.ts",
       "test/*",
     ],
