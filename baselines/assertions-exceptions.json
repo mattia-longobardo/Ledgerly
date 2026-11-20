@@ -337,7 +337,7 @@
   {
     "file": "packages/domain/src/platform/integrations/rules.test.ts",
     "decision": "R0",
-    "reason": "Q9, audit INTG-8 (05-refactor.md \u00a75.3): `isDue` had no use outside its own test and is removed with it; the other assertions are the same"
+    "reason": "Q9, audit INTG-8 (05-refactor.md §5.3): `isDue` had no use outside its own test and is removed with it; the other assertions are the same"
   },
   {
     "file": "apps/web/src/platform/integrations/jobs.itest.ts",
@@ -458,5 +458,30 @@
     "file": "test/reference-user.ts",
     "decision": "TRX-6",
     "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/transactions/ui/categories.test.tsx",
+    "decision": "UI-EXP-4",
+    "reason": "the table moves to DataTable, useSelection and TransactionRowMenu, which route through @ledgerly/ui/router: the test mocks that router instead of next/navigation; no assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/transactions/ui/manual-movement.test.tsx",
+    "decision": "UI-EXP-4",
+    "reason": "the table moves to DataTable, useSelection and TransactionRowMenu, which route through @ledgerly/ui/router: the test mocks that router instead of next/navigation; no assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/transactions/ui/manual-send.test.tsx",
+    "decision": "UI-EXP-4",
+    "reason": "the table moves to DataTable, useSelection and TransactionRowMenu, which route through @ledgerly/ui/router: the test mocks that router instead of next/navigation; no assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/transactions/ui/transactions-table.test.tsx",
+    "decision": "UI-EXP-4",
+    "reason": "the table moves to DataTable, useSelection and TransactionRowMenu, which route through @ledgerly/ui/router: the test mocks that router instead of next/navigation; no assertion changed"
+  },
+  {
+    "file": "tools/contract.test.ts",
+    "decision": "UI-EXP-4",
+    "reason": "apps/web/src/modules/transactions/actions.ts is deleted by the same commit, so it leaves the list of the files of Server Actions; no assertion changed"
   }
 ]
