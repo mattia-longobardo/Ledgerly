@@ -282,9 +282,12 @@ export function dayExpression(
 /**
  * The grouping key of a payee in SQL: the twin of `payeeKeyOf` (audit TRX-9), which a test holds
  * it to. A payee that normalises to nothing is `''` here and `null` there; neither is a key.
+ * JS is the reference, because the stored keys (`recurring_patterns.payee_key`) come from it: the
+ * class is JS's `\s` written out (Postgres's leaves out U+00A0, U+202F, U+FEFF…), and U+0130 is
+ * lowered as JS lowers it, to "i" + U+0307 (PERS-473).
  */
 export function payeeKeyExpression(payee: SQL | AnyPgColumn): SQL<string> {
-  return sql<string>`lower(regexp_replace(${payee}, '\\s+', '', 'g'))`;
+  return sql<string>`lower(regexp_replace(replace(${payee}, U&'\\0130', U&'i\\0307'), '[\\s\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+', '', 'g'))`;
 }
 
 /** The month key of a movement in the user's zone: `to_char` on the shifted instant. */

@@ -20,9 +20,10 @@ const PAYEES = [
   "ΣΟΦΊΑ Москва",
   "AMAZON*MKTPLACE  EU-IT",
   "ideo\u3000space",
+  // Whitespace to JS and not to Postgres's `\s`, and a capital that lowers differently (PERS-473).
+  "NET\u00a0FLIX \u202fEU\ufeff",
+  "İSTANBUL Kebap",
 ];
-// Known to differ, left as they are by a refactor: a no-break space (U+00A0) is whitespace to JS and
-// not to Postgres, and a dotted capital I (U+0130) lowers to "i\u0307" in JS and to "i" in Postgres.
 
 describe("payeeKeyExpression", () => {
   it.each(PAYEES)("gives the key payeeKeyOf gives: %j", async (payee) => {
