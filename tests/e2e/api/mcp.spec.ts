@@ -121,6 +121,7 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
     "list_connections",
     "list_investments",
     "list_labels",
+    "list_pockets",
     "list_transactions",
   ]);
   const listed = await client.callTool({ name: "list_accounts", arguments: {} });
