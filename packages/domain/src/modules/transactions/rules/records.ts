@@ -232,3 +232,14 @@ export function treeOrder<T extends { id: string; parentId: string | null }>(
   }
   return ordered;
 }
+
+/**
+ * What a category covers (spec §7.2, F2.5; audit BUD-5): itself and, for a group, its sub-categories.
+ * The budgets' spent counts it; the filter of Expenses applies the same rule in SQL (`conditions`).
+ */
+export function categoryFamily(
+  id: string,
+  tree: readonly { id: string; parentId: string | null }[],
+): ReadonlySet<string> {
+  return new Set([id, ...tree.filter((one) => one.parentId === id).map((one) => one.id)]);
+}

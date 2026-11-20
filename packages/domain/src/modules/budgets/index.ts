@@ -3,6 +3,7 @@ export { alertSettings, budgetDetail, budgetsView } from "./queries";
 export {
   ALERT_PRESETS,
   DEFAULT_ALERT_SETTINGS,
+  budgetName,
   budgetSlug,
   parseBudgetSlug,
   percentOf,

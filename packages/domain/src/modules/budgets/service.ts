@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, lte } from "drizzle-orm";
 import { requireOpenAccount } from "../accounts";
-import { getCategory, TaxonomyError } from "../transactions/taxonomy";
+import { getCategory, TaxonomyError } from "../transactions";
 import type { Ctx } from "../../platform/context";
 import type { MonthKey } from "../../shared/dates";
 import { getDb, type Tx } from "../../platform/db/client";
@@ -66,11 +66,11 @@ export async function setLimit(
 ): Promise<void> {
   const parsed = setLimitSchema.parse(input);
   await requireScope(ctx, parsed);
-  await getDb().transaction(async (tx) => {
-    await tx
+  await getDb().transaction(async (trx) => {
+    await trx
       .delete(budgetLimits)
       .where(and(sameScope(ctx, parsed), gte(budgetLimits.fromMonth, parsed.month)));
-    await tx.insert(budgetLimits).values(
+    await trx.insert(budgetLimits).values(
       userScoped(ctx).stamp({
         categoryId: parsed.categoryId,
         accountId: parsed.accountId,
@@ -93,16 +93,16 @@ export async function stopLimit(
 ): Promise<void> {
   const parsed = stopLimitSchema.parse(input);
   await requireScope(ctx, parsed);
-  await getDb().transaction(async (tx) => {
+  await getDb().transaction(async (trx) => {
     const scope = sameScope(ctx, parsed);
-    await tx.delete(budgetLimits).where(and(scope, gte(budgetLimits.fromMonth, parsed.month)));
-    const earlier = await tx
+    await trx.delete(budgetLimits).where(and(scope, gte(budgetLimits.fromMonth, parsed.month)));
+    const earlier = await trx
       .select({ id: budgetLimits.id })
       .from(budgetLimits)
       .where(and(scope, lt(budgetLimits.fromMonth, parsed.month), eq(budgetLimits.stopped, false)))
       .limit(1);
     if (earlier.length === 0) return;
-    await tx.insert(budgetLimits).values(
+    await trx.insert(budgetLimits).values(
       userScoped(ctx).stamp({
         categoryId: parsed.categoryId,
         accountId: parsed.accountId,
@@ -151,9 +151,9 @@ export async function saveAlerts(
 export async function mergeLimits(
   ctx: Pick<Ctx, "userId">,
   input: { keepId: string; dropId: string; month: MonthKey },
-  tx: Tx,
+  trx: Tx,
 ): Promise<number> {
-  const rows = await tx
+  const rows = await trx
     .select()
     .from(budgetLimits)
     .where(
@@ -178,11 +178,11 @@ export async function mergeLimits(
     if (dropped === null) continue;
     const kept = inForce(input.keepId, accountId) ?? 0n;
     for (const categoryId of [input.keepId, input.dropId]) {
-      await tx
+      await trx
         .delete(budgetLimits)
         .where(and(sameScope(ctx, { categoryId, accountId }), gte(budgetLimits.fromMonth, input.month)));
     }
-    await tx.insert(budgetLimits).values([
+    await trx.insert(budgetLimits).values([
       userScoped(ctx).stamp({
         categoryId: input.keepId,
         accountId,
@@ -225,9 +225,9 @@ export async function limitsSnapshot(
   ctx: Pick<Ctx, "userId">,
   categoryIds: readonly string[],
   month: MonthKey,
-  tx: Tx,
+  trx: Tx,
 ): Promise<LimitsSnapshot> {
-  const rows = await tx
+  const rows = await trx
     .select()
     .from(budgetLimits)
     .where(
@@ -241,13 +241,20 @@ export async function limitsSnapshot(
   return {
     month,
     categoryIds: [...categoryIds],
-    rows: rows.map((row) => ({
-      categoryId: row.categoryId as string,
-      accountId: row.accountId,
-      fromMonth: row.fromMonth,
-      amountCents: row.amountCents === null ? null : row.amountCents.toString(),
-      stopped: row.stopped,
-    })),
+    // `inArray` on the category leaves the budgets on a whole account out: every row has one.
+    rows: rows.flatMap((row) =>
+      row.categoryId === null
+        ? []
+        : [
+            {
+              categoryId: row.categoryId,
+              accountId: row.accountId,
+              fromMonth: row.fromMonth,
+              amountCents: row.amountCents === null ? null : row.amountCents.toString(),
+              stopped: row.stopped,
+            },
+          ],
+    ),
   };
 }
 
@@ -255,10 +262,10 @@ export async function limitsSnapshot(
 export async function restoreLimits(
   ctx: Pick<Ctx, "userId">,
   snapshot: LimitsSnapshot,
-  tx: Tx,
+  trx: Tx,
 ): Promise<void> {
   if (snapshot.categoryIds.length === 0) return;
-  await tx
+  await trx
     .delete(budgetLimits)
     .where(
       and(
@@ -268,7 +275,7 @@ export async function restoreLimits(
       ),
     );
   if (snapshot.rows.length === 0) return;
-  await tx.insert(budgetLimits).values(
+  await trx.insert(budgetLimits).values(
     snapshot.rows.map((row) =>
       userScoped(ctx).stamp({
         categoryId: row.categoryId,
@@ -376,15 +383,15 @@ export async function stopLimitsOf(
   ctx: Pick<Ctx, "userId">,
   categoryIds: readonly string[],
   month: MonthKey,
-  tx: Tx,
+  trx: Tx,
 ): Promise<number> {
   if (categoryIds.length === 0) return 0;
   const ofCategories = and(
     userScoped(ctx).owns(budgetLimits),
     inArray(budgetLimits.categoryId, [...categoryIds]),
   );
-  await tx.delete(budgetLimits).where(and(ofCategories, gte(budgetLimits.fromMonth, month)));
-  const earlier = await tx
+  await trx.delete(budgetLimits).where(and(ofCategories, gte(budgetLimits.fromMonth, month)));
+  const earlier = await trx
     .select()
     .from(budgetLimits)
     .where(and(ofCategories, lt(budgetLimits.fromMonth, month)))
@@ -397,7 +404,7 @@ export async function stopLimitsOf(
   }
   const running = [...latest.values()].filter((row) => !row.stopped);
   if (running.length === 0) return 0;
-  await tx.insert(budgetLimits).values(
+  await trx.insert(budgetLimits).values(
     running.map((row) =>
       userScoped(ctx).stamp({
         categoryId: row.categoryId,

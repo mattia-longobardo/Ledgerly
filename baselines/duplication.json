@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97673,
-    "duplicatedLines": 16756,
-    "percent": 17.16,
-    "blocks": 1227
+    "lines": 97750,
+    "duplicatedLines": 16742,
+    "percent": 17.13,
+    "blocks": 1226
   },
   "units": {
     "api": {
@@ -41,10 +41,10 @@
       "blocks": 70
     },
     "modules/budgets": {
-      "lines": 1443,
-      "duplicatedLines": 245,
-      "percent": 16.98,
-      "blocks": 21
+      "lines": 1513,
+      "duplicatedLines": 232,
+      "percent": 15.33,
+      "blocks": 20
     },
     "modules/funds": {
       "lines": 10576,
@@ -95,9 +95,9 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12765,
-      "duplicatedLines": 1622,
-      "percent": 12.71,
+      "lines": 12772,
+      "duplicatedLines": 1621,
+      "percent": 12.69,
       "blocks": 128
     },
     "modules/users": {
@@ -517,7 +517,7 @@
     "modules/accounts/ui/switch/undo-switch.tsx": 7,
     "modules/budgets/actions.ts": 11,
     "modules/budgets/jobs.ts": 12,
-    "modules/budgets/queries.ts": 36,
+    "modules/budgets/queries.ts": 23,
     "modules/budgets/schema.ts": 34,
     "modules/budgets/service.ts": 49,
     "modules/budgets/ui/add-budget.tsx": 55,
@@ -625,7 +625,7 @@
     "modules/timeoff/ui/leave-panel.tsx": 48,
     "modules/timeoff/ui/settings-forms.tsx": 45,
     "modules/transactions/categorize/review/changes.ts": 72,
-    "modules/transactions/categorize/review/merges.ts": 59,
+    "modules/transactions/categorize/review/merges.ts": 58,
     "modules/transactions/categorize/service.ts": 50,
     "modules/transactions/categorize/user-rules-service/applying.ts": 67,
     "modules/transactions/categorize/user-rules-service/previews.ts": 25,

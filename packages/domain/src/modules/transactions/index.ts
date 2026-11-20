@@ -48,6 +48,7 @@ export {
   listTransactions,
   manualMovementsByAccount,
   matchMovements,
+  monthSpending,
   movementSpanByAccount,
   rulesForExport,
   searchPayees,

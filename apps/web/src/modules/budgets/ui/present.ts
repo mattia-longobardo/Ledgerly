@@ -4,19 +4,18 @@ import {
   formatWholePercent,
   type NumberFormat,
 } from "@ledgerly/domain/platform/format";
-import { type BudgetRow, budgetSlug } from "@ledgerly/domain/budgets";
+import { type BudgetRow, budgetName as nameOf, budgetSlug } from "@ledgerly/domain/budgets";
 import type { BudgetRowView } from "./budgets-table";
 
 /** A category with no colour of its own (and no group to borrow one from) is drawn in grey. */
 export const NO_COLOR = "#8a8f98";
 
-/** How a budget is named: "Group › Sub" for a sub-category shown on its own, "All …" for none. */
+/** How a budget is named (the domain's `budgetName`), «All categories» for one on a whole account. */
 export function budgetName(
   row: Pick<BudgetRow, "name" | "groupName" | "depth">,
   allCategories: string,
 ): string {
-  if (row.name === null) return allCategories;
-  return row.depth === 0 && row.groupName !== null ? `${row.groupName} › ${row.name}` : row.name;
+  return nameOf(row) ?? allCategories;
 }
 
 /** The table's rows, formatted on the server (spec §8.5). */

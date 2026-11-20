@@ -35,6 +35,7 @@ export {
   CATEGORY_COLORS,
   autoCategoryColor,
   categoryColor,
+  categoryFamily,
   treeOrder,
 } from "./records";
 export type { IncomingTransaction, ProviderResolution, StoredTransaction, TransactionPatch } from "./records";

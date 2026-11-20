@@ -198,6 +198,7 @@
     "LimitsSnapshot",
     "alertSettings",
     "budgetDetail",
+    "budgetName",
     "budgetSlug",
     "budgetsView",
     "categoriesWithLimit",
@@ -642,7 +643,8 @@
     "RuleField",
     "TEXT_OPS",
     "TRANSACTION_TYPES",
-    "TransactionType"
+    "TransactionType",
+    "categoryFamily"
   ],
   "packages/domain/src/modules/transactions/index.ts": [
     "CATEGORY_NAME_MAX",
@@ -746,6 +748,7 @@
     "matchMovements",
     "mergeCategories",
     "mergeUndoSchema",
+    "monthSpending",
     "moveCategory",
     "moveCategoryToMacro",
     "movementSpanByAccount",

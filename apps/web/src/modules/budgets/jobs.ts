@@ -11,12 +11,12 @@ import en from "../../../../../messages/en.json";
 import it from "../../../../../messages/it.json";
 import { alertSettings, budgetsView } from "@ledgerly/domain/budgets";
 import {
+  budgetName,
   budgetSlug,
   DEFAULT_ALERT_SETTINGS,
   reachedThreshold,
   thresholdReached,
 } from "@ledgerly/domain/budgets";
-import { budgetName } from "./ui/present";
 
 const CATALOGUES = { en, it } as const;
 
@@ -73,7 +73,7 @@ export const budgetAlertsJob: JobDefinition = {
         if (!alerts.enabled) continue;
         const reached = reachedThreshold(row.spentCents, row.limitCents, alerts.thresholds);
         if (reached === null) continue;
-        const over = row.spentCents > row.limitCents;
+        const over = row.status === "over";
         const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
         const delivered = await notifyOnce(
           {
@@ -84,7 +84,7 @@ export const budgetAlertsJob: JobDefinition = {
             mail: {
               to: person.email,
               ...alertMail(ctx.locale, over, {
-                budget: budgetName(row, t("allCategories")),
+                budget: budgetName(row) ?? t("allCategories"),
                 account: row.accountName ?? t("allAccounts"),
                 month: formatDate(month, "monthYear", ctx.locale),
                 percent: formatWholePercent(row.percent, ctx.numberFormat),

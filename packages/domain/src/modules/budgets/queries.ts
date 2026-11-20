@@ -1,7 +1,6 @@
 import { and, asc, lte, min } from "drizzle-orm";
 import { accountOptions, listAccounts } from "../accounts";
-import { monthSpending } from "../transactions/queries";
-import { categoryOptions, listCategories } from "../transactions/taxonomy";
+import { categoryOptions, listCategories, monthSpending } from "../transactions";
 import type { Ctx } from "../../platform/context";
 import { addMonths, type MonthKey } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
@@ -13,9 +12,11 @@ import {
   budgetRows,
   type BudgetScope,
   DEFAULT_ALERT_SETTINGS,
+  familiesOf,
   type LimitVersion,
   limitFor,
   scopeKey,
+  spentFor,
 } from "./rules";
 import { budgetAlerts, budgetLimits } from "./schema";
 
@@ -43,6 +44,46 @@ interface BudgetsView {
   firstMonth: MonthKey | null;
 }
 
+/** Every scope with a limit set on or before `month`, and its versions (audit BUD-3: one query). */
+async function loadLimits(
+  ctx: Pick<Ctx, "userId">,
+  month: MonthKey,
+): Promise<Map<string, { scope: BudgetScope; versions: LimitVersion[] }>> {
+  const versions = await getDb()
+    .select({
+      categoryId: budgetLimits.categoryId,
+      accountId: budgetLimits.accountId,
+      fromMonth: budgetLimits.fromMonth,
+      amountCents: budgetLimits.amountCents,
+      stopped: budgetLimits.stopped,
+    })
+    .from(budgetLimits)
+    .where(and(userScoped(ctx).owns(budgetLimits), lte(budgetLimits.fromMonth, month)))
+    .orderBy(asc(budgetLimits.categoryId), asc(budgetLimits.accountId), asc(budgetLimits.fromMonth));
+  const byScope = new Map<string, { scope: BudgetScope; versions: LimitVersion[] }>();
+  for (const version of versions) {
+    const key = scopeKey(version);
+    const entry = byScope.get(key) ?? {
+      scope: { categoryId: version.categoryId, accountId: version.accountId },
+      versions: [],
+    };
+    entry.versions.push(version);
+    byScope.set(key, entry);
+  }
+  return byScope;
+}
+
+/** The limit each scope has in `month`; a scope stopped or not yet begun has none. */
+function limitsIn(
+  byScope: ReadonlyMap<string, { scope: BudgetScope; versions: LimitVersion[] }>,
+  month: MonthKey,
+): (BudgetScope & { limitCents: Cents })[] {
+  return [...byScope.values()].flatMap(({ scope, versions }) => {
+    const limit = limitFor(versions, month);
+    return limit === null ? [] : [{ ...scope, limitCents: limit }];
+  });
+}
+
 /**
  * Everything Budgets renders for one month (spec §7.3, F3), computed on read: the versions in force
  * per scope (category, account or both), one aggregate query of the month's spending per category
@@ -52,18 +93,8 @@ export async function budgetsView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   month: MonthKey,
 ): Promise<BudgetsView> {
-  const [versions, spending, tree, accounts, options, first] = await Promise.all([
-    getDb()
-      .select({
-        categoryId: budgetLimits.categoryId,
-        accountId: budgetLimits.accountId,
-        fromMonth: budgetLimits.fromMonth,
-        amountCents: budgetLimits.amountCents,
-        stopped: budgetLimits.stopped,
-      })
-      .from(budgetLimits)
-      .where(and(userScoped(ctx).owns(budgetLimits), lte(budgetLimits.fromMonth, month)))
-      .orderBy(asc(budgetLimits.categoryId), asc(budgetLimits.accountId), asc(budgetLimits.fromMonth)),
+  const [byScope, spending, tree, accounts, options, first] = await Promise.all([
+    loadLimits(ctx, month),
     monthSpending(ctx, month),
     // Archived too: a limit set before a category was archived still has spending to show.
     listCategories(ctx, { includeArchived: true }),
@@ -75,23 +106,10 @@ export async function budgetsView(
       .where(userScoped(ctx).owns(budgetLimits)),
   ]);
 
-  const byScope = new Map<string, { scope: BudgetScope; versions: LimitVersion[] }>();
-  for (const version of versions) {
-    const key = scopeKey(version);
-    const entry = byScope.get(key) ?? { scope: version, versions: [] };
-    entry.versions.push(version);
-    byScope.set(key, entry);
-  }
-  const limits = [...byScope.values()].flatMap(({ scope, versions: list }) => {
-    const limit = limitFor(list, month);
-    return limit === null
-      ? []
-      : [{ categoryId: scope.categoryId, accountId: scope.accountId, limitCents: limit }];
-  });
   const result = budgetRows(
     tree.filter((category) => category.type === "expense"),
     accounts,
-    limits,
+    limitsIn(byScope, month),
     spending,
   );
 
@@ -151,43 +169,30 @@ export async function budgetDetail(
   scope: BudgetScope,
   month: MonthKey,
 ): Promise<BudgetDetail | null> {
-  const view = await budgetsView(ctx, month);
   const key = scopeKey(scope);
-  const row = view.rows.find((one) => one.key === key);
-  if (!row) return null;
-
-  const months = Array.from({ length: HISTORY_MONTHS }, (_, index) => addMonths(month, -(index + 1)));
-  const [versions, tree, accounts, settings, ...spending] = await Promise.all([
-    getDb()
-      .select({
-        categoryId: budgetLimits.categoryId,
-        accountId: budgetLimits.accountId,
-        fromMonth: budgetLimits.fromMonth,
-        amountCents: budgetLimits.amountCents,
-        stopped: budgetLimits.stopped,
-      })
-      .from(budgetLimits)
-      .where(and(userScoped(ctx).owns(budgetLimits), lte(budgetLimits.fromMonth, month)))
-      .orderBy(asc(budgetLimits.fromMonth), asc(budgetLimits.id)),
+  const months = Array.from({ length: HISTORY_MONTHS }, (_unused, index) => addMonths(month, -(index + 1)));
+  const [byScope, tree, accounts, settings, current, ...spending] = await Promise.all([
+    loadLimits(ctx, month),
     listCategories(ctx, { includeArchived: true }),
     listAccounts(ctx, { includeArchived: true }),
     alertSettings(ctx),
+    monthSpending(ctx, month),
     ...months.map((one) => monthSpending(ctx, one)),
   ]);
-  const own = versions.filter((version) => scopeKey(version) === key);
   const expense = tree.filter((category) => category.type === "expense");
-  const history = months.map((one, index) => {
-    const limitCents = limitFor(own, one);
-    // The spent of a month with no limit is still the scope's spending: the row is computed
-    // against a stand-in limit of one cent and only its `spentCents` is kept.
-    const [computed] = budgetRows(
-      expense,
-      accounts,
-      [{ ...scope, limitCents: limitCents ?? 1n }],
-      spending[index],
-    ).rows;
-    return { month: one, limitCents, spentCents: computed.spentCents };
-  });
+  // The row as the Budgets table shows it: its depth depends on the other budgets of the month.
+  const row = budgetRows(expense, accounts, limitsIn(byScope, month), current).rows.find(
+    (one) => one.key === key,
+  );
+  if (!row) return null;
+
+  const own = byScope.get(key)?.versions ?? [];
+  const families = familiesOf([scope], expense);
+  const history = months.map((one, index) => ({
+    month: one,
+    limitCents: limitFor(own, one),
+    spentCents: spentFor(scope, spending[index], families),
+  }));
 
   return {
     row,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { type MonthKey, isCivilDate } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
+import { categoryFamily } from "../transactions/client";
 
 /** How close to the limit a budget turns "Near limit" (spec §7.3): spent ≥ 85 % of it. */
 const NEAR_LIMIT_PERCENT = 85n;
@@ -28,19 +29,33 @@ export function limitFor(versions: readonly LimitVersion[], month: MonthKey): Ce
 }
 
 /**
- * Spec §7.3: spent > limit → Over; spent ≥ 85 % → Near limit; otherwise On track. In integer
- * cents (`spent × 100 ≥ limit × 85`), so no rounding decides a boundary.
+ * Spent over limit (audit BUD-4): the one comparison every figure of a budget derives from — its
+ * status, its percentage and its alert thresholds. In integer cents (`spent × 100` against
+ * `limit × percent`), so no rounding decides a boundary.
  */
+export function ratio(spent: Cents, limit: Cents) {
+  const scaled = spent * 100n;
+  return {
+    /** Spent has reached `percent` of the limit. */
+    reaches: (percent: number | bigint) => scaled >= limit * BigInt(percent),
+    /** Spent has passed `percent` of the limit. */
+    passes: (percent: number | bigint) => scaled > limit * BigInt(percent),
+    /** Spent as a whole percentage of the limit, rounded half-up; past 100 when over; 0 without a limit. */
+    percent: limit <= 0n ? 0 : Number((spent * 200n + limit) / (limit * 2n)),
+  };
+}
+
+/** Spec §7.3: spent > limit → Over; spent ≥ 85 % → Near limit; otherwise On track. */
 export function budgetStatus(spent: Cents, limit: Cents): BudgetStatus {
-  if (spent > limit) return "over";
-  if (spent * 100n >= limit * NEAR_LIMIT_PERCENT) return "near";
+  const share = ratio(spent, limit);
+  if (share.passes(100)) return "over";
+  if (share.reaches(NEAR_LIMIT_PERCENT)) return "near";
   return "on_track";
 }
 
 /** Spent as a whole percentage of the limit, rounded half-up; past 100 when over. */
 export function percentOf(spent: Cents, limit: Cents): number {
-  if (limit <= 0n) return 0;
-  return Number((spent * 200n + limit) / (limit * 2n));
+  return ratio(spent, limit).percent;
 }
 
 /** A category as the budgets see it: the tree, and the colour a sub-category borrows. */
@@ -97,6 +112,41 @@ interface BudgetRowsResult {
   unbudgetedCents: Cents;
 }
 
+/** Whether a month's spending row falls in a scope: its category's family, on its account or any. */
+function covers(scope: BudgetScope, row: Spending, families: ReadonlyMap<string, ReadonlySet<string>>) {
+  return (
+    (scope.categoryId === null ||
+      (row.categoryId !== null && (families.get(scope.categoryId)?.has(row.categoryId) ?? false))) &&
+    (scope.accountId === null || scope.accountId === row.accountId)
+  );
+}
+
+/** The family of each scope's category, for {@link spentFor}. */
+export function familiesOf(
+  scopes: readonly BudgetScope[],
+  tree: readonly { id: string; parentId: string | null }[],
+): Map<string, ReadonlySet<string>> {
+  return new Map(
+    scopes.flatMap((scope) =>
+      scope.categoryId ? [[scope.categoryId, categoryFamily(scope.categoryId, tree)]] : [],
+    ),
+  );
+}
+
+/**
+ * What a scope spent in one month (audit BUD-3): the month's spending of its category — a group with
+ * its sub-categories — on its account, or on every account. `families` holds the scope's category.
+ */
+export function spentFor(
+  scope: BudgetScope,
+  spending: readonly Spending[],
+  families: ReadonlyMap<string, ReadonlySet<string>>,
+): Cents {
+  return spending
+    .filter((row) => covers(scope, row, families))
+    .reduce<Cents>((sum, row) => sum + row.cents, 0n);
+}
+
 /**
  * The Budgets table and its totals for one month (spec §7.3, F3). A budget is on a category, an
  * account or both: its spent is the month's spending of the category — a group with its
@@ -113,73 +163,90 @@ export function budgetRows(
   spending: readonly Spending[],
 ): BudgetRowsResult {
   const byId = new Map(categories.map((category) => [category.id, category]));
-  const order = new Map(categories.map((category, index) => [category.id, index]));
   const accountName = new Map(accounts.map((account) => [account.id, account.name]));
-  const family = (id: string) =>
-    new Set([
-      id,
-      ...categories.filter((category) => category.parentId === id).map((category) => category.id),
-    ]);
-  const families = new Map(
-    limits.flatMap((limit) => (limit.categoryId ? [[limit.categoryId, family(limit.categoryId)]] : [])),
-  );
-
-  const matches = (scope: BudgetScope, row: Spending) =>
-    (scope.categoryId === null ||
-      (row.categoryId !== null && families.get(scope.categoryId)!.has(row.categoryId))) &&
-    (scope.accountId === null || scope.accountId === row.accountId);
-  const contains = (outer: BudgetScope, inner: BudgetScope) =>
-    scopeKey(outer) !== scopeKey(inner) &&
-    (outer.categoryId === null ||
-      (inner.categoryId !== null && families.get(outer.categoryId)!.has(inner.categoryId))) &&
-    (outer.accountId === null || outer.accountId === inner.accountId);
-
-  const rows: BudgetRow[] = limits.map((limit) => {
+  const families = familiesOf(limits, categories);
+  const rows = limits.map((limit) => {
     const category = limit.categoryId === null ? undefined : byId.get(limit.categoryId);
     const parent = category?.parentId ? byId.get(category.parentId) : undefined;
-    const spentCents = spending
-      .filter((row) => matches(limit, row))
-      .reduce<Cents>((sum, row) => sum + row.cents, 0n);
     const underGroup =
       parent !== undefined &&
       limits.some((other) => other.categoryId === parent.id && other.accountId === limit.accountId);
-    return {
-      key: scopeKey(limit),
-      categoryId: limit.categoryId,
-      accountId: limit.accountId,
-      name: category?.name ?? null,
-      groupName: parent?.name ?? null,
+    return rowOf(limit, {
+      category,
+      parent,
       accountName: limit.accountId === null ? null : (accountName.get(limit.accountId) ?? null),
-      color: parent ? parent.color : (category?.color ?? null),
       depth: underGroup ? 1 : 0,
-      limitCents: limit.limitCents,
-      spentCents,
-      status: budgetStatus(spentCents, limit.limitCents),
-      percent: percentOf(spentCents, limit.limitCents),
-    };
+      spentCents: spentFor(limit, spending, families),
+    });
   });
-  // Tree order of the category (the group's own row first, so a sub-category follows it), the
-  // whole-account budgets first; then the account, "every account" first.
+  return { rows: sortRows(rows, categories), ...totalsOf(limits, spending, families) };
+}
+
+/** One row of the table, from its limit, what it spent and where it sits. */
+function rowOf(
+  limit: BudgetScope & { limitCents: Cents },
+  place: {
+    category: BudgetCategory | undefined;
+    parent: BudgetCategory | undefined;
+    accountName: string | null;
+    depth: 0 | 1;
+    spentCents: Cents;
+  },
+): BudgetRow {
+  const { category, parent, spentCents } = place;
+  return {
+    key: scopeKey(limit),
+    categoryId: limit.categoryId,
+    accountId: limit.accountId,
+    name: category?.name ?? null,
+    groupName: parent?.name ?? null,
+    accountName: place.accountName,
+    color: parent ? parent.color : (category?.color ?? null),
+    depth: place.depth,
+    limitCents: limit.limitCents,
+    spentCents,
+    status: budgetStatus(spentCents, limit.limitCents),
+    percent: percentOf(spentCents, limit.limitCents),
+  };
+}
+
+/**
+ * Tree order of the category (the group's own row first, so a sub-category follows it), the
+ * whole-account budgets first; then the account, "every account" first.
+ */
+function sortRows(rows: BudgetRow[], categories: readonly BudgetCategory[]): BudgetRow[] {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const order = new Map(categories.map((category, index) => [category.id, index]));
   const rank = (row: BudgetRow) => {
     if (row.categoryId === null) return -1;
-    const category = byId.get(row.categoryId);
-    const group = category?.parentId ?? row.categoryId;
+    const group = byId.get(row.categoryId)?.parentId ?? row.categoryId;
     return (order.get(group) ?? 0) * 10_000 + (order.get(row.categoryId) ?? 0);
   };
-  rows.sort(
-    (a, b) =>
-      rank(a) - rank(b) ||
-      Number(a.accountId !== null) - Number(b.accountId !== null) ||
-      (a.accountName ?? "").localeCompare(b.accountName ?? "") ||
-      a.key.localeCompare(b.key),
+  return rows.sort(
+    (left, right) =>
+      rank(left) - rank(right) ||
+      Number(left.accountId !== null) - Number(right.accountId !== null) ||
+      (left.accountName ?? "").localeCompare(right.accountName ?? "") ||
+      left.key.localeCompare(right.key),
   );
+}
 
+/** The totals: the limit of the budgets no other contains, and each covered movement once. */
+function totalsOf(
+  limits: readonly (BudgetScope & { limitCents: Cents })[],
+  spending: readonly Spending[],
+  families: ReadonlyMap<string, ReadonlySet<string>>,
+): Omit<BudgetRowsResult, "rows"> {
+  const contains = (outer: BudgetScope, inner: BudgetScope) =>
+    scopeKey(outer) !== scopeKey(inner) &&
+    (outer.categoryId === null ||
+      (inner.categoryId !== null && (families.get(outer.categoryId)?.has(inner.categoryId) ?? false))) &&
+    (outer.accountId === null || outer.accountId === inner.accountId);
   const outermost = limits.filter((limit) => !limits.some((other) => contains(other, limit)));
-  const covered = spending.filter((row) => limits.some((limit) => matches(limit, row)));
+  const covered = spending.filter((row) => limits.some((limit) => covers(limit, row, families)));
   const everything = spending.reduce<Cents>((sum, row) => sum + row.cents, 0n);
   const spentCents = covered.reduce<Cents>((sum, row) => sum + row.cents, 0n);
   return {
-    rows,
     totals: { limitCents: outermost.reduce<Cents>((sum, limit) => sum + limit.limitCents, 0n), spentCents },
     unbudgetedCents: everything - spentCents,
   };
@@ -237,8 +304,8 @@ export const DEFAULT_ALERT_SETTINGS: Readonly<AlertSettings> = Object.freeze({
  * {@link budgetStatus}: a budget spent to the cent is not over. Integer cents, no rounding.
  */
 export function thresholdReached(spent: Cents, limit: Cents, percent: number): boolean {
-  const scaled = limit * BigInt(percent);
-  return percent < 100 ? spent * 100n >= scaled : spent * 100n > scaled;
+  const share = ratio(spent, limit);
+  return percent < 100 ? share.reaches(percent) : share.passes(percent);
 }
 
 /**
@@ -251,6 +318,15 @@ export function reachedThreshold(spent: Cents, limit: Cents, thresholds: readonl
     if (thresholdReached(spent, limit, percent) && (reached === null || percent > reached)) reached = percent;
   }
   return reached;
+}
+
+/**
+ * How a budget is named (audit BUD-6): «Group › Sub» for a sub-category shown on its own, the
+ * category's name otherwise, `null` for a budget on a whole account (the caller's «All categories»).
+ */
+export function budgetName(row: Pick<BudgetRow, "name" | "groupName" | "depth">): string | null {
+  if (row.name === null) return null;
+  return row.depth === 0 && row.groupName !== null ? `${row.groupName} › ${row.name}` : row.name;
 }
 
 /** A budget's address: `<category|all>_<account|all>`, the two halves of its scope. */
@@ -279,7 +355,7 @@ export const saveAlertsSchema = z
     thresholds: z
       .array(z.number().int().min(1).max(200))
       .max(MAX_ALERT_THRESHOLDS)
-      .transform((list) => [...new Set(list)].sort((a, b) => a - b)),
+      .transform((list) => [...new Set(list)].sort((left, right) => left - right)),
   })
   .refine(onSomething, "A budget is on a category, an account or both")
   .refine((value) => !value.enabled || value.thresholds.length > 0, "Alerts on need a threshold");
