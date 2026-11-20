@@ -9,7 +9,7 @@ import { colorOfCategory, listCategoriesWithUsage } from "@ledgerly/domain/trans
 import { categoryColor } from "@/modules/transactions/ui/display";
 import { AccountsMenu } from "@/modules/transactions/ui/filter-bar";
 import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
-import { MACROS, type Macro, macroViews } from "@/modules/transactions/ui/macros";
+import { MACROS, type Macro, macroViews } from "@ledgerly/domain/transactions";
 import { listAccounts } from "@ledgerly/domain/accounts";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";

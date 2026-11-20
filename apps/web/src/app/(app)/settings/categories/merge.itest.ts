@@ -17,7 +17,7 @@ import {
   moveCategory,
   restoreCategories,
 } from "@domain/modules/transactions/taxonomy";
-import { macroViews } from "@/modules/transactions/ui/macros";
+import { macroViews } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@domain/platform/context";
 import { monthKey, today } from "@domain/shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../../../test/db";

@@ -13,7 +13,7 @@ import { ApiCategoryActions } from "@/modules/transactions/client";
 import { categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
 import { spendingBuckets, spendingLayers } from "@ledgerly/domain/transactions";
 import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
-import { macroViews } from "@/modules/transactions/ui/macros";
+import { macroViews } from "@ledgerly/domain/transactions";
 import { SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";

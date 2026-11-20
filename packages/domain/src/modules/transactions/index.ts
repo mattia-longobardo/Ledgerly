@@ -60,6 +60,8 @@ export {
   transactionsSummary,
 } from "./queries";
 export type { CategoryMacroTotal, SpendingGroup, Transaction, TransactionRow } from "./queries";
+export { MACROS, macroViews } from "./queries";
+export type { Macro, MacroCategory } from "./queries";
 export {
   CATEGORY_TYPES,
   TRANSACTION_TYPES,

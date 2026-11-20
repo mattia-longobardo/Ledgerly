@@ -1,10 +1,11 @@
-// modules/transactions/ui/macros.ts — the page of the categories as data (categories-and-rules.md
+// The page of the categories as data (categories-and-rules.md
 // §2, §5.2, §5.3): the three macros, their groups and categories, with the totals of a period.
-// Pure, on the server: the page reads the categories and the totals, this decides where each
-// amount is drawn.
-import { type CategoryMacroTotal, shareOf } from "@ledgerly/domain/transactions";
-import { type CategoryType, CATEGORY_TYPES } from "@ledgerly/domain/transactions";
-import { abs } from "@ledgerly/domain/shared/money";
+// Pure: the page and `/api/v1` read the categories and the totals, this decides where each amount
+// is drawn.
+import { abs } from "../../../shared/money";
+import { type CategoryType, CATEGORY_TYPES } from "../rules";
+import { shareOf } from "./filters";
+import type { CategoryMacroTotal } from "./views";
 
 /** Income, Expenses, Transfers: the type of a category, always in this order (CR1). */
 export const MACROS = CATEGORY_TYPES;
@@ -48,20 +49,22 @@ interface MacroView extends Amount {
 
 const ZERO: Amount = { count: 0, totalCents: 0n, inCents: 0n, outCents: 0n };
 
-function add(a: Amount, b: Amount): Amount {
+function add(left: Amount, right: Amount): Amount {
   return {
-    count: a.count + b.count,
-    totalCents: a.totalCents + b.totalCents,
-    inCents: a.inCents + b.inCents,
-    outCents: a.outCents + b.outCents,
+    count: left.count + right.count,
+    totalCents: left.totalCents + right.totalCents,
+    inCents: left.inCents + right.inCents,
+    outCents: left.outCents + right.outCents,
   };
 }
 
 /** Biggest first; at a tie, by name (§5.2): a line at zero falls to the end of its list. */
-function byTotal(a: CategoryLine, b: CategoryLine): number {
-  const size = abs(b.totalCents) - abs(a.totalCents);
+function byTotal(left: CategoryLine, right: CategoryLine): number {
+  const size = abs(right.totalCents) - abs(left.totalCents);
   if (size !== 0n) return size > 0n ? 1 : -1;
-  return a.category.name.localeCompare(b.category.name) || a.category.id.localeCompare(b.category.id);
+  return (
+    left.category.name.localeCompare(right.category.name) || left.category.id.localeCompare(right.category.id)
+  );
 }
 
 /**

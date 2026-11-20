@@ -15,8 +15,11 @@ import {
   type RangePreset,
   shiftRange,
 } from "@ledgerly/format/ranges";
-import { type CivilDate, isCivilDate, type MonthKey, monthKey, monthsBetween } from "@ledgerly/format/dates";
+import { type CivilDate, isCivilDate } from "@ledgerly/format/dates";
 import type { Params } from "./url";
+
+// The days a period has happened through live with the ranges, which the domain shares.
+export { periodEnd, periodMonths } from "@ledgerly/format/ranges";
 
 /** The window these screens open on: the one Expenses opens on. */
 const DEFAULT_PERIOD_PRESET: RangePreset = "thisMonth";
@@ -75,20 +78,4 @@ export function parsePeriodQuery(raw: Raw, today: CivilDate, grainParam = "grain
     params: { ...stepperParams, off: offset > 0 ? String(offset) : undefined },
     stepperParams,
   };
-}
-
-/** The last day of the range that has happened: the range's end, or today if it is later. */
-export function periodEnd(range: DateRange, today: CivilDate): CivilDate {
-  return range.to < today ? range.to : today;
-}
-
-/**
- * The month ends a month-grain chart of the range draws, up to today's month: how many, and the
- * last. A range entirely in the future still draws its first month, never an empty chart.
- */
-export function periodMonths(range: DateRange, today: CivilDate): { months: number; through: MonthKey } {
-  const first = monthKey(range.from);
-  const last = monthKey(periodEnd(range, today));
-  const through = last < first ? first : last;
-  return { months: monthsBetween(first, through).length, through };
 }

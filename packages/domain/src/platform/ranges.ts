@@ -4,6 +4,8 @@ export {
   type DateRange,
   daysInRange,
   isWholeMonths,
+  periodEnd,
+  periodMonths,
   presetRange,
   RANGE_PRESETS,
   type RangePreset,

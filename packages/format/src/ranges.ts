@@ -4,7 +4,15 @@
  * so every screen speaks of time in one way. Pure: "today" is passed in.
  */
 
-import { addDays, addMonths, type CivilDate, lastDayOfMonth, monthKey } from "./dates";
+import {
+  addDays,
+  addMonths,
+  type CivilDate,
+  lastDayOfMonth,
+  type MonthKey,
+  monthKey,
+  monthsBetween,
+} from "./dates";
 import { formatDate, type UiLocale } from "./format";
 
 /** The four presets of the design, in the order the segmented control shows them. */
@@ -99,4 +107,20 @@ export function shiftRange(range: DateRange, periods: number): DateRange {
 export function rangeLabel(range: DateRange, locale: UiLocale): string {
   if (isSingleMonth(range)) return formatDate(range.from, "monthYear", locale);
   return `${formatDate(range.from, "long", locale)} – ${formatDate(range.to, "long", locale)}`;
+}
+
+/** The last day of the range that has happened: the range's end, or today if it is later. */
+export function periodEnd(range: DateRange, today: CivilDate): CivilDate {
+  return range.to < today ? range.to : today;
+}
+
+/**
+ * The month ends a month-grain chart of the range draws, up to today's month: how many, and the
+ * last. A range entirely in the future still draws its first month, never an empty chart.
+ */
+export function periodMonths(range: DateRange, today: CivilDate): { months: number; through: MonthKey } {
+  const first = monthKey(range.from);
+  const last = monthKey(periodEnd(range, today));
+  const through = last < first ? first : last;
+  return { months: monthsBetween(first, through).length, through };
 }

@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 181,
+    "deepImports": 179,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -365,13 +365,11 @@
     "app/(app)/budgets/page.tsx → modules/budgets/ui/present",
     "app/(app)/expenses/categories/[id]/page.tsx → modules/transactions/ui/display",
     "app/(app)/expenses/categories/[id]/page.tsx → modules/transactions/ui/filters",
-    "app/(app)/expenses/categories/[id]/page.tsx → modules/transactions/ui/macros",
     "app/(app)/expenses/categories/[id]/page.tsx → modules/transactions/ui/spending-card",
     "app/(app)/expenses/categories/[id]/page.tsx → modules/transactions/ui/transactions-table",
     "app/(app)/expenses/categories/page.tsx → modules/transactions/ui/display",
     "app/(app)/expenses/categories/page.tsx → modules/transactions/ui/filter-bar",
     "app/(app)/expenses/categories/page.tsx → modules/transactions/ui/filters",
-    "app/(app)/expenses/categories/page.tsx → modules/transactions/ui/macros",
     "app/(app)/expenses/page.tsx → modules/transactions/ui/breakdown-card",
     "app/(app)/expenses/page.tsx → modules/transactions/ui/display",
     "app/(app)/expenses/page.tsx → modules/transactions/ui/filter-bar",
