@@ -13,7 +13,9 @@ test("Expenses › Categories: a group, its menu, renaming and the macros, from 
   page,
 }) => {
   await page.goto("/expenses/categories?preset=last3Months");
-  const group = page.locator("main").getByRole("button", { expanded: false }).first();
+  // The accounts menu is a popover since UI-EXP-3 (Mattia, 20/11/2026), a closed button too: the
+  // first group is looked for in the board, past it.
+  const group = page.locator("main section").getByRole("button", { expanded: false }).first();
   await hydrated(group);
   const name = (await group.textContent())?.trim() ?? "";
 

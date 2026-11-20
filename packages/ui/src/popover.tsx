@@ -3,21 +3,24 @@
 import { Popover as BasePopover } from "@base-ui/react/popover";
 import type { ReactNode } from "react";
 
+const TRIGGER =
+  "focus-ring inline-flex h-[30px] items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm hover:bg-hover";
+
 export function Popover({
   trigger,
   triggerLabel,
+  triggerClassName = TRIGGER,
   children,
 }: {
   trigger: ReactNode;
-  triggerLabel: string;
+  /** The trigger's name when its content is not one (an icon); a visible text names it already. */
+  triggerLabel?: string;
+  triggerClassName?: string;
   children: ReactNode;
 }) {
   return (
     <BasePopover.Root>
-      <BasePopover.Trigger
-        aria-label={triggerLabel}
-        className="focus-ring inline-flex h-[30px] items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm hover:bg-hover"
-      >
+      <BasePopover.Trigger aria-label={triggerLabel} className={triggerClassName}>
         {trigger}
       </BasePopover.Trigger>
       <BasePopover.Portal>

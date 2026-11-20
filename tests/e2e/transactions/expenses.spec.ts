@@ -138,7 +138,7 @@ test("synced movements are filtered, recategorised and hidden, and the totals fo
       ),
     ).toBeVisible();
 
-    await page.locator("summary", { hasText: "All types" }).click();
+    await page.getByRole("button", { name: "All types", exact: true }).click();
     await page.getByRole("link", { name: /^Transfers/ }).click();
     await expect(page).toHaveURL(/type=transfer/);
     await expect(page.getByRole("row").filter({ hasText: "Netflix" })).toHaveCount(0);

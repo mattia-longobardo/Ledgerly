@@ -12,19 +12,16 @@ import { CategoryPicker } from "@ledgerly/ui/category-picker";
 import { cn } from "@ledgerly/ui/cn";
 import { Input } from "@ledgerly/ui/input";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
-import { DismissableDetails } from "@ledgerly/ui/dismissable-details";
+import { Popover } from "@ledgerly/ui/popover";
 import { type ExpensesQuery, listParam, toggle, UNCATEGORISED } from "./filters";
 import type { AccountFilterOption, CategoryFilterOption } from "./view";
 
 const CONTROL =
   "focus-ring flex h-[30px] cursor-pointer list-none items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm font-medium hover:bg-hover";
 
-const PANEL =
-  "absolute top-9 left-0 z-30 flex max-w-[calc(100vw-32px)] animate-in flex-col rounded-lg border border-border bg-card p-1.5 shadow-overlay";
-
 /**
- * A menu of links under its summary. A `<details>`, as before R3: the keyboard specs walk the page's
- * disclosure buttons, and a summary is not one of them.
+ * A menu of links in a popover, as the categories' (audit UI-EXP-3, Mattia's decision of
+ * 20/11/2026): it stays open after a pick, so a second choice is one more click.
  */
 function LinkMenu({
   label,
@@ -38,12 +35,9 @@ function LinkMenu({
   children: ReactNode;
 }) {
   return (
-    <DismissableDetails className="relative">
-      <summary className={cn(CONTROL, "[&::-webkit-details-marker]:hidden", active && "border-accent")}>
-        {label}
-      </summary>
-      <div className={cn(PANEL, width)}>{children}</div>
-    </DismissableDetails>
+    <Popover trigger={label} triggerClassName={cn(CONTROL, active && "border-accent")}>
+      <div className={cn("flex max-w-[calc(100vw-32px)] flex-col", width)}>{children}</div>
+    </Popover>
   );
 }
 

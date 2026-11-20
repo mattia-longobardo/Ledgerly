@@ -1,6 +1,6 @@
 "use client";
 
-import { type ComponentProps, type RefObject, useEffect, useEffectEvent, useRef, useState } from "react";
+import { type RefObject, useEffect, useEffectEvent } from "react";
 
 /**
  * Closes an open `<details>` menu when the pointer goes down outside it or Escape is pressed: a
@@ -26,26 +26,4 @@ export function useDismiss(ref: RefObject<HTMLDetailsElement | null>, open: bool
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [ref, open]);
-}
-
-/**
- * A `<details>` menu that still opens without JavaScript and, once hydrated, closes on an outside
- * click or Escape ({@link useDismiss}). The children can be rendered by the server.
- */
-export function DismissableDetails(props: Omit<ComponentProps<"details">, "ref">) {
-  const ref = useRef<HTMLDetailsElement>(null);
-  const [open, setOpen] = useState(false);
-  useDismiss(ref, open, () => {
-    if (ref.current) ref.current.open = false;
-  });
-  return (
-    <details
-      {...props}
-      ref={ref}
-      onToggle={(event) => {
-        setOpen(event.currentTarget.open);
-        props.onToggle?.(event);
-      }}
-    />
-  );
 }

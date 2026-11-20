@@ -57,17 +57,17 @@ describe("FilterBar", () => {
     expect(push).toHaveBeenLastCalledWith("/expenses?off=1");
   });
 
-  it("opens the types menu from its summary, as the E2E finds it, and Escape closes it", async () => {
+  it("opens the types menu as a popover from its button, and Escape closes it (UI-EXP-3)", async () => {
     renderBar({ off: "1" });
-    const summary = [...document.querySelectorAll("summary")].find((one) => one.textContent === "All types")!;
-    await userEvent.click(summary);
+    const trigger = screen.getByRole("button", { name: "All types" });
+    await userEvent.click(trigger);
     expect(screen.getByRole("link", { name: /^Transfers/ })).toHaveAttribute(
       "href",
       "/expenses?off=1&type=transfer",
     );
-    expect(summary.parentElement).toHaveAttribute("open");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
     await userEvent.keyboard("{Escape}");
-    expect(summary.parentElement).not.toHaveAttribute("open");
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   // PeriodBar writes the period parameters first, as on Accounts; the old row wrote a preset last.
