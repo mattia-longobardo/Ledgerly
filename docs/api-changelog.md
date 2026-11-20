@@ -3,6 +3,26 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-20 · subscriptions (0.46.0)
+
+- `GET /subscriptions` (new, `read`): the Subscriptions page — the active `subscriptions` and the
+  `inactive` ones (`id`, `name`, `state`, `categoryId`, `category`, `categoryColor`, `accountId`,
+  `account`, `price`, `cycle`, `chargeOn` as entered, `nextChargeOn` not paid yet, `utility`,
+  `payeeMatch`, `tolerance` as a percentage, `monthly`, `yearly`, `current` — the check of the period
+  under way: `id`, `dueOn`, `state`, `expected`, `actual` — and `lastMatch` `{on, amount}`), the
+  `totals` (`monthly`, `yearly`, `lowUtility` `{yearly, count}`, `next30` `{amount, until}`), the
+  `alerts`, `byCategory` (`groupId`, `name`, `color`, `yearly`), `projections.month` and
+  `projections.year` per paying account (`balance` in EUR, null without one or without a rate,
+  `commit`, `projected`) and the `accounts` a subscription can be paid from.
+- MCP tool `list_subscriptions` (new, read only): the answer of `GET /subscriptions`, from the same
+  descriptor.
+- `GET /subscriptions/suggestions` (new, `read`): the recurring payments no subscription covers yet
+  (`key`, `name`, `price`, `cycle`, `nextChargeOn`, `accountId`, `categoryId`, `occurrences`).
+- `POST /subscriptions` (201 `{id}`), `PUT /subscriptions/{id}`, `PUT /subscriptions/{id}/state`,
+  `DELETE /subscriptions/{id}` (new, `write`). The price is a decimal string, the tolerance a plain
+  percentage (`"2.5"`, 5 when left out). Errors: `invalid` (`reason` `invalid`, `invalid_account`,
+  `invalid_category`), `conflict` (`reason` `not_cancelled`), `not_found`.
+
 ## 2026-11-20 · the budgets' percentages and the categories' board (0.45.0)
 
 - `GET /budgets/view`: `totals.percent` (new), spent as a whole percentage of the limit, with the rule

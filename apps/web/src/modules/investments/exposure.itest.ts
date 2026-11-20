@@ -434,6 +434,7 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
       "list_investments",
       "list_labels",
       "list_pockets",
+      "list_subscriptions",
       "list_transactions",
     ]);
   });

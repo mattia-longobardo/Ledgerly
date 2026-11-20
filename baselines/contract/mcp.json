@@ -431,6 +431,25 @@
     "execution": {
      "taskSupport": "forbidden"
     }
+   },
+   {
+    "name": "list_subscriptions",
+    "title": "Subscriptions",
+    "description": "The subscriptions with their price, cycle, next charge and the payment check of the period under way, the monthly and yearly totals, the payment alerts and what they commit on each paying account.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {}
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
    }
   ]
  },
@@ -845,6 +864,105 @@
     }
    ],
    "nextAccrual": "2031-11-01",
+   "accounts": [
+    {
+     "id": "<id-3>",
+     "name": "ING Conto Arancio"
+    },
+    {
+     "id": "<id-4>",
+     "name": "Revolut Saving"
+    },
+    {
+     "id": "<id-5>",
+     "name": "Directa"
+    },
+    {
+     "id": "<id-6>",
+     "name": "Fideuram Piano Accumulo"
+    }
+   ]
+  }
+ },
+ "list_subscriptions": {
+  "isError": false,
+  "answer": {
+   "subscriptions": [
+    {
+     "id": "<id-28>",
+     "name": "Netflix",
+     "state": "active",
+     "categoryId": null,
+     "category": null,
+     "categoryColor": null,
+     "accountId": "<id-3>",
+     "account": "ING Conto Arancio",
+     "price": "12.99",
+     "cycle": "monthly",
+     "chargeOn": "2031-11-03",
+     "nextChargeOn": "2031-11-03",
+     "utility": 7,
+     "payeeMatch": "netflix",
+     "tolerance": "5.00",
+     "monthly": "12.99",
+     "yearly": "155.88",
+     "current": {
+      "id": "<id-29>",
+      "dueOn": "2031-10-03",
+      "state": "paid",
+      "expected": "12.99",
+      "actual": "12.99"
+     },
+     "lastMatch": {
+      "on": "2031-10-03",
+      "amount": "12.99"
+     }
+    }
+   ],
+   "inactive": [],
+   "totals": {
+    "monthly": "12.99",
+    "yearly": "155.88",
+    "lowUtility": {
+     "yearly": "0.00",
+     "count": 0
+    },
+    "next30": {
+     "amount": "12.99",
+     "until": "2031-11-14"
+    }
+   },
+   "alerts": [],
+   "byCategory": [
+    {
+     "groupId": null,
+     "name": null,
+     "color": null,
+     "yearly": "155.88"
+    }
+   ],
+   "projections": {
+    "month": [
+     {
+      "accountId": "<id-3>",
+      "account": "ING Conto Arancio",
+      "count": 1,
+      "balance": "11302.40",
+      "commit": "12.99",
+      "projected": "11289.41"
+     }
+    ],
+    "year": [
+     {
+      "accountId": "<id-3>",
+      "account": "ING Conto Arancio",
+      "count": 1,
+      "balance": "11302.40",
+      "commit": "155.88",
+      "projected": "11146.52"
+     }
+    ]
+   },
    "accounts": [
     {
      "id": "<id-3>",

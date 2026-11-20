@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 99505,
-    "duplicatedLines": 16558,
-    "percent": 16.64,
-    "blocks": 1228
+    "lines": 99654,
+    "duplicatedLines": 16678,
+    "percent": 16.74,
+    "blocks": 1238
   },
   "units": {
     "api": {
-      "lines": 2741,
-      "duplicatedLines": 331,
-      "percent": 12.08,
-      "blocks": 34
+      "lines": 2890,
+      "duplicatedLines": 451,
+      "percent": 15.61,
+      "blocks": 44
     },
     "app": {
       "lines": 25085,
@@ -385,16 +385,18 @@
   },
   "files": {
     "api/accounts/cases.ts": 6,
-    "api/accounts/dto.ts": 50,
+    "api/accounts/dto.ts": 51,
     "api/accounts/routes.ts": 44,
     "api/budgets/dto.ts": 10,
-    "api/pockets/dto.ts": 31,
-    "api/pockets/routes.ts": 13,
+    "api/pockets/dto.ts": 33,
+    "api/pockets/routes.ts": 54,
     "api/settings/categories.ts": 39,
     "api/settings/category-moves.ts": 6,
     "api/settings/connections.ts": 16,
     "api/settings/security.ts": 33,
     "api/settings/server.ts": 6,
+    "api/subscriptions/dto.ts": 27,
+    "api/subscriptions/routes.ts": 49,
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 26,
     "api/transactions/routes.ts": 12,

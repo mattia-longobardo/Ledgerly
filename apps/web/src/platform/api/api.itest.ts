@@ -538,6 +538,7 @@ describe("parity of users and settings: route = MCP tool", () => {
       "list_connections",
       "list_labels",
       "list_pockets",
+      "list_subscriptions",
       "list_transactions",
     ]);
     const paths: Record<string, string> = {
@@ -547,8 +548,9 @@ describe("parity of users and settings: route = MCP tool", () => {
       list_connections: "/connections",
       list_labels: "/labels",
     };
-    // Accounts', transactions', budgets' and pockets' tools are held to their routes by
-    // `accounts.itest.ts`, `transactions.itest.ts`, `budgets.itest.ts` and `pockets.itest.ts`.
+    // Accounts', transactions', budgets', pockets' and subscriptions' tools are held to their routes by
+    // `accounts.itest.ts`, `transactions.itest.ts`, `budgets.itest.ts`, `pockets.itest.ts` and
+    // `subscriptions.itest.ts`.
     for (const tool of reads.filter((one) => one.name in paths)) {
       const route = await (await call(paths[tool.name], aliceToken)).json();
       expect(await tool.run(alice, {}), tool.name).toEqual(route);

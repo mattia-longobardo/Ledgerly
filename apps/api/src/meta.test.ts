@@ -38,6 +38,7 @@ describe("GET /meta", () => {
         "search",
         "security",
         "server",
+        "subscriptions",
         "transactions",
       ],
       scopes: ["read", "write", "imports", "investments:read"],
