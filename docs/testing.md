@@ -159,13 +159,14 @@ A changed file of this list starts the full suite.
 
 ## The E2E tests, one time, on the local preview
 
-The preview is the image of the final SHA against `ledgerly_test`, on `127.0.0.1:3999`. Prepare
+The preview is the image of the final SHA against `ledgerly_test`, on `127.0.0.1:3999`; the client
+stream's runs against `ledgerly_test_2` with `LEDGERLY_TEST_DATABASE`, `LEDGERLY_PREVIEW_PORT` and
+`LEDGERLY_PREVIEW_NAME`. `up` puts either on `ledgerly_plugins`, where the bank plugin is. Prepare
 the browser first (`AGENTS.md`, "Deploy": `PLAYWRIGHT_BROWSERS_PATH`).
 
 ```bash
 sh scripts/preview-on-test.sh build                      # ledgerly:preview, with its commit on it
-sh scripts/preview-on-test.sh up ledgerly:preview        # then wait for /api/health
-docker network connect ledgerly_plugins ledgerly-preview # the plugin's manifest
+sh scripts/preview-on-test.sh up ledgerly:preview        # on ledgerly_plugins too; wait for /api/health
 sh scripts/preview-on-test.sh seed
 export E2E_BASE_URL=http://localhost:3999
 # … the E2E commands that `npm run test:select` printed …

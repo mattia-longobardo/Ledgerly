@@ -67,6 +67,11 @@ case "${1:-}" in
     environment | docker run -d --name "$name" --network db_internal --user 1000:1000 \
       --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL \
       -p "127.0.0.1:$port:3000" "$2"
+    # The plugin's manifest is on `ledgerly_plugins` (PLUGIN_URLS): without it the bank plugin is
+    # missing and its pages answer 404, whatever the database. A host with no plugin has no network.
+    if docker network inspect ledgerly_plugins >/dev/null 2>&1; then
+      docker network connect ledgerly_plugins "$name"
+    fi
     # The worker of the preview (rewrite plan R1): the tasks the screens put in the queue, on the same
     # database. No scheduler: as before R1, no tier runs by itself in a preview. It restarts until
     # the app has applied the migrations of the queue.
