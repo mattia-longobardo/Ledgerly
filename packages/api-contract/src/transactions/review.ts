@@ -92,6 +92,15 @@ export const getReview = defineRoute({
     unsuggested: z.array(reviewGroup),
     singles: z.array(reviewRow),
     mergeProposals: z.array(z.object({ first: mergeCategory, second: mergeCategory })),
+    /** The movements waiting, groups and single movements together, and their amount. */
+    count: z.number().int(),
+    total: money(),
+    /** How the movements of the chosen accounts stand, over any date: the guided review's counts. */
+    counts: z.object({
+      categorised: z.number().int(),
+      suggested: z.number().int(),
+      open: z.number().int(),
+    }),
   }),
   errors: ["invalid"],
   example: {
@@ -103,6 +112,9 @@ export const getReview = defineRoute({
       unsuggested: [],
       singles: [REVIEW_ROW_EXAMPLE],
       mergeProposals: [],
+      count: 1,
+      total: "-42.80",
+      counts: { categorised: 120, suggested: 0, open: 1 },
     },
   },
 });

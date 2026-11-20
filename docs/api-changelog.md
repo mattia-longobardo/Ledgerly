@@ -3,6 +3,22 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-20 · the card, the chart and «To review» for the client (0.43.0)
+
+- `GET /transactions/spending/breakdown` (new, `read`): the «By category» card on two levels, as the
+  page draws it — `total`, and per group `id`, `name`, `color`, `amount` (positive), `share` of the
+  total and `width` of the largest group (0-1), with its `children` measured within the group (what
+  was filed on the group itself is a child under the group's name). Takes the filters of
+  `GET /transactions`. `id`/`name` null for «Uncategorised»; `color` is the stored one, null when the
+  category has none.
+- `GET /transactions/spending/series?from&to&grain=day|month` (new, `read`): the spending chart —
+  `buckets` (every day or month from `from` to `to`, today at the latest, with its `total`) and
+  `groups` (`id`, `name`, `color`, `total`, `values` aligned to `buckets`, the biggest first). One
+  `type`, spending when none.
+- `GET /transactions/review` adds `count` and `total` (groups and single movements together) and
+  `counts` (`categorised`, `suggested`, `open`) for the chosen accounts.
+- No MCP tool changes.
+
 ## 2026-11-20 · three fixes of transactions (0.42.0)
 
 - `excludedCount` (new, optional): how many movements in another currency a total left out because

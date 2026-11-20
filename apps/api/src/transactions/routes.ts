@@ -14,6 +14,7 @@ import {
   searchPayees,
   setCategory,
   spending,
+  spendingBuckets,
   transactionsSummary,
   facetCounts,
   updateTransaction,
@@ -21,12 +22,15 @@ import {
 } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { parseCents } from "@ledgerly/domain/shared/money";
+import { today } from "@ledgerly/domain/shared/dates";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { refusing, type TransactionCases } from "./cases";
 import {
+  breakdownOf,
   excludedOf,
   filtersOf,
   money,
+  seriesOf,
   spendingGroup,
   summaryOf,
   transactionLine,
@@ -103,6 +107,21 @@ function serveSpending(app: Hono<ApiEnv>, guard: Guard): void {
       type,
     );
     return { groups: groups.map(spendingGroup) };
+  });
+  serve(app, guard, spendingArea.getSpendingBreakdown, async ({ ctx, query }) => {
+    const slices = await spending(ctx, filtersOf(query), "category");
+    return breakdownOf(slices);
+  });
+  serve(app, guard, spendingArea.getSpendingSeries, async ({ ctx, query }) => {
+    const { grain, ...rest } = query;
+    const type = rest.type ?? rest.types?.[0];
+    const points = await spending(
+      ctx,
+      filtersOf({ ...rest, type: undefined, types: undefined }),
+      grain,
+      type,
+    );
+    return seriesOf(points, spendingBuckets(query, grain, today(ctx.timeZone)));
   });
   serve(app, guard, movements.searchPayees, async ({ ctx, query }) => ({
     payees: await searchPayees(ctx, query.q, query.limit),

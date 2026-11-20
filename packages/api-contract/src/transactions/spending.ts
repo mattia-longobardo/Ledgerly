@@ -81,3 +81,96 @@ export const getSpending = defineRoute({
     },
   },
 });
+
+/**
+ * One bar of the «By category» card: the category (null for «Uncategorised»), its own stored colour
+ * (null when it has none: the client gives it the palette's, as the page does), the amount as a
+ * positive value, `share` of the whole and `width` of the largest bar of its level, both 0-1.
+ */
+const breakdownBar = z.object({
+  id: id().nullable(),
+  name: z.string().nullable(),
+  color: hexColor().nullable(),
+  amount: money(),
+  share: z.number(),
+  width: z.number(),
+});
+
+export const getSpendingBreakdown = defineRoute({
+  id: "get_spending_breakdown",
+  method: "GET",
+  path: "/transactions/spending/breakdown",
+  scope: "read",
+  capability: "transactions",
+  summary:
+    "The «By category» card on two levels, as the page draws it: one bar per group of categories, the " +
+    "biggest first, each with its sub-categories measured within it (what was filed on the group itself " +
+    "is one of them, under the group's name). Giroconti out; `total` is what the bars add up to.",
+  actions: [],
+  query: transactionFilters,
+  response: z.object({
+    total: money(),
+    groups: z.array(breakdownBar.extend({ children: z.array(breakdownBar) })),
+  }),
+  errors: ["invalid"],
+  example: {
+    query: { from: "2026-10-01", to: "2026-10-31" },
+    response: {
+      total: "42.80",
+      groups: [
+        {
+          id: CATEGORY_ID,
+          name: "Groceries",
+          color: "#3366cc",
+          amount: "42.80",
+          share: 1,
+          width: 1,
+          children: [],
+        },
+      ],
+    },
+  },
+});
+
+export const getSpendingSeries = defineRoute({
+  id: "get_spending_series",
+  method: "GET",
+  path: "/transactions/spending/series",
+  scope: "read",
+  capability: "transactions",
+  summary:
+    "The spending chart of a range: every day or month from `from` to `to` (today at the latest) with " +
+    "its total, and one series per group of categories with a value for every bucket, the biggest " +
+    "first. One `type` (spending when none), as `get_spending` by day or month.",
+  actions: [],
+  query: transactionFilters.extend({
+    from: civilDate("Not a civil date"),
+    to: civilDate("Not a civil date"),
+    grain: z.enum(["day", "month"]),
+  }),
+  response: z.object({
+    buckets: z.array(z.object({ bucket: civilDate(), total: money() })),
+    groups: z.array(
+      z.object({
+        id: id().nullable(),
+        name: z.string().nullable(),
+        color: hexColor().nullable(),
+        total: money(),
+        values: z.array(money()),
+      }),
+    ),
+  }),
+  errors: ["invalid"],
+  example: {
+    query: { from: "2026-10-01", to: "2026-10-02", grain: "day" },
+    response: {
+      buckets: [
+        { bucket: "2026-10-01", total: "42.80" },
+        { bucket: "2026-10-02", total: "0.00" },
+      ],
+      groups: [
+        { id: CATEGORY_ID, name: "Groceries", color: "#3366cc", total: "42.80", values: ["42.80", "0.00"] },
+      ],
+    },
+  },
+});

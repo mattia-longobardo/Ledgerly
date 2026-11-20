@@ -264,6 +264,87 @@ describe("a total with a movement in another currency and no rate (decision D4)"
   });
 });
 
+describe("the card, the chart and «To review» as the pages compute them (client R3)", () => {
+  it("answers what groupedBreakdown, spendingLayers, reviewTotals and categoryCounts give", async () => {
+    const domain = await import("@ledgerly/domain/transactions");
+    const account = await newAccount(alice);
+    const category = async (name: string, parentId: string | null) =>
+      (await send(alice, "POST", "/categories", { name, type: "expense", parentId, color: null })).body
+        .id as string;
+    const house = await category("House", null);
+    const rent = await category("Rent", house);
+    await manual(alice, account, { amount: "500", categoryId: rent, on: "2026-02-03" });
+    await manual(alice, account, { amount: "100", categoryId: house, on: "2026-02-10" });
+    await manual(alice, account, { amount: "20", on: "2026-02-10" });
+    const range = { from: "2026-02-01", to: "2026-02-28" };
+
+    const card = (
+      await send(alice, "GET", `/transactions/spending/breakdown?from=${range.from}&to=${range.to}`)
+    ).body;
+    const expected = domain.groupedBreakdown(
+      (await domain.spending(alice, range, "category")).map((slice) => ({
+        id: slice.categoryId ?? "",
+        name: slice.name ?? "",
+        color: slice.color ?? "",
+        cents: slice.totalCents,
+        parentId: slice.parentId,
+        parentName: slice.parentName,
+        parentColor: slice.parentColor,
+      })),
+    );
+    expect(card.total).toBe("620.00");
+    const shape = (bar: { id: string; share: number; width: number }) => [
+      bar.id || null,
+      bar.share,
+      bar.width,
+    ];
+    expect(card.groups.map((group: { id: string; share: number; width: number }) => shape(group))).toEqual(
+      expected.groups.map(shape),
+    );
+    expect(card.groups[0]).toMatchObject({ id: house, name: "House", amount: "600.00" });
+    expect(
+      card.groups[0].children.map((child: { id: string; amount: string }) => [child.id, child.amount]),
+    ).toEqual([
+      [rent, "500.00"],
+      [house, "100.00"],
+    ]);
+
+    const chart = (
+      await send(alice, "GET", `/transactions/spending/series?from=${range.from}&to=${range.to}&grain=day`)
+    ).body;
+    const buckets = domain.spendingBuckets(range, "day", "2026-11-20");
+    const layers = domain.spendingLayers(
+      (await domain.spending(alice, range, "day")).map((point) => ({
+        bucket: point.bucket ?? "",
+        groupId: point.categoryId,
+        cents: point.totalCents,
+      })),
+      buckets,
+    );
+    expect(chart.buckets.map((bucket: { bucket: string }) => bucket.bucket)).toEqual(buckets);
+    expect(chart.buckets.map((bucket: { total: string }) => bucket.total)).toEqual(
+      layers.totals.map((cents) => (Number(cents) / 100).toFixed(2)),
+    );
+    expect(
+      chart.groups.map((group: { id: string | null; total: string }) => [group.id, group.total]),
+    ).toEqual(layers.groups.map((group) => [group.id, (Number(group.total) / 100).toFixed(2)]));
+    expect(chart.groups[0].values).toHaveLength(28);
+
+    const review = (await send(alice, "GET", `/transactions/review?from=${range.from}&to=${range.to}`)).body;
+    const accountIds = await domain.categorisableAccountIds(alice);
+    const found =
+      accountIds.length === 0
+        ? { suggested: [], unsuggested: [], singles: [] }
+        : await domain.reviewOf(alice, { ...range, accountIds });
+    const totals = domain.reviewTotals(found);
+    expect([review.count, review.total]).toEqual([
+      totals.count,
+      (Number(totals.totalCents) / 100).toFixed(2),
+    ]);
+    expect(review.counts).toEqual(await domain.categoryCounts(alice, accountIds));
+  });
+});
+
 describe("the rules", () => {
   it("saves, previews, applies and undoes a rule, with its amounts as decimals", async () => {
     const account = await newAccount(alice);
@@ -310,6 +391,9 @@ describe("the review and the search", () => {
       unsuggested: [],
       singles: [],
       mergeProposals: [],
+      count: 0,
+      total: "0.00",
+      counts: { categorised: 0, suggested: 0, open: 0 },
     });
     expect((await send(alice, "GET", "/search?q=x")).body).toEqual({ records: [] });
   });

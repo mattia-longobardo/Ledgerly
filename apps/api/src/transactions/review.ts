@@ -4,6 +4,7 @@ import type { Hono } from "hono";
 import { TRANSACTIONS } from "@ledgerly/api-contract";
 import {
   categorisableAccountIds,
+  categoryCounts,
   changeCategories,
   createDefaultGroups,
   dismissMergeProposal,
@@ -11,6 +12,7 @@ import {
   listMergeProposals,
   restoreMergeProposal,
   reviewOf,
+  reviewTotals,
   similarTo,
   undoChange,
   type ReviewGroup,
@@ -52,14 +54,13 @@ function serveReviewPage(app: Hono<ApiEnv>, guard: Guard): void {
     ]);
     const selected = (query.accounts ?? []).filter((id) => eligible.includes(id));
     const accountIds = selected.length > 0 ? selected : eligible;
-    const found =
+    const [found, counts] = await Promise.all([
       accountIds.length === 0
         ? { suggested: [], unsuggested: [], singles: [] }
-        : await reviewOf(ctx, {
-            from: query.from,
-            to: query.to,
-            accountIds,
-          });
+        : reviewOf(ctx, { from: query.from, to: query.to, accountIds }),
+      categoryCounts(ctx, accountIds),
+    ]);
+    const totals = reviewTotals(found);
     return {
       accountIds: eligible,
       preparing,
@@ -67,6 +68,9 @@ function serveReviewPage(app: Hono<ApiEnv>, guard: Guard): void {
       unsuggested: found.unsuggested.map(reviewGroup),
       singles: found.singles.map(reviewRow),
       mergeProposals: proposals,
+      count: totals.count,
+      total: money(totals.totalCents),
+      counts,
     };
   });
 }

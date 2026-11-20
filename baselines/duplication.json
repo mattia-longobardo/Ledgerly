@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97571,
-    "duplicatedLines": 16744,
+    "lines": 97647,
+    "duplicatedLines": 16756,
     "percent": 17.16,
-    "blocks": 1225
+    "blocks": 1227
   },
   "units": {
     "api": {
-      "lines": 2192,
-      "duplicatedLines": 256,
-      "percent": 11.68,
-      "blocks": 26
+      "lines": 2268,
+      "duplicatedLines": 268,
+      "percent": 11.82,
+      "blocks": 28
     },
     "app": {
       "lines": 24222,
@@ -394,6 +394,7 @@
     "api/settings/server.ts": 6,
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 18,
+    "api/transactions/routes.ts": 12,
     "api/transactions/rules.ts": 18,
     "app/(app)/accounts/[id]/account-screen.tsx": 11,
     "app/(app)/accounts/[id]/connection-status.tsx": 14,

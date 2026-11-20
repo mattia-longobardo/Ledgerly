@@ -3,7 +3,13 @@
 // string, a moment as ISO 8601.
 import type { z } from "zod";
 import type { TRANSACTIONS } from "@ledgerly/api-contract";
-import { incomeLessExpense, type SpendingGroup, type TransactionRow } from "@ledgerly/domain/transactions";
+import {
+  groupedBreakdown,
+  incomeLessExpense,
+  type SpendingGroup,
+  spendingLayers,
+  type TransactionRow,
+} from "@ledgerly/domain/transactions";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
 type Wire<T extends z.ZodType> = z.input<T>;
@@ -115,5 +121,67 @@ export function spendingGroup(group: SpendingGroup) {
     amount: money(totalCents),
     in: inCents === null ? null : money(inCents),
     out: outCents === null ? null : money(outCents),
+  };
+}
+
+/** "" stands for «none» inside the card's rules, whose keys and names are strings. */
+const orNull = (value: string) => (value === "" ? null : value);
+
+/** The «By category» card of the page (`groupedBreakdown`), its sizes as the wire writes them. */
+export function breakdownOf(slices: readonly SpendingGroup[]) {
+  const { groups, totalCents } = groupedBreakdown(
+    slices.map((slice) => ({
+      id: slice.categoryId ?? "",
+      name: slice.name ?? "",
+      color: slice.color ?? "",
+      cents: slice.totalCents,
+      parentId: slice.parentId,
+      parentName: slice.parentName,
+      parentColor: slice.parentColor,
+    })),
+  );
+  const bar = (one: {
+    id: string;
+    name: string;
+    color: string;
+    cents: Cents;
+    share: number;
+    width: number;
+  }) => ({
+    id: orNull(one.id),
+    name: orNull(one.name),
+    color: orNull(one.color),
+    amount: money(one.cents < 0n ? -one.cents : one.cents),
+    share: one.share,
+    width: one.width,
+  });
+  return {
+    total: money(totalCents),
+    groups: groups.map((group) => ({ ...bar(group), children: group.children.map(bar) })),
+  };
+}
+
+/** The spending chart of the page (`spendingLayers`): the buckets with their totals, one series a group. */
+export function seriesOf(points: readonly SpendingGroup[], buckets: readonly string[]) {
+  const layers = spendingLayers(
+    points.map((point) => ({
+      bucket: point.bucket ?? "",
+      groupId: point.categoryId,
+      cents: point.totalCents,
+    })),
+    buckets,
+  );
+  return {
+    buckets: buckets.map((bucket, index) => ({ bucket, total: money(layers.totals[index]) })),
+    groups: layers.groups.map((group) => {
+      const point = points.find((one) => one.categoryId === group.id);
+      return {
+        id: group.id,
+        name: point?.name ?? null,
+        color: point?.color ?? null,
+        total: money(group.total),
+        values: group.values.map(money),
+      };
+    }),
   };
 }
