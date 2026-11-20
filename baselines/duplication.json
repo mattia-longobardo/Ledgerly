@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97369,
-    "duplicatedLines": 17052,
-    "percent": 17.51,
-    "blocks": 1249
+    "lines": 97474,
+    "duplicatedLines": 17021,
+    "percent": 17.46,
+    "blocks": 1246
   },
   "units": {
     "api": {
-      "lines": 2188,
+      "lines": 2190,
       "duplicatedLines": 256,
-      "percent": 11.7,
+      "percent": 11.69,
       "blocks": 26
     },
     "app": {
@@ -72,8 +72,8 @@
     },
     "modules/payroll": {
       "lines": 3404,
-      "duplicatedLines": 833,
-      "percent": 24.47,
+      "duplicatedLines": 826,
+      "percent": 24.27,
       "blocks": 46
     },
     "modules/pockets": {
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12413,
-      "duplicatedLines": 1855,
-      "percent": 14.94,
-      "blocks": 148
+      "lines": 12474,
+      "duplicatedLines": 1831,
+      "percent": 14.68,
+      "blocks": 145
     },
     "modules/users": {
       "lines": 874,
@@ -371,7 +371,7 @@
       "blocks": 0
     },
     "shared/money": {
-      "lines": 71,
+      "lines": 113,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -594,7 +594,7 @@
     "modules/payroll/rules.ts": 101,
     "modules/payroll/schema.ts": 184,
     "modules/payroll/service/codes.ts": 18,
-    "modules/payroll/service/leave.ts": 51,
+    "modules/payroll/service/leave.ts": 44,
     "modules/payroll/service/reading.ts": 62,
     "modules/payroll/service/review.ts": 9,
     "modules/payroll/ui/present.ts": 9,
@@ -636,9 +636,9 @@
     "modules/transactions/manual.ts": 6,
     "modules/transactions/queries/candidates.ts": 20,
     "modules/transactions/queries/filters.ts": 26,
-    "modules/transactions/queries/listing.ts": 30,
+    "modules/transactions/queries/listing.ts": 17,
     "modules/transactions/queries/movements.ts": 53,
-    "modules/transactions/queries/views.ts": 62,
+    "modules/transactions/queries/views.ts": 51,
     "modules/transactions/rules/vocabulary.ts": 7,
     "modules/transactions/schema/categories.ts": 105,
     "modules/transactions/schema/duplicates.ts": 19,

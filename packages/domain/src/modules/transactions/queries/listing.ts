@@ -11,7 +11,6 @@ import { categories, transactions } from "../schema";
 import {
   WAITING_FOR_CATEGORY,
   boundedLimit,
-  cents,
   conditions,
   dayExpression,
   labelsFor,
@@ -26,6 +25,7 @@ import {
   withoutHidden,
 } from "./filters";
 import { abs } from "../../../shared/money";
+import { gather, totallerFor, splitColumns, splitPositions } from "./totals";
 
 /** The movements of a range that wait for a category: how many, how many with a suggestion, their sum. */
 export interface WaitingForCategory {
@@ -178,10 +178,10 @@ export async function listTransactions(
  * never reaches either of them nor the net (F2.5); it is only counted, to be named in the header.
  */
 export async function transactionsSummary(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters = {},
 ): Promise<TransactionsSummary> {
-  const [row] = await getDb()
+  const rows = await getDb()
     .select({
       total: count(),
       incomeCents: sum(
@@ -193,18 +193,20 @@ export async function transactionsSummary(
       netCents: sum(transactions.amountCents),
       transfers: sql<string>`count(*) filter (where ${transactions.type} = 'transfer')`,
       unpaired: sql<string>`count(*) filter (where ${transactions.type} = 'transfer' and ${transactions.transferGroupId} is null)`,
+      ...splitColumns(ctx),
     })
     .from(transactions)
-    .where(conditions(ctx, withoutHidden(filters)));
-  const incomeCents = cents(row?.incomeCents ?? null);
-  const expenseCents = cents(row?.expenseCents ?? null);
+    .where(conditions(ctx, withoutHidden(filters)))
+    .groupBy(...splitPositions(6));
+  const [range] = gather(rows, () => "range", await totallerFor(ctx));
+  const counted = (key: "transfers" | "unpaired") => rows.reduce((sum, row) => sum + Number(row[key]), 0);
   return {
-    count: Number(row?.total ?? 0),
-    incomeCents,
-    expenseCents,
-    netCents: cents(row?.netCents ?? null),
-    transferCount: Number(row?.transfers ?? 0),
-    unpairedTransferCount: Number(row?.unpaired ?? 0),
+    count: range?.count ?? 0,
+    incomeCents: range?.sum((row) => row.incomeCents) ?? 0n,
+    expenseCents: range?.sum((row) => row.expenseCents) ?? 0n,
+    netCents: range?.sum((row) => row.netCents) ?? 0n,
+    transferCount: counted("transfers"),
+    unpairedTransferCount: counted("unpaired"),
   };
 }
 
@@ -217,7 +219,7 @@ export async function transactionsSummary(
  * summing it would print a wrong amount in the same shape as a right one.
  */
 export async function monthlyTotals(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters = {},
 ): Promise<MonthTotal[]> {
   const month = monthExpression(ctx.timeZone);
@@ -227,17 +229,19 @@ export async function monthlyTotals(
       total: count(),
       // The month's cash flow, as the header's net: a paired giroconto cancels itself out.
       netCents: sum(transactions.amountCents),
+      ...splitColumns(ctx),
     })
     .from(transactions)
     .where(conditions(ctx, withoutHidden(filters)))
     // By position: the same expression is written differently in a select list and in a
     // `GROUP BY`, and Postgres compares the two textually.
-    .groupBy(sql`1`)
+    .groupBy(sql`1`, ...splitPositions(3))
     .orderBy(sql`1 desc`);
-  return rows.map((row) => ({
+  const months = gather(rows, (row) => row.month, await totallerFor(ctx));
+  return months.map(({ row, count, sum }) => ({
     month: monthKey(row.month),
-    count: Number(row.total),
-    netCents: cents(row.netCents),
+    count,
+    netCents: sum((row) => row.netCents),
   }));
 }
 
@@ -247,7 +251,7 @@ export async function monthlyTotals(
  * and gone-from-provider rows are left out too, whatever "Show hidden" says: the card is a total.
  */
 export async function categoryTotals(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters = {},
 ): Promise<CategoryTotal[]> {
   // The slice's group comes along (F2.5), archived or not: a movement filed under a sub-category of
@@ -263,6 +267,7 @@ export async function categoryTotals(
       parentColor: parents.color,
       total: count(),
       totalCents: sum(transactions.amountCents),
+      ...splitColumns(ctx),
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
@@ -275,18 +280,20 @@ export async function categoryTotals(
       categories.parentId,
       parents.name,
       parents.color,
+      ...splitPositions(8),
     )
     .orderBy(asc(categories.name), asc(transactions.categoryId));
 
-  const slices = rows.map((row) => ({
+  const groups = gather(rows, (row) => String(row.categoryId), await totallerFor(ctx));
+  const slices = groups.map(({ row, count, sum }) => ({
     categoryId: row.categoryId,
     name: row.name,
     color: row.color,
     parentId: row.parentId,
     parentName: row.parentName,
     parentColor: row.parentColor,
-    count: Number(row.total),
-    totalCents: cents(row.totalCents),
+    count,
+    totalCents: sum((row) => row.totalCents),
   }));
   const whole = slices.reduce<Cents>((sum, slice) => sum + abs(slice.totalCents), 0n);
   return slices

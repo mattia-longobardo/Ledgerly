@@ -159,7 +159,6 @@
     "packages/domain/src/modules/transactions/categorize/service.ts": 1,
     "packages/domain/src/modules/transactions/categorize/user-rules.ts": 1,
     "packages/domain/src/modules/transactions/queries/filters.ts": 1,
-    "packages/domain/src/modules/transactions/queries/listing.ts": 1,
     "packages/domain/src/modules/transactions/rules/recurrences.ts": 1,
     "packages/domain/src/modules/transactions/rules/transfers.ts": 2,
     "packages/domain/src/modules/transactions/service/provider-ids.ts": 1,

@@ -1,4 +1,5 @@
 import { type Cents, parseCents } from "@ledgerly/format/cents";
+import type { CivilDate } from "./dates";
 
 export { type Cents, centsToDecimal, parseCents } from "@ledgerly/format/cents";
 
@@ -27,6 +28,57 @@ export function sumCents(values: readonly (Cents | null)[]): { total: Cents | nu
       continue;
     }
     total = (total ?? 0n) + value;
+  }
+  return { total, partial };
+}
+
+/** An amount with its currency: what a total of movements is made of (audit TR-4). */
+interface Money {
+  cents: Cents;
+  currency: string;
+}
+
+/** An amount and the day it belongs to, whose rate converts it; `null` when it needs none. */
+export interface DatedMoney {
+  money: Money;
+  on: CivilDate | null;
+}
+
+/** `money` in the target currency at the rate of `on`, or `null` when no rate is known. */
+export type Converter = (money: Money, on: CivilDate | null) => Cents | null;
+
+/** A total met an amount in another currency and had no way to convert it. */
+export class MixedCurrencyError extends Error {
+  constructor(
+    readonly into: string,
+    readonly found: string,
+  ) {
+    super(`Cannot add ${found} to a total in ${into} without a conversion`);
+    this.name = "MixedCurrencyError";
+  }
+}
+
+/**
+ * The one sum of amounts in currencies (audit TR-4, TRX-2): an amount in `into` is added as it is;
+ * any other goes through `convert`, and without one the mix is refused. A conversion with no rate
+ * (`null`) leaves that amount out and makes the total `partial`, as the accounts' totals do.
+ */
+export function sumMoney(
+  amounts: Iterable<DatedMoney>,
+  into: string,
+  convert?: Converter,
+): { total: Cents; partial: boolean } {
+  let total = 0n;
+  let partial = false;
+  for (const { money, on } of amounts) {
+    if (money.currency === into) {
+      total += money.cents;
+      continue;
+    }
+    if (!convert) throw new MixedCurrencyError(into, money.currency);
+    const converted = convert(money, on);
+    if (converted === null) partial = true;
+    else total += converted;
   }
   return { total, partial };
 }

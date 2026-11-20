@@ -12,7 +12,6 @@ import { categories, categoryRules, transactions } from "../schema";
 import { listCategories, listLabels } from "../taxonomy";
 import {
   boundedLimit,
-  cents,
   conditions,
   dayExpression,
   escapeLike,
@@ -33,6 +32,7 @@ import {
   monthlyTotals,
   transactionsSummary,
 } from "./listing";
+import { gather, totallerFor, splitColumns, splitPositions } from "./totals";
 
 /** The money of one category in one macro (categories-and-rules.md §5.3): `null` is no category. */
 export interface CategoryMacroTotal {
@@ -52,7 +52,7 @@ export interface CategoryMacroTotal {
  * every total. Summed by the movement's type, so the total of Expenses here is the header's.
  */
 export async function categoryMacroTotals(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters = {},
 ): Promise<CategoryMacroTotal[]> {
   const rows = await getDb()
@@ -67,18 +67,20 @@ export async function categoryMacroTotals(
       outCents: sum(
         sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`,
       ),
+      ...splitColumns(ctx),
     })
     .from(transactions)
     .where(conditions(ctx, withoutHidden(filters)))
-    .groupBy(transactions.categoryId, transactions.type)
+    .groupBy(transactions.categoryId, transactions.type, ...splitPositions(6))
     .orderBy(asc(transactions.categoryId), asc(transactions.type));
-  return rows.map((row) => ({
+  const groups = gather(rows, (row) => `${row.categoryId}|${row.type}`, await totallerFor(ctx));
+  return groups.map(({ row, count, sum }) => ({
     categoryId: row.categoryId,
     type: row.type,
-    count: Number(row.total),
-    totalCents: cents(row.totalCents),
-    inCents: cents(row.inCents),
-    outCents: cents(row.outCents),
+    count,
+    totalCents: sum((row) => row.totalCents),
+    inCents: sum((row) => row.inCents),
+    outCents: sum((row) => row.outCents),
   }));
 }
 
@@ -102,7 +104,7 @@ interface SpendingPoint {
  * list shows; every other filter narrows it like the list.
  */
 export async function spendingOverTime(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters,
   grain: "day" | "month",
   // The page of one category draws its own macro (categories-and-rules.md §5.4): what came in for
@@ -123,20 +125,22 @@ export async function spendingOverTime(
         type === "transfer"
           ? sum(sql`case when ${transactions.amountCents} < 0 then ${transactions.amountCents} else 0 end`)
           : sum(transactions.amountCents),
+      ...splitColumns(ctx),
     })
     .from(transactions)
     .leftJoin(categories, and(eq(categories.id, transactions.categoryId), userScoped(ctx).owns(categories)))
     .leftJoin(parents, and(eq(parents.id, categories.parentId), userScoped(ctx).owns(parents)))
     .where(and(conditions(ctx, withoutHidden({ ...filters, types: undefined })), eq(transactions.type, type)))
     // By position, for the same reason as `monthlyTotals`.
-    .groupBy(sql`1`, sql`2`, sql`3`, sql`4`)
+    .groupBy(sql`1`, sql`2`, sql`3`, sql`4`, ...splitPositions(5))
     .orderBy(sql`1`, sql`2`);
-  return rows.map((row) => ({
+  const points = gather(rows, (row) => `${row.bucket}|${row.groupId}`, await totallerFor(ctx));
+  return points.map(({ row, sum }) => ({
     bucket: row.bucket,
     groupId: row.groupId,
     groupName: row.groupName,
     groupColor: row.groupColor,
-    cents: type === "income" ? cents(row.cents) : -cents(row.cents),
+    cents: type === "income" ? sum((row) => row.cents) : -sum((row) => row.cents),
   }));
 }
 
@@ -254,7 +258,7 @@ export function monthGroups(rows: readonly TransactionRow[], totals: readonly Mo
  * date sort, so a caller sorting by amount or payee should render `rows` flat.
  */
 export async function expensesView(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters = {},
 ): Promise<ExpensesView> {
   // One read of the accounts for the list and the page (audit TRX-11).
@@ -412,7 +416,7 @@ const NO_GROUP = {
  * `month`, the chart of one `type` (spending when none) by category group.
  */
 export async function spending(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   filters: TransactionFilters,
   groupBy: SpendingGroupBy,
   type: TransactionType = "expense",
