@@ -4,7 +4,8 @@
 // with a row is added by the page that knows that source.
 import type { TransactionRow } from "@ledgerly/domain/transactions";
 import { displayPayee, isHidden, macrosFor } from "@ledgerly/domain/transactions";
-import { amountToneOf, badgesOf } from "@/modules/transactions/ui/display";
+import { amountToneOf } from "@/modules/transactions/ui/display";
+import { badgesOf } from "@ledgerly/domain/transactions";
 import type { RowView } from "@/modules/transactions/ui/view";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";

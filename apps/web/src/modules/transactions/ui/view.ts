@@ -4,7 +4,7 @@
  * reformats money or dates and never needs to know the user's locale to draw a row.
  */
 
-import type { RowBadge } from "./display";
+import type { RowBadge } from "@ledgerly/domain/transactions/client";
 import type { Tone } from "@ledgerly/ui/tone";
 import type { CategoryOption } from "@ledgerly/ui/category-picker";
 import type { CategoryType, TransactionType } from "@ledgerly/domain/transactions";

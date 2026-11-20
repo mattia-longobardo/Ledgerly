@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { cn } from "@ledgerly/ui/cn";
 import { TONE_TEXT } from "@ledgerly/ui/tone";
 import { Badge, Tag } from "@ledgerly/ui/badge";
-import type { RowBadge } from "./display";
+import type { RowBadge } from "@ledgerly/domain/transactions/client";
 import type { RowView } from "./view";
 
 /** Hidden and gone-from-the-provider are facts about the data; "edited here" is one about the user. */

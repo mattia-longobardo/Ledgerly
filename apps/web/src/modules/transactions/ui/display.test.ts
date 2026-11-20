@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PALETTE } from "@ledgerly/design-tokens";
-import { amountToneOf, badgesOf, type BadgeSource, categoryColors, withMacroTitles } from "./display";
+import { amountToneOf, categoryColors, withMacroTitles } from "./display";
+import { badgesOf, type BadgeSource } from "@domain/modules/transactions/rules";
 import { categoryBreakdown, groupedBreakdown, spendingLayers } from "@domain/modules/transactions/rules";
 
 const PLAIN: BadgeSource = {

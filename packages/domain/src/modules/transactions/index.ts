@@ -66,6 +66,7 @@ export {
   displayPayee,
   isHidden,
   macrosFor,
+  badgesOf,
   groupedBreakdown,
   spendingLayers,
   spendingBuckets,

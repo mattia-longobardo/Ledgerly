@@ -636,11 +636,10 @@
     "NOTE_MAX",
     "RULE_FIELDS",
     "RULE_SOURCES",
+    "RowBadge",
     "RuleField",
     "TEXT_OPS",
     "TRANSACTION_TYPES",
-    "TransactionOrigin",
-    "TransactionState",
     "TransactionType"
   ],
   "packages/domain/src/modules/transactions/index.ts": [
@@ -683,6 +682,7 @@
     "alignCategoryTypesToMovements",
     "applyRule",
     "archiveCategory",
+    "badgesOf",
     "categorisableAccountIds",
     "categorise",
     "categoryCounts",

@@ -13,5 +13,5 @@ export {
 } from "./categorize/user-rules";
 export type { RuleField } from "./categorize/user-rules";
 export { CATEGORY_COLORS, NAME_MAX, TRANSACTION_TYPES } from "./rules";
-export type { BreakdownBar, BreakdownGroup } from "./rules";
-export type { CategoryType, TransactionOrigin, TransactionState, TransactionType } from "./rules";
+export type { BreakdownBar, BreakdownGroup, RowBadge } from "./rules";
+export type { CategoryType, TransactionType } from "./rules";
