@@ -9,6 +9,7 @@ import {
   CONTRACT_SCOPES,
   POCKETS_ROUTES,
   SETTINGS_ROUTES,
+  SUBSCRIPTIONS_ROUTES,
   TRANSACTIONS_ROUTES,
   type RouteContract,
 } from "@ledgerly/api-contract";
@@ -19,6 +20,8 @@ import * as budgetsWire from "../packages/api-contract/src/budgets/shared";
 import * as budgetsDomain from "@domain/modules/budgets/rules";
 import * as pocketsWire from "../packages/api-contract/src/pockets/shared";
 import * as pocketsDomain from "@domain/modules/pockets/rules";
+import * as subscriptionsWire from "../packages/api-contract/src/subscriptions/shared";
+import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -283,6 +286,34 @@ describe("the Server Actions of pockets", () => {
     const fields = pocketsDomain.pocketInputSchema.shape;
     expect(fields.name.maxLength).toBe(pocketsWire.MAX_NAME);
     expect(pocketsDomain.plannedSchema.shape.description.maxLength).toBe(pocketsWire.MAX_DESCRIPTION);
+  });
+});
+
+/**
+ * The Server Actions of subscriptions (05-refactor.md §5.5) and their routes; no exclusion. The
+ * suggestions read a route of their own, with no action.
+ */
+const SUBSCRIPTIONS_ACTION_FILES = ["apps/web/src/modules/subscriptions/actions.ts"];
+
+describe("the Server Actions of subscriptions", () => {
+  const actions = SUBSCRIPTIONS_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(SUBSCRIPTIONS_ROUTES.flatMap((route) => route.actions));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(subscriptionsWire.CYCLES).toEqual(subscriptionsDomain.CYCLES);
+    expect(subscriptionsWire.SUBSCRIPTION_STATES).toEqual(subscriptionsDomain.SUBSCRIPTION_STATES);
+    expect(subscriptionsWire.CHARGE_STATES).toEqual(subscriptionsDomain.CHARGE_STATES);
+    const fields = subscriptionsDomain.subscriptionInputSchema.shape;
+    expect(fields.name.maxLength).toBe(subscriptionsWire.MAX_NAME);
+    expect(fields.utility.unwrap().minValue).toBe(subscriptionsWire.MIN_UTILITY);
+    expect(fields.utility.unwrap().maxValue).toBe(subscriptionsWire.MAX_UTILITY);
   });
 });
 

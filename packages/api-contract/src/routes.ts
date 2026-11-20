@@ -26,6 +26,7 @@ import * as movements from "./transactions/movements";
 import * as review from "./transactions/review";
 import * as rules from "./transactions/rules";
 import * as spending from "./transactions/spending";
+import * as subscriptions from "./subscriptions/subscriptions";
 
 /** The routes of users and settings by area, for `apps/api` to serve each one by name. */
 export const SETTINGS = {
@@ -94,6 +95,12 @@ export const POCKETS = { pockets } as const;
 /** Pockets, the fifth module of R2 (05-refactor.md §5.2). */
 export const POCKETS_ROUTES: readonly RouteContract[] = Object.values(pockets);
 
+/** Subscriptions by area, for `apps/api` to serve each one by name. */
+export const SUBSCRIPTIONS = { subscriptions } as const;
+
+/** Subscriptions, the sixth module of R2 (05-refactor.md §5.2). */
+export const SUBSCRIPTIONS_ROUTES: readonly RouteContract[] = Object.values(subscriptions);
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
@@ -101,4 +108,5 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...TRANSACTIONS_ROUTES,
   ...BUDGETS_ROUTES,
   ...POCKETS_ROUTES,
+  ...SUBSCRIPTIONS_ROUTES,
 ];
