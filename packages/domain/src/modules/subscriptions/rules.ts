@@ -10,6 +10,9 @@ export const CYCLES = ["weekly", "monthly", "quarterly", "yearly"] as const;
 export const SUBSCRIPTION_STATES = ["active", "paused", "cancelled"] as const;
 export const CHARGE_STATES = ["paid", "amount_differs", "due", "not_found"] as const;
 
+/** The currency of every price (the schema holds it to EUR): what a projection is worked out in. */
+export const PRICE_CURRENCY = "EUR";
+
 export type Cycle = (typeof CYCLES)[number];
 export type SubscriptionState = (typeof SUBSCRIPTION_STATES)[number];
 type ChargeState = (typeof CHARGE_STATES)[number];

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { removeAccount, saveBalanceEntry } from "../accounts/service";
+import { createAccount, removeAccount, saveBalanceEntry } from "../accounts/service";
+import { saveRates } from "../../platform/fx/service";
 import { refreshRecurrences } from "@/modules/transactions/jobs";
 import { listTransactions } from "../transactions/queries";
 import { hideTransaction, upsertFromProvider } from "../transactions/service";
@@ -221,6 +222,45 @@ describe("the page's figures", () => {
     expect(view.projections.month).toMatchObject([
       { accountId, count: 1, commitCents: 1_299n, projectedCents: 10_000n - 1_299n },
     ]);
+  });
+
+  it("projects an account in another currency in EUR at the day's rate, none without a rate (D4)", async () => {
+    const accountIn = async (currency: string) =>
+      (
+        await createAccount(ctx, {
+          name: currency,
+          type: "checking",
+          currency,
+          color: null,
+          reference: "",
+          purpose: "",
+          openedOn: null,
+          notes: "",
+          openingBalance: null,
+        })
+      ).id;
+    const dollars = await accountIn("USD");
+    const pounds = await accountIn("GBP");
+    await saveRates([{ on: addDays(todayOn, -3), currency: "USD", eurPerUnit: "0.8000000000" }]);
+    for (const id of [dollars, pounds]) {
+      await saveBalanceEntry(ctx, id, { on: todayOn, cents: 10_000n });
+      await createSubscription(
+        ctx,
+        input({ cycle: "yearly", payeeMatch: null, paymentAccountId: id, nextChargeOn: addDays(todayOn, 5) }),
+      );
+    }
+
+    const month = (await subscriptionsView(ctx)).projections.month;
+    expect(month.find((one) => one.accountId === dollars)).toMatchObject({
+      balanceCents: 8_000n,
+      commitCents: 1_299n,
+      projectedCents: 8_000n - 1_299n,
+    });
+    expect(month.find((one) => one.accountId === pounds)).toMatchObject({
+      balanceCents: null,
+      commitCents: 1_299n,
+      projectedCents: null,
+    });
   });
 
   it("suggests an outgoing recurring payee until a subscription covers it", async () => {

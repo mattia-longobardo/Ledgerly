@@ -5,11 +5,13 @@ import { colorOfCategory, listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
 import { addDays, type CivilDate, civilDateIn, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
+import { convertCents, ratesOn } from "../../platform/fx";
 import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
 import { groupBy, searchByName } from "../../shared/collections";
 import {
   foundCharges,
+  PRICE_CURRENCY,
   LOW_UTILITY,
   monthlyCost,
   monthlyEquivalent,
@@ -268,6 +270,31 @@ async function sourcesOf(ctx: Pick<Ctx, "userId" | "timeZone">, todayOn: CivilDa
   return { all, accounts, sources };
 }
 
+/**
+ * The latest balance of each paying account in the currency of the prices (D4): one in another
+ * currency is converted at the ECB rate of the day (`convertCents`, the accounts' rule); one with no
+ * rate is left out, so its projection is unknown rather than a sum of two currencies. With every
+ * account in the prices' currency no rate is read.
+ */
+async function balancesInPriceCurrency(
+  ctx: Pick<Ctx, "userId">,
+  accounts: readonly { id: string; currency: string }[],
+  paying: readonly string[],
+  day: CivilDate,
+): Promise<Map<string, Cents>> {
+  const currency = new Map(accounts.map((account) => [account.id, account.currency]));
+  const [native, rates] = await Promise.all([
+    readingsAt(ctx, paying, day),
+    ratesOn([PRICE_CURRENCY, ...paying.map((id) => currency.get(id) ?? PRICE_CURRENCY)], day, day),
+  ]);
+  return new Map(
+    [...native].flatMap(([id, cents]) => {
+      const converted = convertCents(cents, currency.get(id) ?? PRICE_CURRENCY, PRICE_CURRENCY, day, rates);
+      return converted === null ? [] : [[id, converted] as const];
+    }),
+  );
+}
+
 /** Everything the Subscriptions page renders (spec §7.5), read once. */
 export async function subscriptionsView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -279,7 +306,8 @@ export async function subscriptionsView(
   const active = rows.filter((row) => row.subscription.state === "active");
   const next30Until = addDays(todayOn, MONTH_DAYS);
   const paying = [...new Set(active.flatMap((row) => row.subscription.paymentAccountId ?? []))];
-  const commitments = { found: sources.found, balances: await readingsAt(ctx, paying, todayOn) };
+  const balances = await balancesInPriceCurrency(ctx, accounts, paying, todayOn);
+  const commitments = { found: sources.found, balances };
   const low = active.filter((row) => row.subscription.utility <= LOW_UTILITY);
   return {
     rows: active,

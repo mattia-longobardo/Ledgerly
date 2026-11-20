@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 99483,
+    "lines": 99505,
     "duplicatedLines": 16558,
     "percent": 16.64,
     "blocks": 1228
@@ -83,9 +83,9 @@
       "blocks": 44
     },
     "modules/subscriptions": {
-      "lines": 1991,
+      "lines": 2013,
       "duplicatedLines": 443,
-      "percent": 22.25,
+      "percent": 22.01,
       "blocks": 30
     },
     "modules/timeoff": {
