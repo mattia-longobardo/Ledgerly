@@ -2,6 +2,7 @@
 // it: `apps/web`'s Hono app mounts this router with its adapters (`apps/web/src/platform/api/app.ts`).
 import { Hono } from "hono";
 import { type AccountCases, serveAccounts } from "./accounts/routes";
+import { serveBudgets } from "./budgets/routes";
 import { metaApi } from "./meta";
 import type { ApiEnv, Guard } from "./serve";
 import { serveTaxonomy } from "./settings/categories";
@@ -50,6 +51,7 @@ export function apiRoutes({
     ...serveServer(app, guard, server),
     ...serveAccounts(app, guard, accounts),
     ...serveTransactions(app, guard, transactions),
+    ...serveBudgets(app, guard),
   ];
   app.route("/", metaApi(served));
   return app;

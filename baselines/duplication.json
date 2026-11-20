@@ -4,21 +4,21 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97750,
-    "duplicatedLines": 16742,
-    "percent": 17.13,
-    "blocks": 1226
+    "lines": 97839,
+    "duplicatedLines": 16748,
+    "percent": 17.12,
+    "blocks": 1227
   },
   "units": {
     "api": {
-      "lines": 2274,
-      "duplicatedLines": 268,
-      "percent": 11.79,
-      "blocks": 28
+      "lines": 2394,
+      "duplicatedLines": 278,
+      "percent": 11.61,
+      "blocks": 29
     },
     "app": {
       "lines": 24217,
-      "duplicatedLines": 4335,
+      "duplicatedLines": 4334,
       "percent": 17.9,
       "blocks": 328
     },
@@ -41,9 +41,9 @@
       "blocks": 70
     },
     "modules/budgets": {
-      "lines": 1513,
+      "lines": 1517,
       "duplicatedLines": 232,
-      "percent": 15.33,
+      "percent": 15.29,
       "blocks": 20
     },
     "modules/funds": {
@@ -66,8 +66,8 @@
     },
     "modules/investments": {
       "lines": 10301,
-      "duplicatedLines": 1956,
-      "percent": 18.99,
+      "duplicatedLines": 1955,
+      "percent": 18.98,
       "blocks": 134
     },
     "modules/payroll": {
@@ -102,9 +102,9 @@
     },
     "modules/users": {
       "lines": 874,
-      "duplicatedLines": 198,
-      "percent": 22.65,
-      "blocks": 17
+      "duplicatedLines": 206,
+      "percent": 23.57,
+      "blocks": 18
     },
     "platform/alerts": {
       "lines": 34,
@@ -251,10 +251,10 @@
       "blocks": 0
     },
     "platform/mcp": {
-      "lines": 221,
-      "duplicatedLines": 10,
-      "percent": 4.52,
-      "blocks": 1
+      "lines": 186,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
     },
     "platform/next-version": {
       "lines": 2,
@@ -387,6 +387,7 @@
     "api/accounts/cases.ts": 6,
     "api/accounts/dto.ts": 49,
     "api/accounts/routes.ts": 44,
+    "api/budgets/dto.ts": 10,
     "api/settings/categories.ts": 39,
     "api/settings/category-moves.ts": 6,
     "api/settings/connections.ts": 16,
@@ -433,7 +434,7 @@
     "app/(app)/investments/[accountId]/connection/page.tsx": 29,
     "app/(app)/investments/[accountId]/page.tsx": 204,
     "app/(app)/investments/[accountId]/positions/page.tsx": 103,
-    "app/(app)/investments/[accountId]/service-data.ts": 29,
+    "app/(app)/investments/[accountId]/service-data.ts": 28,
     "app/(app)/investments/catalog/page.tsx": 32,
     "app/(app)/investments/page.tsx": 283,
     "app/(app)/navigation.ts": 108,
@@ -571,7 +572,7 @@
     "modules/interests/ui/rule-dialog.tsx": 127,
     "modules/investments/actions.ts": 101,
     "modules/investments/activity.ts": 15,
-    "modules/investments/api.ts": 16,
+    "modules/investments/api.ts": 15,
     "modules/investments/catalog.ts": 82,
     "modules/investments/managed.ts": 21,
     "modules/investments/pnl.ts": 21,
@@ -671,7 +672,7 @@
     "modules/transactions/ui/spending-card.tsx": 20,
     "modules/users/calls.ts": 25,
     "modules/users/schema.ts": 26,
-    "modules/users/service.ts": 23,
+    "modules/users/service.ts": 31,
     "modules/users/ui/invite-person.tsx": 31,
     "modules/users/ui/people-table.tsx": 72,
     "modules/users/ui/two-factor-setup.tsx": 21,
@@ -709,7 +710,6 @@
     "platform/integrations/wallet/records.ts": 6,
     "platform/integrations/wallet/sync.ts": 10,
     "platform/jobs/schema.ts": 28,
-    "platform/mcp/tools.ts": 10,
     "platform/notifications/schema.ts": 15,
     "platform/plugins/queries.ts": 56,
     "platform/plugins/schema.ts": 65,

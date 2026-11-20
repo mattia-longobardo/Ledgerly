@@ -20,7 +20,9 @@ import {
   OVERVIEW_BUDGETS,
 } from "./shared";
 
-const byMonth = z.object({ month: budgetMonth().optional() });
+const byMonth = z.object({
+  month: budgetMonth().optional().describe("YYYY-MM; the current month when omitted."),
+});
 
 export const listBudgets = defineRoute({
   id: "list_budgets",

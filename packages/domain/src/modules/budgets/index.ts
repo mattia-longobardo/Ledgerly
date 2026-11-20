@@ -5,6 +5,7 @@ export {
   DEFAULT_ALERT_SETTINGS,
   budgetName,
   budgetSlug,
+  closestToLimit,
   parseBudgetSlug,
   percentOf,
   reachedThreshold,

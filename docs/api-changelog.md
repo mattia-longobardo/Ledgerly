@@ -3,22 +3,26 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
-## 2026-11-20 · the sign, the series' shares, the groups' counts, the macros, the archived accounts (0.44.0)
+## 2026-11-20 · budgets (0.44.0)
 
-- `GET /transactions/spending/breakdown`: `signedAmount` (new) on every group and child, the amount
-  with its sign (negative for spending). `amount`, `share` and `width` do not change.
-- `GET /transactions/spending/series`: `total` (new), what the buckets add up to, and `share` (new) on
-  every group, its `total` as a share of the series' `total` (0-1; 0 when the series is 0).
-- `GET /transactions/view`: `facets.groups` (new), `[{ categoryId, count }]` for every group of
-  categories that has sub-categories and any movement: its own movements and its sub-categories'
-  (F2.5). `facets.categories` keeps each category's own count; `GET /transactions/facets` does not
-  change.
-- `macros` (new) on every movement of `GET /transactions/view` and `GET /transactions/{id}`: the
-  macros its category may be chosen in — `["transfer"]` for a leg of a pair, otherwise
-  `["expense", "transfer"]` for money out and `["income", "transfer"]` for money in.
-- `GET /accounts?archived=true` (new optional parameter): the archived accounts too, in the same
-  shape. Without it the answer does not change.
-- No MCP tool changes: `list_accounts` keeps no arguments.
+- `GET /budgets?month=` (new, `read`): the answer of the MCP tool `list_budgets`, from the same
+  descriptor and the same mapper — `month`, `budgets` (`categoryId`, `category`, `group`,
+  `accountId`, `account`, `limit`, `spent`, `status` `over`/`near`/`on_track`, `percent`), `totals`
+  and `unbudgeted`.
+- `GET /budgets/view?month=` (new, `read`): the Budgets page. Each row of `list_budgets` plus `slug`,
+  `name` («Group › Sub» already composed, null for «All categories»), `color`, `depth` and
+  `remaining` (`limit − spent`, negative when over); `totals.remaining`, `toCategorise` (`count`,
+  `amount`), the choices of «Add budget» (`categories`, `accounts`) and `firstMonth`.
+- `GET /budgets/overview?month=` (new, `read`): Overview's card, the 5 budgets closest to their limit,
+  the highest `percent` first, with the rows of the page.
+- `GET /budgets/{budget}?month=` (new, `read`): a budget's page — `budget` (the row of the page), the
+  6 months before (`history`: `month`, `limit` null without one, `spent`) and `alerts`. `not_found`
+  when the budget has no limit in `month`. `{budget}` is `<category|all>_<account|all>`.
+- `PUT /budgets/{budget}/limit` (`month`, `amount` as a decimal string), `POST /budgets/{budget}/stop`
+  (`month`), `PUT /budgets/{budget}/alerts` (`enabled`, `thresholds`, answered sorted without
+  repeats) (new, `write`). Errors: `invalid`, `not_found`.
+- `month` is `YYYY-MM` or `YYYY-MM-01` on every budgets route and on `list_budgets` (which took
+  `YYYY-MM` only); none is the current month. The tool's answer does not change.
 
 ## 2026-11-20 · the card, the chart and «To review» for the client (0.43.0)
 

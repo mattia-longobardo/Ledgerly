@@ -5,7 +5,7 @@ import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { TONE_TEXT } from "@ledgerly/ui/tone";
-import { budgetsView } from "@ledgerly/domain/budgets";
+import { budgetsView, closestToLimit } from "@ledgerly/domain/budgets";
 import { budgetName, NO_COLOR } from "./present";
 
 const SHOWN = 5;
@@ -22,9 +22,7 @@ export async function BudgetsOverviewCard({
 }) {
   const t = await getTranslations("budgets");
   const view = await budgetsView(ctx, month);
-  const top = [...view.rows]
-    .sort((a, b) => b.percent - a.percent || a.key.localeCompare(b.key))
-    .slice(0, SHOWN);
+  const top = closestToLimit(view.rows, SHOWN);
 
   return (
     <Card padded={false} data-testid="budgets-card">

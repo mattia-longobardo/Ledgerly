@@ -5377,6 +5377,7 @@
             "in": "query",
             "required": false,
             "schema": {
+              "description": "YYYY-MM; the current month when omitted.",
               "type": "string",
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])(-01)?$"
             }
@@ -5579,6 +5580,7 @@
             "in": "query",
             "required": false,
             "schema": {
+              "description": "YYYY-MM; the current month when omitted.",
               "type": "string",
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])(-01)?$"
             }
@@ -6186,6 +6188,7 @@
             "in": "query",
             "required": false,
             "schema": {
+              "description": "YYYY-MM; the current month when omitted.",
               "type": "string",
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])(-01)?$"
             }
@@ -6398,6 +6401,7 @@
             "in": "query",
             "required": false,
             "schema": {
+              "description": "YYYY-MM; the current month when omitted.",
               "type": "string",
               "pattern": "^\\d{4}-(0[1-9]|1[0-2])(-01)?$"
             }

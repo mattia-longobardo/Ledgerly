@@ -329,6 +329,13 @@ export function budgetName(row: Pick<BudgetRow, "name" | "groupName" | "depth">)
   return row.depth === 0 && row.groupName !== null ? `${row.groupName} › ${row.name}` : row.name;
 }
 
+/** The budgets closest to their limit, the highest percentage first: Overview's card. */
+export function closestToLimit(rows: readonly BudgetRow[], count: number): BudgetRow[] {
+  return [...rows]
+    .sort((left, right) => right.percent - left.percent || left.key.localeCompare(right.key))
+    .slice(0, count);
+}
+
 /** A budget's address: `<category|all>_<account|all>`, the two halves of its scope. */
 export function budgetSlug(scope: BudgetScope): string {
   return `${scope.categoryId ?? "all"}_${scope.accountId ?? "all"}`;

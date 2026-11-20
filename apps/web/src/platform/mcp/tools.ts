@@ -2,13 +2,10 @@ import "server-only";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { budgetsView } from "@ledgerly/domain/budgets";
 import { holdingsJson, pnlJson, portfolioJson } from "@/modules/investments/api";
 import { investmentsPnl, investmentsPortfolio, serviceHoldings } from "@ledgerly/domain/investments";
-import { money } from "@/platform/api/json";
 import type { ApiScope } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
 import { civilDate } from "@ledgerly/api-contract";
 import type { ReadTool } from "@ledgerly/api";
@@ -29,7 +26,6 @@ import type { ReadTool } from "@ledgerly/api";
  */
 
 const civilDateField = civilDate("A date as YYYY-MM-DD");
-const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "A month as YYYY-MM");
 
 /** The JSON of a tool's answer, as text: every MCP client reads that, whatever it does with the rest. */
 function json(value: unknown): CallToolResult {
@@ -63,42 +59,6 @@ export function buildMcpServer(
     ctx,
     reads.filter((tool) => scopes.some((scope) => scope === tool.scope)),
   );
-  if (!scopes.includes("read")) return server;
-
-  server.registerTool(
-    "list_budgets",
-    {
-      title: "Budgets",
-      description:
-        "The budgets of one month with their limit, what was spent and the status, plus the totals " +
-        "and the spending no budget covers, as the Budgets page shows them.",
-      inputSchema: {
-        month: month.optional().describe("YYYY-MM; the current month when omitted."),
-      },
-      annotations: READ_ONLY,
-    },
-    async ({ month: chosen }) => {
-      const key = chosen ? `${chosen}-01` : monthKey(today(ctx.timeZone));
-      const view = await budgetsView(ctx, key);
-      return json({
-        month: view.month,
-        budgets: view.rows.map((row) => ({
-          categoryId: row.categoryId,
-          category: row.name,
-          group: row.groupName,
-          accountId: row.accountId,
-          account: row.accountName,
-          limit: money(row.limitCents),
-          spent: money(row.spentCents),
-          status: row.status,
-          percent: row.percent,
-        })),
-        totals: { limit: money(view.totals.limitCents), spent: money(view.totals.spentCents) },
-        unbudgeted: money(view.unbudgetedCents),
-      });
-    },
-  );
-
   return server;
 }
 
