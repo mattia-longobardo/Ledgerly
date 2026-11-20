@@ -1729,7 +1729,8 @@
       "expenses": "Spese",
       "net": "Netto",
       "transfers": "{count, plural, one {# giroconto escluso da entrate e spese, contato nel netto} other {# giroconti esclusi da entrate e spese, contati nel netto}}",
-      "unpaired": "{count, plural, one {# senza l'altra gamba qui} other {# senza l'altra gamba qui}}"
+      "unpaired": "{count, plural, one {# senza l'altra gamba qui} other {# senza l'altra gamba qui}}",
+      "partial": "Totale parziale: {count, plural, one {# movimento in valuta estera senza cambio escluso} other {# movimenti in valuta estera senza cambio esclusi}}"
     },
     "spending": {
       "title": "Spese nel tempo",

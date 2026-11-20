@@ -1729,7 +1729,8 @@
       "expenses": "Spending",
       "net": "Net",
       "transfers": "{count, plural, one {# transfer} other {# transfers}} left out of income and spending, counted in the net",
-      "unpaired": "{count, plural, one {# has no other leg here} other {# have no other leg here}}"
+      "unpaired": "{count, plural, one {# has no other leg here} other {# have no other leg here}}",
+      "partial": "Partial total: {count, plural, one {# foreign-currency movement without an exchange rate left out} other {# foreign-currency movements without an exchange rate left out}}"
     },
     "spending": {
       "title": "Spending over time",

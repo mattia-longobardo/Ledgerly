@@ -91,6 +91,8 @@ export interface GroupView {
   label: string | null;
   count: number;
   total: string;
+  /** How many movements in another currency with no rate the total leaves out (D4); absent for none. */
+  excludedCount?: number;
   rows: readonly RowView[];
 }
 

@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 99649,
+    "lines": 99659,
     "duplicatedLines": 16676,
     "percent": 16.73,
     "blocks": 1238
@@ -17,9 +17,9 @@
       "blocks": 44
     },
     "app": {
-      "lines": 25085,
+      "lines": 25090,
       "duplicatedLines": 4153,
-      "percent": 16.56,
+      "percent": 16.55,
       "blocks": 323
     },
     "global.d": {
@@ -95,7 +95,7 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 13019,
+      "lines": 13024,
       "duplicatedLines": 1651,
       "percent": 12.68,
       "blocks": 132

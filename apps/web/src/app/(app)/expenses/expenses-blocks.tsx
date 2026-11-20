@@ -147,6 +147,9 @@ function Totals({ view, screen }: { view: View; screen: Screen }) {
           ))}
         </dl>
       </div>
+      {summary.excludedCount !== undefined && summary.excludedCount > 0 && (
+        <p className="text-sm text-warn">{text("totals.partial", { count: summary.excludedCount })}</p>
+      )}
       {summary.transferCount > 0 && (
         <p className="text-sm text-muted">
           {text("totals.transfers", { count: summary.transferCount })}
@@ -329,6 +332,7 @@ function groupsOf(view: View, screen: Screen): GroupView[] {
         label: null,
         count: view.summary.count,
         total: money(view.summary.net, screen),
+        excludedCount: view.summary.excludedCount,
         rows: view.rows.map(row),
       },
     ];
@@ -343,6 +347,7 @@ function groupsOf(view: View, screen: Screen): GroupView[] {
     label: monthLabel(month.month, screen.locale),
     count: month.count,
     total: money(month.net, screen),
+    excludedCount: month.excludedCount,
     rows: (byMonth.get(month.month) ?? []).map(row),
   }));
 }

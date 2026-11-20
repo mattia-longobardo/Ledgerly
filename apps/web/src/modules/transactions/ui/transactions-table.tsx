@@ -303,7 +303,10 @@ export function TransactionsTable({
         groups={groups.map((group) => ({
           key: group.key,
           label: group.label,
-          summary: t("group.summary", { count: group.count, total: group.total }),
+          summary: [
+            t("group.summary", { count: group.count, total: group.total }),
+            ...(group.excludedCount ? [t("totals.partial", { count: group.excludedCount })] : []),
+          ].join(" · "),
           rows: group.rows,
         }))}
         rowKey={(row) => row.id}

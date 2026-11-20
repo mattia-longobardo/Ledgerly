@@ -111,6 +111,20 @@ describe("TransactionsTable", () => {
     expect(table.getByText("2 transactions · −16,99 €")).toBeInTheDocument();
   });
 
+  it("says a month's total is partial only when it left movements out for want of a rate (D4)", () => {
+    const table = renderTable([{ ...GROUPS[0], excludedCount: 2 }]);
+    expect(
+      table.getByText(
+        "2 transactions · −16,99 € · Partial total: 2 foreign-currency movements without an exchange rate left out",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing of a partial total when no movement was left out", () => {
+    const table = renderTable();
+    expect(table.queryByText(/Partial total/)).not.toBeInTheDocument();
+  });
+
   it("names a movement with no payee and no category rather than leaving a blank", () => {
     const table = renderTable();
     expect(table.getByText("No payee")).toBeInTheDocument();
