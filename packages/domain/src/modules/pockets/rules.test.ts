@@ -7,6 +7,8 @@ import {
   pocketBalance,
   pocketBudget,
   pocketLedger,
+  splitInterest,
+  targetPercent,
 } from "./rules";
 
 const movements = [
@@ -107,5 +109,28 @@ describe("plannedVisible", () => {
     expect(plannedVisible("2026-10-20", "2026-10-11")).toBe(true);
     expect(plannedVisible("2026-10-04", "2026-10-11")).toBe(true);
     expect(plannedVisible("2026-10-03", "2026-10-11")).toBe(false);
+  });
+});
+
+describe("splitInterest", () => {
+  it("gives the pocket its share of the account's interest, rounded half up", () => {
+    expect(splitInterest(1_000n, 400_000n, 100_000n)).toBe(250n);
+    expect(splitInterest(1_001n, 400_000n, 100_000n)).toBe(250n);
+    expect(splitInterest(1_002n, 400_000n, 100_000n)).toBe(251n);
+  });
+
+  it("is unknown without a rule or a positive balance on either side", () => {
+    expect(splitInterest(null, 400_000n, 100_000n)).toBeNull();
+    expect(splitInterest(1_000n, null, 100_000n)).toBeNull();
+    expect(splitInterest(1_000n, 0n, 100_000n)).toBeNull();
+    expect(splitInterest(1_000n, 400_000n, 0n)).toBeNull();
+  });
+});
+
+describe("targetPercent", () => {
+  it("is the whole percent of the target, past 100 when beyond, none without a target", () => {
+    expect(targetPercent(62_000n, 150_000n)).toBe(41);
+    expect(targetPercent(180_000n, 150_000n)).toBe(120);
+    expect(targetPercent(62_000n, null)).toBeNull();
   });
 });
