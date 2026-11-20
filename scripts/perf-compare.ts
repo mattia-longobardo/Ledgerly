@@ -33,8 +33,14 @@ const WORSE = 1.1;
  * removes its entry; a later run that still needs it asks again.
  */
 const ACCEPTED_TIMES: Record<string, string> = {};
-/** The views whose time the collector decides (perf-probe.ts, `fromCleanHeap`): held to the reference. */
-const ALTERNATED = new Set(["expensesView (tre anni)"]);
+/**
+ * The measures held to the reference of the same session, not to the file: the views whose time the
+ * collector decides (perf-probe.ts, `fromCleanHeap`), and those whose time moves with the host. One
+ * joins only when the reference of the same session gives its time within 10% (the reference's
+ * threshold stays 10%): Overview and GET /investments, 20/11/2026 (v0.43.0 60.3 and 24.6 ms against
+ * 60.2 and 25.0, the release not touching investments).
+ */
+const ALTERNATED = new Set(["expensesView (tre anni)", "Overview", "GET /investments"]);
 
 type Measure = { medianMs: number; p95Ms: number; queries: number };
 type Group = Record<string, Measure>;

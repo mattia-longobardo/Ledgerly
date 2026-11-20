@@ -189,8 +189,11 @@ written by a command and checked by another.
   tells a busy host from a slower step. Before every process the test database is vacuumed
   (`scripts/perf-vacuum.ts`), and every process alternates with one of the reference version (the
   highest release tag, or `LEDGERLY_PERF_REFERENCE=<tag>`, checked out under `test-results/`): the
-  views in `ALTERNATED` of `scripts/perf-compare.ts` (today «expensesView (tre anni)», whose time the
-  collector decides) are held to the reference's best median of the same session, not to the file.
+  measures in `ALTERNATED` of `scripts/perf-compare.ts` (today «expensesView (tre anni)», whose time
+  the collector decides, and «Overview» and «GET /investments», whose time moves with the host) are
+  held to the reference's best median of the same session, not to the file, with the same 10%. A
+  measure joins `ALTERNATED` only when the reference of the same session gives its time within 10%:
+  the time moved with the host, not with the code (decision of 20/11/2026).
   The run takes about 3 minutes. The 10% and the baseline did not change. `npm run perf -- --queries` runs one process and holds the number of queries only (about
   15 s): it is the part that runs at every release ([testing.md](testing.md)). A slower time
   Mattia accepted is in `ACCEPTED_TIMES` of `scripts/perf-compare.ts`, with the step that takes it
