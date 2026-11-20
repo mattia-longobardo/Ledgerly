@@ -216,6 +216,7 @@ describe("the Server Actions of transactions", () => {
     expect(transactionsWire.TRANSACTION_STATES).toEqual(transactionsDomain.TRANSACTION_STATES);
     expect(transactionsWire.TRANSACTION_ORIGINS).toEqual(transactionsDomain.TRANSACTION_ORIGINS);
     expect(transactionsWire.SEND_STATES).toEqual(transactionsDomain.SEND_STATES);
+    expect(transactionsWire.ROW_BADGES).toEqual(transactionsDomain.ROW_BADGES);
     expect(transactionsWire.MANUAL_KINDS).toEqual(MANUAL_KINDS);
     expect([transactionsWire.DEFAULT_TRANSACTIONS, transactionsWire.MAX_TRANSACTIONS]).toEqual([
       DEFAULT_LIMIT,

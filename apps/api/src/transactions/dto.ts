@@ -4,6 +4,7 @@
 import type { z } from "zod";
 import type { TRANSACTIONS } from "@ledgerly/api-contract";
 import {
+  badgesOf,
   groupedBreakdown,
   incomeLessExpense,
   type SpendingGroup,
@@ -87,6 +88,7 @@ export function transactionLine(row: TransactionRow, extras: LineExtras): Line {
     editableAtSource: extras.editableAtSource.has(row.id),
     removedUpstream: row.removedUpstreamAt !== null,
     edited: row.edited,
+    badges: badgesOf(row),
   };
 }
 

@@ -57,7 +57,7 @@ export { matchesMovement } from "./matching";
 export type { MovementRule } from "./matching";
 export { typeByMacro, typeMarkerByMacro, macrosFor } from "./macros";
 export type { TypedMovement } from "./macros";
-export { badgesOf } from "./badges";
+export { ROW_BADGES, badgesOf } from "./badges";
 export type { BadgeSource, RowBadge } from "./badges";
 export {
   categoryBreakdown,

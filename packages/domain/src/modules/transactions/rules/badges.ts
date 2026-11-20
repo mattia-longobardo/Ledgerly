@@ -8,8 +8,16 @@ import type { TransactionOrigin, TransactionState, TransactionType } from "./voc
  * means the other account is not linked.
  */
 
-export type RowBadge =
-  "manual" | "hidden" | "removedUpstream" | "edited" | "transfer" | "unpaired" | "pending";
+export const ROW_BADGES = [
+  "manual",
+  "hidden",
+  "removedUpstream",
+  "edited",
+  "transfer",
+  "unpaired",
+  "pending",
+] as const;
+export type RowBadge = (typeof ROW_BADGES)[number];
 
 export interface BadgeSource {
   hiddenAt: Date | null;

@@ -345,6 +345,75 @@ describe("the card, the chart and «To review» as the pages compute them (clien
   });
 });
 
+describe("the badges of a row (client R3)", () => {
+  it("are the ones badgesOf gives the page, where hidden and edited say something else", async () => {
+    const domain = await import("@ledgerly/domain/transactions");
+    const { upsertFromProvider } = await import("@domain/modules/transactions/service");
+    const { WALLET_PROVIDER } = await import("@domain/platform/integrations/rules");
+    const { getDb } = await import("@domain/platform/db/client");
+    const { eq } = await import("drizzle-orm");
+    const account = await newAccount(alice);
+    const movement = (externalId: string) => ({
+      externalId,
+      counterpartExternalId: null,
+      occurredAt: new Date("2026-02-10T09:00:00Z"),
+      amountCents: -1250n,
+      currency: "EUR",
+      type: "expense" as const,
+      state: "cleared" as const,
+      payee: externalId,
+      note: null,
+      categoryExternalId: null,
+      categoryName: null,
+      categoryGroupExternalId: null,
+      categoryGroupName: null,
+      labels: [],
+    });
+    await upsertFromProvider(alice, account, [movement("gone"), movement("chosen")], {
+      provider: WALLET_PROVIDER,
+      window: { from: "2026-02-01", to: "2026-02-28" },
+    });
+    const rows = await domain.listTransactions(alice, { includeHidden: true });
+    const id = (payee: string) => rows.find((row) => row.payee === payee)!.id;
+    // Hidden by the person, then gone from the source.
+    await send(alice, "POST", "/transactions/visibility", {
+      ids: [id("gone")],
+      change: "hide",
+      rebuildBalances: false,
+    });
+    await getDb()
+      .update(domain.transactions)
+      .set({ removedUpstreamAt: new Date() })
+      .where(eq(domain.transactions.id, id("gone")));
+    // Only a category chosen where the source gives none (a movement with a category key).
+    await getDb()
+      .update(domain.transactions)
+      .set({ categoryKey: "chosen" })
+      .where(eq(domain.transactions.id, id("chosen")));
+    const food = (
+      await send(alice, "POST", "/categories", { name: "Food", type: "expense", parentId: null, color: null })
+    ).body.id;
+    expect(
+      (await send(alice, "PUT", "/transactions/category", { ids: [id("chosen")], categoryId: food })).body,
+    ).toEqual({
+      count: 1,
+    });
+
+    const today = await domain.listTransactions(alice, {
+      ids: [id("gone"), id("chosen")],
+      includeHidden: true,
+    });
+    for (const [payee, badges, hidden, edited] of [
+      ["gone", ["hidden", "removedUpstream"], true, false],
+      ["chosen", [], false, true],
+    ] as const) {
+      const line = (await send(alice, "GET", `/transactions/${id(payee)}`)).body;
+      expect(line.badges, payee).toEqual(domain.badgesOf(today.find((row) => row.payee === payee)!));
+      expect([line.badges, line.hidden, line.edited], payee).toEqual([badges, hidden, edited]);
+    }
+  });
+});
+
 describe("the rules", () => {
   it("saves, previews, applies and undoes a rule, with its amounts as decimals", async () => {
     const account = await newAccount(alice);

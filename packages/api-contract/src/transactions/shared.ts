@@ -11,6 +11,16 @@ export const TRANSACTION_STATES = ["cleared", "pending"] as const;
 export const TRANSACTION_ORIGINS = ["provider", "manual"] as const;
 export const SEND_STATES = ["to_send", "not_sent"] as const;
 export const CATEGORY_STATES = ["chosen", "automatic", "suggestion", "none"] as const;
+/** The markers of a row (spec §7.2), in the order the row shows them. */
+export const ROW_BADGES = [
+  "manual",
+  "hidden",
+  "removedUpstream",
+  "edited",
+  "transfer",
+  "unpaired",
+  "pending",
+] as const;
 export const MANUAL_KINDS = ["expense", "income"] as const;
 export const SORT_KEYS = ["date", "amount", "payee", "account", "category"] as const;
 export const SORT_DIRECTIONS = ["asc", "desc"] as const;
@@ -115,6 +125,12 @@ export const transactionLine = transactionRow.extend({
   editableAtSource: z.boolean(),
   removedUpstream: z.boolean(),
   edited: z.boolean(),
+  /**
+   * The markers the page draws, decided by the server (`badgesOf`): «hidden» is the person's own
+   * hiding only, «edited» leaves out a category chosen where the source gives none. `hidden` and
+   * `edited` above keep their meaning, for the MCP tools.
+   */
+  badges: z.array(z.enum(ROW_BADGES)),
 });
 
 /**
@@ -174,6 +190,7 @@ export const TRANSACTION_LINE_EXAMPLE = {
   editableAtSource: false,
   removedUpstream: false,
   edited: false,
+  badges: [],
 };
 
 export const SUMMARY_EXAMPLE = {

@@ -17,6 +17,11 @@ written before it keeps working.
   `type`, spending when none.
 - `GET /transactions/review` adds `count` and `total` (groups and single movements together) and
   `counts` (`categorised`, `suggested`, `open`) for the chosen accounts.
+- `badges` (new) on every movement of `GET /transactions/view` and `GET /transactions/{id}`: the
+  markers the page draws, decided by the server, in this order: `manual`, `hidden`,
+  `removedUpstream`, `edited`, `transfer` or `unpaired`, `pending`. `hidden` is the person's own
+  hiding only, and `edited` leaves out a category chosen where the source gives none; the fields
+  `hidden` and `edited` keep their meaning, for the MCP tools.
 - No MCP tool changes.
 
 ## 2026-11-20 · three fixes of transactions (0.42.0)

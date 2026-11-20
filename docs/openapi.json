@@ -19941,6 +19941,21 @@
                     },
                     "edited": {
                       "type": "boolean"
+                    },
+                    "badges": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "manual",
+                          "hidden",
+                          "removedUpstream",
+                          "edited",
+                          "transfer",
+                          "unpaired",
+                          "pending"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -19971,7 +19986,8 @@
                     "sendSource",
                     "editableAtSource",
                     "removedUpstream",
-                    "edited"
+                    "edited",
+                    "badges"
                   ]
                 }
               }
@@ -24128,6 +24144,21 @@
                           },
                           "edited": {
                             "type": "boolean"
+                          },
+                          "badges": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "manual",
+                                "hidden",
+                                "removedUpstream",
+                                "edited",
+                                "transfer",
+                                "unpaired",
+                                "pending"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -24158,7 +24189,8 @@
                           "sendSource",
                           "editableAtSource",
                           "removedUpstream",
-                          "edited"
+                          "edited",
+                          "badges"
                         ]
                       }
                     },

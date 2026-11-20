@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97647,
+    "lines": 97656,
     "duplicatedLines": 16756,
     "percent": 17.16,
     "blocks": 1227
   },
   "units": {
     "api": {
-      "lines": 2268,
+      "lines": 2269,
       "duplicatedLines": 268,
-      "percent": 11.82,
+      "percent": 11.81,
       "blocks": 28
     },
     "app": {
@@ -95,9 +95,9 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12740,
+      "lines": 12748,
       "duplicatedLines": 1622,
-      "percent": 12.73,
+      "percent": 12.72,
       "blocks": 128
     },
     "modules/users": {
