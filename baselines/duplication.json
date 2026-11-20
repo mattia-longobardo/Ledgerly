@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97573,
-    "duplicatedLines": 16789,
-    "percent": 17.21,
-    "blocks": 1227
+    "lines": 97555,
+    "duplicatedLines": 16761,
+    "percent": 17.18,
+    "blocks": 1226
   },
   "units": {
     "api": {
@@ -95,10 +95,10 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12727,
-      "duplicatedLines": 1650,
-      "percent": 12.96,
-      "blocks": 129
+      "lines": 12709,
+      "duplicatedLines": 1622,
+      "percent": 12.76,
+      "blocks": 128
     },
     "modules/users": {
       "lines": 874,
@@ -662,7 +662,7 @@
     "modules/transactions/ui/category-cell.tsx": 9,
     "modules/transactions/ui/default-groups-form.tsx": 17,
     "modules/transactions/ui/details-modal.tsx": 70,
-    "modules/transactions/ui/filter-bar.tsx": 54,
+    "modules/transactions/ui/filter-bar.tsx": 26,
     "modules/transactions/ui/manual-dialog.tsx": 47,
     "modules/transactions/ui/manual-movement.tsx": 7,
     "modules/transactions/ui/review-list.tsx": 9,

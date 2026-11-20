@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { searchCategories } from "./category-picker";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import { CategoryPicker, searchCategories } from "./category-picker";
 
 const items = [
   { id: null, name: "Uncategorised", color: null },
@@ -30,5 +32,59 @@ describe("searchCategories", () => {
 
   it("answers nothing when nothing matches", () => {
     expect(names("zzz")).toEqual([]);
+  });
+});
+
+describe("CategoryPicker, multiple", () => {
+  const categories = [
+    { id: "casa", name: "Casa", color: "#1", count: 3 },
+    { id: "svago", name: "Svago", color: "#2", count: 1 },
+  ];
+
+  function renderMultiple(selectedIds: (string | null)[]) {
+    const onPick = vi.fn();
+    const onClear = vi.fn();
+    const onOpenChange = vi.fn();
+    render(
+      <CategoryPicker
+        categories={categories}
+        multiple={{ selectedIds, title: "Categories", clearLabel: "Clear", onClear }}
+        uncategorisedLabel="To categorise"
+        uncategorisedCount={7}
+        open
+        onOpenChange={onOpenChange}
+        onPick={onPick}
+        searchLabel="Search"
+        noMatchLabel="No match"
+        triggerLabel="2 categories"
+        triggerClassName=""
+      >
+        2 categories
+      </CategoryPicker>,
+    );
+    return { onPick, onClear, onOpenChange };
+  }
+
+  it("ticks every selected option, Uncategorised included, and lists it last", () => {
+    renderMultiple(["svago", null]);
+    expect(screen.getByRole("listbox")).toHaveAttribute("aria-multiselectable", "true");
+    const options = screen.getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Casa3", "Svago1", "To categorise7"]);
+    expect(options.map((option) => option.getAttribute("aria-selected"))).toEqual(["false", "true", "true"]);
+  });
+
+  it("toggles one option and stays open", async () => {
+    const { onPick, onOpenChange } = renderMultiple([]);
+    await userEvent.click(screen.getByRole("option", { name: /Casa/ }));
+    expect(onPick).toHaveBeenCalledWith("casa");
+    await userEvent.click(screen.getByRole("option", { name: /To categorise/ }));
+    expect(onPick).toHaveBeenLastCalledWith(null);
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
+  it("clears the selection", async () => {
+    const { onClear } = renderMultiple(["casa"]);
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(onClear).toHaveBeenCalledOnce();
   });
 });

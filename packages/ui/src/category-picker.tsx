@@ -1,6 +1,7 @@
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
+import { Check } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useId, useState } from "react";
 import { cn } from "./cn";
 
@@ -15,6 +16,8 @@ export interface CategoryOption {
   section?: string;
   /** The macro the option is in, for a picker that offers only some (§3.2). */
   type?: string;
+  /** How many movements the option holds, shown at its right (the filter row, audit UI-EXP-2). */
+  count?: number;
 }
 
 interface PickerItem {
@@ -23,6 +26,16 @@ interface PickerItem {
   color: string | null;
   depth?: 0 | 1;
   section?: string;
+  count?: number;
+}
+
+/** The multiple choice of a filter: every id ticked, `null` for "Uncategorised". */
+interface CategoryPickerMultiple {
+  selectedIds: readonly (string | null)[];
+  /** The list's heading, beside «Clear». */
+  title: string;
+  clearLabel: string;
+  onClear: () => void;
 }
 
 /** Case and accents aside: "caffe" finds "Caffè". */
@@ -77,10 +90,15 @@ function sectionsOf(items: readonly PickerItem[]): { title?: string; items: Pick
  * Picking "Uncategorised" is a real choice and not a way out of the list: a person can take a
  * category off a movement, and that too is a local edit the sync must not undo (spec §7.2). A
  * caller with nothing to offer for "none" (a budget is always on a category) leaves the label out.
+ *
+ * With `multiple` (the category filter of Expenses) a pick toggles one option and the list stays
+ * open; "Uncategorised" comes last, as a filter lists it.
  */
 export function CategoryPicker({
   categories,
-  currentId,
+  currentId = null,
+  multiple,
+  uncategorisedCount,
   open,
   onOpenChange,
   onPick,
@@ -95,7 +113,10 @@ export function CategoryPicker({
   children,
 }: {
   categories: readonly CategoryOption[];
-  currentId: string | null;
+  currentId?: string | null;
+  multiple?: CategoryPickerMultiple;
+  /** The count beside "Uncategorised", when the options show counts. */
+  uncategorisedCount?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPick: (categoryId: string | null) => void;
@@ -114,10 +135,12 @@ export function CategoryPicker({
   const listId = useId();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const items: PickerItem[] =
+  const none: PickerItem[] =
     uncategorisedLabel === undefined
-      ? [...categories]
-      : [{ id: null, name: uncategorisedLabel, color: null }, ...categories];
+      ? []
+      : [{ id: null, name: uncategorisedLabel, color: null, count: uncategorisedCount }];
+  const items: PickerItem[] = multiple ? [...categories, ...none] : [...none, ...categories];
+  const isSelected = (id: string | null) => (multiple ? multiple.selectedIds.includes(id) : id === currentId);
   const shown = searchCategories(items, query);
   const highlighted = Math.min(active, shown.length - 1);
 
@@ -128,7 +151,7 @@ export function CategoryPicker({
       setActive(
         Math.max(
           0,
-          items.findIndex((item) => item.id === currentId),
+          items.findIndex((item) => isSelected(item.id)),
         ),
       );
     }
@@ -137,7 +160,7 @@ export function CategoryPicker({
 
   function pick(item: PickerItem) {
     onPick(item.id);
-    onOpenChange(false);
+    if (!multiple) onOpenChange(false);
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -191,10 +214,23 @@ export function CategoryPicker({
               className="h-7 w-full rounded-tag border border-border bg-card px-2 text-sm placeholder:text-faint focus:border-accent focus:outline-none"
             />
             {note !== undefined && <p className="px-2 text-sm text-muted">{note}</p>}
+            {multiple && (
+              <div className="flex items-center justify-between px-2 text-micro font-medium tracking-caps text-faint uppercase">
+                {multiple.title}
+                <button
+                  type="button"
+                  onClick={multiple.onClear}
+                  className="focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline"
+                >
+                  {multiple.clearLabel}
+                </button>
+              </div>
+            )}
             <ul
               id={listId}
               role="listbox"
               aria-label={triggerLabel}
+              aria-multiselectable={multiple ? true : undefined}
               className="max-h-[300px] overflow-y-auto"
             >
               {shown.length === 0 && <li className="px-2 py-1.5 text-sm text-muted">{noMatchLabel}</li>}
@@ -206,7 +242,7 @@ export function CategoryPicker({
                       key={item.id ?? "none"}
                       id={optionId(index)}
                       role="option"
-                      aria-selected={item.id === currentId}
+                      aria-selected={isSelected(item.id)}
                       onClick={() => pick(item)}
                       onMouseMove={() => setActive(index)}
                       className={cn(
@@ -214,15 +250,19 @@ export function CategoryPicker({
                         index === highlighted && "bg-hover",
                         // A sub-category sits under its group (F2.5).
                         item.depth === 1 && "pl-6",
-                        item.id === currentId && "font-medium",
+                        !multiple && item.id === currentId && "font-medium",
                       )}
                     >
+                      {multiple && <CheckBox checked={isSelected(item.id)} />}
                       <span
                         aria-hidden
                         className={cn("size-2 shrink-0 rounded-xs", item.color === null && "bg-faint")}
                         style={item.color === null ? undefined : { background: item.color }}
                       />
-                      <span className="min-w-0 truncate">{item.name}</span>
+                      <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                      {item.count !== undefined && (
+                        <span className="text-micro text-muted">{item.count}</span>
+                      )}
                     </li>
                   );
                 });
@@ -244,5 +284,20 @@ export function CategoryPicker({
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+/** The design's checkbox square, as a glyph: the option itself carries `aria-selected`. */
+function CheckBox({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid size-3.5 shrink-0 place-items-center rounded-sm border",
+        checked ? "border-primary bg-primary text-primary-fg" : "border-border2",
+      )}
+    >
+      {checked && <Check className="size-2.5" />}
+    </span>
   );
 }

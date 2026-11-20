@@ -8,8 +8,9 @@
  */
 
 import type { Params } from "@ledgerly/ui/url";
+import { parsePeriodQuery } from "@ledgerly/ui/period";
 import { TRANSACTION_TYPES, type TransactionType } from "@ledgerly/domain/transactions/client";
-import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
+import type { CivilDate } from "@ledgerly/domain/shared/dates";
 
 export {
   type DateRange,
@@ -20,18 +21,7 @@ export {
   type RangePreset,
   shiftRange,
 } from "@ledgerly/format/ranges";
-import {
-  type DateRange,
-  DAY_GRAIN_MAX_DAYS,
-  daysInRange,
-  presetRange,
-  RANGE_PRESETS,
-  type RangePreset,
-  shiftRange,
-} from "@ledgerly/format/ranges";
-
-/** The range the screen opens on. */
-const DEFAULT_PRESET: RangePreset = "thisMonth";
+import type { DateRange, RangePreset } from "@ledgerly/format/ranges";
 
 /** What the spending chart adds up per point: days, or months (F2.5). */
 export type ChartGrain = "day" | "month";
@@ -76,10 +66,6 @@ function list(value: string | string[] | undefined): string[] {
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry !== "");
-}
-
-function civilDate(value: string): CivilDate | null {
-  return value !== "" && isCivilDate(value) ? value : null;
 }
 
 /**
@@ -150,14 +136,8 @@ export interface ExpensesQuery {
  * to the default, because a hand-edited address should still render a page.
  */
 export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQuery {
-  const from = civilDate(one(raw.from));
-  const to = civilDate(one(raw.to));
-  const custom = from !== null && to !== null && from <= to;
-  const wanted = one(raw.preset);
-  const preset = custom ? null : (RANGE_PRESETS.find((key) => key === wanted) ?? DEFAULT_PRESET);
-  const offset = Math.max(0, Math.trunc(Number(one(raw.off))) || 0);
-  const base = custom ? { from, to } : presetRange(preset ?? DEFAULT_PRESET, today);
-  const range = shiftRange(base, -offset);
+  // The period is read as Overview and Accounts read theirs: one parser, one meaning of the address.
+  const { preset, offset, range, grain, stepperParams: periodParams } = parsePeriodQuery(raw, today);
 
   const categorySelection = [
     ...new Set(
@@ -186,21 +166,17 @@ export function parseExpensesQuery(raw: RawParams, today: CivilDate): ExpensesQu
     q: search || undefined,
     hidden: showHidden ? "1" : undefined,
   };
-  const wantedGrain = one(raw.grain);
-  const chosenGrain: ChartGrain | null =
-    wantedGrain === "day" || wantedGrain === "month" ? wantedGrain : null;
-  const grain: ChartGrain = chosenGrain ?? (daysInRange(range) <= DAY_GRAIN_MAX_DAYS ? "day" : "month");
   // How the screen is drawn rather than what it holds: it travels with every link, and "Clear
   // filters" keeps it, like the sort.
   const order: Params = {
     sort: sort === DEFAULT_SORT ? undefined : sort,
     dir: direction === DEFAULT_DIRECTION[sort] ? undefined : direction,
-    grain: chosenGrain ?? undefined,
+    grain: periodParams.grain,
   };
   const period: Params = {
-    preset: preset === null || preset === DEFAULT_PRESET ? undefined : preset,
-    from: custom ? from : undefined,
-    to: custom ? to : undefined,
+    preset: periodParams.preset,
+    from: periodParams.from,
+    to: periodParams.to,
     off: offset > 0 ? String(offset) : undefined,
   };
 

@@ -1,24 +1,57 @@
+"use client";
+
 import { Check, ChevronDown, Landmark, Search, Tag as TagIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
-import { Link } from "@ledgerly/ui/router";
-import { LinkTabs, PeriodStepper } from "@ledgerly/ui/link-controls";
+import { useTranslations } from "next-intl";
+import { type FormEvent, type ReactNode, useState } from "react";
+import { Link, useRouter } from "@ledgerly/ui/router";
 import { type Params, withParams } from "@ledgerly/ui/url";
-import { TRANSACTION_TYPES, type TransactionType } from "@ledgerly/domain/transactions";
-import type { UiLocale } from "@ledgerly/domain/platform/format";
+import { TRANSACTION_TYPES, type TransactionType } from "@ledgerly/domain/transactions/client";
+import type { UiLocale } from "@ledgerly/format/format";
 import { IconButton } from "@ledgerly/ui/button";
+import { CategoryPicker } from "@ledgerly/ui/category-picker";
 import { cn } from "@ledgerly/ui/cn";
-import { DismissableDetails } from "@ledgerly/ui/dismissable-details";
 import { Input } from "@ledgerly/ui/input";
-import { type ExpensesQuery, listParam, RANGE_PRESETS, toggle, UNCATEGORISED } from "./filters";
-import { RangePicker } from "@ledgerly/ui/range-picker";
-import { rangeLabel } from "@ledgerly/format/ranges";
+import { PeriodBar } from "@ledgerly/ui/period-bar";
+import { DismissableDetails } from "@ledgerly/ui/dismissable-details";
+import { type ExpensesQuery, listParam, toggle, UNCATEGORISED } from "./filters";
 import type { AccountFilterOption, CategoryFilterOption } from "./view";
 
 const CONTROL =
-  "focus-ring flex h-[30px] cursor-pointer list-none items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm font-medium hover:bg-hover [&::-webkit-details-marker]:hidden";
+  "focus-ring flex h-[30px] cursor-pointer list-none items-center gap-1.5 rounded-ctl border border-border bg-card px-2.5 text-sm font-medium hover:bg-hover";
 
 const PANEL =
-  "absolute top-9 left-0 z-30 flex w-[240px] max-w-[calc(100vw-32px)] animate-in flex-col rounded-lg border border-border bg-card p-1.5 shadow-overlay";
+  "absolute top-9 left-0 z-30 flex max-w-[calc(100vw-32px)] animate-in flex-col rounded-lg border border-border bg-card p-1.5 shadow-overlay";
+
+/**
+ * A menu of links under its summary. A `<details>`, as before R3: the keyboard specs walk the page's
+ * disclosure buttons, and a summary is not one of them.
+ */
+function LinkMenu({
+  label,
+  active,
+  width,
+  children,
+}: {
+  label: ReactNode;
+  active: boolean;
+  width: string;
+  children: ReactNode;
+}) {
+  return (
+    <DismissableDetails className="relative">
+      <summary className={cn(CONTROL, "[&::-webkit-details-marker]:hidden", active && "border-accent")}>
+        {label}
+      </summary>
+      <div className={cn(PANEL, width)}>{children}</div>
+    </DismissableDetails>
+  );
+}
+
+const HEADER =
+  "flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-caps text-faint uppercase";
+
+const CLEAR =
+  "focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline";
 
 const OPTION = "focus-ring flex h-[30px] items-center gap-2.5 rounded-tag px-2 text-sm hover:bg-hover";
 
@@ -37,25 +70,15 @@ function Box({ checked }: { checked: boolean }) {
   );
 }
 
-function Dot({ color }: { color: string | null }) {
-  return (
-    <span
-      aria-hidden
-      className={cn("size-2 shrink-0 rounded-xs", color === null && "bg-faint")}
-      style={color === null ? undefined : { background: color }}
-    />
-  );
-}
-
 /** A menu's summary: "All …", the one name picked, or how many. */
 const summaryOf = (count: number, all: string, oneName: string | undefined, some: string) =>
   count === 0 ? all : count === 1 && oneName !== undefined ? oneName : some;
 
 /**
  * The accounts menu of the filter row, multiple choice: Expenses and the page of the categories
- * (categories-and-rules.md §5.1) draw the same one. Links only, like the rest of the row.
+ * (categories-and-rules.md §5.1) draw the same one. Its options are links: each is an address.
  */
-export async function AccountsMenu({
+export function AccountsMenu({
   accounts,
   selection,
   path,
@@ -66,27 +89,30 @@ export async function AccountsMenu({
   path: string;
   carry: Params;
 }) {
-  const t = await getTranslations("expenses.filters");
+  const t = useTranslations("expenses.filters");
   const accountHref = (id: string) => withParams(path, carry, { acc: listParam(toggle(selection, id)) });
+  const label = summaryOf(
+    selection.length,
+    t("accounts.all"),
+    accounts.find((one) => one.id === selection[0])?.name,
+    t("accounts.some", { count: selection.length }),
+  );
   return (
-    <DismissableDetails className="relative">
-      <summary className={cn(CONTROL, selection.length > 0 && "border-accent")}>
-        <Landmark aria-hidden className="size-3.5 text-muted" />
-        {summaryOf(
-          selection.length,
-          t("accounts.all"),
-          accounts.find((one) => one.id === selection[0])?.name,
-          t("accounts.some", { count: selection.length }),
-        )}
-        <ChevronDown aria-hidden className="size-3 text-muted" />
-      </summary>
-      <div className={cn(PANEL, "w-[240px]")}>
-        <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-caps text-faint uppercase">
+    <LinkMenu
+      active={selection.length > 0}
+      width="w-[240px]"
+      label={
+        <>
+          <Landmark aria-hidden className="size-3.5 text-muted" />
+          {label}
+          <ChevronDown aria-hidden className="size-3 text-muted" />
+        </>
+      }
+    >
+      <div className="flex flex-col">
+        <div className={HEADER}>
           {t("accounts.title")}
-          <Link
-            href={withParams(path, carry, { acc: "" })}
-            className="focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline"
-          >
+          <Link href={withParams(path, carry, { acc: "" })} className={CLEAR}>
             {t("accounts.clear")}
           </Link>
         </div>
@@ -105,7 +131,7 @@ export async function AccountsMenu({
           ))}
         </div>
       </div>
-    </DismissableDetails>
+    </LinkMenu>
   );
 }
 
@@ -114,11 +140,10 @@ export async function AccountsMenu({
  * two-month picker, then categories, account, type (F2.5), "Show hidden", the payee search and
  * "Clear filters".
  *
- * Everything here is a link or a GET form, which is the whole point of keeping the state in the
- * URL (spec §8.4 point 2): the row is rendered by the server and every control works before any
- * JavaScript has run. `LinkTabs` and `PeriodStepper` come from F1 unchanged.
+ * The state stays in the URL (spec §8.4 point 2): every control writes the address, through a
+ * link or the router, and the page reads it back. Props are plain data: a server page renders it.
  */
-export async function FilterBar({
+export function FilterBar({
   query,
   categories,
   accounts,
@@ -137,8 +162,10 @@ export async function FilterBar({
   locale: UiLocale;
   path?: string;
 }) {
-  const t = await getTranslations("expenses.filters");
-  const period = await getTranslations("common.period");
+  const t = useTranslations("expenses.filters");
+  const row = useTranslations("expenses.row");
+  const router = useRouter();
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const selected = query.categorySelection;
   const accountSelection = query.accountSelection;
   const typeSelection = query.typeSelection;
@@ -153,103 +180,80 @@ export async function FilterBar({
       type: listParam(TRANSACTION_TYPES.filter((one) => next.includes(one))),
     });
   };
+  const typesLabel = summaryOf(
+    typeSelection.length,
+    t("types.all"),
+    typeSelection[0] === undefined ? undefined : t(`types.${typeSelection[0]}`),
+    t("types.some", { count: typeSelection.length }),
+  );
+  const categoriesLabel =
+    selected.length === 0 ? t("categories.all") : t("categories.some", { count: selected.length });
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    // The address the GET form writes, field by field, without the full page load.
+    const search = new URLSearchParams();
+    for (const [name, value] of new FormData(event.currentTarget)) {
+      if (typeof value === "string") search.append(name, value);
+    }
+    router.push(`${path}?${search}`);
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <PeriodStepper
-        label={period("label")}
+      <PeriodBar
+        period={{
+          preset: query.preset,
+          offset: query.offset,
+          range: query.range,
+          stepperParams: query.stepperParams,
+        }}
         path={path}
-        params={query.stepperParams}
-        offset={query.offset}
-        periodLabel={
-          <RangePicker
-            range={query.range}
-            text={rangeLabel(query.range, locale)}
-            params={query.presetParams}
-            locale={locale}
-            label={period("label")}
-            path={path}
-          />
-        }
-        previousLabel={period("previous")}
-        nextLabel={period("next")}
-        latestLabel={period("latest")}
-      />
-
-      <LinkTabs
-        label={period("label")}
-        path={path}
-        params={query.presetParams}
-        name="preset"
-        current={query.preset ?? ""}
-        options={RANGE_PRESETS.map((preset) => ({ value: preset, label: period(`presets.${preset}`) }))}
+        locale={locale}
       />
 
       <span aria-hidden className="mx-1 h-[18px] w-px bg-border max-md:hidden" />
 
-      <DismissableDetails className="relative">
-        <summary className={cn(CONTROL, selected.length > 0 && "border-accent")}>
-          <TagIcon aria-hidden className="size-3.5 text-muted" />
-          {selected.length === 0 ? t("categories.all") : t("categories.some", { count: selected.length })}
-          <ChevronDown aria-hidden className="size-3 text-muted" />
-        </summary>
-        <div className={PANEL}>
-          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-caps text-faint uppercase">
-            {t("categories.title")}
-            <Link
-              href={withParams(path, carry, { cat: "" })}
-              className="focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline"
-            >
-              {t("categories.clear")}
-            </Link>
-          </div>
-          <div className="max-h-[320px] overflow-y-auto">
-            {categories.map((category) => (
-              <Link
-                key={category.id}
-                href={categoryHref(category.id)}
-                aria-current={selected.includes(category.id) ? "true" : undefined}
-                className={cn(OPTION, category.depth === 1 && "pl-7")}
-              >
-                <Box checked={selected.includes(category.id)} />
-                <Dot color={category.color} />
-                <span className="min-w-0 flex-1 truncate">{category.name}</span>
-                <span className="text-micro text-muted">{category.count}</span>
-              </Link>
-            ))}
-            <Link
-              href={categoryHref(UNCATEGORISED)}
-              aria-current={selected.includes(UNCATEGORISED) ? "true" : undefined}
-              className={OPTION}
-            >
-              <Box checked={selected.includes(UNCATEGORISED)} />
-              <Dot color={null} />
-              <span className="min-w-0 flex-1 truncate">{t("categories.none")}</span>
-              <span className="text-micro text-muted">{uncategorisedCount}</span>
-            </Link>
-          </div>
-        </div>
-      </DismissableDetails>
+      <CategoryPicker
+        categories={categories}
+        multiple={{
+          selectedIds: selected.map((id) => (id === UNCATEGORISED ? null : id)),
+          title: t("categories.title"),
+          clearLabel: t("categories.clear"),
+          onClear: () => router.push(withParams(path, carry, { cat: "" })),
+        }}
+        uncategorisedLabel={t("categories.none")}
+        uncategorisedCount={uncategorisedCount}
+        open={categoriesOpen}
+        onOpenChange={setCategoriesOpen}
+        onPick={(id) => router.push(categoryHref(id ?? UNCATEGORISED))}
+        searchLabel={row("searchCategory")}
+        noMatchLabel={row("noCategoryMatch")}
+        triggerLabel={categoriesLabel}
+        triggerClassName={cn(CONTROL, selected.length > 0 && "border-accent")}
+      >
+        <TagIcon aria-hidden className="size-3.5 text-muted" />
+        {categoriesLabel}
+        <ChevronDown aria-hidden className="size-3 text-muted" />
+      </CategoryPicker>
 
       {/* Accounts and types are multiple choice too, like the categories. */}
       <AccountsMenu accounts={accounts} selection={accountSelection} path={path} carry={carry} />
 
-      <DismissableDetails className="relative">
-        <summary className={cn(CONTROL, typeSelection.length > 0 && "border-accent")}>
-          {summaryOf(
-            typeSelection.length,
-            t("types.all"),
-            typeSelection[0] === undefined ? undefined : t(`types.${typeSelection[0]}`),
-            t("types.some", { count: typeSelection.length }),
-          )}
-          <ChevronDown aria-hidden className="size-3 text-muted" />
-        </summary>
-        <div className={cn(PANEL, "w-[200px]")}>
-          <div className="flex items-center justify-between px-2 pt-1 pb-1.5 text-micro font-medium tracking-caps text-faint uppercase">
+      <LinkMenu
+        active={typeSelection.length > 0}
+        width="w-[200px]"
+        label={
+          <>
+            {typesLabel}
+            <ChevronDown aria-hidden className="size-3 text-muted" />
+          </>
+        }
+      >
+        <div className="flex flex-col">
+          <div className={HEADER}>
             {t("types.label")}
-            <Link
-              href={withParams(path, carry, { type: "" })}
-              className="focus-ring rounded-xs text-sm font-medium tracking-normal text-accent normal-case hover:underline"
-            >
+            <Link href={withParams(path, carry, { type: "" })} className={CLEAR}>
               {t("types.clear")}
             </Link>
           </div>
@@ -266,12 +270,12 @@ export async function FilterBar({
             </Link>
           ))}
         </div>
-      </DismissableDetails>
+      </LinkMenu>
 
       <Link
         href={withParams(path, carry, { hidden: query.showHidden ? "" : "1" })}
         aria-current={query.showHidden ? "true" : undefined}
-        className={cn(CONTROL, "font-medium", query.showHidden && "border-accent")}
+        className={cn(CONTROL, query.showHidden && "border-accent")}
       >
         <Box checked={query.showHidden} />
         {t("showHidden")}
@@ -288,7 +292,8 @@ export async function FilterBar({
 
       <span className="flex-1" />
 
-      <form method="get" action={path} className="flex items-center gap-1.5">
+      {/* Still a GET form underneath: the same address before the bundle has loaded. */}
+      <form method="get" action={path} onSubmit={submitSearch} className="flex items-center gap-1.5">
         {Object.entries(query.params).map(([name, value]) =>
           name === "q" || value === undefined || value === "" ? null : (
             <input key={name} type="hidden" name={name} value={value} />

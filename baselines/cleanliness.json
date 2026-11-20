@@ -704,7 +704,6 @@
     "apps/web/src/modules/transactions/ui/default-groups-form.tsx": 1,
     "apps/web/src/modules/transactions/ui/details-modal.tsx": 1,
     "apps/web/src/modules/transactions/ui/filter-bar.tsx": 1,
-    "apps/web/src/modules/transactions/ui/filters.ts": 1,
     "apps/web/src/modules/transactions/ui/manual-dialog.tsx": 1,
     "apps/web/src/modules/transactions/ui/manual-movement.tsx": 1,
     "apps/web/src/modules/transactions/ui/review-list.tsx": 2,
