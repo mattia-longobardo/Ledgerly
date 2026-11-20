@@ -165,7 +165,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
     ]);
     // How the movements of this bank stand after the cascade read them (rewrite plan N3).
     const [categoryState, ownCategories] = await Promise.all([categoryCounts(ctx, ids), listCategories(ctx)]);
-    const waiting = categoryState.suggested + categoryState.open;
+    const waiting = categoryState.left;
     const read = categoryState.categorised + waiting;
     const reviewHref = withParams("/expenses/review", {}, { guide: "1", acc: ids.join(","), bank });
     const failed = run?.state === "failed";

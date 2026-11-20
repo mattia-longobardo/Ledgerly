@@ -13,5 +13,6 @@ export {
 } from "./categorize/user-rules";
 export type { RuleField } from "./categorize/user-rules";
 export { CATEGORY_COLORS, NAME_MAX, TRANSACTION_TYPES, categoryFamily } from "./rules";
+export { DEFAULT_GROUPS } from "./categorize/tables";
 export type { BreakdownBar, BreakdownGroup, RowBadge } from "./rules";
 export type { CategoryType, TransactionType } from "./rules";

@@ -35,3 +35,4 @@ export {
 export type { CategoryMacroTotal, SpendingGroup } from "./views";
 export { MACROS, macroViews } from "./macro-views";
 export type { Macro, MacroCategory } from "./macro-views";
+export { categorySummary } from "./category-summary";

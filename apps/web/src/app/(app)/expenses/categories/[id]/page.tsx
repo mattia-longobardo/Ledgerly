@@ -13,7 +13,7 @@ import { ApiCategoryActions } from "@/modules/transactions/client";
 import { categoryColors, withMacroTitles } from "@/modules/transactions/ui/display";
 import { spendingBuckets, spendingLayers } from "@ledgerly/domain/transactions";
 import { parseExpensesQuery } from "@/modules/transactions/ui/filters";
-import { macroViews } from "@ledgerly/domain/transactions";
+import { categorySummary } from "@ledgerly/domain/transactions";
 import { SpendingCard } from "@/modules/transactions/ui/spending-card";
 import { TransactionsTable } from "@/modules/transactions/ui/transactions-table";
 import { requireSession } from "@/platform/auth/session";
@@ -90,25 +90,15 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
   const macroName = t(`categories.macro.${category.type}`);
   const group = category.parentId === null ? null : all.find((one) => one.id === category.parentId);
-  const children = all.filter((one) => one.parentId === category.id);
-  const ofMacro = (list: typeof totals) => list.filter((row) => row.type === category.type);
-  /** What the KPI calls the amount: spent, received, or moved out for a transfer. */
-  const amountOf = (list: typeof totals) =>
-    ofMacro(list).reduce(
-      (sum, row) =>
-        sum +
-        (category.type === "transfer"
-          ? -row.outCents
-          : category.type === "expense"
-            ? -row.totalCents
-            : row.totalCents),
-      0n,
-    );
-  const amount = amountOf(totals);
-  const count = ofMacro(totals).reduce((sum, row) => sum + row.count, 0);
-  const earlier = amountOf(before);
-  const hadBefore = ofMacro(before).some((row) => row.count > 0);
-  const { months } = periodMonths(query.range, todayOn);
+  const summary = categorySummary({
+    category,
+    categories: all,
+    totals,
+    before,
+    months: periodMonths(query.range, todayOn).months,
+    budget: budget && { ...budget, from: monthKey(query.range.from), end },
+  });
+  const amount = summary.amountCents;
 
   const listHref = (macro: string) =>
     withParams("/expenses/categories", carry, { macro: macro === "expense" ? undefined : macro }) as Route;
@@ -142,20 +132,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
     total: band.total,
   }));
 
-  // Months over the limit inside the period: this one and the history before it.
-  const overMonths =
-    budget === null
-      ? 0
-      : [
-          { month: end, limitCents: budget.row.limitCents, spentCents: budget.row.spentCents },
-          ...budget.history,
-        ].filter(
-          (one) =>
-            one.month >= monthKey(query.range.from) &&
-            one.limitCents !== null &&
-            one.spentCents > one.limitCents,
-        ).length;
-
   const note = notes.get(category.id);
   const noteHref = note ? sourceHref(note.provider) : null;
   const kpiLabel = t(
@@ -166,13 +142,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
         : "categories.detail.spent",
   );
   const delta =
-    hadBefore && earlier !== 0n
-      ? t("categories.detail.vsPrevious", {
-          delta: formatPercent(Number(amount - earlier) / Number(earlier), ctx.numberFormat, {
-            signed: true,
-          }),
-        })
-      : undefined;
+    summary.change === null
+      ? undefined
+      : t("categories.detail.vsPrevious", {
+          delta: formatPercent(summary.change, ctx.numberFormat, { signed: true }),
+        });
 
   const table = (
     <Card padded={false} className="overflow-clip">
@@ -202,21 +176,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
   );
 
   // The categories of a group, with their totals in the period (§5.4): the list of the page.
-  const groupLines =
-    children.length === 0
-      ? []
-      : (macroViews(
-          all.map((one) => ({
-            id: one.id,
-            name: one.name,
-            parentId: one.parentId,
-            type: one.type,
-            archived: one.archivedAt !== null,
-          })),
-          totals,
-        )
-          .find((view) => view.macro === category.type)
-          ?.groups.find((line) => line.category.id === category.id)?.children ?? []);
+  const groupLines = summary.children;
 
   return (
     <ApiCategoryActions categories={options}>
@@ -275,18 +235,18 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
 
         <div className="grid grid-cols-2 gap-3 @4xl:grid-cols-4">
           <KpiTile label={kpiLabel} value={money(amount)} delta={delta} />
-          <KpiTile label={t("categories.detail.count")} value={String(count)} />
-          {months >= 2 && (
-            <KpiTile label={t("categories.detail.perMonth")} value={money(amount / BigInt(months))} />
+          <KpiTile label={t("categories.detail.count")} value={String(summary.count)} />
+          {summary.perMonthCents !== null && (
+            <KpiTile label={t("categories.detail.perMonth")} value={money(summary.perMonthCents)} />
           )}
-          {budget && (
+          {summary.budget && (
             <Card className="flex min-w-0 flex-col gap-1.5">
               <span className="text-sm font-medium text-muted">{t("categories.detail.budget")}</span>
               <span className="text-lg font-semibold">
-                {t("categories.detail.budgetLimit", { limit: money(budget.row.limitCents) })}
+                {t("categories.detail.budgetLimit", { limit: money(summary.budget.limitCents) })}
               </span>
               <span className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
-                {t("categories.detail.overMonths", { count: overMonths })}
+                {t("categories.detail.overMonths", { count: summary.budget.overMonths })}
                 <Link
                   href={"/budgets" as Route}
                   className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent hover:underline"

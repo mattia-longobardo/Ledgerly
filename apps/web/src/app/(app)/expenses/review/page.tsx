@@ -5,7 +5,7 @@ import { listAccounts } from "@ledgerly/domain/accounts";
 import { categoryCounts, listMergeProposals, reviewOf, reviewTotals } from "@ledgerly/domain/transactions";
 import type { ReviewGroup } from "@ledgerly/domain/transactions";
 import { isPreparing } from "@ledgerly/domain/transactions";
-import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions";
+import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions/client";
 import { listTransactions } from "@ledgerly/domain/transactions";
 import { categorisableAccountIds } from "@ledgerly/domain/transactions";
 import { listCategories, listLabels } from "@ledgerly/domain/transactions";
@@ -212,7 +212,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
 
   if (step === "done") {
     const counts = await categoryCounts(ctx, accountIds);
-    const left = counts.suggested + counts.open;
+    const { left } = counts;
     return (
       <Page title={title} parent={parent}>
         {heading}
@@ -293,7 +293,7 @@ export default async function ReviewPage({ searchParams }: PageProps<"/expenses/
   // moment after an action must not take the place of what the page has to say.
   if (guided && preparing && count === 0) {
     const waiting = await categoryCounts(ctx, accountIds);
-    body = <PreparingCard count={waiting.open + waiting.suggested} />;
+    body = <PreparingCard count={waiting.left} />;
   } else if (eligible.length === 0) {
     body = (
       <EmptyState

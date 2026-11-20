@@ -90,8 +90,8 @@ export async function reviewOf(
 export async function categoryCounts(
   ctx: Who,
   accountIds: readonly string[],
-): Promise<{ categorised: number; suggested: number; open: number }> {
-  if (accountIds.length === 0) return { categorised: 0, suggested: 0, open: 0 };
+): Promise<{ categorised: number; suggested: number; open: number; left: number }> {
+  if (accountIds.length === 0) return { categorised: 0, suggested: 0, open: 0, left: 0 };
   const [row] = await getDb()
     .select({
       categorised: sql<number>`count(*) filter (where ${transactions.categoryId} is not null)::int`,
@@ -108,7 +108,9 @@ export async function categoryCounts(
         isNull(transactions.removedUpstreamAt),
       ),
     );
-  return row ?? { categorised: 0, suggested: 0, open: 0 };
+  const counts = row ?? { categorised: 0, suggested: 0, open: 0 };
+  // What is left to review: suggested or open, never categorised.
+  return { ...counts, left: counts.suggested + counts.open };
 }
 
 /* Actions on several movements */

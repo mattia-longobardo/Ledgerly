@@ -100,6 +100,8 @@ export const getReview = defineRoute({
       categorised: z.number().int(),
       suggested: z.number().int(),
       open: z.number().int(),
+      /** What is left to review: `suggested` + `open`. */
+      left: z.number().int(),
     }),
   }),
   errors: ["invalid"],
@@ -114,7 +116,7 @@ export const getReview = defineRoute({
       mergeProposals: [],
       count: 1,
       total: "-42.80",
-      counts: { categorised: 120, suggested: 0, open: 1 },
+      counts: { categorised: 120, suggested: 0, open: 1, left: 1 },
     },
   },
 });

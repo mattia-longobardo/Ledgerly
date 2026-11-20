@@ -3,9 +3,16 @@
 // `taxonomy.ts`; the Server Actions call the same ones.
 import type { Hono } from "hono";
 import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
-import { centsToDecimal } from "@ledgerly/domain/shared/money";
+import { budgetDetail } from "@ledgerly/domain/budgets";
+import { monthKey, today } from "@ledgerly/domain/shared/dates";
+import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
+import { periodEnd, periodMonths, shiftRange } from "@ledgerly/domain/platform/ranges";
 import {
+  categoryMacroTotals,
+  categorySummary,
+  getCategory,
   keepSourceCategory,
+  listCategories,
   listSourceCategories,
   SourceCategoryError,
   TaxonomyError,
@@ -18,6 +25,7 @@ import {
   moveToMacro,
   setSourceCategory,
   type SourceName,
+  sourceNotes,
   undoMergeOfTwo,
   undoMoveToMacro,
   undoSourceCategoryChange,
@@ -84,6 +92,59 @@ function serveMoves(app: Hono<ApiEnv>, guard: Guard, sourceName: SourceName): vo
   );
 }
 
+/** The figures of a category's page (§5.4): the page computes them with the same `categorySummary`. */
+function serveSummary(app: Hono<ApiEnv>, guard: Guard, sourceName: SourceName): void {
+  serve(app, guard, categories.getCategorySummary, ({ ctx, params, query }) =>
+    guarded(async () => {
+      const category = await getCategory(ctx, params.id);
+      const todayOn = today(ctx.timeZone);
+      const range = { from: query.from, to: query.to };
+      const scope = { accountIds: query.accounts, categoryIds: [category.id] };
+      const end = monthKey(periodEnd(range, todayOn));
+      const [all, totals, before, budget, notes] = await Promise.all([
+        listCategories(ctx, { includeArchived: true }),
+        categoryMacroTotals(ctx, { ...scope, ...range }),
+        categoryMacroTotals(ctx, { ...scope, ...shiftRange(range, -1) }),
+        category.type === "expense"
+          ? budgetDetail(ctx, { categoryId: category.id, accountId: null }, end)
+          : null,
+        sourceNotes(ctx, sourceName),
+      ]);
+      const summary = categorySummary({
+        category,
+        categories: all,
+        totals,
+        before,
+        months: periodMonths(range, todayOn).months,
+        budget: budget && { ...budget, from: monthKey(range.from), end },
+      });
+      const money = (cents: Cents | null) => (cents === null ? null : centsToDecimal(cents));
+      const colorOf = new Map(all.map((one) => [one.id, one.color]));
+      const note = notes.get(category.id);
+      return {
+        amount: centsToDecimal(summary.amountCents),
+        count: summary.count,
+        previousAmount: money(summary.previousCents),
+        change: summary.change,
+        perMonth: money(summary.perMonthCents),
+        budget: summary.budget && {
+          limit: centsToDecimal(summary.budget.limitCents),
+          overMonths: summary.budget.overMonths,
+        },
+        children: summary.children.map((line) => ({
+          id: line.category.id,
+          name: line.category.name,
+          color: colorOf.get(line.category.id) ?? null,
+          amount: centsToDecimal(line.totalCents),
+          // The page's percentage, one decimal, as the wire's 0-1.
+          share: line.share / 100,
+        })),
+        source: note ? { provider: note.provider, name: note.source, names: note.names } : null,
+      };
+    }),
+  );
+}
+
 export function serveCategoryMoves(
   app: Hono<ApiEnv>,
   guard: Guard,
@@ -91,6 +152,7 @@ export function serveCategoryMoves(
 ): readonly RouteContract[] {
   serveSourceCategories(app, guard);
   serveMoves(app, guard, sourceName);
+  serveSummary(app, guard, sourceName);
   return [
     labels.listSourceCategories,
     labels.setSourceCategory,
@@ -101,5 +163,6 @@ export function serveCategoryMoves(
     categories.undoMoveToMacro,
     categories.mergeCategories,
     categories.undoMerge,
+    categories.getCategorySummary,
   ];
 }

@@ -24,7 +24,7 @@ written before it keeps working.
 - `month` is `YYYY-MM` or `YYYY-MM-01` on every budgets route and on `list_budgets` (which took
   `YYYY-MM` only); none is the current month. The tool's answer does not change.
 
-## 2026-11-20 · the sign, the series' shares, the groups' counts, the macros, the archived accounts (0.44.0)
+## 2026-11-20 · the sign, the series' shares, the groups' counts, the macros, the archived accounts, a category's figures (0.44.0)
 
 - `GET /transactions/spending/breakdown`: `signedAmount` (new) on every group and child, the amount
   with its sign (negative for spending). `amount`, `share` and `width` do not change.
@@ -39,6 +39,14 @@ written before it keeps working.
   `["expense", "transfer"]` for money out and `["income", "transfer"]` for money in.
 - `GET /accounts?archived=true` (new optional parameter): the archived accounts too, in the same
   shape. Without it the answer does not change.
+- `GET /categories/{id}/summary?from&to[&accounts]` (new, `read`): the figures of a category's page
+  for a period, the category and its sub-categories together — `amount` (spent, received or moved
+  out, positive when the money went that way), `count`, `previousAmount` and `change` against the
+  period before (null when that one had no movement; `change` also when it came to 0), `perMonth`
+  (null under two months), `budget` (`limit`, `overMonths` in the period; null without one),
+  `children` of a group (`id`, `name`, `color`, `amount` with its sign, `share` of the macro 0-1) and
+  `source` (`provider`, `name`, `names`: the source whose categories count under it; null when none).
+- `GET /transactions/review`: `counts.left` (new), what is left to review: `suggested` + `open`.
 - No MCP tool changes: `list_accounts` keeps no arguments.
 
 ## 2026-11-20 · the card, the chart and «To review» for the client (0.43.0)

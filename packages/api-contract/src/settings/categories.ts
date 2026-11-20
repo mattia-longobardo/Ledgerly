@@ -4,7 +4,8 @@
 // client, not stored: `undoMergeAction`).
 import { z } from "zod";
 import { defineRoute } from "../route";
-import { hexColor, id, instant, money } from "../primitives";
+import { civilDate, hexColor, id, instant, money } from "../primitives";
+import { transactionFilters } from "../transactions/shared";
 import { CATEGORY_ID, categoryType, TAXONOMY_ERRORS } from "./shared";
 
 const category = z.object({
@@ -245,6 +246,76 @@ export const getMacroMove = defineRoute({
       linked: { subscriptions: 0, pockets: 0, interests: 0 },
       stopsBudget: false,
       sources: [],
+    },
+  },
+});
+
+/**
+ * The figures of one category's page (categories-and-rules.md §5.4) for a period, the category and
+ * its sub-categories together. `amount` is what the page's KPI says: spent for an expense, received
+ * for an income, moved out for a transfer, each positive when the money went that way. A child's
+ * `amount` is its total with its sign, as the page's list shows it.
+ */
+export const getCategorySummary = defineRoute({
+  id: "get_category_summary",
+  method: "GET",
+  path: "/categories/{id}/summary",
+  scope: "read",
+  capability: "categories",
+  summary:
+    "What a category spent, received or moved in a period with its sub-categories: the amount and the " +
+    "movements, against the period before, by month, against its budget, its sub-categories and the source " +
+    "whose categories count under it.",
+  actions: [],
+  params: z.object({ id: id() }),
+  query: transactionFilters
+    .pick({ accounts: true })
+    .extend({ from: civilDate("Not a civil date"), to: civilDate("Not a civil date") }),
+  response: z.object({
+    amount: money(),
+    count: z.number().int(),
+    /** The amount of the period before, of the same length; null when it had no movement. */
+    previousAmount: money().nullable(),
+    /** `(amount - previousAmount) / previousAmount`; null without movements before or at 0. */
+    change: z.number().nullable(),
+    /** `amount` over the months the period has happened through; null under two months. */
+    perMonth: money().nullable(),
+    /** The budget of an expense category in the period's last month; null without one. */
+    budget: z
+      .object({
+        limit: money(),
+        /** The months of the period over the limit, the last one included. */
+        overMonths: z.number().int(),
+      })
+      .nullable(),
+    /** A group's sub-categories with their totals in the period, the biggest first; empty otherwise. */
+    children: z.array(
+      z.object({
+        id: id(),
+        name: z.string(),
+        /** The stored colour; null draws the palette's. */
+        color: hexColor().nullable(),
+        amount: money(),
+        /** Share of the macro in the period, 0-1; 0 under Transfers. */
+        share: z.number(),
+      }),
+    ),
+    /** The source whose categories count under this one: its id, its name, and their names. */
+    source: z.object({ provider: z.string(), name: z.string(), names: z.array(z.string()) }).nullable(),
+  }),
+  errors: TAXONOMY_ERRORS,
+  example: {
+    params: { id: GROUP_ID },
+    query: { from: "2026-09-01", to: "2026-10-31" },
+    response: {
+      amount: "600.00",
+      count: 2,
+      previousAmount: null,
+      change: null,
+      perMonth: "300.00",
+      budget: { limit: "500.00", overMonths: 1 },
+      children: [{ id: CATEGORY_ID, name: "Rent", color: null, amount: "-500.00", share: 0.833 }],
+      source: null,
     },
   },
 });

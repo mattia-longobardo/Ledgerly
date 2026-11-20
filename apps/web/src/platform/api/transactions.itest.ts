@@ -526,6 +526,137 @@ describe("the sign, the series' shares, the groups' counts and the macros (clien
   });
 });
 
+describe("the figures of a category's page (client R3)", () => {
+  it("answers what categorySummary gives the page: a group, an empty period before, one month", async () => {
+    const domain = await import("@ledgerly/domain/transactions");
+    const { budgetDetail, setLimit } = await import("@ledgerly/domain/budgets");
+    const { centsToDecimal } = await import("@ledgerly/domain/shared/money");
+    const account = await newAccount(alice);
+    const category = async (name: string, parentId: string | null) =>
+      (await send(alice, "POST", "/categories", { name, type: "expense", parentId, color: null })).body
+        .id as string;
+    const house = await category("House", null);
+    const rent = await category("Rent", house);
+    await manual(alice, account, { amount: "500", categoryId: rent, on: "2026-02-03" });
+    await manual(alice, account, { amount: "100", categoryId: house, on: "2026-02-10" });
+    await setLimit(alice, { categoryId: house, accountId: null, month: "2026-02-01", cents: 50_000n });
+    const summaryOf = async (from: string, to: string) =>
+      (await send(alice, "GET", `/categories/${house}/summary?from=${from}&to=${to}`)).body;
+
+    // February alone: one month, and January before it has no movement.
+    const february = await summaryOf("2026-02-01", "2026-02-28");
+    const scope = { categoryIds: [house] };
+    const all = await domain.listCategories(alice, { includeArchived: true });
+    const totals = await domain.categoryMacroTotals(alice, {
+      ...scope,
+      from: "2026-02-01",
+      to: "2026-02-28",
+    });
+    const budget = await budgetDetail(alice, { categoryId: house, accountId: null }, "2026-02-01");
+    const page = domain.categorySummary({
+      category: { id: house, type: "expense" },
+      categories: all,
+      totals,
+      before: await domain.categoryMacroTotals(alice, { ...scope, from: "2026-01-01", to: "2026-01-31" }),
+      months: 1,
+      budget: budget && { ...budget, from: "2026-02-01", end: "2026-02-01" },
+    });
+    expect(february).toEqual({
+      amount: centsToDecimal(page.amountCents),
+      count: page.count,
+      previousAmount: null,
+      change: null,
+      perMonth: null,
+      budget: { limit: centsToDecimal(page.budget!.limitCents), overMonths: page.budget!.overMonths },
+      children: page.children.map((line) => ({
+        id: line.category.id,
+        name: line.category.name,
+        color: null,
+        amount: centsToDecimal(line.totalCents),
+        share: line.share / 100,
+      })),
+      source: null,
+    });
+    expect(february).toMatchObject({
+      amount: "600.00",
+      count: 2,
+      budget: { limit: "500.00", overMonths: 1 },
+    });
+    expect(february.children).toEqual([
+      { id: rent, name: "Rent", color: null, amount: "-500.00", share: 0.833 },
+    ]);
+
+    // March with February before it: the change, and two months for the amount by month.
+    await manual(alice, account, { amount: "300", categoryId: rent, on: "2026-03-05" });
+    const march = await summaryOf("2026-03-01", "2026-03-31");
+    expect([march.amount, march.previousAmount, march.change]).toEqual(["300.00", "600.00", -0.5]);
+    expect((await summaryOf("2026-02-01", "2026-03-31")).perMonth).toBe("450.00");
+    expect(
+      (await send(bob, "GET", `/categories/${house}/summary?from=2026-02-01&to=2026-02-28`)).status,
+    ).toBe(404);
+  });
+
+  it("names the source whose categories count under it, as the page's note", async () => {
+    const { applyProviderAccounts } = await import("@domain/modules/accounts/service");
+    const { listAccounts } = await import("@domain/modules/accounts/queries");
+    const { upsertFromProvider } = await import("@domain/modules/transactions/service");
+    const { sourceNotes } = await import("@/app/(app)/settings/categories/source");
+    const domain = await import("@ledgerly/domain/transactions");
+    await applyProviderAccounts(alice, "wallet", [
+      { provider: "wallet", providerAccountId: "acc-1", name: "Current", type: "checking", currency: "EUR" },
+    ]);
+    const [account] = await listAccounts(alice);
+    const incoming = (externalId: string, name: string) => ({
+      externalId,
+      counterpartExternalId: null,
+      occurredAt: new Date("2026-02-10T10:00:00Z"),
+      amountCents: -1_000n,
+      currency: "EUR",
+      type: "expense" as const,
+      state: "cleared" as const,
+      payee: externalId,
+      note: null,
+      categoryExternalId: name,
+      categoryName: name,
+      categoryGroupExternalId: null,
+      categoryGroupName: null,
+      labels: [],
+    });
+    await upsertFromProvider(
+      alice,
+      account.id,
+      [incoming("e-1", "Tobacco"), incoming("e-2", "Alcohol, tobacco")],
+      {
+        provider: "wallet",
+      },
+    );
+    const alcohol = (await domain.listCategories(alice)).find((one) => one.name === "Alcohol, tobacco")!;
+    const tobacco = (await send(alice, "GET", "/source-categories")).body.sourceCategories.find(
+      (one: { name: string }) => one.name === "Tobacco",
+    );
+    expect(
+      (await send(alice, "PUT", `/source-categories/${tobacco.id}`, { categoryId: alcohol.id })).status,
+    ).toBe(200);
+
+    const note = (await sourceNotes(alice)).get(alcohol.id)!;
+    const answer = (
+      await send(alice, "GET", `/categories/${alcohol.id}/summary?from=2026-02-01&to=2026-02-28`)
+    ).body;
+    expect(answer.source).toEqual({ provider: note.provider, name: note.source, names: note.names });
+    expect(answer.source.names).toEqual(["Alcohol, tobacco", "Tobacco"]);
+  });
+});
+
+describe("what is left of «To review» (client R3)", () => {
+  it("answers left as the page reads it: suggested and open", async () => {
+    const domain = await import("@ledgerly/domain/transactions");
+    const review = (await send(alice, "GET", "/transactions/review")).body;
+    const counts = await domain.categoryCounts(alice, review.accountIds);
+    expect(review.counts).toEqual(counts);
+    expect(review.counts.left).toBe(counts.suggested + counts.open);
+  });
+});
+
 describe("the rules", () => {
   it("saves, previews, applies and undoes a rule, with its amounts as decimals", async () => {
     const account = await newAccount(alice);
@@ -574,7 +705,7 @@ describe("the review and the search", () => {
       mergeProposals: [],
       count: 0,
       total: "0.00",
-      counts: { categorised: 0, suggested: 0, open: 0 },
+      counts: { categorised: 0, suggested: 0, open: 0, left: 0 },
     });
     expect((await send(alice, "GET", "/search?q=x")).body).toEqual({ records: [] });
   });
