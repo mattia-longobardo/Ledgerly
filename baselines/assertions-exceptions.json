@@ -483,5 +483,20 @@
     "file": "tools/contract.test.ts",
     "decision": "UI-EXP-4",
     "reason": "apps/web/src/modules/transactions/actions.ts is deleted by the same commit, so it leaves the list of the files of Server Actions; no assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/subscriptions/ui/inactive-subscriptions.test.tsx",
+    "decision": "SUB-Q9",
+    "reason": "setUtility goes as dead code (Q9, decided with the scope of R2 subscriptions): the mock of setUtilityAction, an action that never existed, goes with it; no assertion changed"
+  },
+  {
+    "file": "packages/domain/src/modules/subscriptions/rules.test.ts",
+    "decision": "SUB-1",
+    "reason": "tests added for upcomingCharges, foundCharges, monthlyCost and toleranceOf (SUB-1, SUB-2, SUB-3, SUB-7); no existing test or assertion changed"
+  },
+  {
+    "file": "packages/domain/src/shared/collections.test.ts",
+    "decision": "SUB-9",
+    "reason": "tests added for searchByName (SUB-9); no existing test or assertion changed"
   }
 ]
