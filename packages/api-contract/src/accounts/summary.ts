@@ -29,6 +29,8 @@ export const getSummary = defineRoute({
     income: money(),
     expense: money(),
     net: money(),
+    /** Income less spending, giroconti out (D3); `net` keeps every movement. */
+    incomeLessExpense: money(),
     transactions: z.number().int(),
     accounts: z.number().int(),
     lastSnapshotMonth: monthStart().nullable(),
@@ -55,6 +57,7 @@ export const getSummary = defineRoute({
       income: "0.00",
       expense: "-243.44",
       net: "-243.44",
+      incomeLessExpense: "-243.44",
       transactions: 5,
       accounts: 4,
       lastSnapshotMonth: "2026-10-01",

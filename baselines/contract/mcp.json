@@ -428,6 +428,7 @@
    "income": "0.00",
    "expense": "-243.44",
    "net": "-243.44",
+   "incomeLessExpense": "-243.44",
    "transactions": 5,
    "accounts": 4,
    "lastSnapshotMonth": null
@@ -747,7 +748,8 @@
     "count": 12,
     "income": "2450.00",
     "expense": "-579.98",
-    "net": "1870.02"
+    "net": "1870.02",
+    "incomeLessExpense": "1870.02"
    }
   }
  },

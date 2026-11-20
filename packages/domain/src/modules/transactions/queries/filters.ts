@@ -146,6 +146,15 @@ export interface TransactionsSummary {
   unpairedTransferCount: number;
 }
 
+/**
+ * Income less spending, giroconti out (decision D3): what the person earned less what they spent.
+ * `netCents` stays the cash flow of every movement; the two differ when a giroconto has no
+ * counterpart in the range.
+ */
+export function incomeLessExpense(summary: Pick<TransactionsSummary, "incomeCents" | "expenseCents">): Cents {
+  return summary.incomeCents + summary.expenseCents;
+}
+
 export interface MonthTotal {
   month: MonthKey;
   count: number;

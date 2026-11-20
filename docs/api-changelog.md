@@ -17,6 +17,9 @@ written before it keeps working.
   source; the manual movement (create with an idempotency key, change, delete, retry the send); the
   choices of «To review» with «Undo»; the merge proposals; the default groups; the rules.
 - MCP: new tool `get_spending`; `list_transactions` keeps its arguments and its page of 50.
+- `incomeLessExpense` (decision D3) beside `net` in the `summary` of `GET /transactions` and
+  `list_transactions` and in `GET /summary`: income less spending, giroconti out. `net` is unchanged
+  (every movement, giroconti included); the two differ when a giroconto has no counterpart.
 
 ## 2026-11-19 · archived doubles and the state of a connection (decision H58)
 

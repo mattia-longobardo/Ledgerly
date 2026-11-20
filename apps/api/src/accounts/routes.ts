@@ -28,6 +28,7 @@ import {
   updateConnection,
 } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
+import { incomeLessExpense } from "@ledgerly/domain/transactions";
 import { groupIban } from "@ledgerly/domain/platform/iban";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
@@ -274,6 +275,7 @@ function serveFigures(app: Hono<ApiEnv>, guard: Guard, cases: AccountCases): voi
       income: moneyOf(figures.incomeCents),
       expense: moneyOf(figures.expenseCents),
       net: moneyOf(figures.netCents),
+      incomeLessExpense: moneyOf(incomeLessExpense(figures)),
       transactions: figures.transactions,
       accounts: figures.accounts,
       lastSnapshotMonth: figures.lastSnapshotMonth,

@@ -3,7 +3,7 @@
 // string, a moment as ISO 8601.
 import type { z } from "zod";
 import type { TRANSACTIONS } from "@ledgerly/api-contract";
-import type { SpendingGroup, TransactionRow } from "@ledgerly/domain/transactions";
+import { incomeLessExpense, type SpendingGroup, type TransactionRow } from "@ledgerly/domain/transactions";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
 type Wire<T extends z.ZodType> = z.input<T>;
@@ -96,6 +96,7 @@ export function summaryOf(summary: {
     income: money(summary.incomeCents),
     expense: money(summary.expenseCents),
     net: money(summary.netCents),
+    incomeLessExpense: money(incomeLessExpense(summary)),
   };
 }
 

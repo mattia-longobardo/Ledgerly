@@ -710,6 +710,7 @@
     "getCategory",
     "getTransaction",
     "hideTransactions",
+    "incomeLessExpense",
     "isHidden",
     "isPreparing",
     "joinDoubles",

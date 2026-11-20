@@ -179,7 +179,13 @@ describe("the movements", () => {
     });
 
     const list = await send(alice, "GET", "/transactions?from=2026-02-01&to=2026-02-28");
-    expect(list.body.summary).toEqual({ count: 1, income: "0.00", expense: "-12.50", net: "-12.50" });
+    expect(list.body.summary).toEqual({
+      count: 1,
+      income: "0.00",
+      expense: "-12.50",
+      net: "-12.50",
+      incomeLessExpense: "-12.50",
+    });
     const view = await send(alice, "GET", "/transactions/view?from=2026-02-01&to=2026-02-28");
     expect(view.body.rows[0]).toEqual(one.body);
     expect(view.body.months).toEqual([{ month: "2026-02-01", count: 1, net: "-12.50" }]);
@@ -216,6 +222,18 @@ describe("the movements", () => {
     });
     expect(hidden.body).toEqual({ count: 1 });
     expect(await balanceOf(alice, rebuilt)).toBe("100.00");
+  });
+});
+
+describe("the money of a range (decision D3)", () => {
+  it("keeps net as every movement and adds income less spending beside it", async () => {
+    const account = await newAccount(alice);
+    await manual(alice, account, { kind: "income", amount: "100" });
+    await manual(alice, account, { kind: "expense", amount: "30.25" });
+    const { summary } = (await send(alice, "GET", "/transactions?from=2026-02-01&to=2026-02-28")).body;
+    expect(summary).toMatchObject({ income: "100.00", expense: "-30.25", net: "69.75" });
+    // With no giroconto the two agree; `net` keeps a giroconto's leg, `incomeLessExpense` never does.
+    expect(summary.incomeLessExpense).toBe("69.75");
   });
 });
 

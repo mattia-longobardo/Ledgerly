@@ -126,6 +126,8 @@ export const transactionsSummary = z.object({
   income: money(),
   expense: money(),
   net: money(),
+  /** Income less spending, giroconti out (D3): differs from `net` when a giroconto has no counterpart. */
+  incomeLessExpense: money(),
 });
 
 /** What the pages add to the summary: how many giroconti the totals leave out. */
@@ -169,7 +171,13 @@ export const TRANSACTION_LINE_EXAMPLE = {
   edited: false,
 };
 
-export const SUMMARY_EXAMPLE = { count: 1, income: "0.00", expense: "-42.80", net: "-42.80" };
+export const SUMMARY_EXAMPLE = {
+  count: 1,
+  income: "0.00",
+  expense: "-42.80",
+  net: "-42.80",
+  incomeLessExpense: "-42.80",
+};
 
 /** A write over a selection: how many rows really changed, for the toast. */
 export const changed = z.object({ count: z.number().int() });

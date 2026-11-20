@@ -42,6 +42,7 @@ export {
   categoryMacroTotals,
   chargeCandidates,
   expensesView,
+  incomeLessExpense,
   facetCounts,
   getTransaction,
   listTransactions,

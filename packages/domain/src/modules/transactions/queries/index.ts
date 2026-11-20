@@ -1,7 +1,7 @@
 // modules/transactions/queries.ts — the read models Expenses renders (spec §7.2): the filtered
 // list, the month groups, the "By category" card and the payee search the ⌘K palette uses. Every
 // query is scoped with `userScoped(ctx)` and every list has a deterministic `ORDER BY`.
-export { DEFAULT_LIMIT, MAX_LIMIT, boundedLimit, escapeLike, shareOf } from "./filters";
+export { DEFAULT_LIMIT, MAX_LIMIT, boundedLimit, escapeLike, incomeLessExpense, shareOf } from "./filters";
 export type { Transaction, TransactionRow, MonthTotal } from "./filters";
 export {
   transactionsByIds,

@@ -19244,6 +19244,10 @@
                       "type": "string",
                       "pattern": "^-?\\d+\\.\\d{2}$"
                     },
+                    "incomeLessExpense": {
+                      "type": "string",
+                      "pattern": "^-?\\d+\\.\\d{2}$"
+                    },
                     "transactions": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -19277,6 +19281,7 @@
                     "income",
                     "expense",
                     "net",
+                    "incomeLessExpense",
                     "transactions",
                     "accounts",
                     "lastSnapshotMonth"
@@ -19624,13 +19629,18 @@
                         "net": {
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "incomeLessExpense": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
                         }
                       },
                       "required": [
                         "count",
                         "income",
                         "expense",
-                        "net"
+                        "net",
+                        "incomeLessExpense"
                       ]
                     }
                   },
@@ -23580,6 +23590,10 @@
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
                         },
+                        "incomeLessExpense": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
                         "transferCount": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -23596,6 +23610,7 @@
                         "income",
                         "expense",
                         "net",
+                        "incomeLessExpense",
                         "transferCount",
                         "unpairedTransferCount"
                       ]
