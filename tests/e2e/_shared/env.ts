@@ -9,6 +9,18 @@
 // (scripts/preview-on-test.sh, docs/design/funds-ux.md §10).
 export const BASE_URL = process.env.E2E_BASE_URL ?? "https://dash.longobardo.me";
 
+/**
+ * E2E_ORIGIN (`127.0.0.1`, Traefik's `web` entrypoint): the specs reach the site's origin through a
+ * proxy of the run instead of Cloudflare (tests/e2e/_shared/origin.ts). `scripts/release.sh` sets it
+ * for the `@smoke` tests; the `@site` tests and every other run go through Cloudflare as before.
+ */
+export const ORIGIN = process.env.E2E_ORIGIN;
+const ORIGIN_PROXY = "http://127.0.0.1:3990";
+
+/** What a context needs to go through that proxy; nothing without E2E_ORIGIN. */
+export const ORIGIN_OPTIONS = ORIGIN ? { proxy: { server: ORIGIN_PROXY }, ignoreHTTPSErrors: true } : {};
+export const ORIGIN_PROXY_PORT = Number(new URL(ORIGIN_PROXY).port);
+
 // Better Auth rate-limits password sign-ins to 5 per minute per client (/sign-in/email,
 // src/platform/auth/auth.ts), and the whole run is one client. The suite spends 4; a spec that
 // only needs to be signed in starts from a session the seed prepared and spends none.

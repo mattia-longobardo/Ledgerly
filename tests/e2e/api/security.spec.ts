@@ -2,7 +2,7 @@
 // an ordinary user on the deployed site. The client is created, its token spent against /api/v1,
 // the client deleted, and the token proved dead.
 import { expect, request as http, test } from "@playwright/test";
-import { BASE_URL, sessionState } from "../_shared/env";
+import { BASE_URL, ORIGIN_OPTIONS, sessionState } from "../_shared/env";
 
 test.use({ storageState: sessionState("security") });
 
@@ -32,7 +32,11 @@ test("a Client API is shown once, gets a token, works on /api/v1 and stops the m
   await expect(row).not.toContainText(clientSecret);
 
   // A script, not the browser: no session cookie, so no CSRF origin check on the token endpoint.
-  const script = await http.newContext({ baseURL: BASE_URL, storageState: { cookies: [], origins: [] } });
+  const script = await http.newContext({
+    baseURL: BASE_URL,
+    ...ORIGIN_OPTIONS,
+    storageState: { cookies: [], origins: [] },
+  });
   const minted = await script.post(tokenEndpoint, {
     headers: { authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}` },
     form: { grant_type: "client_credentials", resource },
@@ -67,7 +71,11 @@ test("a Client API is shown once, gets a token, works on /api/v1 and stops the m
 test("/api/v1 refuses a call with no token at all, and says where to get one @smoke", async () => {
   // No session cookie either: since the web's session opens /api/v1 (R2), the file's signed-in
   // state would be a credential.
-  const request = await http.newContext({ baseURL: BASE_URL, storageState: { cookies: [], origins: [] } });
+  const request = await http.newContext({
+    baseURL: BASE_URL,
+    ...ORIGIN_OPTIONS,
+    storageState: { cookies: [], origins: [] },
+  });
   const response = await request.get("/api/v1/summary");
   expect(response.status()).toBe(401);
   expect(response.headers()["www-authenticate"]).toMatch(

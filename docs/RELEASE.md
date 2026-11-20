@@ -155,7 +155,7 @@ container will not serve a half-configured app.
 curl -s https://dash.longobardo.me/api/health     # G8: status ok, db up
 npm run numbers -- "$folder" after --as-of <the instant step 2 printed>
 npm run numbers -- --diff "$folder/numbers-before.json" "$folder/numbers-after.json"   # G5: "uguale"
-npx playwright test -g @smoke                      # G6: the smoke tests, on the deployed site
+E2E_ORIGIN=127.0.0.1 npx playwright test -g @smoke  # G6: the smoke tests, at the site's origin
 npx playwright test <specs> -g @site               # G6: the tests about the site itself, for the selected specs
 ```
 
@@ -164,8 +164,8 @@ names, never their values — a difference stops the release until it is explain
 between the two is an explanation; a number the release was not meant to move is a rollback). Only
 the verdict and the names go in a comment: the files stay in the folder.
 
-`scripts/release.sh` runs the first three commands and `@smoke` itself; a red smoke test is a failed
-deploy, with the rollback of step 8. The `@site` tests are the ones `npm run test:select` printed
+`scripts/release.sh` runs the first three commands and `@smoke` itself — at Traefik's origin, not
+through Cloudflare, whose rate limit a run of them passes; a red smoke test is a failed deploy, with the rollback of step 8. The `@site` tests are the ones `npm run test:select` printed
 under "After the deploy". The E2E tests create their `@example.test` users before the run and delete
 them, with everything they own, after it: they never touch anybody else's data. The rest of the
 suite already ran on the preview, before the deploy: it does not run again here.

@@ -1,6 +1,6 @@
 // playwright.config.ts — the e2e suite drives the deployed site (tests/e2e/_shared/env.ts): deploy first.
 import { defineConfig, devices } from "@playwright/test";
-import { BASE_URL } from "./tests/e2e/_shared/env";
+import { BASE_URL, ORIGIN_OPTIONS } from "./tests/e2e/_shared/env";
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -12,6 +12,8 @@ export default defineConfig({
   globalTeardown: "./tests/e2e/_shared/global-teardown.ts",
   use: {
     baseURL: BASE_URL,
+    // E2E_ORIGIN: the site's origin, not Cloudflare (tests/e2e/_shared/origin.ts).
+    ...ORIGIN_OPTIONS,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     locale: "en-US",

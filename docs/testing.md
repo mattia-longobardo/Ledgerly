@@ -200,8 +200,10 @@ midway can leave data on its user: run `seed` again before the next try.
   sign-in, the manifest, `/api/v1` with no token, the command palette, and one screen of each area
   at the desktop width. They run for every release: on the preview before the deploy
   (`npx playwright test -c playwright.preview.config.ts -g @smoke`, under one minute) and
-  on the site after it (`npx playwright test -g @smoke`; `scripts/release.sh` does this as its
-  last step, and a red test there is a failed deploy).
+  on the site after it (`E2E_ORIGIN=127.0.0.1 npx playwright test -g @smoke`; `scripts/release.sh`
+  does this as its last step, and a red test there is a failed deploy). `E2E_ORIGIN` sends them to
+  Traefik's origin through a proxy of the run (`tests/e2e/_shared/origin.ts`), with the site's name
+  and cookies, because Cloudflare's rate limit stops a run of them; the `@site` tests stay on Cloudflare.
 - **`@site`**: the 11 tests about what differs between the preview and the site — a password
   sign-in through the proxy, OAuth, the real exchange rates, the return from a plugin. They run
   on the preview with every other test. After the deploy, run them on the site too, only for the
