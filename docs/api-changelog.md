@@ -3,6 +3,28 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-20 · pockets (0.45.0)
+
+- `GET /pockets` (new, `read`): the Pockets page — the open pockets (`id`, `name`, `color`, `state`,
+  `accountId`, `account`, `startMonth`, `target`, `monthly`, `balance`, `percent` of the target, whole,
+  null without one, and `planned` `{count, total, after}`), the `archived` ones, the `totals`
+  (`earmarked`, `backing` and `free`, null when a backing balance is unknown, `monthly`),
+  `backingAccounts` (`id`, `name`, `free`), `nextAccrual` and the `accounts` a pocket can rest on.
+- MCP tool `list_pockets` (new, read only): the answer of `GET /pockets`, from the same descriptor.
+- `GET /pockets/overview` (new, `read`): Overview's tile — `total`, `monthly`, `count`.
+- `GET /pockets/candidates` (new, `read`): the expenses a standalone pocket can take (`id`, `on`,
+  `amount`, `payee`, `account`), newest first.
+- `GET /pockets/{id}` (new, `read`): a pocket's page — its row plus `budget`, `accrued`, `spent`,
+  `toGo`, `eta`, `etaMonth`, `interest` (null when unknown), `interestReason`
+  (`estimate`/`no_interest_data`/`standalone`), `freeOnAccount`; `history` (`month`, `balance`, 12
+  months, oldest first), `expenses` and `planned`. `not_found` for an archived pocket.
+- `POST /pockets` (201 `{id}`), `PUT /pockets/{id}`, `PUT /pockets/{id}/state`,
+  `POST /pockets/{id}/deposits`, `PUT` and `DELETE /pockets/{id}/expenses/{transaction}`,
+  `POST /pockets/{id}/planned`, `DELETE /pockets/planned/{id}` (new, `write`). Amounts are decimal
+  strings, `null` for none. Errors: `invalid` (`reason` `invalid`, `amount`, `invalid_account`,
+  `future_date`, `past_date`, `not_expense`), `conflict` (`reason` `duplicate_name`, `archived`,
+  `backed`, `already_linked`), `not_found`.
+
 ## 2026-11-20 · budgets (0.44.0)
 
 - `GET /budgets?month=` (new, `read`): the answer of the MCP tool `list_budgets`, from the same

@@ -232,6 +232,7 @@ describe("the reference user", () => {
     });
     answers.list_transactions = await tool("list_transactions", { from: "2031-09-01", to: "2031-10-15" });
     answers.list_budgets = await tool("list_budgets", { month: "2031-10" });
+    answers.list_pockets = await tool("list_pockets");
     answers.list_investments = await tool("list_investments", { period: "all" });
     answers.get_investment_holdings = await tool("get_investment_holdings", { account_id: user.brokerId });
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/mcp.json"));

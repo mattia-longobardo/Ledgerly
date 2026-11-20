@@ -412,6 +412,25 @@
     "execution": {
      "taskSupport": "forbidden"
     }
+   },
+   {
+    "name": "list_pockets",
+    "title": "Pockets",
+    "description": "The open pockets with what is left in each, their target and monthly amount, and the totals of the Pockets page: earmarked, the backing accounts' balance and what is free on them.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {}
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
    }
   ]
  },
@@ -786,6 +805,64 @@
     "spent": "193.95"
    },
    "unbudgeted": "49.49"
+  }
+ },
+ "list_pockets": {
+  "isError": false,
+  "answer": {
+   "pockets": [
+    {
+     "id": "<id-27>",
+     "name": "Holidays",
+     "color": null,
+     "state": "active",
+     "accountId": "<id-4>",
+     "account": "Revolut Saving",
+     "startMonth": "2031-07-01",
+     "target": "4000.00",
+     "monthly": "250.00",
+     "balance": "750.00",
+     "percent": 19,
+     "planned": {
+      "count": 0,
+      "total": "0.00",
+      "after": "750.00"
+     }
+    }
+   ],
+   "archived": [],
+   "totals": {
+    "earmarked": "750.00",
+    "backing": "12050.00",
+    "free": "11300.00",
+    "monthly": "250.00"
+   },
+   "backingAccounts": [
+    {
+     "id": "<id-4>",
+     "name": "Revolut Saving",
+     "free": "11300.00"
+    }
+   ],
+   "nextAccrual": "2031-11-01",
+   "accounts": [
+    {
+     "id": "<id-3>",
+     "name": "ING Conto Arancio"
+    },
+    {
+     "id": "<id-4>",
+     "name": "Revolut Saving"
+    },
+    {
+     "id": "<id-5>",
+     "name": "Directa"
+    },
+    {
+     "id": "<id-6>",
+     "name": "Fideuram Piano Accumulo"
+    }
+   ]
   }
  },
  "list_investments": {

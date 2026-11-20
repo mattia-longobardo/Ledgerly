@@ -72,6 +72,8 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | the writes of movements, manual movements, categories to review and rules ([changelog](api-changelog.md)) | `write` |
 | `GET /budgets`, `/budgets/view`, `/budgets/overview`, `/budgets/{budget}` | `read` |
 | `PUT /budgets/{budget}/limit`, `POST /budgets/{budget}/stop`, `PUT /budgets/{budget}/alerts` | `write` |
+| `GET /pockets`, `/pockets/overview`, `/pockets/candidates`, `/pockets/{id}` | `read` |
+| the writes of pockets, their deposits, linked expenses and planned expenses ([changelog](api-changelog.md)) | `write` |
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |
 | `POST /imports`                            | `imports`          |
@@ -108,6 +110,7 @@ and uses the same services as the REST API.
 | `list_transactions`        | `GET /api/v1/transactions`                  |
 | `get_spending`             | `GET /api/v1/transactions/spending`         |
 | `list_budgets`             | `GET /api/v1/budgets`                       |
+| `list_pockets`             | `GET /api/v1/pockets`                       |
 | `list_investments`         | `GET /api/v1/investments`                   |
 | `get_investment_holdings`  | `GET /api/v1/investments/{accountId}/holdings` |
 

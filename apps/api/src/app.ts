@@ -3,6 +3,7 @@
 import { Hono } from "hono";
 import { type AccountCases, serveAccounts } from "./accounts/routes";
 import { serveBudgets } from "./budgets/routes";
+import { servePockets } from "./pockets/routes";
 import { metaApi } from "./meta";
 import type { ApiEnv, Guard } from "./serve";
 import { serveTaxonomy } from "./settings/categories";
@@ -52,6 +53,7 @@ export function apiRoutes({
     ...serveAccounts(app, guard, accounts),
     ...serveTransactions(app, guard, transactions),
     ...serveBudgets(app, guard),
+    ...servePockets(app, guard),
   ];
   app.route("/", metaApi(served));
   return app;

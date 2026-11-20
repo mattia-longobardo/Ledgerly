@@ -209,6 +209,7 @@ describe("MCP tools", () => {
       "list_categories",
       "list_connections",
       "list_labels",
+      "list_pockets",
       "list_transactions",
     ]);
     for (const tool of tools) expect(tool.annotations).toMatchObject({ readOnlyHint: true });

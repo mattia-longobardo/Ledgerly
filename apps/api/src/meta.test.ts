@@ -31,6 +31,7 @@ describe("GET /meta", () => {
         "connections",
         "meta",
         "people",
+        "pockets",
         "preferences",
         "profile",
         "rules",

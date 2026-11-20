@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97933,
-    "duplicatedLines": 16748,
+    "lines": 98178,
+    "duplicatedLines": 16787,
     "percent": 17.1,
-    "blocks": 1227
+    "blocks": 1234
   },
   "units": {
     "api": {
-      "lines": 2447,
-      "duplicatedLines": 278,
-      "percent": 11.36,
-      "blocks": 29
+      "lines": 2643,
+      "duplicatedLines": 331,
+      "percent": 12.52,
+      "blocks": 34
     },
     "app": {
       "lines": 24179,
@@ -48,9 +48,9 @@
     },
     "modules/funds": {
       "lines": 10576,
-      "duplicatedLines": 2021,
-      "percent": 19.11,
-      "blocks": 149
+      "duplicatedLines": 2023,
+      "percent": 19.13,
+      "blocks": 148
     },
     "modules/imports": {
       "lines": 837,
@@ -59,9 +59,9 @@
       "blocks": 16
     },
     "modules/interests": {
-      "lines": 2199,
+      "lines": 2207,
       "duplicatedLines": 506,
-      "percent": 23.01,
+      "percent": 22.93,
       "blocks": 40
     },
     "modules/investments": {
@@ -77,15 +77,15 @@
       "blocks": 45
     },
     "modules/pockets": {
-      "lines": 1677,
-      "duplicatedLines": 795,
-      "percent": 47.41,
-      "blocks": 42
+      "lines": 1713,
+      "duplicatedLines": 786,
+      "percent": 45.88,
+      "blocks": 45
     },
     "modules/subscriptions": {
       "lines": 1878,
-      "duplicatedLines": 479,
-      "percent": 25.51,
+      "duplicatedLines": 478,
+      "percent": 25.45,
       "blocks": 33
     },
     "modules/timeoff": {
@@ -95,7 +95,7 @@
       "blocks": 28
     },
     "modules/transactions": {
-      "lines": 12850,
+      "lines": 12851,
       "duplicatedLines": 1621,
       "percent": 12.61,
       "blocks": 128
@@ -192,8 +192,8 @@
     },
     "platform/integrations": {
       "lines": 2211,
-      "duplicatedLines": 444,
-      "percent": 20.08,
+      "duplicatedLines": 438,
+      "percent": 19.81,
       "blocks": 35
     },
     "platform/integrations/ccxt": {
@@ -371,7 +371,7 @@
       "blocks": 0
     },
     "shared/money": {
-      "lines": 113,
+      "lines": 117,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -385,16 +385,18 @@
   },
   "files": {
     "api/accounts/cases.ts": 6,
-    "api/accounts/dto.ts": 49,
+    "api/accounts/dto.ts": 50,
     "api/accounts/routes.ts": 44,
     "api/budgets/dto.ts": 10,
+    "api/pockets/dto.ts": 31,
+    "api/pockets/routes.ts": 13,
     "api/settings/categories.ts": 39,
     "api/settings/category-moves.ts": 6,
     "api/settings/connections.ts": 16,
     "api/settings/security.ts": 33,
     "api/settings/server.ts": 6,
     "api/transactions/dto.ts": 21,
-    "api/transactions/review.ts": 18,
+    "api/transactions/review.ts": 26,
     "api/transactions/routes.ts": 12,
     "api/transactions/rules.ts": 18,
     "app/(app)/accounts/[id]/account-screen.tsx": 11,
@@ -528,11 +530,11 @@
     "modules/funds/home-queries.ts": 8,
     "modules/funds/home.ts": 7,
     "modules/funds/jobs.ts": 8,
-    "modules/funds/overview.ts": 57,
+    "modules/funds/overview.ts": 65,
     "modules/funds/pension/operations.ts": 33,
     "modules/funds/pension/rules.ts": 7,
     "modules/funds/pension/service.ts": 99,
-    "modules/funds/queries.ts": 44,
+    "modules/funds/queries.ts": 38,
     "modules/funds/schema.ts": 426,
     "modules/funds/service.ts": 222,
     "modules/funds/sources.ts": 13,
@@ -606,13 +608,13 @@
     "modules/payroll/ui/review-workspace.tsx": 17,
     "modules/pockets/actions.ts": 95,
     "modules/pockets/jobs.ts": 19,
-    "modules/pockets/queries.ts": 81,
+    "modules/pockets/queries.ts": 71,
     "modules/pockets/schema.ts": 111,
-    "modules/pockets/service.ts": 152,
+    "modules/pockets/service.ts": 153,
     "modules/pockets/ui/pocket-actions.tsx": 337,
     "modules/subscriptions/actions.ts": 43,
     "modules/subscriptions/jobs.ts": 9,
-    "modules/subscriptions/queries.ts": 48,
+    "modules/subscriptions/queries.ts": 47,
     "modules/subscriptions/schema.ts": 78,
     "modules/subscriptions/service.ts": 123,
     "modules/subscriptions/ui/present.ts": 8,
@@ -700,7 +702,7 @@
     "platform/integrations/service/external.ts": 69,
     "platform/integrations/service/runs.ts": 40,
     "platform/integrations/service/schedule.ts": 31,
-    "platform/integrations/service/sources.ts": 82,
+    "platform/integrations/service/sources.ts": 76,
     "platform/integrations/status.ts": 20,
     "platform/integrations/trek/client.ts": 64,
     "platform/integrations/trek/sync.ts": 18,
