@@ -349,7 +349,7 @@ function monthlyOf(open: readonly Pocket[]): Cents {
 }
 
 /** An expense "Link an expense" offers: positive amount, the person's own day. */
-export interface LinkCandidate {
+interface LinkCandidate {
   id: string;
   on: CivilDate;
   cents: Cents;

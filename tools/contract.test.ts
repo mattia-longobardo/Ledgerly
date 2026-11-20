@@ -265,9 +265,10 @@ describe("the Server Actions of budgets", () => {
 
 /**
  * The Server Actions of pockets (05-refactor.md §5.5) and their routes; no exclusion. Overview's tile,
- * a pocket's page and «Link an expense» read routes of their own, with no action.
+ * a pocket's page and «Link an expense» read routes of their own, with no action. The screens call
+ * `/api/v1`: no action left.
  */
-const POCKETS_ACTION_FILES = ["apps/web/src/modules/pockets/actions.ts"];
+const POCKETS_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of pockets", () => {
   const actions = POCKETS_ACTION_FILES.flatMap((file) =>

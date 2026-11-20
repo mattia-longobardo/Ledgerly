@@ -79,6 +79,11 @@
     "syncRuleSchema",
     "syncScheduleSchema"
   ],
+  "packages/api-contract/src/pockets/index.ts": [
+    "MAX_DESCRIPTION",
+    "MAX_NAME",
+    "pockets"
+  ],
   "packages/api-contract/src/settings/index.ts": [
     "LAST_DAY",
     "MAX_RULES",
@@ -543,9 +548,6 @@
     "setCodeRole",
     "uploadPayslip",
     "verifyPayslip"
-  ],
-  "packages/domain/src/modules/pockets/client.ts": [
-    "LinkCandidate"
   ],
   "packages/domain/src/modules/pockets/index.ts": [
     "PocketError",

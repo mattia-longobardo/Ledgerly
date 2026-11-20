@@ -212,7 +212,7 @@ export const createPocket = defineRoute({
   summary:
     "Creates a pocket, on an open account or standalone. Target and monthly are positive decimal strings, " +
     "or null.",
-  actions: ["createPocketAction"],
+  actions: [],
   body: pocketBody,
   response: z.object({ id: id() }),
   status: 201,
@@ -227,7 +227,7 @@ export const updatePocket = defineRoute({
   scope: "write",
   capability: "pockets",
   summary: "Changes a pocket: every field of the dialog, as `POST /pockets` takes them.",
-  actions: ["updatePocketAction"],
+  actions: [],
   params: byPocket,
   body: pocketBody,
   response: null,
@@ -243,7 +243,7 @@ export const setPocketState = defineRoute({
   scope: "write",
   capability: "pockets",
   summary: "Pauses, resumes, archives or restores a pocket.",
-  actions: ["setPocketStateAction"],
+  actions: [],
   params: byPocket,
   body: z.object({ state: z.enum(POCKET_STATES) }).strict(),
   response: null,
@@ -260,7 +260,7 @@ export const addToPocket = defineRoute({
   capability: "pockets",
   summary:
     "Adds money to a pocket's budget on a day, today or before. The amount is a positive decimal string.",
-  actions: ["addToPocketAction"],
+  actions: [],
   params: byPocket,
   body: z.object({ amount: amountInput(), on: civilDate() }).strict(),
   response: null,
@@ -279,7 +279,7 @@ export const linkPocketExpense = defineRoute({
   capability: "pockets",
   summary:
     "Files an expense under a standalone pocket (`GET /pockets/candidates` lists the ones it can take).",
-  actions: ["linkExpenseAction"],
+  actions: [],
   params: byExpense,
   response: null,
   status: 204,
@@ -294,7 +294,7 @@ export const unlinkPocketExpense = defineRoute({
   scope: "write",
   capability: "pockets",
   summary: "Takes an expense filed by hand out of a standalone pocket.",
-  actions: ["unlinkExpenseAction"],
+  actions: [],
   params: byExpense,
   response: null,
   status: 204,
@@ -309,7 +309,7 @@ export const addPlannedExpense = defineRoute({
   scope: "write",
   capability: "pockets",
   summary: "Plans an expense on a pocket for a day, today or later. The amount is a positive decimal string.",
-  actions: ["addPlannedExpenseAction"],
+  actions: [],
   params: byPocket,
   body: z
     .object({
@@ -334,7 +334,7 @@ export const removePlannedExpense = defineRoute({
   scope: "write",
   capability: "pockets",
   summary: "Removes a planned expense (the `id` of `planned[]` in `GET /pockets/{id}`).",
-  actions: ["removePlannedExpenseAction"],
+  actions: [],
   params: z.object({ id: id() }),
   response: null,
   status: 204,

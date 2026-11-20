@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 149,
+    "deepImports": 147,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -411,8 +411,6 @@
     "app/(app)/payroll/page.tsx → modules/payroll/ui/present",
     "app/(app)/payroll/page.tsx → modules/payroll/ui/register-table",
     "app/(app)/payroll/settings/code-map-card.tsx → modules/payroll/actions",
-    "app/(app)/pockets/[id]/page.tsx → modules/pockets/ui/pocket-actions",
-    "app/(app)/pockets/page.tsx → modules/pockets/ui/pocket-actions",
     "app/(app)/settings/categories/default-groups.tsx → modules/transactions/ui/default-groups-form",
     "app/(app)/settings/categories/page.tsx → modules/transactions/ui/display",
     "app/(app)/settings/data/page.tsx → modules/accounts/ui/snapshot-button",

@@ -1,12 +1,11 @@
 "use client";
 
 // Overview, read from `/api/v1` (rewrite plan R3): the net worth, its buckets, its chart and the
-// accounts are fields of `GET /net-worth`, the budgets card reads `GET /budgets/overview`. The pockets
-// tile belongs to a module still drawn on the server: the page hands it in, already drawn.
+// accounts are fields of `GET /net-worth`, the budgets card reads `GET /budgets/overview`, the pockets
+// tile `GET /pockets/overview`.
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
 import { views } from "@ledgerly/api-contract/accounts";
 import { profile } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
@@ -25,16 +24,12 @@ import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type CardFormat, centsOf, counterValue, NetWorthCard } from "@/modules/accounts/client";
 import { BudgetsOverviewCard } from "@/modules/budgets";
+import { PocketsOverviewTile } from "@/modules/pockets";
 
 type NetWorth = RouteOutput<typeof views.getNetWorth>;
 type ViewRow = NetWorth["accounts"][number];
 
-/** The block of another module the page draws on the server: the pockets tile. */
-interface ServerBlocks {
-  pockets: ReactNode;
-}
-
-export function OverviewScreen(blocks: ServerBlocks) {
+export function OverviewScreen() {
   const text = useTranslations("overview");
   const accountsText = useTranslations("accounts");
   const preferences = useApi(profile.getPreferences, {});
@@ -60,7 +55,6 @@ export function OverviewScreen(blocks: ServerBlocks) {
               <OverviewView
                 view={view}
                 format={{ locale: prefs.locale, timeZone: prefs.timeZone, numberFormat: numberStyle(prefs) }}
-                {...blocks}
               />
             )}
           </Loaded>
@@ -70,7 +64,7 @@ export function OverviewScreen(blocks: ServerBlocks) {
   );
 }
 
-function OverviewView({ view, format, pockets }: ServerBlocks & { view: NetWorth; format: CardFormat }) {
+function OverviewView({ view, format }: { view: NetWorth; format: CardFormat }) {
   const text = useTranslations("overview");
   const accountsText = useTranslations("accounts");
   const search = useSearchParams();
@@ -104,7 +98,8 @@ function OverviewView({ view, format, pockets }: ServerBlocks & { view: NetWorth
             note={accountsText("countAccounts", { count: bucket.count })}
           />
         ))}
-        {pockets}
+        {/* The fourth tile of the design, deferred by F1 until pockets existed (F3). */}
+        <PocketsOverviewTile numberFormat={format.numberFormat} />
       </div>
 
       {/* Past the wide threshold the chart and the accounts sit side by side (spec §8.2, F2.5). */}

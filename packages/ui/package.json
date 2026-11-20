@@ -23,6 +23,8 @@
     "./detail-header": "./src/detail-header.tsx",
     "./dismissable-details": "./src/dismissable-details.tsx",
     "./field": "./src/field.tsx",
+    "./form-dialog": "./src/form-dialog.tsx",
+    "./hero-figure": "./src/hero-figure.tsx",
     "./highlight": "./src/highlight.tsx",
     "./initials": "./src/initials.ts",
     "./input": "./src/input.tsx",

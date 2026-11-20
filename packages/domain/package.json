@@ -47,7 +47,6 @@
     "./platform/storage": "./src/platform/storage.ts",
     "./platform/version": "./src/platform/version.ts",
     "./pockets": "./src/modules/pockets/index.ts",
-    "./pockets/client": "./src/modules/pockets/client.ts",
     "./shared/country": "./src/shared/country.ts",
     "./shared/dates": "./src/shared/dates.ts",
     "./shared/fees": "./src/shared/fees.ts",

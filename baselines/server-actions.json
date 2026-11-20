@@ -152,19 +152,6 @@
       "verifyPayslipAction"
     ]
   },
-  "apps/web/src/modules/pockets/actions.ts": {
-    "closedBy": "R3 of pockets",
-    "actions": [
-      "addPlannedExpenseAction",
-      "addToPocketAction",
-      "createPocketAction",
-      "linkExpenseAction",
-      "removePlannedExpenseAction",
-      "setPocketStateAction",
-      "unlinkExpenseAction",
-      "updatePocketAction"
-    ]
-  },
   "apps/web/src/modules/subscriptions/actions.ts": {
     "closedBy": "R3 of subscriptions",
     "actions": [
