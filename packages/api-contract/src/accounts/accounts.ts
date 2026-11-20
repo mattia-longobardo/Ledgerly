@@ -81,13 +81,17 @@ export const listAccounts = defineRoute({
   path: "/accounts",
   scope: "read",
   capability: "accounts",
-  summary: "Every account with its type, currency, state and today's balance.",
+  summary:
+    "Every account with its type, currency, state and today's balance; `archived=true` adds the archived ones.",
   actions: [],
+  query: z.object({ archived: z.enum(["true", "false"]).optional() }),
   response: z.object({ accounts: z.array(accountRow) }),
-  errors: [],
+  errors: ["invalid"],
   mcp: {
     title: "Accounts",
     description: "Every account with its type, currency, state and today's balance, as GET /api/v1/accounts.",
+    // The tool keeps the arguments of F8: none.
+    arguments: {},
   },
   example: { response: { accounts: [ACCOUNT_ROW_EXAMPLE] } },
 });

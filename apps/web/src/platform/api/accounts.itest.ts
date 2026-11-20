@@ -188,6 +188,23 @@ describe("what hangs off an account, deletion and the snapshot", () => {
   });
 });
 
+describe("the archived accounts of the filter (client R3)", () => {
+  it("answers them with archived=true only, in the shape of GET /accounts", async () => {
+    const { listAccounts } = await import("@ledgerly/domain/accounts");
+    const kept = await newAccount(alice);
+    const gone = await newAccount(alice, { name: "Old" });
+    expect((await send(alice, "POST", `/accounts/${gone.id}/archive`)).status).toBe(204);
+    const ids = (body: { accounts: { id: string }[] }) => body.accounts.map((one) => one.id).sort();
+    expect(ids((await send(alice, "GET", "/accounts")).body)).toEqual([kept.id]);
+    const all = (await send(alice, "GET", "/accounts?archived=true")).body;
+    expect(ids(all)).toEqual(
+      (await listAccounts(alice, { includeArchived: true })).map((one) => one.id).sort(),
+    );
+    expect(ids(all)).toEqual([kept.id, gone.id].sort());
+    expect(all.accounts.find((one: { id: string }) => one.id === gone.id).state).toBe("archived");
+  });
+});
+
 describe("parity of accounts: route = MCP tool", () => {
   it("answers each read tool of accounts with what its route answers", async () => {
     const account = await newAccount(alice, { openingBalance: { on: "2026-01-31", amount: "50" } });

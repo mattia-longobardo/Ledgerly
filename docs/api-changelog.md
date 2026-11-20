@@ -3,6 +3,23 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-20 · the sign, the series' shares, the groups' counts, the macros, the archived accounts (0.44.0)
+
+- `GET /transactions/spending/breakdown`: `signedAmount` (new) on every group and child, the amount
+  with its sign (negative for spending). `amount`, `share` and `width` do not change.
+- `GET /transactions/spending/series`: `total` (new), what the buckets add up to, and `share` (new) on
+  every group, its `total` as a share of the series' `total` (0-1; 0 when the series is 0).
+- `GET /transactions/view`: `facets.groups` (new), `[{ categoryId, count }]` for every group of
+  categories that has sub-categories and any movement: its own movements and its sub-categories'
+  (F2.5). `facets.categories` keeps each category's own count; `GET /transactions/facets` does not
+  change.
+- `macros` (new) on every movement of `GET /transactions/view` and `GET /transactions/{id}`: the
+  macros its category may be chosen in — `["transfer"]` for a leg of a pair, otherwise
+  `["expense", "transfer"]` for money out and `["income", "transfer"]` for money in.
+- `GET /accounts?archived=true` (new optional parameter): the archived accounts too, in the same
+  shape. Without it the answer does not change.
+- No MCP tool changes: `list_accounts` keeps no arguments.
+
 ## 2026-11-20 · the card, the chart and «To review» for the client (0.43.0)
 
 - `GET /transactions/spending/breakdown` (new, `read`): the «By category» card on two levels, as the

@@ -13,9 +13,23 @@
     "/accounts": {
       "get": {
         "operationId": "list_accounts",
-        "summary": "Every account with its type, currency, state and today's balance.",
+        "summary": "Every account with its type, currency, state and today's balance; `archived=true` adds the archived ones.",
         "tags": [
           "accounts"
+        ],
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -117,6 +131,16 @@
                   "required": [
                     "accounts"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -21314,6 +21338,17 @@
                           "pending"
                         ]
                       }
+                    },
+                    "macros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "income",
+                          "expense",
+                          "transfer"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -21345,7 +21380,8 @@
                     "editableAtSource",
                     "removedUpstream",
                     "edited",
-                    "badges"
+                    "badges",
+                    "macros"
                   ]
                 }
               }
@@ -24724,6 +24760,10 @@
                             "type": "string",
                             "pattern": "^-?\\d+\\.\\d{2}$"
                           },
+                          "signedAmount": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
                           "share": {
                             "type": "number"
                           },
@@ -24768,6 +24808,10 @@
                                   "type": "string",
                                   "pattern": "^-?\\d+\\.\\d{2}$"
                                 },
+                                "signedAmount": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
                                 "share": {
                                   "type": "number"
                                 },
@@ -24780,6 +24824,7 @@
                                 "name",
                                 "color",
                                 "amount",
+                                "signedAmount",
                                 "share",
                                 "width"
                               ]
@@ -24791,6 +24836,7 @@
                           "name",
                           "color",
                           "amount",
+                          "signedAmount",
                           "share",
                           "width",
                           "children"
@@ -24991,6 +25037,10 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "total": {
+                      "type": "string",
+                      "pattern": "^-?\\d+\\.\\d{2}$"
+                    },
                     "buckets": {
                       "type": "array",
                       "items": {
@@ -25048,6 +25098,9 @@
                             "type": "string",
                             "pattern": "^-?\\d+\\.\\d{2}$"
                           },
+                          "share": {
+                            "type": "number"
+                          },
                           "values": {
                             "type": "array",
                             "items": {
@@ -25061,12 +25114,14 @@
                           "name",
                           "color",
                           "total",
+                          "share",
                           "values"
                         ]
                       }
                     }
                   },
                   "required": [
+                    "total",
                     "buckets",
                     "groups"
                   ]
@@ -25517,6 +25572,17 @@
                                 "pending"
                               ]
                             }
+                          },
+                          "macros": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "income",
+                                "expense",
+                                "transfer"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -25548,7 +25614,8 @@
                           "editableAtSource",
                           "removedUpstream",
                           "edited",
-                          "badges"
+                          "badges",
+                          "macros"
                         ]
                       }
                     },
@@ -25710,12 +25777,35 @@
                               "count"
                             ]
                           }
+                        },
+                        "groups": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "categoryId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "count": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "categoryId",
+                              "count"
+                            ]
+                          }
                         }
                       },
                       "required": [
                         "accounts",
                         "categories",
-                        "types"
+                        "types",
+                        "groups"
                       ]
                     },
                     "listCount": {

@@ -71,6 +71,7 @@ export {
   spendingLayers,
   spendingBuckets,
   reviewTotals,
+  groupCounts,
 } from "./rules";
 export type {
   CategoryType,

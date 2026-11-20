@@ -3,6 +3,7 @@
 // route, by its MCP tool and by the page alike (audit TRX-5, TRX-10, API-2). No route is declared here.
 import { z } from "zod";
 import { civilDate, hexColor, id, instant, money } from "../primitives";
+import { categoryType } from "../settings/shared";
 
 // The vocabularies are the domain's (`@ledgerly/domain/transactions`): the contract imports zod only
 // (10-modularity.md §10.2), so `tools/contract.test.ts` holds the lists equal.
@@ -131,6 +132,8 @@ export const transactionLine = transactionRow.extend({
    * `edited` above keep their meaning, for the MCP tools.
    */
   badges: z.array(z.enum(ROW_BADGES)),
+  /** The macros its category may be chosen in (`macrosFor`): a pair, `transfer` only; else by the sign. */
+  macros: z.array(categoryType),
 });
 
 /**
@@ -191,6 +194,7 @@ export const TRANSACTION_LINE_EXAMPLE = {
   removedUpstream: false,
   edited: false,
   badges: [],
+  macros: ["expense", "transfer"],
 };
 
 export const SUMMARY_EXAMPLE = {

@@ -96,6 +96,14 @@ const facets = z.object({
   types: z.array(z.object({ type: z.enum(TRANSACTION_TYPES), count: z.number().int() })),
 });
 
+/**
+ * The facets of Expenses: `groups` counts a group of categories with its sub-categories' movements
+ * (F2.5), one entry per group that has any; `categories` keeps each category's own.
+ */
+const viewFacets = facets.extend({
+  groups: z.array(z.object({ categoryId: id(), count: z.number().int() })),
+});
+
 export const FACETS_EXAMPLE = {
   accounts: [{ accountId: ACCOUNT_ID, count: 1 }],
   categories: [{ categoryId: CATEGORY_ID, count: 1 }],
@@ -117,7 +125,7 @@ export const getTransactionsView = defineRoute({
     rows: z.array(transactionLine),
     months: z.array(monthTotal),
     summary: transactionsTotals,
-    facets,
+    facets: viewFacets,
     /** The rows of the whole range for the list: `summary.count` unless hidden rows are shown. */
     listCount: z.number().int(),
     truncated: z.boolean(),
@@ -132,7 +140,7 @@ export const getTransactionsView = defineRoute({
       rows: [TRANSACTION_LINE_EXAMPLE],
       months: [{ month: "2026-10-01", count: 1, net: "-42.80" }],
       summary: { ...SUMMARY_EXAMPLE, transferCount: 0, unpairedTransferCount: 0 },
-      facets: FACETS_EXAMPLE,
+      facets: { ...FACETS_EXAMPLE, groups: [] },
       listCount: 1,
       truncated: false,
       hasAny: true,

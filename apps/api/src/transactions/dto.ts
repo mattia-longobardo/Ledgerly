@@ -6,12 +6,13 @@ import type { TRANSACTIONS } from "@ledgerly/api-contract";
 import {
   badgesOf,
   groupedBreakdown,
+  macrosFor,
   incomeLessExpense,
   type SpendingGroup,
   spendingLayers,
   type TransactionRow,
 } from "@ledgerly/domain/transactions";
-import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
+import { type Cents, centsToDecimal, share } from "@ledgerly/domain/shared/money";
 
 type Wire<T extends z.ZodType> = z.input<T>;
 type Row = Wire<typeof TRANSACTIONS.movements.listTransactions.response>["transactions"][number];
@@ -89,6 +90,7 @@ export function transactionLine(row: TransactionRow, extras: LineExtras): Line {
     removedUpstream: row.removedUpstreamAt !== null,
     edited: row.edited,
     badges: badgesOf(row),
+    macros: macrosFor(row),
   };
 }
 
@@ -154,6 +156,7 @@ export function breakdownOf(slices: readonly SpendingGroup[]) {
     name: orNull(one.name),
     color: orNull(one.color),
     amount: money(one.cents < 0n ? -one.cents : one.cents),
+    signedAmount: money(one.cents),
     share: one.share,
     width: one.width,
   });
@@ -173,7 +176,9 @@ export function seriesOf(points: readonly SpendingGroup[], buckets: readonly str
     })),
     buckets,
   );
+  const total = layers.totals.reduce((sum, value) => sum + value, 0n);
   return {
+    total: money(total),
     buckets: buckets.map((bucket, index) => ({ bucket, total: money(layers.totals[index]) })),
     groups: layers.groups.map((group) => {
       const point = points.find((one) => one.categoryId === group.id);
@@ -182,6 +187,7 @@ export function seriesOf(points: readonly SpendingGroup[], buckets: readonly str
         name: point?.name ?? null,
         color: point?.color ?? null,
         total: money(group.total),
+        share: share(group.total, total) ?? 0,
         values: group.values.map(money),
       };
     }),

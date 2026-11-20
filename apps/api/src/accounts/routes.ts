@@ -123,8 +123,8 @@ function historyLimit(raw: string | undefined): number {
 }
 
 function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, accounts.listAccounts, async ({ ctx }) => {
-    const rows = await listAccounts(ctx);
+  serve(app, guard, accounts.listAccounts, async ({ ctx, query }) => {
+    const rows = await listAccounts(ctx, { includeArchived: query.archived === "true" });
     const latest = await readingsAt(
       ctx,
       rows.map((account) => account.id),

@@ -15,7 +15,12 @@ import {
   monthLabel,
   withMacroTitles,
 } from "@/modules/transactions/ui/display";
-import { groupedBreakdown, spendingBuckets, spendingLayers } from "@ledgerly/domain/transactions";
+import {
+  groupCounts,
+  groupedBreakdown,
+  spendingBuckets,
+  spendingLayers,
+} from "@ledgerly/domain/transactions";
 import { FilterBar } from "@/modules/transactions/ui/filter-bar";
 import { filtersOf, parseExpensesQuery, UNCATEGORISED } from "@/modules/transactions/ui/filters";
 import { ApiCategoryActions, ApiManualMovement } from "@/modules/transactions/client";
@@ -107,18 +112,13 @@ export default async function ExpensesPage({ searchParams }: PageProps<"/expense
    * The chips show what the range actually holds, plus whatever is selected (so it can be undone).
    * A group counts its sub-categories' movements with its own (F2.5): picking it takes them in.
    */
-  const childCount = new Map<string, number>();
-  for (const category of view.categories) {
-    if (category.parentId === null || category.depth === 0) continue;
-    childCount.set(
-      category.parentId,
-      (childCount.get(category.parentId) ?? 0) + (categoryCount.get(category.id) ?? 0),
-    );
-  }
+  const groupCount = new Map(
+    groupCounts(view.categories, view.facets.categories).map((group) => [group.categoryId, group.count]),
+  );
   const categoryFilters: CategoryFilterOption[] = options
     .map((option) => ({
       ...option,
-      count: (categoryCount.get(option.id) ?? 0) + (childCount.get(option.id) ?? 0),
+      count: groupCount.get(option.id) ?? categoryCount.get(option.id) ?? 0,
     }))
     .filter((option) => option.count > 0 || query.categorySelection.includes(option.id));
   const accountFilters: AccountFilterOption[] = view.accounts

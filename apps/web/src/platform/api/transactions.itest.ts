@@ -414,6 +414,118 @@ describe("the badges of a row (client R3)", () => {
   });
 });
 
+describe("the sign, the series' shares, the groups' counts and the macros (client R3)", () => {
+  it("answers what groupedBreakdown, spendingLayers, share, groupCounts and macrosFor give", async () => {
+    const domain = await import("@ledgerly/domain/transactions");
+    const { centsToDecimal, share } = await import("@ledgerly/domain/shared/money");
+    const account = await newAccount(alice);
+    const category = async (name: string, parentId: string | null) =>
+      (await send(alice, "POST", "/categories", { name, type: "expense", parentId, color: null })).body
+        .id as string;
+    const house = await category("House", null);
+    const rent = await category("Rent", house);
+    const spent = await manual(alice, account, { amount: "500", categoryId: rent, on: "2026-02-03" });
+    await manual(alice, account, { amount: "100", categoryId: house, on: "2026-02-10" });
+    const earned = await manual(alice, account, { kind: "income", amount: "30", on: "2026-02-11" });
+    const range = { from: "2026-02-01", to: "2026-02-28" };
+    const query = `from=${range.from}&to=${range.to}`;
+
+    // 1. The amount with its sign, as groupedBreakdown keeps it.
+    const card = (await send(alice, "GET", `/transactions/spending/breakdown?${query}`)).body;
+    const expected = domain.groupedBreakdown(
+      (await domain.spending(alice, range, "category")).map((slice) => ({
+        id: slice.categoryId ?? "",
+        name: slice.name ?? "",
+        color: slice.color ?? "",
+        cents: slice.totalCents,
+        parentId: slice.parentId,
+        parentName: slice.parentName,
+        parentColor: slice.parentColor,
+      })),
+    );
+    type Bar = { signedAmount: string; children: { signedAmount: string }[] };
+    expect(
+      card.groups.map((group: Bar) => [group.signedAmount, group.children.map((one) => one.signedAmount)]),
+    ).toEqual(
+      expected.groups.map((group) => [
+        centsToDecimal(group.cents),
+        group.children.map((one) => centsToDecimal(one.cents)),
+      ]),
+    );
+    expect(card.groups[0]).toMatchObject({ id: house, amount: "600.00", signedAmount: "-600.00" });
+
+    // 2. The series' total and each group's share of it.
+    const chart = (await send(alice, "GET", `/transactions/spending/series?${query}&grain=day`)).body;
+    const layers = domain.spendingLayers(
+      (await domain.spending(alice, range, "day")).map((point) => ({
+        bucket: point.bucket ?? "",
+        groupId: point.categoryId,
+        cents: point.totalCents,
+      })),
+      domain.spendingBuckets(range, "day", "2026-11-20"),
+    );
+    const total = layers.totals.reduce((sum, cents) => sum + cents, 0n);
+    expect(chart.total).toBe(centsToDecimal(total));
+    expect(chart.groups.map((group: { share: number }) => group.share)).toEqual(
+      layers.groups.map((group) => share(group.total, total) ?? 0),
+    );
+
+    // 3. A group counts its own movements and its sub-categories' (F2.5).
+    const view = (await send(alice, "GET", `/transactions/view?${query}`)).body;
+    expect(view.facets.groups).toEqual(
+      domain.groupCounts(
+        await domain.listCategories(alice),
+        (await domain.facetCounts(alice, range)).categories,
+      ),
+    );
+    expect(view.facets.groups).toEqual([{ categoryId: house, count: 2 }]);
+
+    // 4. The macros a category may be chosen in: by the sign, and `transfer` only for a pair.
+    const { upsertFromProvider } = await import("@domain/modules/transactions/service");
+    const { WALLET_PROVIDER } = await import("@domain/platform/integrations/rules");
+    const other = await newAccount(alice, "Revolut");
+    const leg = (accountId: string, externalId: string, counterpart: string, amountCents: bigint) =>
+      upsertFromProvider(
+        alice,
+        accountId,
+        [
+          {
+            externalId,
+            counterpartExternalId: counterpart,
+            occurredAt: new Date("2026-02-12T09:00:00Z"),
+            amountCents,
+            currency: "EUR",
+            type: "transfer" as const,
+            state: "cleared" as const,
+            payee: externalId,
+            note: null,
+            categoryExternalId: null,
+            categoryName: null,
+            categoryGroupExternalId: null,
+            categoryGroupName: null,
+            labels: [],
+          },
+        ],
+        { provider: WALLET_PROVIDER },
+      );
+    await leg(account, "w-1", "w-2", -5000n);
+    await leg(other, "w-2", "w-1", 5000n);
+    const rows = await domain.listTransactions(alice, { includeHidden: true });
+    const legs = rows.filter((row) => row.transferGroupId !== null);
+    expect(legs).toHaveLength(2);
+    for (const [id, macros] of [
+      [spent.id, ["expense", "transfer"]],
+      [earned.id, ["income", "transfer"]],
+      [legs[0].id, ["transfer"]],
+      [legs[1].id, ["transfer"]],
+    ] as const) {
+      const line = (await send(alice, "GET", `/transactions/${id}`)).body;
+      expect(line.macros).toEqual(domain.macrosFor(rows.find((row) => row.id === id)!));
+      expect(line.macros).toEqual(macros);
+    }
+  });
+});
+
 describe("the rules", () => {
   it("saves, previews, applies and undoes a rule, with its amounts as decimals", async () => {
     const account = await newAccount(alice);

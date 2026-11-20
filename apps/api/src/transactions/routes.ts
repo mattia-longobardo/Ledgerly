@@ -17,6 +17,7 @@ import {
   spendingBuckets,
   transactionsSummary,
   facetCounts,
+  groupCounts,
   updateTransaction,
   type TransactionRow,
 } from "@ledgerly/domain/transactions";
@@ -79,7 +80,7 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): v
         transferCount: view.summary.transferCount,
         unpairedTransferCount: view.summary.unpairedTransferCount,
       },
-      facets: view.facets,
+      facets: { ...view.facets, groups: groupCounts(view.categories, view.facets.categories) },
       listCount: view.listCount,
       truncated: view.truncated,
       hasAny: view.hasAny,

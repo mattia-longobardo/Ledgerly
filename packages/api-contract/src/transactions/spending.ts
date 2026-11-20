@@ -92,6 +92,8 @@ const breakdownBar = z.object({
   name: z.string().nullable(),
   color: hexColor().nullable(),
   amount: money(),
+  /** `amount` with its sign: negative for spending. */
+  signedAmount: money(),
   share: z.number(),
   width: z.number(),
 });
@@ -123,6 +125,7 @@ export const getSpendingBreakdown = defineRoute({
           name: "Groceries",
           color: "#3366cc",
           amount: "42.80",
+          signedAmount: "-42.80",
           share: 1,
           width: 1,
           children: [],
@@ -149,6 +152,8 @@ export const getSpendingSeries = defineRoute({
     grain: z.enum(["day", "month"]),
   }),
   response: z.object({
+    /** What the buckets add up to. */
+    total: money(),
     buckets: z.array(z.object({ bucket: civilDate(), total: money() })),
     groups: z.array(
       z.object({
@@ -156,6 +161,8 @@ export const getSpendingSeries = defineRoute({
         name: z.string().nullable(),
         color: hexColor().nullable(),
         total: money(),
+        /** `total` as a share of the series' `total`, 0-1 (0 when the series is 0). */
+        share: z.number(),
         values: z.array(money()),
       }),
     ),
@@ -164,12 +171,20 @@ export const getSpendingSeries = defineRoute({
   example: {
     query: { from: "2026-10-01", to: "2026-10-02", grain: "day" },
     response: {
+      total: "42.80",
       buckets: [
         { bucket: "2026-10-01", total: "42.80" },
         { bucket: "2026-10-02", total: "0.00" },
       ],
       groups: [
-        { id: CATEGORY_ID, name: "Groceries", color: "#3366cc", total: "42.80", values: ["42.80", "0.00"] },
+        {
+          id: CATEGORY_ID,
+          name: "Groceries",
+          color: "#3366cc",
+          total: "42.80",
+          share: 1,
+          values: ["42.80", "0.00"],
+        },
       ],
     },
   },

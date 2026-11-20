@@ -718,6 +718,7 @@
     "forgetSourceCategories",
     "getCategory",
     "getTransaction",
+    "groupCounts",
     "groupedBreakdown",
     "hideTransactions",
     "incomeLessExpense",

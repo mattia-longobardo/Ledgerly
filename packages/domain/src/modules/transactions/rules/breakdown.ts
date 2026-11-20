@@ -193,3 +193,24 @@ export function reviewTotals(review: {
       review.singles.reduce((sum, row) => sum + row.amountCents, 0n),
   };
 }
+
+/**
+ * The count of a group's chip (F2.5): the group's own movements and its sub-categories', for every
+ * group that has sub-categories and any movement. `counts` are the categories' own (`facetCounts`).
+ */
+export function groupCounts(
+  categories: readonly { id: string; parentId: string | null; depth: number }[],
+  counts: readonly { categoryId: string | null; count: number }[],
+): { categoryId: string; count: number }[] {
+  const own = new Map(counts.map((facet) => [facet.categoryId, facet.count]));
+  const groups = new Map<string, number>();
+  for (const category of categories) {
+    if (category.parentId === null || category.depth === 0) continue;
+    const sum = groups.get(category.parentId) ?? own.get(category.parentId) ?? 0;
+    groups.set(category.parentId, sum + (own.get(category.id) ?? 0));
+  }
+  return [...groups.entries()]
+    .filter(([, count]) => count > 0)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([categoryId, count]) => ({ categoryId, count }));
+}

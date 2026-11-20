@@ -65,6 +65,7 @@ export {
   spendingLayers,
   spendingBuckets,
   reviewTotals,
+  groupCounts,
 } from "./breakdown";
 export type { BreakdownBar, BreakdownGroup } from "./breakdown";
 export { normalizeIban } from "../../../platform/iban";
