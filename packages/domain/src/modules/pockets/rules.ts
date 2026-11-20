@@ -6,6 +6,13 @@ import { civilDate } from "../../shared/inputs";
 export const POCKET_STATES = ["active", "paused", "archived"] as const;
 export const MOVEMENT_KINDS = ["accrual", "deposit", "withdrawal", "adjustment"] as const;
 type MovementKind = (typeof MOVEMENT_KINDS)[number];
+/**
+ * Why a pocket's share of the backing account's interest is what it is (spec §7.4): an estimate
+ * from the account's accruals (F4), none because the account has no interest rule or no positive
+ * balance, or none because a standalone pocket rests on no account at all.
+ */
+export const INTEREST_REASONS = ["estimate", "no_interest_data", "standalone"] as const;
+export type InterestReason = (typeof INTEREST_REASONS)[number];
 
 interface MovementLike {
   kind: MovementKind;

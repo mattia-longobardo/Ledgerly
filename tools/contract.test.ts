@@ -7,6 +7,7 @@ import {
   BUDGETS_ROUTES,
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
+  POCKETS_ROUTES,
   SETTINGS_ROUTES,
   TRANSACTIONS_ROUTES,
   type RouteContract,
@@ -16,6 +17,8 @@ import * as transactionsWire from "../packages/api-contract/src/transactions/sha
 import * as rulesWire from "../packages/api-contract/src/transactions/rules";
 import * as budgetsWire from "../packages/api-contract/src/budgets/shared";
 import * as budgetsDomain from "@domain/modules/budgets/rules";
+import * as pocketsWire from "../packages/api-contract/src/pockets/shared";
+import * as pocketsDomain from "@domain/modules/pockets/rules";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -254,6 +257,32 @@ describe("the Server Actions of budgets", () => {
   it("speak the vocabularies of the domain", () => {
     expect(budgetsWire.ALERT_PRESETS).toEqual(budgetsDomain.ALERT_PRESETS);
     expect(budgetsWire.MAX_ALERT_THRESHOLDS).toEqual(budgetsDomain.MAX_ALERT_THRESHOLDS);
+  });
+});
+
+/**
+ * The Server Actions of pockets (05-refactor.md §5.5) and their routes; no exclusion. Overview's tile,
+ * a pocket's page and «Link an expense» read routes of their own, with no action.
+ */
+const POCKETS_ACTION_FILES = ["apps/web/src/modules/pockets/actions.ts"];
+
+describe("the Server Actions of pockets", () => {
+  const actions = POCKETS_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(POCKETS_ROUTES.flatMap((route) => route.actions));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(pocketsWire.POCKET_STATES).toEqual(pocketsDomain.POCKET_STATES);
+    expect(pocketsWire.INTEREST_REASONS).toEqual(pocketsDomain.INTEREST_REASONS);
+    const fields = pocketsDomain.pocketInputSchema.shape;
+    expect(fields.name.maxLength).toBe(pocketsWire.MAX_NAME);
+    expect(pocketsDomain.plannedSchema.shape.description.maxLength).toBe(pocketsWire.MAX_DESCRIPTION);
   });
 });
 

@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 97932,
+    "lines": 97933,
     "duplicatedLines": 16748,
     "percent": 17.1,
     "blocks": 1227
@@ -77,9 +77,9 @@
       "blocks": 45
     },
     "modules/pockets": {
-      "lines": 1676,
+      "lines": 1677,
       "duplicatedLines": 795,
-      "percent": 47.43,
+      "percent": 47.41,
       "blocks": 42
     },
     "modules/subscriptions": {

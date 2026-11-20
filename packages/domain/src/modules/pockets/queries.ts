@@ -19,6 +19,7 @@ import type { Cents } from "../../shared/money";
 import {
   etaMonths,
   freeBalance,
+  type InterestReason,
   monthEndBalances,
   plannedVisible,
   pocketBalance,
@@ -33,13 +34,6 @@ const HISTORY_MONTHS = 12;
 
 /** How far back "Link an expense" offers movements from. */
 const LINK_WINDOW_DAYS = 120;
-
-/**
- * Why a pocket's share of the backing account's interest is what it is (spec §7.4): an estimate
- * from the account's accruals (F4), none because the account has no interest rule or no positive
- * balance, or none because a standalone pocket rests on no account at all.
- */
-type InterestReason = "estimate" | "no_interest_data" | "standalone";
 
 /** An expense counted against a pocket, as its page lists it. */
 interface PocketExpense {

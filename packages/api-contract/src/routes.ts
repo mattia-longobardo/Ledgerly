@@ -9,6 +9,7 @@ import * as accountSwitch from "./accounts/switch";
 import * as views from "./accounts/views";
 import * as budgets from "./budgets/budgets";
 import { metaRoute } from "./meta";
+import * as pockets from "./pockets/pockets";
 import * as search from "./search";
 import type { RouteContract } from "./route";
 import * as banks from "./settings/banks";
@@ -84,10 +85,17 @@ export const BUDGETS = { budgets } as const;
 /** Budgets, the fourth module of R2 (05-refactor.md §5.2). */
 export const BUDGETS_ROUTES: readonly RouteContract[] = Object.values(budgets);
 
+/** Pockets by area, for `apps/api` to serve each one by name. */
+export const POCKETS = { pockets } as const;
+
+/** Pockets, the fifth module of R2 (05-refactor.md §5.2). */
+export const POCKETS_ROUTES: readonly RouteContract[] = Object.values(pockets);
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
   ...ACCOUNTS_ROUTES,
   ...TRANSACTIONS_ROUTES,
   ...BUDGETS_ROUTES,
+  ...POCKETS_ROUTES,
 ];
