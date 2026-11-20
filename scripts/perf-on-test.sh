@@ -39,7 +39,9 @@ if [ -z "$queries_only" ]; then
   tag="${LEDGERLY_PERF_REFERENCE:-$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)}"
   reference="test-results/perf-reference/$tag"
   if [ ! -f "$reference/node_modules/.package-lock.json" ]; then
+    # The E2E tests empty `test-results/`: a worktree gone with it is still registered until pruned.
     git worktree remove --force "$reference" 2>/dev/null || rm -rf "$reference"
+    git worktree prune
     git worktree add --detach "$reference" "$tag" >&2
     (cd "$reference" && npm ci --ignore-scripts --no-audit --no-fund >&2)
   fi
