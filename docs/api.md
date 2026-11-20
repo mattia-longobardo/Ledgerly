@@ -76,6 +76,8 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | the writes of pockets, their deposits, linked expenses and planned expenses ([changelog](api-changelog.md)) | `write` |
 | `GET /subscriptions`, `/subscriptions/suggestions` | `read` |
 | the writes of subscriptions: create, change, state, delete ([changelog](api-changelog.md)) | `write` |
+| `GET /interests`, `/interests/{id}` | `read` |
+| the writes of interests: create, change, state, post and mark a settlement ([changelog](api-changelog.md)) | `write` |
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |
 | `POST /imports`                            | `imports`          |
@@ -114,6 +116,8 @@ and uses the same services as the REST API.
 | `list_budgets`             | `GET /api/v1/budgets`                       |
 | `list_pockets`             | `GET /api/v1/pockets`                       |
 | `list_subscriptions`       | `GET /api/v1/subscriptions`                 |
+| `list_interest_rules`      | `GET /api/v1/interests`                     |
+| `get_interest_rule`        | `GET /api/v1/interests/{id}`                |
 | `list_investments`         | `GET /api/v1/investments`                   |
 | `get_investment_holdings`  | `GET /api/v1/investments/{accountId}/holdings` |
 

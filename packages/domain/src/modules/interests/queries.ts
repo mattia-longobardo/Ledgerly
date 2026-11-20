@@ -4,6 +4,7 @@ import { findMovements } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";
 import type { Ctx } from "../../platform/context";
+import { coreCreatesRecords, listConnections } from "../../platform/integrations";
 import { addDays, type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
@@ -128,6 +129,8 @@ interface RuleDetail {
   days: InterestAccrual[];
   /** Net accrued in the period under way, not settled yet. */
   pendingCents: Cents;
+  /** The page's own year to date: the settlements that start this year, plus what is pending. */
+  accruedYtdCents: Cents;
 }
 
 /**
@@ -259,6 +262,9 @@ export async function ruleDetail(
     settlements,
     days,
     pendingCents: BigInt(pending[0]?.net ?? "0"),
+    accruedYtdCents: entries
+      .filter((entry) => entry.periodFrom.startsWith(todayOn.slice(0, 4)))
+      .reduce((sum, entry) => sum + entry.netCents, BigInt(pending[0]?.net ?? "0")),
   };
 }
 
@@ -292,4 +298,21 @@ export async function rulesOnAccount(
     rules.map((rule) => rule.id),
   );
   return rules.map((rule) => ({ id: rule.id, tiers: tiers.get(rule.id) ?? [] }));
+}
+
+/**
+ * The open accounts a rule can be on, each saying whether a rule on it can publish: its source is
+ * connected and writes (plugin-settings.md §2.2). What the rule dialog offers.
+ */
+export async function ruleAccounts(
+  ctx: Pick<Ctx, "userId">,
+): Promise<{ id: string; name: string; publishable: boolean }[]> {
+  const [accounts, connections] = await Promise.all([listAccounts(ctx), listConnections(ctx)]);
+  const connected = new Set(connections.map((connection) => connection.provider));
+  return accounts.map((account) => ({
+    id: account.id,
+    name: account.name,
+    publishable:
+      account.provider !== null && coreCreatesRecords(account.provider) && connected.has(account.provider),
+  }));
 }

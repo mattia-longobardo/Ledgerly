@@ -82,6 +82,11 @@ export const getInterestRule = defineRoute({
     /** Net accrued in the period under way, not settled yet. */
     pending: money(),
     /**
+     * The page's year to date: the settlements that start this year plus `pending`. It differs from
+     * `rule.accruedYtd` (the accruals since 1 January) while days of last year are still unsettled.
+     */
+    accruedYtd: money(),
+    /**
      * The balance the accrual reads (D7: the threshold of the accrual, not the account's own
      * `staleAfterHours`). `staleForAccrual`: a synced account whose last reading is too old to accrue
      * on — the days are on hold until a fresh one.
@@ -128,6 +133,7 @@ export const getInterestRule = defineRoute({
     description:
       "One interest rule with its settlements, each reconciled with what the bank paid, its posting to " +
       "the source and its latest days of accrual.",
+    arguments: { rule_id: id().describe("The rule's id, from list_interest_rules.") },
     pathArguments: { id: "rule_id" },
   },
   example: {
@@ -136,6 +142,7 @@ export const getInterestRule = defineRoute({
       rule: RULE_ROW_EXAMPLE,
       category: null,
       pending: "18.20",
+      accruedYtd: "312.40",
       balance: { synced: false, lastSyncedAt: null, staleForAccrual: false },
       settlements: [
         {

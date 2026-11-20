@@ -422,6 +422,7 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
     const both = await tokenFor(["read", "investments:read"], MCP);
     expect(await toolNames(both)).toEqual([
       "get_account_balances",
+      "get_interest_rule",
       "get_investment_holdings",
       "get_preferences",
       "get_profile",
@@ -431,6 +432,7 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
       "list_budgets",
       "list_categories",
       "list_connections",
+      "list_interest_rules",
       "list_investments",
       "list_labels",
       "list_pockets",

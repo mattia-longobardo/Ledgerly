@@ -13063,6 +13063,10 @@
                       "type": "string",
                       "pattern": "^-?\\d+\\.\\d{2}$"
                     },
+                    "accruedYtd": {
+                      "type": "string",
+                      "pattern": "^-?\\d+\\.\\d{2}$"
+                    },
                     "balance": {
                       "type": "object",
                       "properties": {
@@ -13238,6 +13242,7 @@
                     "rule",
                     "category",
                     "pending",
+                    "accruedYtd",
                     "balance",
                     "settlements",
                     "days"

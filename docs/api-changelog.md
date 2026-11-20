@@ -3,6 +3,31 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · interests (0.48.0)
+
+- `GET /interests` (new, `read`): the Interests page — the `rules`, oldest first (`id`, `accountId`,
+  `account`, `validFrom`, `validTo`, `runHour`, `tiers` `{upTo, rate}` with the rate as a plain
+  percentage, `tax` as a percentage, `dayBasis`, `settlement`, `payeeMatch`, `mode`, `categoryId`,
+  `state`, `accruedYtd` and `grossYtd` since 1 January, `nextPayout`), the `totals` of the year
+  (`year`, `accruedYtd`, `grossYtd`) and the open `accounts` a rule can be on, with `publishable`.
+- `GET /interests/{id}` (new, `read`): one rule's page — the `rule` (the row above), `category`,
+  `pending`, `accruedYtd` (the settlements that start this year plus `pending`), `balance` (`synced`,
+  `lastSyncedAt`, `staleForAccrual`: the reading is too old for the accrual, one hour, not the
+  account's own threshold), the `settlements` reconciled with what was paid (`periodFrom`, `periodTo`,
+  `settleOn`, `accruedDays`, `skippedDays`, `gross`, `tax`, `net`, `paid`, `status`, `posting`,
+  `postingError`) and the latest 90 `days` (`on`, `balance`, `net`, `status`).
+- MCP tools `list_interest_rules` and `get_interest_rule` (`rule_id`) (new, read only): the answers of
+  the two routes, from the same descriptors.
+- `POST /interests` (201 `{id}`), `PUT /interests/{id}`, `PUT /interests/{id}/state` (new, `write`).
+  Rates and tax are plain percentages (`"2.75"`), band bounds decimal strings, the last band without
+  one. Errors: `invalid` (`reason` `invalid`, `invalid_account`, `invalid_tiers`, `invalid_category`),
+  `conflict` (`reason` `not_synced`), `not_found`.
+- `POST /interests/{id}/settlements/{entryId}/posting` `{retry}` and
+  `PUT /interests/{id}/settlements/{entryId}/posted` (new, `write`): «Post now» or «Retry», and «Mark as
+  posted»; both answer `{posting}`. A posting that does not land is an answer, not an error.
+- The tolerance of subscriptions and the rates of interests share one schema of a percentage on the
+  way in (`percentInput`): nothing changes on the wire.
+
 ## 2026-11-20 · subscriptions (0.46.0)
 
 - `GET /subscriptions` (new, `read`): the Subscriptions page — the active `subscriptions` and the

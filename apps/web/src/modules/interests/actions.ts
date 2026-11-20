@@ -7,10 +7,19 @@ import { z } from "zod";
 import { parseAmount } from "@ledgerly/domain/platform/format";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { percentToFraction } from "@ledgerly/domain/shared/money";
+import { centsToDecimal } from "@ledgerly/domain/shared/money";
 import { readRate } from "./ui/present";
-import { markPosted, postEntry, retryPosting } from "@ledgerly/domain/interests";
-import { createRule, InterestError, setRuleState, updateRule } from "@ledgerly/domain/interests";
+import { markPosted, postEntry } from "@ledgerly/domain/interests";
+import {
+  createRule,
+  DAY_BASES,
+  InterestError,
+  type PlainRule,
+  ruleInputOf,
+  setRuleState,
+  SETTLEMENTS,
+  updateRule,
+} from "@ledgerly/domain/interests";
 
 export type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
@@ -24,11 +33,6 @@ function revalidate(id?: string): void {
   revalidatePath("/interests");
   if (id) revalidatePath(`/interests/${id}`);
   revalidatePath("/pockets");
-}
-
-/** A typed percentage, in the user's own separators, as the stored fraction. */
-function rate(text: string, ctx: Ctx): string {
-  return percentToFraction(readRate(text, ctx.numberFormat));
 }
 
 interface RuleFormInput {
@@ -48,24 +52,27 @@ interface RuleFormInput {
   active: boolean;
 }
 
+/** The dialog in plain decimal form: the person's separators read, the rest as the wire has it. */
 function toInput(input: RuleFormInput, ctx: Ctx) {
-  return {
+  const plain: PlainRule = {
     accountId: input.accountId,
     validFrom: input.validFrom,
     validTo: input.validTo === "" ? null : input.validTo,
     runHour: input.runHour === "" ? null : z.coerce.number().int().min(0).max(23).parse(input.runHour),
     tiers: input.tiers.map((tier, index) => ({
-      upToCents: index === input.tiers.length - 1 ? null : parseAmount(tier.upTo, ctx.numberFormat),
-      annualRate: rate(tier.rate, ctx),
+      upTo:
+        index === input.tiers.length - 1 ? null : centsToDecimal(parseAmount(tier.upTo, ctx.numberFormat)),
+      rate: readRate(tier.rate, ctx.numberFormat),
     })),
-    taxRate: rate(input.tax === "" ? "0" : input.tax, ctx),
-    dayBasis: z.enum(["365", "360"]).parse(input.dayBasis),
-    settlement: z.enum(["daily", "monthly", "quarterly", "annual"]).parse(input.settlement),
+    tax: readRate(input.tax === "" ? "0" : input.tax, ctx.numberFormat),
+    dayBasis: z.enum(DAY_BASES).parse(input.dayBasis),
+    settlement: z.enum(SETTLEMENTS).parse(input.settlement),
     payeeMatch: input.payeeMatch,
-    mode: input.publish ? ("post_to_provider" as const) : ("analyze_only" as const),
-    postingCategoryId: input.categoryId === "" ? null : z.uuid().parse(input.categoryId),
-    state: input.active ? ("active" as const) : ("paused" as const),
+    mode: input.publish ? "post_to_provider" : "analyze_only",
+    categoryId: input.categoryId === "" ? null : z.uuid().parse(input.categoryId),
+    state: input.active ? "active" : "paused",
   };
+  return ruleInputOf(plain);
 }
 
 export async function createRuleAction(input: RuleFormInput): Promise<ActionResult> {
@@ -111,7 +118,7 @@ export async function postEntryAction(
 ): Promise<PostingResult> {
   const ctx = await requireSession();
   try {
-    const state = retry ? await retryPosting(ctx, entryId) : await postEntry(ctx, entryId);
+    const state = await postEntry(ctx, entryId, { retry, ruleId });
     revalidate(ruleId);
     return { ok: true, state };
   } catch (error) {
@@ -123,7 +130,7 @@ export async function postEntryAction(
 export async function markPostedAction(ruleId: string, entryId: string): Promise<PostingResult> {
   const ctx = await requireSession();
   try {
-    await markPosted(ctx, entryId);
+    await markPosted(ctx, ruleId, entryId);
     revalidate(ruleId);
     return { ok: true, state: "posted" };
   } catch (error) {

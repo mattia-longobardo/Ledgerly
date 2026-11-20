@@ -1,11 +1,11 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export { ensureFreshBalances } from "./freshness";
 export type { FreshnessOptions, StaleReason } from "./freshness";
-export { lookUpUnsure, markPosted, postEntry, postPending, retryPosting } from "./posting";
-export { interestsView, publishingRulesOn, ruleDetail, rulesOnAccount } from "./queries";
+export { lookUpUnsure, markPosted, postEntry, postPending } from "./posting";
+export { interestsView, publishingRulesOn, ruleAccounts, ruleDetail, rulesOnAccount } from "./queries";
 export type { RuleRow } from "./queries";
-export { fractionToPercent, runsAt } from "./rules";
-export type { Tier } from "./rules";
+export { DAY_BASES, fractionToPercent, ruleInputOf, runsAt, SETTLEMENTS } from "./rules";
+export type { PlainRule, Tier } from "./rules";
 export { interestRules } from "./schema";
 export {
   InterestError,

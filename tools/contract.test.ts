@@ -345,6 +345,7 @@ describe("the Server Actions of interests", () => {
     expect(interestsWire.RULE_STATES).toEqual(interestsDomain.RULE_STATES);
     expect(interestsWire.ACCRUAL_STATUSES).toEqual(interestsDomain.ACCRUAL_STATUSES);
     expect(interestsWire.POSTING_STATES).toEqual(interestsDomain.POSTING_STATES);
+    expect(interestsWire.MAX_MATCH).toBe(interestsDomain.MAX_MATCH);
   });
 });
 

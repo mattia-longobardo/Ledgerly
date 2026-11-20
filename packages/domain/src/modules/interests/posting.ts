@@ -144,13 +144,19 @@ async function settlePosted(
 export async function postEntry(
   ctx: Pick<Ctx, "userId">,
   entryId: string,
-  options: { client?: PostingClient; retry?: boolean } = {},
+  options: { client?: PostingClient; retry?: boolean; ruleId?: string } = {},
 ): Promise<PostingState> {
   const [row] = await getDb()
     .select({ entry: interestEntries, rule: interestRules })
     .from(interestEntries)
     .innerJoin(interestRules, eq(interestRules.id, interestEntries.ruleId))
-    .where(and(eq(interestEntries.id, entryId), userScoped(ctx).owns(interestEntries)));
+    .where(
+      and(
+        eq(interestEntries.id, entryId),
+        userScoped(ctx).owns(interestEntries),
+        options.ruleId === undefined ? undefined : eq(interestEntries.ruleId, options.ruleId),
+      ),
+    );
   if (!row) throw new InterestError("not_found");
   const { entry, rule } = row;
   if (rule.mode !== "post_to_provider" || entry.netCents <= 0n) return entry.posting;
@@ -223,11 +229,6 @@ export async function postEntry(
   }
 }
 
-/** "Retry" on an unsure settlement: the same steps, starting from `indeterminate`. */
-export function retryPosting(ctx: Pick<Ctx, "userId">, entryId: string, client?: PostingClient) {
-  return postEntry(ctx, entryId, { client, retry: true });
-}
-
 /**
  * The daily second look at every unsure settlement: it **only looks** — never posts — for the
  * Wallet record carrying the settlement's marker on its day. One with the same amount makes the
@@ -293,14 +294,15 @@ export async function lookUpUnsure(ctx: Pick<Ctx, "userId">, client?: PostingCli
   return found;
 }
 
-/** "Mark as posted": the person checked Wallet and the record is there. */
-export async function markPosted(ctx: Pick<Ctx, "userId">, entryId: string): Promise<void> {
+/** "Mark as posted": the person checked the source and the record is there; one of `ruleId`'s. */
+export async function markPosted(ctx: Pick<Ctx, "userId">, ruleId: string, entryId: string): Promise<void> {
   const updated = await getDb()
     .update(interestEntries)
     .set({ posting: "posted", postedAt: new Date(), postingError: null })
     .where(
       and(
         eq(interestEntries.id, entryId),
+        eq(interestEntries.ruleId, ruleId),
         userScoped(ctx).owns(interestEntries),
         inArray(interestEntries.posting, ["indeterminate"]),
       ),

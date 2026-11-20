@@ -234,6 +234,9 @@ describe("the reference user", () => {
     answers.list_budgets = await tool("list_budgets", { month: "2031-10" });
     answers.list_pockets = await tool("list_pockets");
     answers.list_subscriptions = await tool("list_subscriptions");
+    answers.list_interest_rules = await tool("list_interest_rules");
+    const listed = answers.list_interest_rules as { answer: { rules: { id: string }[] } };
+    answers.get_interest_rule = await tool("get_interest_rule", { rule_id: listed.answer.rules[0].id });
     answers.list_investments = await tool("list_investments", { period: "all" });
     answers.get_investment_holdings = await tool("get_investment_holdings", { account_id: user.brokerId });
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/mcp.json"));

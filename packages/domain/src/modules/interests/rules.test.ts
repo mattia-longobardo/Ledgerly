@@ -13,6 +13,8 @@ import {
   settlementNote,
   periodOf,
   reconcile,
+  ruleInputOf,
+  ruleInputSchema,
   settlementPeriods,
   validateTiers,
   assignPayments,
@@ -420,5 +422,39 @@ describe("the note a published settlement carries (spec §7.6, §9.1)", () => {
       grossCents: 7n,
     });
     expect(note).toMatch(/^auto-interest ≈\d+(\.\d{1,4})?%\/y /);
+  });
+});
+
+describe("ruleInputOf (INT-5)", () => {
+  const plain = {
+    accountId: "1f2e3d4c-5b6a-4978-8695-a4b3c2d1e0f9",
+    validFrom: "2026-01-01",
+    validTo: null,
+    runHour: null,
+    tiers: [
+      { upTo: "20000", rate: "2.75" },
+      { upTo: null, rate: "1.5" },
+    ],
+    tax: "26",
+    dayBasis: "365",
+    settlement: "monthly",
+    payeeMatch: "",
+    mode: "analyze_only",
+    categoryId: null,
+    state: "active",
+  } as const;
+
+  it("turns percentages into stored fractions and bounds into cents", () => {
+    const input = ruleInputSchema.parse(ruleInputOf(plain));
+    expect(input.tiers).toEqual([
+      { upToCents: 2_000_000n, annualRate: "0.027500" },
+      { upToCents: null, annualRate: "0.015000" },
+    ]);
+    expect(input.taxRate).toBe("0.260000");
+    expect(input.payeeMatch).toBeNull();
+  });
+
+  it("refuses a rate that is not a percentage", () => {
+    expect(() => ruleInputOf({ ...plain, tax: "26%" })).toThrow(RangeError);
   });
 });

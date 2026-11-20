@@ -450,6 +450,54 @@
     "execution": {
      "taskSupport": "forbidden"
     }
+   },
+   {
+    "name": "list_interest_rules",
+    "title": "Interest rules",
+    "description": "The interest rules on the accounts: rate bands, tax, day basis, settlement, what each accrued since 1 January, net and gross, and the next payout.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {}
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
+   },
+   {
+    "name": "get_interest_rule",
+    "title": "Interest rule",
+    "description": "One interest rule with its settlements, each reconciled with what the bank paid, its posting to the source and its latest days of accrual.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {
+      "rule_id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|<id-1>|<id-2>)$",
+       "description": "The rule's id, from list_interest_rules."
+      }
+     },
+     "required": [
+      "rule_id"
+     ]
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
    }
   ]
  },
@@ -979,6 +1027,870 @@
     {
      "id": "<id-6>",
      "name": "Fideuram Piano Accumulo"
+    }
+   ]
+  }
+ },
+ "list_interest_rules": {
+  "isError": false,
+  "answer": {
+   "rules": [
+    {
+     "id": "<id-30>",
+     "accountId": "<id-4>",
+     "account": "Revolut Saving",
+     "validFrom": "2031-01-01",
+     "validTo": null,
+     "runHour": null,
+     "tiers": [
+      {
+       "upTo": null,
+       "rate": "3.65"
+      }
+     ],
+     "tax": "26",
+     "dayBasis": "365",
+     "settlement": "monthly",
+     "payeeMatch": "interessi",
+     "mode": "analyze_only",
+     "categoryId": null,
+     "state": "active",
+     "accruedYtd": "110.37",
+     "grossYtd": "149.15",
+     "nextPayout": "2031-11-01"
+    }
+   ],
+   "totals": {
+    "year": "2031",
+    "accruedYtd": "110.37",
+    "grossYtd": "149.15"
+   },
+   "accounts": [
+    {
+     "id": "<id-3>",
+     "name": "ING Conto Arancio",
+     "publishable": false
+    },
+    {
+     "id": "<id-4>",
+     "name": "Revolut Saving",
+     "publishable": false
+    },
+    {
+     "id": "<id-5>",
+     "name": "Directa",
+     "publishable": false
+    },
+    {
+     "id": "<id-6>",
+     "name": "Fideuram Piano Accumulo",
+     "publishable": false
+    }
+   ]
+  }
+ },
+ "get_interest_rule": {
+  "isError": false,
+  "answer": {
+   "rule": {
+    "id": "<id-30>",
+    "accountId": "<id-4>",
+    "account": "Revolut Saving",
+    "validFrom": "2031-01-01",
+    "validTo": null,
+    "runHour": null,
+    "tiers": [
+     {
+      "upTo": null,
+      "rate": "3.65"
+     }
+    ],
+    "tax": "26",
+    "dayBasis": "365",
+    "settlement": "monthly",
+    "payeeMatch": "interessi",
+    "mode": "analyze_only",
+    "categoryId": null,
+    "state": "active",
+    "accruedYtd": "110.37",
+    "grossYtd": "149.15",
+    "nextPayout": "2031-11-01"
+   },
+   "category": null,
+   "pending": "12.43",
+   "accruedYtd": "110.37",
+   "balance": {
+    "synced": false,
+    "lastSyncedAt": null,
+    "staleForAccrual": false
+   },
+   "settlements": [
+    {
+     "id": "<id-31>",
+     "periodFrom": "2031-09-01",
+     "periodTo": "2031-09-30",
+     "settleOn": "2031-10-01",
+     "accruedDays": 30,
+     "skippedDays": 0,
+     "gross": "34.55",
+     "tax": "8.98",
+     "net": "25.57",
+     "paid": "0.00",
+     "status": "missing",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-32>",
+     "periodFrom": "2031-08-01",
+     "periodTo": "2031-08-31",
+     "settleOn": "2031-09-01",
+     "accruedDays": 31,
+     "skippedDays": 0,
+     "gross": "34.15",
+     "tax": "8.88",
+     "net": "25.27",
+     "paid": "0.00",
+     "status": "missing",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-33>",
+     "periodFrom": "2031-07-01",
+     "periodTo": "2031-07-31",
+     "settleOn": "2031-08-01",
+     "accruedDays": 31,
+     "skippedDays": 0,
+     "gross": "32.60",
+     "tax": "8.48",
+     "net": "24.12",
+     "paid": "0.00",
+     "status": "missing",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-34>",
+     "periodFrom": "2031-06-01",
+     "periodTo": "2031-06-30",
+     "settleOn": "2031-07-01",
+     "accruedDays": 30,
+     "skippedDays": 0,
+     "gross": "30.05",
+     "tax": "7.81",
+     "net": "22.24",
+     "paid": "0.00",
+     "status": "missing",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-35>",
+     "periodFrom": "2031-05-01",
+     "periodTo": "2031-05-31",
+     "settleOn": "2031-06-01",
+     "accruedDays": 1,
+     "skippedDays": 30,
+     "gross": "1.00",
+     "tax": "0.26",
+     "net": "0.74",
+     "paid": "0.00",
+     "status": "missing",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-36>",
+     "periodFrom": "2031-04-01",
+     "periodTo": "2031-04-30",
+     "settleOn": "2031-05-01",
+     "accruedDays": 0,
+     "skippedDays": 30,
+     "gross": "0.00",
+     "tax": "0.00",
+     "net": "0.00",
+     "paid": "0.00",
+     "status": "no_data",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-37>",
+     "periodFrom": "2031-03-01",
+     "periodTo": "2031-03-31",
+     "settleOn": "2031-04-01",
+     "accruedDays": 0,
+     "skippedDays": 31,
+     "gross": "0.00",
+     "tax": "0.00",
+     "net": "0.00",
+     "paid": "0.00",
+     "status": "no_data",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-38>",
+     "periodFrom": "2031-02-01",
+     "periodTo": "2031-02-28",
+     "settleOn": "2031-03-01",
+     "accruedDays": 0,
+     "skippedDays": 28,
+     "gross": "0.00",
+     "tax": "0.00",
+     "net": "0.00",
+     "paid": "0.00",
+     "status": "no_data",
+     "posting": "none",
+     "postingError": null
+    },
+    {
+     "id": "<id-39>",
+     "periodFrom": "2031-01-01",
+     "periodTo": "2031-01-31",
+     "settleOn": "2031-02-01",
+     "accruedDays": 0,
+     "skippedDays": 31,
+     "gross": "0.00",
+     "tax": "0.00",
+     "net": "0.00",
+     "paid": "0.00",
+     "status": "no_data",
+     "posting": "none",
+     "postingError": null
+    }
+   ],
+   "days": [
+    {
+     "id": "<id-40>",
+     "on": "2031-10-14",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-41>",
+     "on": "2031-10-13",
+     "balance": "12000.00",
+     "net": "0.88",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-42>",
+     "on": "2031-10-12",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-43>",
+     "on": "2031-10-11",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-44>",
+     "on": "2031-10-10",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-45>",
+     "on": "2031-10-09",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-46>",
+     "on": "2031-10-08",
+     "balance": "12000.00",
+     "net": "0.88",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-47>",
+     "on": "2031-10-07",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-48>",
+     "on": "2031-10-06",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-49>",
+     "on": "2031-10-05",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-50>",
+     "on": "2031-10-04",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-51>",
+     "on": "2031-10-03",
+     "balance": "12000.00",
+     "net": "0.88",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-52>",
+     "on": "2031-10-02",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-53>",
+     "on": "2031-10-01",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-54>",
+     "on": "2031-09-30",
+     "balance": "12000.00",
+     "net": "0.89",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-55>",
+     "on": "2031-09-29",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-56>",
+     "on": "2031-09-28",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-57>",
+     "on": "2031-09-27",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-58>",
+     "on": "2031-09-26",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-59>",
+     "on": "2031-09-25",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-60>",
+     "on": "2031-09-24",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-61>",
+     "on": "2031-09-23",
+     "balance": "11500.00",
+     "net": "0.86",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-62>",
+     "on": "2031-09-22",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-63>",
+     "on": "2031-09-21",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-64>",
+     "on": "2031-09-20",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-65>",
+     "on": "2031-09-19",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-66>",
+     "on": "2031-09-18",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-67>",
+     "on": "2031-09-17",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-68>",
+     "on": "2031-09-16",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-69>",
+     "on": "2031-09-15",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-70>",
+     "on": "2031-09-14",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-71>",
+     "on": "2031-09-13",
+     "balance": "11500.00",
+     "net": "0.86",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-72>",
+     "on": "2031-09-12",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-73>",
+     "on": "2031-09-11",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-74>",
+     "on": "2031-09-10",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-75>",
+     "on": "2031-09-09",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-76>",
+     "on": "2031-09-08",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-77>",
+     "on": "2031-09-07",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-78>",
+     "on": "2031-09-06",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-79>",
+     "on": "2031-09-05",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-80>",
+     "on": "2031-09-04",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-81>",
+     "on": "2031-09-03",
+     "balance": "11500.00",
+     "net": "0.86",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-82>",
+     "on": "2031-09-02",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-83>",
+     "on": "2031-09-01",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-84>",
+     "on": "2031-08-31",
+     "balance": "11500.00",
+     "net": "0.85",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-85>",
+     "on": "2031-08-30",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-86>",
+     "on": "2031-08-29",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-87>",
+     "on": "2031-08-28",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-88>",
+     "on": "2031-08-27",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-89>",
+     "on": "2031-08-26",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-90>",
+     "on": "2031-08-25",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-91>",
+     "on": "2031-08-24",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-92>",
+     "on": "2031-08-23",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-93>",
+     "on": "2031-08-22",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-94>",
+     "on": "2031-08-21",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-95>",
+     "on": "2031-08-20",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-96>",
+     "on": "2031-08-19",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-97>",
+     "on": "2031-08-18",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-98>",
+     "on": "2031-08-17",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-99>",
+     "on": "2031-08-16",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-100>",
+     "on": "2031-08-15",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-101>",
+     "on": "2031-08-14",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-102>",
+     "on": "2031-08-13",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-103>",
+     "on": "2031-08-12",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-104>",
+     "on": "2031-08-11",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-105>",
+     "on": "2031-08-10",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-106>",
+     "on": "2031-08-09",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-107>",
+     "on": "2031-08-08",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-108>",
+     "on": "2031-08-07",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-109>",
+     "on": "2031-08-06",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-110>",
+     "on": "2031-08-05",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-111>",
+     "on": "2031-08-04",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-112>",
+     "on": "2031-08-03",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-113>",
+     "on": "2031-08-02",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-114>",
+     "on": "2031-08-01",
+     "balance": "11000.00",
+     "net": "0.82",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-115>",
+     "on": "2031-07-31",
+     "balance": "11000.00",
+     "net": "0.81",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-116>",
+     "on": "2031-07-30",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-117>",
+     "on": "2031-07-29",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-118>",
+     "on": "2031-07-28",
+     "balance": "10500.00",
+     "net": "0.77",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-119>",
+     "on": "2031-07-27",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-120>",
+     "on": "2031-07-26",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-121>",
+     "on": "2031-07-25",
+     "balance": "10500.00",
+     "net": "0.77",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-122>",
+     "on": "2031-07-24",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-123>",
+     "on": "2031-07-23",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-124>",
+     "on": "2031-07-22",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-125>",
+     "on": "2031-07-21",
+     "balance": "10500.00",
+     "net": "0.77",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-126>",
+     "on": "2031-07-20",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-127>",
+     "on": "2031-07-19",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-128>",
+     "on": "2031-07-18",
+     "balance": "10500.00",
+     "net": "0.77",
+     "status": "accrued"
+    },
+    {
+     "id": "<id-129>",
+     "on": "2031-07-17",
+     "balance": "10500.00",
+     "net": "0.78",
+     "status": "accrued"
     }
    ]
   }

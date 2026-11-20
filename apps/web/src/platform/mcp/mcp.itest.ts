@@ -200,6 +200,7 @@ describe("MCP tools", () => {
       .result.tools;
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "get_account_balances",
+      "get_interest_rule",
       "get_preferences",
       "get_profile",
       "get_spending",
@@ -208,6 +209,7 @@ describe("MCP tools", () => {
       "list_budgets",
       "list_categories",
       "list_connections",
+      "list_interest_rules",
       "list_labels",
       "list_pockets",
       "list_subscriptions",

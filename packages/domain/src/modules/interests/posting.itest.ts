@@ -9,21 +9,15 @@ import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { linkExternal, resolveExternal } from "../../platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
-import {
-  lookUpUnsure,
-  markPosted,
-  postEntry,
-  postPending,
-  type PostingClient,
-  retryPosting,
-} from "./posting";
+import { lookUpUnsure, markPosted, postEntry, postPending, type PostingClient } from "./posting";
 import { ruleDetail } from "./queries";
-import { CATEGORY_NOT_LINKED } from "./rules";
+import { CATEGORY_NOT_LINKED, type RuleInput } from "./rules";
 import { interestEntries } from "./schema";
-import { createRule, type RuleInput } from "./service";
+import { createRule } from "./service";
 
 let ctx: Ctx;
 let entryId: string;
+let ruleId: string;
 
 /** A fake Wallet: what it holds, and every POST it received. */
 function fakeWallet(
@@ -115,6 +109,7 @@ beforeEach(async () => {
     mode: "post_to_provider",
     tiers: [{ upToCents: null, annualRate: "0.0365" }],
   });
+  ruleId = rule.id;
   entryId = (await ruleDetail(ctx, rule.id)).settlements[0].entry.id;
 });
 
@@ -167,7 +162,7 @@ describe("publishing a settlement to Wallet (spec §7.6)", () => {
     expect(failing.posts).toHaveLength(1);
 
     const working = fakeWallet();
-    expect(await retryPosting(ctx, entryId, working.client)).toBe("posted");
+    expect(await postEntry(ctx, entryId, { client: working.client, retry: true })).toBe("posted");
   });
 
   it("looks for an unsure settlement again each day, never posting, and settles it when found", async () => {
@@ -199,7 +194,7 @@ describe("publishing a settlement to Wallet (spec §7.6)", () => {
     expect(await postEntry(ctx, entryId, { client: fakeWallet({ noId: true }).client })).toBe(
       "indeterminate",
     );
-    await markPosted(ctx, entryId);
+    await markPosted(ctx, ruleId, entryId);
     expect((await postingOf(entryId)).posting).toBe("posted");
   });
 
@@ -271,6 +266,6 @@ describe("publishing a settlement to Wallet (spec §7.6)", () => {
     await expect(postEntry(other, entryId, { client: fakeWallet().client })).rejects.toMatchObject({
       code: "not_found",
     });
-    await expect(markPosted(other, entryId)).rejects.toMatchObject({ code: "not_found" });
+    await expect(markPosted(other, ruleId, entryId)).rejects.toMatchObject({ code: "not_found" });
   });
 });

@@ -1,14 +1,11 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { listAccounts } from "@ledgerly/domain/accounts";
 import { categoryOptions } from "@ledgerly/domain/transactions";
-import { interestsView } from "@ledgerly/domain/interests";
+import { interestsView, ruleAccounts } from "@ledgerly/domain/interests";
 import { draftOf, formatRate, newDraft, tierChips } from "@/modules/interests/ui/present";
 import { RuleButton } from "@/modules/interests/ui/rule-dialog";
 import { requireSession } from "@/platform/auth/session";
-import { coreCreatesRecords } from "@ledgerly/domain/platform/integrations";
-import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Card } from "@ledgerly/ui/card";
@@ -26,21 +23,12 @@ export default async function InterestsPage() {
   const ctx = await requireSession();
   const t = await getTranslations("interests");
   const todayOn = today(ctx.timeZone);
-  const [rows, accounts, categories, connections] = await Promise.all([
+  const [rows, open, categories] = await Promise.all([
     interestsView(ctx),
-    listAccounts(ctx),
+    ruleAccounts(ctx),
     // An interest payout is income: those are the categories a published settlement is filed under.
     categoryOptions(ctx, "income"),
-    listConnections(ctx),
   ]);
-  // "Publish" only on an account whose source is connected and writes (plugin-settings.md §2.2).
-  const writes = (provider: string | null) =>
-    provider !== null && coreCreatesRecords(provider) && connections.some((one) => one.provider === provider);
-  const open = accounts.map((account) => ({
-    id: account.id,
-    name: account.name,
-    publishable: writes(account.provider),
-  }));
   const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
   const add = (label: string) => (
     <RuleButton draft={newDraft(open, todayOn)} accounts={open} categories={categories} label={label} />

@@ -1,6 +1,8 @@
 import { addDays, type CivilDate, lastDayOfMonth, monthKey } from "../../shared/dates";
 import { payeeKeyOf } from "../transactions/rules";
-import { type Cents, centsToDecimal } from "../../shared/money";
+import { z } from "zod";
+import { civilDate, optionalText } from "../../shared/inputs";
+import { type Cents, centsToDecimal, parseCents, percentToFraction } from "../../shared/money";
 
 export const DAY_BASES = ["365", "360"] as const;
 export const SETTLEMENTS = ["daily", "monthly", "quarterly", "annual"] as const;
@@ -44,6 +46,75 @@ export interface Tier {
   upToCents: Cents | null;
   /** The gross yearly rate as a fraction ("0.0275"). */
   annualRate: string;
+}
+
+/** The longest match text the dialog takes. */
+export const MAX_MATCH = 80;
+
+const fraction = z
+  .string()
+  .regex(/^\d+(\.\d{1,6})?$/)
+  .refine((value) => fixedFromDecimal(value) <= FIXED_SCALE, "Above 1");
+
+/** A rule as the domain stores it (audit INT-5: with the input schemas of the other modules). */
+export const ruleInputSchema = z
+  .object({
+    accountId: z.uuid(),
+    taxRate: fraction,
+    dayBasis: z.enum(DAY_BASES),
+    settlement: z.enum(SETTLEMENTS),
+    validFrom: civilDate(),
+    validTo: civilDate().nullable().default(null),
+    runHour: z.int().min(0).max(23).nullable().default(null),
+    mode: z.enum(RULE_MODES).default("analyze_only"),
+    /** The local category a published settlement is filed under on the source (spec §7.6). */
+    postingCategoryId: z.uuid().nullable().default(null),
+    state: z.enum(RULE_STATES).default("active"),
+    payeeMatch: optionalText(MAX_MATCH),
+    tiers: z.array(z.object({ upToCents: z.bigint().positive().nullable(), annualRate: fraction })).min(1),
+  })
+  .refine((rule) => rule.validTo === null || rule.validTo >= rule.validFrom, "Ends before it starts");
+
+export type RuleInput = z.input<typeof ruleInputSchema>;
+
+/**
+ * The rule dialog in plain decimal form: the body of `POST /interests`, or the form once the person's
+ * separators are read. Rates are percentages ("2.75"), bounds amounts ("20000"); the last band has none.
+ */
+export interface PlainRule {
+  accountId: string;
+  validFrom: string;
+  validTo: string | null;
+  runHour: number | null;
+  tiers: readonly { upTo: string | null; rate: string }[];
+  tax: string;
+  dayBasis: (typeof DAY_BASES)[number];
+  settlement: Settlement;
+  payeeMatch: string | null;
+  mode: RuleMode;
+  categoryId: string | null;
+  state: (typeof RULE_STATES)[number];
+}
+
+/** The one conversion of the dialog (INT-5): percentages to the stored fractions, bounds to cents. */
+export function ruleInputOf(plain: PlainRule): RuleInput {
+  return {
+    accountId: plain.accountId,
+    validFrom: plain.validFrom,
+    validTo: plain.validTo,
+    runHour: plain.runHour,
+    tiers: plain.tiers.map((tier) => ({
+      upToCents: tier.upTo === null ? null : parseCents(tier.upTo),
+      annualRate: percentToFraction(tier.rate),
+    })),
+    taxRate: percentToFraction(plain.tax),
+    dayBasis: plain.dayBasis,
+    settlement: plain.settlement,
+    payeeMatch: plain.payeeMatch,
+    mode: plain.mode,
+    postingCategoryId: plain.categoryId,
+    state: plain.state,
+  };
 }
 
 /**

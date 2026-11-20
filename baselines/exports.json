@@ -384,9 +384,12 @@
     "formatRunHour"
   ],
   "packages/domain/src/modules/interests/index.ts": [
+    "DAY_BASES",
     "FreshnessOptions",
     "InterestError",
+    "PlainRule",
     "RuleRow",
+    "SETTLEMENTS",
     "StaleReason",
     "Tier",
     "accruedInterestByAccount",
@@ -405,8 +408,9 @@
     "publishingRuleCount",
     "publishingRulesOn",
     "restorePublishing",
-    "retryPosting",
+    "ruleAccounts",
     "ruleDetail",
+    "ruleInputOf",
     "rulesOnAccount",
     "rulesToMove",
     "runsAt",

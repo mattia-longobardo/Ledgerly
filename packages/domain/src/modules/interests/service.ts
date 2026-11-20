@@ -1,5 +1,4 @@
 import { and, asc, desc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
-import { z } from "zod";
 import { requireOpenAccount, reconstructedBalances } from "../accounts";
 import { listCategories } from "../transactions/taxonomy";
 import type { Ctx } from "../../platform/context";
@@ -9,22 +8,18 @@ import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
 import {
   accrueDay,
-  DAY_BASES,
   type Fixed,
-  FIXED_SCALE,
   fixedFromDecimal,
   fixedToDecimal,
-  RULE_MODES,
-  RULE_STATES,
   roundToCents,
-  SETTLEMENTS,
+  type RuleInput,
+  ruleInputSchema,
   periodOf,
   settlementPeriods,
   type Tier,
   validateTiers,
 } from "./rules";
 import { interestAccruals, interestEntries, interestRules, interestRuleTiers } from "./schema";
-import { civilDate } from "../../shared/inputs";
 
 export type InterestRule = typeof interestRules.$inferSelect;
 export type InterestEntry = typeof interestEntries.$inferSelect;
@@ -39,37 +34,6 @@ export class InterestError extends Error {
     this.name = "InterestError";
   }
 }
-
-const fraction = z
-  .string()
-  .regex(/^\d+(\.\d{1,6})?$/)
-  .refine((value) => fixedFromDecimal(value) <= FIXED_SCALE, "Above 1");
-
-const ruleInputSchema = z
-  .object({
-    accountId: z.uuid(),
-    taxRate: fraction,
-    dayBasis: z.enum(DAY_BASES),
-    settlement: z.enum(SETTLEMENTS),
-    validFrom: civilDate(),
-    validTo: civilDate().nullable().default(null),
-    runHour: z.int().min(0).max(23).nullable().default(null),
-    mode: z.enum(RULE_MODES).default("analyze_only"),
-    /** The local category a published settlement is filed under in Wallet (spec §7.6). */
-    postingCategoryId: z.uuid().nullable().default(null),
-    state: z.enum(RULE_STATES).default("active"),
-    payeeMatch: z
-      .string()
-      .trim()
-      .max(80)
-      .transform((value) => (value === "" ? null : value))
-      .nullable()
-      .default(null),
-    tiers: z.array(z.object({ upToCents: z.bigint().positive().nullable(), annualRate: fraction })).min(1),
-  })
-  .refine((rule) => rule.validTo === null || rule.validTo >= rule.validFrom, "Ends before it starts");
-
-export type RuleInput = z.input<typeof ruleInputSchema>;
 
 async function requireRule(ctx: Pick<Ctx, "userId">, id: string): Promise<InterestRule> {
   const [row] = await getDb()

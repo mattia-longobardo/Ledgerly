@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { listAccounts } from "@ledgerly/domain/accounts";
 import { categoryOptions } from "@ledgerly/domain/transactions";
-import { ruleDetail } from "@ledgerly/domain/interests";
+import { ruleAccounts, ruleDetail } from "@ledgerly/domain/interests";
 import { InterestError } from "@ledgerly/domain/interests";
 import { draftOf, formatRate, tierChips } from "@/modules/interests/ui/present";
 import { PostingCell } from "@/modules/interests/ui/posting-cell";
 import { RuleButton, RuleStateButton } from "@/modules/interests/ui/rule-dialog";
 import { requireSession } from "@/platform/auth/session";
-import { coreCreatesRecords } from "@ledgerly/domain/platform/integrations";
-import { listConnections } from "@ledgerly/domain/platform/integrations";
-import { civilDateIn, today } from "@ledgerly/domain/shared/dates";
+import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
@@ -47,19 +44,7 @@ export async function generateMetadata({ params }: PageProps<"/interests/[id]">)
 export default async function RulePage({ params }: PageProps<"/interests/[id]">) {
   const { ctx, detail } = await load((await params).id);
   const t = await getTranslations("interests");
-  const [open, categories, connections] = await Promise.all([
-    listAccounts(ctx),
-    categoryOptions(ctx, "income"),
-    listConnections(ctx),
-  ]);
-  // "Publish" only on an account whose source is connected and writes (plugin-settings.md §2.2).
-  const writes = (provider: string | null) =>
-    provider !== null && coreCreatesRecords(provider) && connections.some((one) => one.provider === provider);
-  const accounts = open.map((account) => ({
-    id: account.id,
-    name: account.name,
-    publishable: writes(account.provider),
-  }));
+  const [accounts, categories] = await Promise.all([ruleAccounts(ctx), categoryOptions(ctx, "income")]);
   const money = (cents: bigint | null) => formatMoney(cents, ctx.numberFormat);
   const { rule } = detail;
   const labels = {
@@ -68,10 +53,6 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
     above: t("tier.above"),
     any: t("tier.any"),
   };
-  const year = today(ctx.timeZone).slice(0, 4);
-  const accruedYtd = detail.settlements
-    .filter((row) => row.entry.periodFrom.startsWith(year))
-    .reduce((sum, row) => sum + row.entry.netCents, detail.pendingCents);
 
   return (
     <Page
@@ -133,7 +114,7 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
       )}
 
       <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
-        <KpiTile label={t("detail.accruedYtd")} value={money(accruedYtd)} valueTone="pos" />
+        <KpiTile label={t("detail.accruedYtd")} value={money(detail.accruedYtdCents)} valueTone="pos" />
         <KpiTile label={t("detail.pending")} value={money(detail.pendingCents)} />
         <KpiTile
           label={t("detail.mode")}
