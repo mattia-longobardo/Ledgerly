@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 98803,
-    "duplicatedLines": 16709,
-    "percent": 16.91,
-    "blocks": 1231
+    "lines": 98997,
+    "duplicatedLines": 16714,
+    "percent": 16.88,
+    "blocks": 1235
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 35
     },
     "app": {
-      "lines": 24648,
-      "duplicatedLines": 4287,
-      "percent": 17.39,
-      "blocks": 325
+      "lines": 24842,
+      "duplicatedLines": 4284,
+      "percent": 17.24,
+      "blocks": 327
     },
     "global.d": {
       "lines": 12,
@@ -42,15 +42,15 @@
     },
     "modules/budgets": {
       "lines": 1517,
-      "duplicatedLines": 232,
-      "percent": 15.29,
+      "duplicatedLines": 229,
+      "percent": 15.1,
       "blocks": 20
     },
     "modules/funds": {
       "lines": 10576,
-      "duplicatedLines": 2023,
-      "percent": 19.13,
-      "blocks": 148
+      "duplicatedLines": 2020,
+      "percent": 19.1,
+      "blocks": 149
     },
     "modules/imports": {
       "lines": 837,
@@ -96,9 +96,9 @@
     },
     "modules/transactions": {
       "lines": 12909,
-      "duplicatedLines": 1582,
-      "percent": 12.26,
-      "blocks": 127
+      "duplicatedLines": 1596,
+      "percent": 12.36,
+      "blocks": 128
     },
     "modules/users": {
       "lines": 874,
@@ -474,9 +474,11 @@
     "app/(app)/settings/profile/page.tsx": 8,
     "app/(app)/settings/profile/preferences-form.tsx": 103,
     "app/(app)/settings/profile/profile-screen.tsx": 14,
+    "app/(app)/settings/rules/apply-dialog.tsx": 28,
     "app/(app)/settings/rules/page.tsx": 8,
-    "app/(app)/settings/rules/rules-board.tsx": 113,
+    "app/(app)/settings/rules/rule-editor.tsx": 57,
     "app/(app)/settings/rules/rules-screen.tsx": 17,
+    "app/(app)/settings/rules/value-cell.tsx": 25,
     "app/(app)/settings/security/api-clients-table.tsx": 72,
     "app/(app)/settings/security/calls.ts": 25,
     "app/(app)/settings/security/connected-apps-table.tsx": 59,
@@ -527,7 +529,7 @@
     "modules/budgets/queries.ts": 23,
     "modules/budgets/schema.ts": 34,
     "modules/budgets/service.ts": 49,
-    "modules/budgets/ui/add-budget.tsx": 55,
+    "modules/budgets/ui/add-budget.tsx": 52,
     "modules/budgets/ui/budgets-table.tsx": 48,
     "modules/funds/actions.ts": 44,
     "modules/funds/forms.ts": 6,
@@ -554,7 +556,7 @@
     "modules/funds/ui/fund-settings.tsx": 37,
     "modules/funds/ui/fund-sources.tsx": 21,
     "modules/funds/ui/fund-valuations.tsx": 113,
-    "modules/funds/ui/fund-wizard.tsx": 86,
+    "modules/funds/ui/fund-wizard.tsx": 83,
     "modules/funds/ui/pension-present.ts": 9,
     "modules/funds/ui/projection.tsx": 24,
     "modules/funds/ui/reconciliation-buttons.tsx": 20,
@@ -675,6 +677,7 @@
     "modules/transactions/ui/review-list.tsx": 9,
     "modules/transactions/ui/similar-dialog.tsx": 9,
     "modules/transactions/ui/spending-card.tsx": 20,
+    "modules/transactions/ui/transaction-row-menu.tsx": 14,
     "modules/transactions/ui/view.ts": 6,
     "modules/users/calls.ts": 25,
     "modules/users/schema.ts": 26,
