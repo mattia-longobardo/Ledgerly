@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { BudgetsOverviewCard } from "@/modules/budgets/ui/overview-card";
 import { pocketsTotal } from "@ledgerly/domain/pockets";
 import { requireSession } from "@/platform/auth/session";
-import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatMoney } from "@ledgerly/domain/platform/format";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { OverviewScreen } from "./overview-screen";
@@ -13,8 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Overview: the accounts and the net worth come from `/api/v1` in the client screen. The pockets
- * tile and the budgets card belong to modules not on the API yet, so they are still drawn here.
+ * Overview: the accounts, the net worth and the budgets card come from `/api/v1` in the client
+ * screen. The pockets tile belongs to a module not on the API yet, so it is still drawn here.
  */
 export default async function OverviewPage() {
   const ctx = await requireSession();
@@ -34,7 +32,6 @@ export default async function OverviewPage() {
           note={tp("kpis.count", { count: pockets.count })}
         />
       }
-      budgets={<BudgetsOverviewCard ctx={ctx} month={monthKey(today(ctx.timeZone))} />}
     />
   );
 }

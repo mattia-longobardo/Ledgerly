@@ -435,6 +435,7 @@ export const MODULES: Module[] = [
       "investments",
       "accounts",
       "transactions",
+      "budgets",
       "imports",
       "admin",
       "categories",

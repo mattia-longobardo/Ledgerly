@@ -172,7 +172,7 @@ export const setBudgetLimit = defineRoute({
   summary:
     "Sets the budget's limit from `month` onwards: versions already set for later months are replaced. " +
     "The amount is a positive decimal string.",
-  actions: ["setBudgetLimitAction"],
+  actions: [],
   params: byBudget,
   body: z.object({ month: budgetMonth(), amount: amountInput() }),
   response: null,
@@ -190,7 +190,7 @@ export const stopBudget = defineRoute({
   summary:
     "Takes the budget away from `month` onwards; the months before keep their limit. A budget stopped in " +
     "the month it began leaves nothing behind.",
-  actions: ["stopBudgetAction"],
+  actions: [],
   params: byBudget,
   body: z.object({ month: budgetMonth() }),
   response: null,
@@ -208,7 +208,7 @@ export const saveBudgetAlerts = defineRoute({
   summary:
     "When the budget emails: on or off, and the percentages of its limit that send one (sorted, without " +
     "repeats, in the answer). Alerts on need a threshold.",
-  actions: ["saveBudgetAlertsAction"],
+  actions: [],
   params: byBudget,
   body: alertSettings,
   response: alertSettings,

@@ -7,8 +7,9 @@ import {
 import { type BudgetRow, budgetName as nameOf, budgetSlug } from "@ledgerly/domain/budgets";
 import type { BudgetRowView } from "./budgets-table";
 
-/** A category with no colour of its own (and no group to borrow one from) is drawn in grey. */
-export const NO_COLOR = "#8a8f98";
+import { NO_COLOR } from "./colors";
+
+export { NO_COLOR };
 
 /** How a budget is named (the domain's `budgetName`), «All categories» for one on a whole account. */
 export function budgetName(

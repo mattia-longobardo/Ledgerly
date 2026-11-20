@@ -19,7 +19,7 @@
     ]
   },
   "apps/web/src/app/(app)/settings/categories/actions.ts": {
-    "closedBy": "R3 of transactions (Settings › Categories is that module's)",
+    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
     "actions": [
       "archiveWithUndoAction",
       "createCategoryAction",
@@ -39,7 +39,7 @@
     ]
   },
   "apps/web/src/app/(app)/settings/categories/source-actions.ts": {
-    "closedBy": "R3 of transactions (Settings › Categories is that module's)",
+    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
     "actions": [
       "keepSourceCategoryAction",
       "setSourceCategoryAction",
@@ -76,7 +76,7 @@
     ]
   },
   "apps/web/src/app/(app)/settings/security/actions.ts": {
-    "closedBy": "POST /api-clients, with git-policy §6 #4",
+    "closedBy": "POST /api-clients, with git-policy \u00a76 #4",
     "actions": [
       "createApiClientAction"
     ]
@@ -95,14 +95,6 @@
     "closedBy": "kept: web cookie (contract test, EXCLUDED)",
     "actions": [
       "acceptInviteAction"
-    ]
-  },
-  "apps/web/src/modules/budgets/actions.ts": {
-    "closedBy": "R3 of budgets",
-    "actions": [
-      "saveBudgetAlertsAction",
-      "setBudgetLimitAction",
-      "stopBudgetAction"
     ]
   },
   "apps/web/src/modules/funds/actions.ts": {

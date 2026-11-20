@@ -12,7 +12,7 @@ import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
 import { TONE_TEXT } from "@ledgerly/ui/tone";
-import { setBudgetLimitAction, stopBudgetAction } from "../actions";
+import { setBudgetLimit, stopBudget } from "../calls";
 import type { BudgetScope, BudgetStatus } from "@ledgerly/domain/budgets/client";
 
 /** One budget as the table draws it: every amount already formatted by the server (spec §8.5). */
@@ -53,13 +53,15 @@ function LimitCell({ row, month }: { row: BudgetRowView; month: string }) {
   const t = useTranslations("budgets");
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function save(value: string) {
     setEditing(false);
     if (value.trim() === "" || value.trim() === row.limitInput) return;
     startTransition(async () => {
-      const result = await setBudgetLimitAction(row.scope, month, value);
+      const result = await setBudgetLimit(row.scope, month, value);
       notify(result.ok ? t("toasts.saved") : t("errors.invalid"), result.ok ? "success" : "error");
+      if (result.ok) router.refresh();
     });
   }
 
@@ -113,12 +115,13 @@ export function BudgetsTable({
   const router = useRouter();
 
   function remove(row: BudgetRowView) {
-    void stopBudgetAction(row.scope, month).then((result) =>
+    void stopBudget(row.scope, month).then((result) => {
       notify(
         result.ok ? t("toasts.removed", { month: monthLabel }) : t("errors.failed"),
         result.ok ? "success" : "error",
-      ),
-    );
+      );
+      if (result.ok) router.refresh();
+    });
   }
 
   const menu = (row: BudgetRowView) => (

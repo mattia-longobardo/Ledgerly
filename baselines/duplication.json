@@ -4,8 +4,8 @@
     "minLines": 6
   },
   "total": {
-    "lines": 98997,
-    "duplicatedLines": 16714,
+    "lines": 99010,
+    "duplicatedLines": 16715,
     "percent": 16.88,
     "blocks": 1235
   },
@@ -17,9 +17,9 @@
       "blocks": 35
     },
     "app": {
-      "lines": 24842,
-      "duplicatedLines": 4284,
-      "percent": 17.24,
+      "lines": 24835,
+      "duplicatedLines": 4287,
+      "percent": 17.26,
       "blocks": 327
     },
     "global.d": {
@@ -41,9 +41,9 @@
       "blocks": 70
     },
     "modules/budgets": {
-      "lines": 1517,
+      "lines": 1537,
       "duplicatedLines": 229,
-      "percent": 15.1,
+      "percent": 14.9,
       "blocks": 20
     },
     "modules/funds": {
@@ -84,8 +84,8 @@
     },
     "modules/subscriptions": {
       "lines": 1878,
-      "duplicatedLines": 478,
-      "percent": 25.45,
+      "duplicatedLines": 476,
+      "percent": 25.35,
       "blocks": 33
     },
     "modules/timeoff": {
@@ -420,7 +420,7 @@
     "app/(app)/budgets/[id]/page.tsx": 11,
     "app/(app)/expenses/categories/[id]/category-blocks.tsx": 9,
     "app/(app)/expenses/categories/[id]/category-screen.tsx": 29,
-    "app/(app)/expenses/categories/board.tsx": 241,
+    "app/(app)/expenses/categories/board.tsx": 242,
     "app/(app)/expenses/categories/macro-dialog.tsx": 32,
     "app/(app)/expenses/categories/page.tsx": 21,
     "app/(app)/expenses/expenses-blocks.tsx": 9,
@@ -449,7 +449,7 @@
     "app/(app)/payroll/page.tsx": 19,
     "app/(app)/payroll/settings/code-map-card.tsx": 8,
     "app/(app)/payroll/settings/page.tsx": 17,
-    "app/(app)/pockets/[id]/page.tsx": 78,
+    "app/(app)/pockets/[id]/page.tsx": 80,
     "app/(app)/pockets/page.tsx": 23,
     "app/(app)/settings/categories/actions.ts": 37,
     "app/(app)/settings/categories/delete-dialog.tsx": 13,
@@ -524,13 +524,13 @@
     "modules/accounts/ui/settings-form.tsx": 67,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
     "modules/accounts/ui/switch/undo-switch.tsx": 7,
-    "modules/budgets/actions.ts": 11,
     "modules/budgets/jobs.ts": 12,
     "modules/budgets/queries.ts": 23,
     "modules/budgets/schema.ts": 34,
     "modules/budgets/service.ts": 49,
-    "modules/budgets/ui/add-budget.tsx": 52,
+    "modules/budgets/ui/add-budget.tsx": 53,
     "modules/budgets/ui/budgets-table.tsx": 48,
+    "modules/budgets/ui/overview-card.tsx": 10,
     "modules/funds/actions.ts": 44,
     "modules/funds/forms.ts": 6,
     "modules/funds/home-queries.ts": 8,
@@ -618,7 +618,7 @@
     "modules/pockets/schema.ts": 111,
     "modules/pockets/service.ts": 153,
     "modules/pockets/ui/pocket-actions.tsx": 337,
-    "modules/subscriptions/actions.ts": 43,
+    "modules/subscriptions/actions.ts": 41,
     "modules/subscriptions/jobs.ts": 9,
     "modules/subscriptions/queries.ts": 47,
     "modules/subscriptions/schema.ts": 78,

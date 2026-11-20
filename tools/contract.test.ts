@@ -239,9 +239,9 @@ describe("the Server Actions of transactions", () => {
 
 /**
  * The Server Actions of budgets (05-refactor.md §5.5) and their routes; no exclusion. Overview's card
- * and a budget's page read routes of their own, with no action.
+ * and a budget's page read routes of their own, with no action. The screens call `/api/v1`: no action left.
  */
-const BUDGETS_ACTION_FILES = ["apps/web/src/modules/budgets/actions.ts"];
+const BUDGETS_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of budgets", () => {
   const actions = BUDGETS_ACTION_FILES.flatMap((file) =>

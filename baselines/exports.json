@@ -35,6 +35,9 @@
     "summary",
     "views"
   ],
+  "packages/api-contract/src/budgets/index.ts": [
+    "budgets"
+  ],
   "packages/api-contract/src/core/index.ts": [
     "RouteContract",
     "SESSION_CSRF_HEADER",

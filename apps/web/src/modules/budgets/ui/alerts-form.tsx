@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button, Chip } from "@ledgerly/ui/button";
@@ -7,7 +8,7 @@ import { CardFooter } from "@ledgerly/ui/card";
 import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
-import { saveBudgetAlertsAction } from "../actions";
+import { saveBudgetAlerts } from "../calls";
 import {
   ALERT_PRESETS,
   type AlertSettings,
@@ -36,6 +37,7 @@ export function AlertsForm({
   const [custom, setCustom] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const shown = [...new Set([...ALERT_PRESETS, ...thresholds])].sort((a, b) => a - b);
   const label = (percent: number) =>
@@ -73,13 +75,14 @@ export function AlertsForm({
       return;
     }
     startTransition(async () => {
-      const result = await saveBudgetAlertsAction(scope, { enabled, thresholds });
+      const result = await saveBudgetAlerts(scope, { enabled, thresholds });
       if (!result.ok) {
         setError(result.error === "not_found" ? errors("not_found") : errors("failed"));
         return;
       }
       setError(null);
       notify(t("saved"), "success");
+      router.refresh();
     });
   }
 

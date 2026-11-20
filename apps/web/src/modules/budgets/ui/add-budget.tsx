@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
@@ -9,7 +10,7 @@ import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Input, InputGroup } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import { setBudgetLimitAction } from "../actions";
+import { setBudgetLimit } from "../calls";
 
 /**
  * "Add budget" (plan F3 §3.6.2: the design only shows a toast here): a monthly limit on a spending
@@ -38,6 +39,7 @@ export function AddBudget({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   const chosen = categories.find((option) => option.id === categoryId) ?? null;
 
   function change(next: boolean) {
@@ -55,10 +57,12 @@ export function AddBudget({
     if (categoryId === null && accountId === null) return setError(t("form.needScope"));
     const amount = String(data.get("amount") ?? "");
     startTransition(async () => {
-      const result = await setBudgetLimitAction({ categoryId, accountId }, month, amount);
+      const result = await setBudgetLimit({ categoryId, accountId }, month, amount);
       if (!result.ok) return setError(t(`errors.${result.error === "not_found" ? "not_found" : "invalid"}`));
       notify(t("toasts.added"));
       setOpen(false);
+      // The page is still drawn on the server until its read moves to `/api/v1`.
+      router.refresh();
     });
   }
 

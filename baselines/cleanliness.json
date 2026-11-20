@@ -310,7 +310,6 @@
     "apps/web/src/modules/budgets/ui/add-budget.tsx": 1,
     "apps/web/src/modules/budgets/ui/alerts-form.tsx": 7,
     "apps/web/src/modules/budgets/ui/budgets-table.tsx": 2,
-    "apps/web/src/modules/budgets/ui/overview-card.tsx": 1,
     "apps/web/src/modules/funds/ui/contribution-dialog.tsx": 2,
     "apps/web/src/modules/funds/ui/fee-dialog.tsx": 2,
     "apps/web/src/modules/funds/ui/fee-list.tsx": 2,

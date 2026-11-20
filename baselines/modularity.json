@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 158,
+    "deepImports": 157,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -411,7 +411,6 @@
     "app/(app)/investments/page.tsx → modules/accounts/ui/display",
     "app/(app)/investments/page.tsx → modules/investments/ui/chart-data",
     "app/(app)/investments/page.tsx → modules/investments/ui/period-control",
-    "app/(app)/page.tsx → modules/budgets/ui/overview-card",
     "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/auto-refresh",
     "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/present",
     "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/review-actions",

@@ -1,8 +1,8 @@
 "use client";
 
 // Overview, read from `/api/v1` (rewrite plan R3): the net worth, its buckets, its chart and the
-// accounts are fields of `GET /net-worth`. The pockets tile and the budgets card belong to modules
-// still drawn on the server: the page hands them in, already drawn.
+// accounts are fields of `GET /net-worth`, the budgets card reads `GET /budgets/overview`. The pockets
+// tile belongs to a module still drawn on the server: the page hands it in, already drawn.
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -24,14 +24,14 @@ import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type CardFormat, centsOf, counterValue, NetWorthCard } from "@/modules/accounts/client";
+import { BudgetsOverviewCard } from "@/modules/budgets/client";
 
 type NetWorth = RouteOutput<typeof views.getNetWorth>;
 type ViewRow = NetWorth["accounts"][number];
 
-/** The blocks of other modules the page draws on the server: the pockets tile, the budgets card. */
+/** The block of another module the page draws on the server: the pockets tile. */
 interface ServerBlocks {
   pockets: ReactNode;
-  budgets: ReactNode;
 }
 
 export function OverviewScreen(blocks: ServerBlocks) {
@@ -70,12 +70,7 @@ export function OverviewScreen(blocks: ServerBlocks) {
   );
 }
 
-function OverviewView({
-  view,
-  format,
-  pockets,
-  budgets,
-}: ServerBlocks & { view: NetWorth; format: CardFormat }) {
+function OverviewView({ view, format, pockets }: ServerBlocks & { view: NetWorth; format: CardFormat }) {
   const text = useTranslations("overview");
   const accountsText = useTranslations("accounts");
   const search = useSearchParams();
@@ -126,7 +121,7 @@ function OverviewView({
       </div>
 
       {/* The card spans the page's whole column, and so do its rows' bars (spec §8.2). */}
-      {budgets}
+      <BudgetsOverviewCard format={format} />
     </>
   );
 }
