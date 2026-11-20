@@ -281,7 +281,6 @@ export async function subscriptionsView(
   const paying = [...new Set(active.flatMap((row) => row.subscription.paymentAccountId ?? []))];
   const commitments = { found: sources.found, balances: await readingsAt(ctx, paying, todayOn) };
   const low = active.filter((row) => row.subscription.utility <= LOW_UTILITY);
-  const tomorrow = addDays(todayOn, 1);
   return {
     rows: active,
     inactive: rows.filter((row) => row.subscription.state !== "active"),
@@ -298,8 +297,9 @@ export async function subscriptionsView(
     alerts: alertsOf(active, sources),
     byCategory: byCategoryOf(active),
     projections: {
-      month: project(active, commitments, { from: tomorrow, to: next30Until }),
-      year: project(active, commitments, { from: tomorrow, to: addDays(todayOn, YEAR_DAYS) }),
+      // From today, as «Next 30 days» (D6): a charge due today is still to come until it is found.
+      month: project(active, commitments, { from: todayOn, to: next30Until }),
+      year: project(active, commitments, { from: todayOn, to: addDays(todayOn, YEAR_DAYS) }),
     },
     accounts: accountOptions(accounts),
   };

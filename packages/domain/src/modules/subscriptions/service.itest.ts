@@ -212,6 +212,17 @@ describe("the page's figures", () => {
     expect(await subscriptionsOnAccount(ctx, accountId)).toEqual({ count: 2, monthlyCents: 1_715n });
   });
 
+  it("counts a charge due today in the projection, as in «Next 30 days» (D6)", async () => {
+    await saveBalanceEntry(ctx, accountId, { on: todayOn, cents: 10_000n });
+    await createSubscription(ctx, input({ cycle: "yearly", payeeMatch: null, nextChargeOn: todayOn }));
+
+    const view = await subscriptionsView(ctx);
+    expect(view.next30Cents).toBe(1_299n);
+    expect(view.projections.month).toMatchObject([
+      { accountId, count: 1, commitCents: 1_299n, projectedCents: 10_000n - 1_299n },
+    ]);
+  });
+
   it("suggests an outgoing recurring payee until a subscription covers it", async () => {
     await upsertFromProvider(
       ctx,
