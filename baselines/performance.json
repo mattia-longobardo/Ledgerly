@@ -88,8 +88,8 @@
       "queries": 8
     },
     "GET /transactions": {
-      "medianMs": 9.6,
-      "p95Ms": 11.6,
+      "medianMs": 13.4,
+      "p95Ms": 14.3,
       "queries": 8
     },
     "GET /summary": {

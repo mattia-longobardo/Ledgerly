@@ -445,6 +445,20 @@ su `v0.37.0`: tre misure di seguito (48,7, 49,9 e 55,1 ms), base = quella di mez
 
 Nessun'altra riga del file è cambiata. La soglia del 10% resta.
 
+**Base cambiata al rilascio di R2 transactions, solo per «GET /transactions»** (decisione scritta di Mattia del
+20/11/2026, PERS-433). La base di N0 (14/11) aveva 7 query; R1 (`087dd931`, 18/11) ha portato i limiti dell'API nella
+tabella `rate_limit_counters`, una query in più su ogni rotta (circa +1 ms), senza rimisurare i tempi; il resto della
+differenza c'era già da `v0.37.0` (accettato il 19/11). Il passo R2 transactions non la peggiora: con la procedura del
+gate su `ledgerly_1_test`, in coppie alternate, `v0.40.0` 13,5 · 13,4 · 13,2 ms e `b23f6725` 13,6 · 14,1 ms. Base = la
+misura di mezzo di `v0.40.0`, la versione in produzione; p95 della serie di `v0.40.0` delle 4:15. L'eccezione di
+`ACCEPTED_TIMES` è tolta.
+
+| Rotta | Prima (N0) | Dopo la rimisura | Motivo |
+|---|---|---|---|
+| GET /transactions | 9,6 ms · p95 11,6 · 7 query | 13,4 ms · p95 14,3 · 8 query | La query di R1 su ogni rotta e il costo già presente da `v0.37.0`; stesso numero di query di `v0.40.0` |
+
+Nessun'altra riga del file è cambiata.
+
 `POST /imports` non è misurata: chiede un documento, il bucket e `after()` di Next. Le pagine (tempo di risposta del
 server) non sono misurate in N0: l'utente pesante esiste solo in `ledgerly_test` e l'anteprima locale non accetta il
 login con password. Ogni «pagina» della tabella è l'insieme delle letture del suo `page.tsx`.
