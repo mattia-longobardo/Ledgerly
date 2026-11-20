@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
+import { NO_RATES, convertCents, ratesOn } from "../../../platform/fx";
 import type { CivilDate } from "../../../shared/dates";
 import { type Cents, type Converter, type DatedMoney, sumMoney } from "../../../shared/money";
 import { transactions } from "../schema";
@@ -31,12 +32,25 @@ export function splitPositions(before: number) {
 /** Adds up split amounts into one total in the display currency. */
 type Totaller = (amounts: readonly DatedMoney[]) => Cents;
 
-/** Before decision D4: every currency counted 1:1, as each total of movements always did. */
-const ONE_TO_ONE: Converter = (money) => money.cents;
-
-/** The one way the totals of movements add amounts up (audit TR-4): `sumMoney` into the display currency. */
-export function totallerFor(ctx: Pick<Ctx, "displayCurrency">): Promise<Totaller> {
-  return Promise.resolve((amounts) => sumMoney(amounts, ctx.displayCurrency, ONE_TO_ONE).total);
+/**
+ * The one way the totals of movements add amounts up (audit TR-4, decision D4): `sumMoney` into the
+ * display currency, a foreign amount converted at the ECB rate of its own day with the accounts'
+ * rule (`convertCents`); one with no rate is left out, never counted 1:1. With every row in the
+ * display currency no rate is read.
+ */
+export async function totallerFor(
+  ctx: Pick<Ctx, "displayCurrency">,
+  rows: readonly Split[],
+): Promise<Totaller> {
+  const into = ctx.displayCurrency;
+  const days = rows.flatMap((row) => (row.on === null ? [] : [row.on])).sort();
+  const rates =
+    days.length === 0
+      ? NO_RATES
+      : await ratesOn([into, ...rows.map((row) => row.currency)], days[0], days[days.length - 1]);
+  const convert: Converter = (money, day) =>
+    day === null ? null : convertCents(money.cents, money.currency, into, day, rates);
+  return (amounts) => sumMoney(amounts, into, convert).total;
 }
 
 /**

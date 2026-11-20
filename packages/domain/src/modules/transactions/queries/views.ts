@@ -73,7 +73,7 @@ export async function categoryMacroTotals(
     .where(conditions(ctx, withoutHidden(filters)))
     .groupBy(transactions.categoryId, transactions.type, ...splitPositions(6))
     .orderBy(asc(transactions.categoryId), asc(transactions.type));
-  const groups = gather(rows, (row) => `${row.categoryId}|${row.type}`, await totallerFor(ctx));
+  const groups = gather(rows, (row) => `${row.categoryId}|${row.type}`, await totallerFor(ctx, rows));
   return groups.map(({ row, count, sum }) => ({
     categoryId: row.categoryId,
     type: row.type,
@@ -134,7 +134,7 @@ export async function spendingOverTime(
     // By position, for the same reason as `monthlyTotals`.
     .groupBy(sql`1`, sql`2`, sql`3`, sql`4`, ...splitPositions(5))
     .orderBy(sql`1`, sql`2`);
-  const points = gather(rows, (row) => `${row.bucket}|${row.groupId}`, await totallerFor(ctx));
+  const points = gather(rows, (row) => `${row.bucket}|${row.groupId}`, await totallerFor(ctx, rows));
   return points.map(({ row, sum }) => ({
     bucket: row.bucket,
     groupId: row.groupId,

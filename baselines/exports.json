@@ -898,8 +898,11 @@
   ],
   "packages/domain/src/platform/fx/index.ts": [
     "FxFetchOptions",
+    "NO_RATES",
+    "convertCents",
     "fetchEcbRates",
     "rangesToFetch",
+    "ratesOn",
     "saveRates",
     "storedRange"
   ],

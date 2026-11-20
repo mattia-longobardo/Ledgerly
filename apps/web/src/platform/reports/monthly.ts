@@ -17,8 +17,8 @@ import type { Cents } from "@ledgerly/domain/shared/money";
 interface MonthlyFigures {
   month: MonthKey;
   /**
-   * The display currency the account totals (net worth, previous net worth, cash) are in (§1.8,
-   * D1). Income, expense and net are sums of the month's transactions, as they were before D1.
+   * The display currency every total is in (§1.8, D1): the account totals, and income, expense
+   * and net, each movement converted at the rate of its own day (D4).
    */
   currency: string;
   netWorthCents: Cents | null;

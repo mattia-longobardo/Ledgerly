@@ -198,7 +198,7 @@ export async function transactionsSummary(
     .from(transactions)
     .where(conditions(ctx, withoutHidden(filters)))
     .groupBy(...splitPositions(6));
-  const [range] = gather(rows, () => "range", await totallerFor(ctx));
+  const [range] = gather(rows, () => "range", await totallerFor(ctx, rows));
   const counted = (key: "transfers" | "unpaired") => rows.reduce((sum, row) => sum + Number(row[key]), 0);
   return {
     count: range?.count ?? 0,
@@ -237,7 +237,7 @@ export async function monthlyTotals(
     // `GROUP BY`, and Postgres compares the two textually.
     .groupBy(sql`1`, ...splitPositions(3))
     .orderBy(sql`1 desc`);
-  const months = gather(rows, (row) => row.month, await totallerFor(ctx));
+  const months = gather(rows, (row) => row.month, await totallerFor(ctx, rows));
   return months.map(({ row, count, sum }) => ({
     month: monthKey(row.month),
     count,
@@ -284,7 +284,7 @@ export async function categoryTotals(
     )
     .orderBy(asc(categories.name), asc(transactions.categoryId));
 
-  const groups = gather(rows, (row) => String(row.categoryId), await totallerFor(ctx));
+  const groups = gather(rows, (row) => String(row.categoryId), await totallerFor(ctx, rows));
   const slices = groups.map(({ row, count, sum }) => ({
     categoryId: row.categoryId,
     name: row.name,
