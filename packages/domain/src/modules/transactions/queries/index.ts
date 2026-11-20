@@ -13,6 +13,7 @@ export {
   movementsByAccount,
 } from "./movements";
 export { monthSpending, findMovements, chargeCandidates, payeeSamples, recurrences } from "./candidates";
+export { matchMovements } from "./matching";
 export {
   countAllTransactions,
   listTransactions,

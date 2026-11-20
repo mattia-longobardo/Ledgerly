@@ -53,6 +53,8 @@ export {
 export type { UserEdit, WindowRow } from "./merges";
 export { cadenceOfInterval, detectRecurrences } from "./recurrences";
 export type { RecurrenceInput } from "./recurrences";
+export { matchesMovement } from "./matching";
+export type { MovementRule } from "./matching";
 export { typeByMacro, typeMarkerByMacro, macrosFor } from "./macros";
 export type { TypedMovement } from "./macros";
 export { normalizeIban } from "../../../platform/iban";

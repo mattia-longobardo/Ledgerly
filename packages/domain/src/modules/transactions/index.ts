@@ -45,6 +45,7 @@ export {
   facetCounts,
   listTransactions,
   manualMovementsByAccount,
+  matchMovements,
   movementSpanByAccount,
   rulesForExport,
   searchPayees,
@@ -63,7 +64,13 @@ export {
   isHidden,
   macrosFor,
 } from "./rules";
-export type { CategoryType, IncomingTransaction, RecurrenceInput, TransactionType } from "./rules";
+export type {
+  CategoryType,
+  IncomingTransaction,
+  MovementRule,
+  RecurrenceInput,
+  TransactionType,
+} from "./rules";
 export { recurringPatterns, transactions } from "./schema";
 export { forgetSends, pendingSends } from "./sending";
 export {
