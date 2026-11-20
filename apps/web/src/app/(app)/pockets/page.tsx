@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { pocketsView } from "@ledgerly/domain/pockets";
 import { type DialogContext, PocketActions, RestorePocket } from "@/modules/pockets/ui/pocket-actions";
-import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatWholePercent } from "@ledgerly/domain/platform/format";
@@ -98,7 +97,7 @@ export default async function PocketsPage() {
       <nav aria-label={t("list.label")} className="grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
         {view.pockets.map((item) => {
           const target = item.pocket.targetCents;
-          const percent = target === null ? null : percentOf(item.balanceCents, target);
+          const percent = item.percent;
           return (
             <Link
               key={item.pocket.id}

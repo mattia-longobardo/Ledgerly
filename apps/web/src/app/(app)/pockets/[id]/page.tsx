@@ -9,7 +9,6 @@ import {
   RemovePlannedButton,
   UnlinkExpenseButton,
 } from "@/modules/pockets/ui/pocket-actions";
-import { percentOf } from "@ledgerly/domain/budgets";
 import { requireSession } from "@/platform/auth/session";
 import { addMonths, monthKey, today } from "@ledgerly/domain/shared/dates";
 import {
@@ -74,7 +73,7 @@ export default async function PocketPage({ params }: PageProps<"/pockets/[id]">)
   };
 
   const target = pocket.targetCents;
-  const funded = target === null ? 0 : percentOf(selected.balanceCents, target);
+  const funded = selected.percent ?? 0;
   const monthLabel = (month: string) => formatDate(month, "monthShort", ctx.locale);
   const expenseLabel = (expense: PocketView["expenses"][number]) =>
     `${formatDate(expense.on, "long", ctx.locale)} · ${expense.payee ?? t("expenses.noPayee")}`;

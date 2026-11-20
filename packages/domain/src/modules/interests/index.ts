@@ -9,6 +9,7 @@ export type { Tier } from "./rules";
 export { interestRules } from "./schema";
 export {
   InterestError,
+  accruedInterestByAccount,
   bringUpToDate,
   createRule,
   moveRuleAccount,

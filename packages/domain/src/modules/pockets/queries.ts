@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts";
-import { accruedInterest } from "../interests/service";
-import { chargeCandidates, transactionsByIds } from "../transactions/queries";
+import { accruedInterestByAccount } from "../interests";
+import { chargeCandidates, transactionsByIds } from "../transactions";
 import type { Ctx } from "../../platform/context";
 import {
   addDays,
@@ -25,6 +25,8 @@ import {
   pocketBalance,
   pocketBudget,
   pocketLedger,
+  splitInterest,
+  targetPercent,
 } from "./rules";
 import { pocketExpenseLinks, pocketMovements, pocketPlannedExpenses, pockets } from "./schema";
 import type { Pocket, PocketMovement } from "./service";
@@ -65,6 +67,8 @@ export interface PocketView {
   accountName: string | null;
   /** What is left: the budget minus what was spent. */
   balanceCents: Cents;
+  /** Balance over target, whole; `null` without a target. */
+  percent: number | null;
   /** Every accrual, deposit and adjustment since the start: the budget given so far. */
   budgetCents: Cents;
   /** What the monthly accruals have added since the start: the design's "Accrued since …". */
@@ -105,37 +109,38 @@ interface PocketsView {
   accounts: { id: string; name: string }[];
 }
 
+/** A spend of a pocket before its account has a name: the ledger needs none. */
+type Spend = Omit<PocketExpense, "accountName"> & { accountId: string | null };
+
 /**
  * The expenses of every open pocket. A pocket on an account takes each `expense` of that account
  * from its start month on — never a giroconto or an income, never a hidden one; a standalone pocket
- * takes the expenses linked to it.
+ * takes the expenses linked to it. One read for every backing account (audit POC-3).
  */
 async function expensesByPocket(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   open: readonly Pocket[],
-  accountName: ReadonlyMap<string, string>,
   todayOn: CivilDate,
-): Promise<Map<string, PocketExpense[]>> {
-  const result = new Map<string, PocketExpense[]>(open.map((pocket) => [pocket.id, []]));
+): Promise<Map<string, Spend[]>> {
+  const result = new Map<string, Spend[]>(open.map((pocket) => [pocket.id, []]));
 
   const backed = open.filter((pocket) => pocket.backingAccountId !== null);
   const accountIds = [...new Set(backed.map((pocket) => pocket.backingAccountId as string))];
-  for (const accountId of accountIds) {
-    const on = backed.filter((pocket) => pocket.backingAccountId === accountId);
-    const from = on.map((pocket) => pocket.startMonth).sort()[0];
-    const charges = await chargeCandidates(ctx, { accountId, from, to: todayOn });
-    for (const pocket of on) {
+  if (accountIds.length > 0) {
+    const from = backed.map((pocket) => pocket.startMonth).sort()[0];
+    const charges = await chargeCandidates(ctx, { accountId: accountIds, from, to: todayOn });
+    for (const pocket of backed) {
       result.set(
         pocket.id,
         charges
-          .filter((charge) => charge.on >= pocket.startMonth)
+          .filter((charge) => charge.accountId === pocket.backingAccountId && charge.on >= pocket.startMonth)
           .map((charge) => ({
             id: charge.id,
             on: charge.on,
             cents: charge.cents,
             payee: charge.payee,
             note: charge.note,
-            accountName: accountName.get(accountId) ?? null,
+            accountId: charge.accountId,
             linked: false,
             manual: false,
           })),
@@ -164,7 +169,7 @@ async function expensesByPocket(
         cents: -movement.amountCents,
         payee: movement.payee,
         note: movement.note,
-        accountName: accountName.get(movement.accountId) ?? null,
+        accountId: movement.accountId,
         linked: true,
         manual: false,
       });
@@ -173,18 +178,24 @@ async function expensesByPocket(
   return result;
 }
 
-const newestFirst = (a: PocketExpense, b: PocketExpense) =>
-  a.on < b.on ? 1 : a.on > b.on ? -1 : a.id < b.id ? 1 : -1;
+const newestFirst = (a: Spend, b: Spend) => (a.on < b.on ? 1 : a.on > b.on ? -1 : a.id < b.id ? 1 : -1);
 
-/** Everything the Pockets pages render (spec §7.4), read once. */
-export async function pocketsView(
+/** One open pocket's ledger: its own movements, its expenses, and what is left. */
+interface PocketLedger {
+  pocket: Pocket;
+  own: PocketMovement[];
+  /** Newest first, the withdrawals recorded by hand among them. */
+  spent: Spend[];
+  ledger: ReturnType<typeof pocketLedger>;
+  balanceCents: Cents;
+}
+
+/** Every pocket, and the ledger of each open one: what `pocketBalances` and the view share. */
+async function pocketLedgers(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  now: Date = new Date(),
-): Promise<PocketsView> {
-  const todayOn = today(ctx.timeZone, now);
-  const thisMonth = monthKey(todayOn);
-  const months = monthsBetween(addMonths(thisMonth, -(HISTORY_MONTHS - 1)), thisMonth);
-  const [rows, movements, planned, accounts] = await Promise.all([
+  todayOn: CivilDate,
+): Promise<{ rows: Pocket[]; ledgers: PocketLedger[] }> {
+  const [rows, movements] = await Promise.all([
     getDb()
       .select()
       .from(pockets)
@@ -195,46 +206,14 @@ export async function pocketsView(
       .from(pocketMovements)
       .where(userScoped(ctx).owns(pocketMovements))
       .orderBy(asc(pocketMovements.on), asc(pocketMovements.id)),
-    getDb()
-      .select()
-      .from(pocketPlannedExpenses)
-      .where(userScoped(ctx).owns(pocketPlannedExpenses))
-      .orderBy(asc(pocketPlannedExpenses.dueOn), asc(pocketPlannedExpenses.id)),
-    listAccounts(ctx, { includeArchived: true }),
   ]);
-  const byPocket = new Map<string, PocketMovement[]>();
-  for (const movement of movements) {
-    byPocket.set(movement.pocketId, [...(byPocket.get(movement.pocketId) ?? []), movement]);
-  }
-  const accountName = accountNames(accounts);
+  const byPocket = Map.groupBy(movements, (movement) => movement.pocketId);
   const open = rows.filter((pocket) => pocket.state !== "archived");
-  const backingIds = [
-    ...new Set(open.flatMap((pocket) => (pocket.backingAccountId ? [pocket.backingAccountId] : []))),
-  ];
-  const [balances, expenses] = await Promise.all([
-    readingsAt(ctx, backingIds, todayOn),
-    expensesByPocket(ctx, open, accountName, todayOn),
-  ]);
-
-  const interestFrom = addDays(todayOn, -364);
-  const accruedByAccount = new Map(
-    await Promise.all(
-      backingIds.map(async (id) => [id, await accruedInterest(ctx, id, interestFrom, todayOn)] as const),
-    ),
-  );
-  const shareOf = (accountId: string | null, balanceCents: Cents): Cents | null => {
-    if (accountId === null) return null;
-    const accrued = accruedByAccount.get(accountId) ?? null;
-    const accountBalance = balances.get(accountId) ?? null;
-    if (accrued === null || accountBalance === null || accountBalance <= 0n || balanceCents <= 0n)
-      return null;
-    return (accrued * balanceCents * 2n + accountBalance) / (accountBalance * 2n);
-  };
-
-  const views: PocketView[] = open.map((pocket) => {
+  const expenses = await expensesByPocket(ctx, open, todayOn);
+  const ledgers = open.map((pocket) => {
     const own = byPocket.get(pocket.id) ?? [];
     // Withdrawals recorded by hand before expenses were counted still count, and are listed.
-    const manual: PocketExpense[] = own
+    const manual: Spend[] = own
       .filter((movement) => movement.kind === "withdrawal")
       .map((movement) => ({
         id: movement.id,
@@ -242,7 +221,7 @@ export async function pocketsView(
         cents: -movement.amountCents,
         payee: movement.reason,
         note: null,
-        accountName: null,
+        accountId: null,
         linked: false,
         manual: true,
       }));
@@ -251,7 +230,51 @@ export async function pocketsView(
       own.filter((movement) => movement.kind !== "withdrawal"),
       spent,
     );
-    const balanceCents = pocketBalance(ledger);
+    return { pocket, own, spent, ledger, balanceCents: pocketBalance(ledger) };
+  });
+  return { rows, ledgers };
+}
+
+/**
+ * What each open pocket has left (audit POC-1): the one balance Overview, the Pockets page, the API
+ * and the export share. The balance is derived, never stored, so it reads the ledger but nothing the
+ * page alone needs (planned expenses, balances of the accounts, interest).
+ */
+export async function pocketBalances(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+): Promise<{ pocket: Pocket; balanceCents: Cents }[]> {
+  const { ledgers } = await pocketLedgers(ctx, today(ctx.timeZone));
+  return ledgers.map(({ pocket, balanceCents }) => ({ pocket, balanceCents }));
+}
+
+/** Everything the Pockets pages render (spec §7.4), read once. */
+export async function pocketsView(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  now: Date = new Date(),
+): Promise<PocketsView> {
+  const todayOn = today(ctx.timeZone, now);
+  const thisMonth = monthKey(todayOn);
+  const months = monthsBetween(addMonths(thisMonth, -(HISTORY_MONTHS - 1)), thisMonth);
+  const [{ rows, ledgers }, planned, accounts] = await Promise.all([
+    pocketLedgers(ctx, todayOn),
+    getDb()
+      .select()
+      .from(pocketPlannedExpenses)
+      .where(userScoped(ctx).owns(pocketPlannedExpenses))
+      .orderBy(asc(pocketPlannedExpenses.dueOn), asc(pocketPlannedExpenses.id)),
+    listAccounts(ctx, { includeArchived: true }),
+  ]);
+  const accountName = accountNames(accounts);
+  const nameOf = (id: string | null) => (id === null ? null : (accountName.get(id) ?? null));
+  const backingIds = [
+    ...new Set(ledgers.flatMap(({ pocket }) => (pocket.backingAccountId ? [pocket.backingAccountId] : []))),
+  ];
+  const [balances, accrued] = await Promise.all([
+    readingsAt(ctx, backingIds, todayOn),
+    accruedInterestByAccount(ctx, backingIds, addDays(todayOn, -364), todayOn),
+  ]);
+
+  const views: PocketView[] = ledgers.map(({ pocket, own, spent, ledger, balanceCents }) => {
     const upcoming = planned
       .filter((row) => row.pocketId === pocket.id && plannedVisible(row.dueOn, todayOn))
       .map((row) => ({
@@ -262,27 +285,28 @@ export async function pocketsView(
         overdue: row.dueOn < todayOn,
       }));
     const plannedCents = upcoming.reduce<Cents>((sum, row) => sum + row.cents, 0n);
-    const interestCents = shareOf(pocket.backingAccountId, balanceCents);
+    const account = pocket.backingAccountId;
+    const interestCents =
+      account === null
+        ? null
+        : splitInterest(accrued.get(account) ?? null, balances.get(account) ?? null, balanceCents);
     return {
       pocket,
-      accountName: pocket.backingAccountId ? (accountName.get(pocket.backingAccountId) ?? null) : null,
+      accountName: nameOf(account),
       balanceCents,
+      percent: targetPercent(balanceCents, pocket.targetCents),
       budgetCents: pocketBudget(ledger),
       accruedCents: pocketBalance(own.filter((movement) => movement.kind === "accrual")),
       spentCents: -spent.reduce<Cents>((sum, row) => sum + row.cents, 0n),
       history: monthEndBalances(ledger, months),
-      expenses: spent,
+      expenses: spent.map(({ accountId, ...expense }) => ({ ...expense, accountName: nameOf(accountId) })),
       planned: upcoming,
       plannedCents,
       projectedCents: balanceCents - plannedCents,
       eta: etaMonths(pocket.targetCents, balanceCents, pocket.monthlyCents),
       interestCents,
       interestReason:
-        pocket.backingAccountId === null
-          ? "standalone"
-          : interestCents === null
-            ? "no_interest_data"
-            : "estimate",
+        account === null ? "standalone" : interestCents === null ? "no_interest_data" : "estimate",
     };
   });
 
@@ -310,12 +334,17 @@ export async function pocketsView(
     backingNames: backingIds.map((id) => accountName.get(id) ?? "").filter((name) => name !== ""),
     freeCents: free.freeCents,
     freeByAccount,
-    monthlyCents: open
-      .filter((pocket) => pocket.state === "active")
-      .reduce<Cents>((sum, pocket) => sum + (pocket.monthlyCents ?? 0n), 0n),
+    monthlyCents: monthlyOf(ledgers.map(({ pocket }) => pocket)),
     nextAccrual: addMonths(thisMonth, 1),
     accounts: accountOptions(accounts),
   };
+}
+
+/** What the active pockets are given each month. */
+function monthlyOf(open: readonly Pocket[]): Cents {
+  return open
+    .filter((pocket) => pocket.state === "active")
+    .reduce<Cents>((sum, pocket) => sum + (pocket.monthlyCents ?? 0n), 0n);
 }
 
 /** An expense "Link an expense" offers: positive amount, the person's own day. */
@@ -370,8 +399,30 @@ export async function expenseLinkCandidates(
 export async function pocketsTotal(
   ctx: Pick<Ctx, "userId" | "timeZone">,
 ): Promise<{ totalCents: Cents; monthlyCents: Cents; count: number }> {
-  const view = await pocketsView(ctx);
-  return { totalCents: view.earmarkedCents, monthlyCents: view.monthlyCents, count: view.pockets.length };
+  const balances = await pocketBalances(ctx);
+  return {
+    totalCents: pocketBalance(balances.map((row) => ({ amountCents: row.balanceCents }))),
+    monthlyCents: monthlyOf(balances.map((row) => row.pocket)),
+    count: balances.length,
+  };
+}
+
+/**
+ * The open pockets' names, by name: all of them, or those resting on one account. Names are unique
+ * per person (`pockets_user_name_uq`), so the order is the same whatever breaks a tie.
+ */
+function openPocketNames(ctx: Pick<Ctx, "userId">, accountId?: string) {
+  return getDb()
+    .select({ id: pockets.id, name: pockets.name })
+    .from(pockets)
+    .where(
+      and(
+        userScoped(ctx).owns(pockets),
+        ne(pockets.state, "archived"),
+        accountId === undefined ? undefined : eq(pockets.backingAccountId, accountId),
+      ),
+    )
+    .orderBy(asc(pockets.name), asc(pockets.id));
 }
 
 /** The open pockets resting on an account, for Account detail (design: "Pockets" row). */
@@ -379,17 +430,7 @@ export async function pocketsOnAccount(
   ctx: Pick<Ctx, "userId">,
   accountId: string,
 ): Promise<{ id: string; name: string }[]> {
-  return getDb()
-    .select({ id: pockets.id, name: pockets.name })
-    .from(pockets)
-    .where(
-      and(
-        userScoped(ctx).owns(pockets),
-        eq(pockets.backingAccountId, accountId),
-        ne(pockets.state, "archived"),
-      ),
-    )
-    .orderBy(asc(pockets.name), asc(pockets.id));
+  return openPocketNames(ctx, accountId);
 }
 
 /** Pockets by name, for the ⌘K palette (spec §8.2). */
@@ -399,10 +440,6 @@ export async function searchPockets(
 ): Promise<{ id: string; name: string }[]> {
   const needle = term.trim().toLocaleLowerCase();
   if (needle === "") return [];
-  const rows = await getDb()
-    .select({ id: pockets.id, name: pockets.name })
-    .from(pockets)
-    .where(and(userScoped(ctx).owns(pockets), ne(pockets.state, "archived")))
-    .orderBy(asc(pockets.name), desc(pockets.id));
+  const rows = await openPocketNames(ctx);
   return rows.filter((row) => row.name.toLocaleLowerCase().includes(needle)).slice(0, 5);
 }

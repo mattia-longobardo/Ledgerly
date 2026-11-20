@@ -442,7 +442,7 @@
     "packages/domain/src/modules/payroll/rules.ts": 8,
     "packages/domain/src/modules/payroll/service/reading.ts": 6,
     "packages/domain/src/modules/payroll/service/review.ts": 9,
-    "packages/domain/src/modules/pockets/queries.ts": 4,
+    "packages/domain/src/modules/pockets/queries.ts": 3,
     "packages/domain/src/modules/pockets/rules.ts": 2,
     "packages/domain/src/modules/subscriptions/queries.ts": 4,
     "packages/domain/src/modules/subscriptions/rules.ts": 9,

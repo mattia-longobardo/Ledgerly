@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { type MonthKey, isCivilDate } from "../../shared/dates";
-import type { Cents } from "../../shared/money";
+import { type Cents, wholePercent } from "../../shared/money";
 import { categoryFamily } from "../transactions/client";
 
 /** How close to the limit a budget turns "Near limit" (spec §7.3): spent ≥ 85 % of it. */
@@ -41,7 +41,7 @@ export function ratio(spent: Cents, limit: Cents) {
     /** Spent has passed `percent` of the limit. */
     passes: (percent: number | bigint) => scaled > limit * BigInt(percent),
     /** Spent as a whole percentage of the limit, rounded half-up; past 100 when over; 0 without a limit. */
-    percent: limit <= 0n ? 0 : Number((spent * 200n + limit) / (limit * 2n)),
+    percent: wholePercent(spent, limit),
   };
 }
 

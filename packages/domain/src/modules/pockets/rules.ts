@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { addDays, type CivilDate, lastDayOfMonth, type MonthKey } from "../../shared/dates";
-import type { Cents } from "../../shared/money";
+import { type Cents, wholePercent } from "../../shared/money";
 import { civilDate } from "../../shared/inputs";
 
 export const POCKET_STATES = ["active", "paused", "archived"] as const;
@@ -73,6 +73,26 @@ export function etaMonths(target: Cents | null, balance: Cents, monthly: Cents |
   if (monthly === null || monthly <= 0n) return null;
   const missing = target - balance;
   return Number((missing + monthly - 1n) / monthly);
+}
+
+/** How far a pocket is to its target: a whole percent, rounded half up; `null` without a target. */
+export function targetPercent(balance: Cents, target: Cents | null): number | null {
+  return target === null ? null : wholePercent(balance, target);
+}
+
+/**
+ * Spec §7.4 "stima" (audit POC-5): a pocket's share of what its backing account accrued in the last
+ * twelve months, `accrued × pocket ÷ account`, rounded half up. `null` — unknown, never zero —
+ * without an interest rule on the account, or without a positive balance on either side (plan F4
+ * §3.4.10).
+ */
+export function splitInterest(
+  accrued: Cents | null,
+  accountBalance: Cents | null,
+  pocketBalance: Cents,
+): Cents | null {
+  if (accrued === null || accountBalance === null || accountBalance <= 0n || pocketBalance <= 0n) return null;
+  return (accrued * pocketBalance * 2n + accountBalance) / (accountBalance * 2n);
 }
 
 /**

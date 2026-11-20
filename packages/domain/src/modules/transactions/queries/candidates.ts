@@ -122,7 +122,8 @@ export async function findMovements(
 export async function chargeCandidates(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   input: {
-    accountId: string | null;
+    /** One account, several in one query (audit POC-3), or every account. */
+    accountId: string | readonly string[] | null;
     from: CivilDate;
     to: CivilDate;
     /** `expense` by default; a PAC debit may reach the ledger as a giroconto too (F4). */
@@ -134,7 +135,7 @@ export async function chargeCandidates(
     to: input.to,
     sign: "out",
     types: input.types ?? ["expense"],
-    accountIds: input.accountId === null ? undefined : [input.accountId],
+    accountIds: input.accountId === null ? undefined : [input.accountId].flat(),
   });
 }
 

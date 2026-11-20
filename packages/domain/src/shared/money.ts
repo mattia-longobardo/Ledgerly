@@ -119,6 +119,15 @@ export function divRound(numerator: bigint, denominator: bigint): bigint {
 }
 
 /**
+ * `part` as a whole percentage of `whole`, rounded half up on the integer cents (`part × 200 + whole`
+ * over `whole × 2`, as the budgets have always rounded); past 100 when beyond; 0 without a positive
+ * whole. The one rule of a budget's and a pocket's progress.
+ */
+export function wholePercent(part: bigint, whole: bigint): number {
+  return whole <= 0n ? 0 : Number((part * 200n + whole) / (whole * 2n));
+}
+
+/**
  * A percentage as typed, already in plain decimal form ("2.75", "26"), as the fraction a rate
  * column stores ("0.0275"), exactly: the point moves two places, no float. Up to four decimals of a
  * percent (six of the fraction).

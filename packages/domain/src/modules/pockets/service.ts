@@ -1,6 +1,6 @@
 import { and, asc, eq, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
 import { requireOpenAccount, isFutureDate } from "../accounts";
-import { transactionsByIds } from "../transactions/queries";
+import { transactionsByIds } from "../transactions";
 import type { Ctx } from "../../platform/context";
 import { addDays, type CivilDate, type MonthKey, monthKey, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";

@@ -389,26 +389,38 @@ export async function accruedInterest(
   from: CivilDate,
   to: CivilDate,
 ): Promise<Cents | null> {
-  const rules = await getDb()
-    .select({ id: interestRules.id })
+  return (await accruedInterestByAccount(ctx, [accountId], from, to)).get(accountId) ?? null;
+}
+
+/**
+ * `accruedInterest` of several accounts in one query (audit POC-3, POC-5: the read port pockets
+ * uses). An account with no rule is absent from the map; one with rules and no accrual has zero.
+ */
+export async function accruedInterestByAccount(
+  ctx: Pick<Ctx, "userId">,
+  accountIds: readonly string[],
+  from: CivilDate,
+  to: CivilDate,
+): Promise<Map<string, Cents>> {
+  if (accountIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({
+      accountId: interestRules.accountId,
+      net: sql<string | null>`sum(${interestAccruals.netCents})`,
+    })
     .from(interestRules)
-    .where(and(userScoped(ctx).owns(interestRules), eq(interestRules.accountId, accountId)));
-  if (rules.length === 0) return null;
-  const [row] = await getDb()
-    .select({ net: sql<string | null>`sum(${interestAccruals.netCents})` })
-    .from(interestAccruals)
-    .where(
+    .leftJoin(
+      interestAccruals,
       and(
+        eq(interestAccruals.ruleId, interestRules.id),
         userScoped(ctx).owns(interestAccruals),
-        inArray(
-          interestAccruals.ruleId,
-          rules.map((rule) => rule.id),
-        ),
         gte(interestAccruals.on, from),
         lt(interestAccruals.on, addDays(to, 1)),
       ),
-    );
-  return BigInt(row?.net ?? "0");
+    )
+    .where(and(userScoped(ctx).owns(interestRules), inArray(interestRules.accountId, [...accountIds])))
+    .groupBy(interestRules.accountId);
+  return new Map(rows.map((row) => [row.accountId, BigInt(row.net ?? "0")]));
 }
 
 // ——— What rests on an account (PERS-419) ——————————————————————————————————————————————————————
