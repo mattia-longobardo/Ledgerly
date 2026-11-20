@@ -3,7 +3,22 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
-## 2026-11-20 · pockets (0.45.0)
+## 2026-11-20 · the budgets' percentages and the categories' board (0.45.0)
+
+- `GET /budgets/view`: `totals.percent` (new), spent as a whole percentage of the limit, with the rule
+  of a row's `percent` (rounded half-up, past 100 when over).
+- `GET /budgets/{budget}`: `percent` and `remaining` (new) on every month of `history` — the rule of a
+  row's `percent`, and `limit − spent`, negative when over; both null in a month without a limit.
+- `GET /categories/board?from=&to=&accounts=` (new, `read`): Expenses › Categories in a period.
+  `macros`, always Income, Expenses, Transfers: `macro`, `count`, `total` (signed), `in` and `out`
+  (positive); `groups` (biggest first), each a line plus `only` (`total`, `count` of the movements on
+  the group itself; null when none) and `children` (lines); `rest` (`count`, `total`, `in`, `out` of
+  the movements without a category; null when none). A line: `id`, `name`, `parentId`, `type`,
+  `color` (as drawn: its own, its group's or the palette's), `chosenColor` (null when none),
+  `archived`, `canMerge`, `usage` (movements ever), `count`, `total`, `in`, `out`, `share` (0-100,
+  one decimal; 0 under Transfers), `budget` (`limit`, `status` on every account in the period's last
+  month; null when none) and `source` (`provider`, `name`, `names`; null when none). No MCP tool.
+
 
 - `GET /pockets` (new, `read`): the Pockets page — the open pockets (`id`, `name`, `color`, `state`,
   `accountId`, `account`, `startMonth`, `target`, `monthly`, `balance`, `percent` of the target, whole,

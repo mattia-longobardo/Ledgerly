@@ -82,7 +82,8 @@ export const getBudgetsView = defineRoute({
   response: z.object({
     month: monthStart(),
     budgets: z.array(budgetLine),
-    totals: z.object({ limit: money(), spent: money(), remaining: money() }),
+    /** `percent` as a row's: spent as a whole percentage of the limit, rounded half-up. */
+    totals: z.object({ limit: money(), spent: money(), remaining: money(), percent: z.number().int() }),
     unbudgeted: money(),
     /** The month's spending with no category yet: in no category budget until a person files it. */
     toCategorise: z.object({ count: z.number().int(), amount: money() }),
@@ -97,7 +98,7 @@ export const getBudgetsView = defineRoute({
     response: {
       month: "2026-10-01",
       budgets: [BUDGET_LINE_EXAMPLE],
-      totals: { limit: "300.00", spent: "255.00", remaining: "45.00" },
+      totals: { limit: "300.00", spent: "255.00", remaining: "45.00", percent: 85 },
       unbudgeted: "40.00",
       toCategorise: { count: 2, amount: "18.40" },
       categories: [{ id: CATEGORY_ID, name: "Groceries", color: "#3366cc", depth: 0 }],
@@ -137,7 +138,17 @@ export const getBudget = defineRoute({
   query: byMonth,
   response: z.object({
     budget: budgetLine,
-    history: z.array(z.object({ month: monthStart(), limit: money().nullable(), spent: money() })),
+    history: z.array(
+      z.object({
+        month: monthStart(),
+        limit: money().nullable(),
+        spent: money(),
+        /** As a row's `percent`; null in a month without a limit. */
+        percent: z.number().int().nullable(),
+        /** `limit - spent`, negative when over; null in a month without a limit. */
+        remaining: money().nullable(),
+      }),
+    ),
     alerts: alertSettings,
   }),
   errors: ["invalid", "not_found"],
@@ -146,7 +157,7 @@ export const getBudget = defineRoute({
     query: { month: "2026-10" },
     response: {
       budget: BUDGET_LINE_EXAMPLE,
-      history: [{ month: "2026-09-01", limit: "300.00", spent: "281.10" }],
+      history: [{ month: "2026-09-01", limit: "300.00", spent: "281.10", percent: 94, remaining: "18.90" }],
       alerts: { enabled: true, thresholds: [85, 100] },
     },
   },

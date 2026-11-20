@@ -5737,12 +5737,37 @@
                           "spent": {
                             "type": "string",
                             "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "percent": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "remaining": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
                           "month",
                           "limit",
-                          "spent"
+                          "spent",
+                          "percent",
+                          "remaining"
                         ]
                       }
                     },
@@ -6556,12 +6581,18 @@
                         "remaining": {
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "percent": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
                         "limit",
                         "spent",
-                        "remaining"
+                        "remaining",
+                        "percent"
                       ]
                     },
                     "unbudgeted": {
@@ -8343,6 +8374,523 @@
           },
           "409": {
             "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/categories/board": {
+      "get": {
+        "operationId": "get_categories_board",
+        "summary": "Expenses › Categories in a period: Income, Expenses and Transfers with their totals, their groups (the movements on the group itself in `only`) and categories, the biggest first, and the movements without a category in `rest`.",
+        "tags": [
+          "categories"
+        ],
+        "parameters": [
+          {
+            "name": "accounts",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4000
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "macros": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "macro": {
+                            "type": "string",
+                            "enum": [
+                              "income",
+                              "expense",
+                              "transfer"
+                            ]
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "total": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "in": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "out": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "groups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "parentId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "income",
+                                    "expense",
+                                    "transfer"
+                                  ]
+                                },
+                                "color": {
+                                  "type": "string",
+                                  "pattern": "^#[0-9a-fA-F]{6}$"
+                                },
+                                "chosenColor": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^#[0-9a-fA-F]{6}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "archived": {
+                                  "type": "boolean"
+                                },
+                                "canMerge": {
+                                  "type": "boolean"
+                                },
+                                "usage": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "count": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "total": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "in": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "out": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "share": {
+                                  "type": "number"
+                                },
+                                "budget": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "limit": {
+                                          "type": "string",
+                                          "pattern": "^-?\\d+\\.\\d{2}$"
+                                        },
+                                        "status": {
+                                          "type": "string",
+                                          "enum": [
+                                            "over",
+                                            "near",
+                                            "on_track"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "limit",
+                                        "status"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "source": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "provider": {
+                                          "type": "string"
+                                        },
+                                        "name": {
+                                          "type": "string"
+                                        },
+                                        "names": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        }
+                                      },
+                                      "required": [
+                                        "provider",
+                                        "name",
+                                        "names"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "only": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "total": {
+                                          "type": "string",
+                                          "pattern": "^-?\\d+\\.\\d{2}$"
+                                        },
+                                        "count": {
+                                          "type": "integer",
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "total",
+                                        "count"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "children": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "parentId": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "format": "uuid",
+                                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "type": {
+                                        "type": "string",
+                                        "enum": [
+                                          "income",
+                                          "expense",
+                                          "transfer"
+                                        ]
+                                      },
+                                      "color": {
+                                        "type": "string",
+                                        "pattern": "^#[0-9a-fA-F]{6}$"
+                                      },
+                                      "chosenColor": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "pattern": "^#[0-9a-fA-F]{6}$"
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "archived": {
+                                        "type": "boolean"
+                                      },
+                                      "canMerge": {
+                                        "type": "boolean"
+                                      },
+                                      "usage": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "total": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "in": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "out": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "share": {
+                                        "type": "number"
+                                      },
+                                      "budget": {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "limit": {
+                                                "type": "string",
+                                                "pattern": "^-?\\d+\\.\\d{2}$"
+                                              },
+                                              "status": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "over",
+                                                  "near",
+                                                  "on_track"
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "limit",
+                                              "status"
+                                            ]
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      },
+                                      "source": {
+                                        "anyOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "provider": {
+                                                "type": "string"
+                                              },
+                                              "name": {
+                                                "type": "string"
+                                              },
+                                              "names": {
+                                                "type": "array",
+                                                "items": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            },
+                                            "required": [
+                                              "provider",
+                                              "name",
+                                              "names"
+                                            ]
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "id",
+                                      "name",
+                                      "parentId",
+                                      "type",
+                                      "color",
+                                      "chosenColor",
+                                      "archived",
+                                      "canMerge",
+                                      "usage",
+                                      "count",
+                                      "total",
+                                      "in",
+                                      "out",
+                                      "share",
+                                      "budget",
+                                      "source"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "parentId",
+                                "type",
+                                "color",
+                                "chosenColor",
+                                "archived",
+                                "canMerge",
+                                "usage",
+                                "count",
+                                "total",
+                                "in",
+                                "out",
+                                "share",
+                                "budget",
+                                "source",
+                                "only",
+                                "children"
+                              ]
+                            }
+                          },
+                          "rest": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "count": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "total": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  "in": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  "out": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  }
+                                },
+                                "required": [
+                                  "count",
+                                  "total",
+                                  "in",
+                                  "out"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "macro",
+                          "count",
+                          "total",
+                          "in",
+                          "out",
+                          "groups",
+                          "rest"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "macros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
             "content": {
               "application/json": {
                 "schema": {

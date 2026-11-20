@@ -143,7 +143,12 @@ describe("the routes of budgets", () => {
       [groupSlug, "Home", 0, "159.50"],
       [childSlug, "Home › Food", 0, "-0.50"],
     ]);
-    expect(view.body.totals).toEqual({ limit: "300.00", spent: "140.50", remaining: "159.50" });
+    expect(view.body.totals).toEqual({ limit: "300.00", spent: "140.50", remaining: "159.50", percent: 47 });
+    // The page's `percentOf(totals.spent, totals.limit)`, from the domain's own view.
+    const month = await budgets.budgetsView(alice, "2026-10-01");
+    expect(view.body.totals.percent).toBe(
+      budgets.percentOf(month.totals.spentCents, month.totals.limitCents),
+    );
     expect(view.body.toCategorise.amount).toMatch(/^\d+\.\d{2}$/);
     expect(view.body.firstMonth).toBe("2026-10-01");
 
@@ -153,7 +158,13 @@ describe("the routes of budgets", () => {
     const detail = await send(alice, "GET", `/budgets/${childSlug}?month=${MONTH}`);
     expect(detail.body.budget).toEqual(view.body.budgets[1]);
     expect(detail.body.history).toHaveLength(6);
-    expect(detail.body.history[0]).toEqual({ month: "2026-09-01", limit: null, spent: "0.00" });
+    expect(detail.body.history[0]).toEqual({
+      month: "2026-09-01",
+      limit: null,
+      spent: "0.00",
+      percent: null,
+      remaining: null,
+    });
     expect(detail.body.alerts).toEqual({ enabled: true, thresholds: [85, 100] });
 
     const alerts = await send(alice, "PUT", `/budgets/${childSlug}/alerts`, {
@@ -173,6 +184,35 @@ describe("the routes of budgets", () => {
 
     expect((await send(alice, "POST", `/budgets/${childSlug}/stop`, { month: MONTH })).status).toBe(204);
     expect((await send(alice, "GET", `/budgets/${childSlug}?month=${MONTH}`)).status).toBe(404);
+  });
+
+  it("answers each month of a budget's history with the page's percent and what is left", async () => {
+    const { account, group } = await seed(alice);
+    const slug = `${group}_all`;
+    // September over its limit, August without one; October is the month asked for.
+    await send(alice, "PUT", `/budgets/${slug}/limit`, { month: "2026-09", amount: "100" });
+    const spent = await send(alice, "POST", "/transactions/manual", {
+      kind: "expense",
+      amount: "150",
+      on: "2026-09-10",
+      accountId: account,
+      categoryId: group,
+      payee: "Shop",
+      note: "",
+      key: crypto.randomUUID(),
+    });
+    expect(spent.status).toBe(201);
+    const history = (await send(alice, "GET", `/budgets/${slug}?month=${MONTH}`)).body.history;
+    expect(history.slice(0, 2)).toEqual([
+      { month: "2026-09-01", limit: "100.00", spent: "150.00", percent: 150, remaining: "-50.00" },
+      { month: "2026-08-01", limit: null, spent: "0.00", percent: null, remaining: null },
+    ]);
+    const detail = await budgets.budgetDetail(alice, { categoryId: group, accountId: null }, "2026-10-01");
+    expect(history.map((row: { percent: number | null }) => row.percent)).toEqual(
+      detail!.history.map((past) =>
+        past.limitCents === null ? null : budgets.percentOf(past.spentCents, past.limitCents),
+      ),
+    );
   });
 
   it("refuses what is not an amount, a month or a budget", async () => {

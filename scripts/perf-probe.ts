@@ -15,7 +15,7 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { accountsView, listBalanceEntries } from "@domain/modules/accounts/queries";
+import { accountsView, listAccounts, listBalanceEntries } from "@domain/modules/accounts/queries";
 import { accounts, balanceEntries } from "@domain/modules/accounts/schema";
 import { budgetsView } from "@domain/modules/budgets/queries";
 import { setLimit } from "@domain/modules/budgets/service";
@@ -40,7 +40,9 @@ import {
 import { createSubscription } from "@domain/modules/subscriptions/service";
 import { timeOffView } from "@domain/modules/timeoff/queries";
 import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
-import { expensesView } from "@domain/modules/transactions/queries";
+import { categoryMacroTotals, expensesView, facetCounts } from "@domain/modules/transactions/queries";
+import { listCategoriesWithUsage } from "@domain/modules/transactions/taxonomy";
+import { sourceNotes } from "../apps/web/src/app/(app)/settings/categories/source";
 import { categories, transactions } from "@domain/modules/transactions/schema";
 // `/api/v1` as the web serves it, `apps/api` included (R2).
 import { api } from "../apps/web/src/app/api/v1/[[...route]]/composition";
@@ -356,6 +358,19 @@ const views: [string, () => Promise<unknown>, { fromCleanHeap: boolean }?][] = [
   ["Budgets", () => budgetsView(ctx, thisMonth)],
   ["Subscriptions", async () => [await subscriptionsView(ctx), await suggestions(ctx)]],
   ["Time Off (anno)", () => timeOffView(ctx, thisYear)],
+  // Expenses › Categories, the reads of its page for the current month; `GET /categories/board` below.
+  [
+    "Categories (mese corrente)",
+    () =>
+      Promise.all([
+        listCategoriesWithUsage(ctx, { includeArchived: true }),
+        categoryMacroTotals(ctx, { from: thisMonth, to: todayOn }),
+        listAccounts(ctx, { includeArchived: true }),
+        facetCounts(ctx, { from: thisMonth, to: todayOn }),
+        budgetsView(ctx, thisMonth),
+        sourceNotes(ctx),
+      ]),
+  ],
 ];
 for (const [name, run, options] of views) {
   measured.views[name] = await timed(5, run, options?.fromCleanHeap);
@@ -408,6 +423,7 @@ const routes: [string, () => Promise<void>][] = [
   ["GET /net-worth", () => call("GET", "/net-worth")],
   ["GET /investments", () => call("GET", "/investments")],
   ["GET /investments/:accountId/holdings", () => call("GET", `/investments/${brokers[0]}/holdings`)],
+  ["GET /categories/board", () => call("GET", `/categories/board?from=${thisMonth}&to=${todayOn}`)],
 ];
 for (const [name, run] of routes) {
   resetRateLimits();

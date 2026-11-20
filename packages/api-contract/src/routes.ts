@@ -14,6 +14,7 @@ import * as search from "./search";
 import type { RouteContract } from "./route";
 import * as banks from "./settings/banks";
 import * as categories from "./settings/categories";
+import * as categoryBoard from "./settings/category-board";
 import * as connections from "./settings/connections";
 import * as labels from "./settings/labels";
 import * as people from "./settings/people";
@@ -33,6 +34,7 @@ export const SETTINGS = {
   people,
   server,
   categories,
+  categoryBoard,
   labels,
   connections,
   banks,
@@ -45,6 +47,7 @@ export const SETTINGS_ROUTES: readonly RouteContract[] = [
   ...Object.values(people),
   ...Object.values(server),
   ...Object.values(categories),
+  ...Object.values(categoryBoard),
   ...Object.values(labels),
   ...Object.values(connections),
   ...Object.values(banks),

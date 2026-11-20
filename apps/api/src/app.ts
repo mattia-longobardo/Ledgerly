@@ -7,6 +7,7 @@ import { servePockets } from "./pockets/routes";
 import { metaApi } from "./meta";
 import type { ApiEnv, Guard } from "./serve";
 import { serveTaxonomy } from "./settings/categories";
+import { serveCategoryBoard } from "./settings/category-board";
 import { serveCategoryMoves } from "./settings/category-moves";
 import { type ConnectionCases, serveConnections } from "./settings/connections";
 import { serveProfile } from "./settings/profile";
@@ -47,6 +48,7 @@ export function apiRoutes({
     ...serveProfile(app, guard),
     ...serveTaxonomy(app, guard),
     ...serveCategoryMoves(app, guard, sourceName),
+    ...serveCategoryBoard(app, guard, sourceName),
     ...serveConnections(app, guard, connections),
     ...serveSecurityAndPeople(app, guard),
     ...serveServer(app, guard, server),
