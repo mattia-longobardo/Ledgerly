@@ -15,6 +15,7 @@ export async function generateMetadata({ params }: PageProps<"/accounts/[id]">):
  * An account's page reads everything it shows from `/api/v1` (rewrite plan R3). One read stays
  * here: whether the account exists, so that an account that does not answers HTTP 404, which only
  * the server can say (`getAccount` finds an archived account too: its page offers «Restore account»).
+ * M10: a necessary server read, with the page's title (decision A, 20/11/2026, PERS-463).
  */
 export default async function AccountDetailPage({ params }: PageProps<"/accounts/[id]">) {
   const ctx = await requireSession();
