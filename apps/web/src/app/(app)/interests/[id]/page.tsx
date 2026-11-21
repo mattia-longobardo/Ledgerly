@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getTranslations } from "next-intl/server";
-import { categoryOptions } from "@ledgerly/domain/transactions";
 import { InterestError, ruleDetail } from "@ledgerly/domain/interests";
 import { requireSession } from "@/platform/auth/session";
 import { RuleScreen } from "./rule-screen";
@@ -26,12 +25,9 @@ export async function generateMetadata({ params }: PageProps<"/interests/[id]">)
   return { title: `${(await getTranslations("interests"))("title")} · ${await nameOf((await params).id)}` };
 }
 
-/**
- * One rule (plan F4 §3.6.12): its payouts reconciled with what was paid (spec §7.6), and its days.
- * shortcut: the picker's income categories are a server read, as on the list (see `../page.tsx`).
- */
+/** One rule (plan F4 §3.6.12): its payouts reconciled with what was paid (spec §7.6), and its days. */
 export default async function RulePage({ params }: PageProps<"/interests/[id]">) {
   const { id } = await params;
   await nameOf(id);
-  return <RuleScreen id={id} categories={await categoryOptions(await requireSession(), "income")} />;
+  return <RuleScreen id={id} />;
 }

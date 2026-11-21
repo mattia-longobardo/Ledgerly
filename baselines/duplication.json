@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100418,
+    "lines": 100430,
     "duplicatedLines": 16211,
     "percent": 16.14,
     "blocks": 1217
@@ -126,6 +126,12 @@
     },
     "platform/backup": {
       "lines": 153,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
+    },
+    "platform/category-options": {
+      "lines": 12,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0

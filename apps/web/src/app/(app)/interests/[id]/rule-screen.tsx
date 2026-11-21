@@ -10,7 +10,6 @@ import type { RouteOutput } from "@ledgerly/api-client";
 import { civilDateIn } from "@ledgerly/format/dates";
 import { formatDate } from "@ledgerly/format/format";
 import { Card, CardHeader } from "@ledgerly/ui/card";
-import type { CategoryOption } from "@ledgerly/ui/category-picker";
 import { cn } from "@ledgerly/ui/cn";
 import { useApi } from "@ledgerly/ui/data";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
@@ -28,6 +27,7 @@ import {
   useFormat,
   useTierChips,
 } from "@/modules/interests/client";
+import { useCategoryOptions } from "@/platform/category-options";
 
 type Detail = RouteOutput<typeof interests.getInterestRule>;
 type Settlement = Detail["settlements"][number];
@@ -307,16 +307,17 @@ function Days({ detail, format }: Props) {
   );
 }
 
-/** `categories`: the income categories of the dialog's picker, from the page (see `page.tsx`). */
-export function RuleScreen({ id, categories }: { id: string; categories: readonly CategoryOption[] }) {
+export function RuleScreen({ id }: { id: string }) {
   const text = useTranslations("interests");
   const read = useApi(interests.getInterestRule, { params: { id } });
   // The accounts a rule can move to, each saying whether it can publish: the dialog's list.
   const accounts = useApi(interests.listInterestRules, {}).data?.accounts;
   const format = useFormat();
+  // An interest payout is income: those are the categories a published settlement is filed under.
+  const categories = useCategoryOptions("income");
   const detail = read.data;
   const rule = detail?.rule;
-  const actions = rule && format && accounts && (
+  const actions = rule && format && accounts && categories && (
     <>
       <RuleStateButton
         id={rule.id}

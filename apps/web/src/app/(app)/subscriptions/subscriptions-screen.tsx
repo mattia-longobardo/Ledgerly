@@ -33,6 +33,7 @@ import {
   SubscriptionsTable,
   SuggestionsButton,
 } from "@/modules/subscriptions/client";
+import { useCategoryOptions } from "@/platform/category-options";
 
 type View = RouteOutput<typeof subscriptionRoutes.listSubscriptions>;
 
@@ -320,9 +321,10 @@ function SubscriptionsView({ view, context, suggest }: { view: View; context: Co
 }
 
 /** What the screen knows of the person and offers the dialog, once its reads are in. */
-function useContext(view: View | undefined, categories: DialogOptions["categories"]): Context | undefined {
+function useContext(view: View | undefined): Context | undefined {
   const prefs = useApi(profile.getPreferences, {}).data;
-  if (!prefs || !view) return undefined;
+  const categories = useCategoryOptions("expense");
+  if (!prefs || !view || !categories) return undefined;
   const numberFormat = numberStyle(prefs);
   return {
     numberFormat,
@@ -333,12 +335,11 @@ function useContext(view: View | undefined, categories: DialogOptions["categorie
   };
 }
 
-/** `categories`: the picker's, from the page (see `page.tsx`). */
-export function SubscriptionsScreen({ categories }: { categories: DialogOptions["categories"] }) {
+export function SubscriptionsScreen() {
   const text = useTranslations("subscriptions");
   const read = useApi(subscriptionRoutes.listSubscriptions, {});
   const suggested = useApi(subscriptionRoutes.listSubscriptionSuggestions, {}).data;
-  const context = useContext(read.data, categories);
+  const context = useContext(read.data);
   const suggest = context && suggested && (
     <SuggestionsButton
       suggestions={suggested.suggestions.map((one) => presentSuggestion(one, text, context))}

@@ -598,6 +598,7 @@ export const MODULES: Module[] = [
       "apps/web/src/platform/route.ts",
       "apps/web/src/platform/router.tsx",
       "apps/web/src/platform/writes.ts",
+      "apps/web/src/platform/category-options.ts",
       "scripts/tokens.ts",
       "apps/web/src/app/error.tsx",
       "apps/web/src/app/global-error.tsx",

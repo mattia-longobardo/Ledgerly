@@ -27,6 +27,7 @@ import {
   useFormat,
   useTierChips,
 } from "@/modules/interests/client";
+import { useCategoryOptions } from "@/platform/category-options";
 
 type View = RouteOutput<typeof interests.listInterestRules>;
 
@@ -145,15 +146,17 @@ function Rules(props: Props) {
   );
 }
 
-/** `categories`: the income categories of the dialog's picker, from the page (see `page.tsx`). */
-export function InterestsScreen({ categories }: { categories: readonly CategoryOption[] }) {
+export function InterestsScreen() {
   const text = useTranslations("interests");
   const read = useApi(interests.listInterestRules, {});
   const format = useFormat();
+  // An interest payout is income: those are the categories a published settlement is filed under.
+  const categories = useCategoryOptions("income");
   const view = read.data;
   const add = (label: string) =>
     view &&
-    format && (
+    format &&
+    categories && (
       <RuleButton
         draft={newDraft(view.accounts, format.today)}
         accounts={view.accounts}
@@ -178,7 +181,7 @@ export function InterestsScreen({ categories }: { categories: readonly CategoryO
       </div>
       <Loaded state={read}>
         {(loaded) =>
-          !format ? null : loaded.rules.length === 0 ? (
+          !format || !categories ? null : loaded.rules.length === 0 ? (
             <EmptyState
               title={text("empty.title")}
               description={text("empty.description")}
