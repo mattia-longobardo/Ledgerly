@@ -34,6 +34,8 @@ export interface AccrualSum {
   grossCents: Cents;
   /** Net accrued and not settled yet, on any day. */
   pendingCents: Cents;
+  /** Gross of the same unsettled days, rounded once, half-up. */
+  pendingGrossCents: Cents;
 }
 
 /**
@@ -58,6 +60,7 @@ export async function sumAccruals(
       net: sql<string>`coalesce(sum(${interestAccruals.netCents}) filter (where ${inWindow ?? sql`true`}), 0)`,
       gross: sql<string>`coalesce(sum(${interestAccruals.gross}) filter (where ${inWindow ?? sql`true`}), 0)`,
       pending: sql<string>`coalesce(sum(${interestAccruals.netCents}) filter (where ${isNull(interestAccruals.entryId)}), 0)`,
+      pendingGross: sql<string>`coalesce(sum(${interestAccruals.gross}) filter (where ${isNull(interestAccruals.entryId)}), 0)`,
     })
     .from(interestRules)
     .leftJoin(
@@ -86,6 +89,7 @@ export async function sumAccruals(
         netCents: BigInt(row.net),
         grossCents: roundToCents(fixedFromDecimal(row.gross)),
         pendingCents: BigInt(row.pending),
+        pendingGrossCents: roundToCents(fixedFromDecimal(row.pendingGross)),
       },
     ]),
   );

@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 103026,
-    "duplicatedLines": 16678,
-    "percent": 16.19,
-    "blocks": 1259
+    "lines": 103042,
+    "duplicatedLines": 16690,
+    "percent": 16.2,
+    "blocks": 1260
   },
   "units": {
     "api": {
@@ -59,10 +59,10 @@
       "blocks": 16
     },
     "modules/interests": {
-      "lines": 2436,
-      "duplicatedLines": 441,
-      "percent": 18.1,
-      "blocks": 32
+      "lines": 2452,
+      "duplicatedLines": 453,
+      "percent": 18.47,
+      "blocks": 33
     },
     "modules/investments": {
       "lines": 10155,
@@ -624,7 +624,7 @@
     "modules/imports/schema.ts": 84,
     "modules/imports/service/index.ts": 88,
     "modules/interests/jobs.ts": 21,
-    "modules/interests/queries.ts": 45,
+    "modules/interests/queries.ts": 57,
     "modules/interests/rules.ts": 14,
     "modules/interests/schema.ts": 128,
     "modules/interests/service/accruals.ts": 7,

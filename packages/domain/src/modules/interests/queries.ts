@@ -36,23 +36,34 @@ export interface RuleRow {
   accountName: string;
   /** Net accrued this year (`accruedYtd`): the list, the export and the rule's page show this one. */
   accruedYtdCents: Cents;
-  /** Gross accrued since 1 January, rounded once. */
+  /** Gross of the same year to date (`grossYtd`): never below the net. */
   grossYtdCents: Cents;
   /** The day the period under way settles; `null` for a paused or ended rule. */
   nextPayout: CivilDate | null;
 }
 
-type EntryAmount = Pick<InterestEntry, "periodFrom" | "netCents">;
+type EntryAmount = Pick<InterestEntry, "periodFrom" | "netCents" | "grossCents">;
 
 /**
- * Net accrued this year: the settlements that start this year, plus what is not settled yet — days of
- * last year included until their settlement. The one figure of the list and of the rule's page.
+ * The year to date, net and gross: the settlements that start this year, plus what is not settled
+ * yet — days of last year included until their settlement. The one figure of the list and of the
+ * rule's page.
  */
-function accruedYtd(entries: readonly EntryAmount[], pendingCents: Cents, todayOn: CivilDate): Cents {
+function yearToDate(
+  entries: readonly EntryAmount[],
+  sum: AccrualSum | undefined,
+  todayOn: CivilDate,
+): { netCents: Cents; grossCents: Cents } {
   const year = todayOn.slice(0, 4);
   return entries
     .filter((entry) => entry.periodFrom.startsWith(year))
-    .reduce((total, entry) => total + entry.netCents, pendingCents);
+    .reduce(
+      (total, entry) => ({
+        netCents: total.netCents + entry.netCents,
+        grossCents: total.grossCents + entry.grossCents,
+      }),
+      { netCents: sum?.pendingCents ?? 0n, grossCents: sum?.pendingGrossCents ?? 0n },
+    );
 }
 
 /** A rule with its year to date (INT-4: `sumAccruals`) and its next payout. */
@@ -69,12 +80,13 @@ function ruleRow(
   const period = periodOf(rule.settlement, parts.todayOn);
   const running = rule.state === "active" && (rule.validTo === null || rule.validTo >= parts.todayOn);
   const end = rule.validTo !== null && rule.validTo < period.to ? rule.validTo : period.to;
+  const ytd = yearToDate(parts.entries, parts.sum, parts.todayOn);
   return {
     rule,
     tiers: parts.tiers,
     accountName: parts.accountName,
-    accruedYtdCents: accruedYtd(parts.entries, parts.sum?.pendingCents ?? 0n, parts.todayOn),
-    grossYtdCents: parts.sum?.grossCents ?? 0n,
+    accruedYtdCents: ytd.netCents,
+    grossYtdCents: ytd.grossCents,
     nextPayout: running ? addDays(end, 1) : null,
   };
 }
@@ -105,6 +117,7 @@ export async function interestsView(
         ruleId: interestEntries.ruleId,
         periodFrom: interestEntries.periodFrom,
         netCents: interestEntries.netCents,
+        grossCents: interestEntries.grossCents,
       })
       .from(interestEntries)
       .where(

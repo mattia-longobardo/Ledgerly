@@ -202,6 +202,9 @@ describe("the rest of the page", () => {
     const page = await ruleDetail(ctx, created.id);
     expect(page.accruedYtdCents).toBe(1_900n);
     expect(row.accruedYtdCents).toBe(page.accruedYtdCents);
+    // The gross reads the same days (Mattia, 2026-11-21): the net never exceeds it.
+    expect(row.grossYtdCents).toBe(page.grossYtdCents);
+    expect(row.grossYtdCents >= row.accruedYtdCents).toBe(true);
   });
 
   it("refuses bad tiers, publishing from a manual account, and archives the account it is on", async () => {

@@ -9,7 +9,8 @@ written before it keeps working.
   are now the figure of the rule's page — the settlements that start this year plus what is not
   settled yet — instead of the accruals since 1 January. `GET /interests/{id}` answers the same figure
   in `accruedYtd` and `rule.accruedYtd`. The two differed while days of last year waited for their
-  settlement, for example on a rule paused across the new year. `grossYtd` is as before.
+  settlement, for example on a rule paused across the new year. `grossYtd` (rules and totals) reads
+  the same days, gross, so the net never exceeds it.
 
 ## 2026-11-21 · investments
 
