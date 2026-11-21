@@ -2,6 +2,7 @@ import { type Cents } from "../../shared/money";
 import { addDays, type CivilDate, lastDayOfMonth, type MonthKey, monthKey } from "../../shared/dates";
 import { SOURCE_PRECEDENCE } from "../accounts";
 import { moneyWeighted, type Xirr } from "../../shared/returns";
+import type { PeriodDays } from "../../shared/period";
 import { type MovementLike, valuePoints } from "./pension/metrics";
 import { accruedTotal, type OperationLike, pendingQuarters, type QuarterStatus } from "./pension/reconcile";
 import { netOfFees, NO_FEES, type PensionFees } from "./pension/rules";
@@ -196,21 +197,9 @@ export function fundFlows(
   return flows.sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
 }
 
-/** A span of days, both ends included. `from` is `null` for "All". */
-export interface FundPeriod {
-  from: CivilDate | null;
-  to: CivilDate;
-}
-
-export function allPeriod(todayOn: CivilDate): FundPeriod {
-  return { from: null, to: todayOn };
-}
-
-/** A calendar year, up to today while it runs. */
-export function yearPeriod(year: number, todayOn: CivilDate): FundPeriod {
-  const end = `${year}-12-31`;
-  return { from: `${year}-01-01`, to: end < todayOn ? end : todayOn };
-}
+/** A span of days, both ends included, `from` `null` for "All": the shared period's days. */
+export type { PeriodDays as FundPeriod };
+export { allPeriod, yearPeriod } from "../../shared/period";
 
 /**
  * The last day whose reading still describes a span ending on `to`. A value recorded on the 1st
@@ -259,7 +248,7 @@ export interface PeriodMeasure {
   notInValueCents: Cents;
 }
 
-const inCalendar = (flow: FundFlow, period: FundPeriod) =>
+const inCalendar = (flow: FundFlow, period: PeriodDays) =>
   (period.from === null || flow.on >= period.from) && flow.on <= period.to;
 
 /** Σ of the origins of flows or of measures. */
@@ -302,7 +291,7 @@ export function startOf(
 export function measurePeriod(input: {
   points: readonly ValuePoint[];
   flows: readonly FundFlow[];
-  period: FundPeriod;
+  period: PeriodDays;
 }): PeriodMeasure {
   const { flows, period } = input;
   const points = [...input.points].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));

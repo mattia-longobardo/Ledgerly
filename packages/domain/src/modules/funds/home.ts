@@ -4,6 +4,7 @@
 import { type CivilDate, daysBetween, lastDayOfMonth, monthKey, monthsBetween } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
 import { moneyWeighted, type Xirr } from "../../shared/returns";
+import { chartGrain } from "../../shared/period";
 import {
   describedDay,
   type FundFlow,
@@ -20,20 +21,12 @@ import {
   yearPeriod,
 } from "./period";
 
-/**
- * What the address cannot mean (§6): a year still to come goes back to the year running. A year older
- * than the first data stays, because the page has something to say about it.
- */
-export function isFutureYear(period: string | undefined, todayOn: CivilDate): boolean {
-  return period !== undefined && /^\d{4}$/.test(period) && Number(period) > Number(todayOn.slice(0, 4));
-}
+export { isFutureYear } from "../../shared/period";
 
 /** A value older than this asks to be updated (decision 7 of §9). */
 const STALE_DAYS = 31;
 /** Past this spread between the dates of the values, a percentage of the portfolio means nothing (§5.3). */
 const AGGREGATE_RATE_DAYS = 45;
-/** Up to a quarter, a custom period draws the stretches between the values (§6). */
-const STRETCH_DAYS = 92;
 
 /** One month of a payslip's contributions: money accrued, not yet in the fund. */
 export interface AccruedLine {
@@ -347,9 +340,8 @@ export function gainGrain(
   if (period.from === null) return "year";
   // A year goes by month, however little of it has passed (§6).
   if (typeof period.year === "number") return "month";
-  const days = daysBetween(span.from, span.to) + 1;
-  if (days <= STRETCH_DAYS) return "stretch";
-  return days <= 366 ? "month" : "year";
+  // Up to a quarter, a custom period draws the stretches between the values (§6).
+  return chartGrain(daysBetween(span.from, span.to) + 1, "stretch");
 }
 
 /**

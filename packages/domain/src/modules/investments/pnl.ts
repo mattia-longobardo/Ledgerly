@@ -22,22 +22,14 @@ import {
   valueAt,
 } from "./rules";
 import { divRound } from "../../shared/money";
+import { allPeriod, isFutureYear, type Period, yearPeriod } from "../../shared/period";
 import { MIN_CAPITAL_CENTS, MIN_CAPITAL_SHARE, type PeriodReturn, periodReturn } from "../../shared/returns";
 import { abs } from "../../shared/money";
 
 // ——— The period (§1.2, §2.1) ————————————————————————————————————————————————————————————————
 
-type PeriodKind = "year" | "all" | "custom";
-
-export interface PnlPeriod {
-  kind: PeriodKind;
-  /** The calendar year of a `year` period. */
-  year: number | null;
-  /** The first day; `null` for "All": each service from its own first day. */
-  from: CivilDate | null;
-  /** The last day: today for the period still running, never past it. */
-  to: CivilDate;
-}
+/** The period of the pages (shared/period). */
+export type { Period as PnlPeriod };
 
 export interface PeriodParams {
   period?: string | null;
@@ -51,22 +43,18 @@ export interface PeriodParams {
  * that ends before it starts or starts after today fall back to the default; a range that ends
  * after today stops today.
  */
-export function periodOf(params: PeriodParams, todayOn: CivilDate): PnlPeriod {
-  const thisYear = Number(todayOn.slice(0, 4));
-  const yearOf = (year: number): PnlPeriod => {
-    const end = `${year}-12-31`;
-    return { kind: "year", year, from: `${year}-01-01`, to: end < todayOn ? end : todayOn };
-  };
+export function periodOf(params: PeriodParams, todayOn: CivilDate): Period {
+  const yearOf = (year: number): Period => ({ kind: "year", year, ...yearPeriod(year, todayOn) });
   const { from, to } = params;
   if (from && to && isCivilDate(from) && isCivilDate(to) && from <= to && from <= todayOn) {
     return { kind: "custom", year: null, from, to: to < todayOn ? to : todayOn };
   }
-  if (params.period === "all") return { kind: "all", year: null, from: null, to: todayOn };
+  if (params.period === "all") return { kind: "all", year: null, ...allPeriod(todayOn) };
   if (params.period && /^\d{4}$/.test(params.period)) {
     const year = Number(params.period);
-    if (year >= 1970 && year <= thisYear) return yearOf(year);
+    if (year >= 1970 && !isFutureYear(params.period, todayOn)) return yearOf(year);
   }
-  return yearOf(thisYear);
+  return yearOf(Number(todayOn.slice(0, 4)));
 }
 
 // ——— Inputs ——————————————————————————————————————————————————————————————————————————————————

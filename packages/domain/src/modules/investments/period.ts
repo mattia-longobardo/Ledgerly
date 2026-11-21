@@ -1,17 +1,8 @@
 // src/modules/investments/period.ts — the period of the section in the address (docs/design/
 // investments-ux.md §1.2, §2, U2): the old chart parameters sent to the new ones, a period written
-// back as parameters, the years the stepper walks, and the intervals of the chart (§2.2). Pure: no
-// database, no clock. Reading the address is `periodOf` in `pnl.ts`, which U1 wrote.
-import {
-  addDays,
-  addMonths,
-  type CivilDate,
-  dayOfWeek,
-  daysBetween,
-  isCivilDate,
-  lastDayOfMonth,
-  monthKey,
-} from "../../shared/dates";
+// back as parameters and the years the stepper walks; the intervals of the chart (§2.2) are the shared
+// ones. Pure: no database, no clock. Reading the address is `periodOf` in `pnl.ts`, which U1 wrote.
+import { type CivilDate, isCivilDate } from "../../shared/dates";
 import {
   type DateRange,
   presetRange,
@@ -19,10 +10,10 @@ import {
   type RangePreset,
   shiftRange,
 } from "../../platform/ranges";
-import type { PnlPeriod } from "./pnl";
-import { first, type PeriodQuery, type Query, yearQuery } from "../../shared/period";
+import { allPeriod, first, type Period, type PeriodQuery, type Query, yearQuery } from "../../shared/period";
 
-export { legacyPeriodQuery, periodSpan, yearQuery } from "../../shared/period";
+export { barIntervals, legacyPeriodQuery, periodSpan, valueDays, yearQuery } from "../../shared/period";
+export type { BarGrain, Interval } from "../../shared/period";
 export type { Query } from "../../shared/period";
 
 /** The names of those parameters: the only ones a tab carries to the next. */
@@ -50,7 +41,7 @@ interface SectionPeriod {
   /** The same without the stepper's offset: what the stepper's own links start from. */
   stepperParams: PeriodQuery;
   /** What the engines measure: a calendar year when the range is one, else its days up to today. */
-  period: PnlPeriod;
+  period: Period;
 }
 
 /** A whole calendar year, or the year running up to a day not before today. */
@@ -86,7 +77,7 @@ export function sectionPeriod(query: Query, todayOn: CivilDate): SectionPeriod {
       range: null,
       params: stepperParams,
       stepperParams,
-      period: { kind: "all", year: null, from: null, to: todayOn },
+      period: { kind: "all", year: null, ...allPeriod(todayOn) },
     };
   }
   const offset = Math.max(0, Math.trunc(Number(text("off"))) || 0);
@@ -116,7 +107,7 @@ export function sectionPeriod(query: Query, todayOn: CivilDate): SectionPeriod {
 }
 
 /** A period as the parameters that ask for it; the year running is the default and needs none. */
-export function periodQuery(period: PnlPeriod, todayOn: CivilDate): PeriodQuery {
+export function periodQuery(period: Period, todayOn: CivilDate): PeriodQuery {
   if (period.kind === "all") return { preset: "all" };
   if (period.kind === "custom") return { from: period.from!, to: period.to };
   return yearQuery(period.year!, todayOn);
@@ -127,55 +118,4 @@ export function yearsOf(firstOn: CivilDate | null, todayOn: CivilDate): { first:
   const last = Number(todayOn.slice(0, 4));
   const firstYear = firstOn === null ? last : Number(firstOn.slice(0, 4));
   return { first: Math.min(firstYear, last), last };
-}
-
-export type BarGrain = "week" | "month" | "year";
-
-export interface Interval {
-  from: CivilDate;
-  to: CivilDate;
-}
-
-/** A quarter: up to 92 days the chart goes by week (P&L) and by day (value) (§2.2). */
-const SHORT_DAYS = 92;
-/** Up to a leap year it goes by month; past it, the P&L bars go by year. */
-const YEAR_DAYS = 366;
-
-/**
- * The bars of the P&L chart (§2.2): by week up to 92 days (Monday to Sunday, the ends cut to the
- * span), by calendar month up to a year, by calendar year past it. Contiguous, oldest first, the
- * first starting on `from` and the last ending on `to`.
- */
-export function barIntervals(from: CivilDate, to: CivilDate): { grain: BarGrain; intervals: Interval[] } {
-  const days = daysBetween(from, to) + 1;
-  const grain: BarGrain = days <= SHORT_DAYS ? "week" : days <= YEAR_DAYS ? "month" : "year";
-  const endOf = (day: CivilDate): CivilDate => {
-    if (grain === "week") return addDays(day, (7 - dayOfWeek(day)) % 7);
-    if (grain === "month") return lastDayOfMonth(monthKey(day));
-    return `${day.slice(0, 4)}-12-31`;
-  };
-  const intervals: Interval[] = [];
-  for (let start = from; start <= to;) {
-    const end = endOf(start);
-    intervals.push({ from: start, to: end < to ? end : to });
-    start = addDays(end, 1);
-  }
-  return { grain, intervals };
-}
-
-/**
- * The points of the value chart (§2.2): every day up to 92 days, else each month's last day (the
- * last point is `to`, today for the month running).
- */
-export function valueDays(from: CivilDate, to: CivilDate): { grain: "day" | "month"; days: CivilDate[] } {
-  const days: CivilDate[] = [];
-  if (daysBetween(from, to) + 1 <= SHORT_DAYS) {
-    for (let day = from; day <= to; day = addDays(day, 1)) days.push(day);
-    return { grain: "day", days };
-  }
-  for (let month = monthKey(from); month <= to; month = addMonths(month, 1)) {
-    const end = lastDayOfMonth(month);
-    days.push(end < to ? end : to);
-  }
-  return { grain: "month", days };
 }

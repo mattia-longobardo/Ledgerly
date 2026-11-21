@@ -1,7 +1,50 @@
-// The period in an address (docs/design/investments-ux.md §1.2): the parameters a link carries, a
-// year as those parameters, the old parameters sent to the new ones, and the days a period really
-// spans. Pure and shared: Funds and Investments read their address the same way (audit FND-7).
-import { addMonths, type CivilDate, isCivilDate, lastDayOfMonth, monthKey } from "./dates";
+// The period of Funds and Investments (docs/design/investments-ux.md §1.2, §2.2): its type, the year
+// up to today, the parameters a link carries, a year as those parameters, the old parameters sent to
+// the new ones, the days a period really spans, and the intervals of its charts. Pure and shared:
+// Funds and Investments read their period and draw their charts the same way (audit FND-7, FND-8).
+import {
+  addDays,
+  addMonths,
+  type CivilDate,
+  dayOfWeek,
+  daysBetween,
+  isCivilDate,
+  lastDayOfMonth,
+  monthKey,
+} from "./dates";
+
+/** A period of the pages (§1.2): a calendar year, "All", or days picked. */
+export interface Period {
+  kind: "year" | "all" | "custom";
+  /** The calendar year of a `year` period. */
+  year: number | null;
+  /** The first day; `null` for "All": each service or fund from its own first day. */
+  from: CivilDate | null;
+  /** The last day: today for the period still running, never past it. */
+  to: CivilDate;
+}
+
+/** The days of a period, both ends included. `from` is `null` for "All". */
+export type PeriodDays = Pick<Period, "from" | "to">;
+
+/** A calendar year, up to today while it runs: the one "year to date" of the pages. */
+export function yearPeriod(year: number, todayOn: CivilDate): PeriodDays {
+  const end = `${year}-12-31`;
+  return { from: `${year}-01-01`, to: end < todayOn ? end : todayOn };
+}
+
+/** "All": from the first day with data to today. */
+export function allPeriod(todayOn: CivilDate): PeriodDays {
+  return { from: null, to: todayOn };
+}
+
+/**
+ * What the address cannot mean (§6): a year still to come goes back to the year running. A year older
+ * than the first data stays, because the page has something to say about it.
+ */
+export function isFutureYear(period: string | undefined, todayOn: CivilDate): boolean {
+  return period !== undefined && /^\d{4}$/.test(period) && Number(period) > Number(todayOn.slice(0, 4));
+}
 
 export type Query = Record<string, string | string[] | undefined>;
 
@@ -71,4 +114,64 @@ export function periodSpan(
   const start = period.from ?? firstOn ?? period.to;
   const from = period.kind === "custom" || firstOn === null || start >= firstOn ? start : firstOn;
   return { from: from > period.to ? period.to : from, to: period.to };
+}
+
+// ——— The intervals of the charts (§2.2, audit FND-8) ——————————————————————————————————————————————
+
+/** A quarter: up to 92 days a chart goes by its short grain (a week, a stretch) and its values by day. */
+const SHORT_DAYS = 92;
+/** Up to a leap year it goes by month; past it, by year. */
+const YEAR_DAYS = 366;
+
+/**
+ * The grain of the bars over `days` (§2.2): the page's own short one up to a quarter — a week for
+ * Investments, a stretch between two values for Funds — by month up to a year, by year past it.
+ */
+export function chartGrain<Short extends string>(days: number, short: Short): Short | "month" | "year" {
+  return days <= SHORT_DAYS ? short : days <= YEAR_DAYS ? "month" : "year";
+}
+
+export type BarGrain = "week" | "month" | "year";
+
+export interface Interval {
+  from: CivilDate;
+  to: CivilDate;
+}
+
+/**
+ * The bars of a chart by calendar week (Monday to Sunday), month or year ({@link chartGrain} with
+ * weeks): contiguous, oldest first, the ends cut to the span, the first starting on `from` and the
+ * last ending on `to`.
+ */
+export function barIntervals(from: CivilDate, to: CivilDate): { grain: BarGrain; intervals: Interval[] } {
+  const grain = chartGrain(daysBetween(from, to) + 1, "week");
+  const endOf = (day: CivilDate): CivilDate => {
+    if (grain === "week") return addDays(day, (7 - dayOfWeek(day)) % 7);
+    if (grain === "month") return lastDayOfMonth(monthKey(day));
+    return `${day.slice(0, 4)}-12-31`;
+  };
+  const intervals: Interval[] = [];
+  for (let start = from; start <= to;) {
+    const end = endOf(start);
+    intervals.push({ from: start, to: end < to ? end : to });
+    start = addDays(end, 1);
+  }
+  return { grain, intervals };
+}
+
+/**
+ * The points of a value chart (§2.2): every day up to a quarter, else each month's last day (the
+ * last point is `to`, today for the month running).
+ */
+export function valueDays(from: CivilDate, to: CivilDate): { grain: "day" | "month"; days: CivilDate[] } {
+  const days: CivilDate[] = [];
+  if (daysBetween(from, to) + 1 <= SHORT_DAYS) {
+    for (let day = from; day <= to; day = addDays(day, 1)) days.push(day);
+    return { grain: "day", days };
+  }
+  for (let month = monthKey(from); month <= to; month = addMonths(month, 1)) {
+    const end = lastDayOfMonth(month);
+    days.push(end < to ? end : to);
+  }
+  return { grain: "month", days };
 }
