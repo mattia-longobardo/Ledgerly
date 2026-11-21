@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105082,
+    "lines": 105083,
     "duplicatedLines": 16604,
     "percent": 15.8,
     "blocks": 1268
   },
   "units": {
     "api": {
-      "lines": 5346,
+      "lines": 5347,
       "duplicatedLines": 1138,
-      "percent": 21.29,
+      "percent": 21.28,
       "blocks": 101
     },
     "app": {

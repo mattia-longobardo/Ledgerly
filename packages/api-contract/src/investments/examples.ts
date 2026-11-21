@@ -89,7 +89,7 @@ export const CHART_EXAMPLE = {
   intervals: [{ from: "2026-11-01", to: "2026-11-21" }],
   valueGrain: "day",
   valueDays: ["2026-11-21"],
-  services: [{ accountId: ACCOUNT_ID, bars: ["650.00"], values: ["12650.00"] }],
+  services: [{ accountId: ACCOUNT_ID, bars: ["650.00"], values: ["12650.00"], returns: [0.054167] }],
   bars: ["650.00"],
   cumulative: ["650.00"],
   values: ["12650.00"],

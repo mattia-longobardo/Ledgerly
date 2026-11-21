@@ -26479,12 +26479,22 @@
                                     }
                                   ]
                                 }
+                              },
+                              "returns": {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ]
+                                }
                               }
                             },
                             "required": [
                               "accountId",
                               "bars",
-                              "values"
+                              "values",
+                              "returns"
                             ]
                           }
                         },
@@ -32917,12 +32927,22 @@
                                     }
                                   ]
                                 }
+                              },
+                              "returns": {
+                                "type": "array",
+                                "items": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ]
+                                }
                               }
                             },
                             "required": [
                               "accountId",
                               "bars",
-                              "values"
+                              "values",
+                              "returns"
                             ]
                           }
                         },

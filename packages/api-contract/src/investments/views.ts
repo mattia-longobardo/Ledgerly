@@ -106,7 +106,13 @@ const chart = z.object({
   valueGrain: z.enum(["day", "month"]),
   valueDays: z.array(civilDate()),
   services: z.array(
-    z.object({ accountId: id(), bars: z.array(money().nullable()), values: z.array(money().nullable()) }),
+    z.object({
+      accountId: id(),
+      bars: z.array(money().nullable()),
+      values: z.array(money().nullable()),
+      /** The service's `bars` in the Return view, on the scale of `returns`. */
+      returns: z.array(ratio()),
+    }),
   ),
   /** Σ of the services per bar and its running total; Σ of the values per day. */
   bars: z.array(money().nullable()),

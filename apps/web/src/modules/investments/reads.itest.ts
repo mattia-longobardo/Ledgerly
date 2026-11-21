@@ -179,6 +179,22 @@ function expectReturns(
   expect(chart.cumulativeReturns).toEqual(cumulative.map(six));
 }
 
+/** Each service's layer in the Return view, as the page scaled it: its bars over the hero's P&L and rate. */
+function expectServiceReturns(
+  chart: Json,
+  services: readonly { accountId: string; bars: readonly (Cents | null)[] }[],
+  total: Cents | null,
+  rate: number | null,
+) {
+  const scale = returnScale(total, rate);
+  expect(chart.services.map((one: Json) => [one.accountId, one.returns])).toEqual(
+    services.map((one) => [
+      one.accountId,
+      scale === null ? one.bars.map(() => null) : asReturns(one.bars, scale).map(six),
+    ]),
+  );
+}
+
 describe.each(PERIODS)("the reads of Investments, period %o", (one) => {
   it("home: fees and exchange, and the Return view", async () => {
     const answer = await get(`/investments/home?${query(one)}`);
@@ -192,6 +208,8 @@ describe.each(PERIODS)("the reads of Investments, period %o", (one) => {
       return known.length === 0 ? null : known.reduce<Cents>((sum, cents) => sum + cents!, 0n);
     });
     expectReturns(answer.chart, barTotals, parts?.pnlCents ?? null, pnl.portfolio.rate);
+    expect(pnl.chart.length).toBeGreaterThan(0);
+    expectServiceReturns(answer.chart, pnl.chart, parts?.pnlCents ?? null, pnl.portfolio.rate);
   });
 
   it.each([

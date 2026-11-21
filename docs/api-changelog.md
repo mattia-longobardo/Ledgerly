@@ -3,6 +3,12 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · investments: the Return view of each service (0.57.0)
+
+- `chart.services[].returns` (`GET /investments/home` and the Overview of a service, which share the
+  chart): each bar of the service on the scale of `chart.returns`, null where the bar is a gap or the
+  period has no return to share. The layers of a bar add up to its `returns`.
+
 ## 2026-11-21 · funds: missing months and the last figures of the pages (0.56.0)
 
 - Fix: `GET /funds/{id}/contributions` answered `500` for a fund with a month without its payslip:

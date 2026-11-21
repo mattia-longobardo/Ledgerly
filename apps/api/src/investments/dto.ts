@@ -312,6 +312,7 @@ export function chartOut(view: View, totalCents: Cents | null, rate: number | nu
       accountId: one.accountId,
       bars: one.bars.map(maybe),
       values: one.values.map(maybe),
+      returns: asReturns(one.bars),
     })),
     bars: bars.map(maybe),
     cumulative: cumulative.map(maybe),
