@@ -528,6 +528,8 @@ describe("parity of users and settings: route = MCP tool", () => {
     });
     expect(reads.map((tool) => tool.name).sort()).toEqual([
       "get_account_balances",
+      "get_fund",
+      "get_funds",
       "get_interest_rule",
       "get_payroll",
       "get_payslip",

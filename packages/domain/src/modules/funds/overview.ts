@@ -10,10 +10,18 @@ import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
 import { fundSummary } from "./detail";
 import { fundsHomeRows } from "./home-queries";
-import { allPeriod, documentedPoints, fundValueAt } from "./period";
+import { allPeriod, documentedPoints, fundValueAt, sortedPoints, type ValuePoint } from "./period";
 import type { MovementLike } from "./pension/metrics";
 import { fundOperations, funds, unitMovements } from "./schema";
 import { feesOf, type Fund, type FundFee, type FundSource, sourcesOf } from "./service";
+
+/**
+ * The value another page shows (funds-ux §5.2, F5): today's (`fundValueAt`), and for a fund valued
+ * only after today its newest value with its date, so that the fund is not left blank.
+ */
+function shownValue<T extends ValuePoint>(points: readonly T[], todayOn: CivilDate): T | null {
+  return fundValueAt(points, todayOn) ?? sortedPoints(points).at(-1) ?? null;
+}
 
 /** One open fund as Investments lists it: what it is worth, with the day of that value. */
 interface FundValueRow {
@@ -80,7 +88,7 @@ export async function fundValues(
       await listBalanceEntries(ctx, fund.valuationAccountId, 200),
       movementsOf.get(fund.id) ?? [],
     );
-    const value = fundValueAt(points, todayOn);
+    const value = shownValue(points, todayOn);
     rows.push({ fund, valueCents: value?.cents ?? null, lastValuation: value?.on ?? null });
   }
   return rows;
@@ -107,7 +115,7 @@ export async function fundsExport(
       return { fund, paidInCents: null, valueCents: null, gainCents: null, lastValuation: null };
     }
     const { measure } = fundSummary({ fund: home, period: allPeriod(todayOn), todayOn }).line;
-    const value = fundValueAt(home.points, todayOn);
+    const value = shownValue(home.points, todayOn);
     return {
       fund,
       paidInCents: measure.paidInCents,

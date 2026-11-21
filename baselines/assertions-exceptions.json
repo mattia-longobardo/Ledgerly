@@ -633,5 +633,20 @@
     "file": "tests/e2e/payroll/a11y.spec.ts",
     "decision": "R3 imports",
     "reason": "a screen added to the layout and accessibility check: the dialog that adds payslips, with its files; no existing screen or assertion changed"
+  },
+  {
+    "file": "apps/web/src/platform/mcp/mcp.itest.ts",
+    "decision": "R2 funds",
+    "reason": "the list of the MCP tools holds the two new read tools get_funds and get_fund: two names added to the expected list; no other value changed"
+  },
+  {
+    "file": "apps/web/src/platform/api/api.itest.ts",
+    "decision": "R2 funds",
+    "reason": "the list of the MCP tools holds the two new read tools get_funds and get_fund: two names added to the expected list; no other value changed"
+  },
+  {
+    "file": "apps/web/src/modules/investments/exposure.itest.ts",
+    "decision": "R2 funds",
+    "reason": "the list of the MCP tools holds the two new read tools get_funds and get_fund: two names added to the expected list; no other value changed"
   }
 ]
