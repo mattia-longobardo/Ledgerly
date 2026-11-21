@@ -21,7 +21,7 @@ import { budgetsView } from "@domain/modules/budgets/queries";
 import { setLimit } from "@domain/modules/budgets/service";
 import { fundHomeRow, fundsHomeRows } from "@domain/modules/funds/home-queries";
 import { recordValuation } from "@domain/modules/funds/service";
-import { rulesOnAccount } from "@domain/modules/interests/queries";
+import { interestsView, ruleAccounts, ruleDetail, rulesOnAccount } from "@domain/modules/interests/queries";
 import { createRule } from "@domain/modules/interests/service";
 import {
   investmentsHome,
@@ -41,7 +41,7 @@ import { createSubscription } from "@domain/modules/subscriptions/service";
 import { timeOffView } from "@domain/modules/timeoff/queries";
 import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
 import { categoryMacroTotals, expensesView, facetCounts } from "@domain/modules/transactions/queries";
-import { listCategoriesWithUsage } from "@domain/modules/transactions/taxonomy";
+import { categoryOptions, listCategoriesWithUsage } from "@domain/modules/transactions/taxonomy";
 import { sourceNotes } from "../apps/web/src/app/(app)/settings/categories/source";
 import { categories, transactions } from "@domain/modules/transactions/schema";
 // `/api/v1` as the web serves it, `apps/api` included (R2).
@@ -213,7 +213,7 @@ for (const index of [0, 1, 2, 3, 4, 5]) {
     tolerance: "0.05",
   });
 }
-await createRule(ctx, {
+const rule = await createRule(ctx, {
   accountId: second.id,
   taxRate: "0.26",
   dayBasis: "365",
@@ -357,6 +357,11 @@ const views: [string, () => Promise<unknown>, { fromCleanHeap: boolean }?][] = [
   ["Pockets", () => pocketsView(ctx)],
   ["Budgets", () => budgetsView(ctx, thisMonth)],
   ["Subscriptions", async () => [await subscriptionsView(ctx), await suggestions(ctx)]],
+  [
+    "Interests",
+    async () => [await interestsView(ctx), await ruleAccounts(ctx), await categoryOptions(ctx, "income")],
+  ],
+  ["Interests (regola)", async () => [await ruleDetail(ctx, rule.id), await ruleAccounts(ctx)]],
   ["Time Off (anno)", () => timeOffView(ctx, thisYear)],
   // Expenses › Categories, the reads of its page for the current month; `GET /categories/board` below.
   [
@@ -424,6 +429,8 @@ const routes: [string, () => Promise<void>][] = [
   ["GET /investments", () => call("GET", "/investments")],
   ["GET /investments/:accountId/holdings", () => call("GET", `/investments/${brokers[0]}/holdings`)],
   ["GET /categories/board", () => call("GET", `/categories/board?from=${thisMonth}&to=${todayOn}`)],
+  ["GET /interests", () => call("GET", "/interests")],
+  ["GET /interests/:id", () => call("GET", `/interests/${rule.id}`)],
 ];
 for (const [name, run] of routes) {
   resetRateLimits();
