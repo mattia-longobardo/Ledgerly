@@ -8,6 +8,7 @@ import { SESSION_CSRF_HEADER } from "@ledgerly/api-contract";
 import { authAccounts, sessions, users } from "@domain/platform/auth/schema";
 import { getDb } from "@domain/platform/db/client";
 import { saveConnection } from "@domain/platform/integrations/service/connections";
+import { deleteFolder } from "@domain/platform/storage";
 import { previewSchedule } from "@domain/platform/integrations/schedule";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 
@@ -63,7 +64,7 @@ const origin = () => new URL(readEnv().BETTER_AUTH_URL).origin;
 function call(
   path: string,
   who: { cookie?: string; bearer?: string },
-  init: { method?: string; body?: unknown; origin?: string | null; csrf?: boolean } = {},
+  init: { method?: string; body?: unknown; form?: FormData; origin?: string | null; csrf?: boolean } = {},
 ): Promise<Response> {
   const method = init.method ?? "GET";
   const headers = new Headers();
@@ -79,7 +80,7 @@ function call(
       new Request(`${origin()}/api/v1${path}`, {
         method,
         headers,
-        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+        body: init.form ?? (init.body === undefined ? undefined : JSON.stringify(init.body)),
       }),
     ),
   );
@@ -289,6 +290,49 @@ describe("the session cookie on /api/v1", () => {
       expect((await call(path, who, { method: "POST" })).status).toBe(403);
     }
     expect(reads.map((tool) => tool.name)).not.toContain("fill_payslip_with_llm");
+  });
+
+  /*
+    R2 imports: the session gets `imports`, so the Payroll screen uploads through `POST /imports`.
+    It gets that scope and no other new one, and no token gains a scope from it.
+  */
+  it("gives the session imports and no other scope it did not have", async () => {
+    const form = new FormData();
+    form.set("kind", "payslip");
+    form.set("file", new File([new TextEncoder().encode("%PDF-1.4\n% session\n%%EOF\n")], "session.pdf"));
+    try {
+      const uploaded = await call("/imports", alice, { method: "POST", form });
+      expect(uploaded.status).toBe(201);
+      expect(await uploaded.json()).toMatchObject({ kind: "payslip", duplicate: false });
+    } finally {
+      await deleteFolder(`payslips/${alice.userId}/`);
+    }
+    // `investments:read` stays a token's own scope, and `admin` an admin's.
+    expect((await call("/investments", alice)).status).toBe(403);
+    expect((await call("/people", alice)).status).toBe(403);
+  });
+
+  it("refuses POST /imports with 403 to a token without imports, and gives no token a new scope", async () => {
+    const form = () => {
+      const data = new FormData();
+      data.set("kind", "payslip");
+      data.set("file", new File([new TextEncoder().encode("%PDF-1.4\n% token\n%%EOF\n")], "token.pdf"));
+      return data;
+    };
+    const token = await tokenFor(alice, ["read", "write", "investments:read"]);
+    for (const who of [{ bearer: token }, { bearer: token, cookie: alice.cookie }]) {
+      const refused = await call("/imports", who, {
+        method: "POST",
+        form: form(),
+        origin: null,
+        csrf: false,
+      });
+      expect(refused.status).toBe(403);
+    }
+    // What only the session has is never granted to a token.
+    for (const scope of ["security", "session", "admin"]) {
+      await expect(tokenFor(alice, ["read", scope]), scope).rejects.toThrow();
+    }
   });
 
   it("never answers with Access-Control-Allow-Credentials, nor a preflight", async () => {

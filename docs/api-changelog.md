@@ -11,6 +11,9 @@ written before it keeps working.
   already received; `400` `invalid`, `413` `too_large`, `415` `unsupported_format` (also for the kinds
   `cometa_operations` and `cometa_position`, before the size). The Payroll screen's upload is the same
   use case.
+- The web's own session gets the scope `imports`, so the Payroll screen can upload through
+  `POST /imports`. A token gets no new scope: it is still granted `read`, `write`, `imports` and
+  `investments:read`, and `POST /imports` without `imports` is still `403`.
 
 ## 2026-11-21 · payroll (0.50.0)
 
