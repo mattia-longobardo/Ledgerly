@@ -180,7 +180,7 @@ npm run --silent numbers -- --diff "$folder/numbers-before.json" "$folder/number
 # At the site's origin, Traefik's `web` entrypoint, not through Cloudflare: one run of them (~950
 # requests in under a minute) passes the rate limit of Cloudflare's rule, and the release failed
 # three times on a 429 with a healthy app. The browser still speaks to https://dash.longobardo.me,
-# with its cookies (tests/e2e/_shared/origin.ts). The `@site` tests stay on Cloudflare.
+# with its cookies (tests/e2e/_shared/origin.ts). The `@site` tests of the caller go there too.
 echo "smoke:"
 E2E_ORIGIN=127.0.0.1 npx playwright test --grep @smoke || failed "the @smoke tests are red on the site"
 

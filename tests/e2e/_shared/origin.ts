@@ -1,5 +1,5 @@
-// tests/e2e/_shared/origin.ts — E2E_ORIGIN: the `@smoke` tests of a release reach the site's origin,
-// Traefik's `web` entrypoint, and not Cloudflare, whose rate limit one run of them passes.
+// tests/e2e/_shared/origin.ts — E2E_ORIGIN: the `@smoke` and `@site` tests of a release reach the site's
+// origin, Traefik's `web` entrypoint, and not Cloudflare, whose rate limit one run of them passes.
 //
 // The browser and the scripts keep talking to https://dash.longobardo.me — the same Host, the same
 // Secure cookies, the same sign-in — through this proxy (playwright.config.ts, `proxy`). For the

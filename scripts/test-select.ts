@@ -31,7 +31,8 @@ const file = (spec: string) => `${spec}.spec.ts`;
 
 /**
  * The `@site` tests of some specs (`<flow>/<name>`), as commands that stay under the site's limit
- * of password sign-ins, with a minute between two of them.
+ * of password sign-ins, with a minute between two of them. They run at the site's origin, as `@smoke`
+ * does: through Cloudflare they hit its rate limit (429).
  */
 export function siteCommands(specs: readonly string[]): string[] {
   const groups: string[][] = [[]];
@@ -48,7 +49,7 @@ export function siteCommands(specs: readonly string[]): string[] {
     .filter((group) => group.length > 0)
     .flatMap((group, at) => [
       ...(at > 0 ? ["sleep 60"] : []),
-      `npx playwright test ${group.map(file).join(" ")} -g @site`,
+      `E2E_ORIGIN=127.0.0.1 npx playwright test ${group.map(file).join(" ")} -g @site`,
     ]);
 }
 

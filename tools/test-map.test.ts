@@ -208,14 +208,14 @@ describe("the selection", () => {
   it("the tests for the site stay under the limit of password sign-ins", () => {
     // Two failed on the site when one command spent six sign-ins in forty seconds.
     expect(siteCommands(Object.keys(SITE_ONLY))).toEqual([
-      "npx playwright test auth/auth.spec.ts auth/two-factor.spec.ts -g @site",
+      "E2E_ORIGIN=127.0.0.1 npx playwright test auth/auth.spec.ts auth/two-factor.spec.ts -g @site",
       "sleep 60",
-      "npx playwright test auth/preferences.spec.ts shell/mobile.spec.ts api/security.spec.ts " +
+      "E2E_ORIGIN=127.0.0.1 npx playwright test auth/preferences.spec.ts shell/mobile.spec.ts api/security.spec.ts " +
         "api/mcp.spec.ts accounts/currency.spec.ts investments/investments-service.spec.ts " +
         "connections/plugins.spec.ts -g @site",
     ]);
     expect(siteCommands(["connections/plugins", "auth/auth", "transactions/expenses"])).toEqual([
-      "npx playwright test auth/auth.spec.ts connections/plugins.spec.ts -g @site",
+      "E2E_ORIGIN=127.0.0.1 npx playwright test auth/auth.spec.ts connections/plugins.spec.ts -g @site",
     ]);
     expect(siteCommands(["transactions/expenses"])).toEqual([]);
   });

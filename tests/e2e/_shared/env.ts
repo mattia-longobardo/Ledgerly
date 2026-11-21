@@ -12,7 +12,8 @@ export const BASE_URL = process.env.E2E_BASE_URL ?? "https://dash.longobardo.me"
 /**
  * E2E_ORIGIN (`127.0.0.1`, Traefik's `web` entrypoint): the specs reach the site's origin through a
  * proxy of the run instead of Cloudflare (tests/e2e/_shared/origin.ts). `scripts/release.sh` sets it
- * for the `@smoke` tests; the `@site` tests and every other run go through Cloudflare as before.
+ * for the `@smoke` tests, and the `@site` commands of `npm run test:select` carry it; every other run
+ * goes through Cloudflare as before.
  */
 export const ORIGIN = process.env.E2E_ORIGIN;
 const ORIGIN_PROXY = "http://127.0.0.1:3990";

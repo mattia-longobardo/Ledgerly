@@ -688,5 +688,10 @@
     "file": "tests/e2e/api/mcp.spec.ts",
     "decision": "R2 investments",
     "reason": "the list of the MCP tools holds the new read tool get_investment: one name added to the expected list; no other value changed"
+  },
+  {
+    "file": "tools/test-map.test.ts",
+    "decision": "@site on origin (Mattia, 2026-11-21)",
+    "reason": "the @site commands that the selection prints now start with E2E_ORIGIN=127.0.0.1, as @smoke: the three expected commands of siteCommands change by that prefix only"
   }
 ]
