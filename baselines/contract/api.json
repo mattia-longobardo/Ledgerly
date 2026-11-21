@@ -1129,10 +1129,323 @@
    "error": "not_found"
   }
  },
+ "GET /payroll/payslips": {
+  "status": 200,
+  "body": {
+   "years": [
+    {
+     "year": 2031,
+     "rows": [
+      {
+       "id": "<id-33>",
+       "payslipId": "<id-34>",
+       "year": 2031,
+       "period": "2031-04-01",
+       "type": "ordinary",
+       "state": "applied",
+       "applied": true,
+       "fileName": "APRILE 2031.pdf",
+       "hasOriginal": true,
+       "amounts": {
+        "gross": "2000.00",
+        "taxesTotal": "277.73",
+        "employeeSocial": "183.80",
+        "netPay": "1514.00",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "regionalInstallment": "10.00",
+        "substituteTax": null,
+        "refund730": null,
+        "welfareCash": null,
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00"
+       },
+       "leaveLeft": {
+        "vacation": "51.66",
+        "rol": "32.66",
+        "permit": null
+       },
+       "openWarnings": 0
+      },
+      {
+       "id": "<id-35>",
+       "payslipId": "<id-36>",
+       "year": 2031,
+       "period": "2031-03-01",
+       "type": "ordinary",
+       "state": "applied",
+       "applied": true,
+       "fileName": "MARZO 2031.pdf",
+       "hasOriginal": true,
+       "amounts": {
+        "gross": "2000.00",
+        "taxesTotal": "280.23",
+        "employeeSocial": "183.80",
+        "netPay": "1511.00",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "regionalInstallment": "10.00",
+        "substituteTax": "2.50",
+        "refund730": null,
+        "welfareCash": null,
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00"
+       },
+       "leaveLeft": {
+        "vacation": "45.00",
+        "rol": "30.00",
+        "permit": null
+       },
+       "openWarnings": 0
+      }
+     ],
+     "totals": {
+      "gross": "4000.00",
+      "taxesTotal": "557.96",
+      "employeeSocial": "367.60",
+      "netPay": "3025.00",
+      "irpefGross": "835.46",
+      "taxDeductions": "300.00",
+      "regionalInstallment": "20.00",
+      "substituteTax": "2.50",
+      "refund730": null,
+      "welfareCash": null,
+      "employeeFundEffective": "50.00",
+      "employerFundEffective": "90.00",
+      "tfrSelected": "300.00"
+     },
+     "averages": {
+      "gross": "2000.00",
+      "taxesTotal": "278.98",
+      "employeeSocial": "183.80",
+      "netPay": "1512.50",
+      "irpefGross": "417.73",
+      "taxDeductions": "150.00",
+      "regionalInstallment": "10.00",
+      "substituteTax": "2.50",
+      "refund730": null,
+      "welfareCash": null,
+      "employeeFundEffective": "25.00",
+      "employerFundEffective": "45.00",
+      "tfrSelected": "150.00"
+     },
+     "hasApplied": true
+    }
+   ],
+   "inbox": [],
+   "awaiting": 0,
+   "inFlight": false,
+   "kpis": {
+    "net3": "1512.50",
+    "net6": "1512.50",
+    "net12": "1512.50",
+    "taxRate": 0.13949,
+    "ral": {
+     "amount": "26000.00",
+     "basis": "estimate",
+     "year": 2031
+    }
+   },
+   "applied": 2,
+   "span": {
+    "from": "2031-03-01",
+    "to": "2031-04-01"
+   }
+  }
+ },
+ "GET /payroll/codes": {
+  "status": 200,
+  "body": {
+   "codes": [
+    {
+     "code": "2",
+     "role": "ordinary_earnings",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "4",
+     "role": "absence",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "19",
+     "role": "absence",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "300",
+     "role": "vacation_offset",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "301",
+     "role": "vacation_event",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "308",
+     "role": "permit_offset",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "309",
+     "role": "permit_event",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "901",
+     "role": "thirteenth_earnings",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "1101",
+     "role": "refund_730",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "1150",
+     "role": "regional_installment",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "1405",
+     "role": "holiday_pay",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "1406",
+     "role": "holiday_pay",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "2161",
+     "role": "paid_leave",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "7052",
+     "role": "employer_fund_enrollment",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "7053",
+     "role": "employee_fund_enrollment",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "7101",
+     "role": "employee_fund",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "7897",
+     "role": "tfr_exemption",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "8003",
+     "role": "tfr_contribution",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "8054",
+     "role": "employee_fund_adjustment",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "8056",
+     "role": "employer_fund_adjustment",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "8992",
+     "role": "separate_payment",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9109",
+     "role": "employer_fund",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9110",
+     "role": "statistical",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9208",
+     "role": "compensated_credit",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9424",
+     "role": "statistical",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9582",
+     "role": "welfare_cash",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9586",
+     "role": "welfare_in_kind",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9824",
+     "role": "separate_payment",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9837",
+     "role": "substitute_tax_base",
+     "note": null,
+     "seeded": true
+    },
+    {
+     "code": "9838",
+     "role": "substitute_tax",
+     "note": null,
+     "seeded": true
+    }
+   ]
+  }
+ },
  "POST /accounts/<id-2>/balances": {
   "status": 201,
   "body": {
-   "id": "<id-33>",
+   "id": "<id-37>",
    "on": "2031-10-15",
    "balance": "12050.00",
    "source": "manual"

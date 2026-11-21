@@ -80,6 +80,9 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | the writes of interests: create, change, state, post and mark a settlement ([changelog](api-changelog.md)) | `write` |
 | `GET /timeoff/{year}`, `/timeoff/allowances`, `/timeoff/holidays/*` | `read` |
 | the writes of time off: allowance, leave, undo, holiday calendars ([changelog](api-changelog.md)) | `write` |
+| `GET /payroll/payslips`, `/payroll/payslips/{id}`, `/payroll/codes` | `read` |
+| the writes of payroll: a value, verify, apply, reopen, reject, retry, rename, delete, the code map ([changelog](api-changelog.md)) | `write` |
+| `POST /payroll/payslips/{id}/llm-fill` (the web's own session only: a token gets 403) | `session` |
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |
 | `POST /imports`                            | `imports`          |
@@ -121,6 +124,8 @@ and uses the same services as the REST API.
 | `list_interest_rules`      | `GET /api/v1/interests`                     |
 | `get_interest_rule`        | `GET /api/v1/interests/{id}`                |
 | `get_time_off`             | `GET /api/v1/timeoff/{year}`                |
+| `get_payroll`              | `GET /api/v1/payroll/payslips`              |
+| `get_payslip`              | `GET /api/v1/payroll/payslips/{id}`         |
 | `list_investments`         | `GET /api/v1/investments`                   |
 | `get_investment_holdings`  | `GET /api/v1/investments/{accountId}/holdings` |
 

@@ -5,8 +5,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { getAccount, listAccounts } from "../../accounts/queries";
 import { DOCUMENT_KINDS } from "../../imports/rules";
 import { listDocuments } from "../../imports/service";
-import { appliedCompetences } from "../../payroll/pension";
-import { applyPayslip, codeMapOf, processPayslip, uploadPayslip, verifyPayslip } from "../../payroll/service";
+import { appliedPayslips } from "../../payroll/applied";
+import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "../../payroll/service";
 import { chargeCandidates } from "../../transactions/queries";
 import { upsertFromProvider } from "../../transactions/service";
 import type { Ctx } from "../../../platform/context";
@@ -19,6 +19,7 @@ import { addVoluntaryContribution, payrollFund as fundFedByPayslip } from "../..
 import { APRIL, MARCH, MARCH_REPRINT, THIRTEENTH } from "../../../../../../test/fixtures/payroll/samples";
 import { twinPdf, type TwinPayslip } from "../../../../../../test/fixtures/payroll/twin";
 import { fundDetail } from "../queries";
+import { competencesFromPayslips } from "./payroll-source";
 import { funds, pensionCompetences } from "../schema";
 import {
   addContribution,
@@ -185,12 +186,12 @@ describe("competences from applied payslips (plan F6 L1)", () => {
     const published = await replaceCompetences(
       ctx,
       fund.id,
-      await appliedCompetences(ctx, await codeMapOf(ctx)),
+      competencesFromPayslips(await appliedPayslips(ctx)),
     );
     expect(published).toBe(2);
     expect((await competencesOf(ctx, fund.id)).map((row) => row.quarter)).toEqual([1, 4]);
     // Twice is the same.
-    await replaceCompetences(ctx, fund.id, await appliedCompetences(ctx, await codeMapOf(ctx)));
+    await replaceCompetences(ctx, fund.id, competencesFromPayslips(await appliedPayslips(ctx)));
     expect(await competencesOf(ctx, fund.id)).toHaveLength(2);
   });
 

@@ -21,8 +21,8 @@ type Executor = Db | Tx;
 /**
  * The fund the payslips' competences are written to: the open fund with an active payslip source.
  * One row holds a whole payslip and a payslip has one row, so one fund at a time receives it
- * (`takenComponents` refuses a second); sending each component to its own fund comes with the
- * `PayslipApplied` event of release R2. `null` when no fund is fed by the payslip.
+ * (`takenComponents` refuses a second); sending each component to its own fund is a change of
+ * behaviour, not of R2's `PayslipApplied`. `null` when no fund is fed by the payslip.
  */
 export async function payrollFund(
   ctx: Pick<Ctx, "userId">,
@@ -65,7 +65,8 @@ function competenceValues(input: CompetenceInput) {
 }
 
 /**
- * What an applied payslip accrued, written inside payroll's applying transaction. Nothing happens
+ * What an applied payslip accrued, written inside payroll's applying transaction (the listener
+ * `payrollSource` of `PayslipApplied`). Nothing happens
  * for a person with no fund fed by the payslip: the competences are published later, when a payslip
  * source is added (`replaceCompetences`). The same payslip again updates its one row.
  */

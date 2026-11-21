@@ -186,6 +186,8 @@ describe("the reference user", () => {
       `/investments/${user.brokerId}/holdings`,
       "/timeoff/2031",
       "/nothing-here",
+      "/payroll/payslips",
+      "/payroll/codes",
     ]) {
       answers[`GET ${path}`] = await call("GET", path);
     }
@@ -241,6 +243,7 @@ describe("the reference user", () => {
     answers.get_time_off = await tool("get_time_off", { year: "2031" });
     answers.list_investments = await tool("list_investments", { period: "all" });
     answers.get_investment_holdings = await tool("get_investment_holdings", { account_id: user.brokerId });
+    answers.get_payroll = await tool("get_payroll");
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/mcp.json"));
   });
 });

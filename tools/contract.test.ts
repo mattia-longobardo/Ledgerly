@@ -35,6 +35,7 @@ import * as payrollRules from "@domain/modules/payroll/rules";
 import * as payrollFields from "@domain/modules/payroll/fields";
 import * as payrollChecks from "@domain/modules/payroll/parse/checks";
 import * as importsRules from "@domain/modules/imports/rules";
+import { BALANCE_KINDS } from "@domain/modules/timeoff/ports";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -429,6 +430,8 @@ describe("the Server Actions of payroll", () => {
     expect(payrollWire.SUMMED_FIELDS).toEqual(payrollRules.SUMMED_FIELDS);
     expect(payrollWire.FIELD_GROUPS).toEqual(payrollFields.FIELD_GROUPS);
     expect(payrollWire.LEAVE_KINDS).toEqual(payrollFields.LEAVE_KINDS);
+    // PAY-6: one vocabulary of the balances, payroll's and the port of time off alike.
+    expect(payrollFields.LEAVE_KINDS).toEqual(BALANCE_KINDS);
     expect(payrollWire.CHECK_IDS).toEqual(payrollChecks.CHECK_IDS);
     expect(payrollWire.WARNING_CODES).toEqual(payrollChecks.WARNING_CODES);
     expect(payrollWire.DOCUMENT_STATES).toEqual(importsRules.DOCUMENT_STATES);

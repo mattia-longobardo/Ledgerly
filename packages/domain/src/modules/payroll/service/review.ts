@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { decideEvidence, deleteDocument, type Document, ImportError, listEvidence, renameDocument, requireDocument, transition } from "../../imports/service";
-import { dropCompetence, recordCompetence } from "../../funds/pension/service";
 import type { Ctx } from "../../../platform/context";
 import { addMonths, isCivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
@@ -9,9 +8,10 @@ import { userScoped } from "../../../platform/db/scope";
 import { centsToDecimal, parseCents } from "../../../shared/money";
 import { FIELDS, type FieldName, isDerived, isFieldName, LEAVE_COLUMNS, LEAVE_KINDS, leaveField } from "../fields";
 import { hasBlockingFailure } from "../parse/checks";
-import { fundLineIds, pensionCompetenceOf } from "../pension";
+import { appliedEventOf } from "../applied";
+import { payslipApplied, payslipWithdrawn } from "../events";
 import { leaveBalanceSnapshots, payrollLeaveEvents, payslips } from "../schema";
-import { PayrollError, codeMapOf, type Payslip } from "./codes";
+import { PayrollError, type Payslip } from "./codes";
 import { activeWithKey, computeState, linesOf, processPayslip, recompute, type Recomputed } from "./reading";
 
 // ——— Review (spec §7.8, §9.3 step 4) ———
@@ -100,7 +100,8 @@ export async function verifyPayslip(
 /**
  * Step 5 (spec §7.8 "Applicazione"), one transaction: the active payslip with the same logical key
  * is superseded — never summed —, this one becomes the active one, its leave snapshots and
- * events are written, and what it accrued goes to the pension fund. The payslip after it, if applied, has its leave read again, since its permits
+ * events are written, and `PayslipApplied` tells the listeners (the pension fund) in the same
+ * transaction. The payslip after it, if applied, has its leave read again, since its permits
  * are confirmed against this one.
  */
 export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string, now: Date = new Date()): Promise<Payslip> {
@@ -117,7 +118,7 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
           .set({ active: false, supersededBy: payslip.id })
           .where(and(eq(payslips.id, replaced.id), userScoped(ctx).owns(payslips)));
         await clearLeave(ctx, replaced.id, tx);
-        await dropCompetence(ctx, replaced.id, tx);
+        await payslipWithdrawn(ctx, replaced.id, tx);
         if (!(await transition(ctx, replaced.documentId, "superseded", {}, tx))) throw new PayrollError("conflict");
       }
       const [applied] = await tx
@@ -126,7 +127,7 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
         .where(and(eq(payslips.id, payslip.id), userScoped(ctx).owns(payslips)))
         .returning();
       await writeLeave(ctx, applied, tx);
-      await recordPension(ctx, applied, tx);
+      await announce(ctx, applied, tx);
       if (!(await transition(ctx, documentId, "applied", {}, tx))) throw new PayrollError("conflict");
       await rereadNext(ctx, applied, tx);
       return applied;
@@ -137,10 +138,9 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
   }
 }
 
-/** The pension sink (spec §7.8): what an applied payslip accrued for the fund taking payroll. */
-async function recordPension(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
-  const competence = pensionCompetenceOf(payslip, await fundLineIds(ctx, payslip.documentId, await codeMapOf(ctx), tx));
-  if (competence) await recordCompetence(ctx, competence, tx);
+/** `PayslipApplied` (spec §7.8): the listeners hear what an applied payslip carries. */
+async function announce(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
+  await payslipApplied(ctx, await appliedEventOf(ctx, payslip, tx), tx);
 }
 
 /** The next month's payslip, if applied, confirms its permits against this one: read them again. */
@@ -167,7 +167,7 @@ async function rereadNext(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): P
 
 /**
  * Takes an applied payslip back to review so its values can be changed — `applyPayslip` undone, in
- * one transaction: it leaves the register with its leave and its pension competence, the payslip it
+ * one transaction: it leaves the register with its leave (`PayslipWithdrawn`), the payslip it
  * had replaced (a rectification) is applied again, and the next month's permits are read again.
  * Applying it once more after the review puts everything back. Returns whether a replaced payslip
  * was restored.
@@ -182,7 +182,7 @@ export async function reopenPayslip(ctx: Pick<Ctx, "userId">, documentId: string
       .where(and(eq(payslips.documentId, documentId), userScoped(ctx).owns(payslips), eq(payslips.active, true)));
     if (!payslip) throw new PayrollError("conflict");
     await clearLeave(ctx, payslip.id, tx);
-    await dropCompetence(ctx, payslip.id, tx);
+    await payslipWithdrawn(ctx, payslip.id, tx);
     const [reopened] = await tx
       .update(payslips)
       .set({ active: false, appliedAt: null })
@@ -204,7 +204,7 @@ export async function reopenPayslip(ctx: Pick<Ctx, "userId">, documentId: string
         .returning();
       if (!(await transition(ctx, restored.documentId, "applied", {}, tx))) throw new PayrollError("conflict");
       await writeLeave(ctx, restored, tx);
-      await recordPension(ctx, restored, tx);
+      await announce(ctx, restored, tx);
     }
     await rereadNext(ctx, reopened, tx);
     return { restored: replaced !== undefined };

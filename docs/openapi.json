@@ -18350,7 +18350,7 @@
     "/payroll/payslips/{id}/llm-fill": {
       "post": {
         "operationId": "fill_payslip_with_llm",
-        "summary": "Asks the LLM fallback for the blank fields it may fill; what it fills is inferred and waits for a decision. `unavailable` (`reason` `llm_not_configured`, `llm_failed`) when it cannot answer.",
+        "summary": "Asks the LLM fallback for the blank fields it may fill; what it fills is inferred and waits for a decision. `unavailable` (`reason` `llm_not_configured`, `llm_failed`) when it cannot answer. Only the web's own session calls it: a token gets 403.",
         "tags": [
           "payroll"
         ],
@@ -18469,7 +18469,7 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "session"
       }
     },
     "/payroll/payslips/{id}/reject": {

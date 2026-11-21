@@ -87,8 +87,8 @@ export function quarterKey(year: number, quarter: number): string {
 }
 
 /**
- * What an applied payslip hands the pension fund (plan F6 §3.3, §3.4.2): built by payroll, which
- * owns the payslip's fields, and stored here as it comes. `null` where the payslip has no such line.
+ * What an applied payslip accrued for the pension fund (plan F6 §3.3, §3.4.2): built by the
+ * `payroll` source from payroll's `PayslipApplied`, and stored here as it comes. `null` where the payslip has no such line.
  */
 export interface CompetenceInput {
   payslipId: string;

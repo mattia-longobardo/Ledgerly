@@ -1,5 +1,6 @@
 import { type MonthKey, monthKey } from "../../../shared/dates";
 import { LEAVE_DAY_KINDS, dayStatus, minuteWeight, type LeaveDayKind, type LeaveDayView } from "./days";
+import type { BalanceKind } from "../ports";
 
 /* Leave the payslips know about and the calendar does not (M2) */
 
@@ -16,7 +17,7 @@ export interface UnrecordedLeave {
 
 /** A payslip's leave event, as `payroll` reports it. */
 interface PayrollLeave {
-  kind: "vacation" | "rol" | "permit";
+  kind: BalanceKind;
   hours: number;
   usagePeriod: MonthKey;
 }

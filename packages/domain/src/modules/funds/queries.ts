@@ -1,7 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
 import { listAccounts, listBalanceEntries } from "../accounts";
-import { FUND_ROLES } from "../payroll/pension";
-import { listCodeMap, payslipsOf } from "../payroll/service";
 import type { Ctx } from "../../platform/context";
 import {
   civilDateIn,
@@ -46,7 +44,9 @@ import {
   valuationsOf,
 } from "./pension/operations";
 import { type OperationLike, type QuarterStatus, reconcile } from "./pension/reconcile";
+import { FUND_ROLES } from "./pension/payroll-source";
 import { type Component, DEFAULT_TOLERANCE_DAYS } from "./pension/rules";
+import { payslipDirectory } from "./ports";
 import {
   type Competence,
   competenceFor,
@@ -251,17 +251,20 @@ export async function fundDetails(
   ]);
   const accountOf = new Map(accounts.map((account) => [account.id, account]));
 
-  // Both come from payroll's own service functions: this module never reads its tables. Funds
+  // Both come through the port `PayslipDirectory`: this module never reads payroll. Funds
   // with no payslip source ask payroll nothing.
   const codes: FundCodes = {};
   let payslipDocuments = new Map<string, string>();
   if (fed.length > 0) {
-    const [codeMap, payslips] = await Promise.all([listCodeMap(ctx), payslipsOf(ctx)]);
+    const [codeMap, documents] = await Promise.all([
+      payslipDirectory().codeRoles(ctx),
+      payslipDirectory().payslipDocuments(ctx),
+    ]);
     for (const entry of codeMap) {
       if (!FUND_ROLES.includes(entry.role)) continue;
       codes[entry.role] = [...(codes[entry.role] ?? []), entry.code];
     }
-    payslipDocuments = new Map(payslips.map((payslip) => [payslip.id, payslip.documentId]));
+    payslipDocuments = documents;
   }
 
   const details: FundDetail[] = [];

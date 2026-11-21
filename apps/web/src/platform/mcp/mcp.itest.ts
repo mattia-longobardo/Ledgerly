@@ -201,6 +201,8 @@ describe("MCP tools", () => {
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       "get_account_balances",
       "get_interest_rule",
+      "get_payroll",
+      "get_payslip",
       "get_preferences",
       "get_profile",
       "get_spending",

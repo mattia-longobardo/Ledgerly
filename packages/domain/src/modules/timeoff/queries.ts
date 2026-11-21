@@ -1,5 +1,5 @@
-import { leaveEventsOf, leaveSnapshotHistory } from "../payroll/service";
 import { holidaysFor } from "../../platform/holidays/service";
+import { type BalanceKind, leaveBalances } from "./ports";
 import { getPreferences } from "../users/service";
 import type { Ctx } from "../../platform/context";
 import { type CivilDate, type MonthKey, addMonths, monthKey, today } from "../../shared/dates";
@@ -61,7 +61,7 @@ export type LeaveRow =
       id: string;
       /** The month the hours were used in — a payslip reports a month, never a day (§3.6.1). */
       usagePeriod: MonthKey;
-      kind: "vacation" | "rol" | "permit";
+      kind: BalanceKind;
       hours: number;
       /** The payslip that reported it, for the note column. */
       payrollPeriod: MonthKey;
@@ -124,7 +124,7 @@ const asView = (day: LeaveDay): LeaveDayView => ({
 /**
  * Everything the Time off screen shows for one year, assembled once (spec §7.9).
  *
- * The payslip snapshots come through `payroll`'s own service, never its tables, and the residual
+ * The payslip snapshots come through the port `LeaveBalanceSource`, never payroll, and the residual
  * is worked out twice — once per kind — because the two have different units and may well have
  * different provenance: a payslip that prints a vacation balance and no ROL one leaves the ROL
  * card on the allowance formula while vacation is on the payslip's.
@@ -132,7 +132,7 @@ const asView = (day: LeaveDay): LeaveDayView => ({
 export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: number): Promise<TimeOffView> {
   // Every payslip's snapshot, not only this year's: the last one may be of the year before, and
   // the monthly accrual is read across them. Read first, because it says how far back the days go.
-  const history = await leaveSnapshotHistory(ctx);
+  const history = await leaveBalances().snapshotHistory(ctx);
   const snapshots = history.filter((one) => Number(one.period.slice(0, 4)) === year);
 
   /** The last applied payslip of any year that printed a balance for this kind. */
@@ -153,7 +153,7 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
     allowanceOf(ctx, year),
     listAllowances(ctx),
     listLeaveDays(ctx, { from, to: shown.to }),
-    leaveEventsOf(ctx, year),
+    leaveBalances().eventsOf(ctx, year),
   ]);
   const days = everyDay.filter((day) => day.on >= shown.from);
 

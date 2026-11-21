@@ -197,11 +197,14 @@ export const fillPayslipWithLlm = defineRoute({
   id: "fill_payslip_with_llm",
   method: "POST",
   path: "/payroll/payslips/{id}/llm-fill",
-  scope: "write",
+  // It sends the payslip's text to an external service: the web's own session only, never a token's
+  // (as the IBAN, H45). A token gets 403.
+  scope: "session",
   capability: "payroll",
   summary:
     "Asks the LLM fallback for the blank fields it may fill; what it fills is inferred and waits for a " +
-    "decision. `unavailable` (`reason` `llm_not_configured`, `llm_failed`) when it cannot answer.",
+    "decision. `unavailable` (`reason` `llm_not_configured`, `llm_failed`) when it cannot answer. Only the " +
+    "web's own session calls it: a token gets 403.",
   actions: ["fillWithLlmAction"],
   params: byPayslip,
   response: z.object({ asked: z.number().int(), filled: z.number().int() }),

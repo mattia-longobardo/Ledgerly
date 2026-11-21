@@ -277,6 +277,20 @@ describe("the session cookie on /api/v1", () => {
     expect(reads.map((tool) => tool.name)).not.toContain("list_switch_identifiers");
   });
 
+  it("lets only the session ask the LLM fallback for a payslip, never a token", async () => {
+    const path = `/payroll/payslips/${randomUUID()}/llm-fill`;
+    // The session reaches the use case: no fallback is configured on the test instance.
+    const asked = await call(path, alice, { method: "POST" });
+    expect(asked.status).toBe(503);
+    expect(await asked.json()).toEqual({ error: "unavailable", reason: "llm_not_configured" });
+    // A token with every scope it can be granted, `write` among them: 403, with or without the cookie.
+    const token = await tokenFor(alice, ["read", "write", "imports", "investments:read"]);
+    for (const who of [{ bearer: token }, { bearer: token, cookie: alice.cookie }]) {
+      expect((await call(path, who, { method: "POST" })).status).toBe(403);
+    }
+    expect(reads.map((tool) => tool.name)).not.toContain("fill_payslip_with_llm");
+  });
+
   it("never answers with Access-Control-Allow-Credentials, nor a preflight", async () => {
     const responses = [
       await call("/profile", alice, { origin: "https://evil.example" }),

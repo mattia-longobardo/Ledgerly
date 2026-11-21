@@ -14,10 +14,9 @@ import {
   sourceInputOf,
   type WizardForm,
 } from "@ledgerly/domain/funds";
-import { replaceCompetences } from "@ledgerly/domain/funds";
+import { competencesFromPayslips, replaceCompetences } from "@ledgerly/domain/funds";
 import { addSource, createFund, FundError, updateSource } from "@ledgerly/domain/funds";
-import { appliedCompetences } from "@ledgerly/domain/payroll";
-import { codeMapOf } from "@ledgerly/domain/payroll";
+import { appliedPayslips } from "@ledgerly/domain/payroll";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 
@@ -40,7 +39,7 @@ function revalidate(fundId?: string): void {
 
 /** Every applied payslip's competence, published for the funds the payslip feeds. */
 async function publish(ctx: Ctx, fundId: string): Promise<number> {
-  return replaceCompetences(ctx, fundId, await appliedCompetences(ctx, await codeMapOf(ctx)));
+  return replaceCompetences(ctx, fundId, competencesFromPayslips(await appliedPayslips(ctx)));
 }
 
 /**

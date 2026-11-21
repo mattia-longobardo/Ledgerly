@@ -308,6 +308,7 @@
     "closesPeriodBefore",
     "competenceOn",
     "competencePeriod",
+    "competencesFromPayslips",
     "contributionFee",
     "contributionFormOf",
     "contributionInputOf",
@@ -342,6 +343,7 @@
     "newContributionForm",
     "nextDueDates",
     "onTheWay",
+    "payrollSource",
     "periodFees",
     "periodStart",
     "periodsPerYear",
@@ -371,6 +373,7 @@
     "valuationLines",
     "valueSeries",
     "valueToday",
+    "wireFunds",
     "yearRows"
   ],
   "packages/domain/src/modules/imports/client.ts": [
@@ -546,8 +549,7 @@
   "packages/domain/src/modules/payroll/index.ts": [
     "FIELDS",
     "PayrollError",
-    "REPLY_TEAMSYSTEM_CODES",
-    "appliedCompetences",
+    "appliedPayslips",
     "applyPayslip",
     "codeMapOf",
     "codeMapView",
@@ -556,6 +558,8 @@
     "fillWithLlm",
     "isFieldName",
     "llmFillable",
+    "payrollDirectory",
+    "payrollLeaveBalances",
     "processPayslip",
     "registerView",
     "rejectPayslip",
@@ -566,7 +570,8 @@
     "reviewView",
     "setCodeRole",
     "uploadPayslip",
-    "verifyPayslip"
+    "verifyPayslip",
+    "wirePayroll"
   ],
   "packages/domain/src/modules/pockets/index.ts": [
     "PocketError",
@@ -642,6 +647,7 @@
     "KindView",
     "LEAVE_DAY_KINDS",
     "LeaveAnswer",
+    "LeaveBalanceSource",
     "LeaveCalendarSync",
     "LeaveRow",
     "LeaveUndo",

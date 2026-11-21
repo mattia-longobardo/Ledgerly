@@ -1,7 +1,6 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { codeMapView } from "@ledgerly/domain/payroll";
-import { REPLY_TEAMSYSTEM_CODES } from "@ledgerly/domain/payroll";
 import { requireSession } from "@/platform/auth/session";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
@@ -25,7 +24,6 @@ export default async function PayrollSettingsPage() {
   const t = await getTranslations("payroll");
   const codes = await getTranslations("settings.codeMap");
   const codeMap = await codeMapView(ctx);
-  const seeded = new Set(REPLY_TEAMSYSTEM_CODES.map((entry) => entry.code));
 
   return (
     <Page title={t("tabs.settings")} parent={{ href: "/payroll", label: t("title") }}>
@@ -44,12 +42,7 @@ export default async function PayrollSettingsPage() {
         <SettingsGrid>
           <SettingsSection title={codes("title")} description={codes("description")} padded={false}>
             <CodeMapCard
-              entries={codeMap.map((entry) => ({
-                code: entry.code,
-                role: entry.role,
-                note: entry.note,
-                seeded: seeded.has(entry.code),
-              }))}
+              entries={codeMap}
             />
           </SettingsSection>
           {ctx.role === "admin" && (

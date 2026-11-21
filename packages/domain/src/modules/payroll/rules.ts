@@ -67,6 +67,11 @@ export const ROLE_FIELD: Partial<Record<CodeRole, MoneyField>> = {
 
 export const REPLY_TEAMSYSTEM = "reply-teamsystem";
 
+/** Whether the reading profile has the code: «Reset» puts it back rather than removing it. */
+export function isSeededCode(code: string): boolean {
+  return REPLY_TEAMSYSTEM_CODES.some((entry) => entry.code === code);
+}
+
 /** The register's amount columns (spec §7.8 D13): summed per year, averaged per ordinary month. */
 export const SUMMED_FIELDS = [
   "gross",

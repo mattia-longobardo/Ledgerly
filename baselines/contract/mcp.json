@@ -526,6 +526,54 @@
     "execution": {
      "taskSupport": "forbidden"
     }
+   },
+   {
+    "name": "get_payroll",
+    "title": "Payroll",
+    "description": "Every payslip applied or waiting for a decision, by year: gross, taxes, social, net and the other amounts, the leave left in hours, the year's totals and means; the mean net of the last 3, 6 and 12 months, the tax rate and the yearly gross (RAL). Amounts are decimal strings.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {}
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
+   },
+   {
+    "name": "get_payslip",
+    "title": "Payslip",
+    "description": "One payslip by its document id (from get_payroll): its values with origin and verification, the checks that passed or failed, the warnings, the leave taken by month and the body lines.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {
+      "id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|<id-1>|<id-2>)$",
+       "description": "The payslip's document id."
+      }
+     },
+     "required": [
+      "id"
+     ]
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
    }
   ]
  },
@@ -2504,6 +2552,132 @@
    "currency": "EUR",
    "on": "2031-10-15",
    "holdings": []
+  }
+ },
+ "get_payroll": {
+  "isError": false,
+  "answer": {
+   "years": [
+    {
+     "year": 2031,
+     "rows": [
+      {
+       "id": "<id-134>",
+       "payslipId": "<id-135>",
+       "year": 2031,
+       "period": "2031-04-01",
+       "type": "ordinary",
+       "state": "applied",
+       "applied": true,
+       "fileName": "APRILE 2031.pdf",
+       "hasOriginal": true,
+       "amounts": {
+        "gross": "2000.00",
+        "taxesTotal": "277.73",
+        "employeeSocial": "183.80",
+        "netPay": "1514.00",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "regionalInstallment": "10.00",
+        "substituteTax": null,
+        "refund730": null,
+        "welfareCash": null,
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00"
+       },
+       "leaveLeft": {
+        "vacation": "51.66",
+        "rol": "32.66",
+        "permit": null
+       },
+       "openWarnings": 0
+      },
+      {
+       "id": "<id-136>",
+       "payslipId": "<id-137>",
+       "year": 2031,
+       "period": "2031-03-01",
+       "type": "ordinary",
+       "state": "applied",
+       "applied": true,
+       "fileName": "MARZO 2031.pdf",
+       "hasOriginal": true,
+       "amounts": {
+        "gross": "2000.00",
+        "taxesTotal": "280.23",
+        "employeeSocial": "183.80",
+        "netPay": "1511.00",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "regionalInstallment": "10.00",
+        "substituteTax": "2.50",
+        "refund730": null,
+        "welfareCash": null,
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00"
+       },
+       "leaveLeft": {
+        "vacation": "45.00",
+        "rol": "30.00",
+        "permit": null
+       },
+       "openWarnings": 0
+      }
+     ],
+     "totals": {
+      "gross": "4000.00",
+      "taxesTotal": "557.96",
+      "employeeSocial": "367.60",
+      "netPay": "3025.00",
+      "irpefGross": "835.46",
+      "taxDeductions": "300.00",
+      "regionalInstallment": "20.00",
+      "substituteTax": "2.50",
+      "refund730": null,
+      "welfareCash": null,
+      "employeeFundEffective": "50.00",
+      "employerFundEffective": "90.00",
+      "tfrSelected": "300.00"
+     },
+     "averages": {
+      "gross": "2000.00",
+      "taxesTotal": "278.98",
+      "employeeSocial": "183.80",
+      "netPay": "1512.50",
+      "irpefGross": "417.73",
+      "taxDeductions": "150.00",
+      "regionalInstallment": "10.00",
+      "substituteTax": "2.50",
+      "refund730": null,
+      "welfareCash": null,
+      "employeeFundEffective": "25.00",
+      "employerFundEffective": "45.00",
+      "tfrSelected": "150.00"
+     },
+     "hasApplied": true
+    }
+   ],
+   "inbox": [],
+   "awaiting": 0,
+   "inFlight": false,
+   "kpis": {
+    "net3": "1512.50",
+    "net6": "1512.50",
+    "net12": "1512.50",
+    "taxRate": 0.13949,
+    "ral": {
+     "amount": "26000.00",
+     "basis": "estimate",
+     "year": 2031
+    }
+   },
+   "applied": 2,
+   "span": {
+    "from": "2031-03-01",
+    "to": "2031-04-01"
+   }
   }
  }
 }

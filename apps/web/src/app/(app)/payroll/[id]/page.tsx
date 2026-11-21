@@ -9,8 +9,6 @@ import { fieldGroups, STATE_TONE } from "@/modules/payroll/ui/present";
 import { ReviewActions } from "@/modules/payroll/ui/review-actions";
 import { ReviewWorkspace } from "@/modules/payroll/ui/review-workspace";
 import { requireSession } from "@/platform/auth/session";
-import { llmFallbackAvailable } from "@ledgerly/domain/platform/settings";
-import { isFieldName, llmFillable } from "@ledgerly/domain/payroll";
 import { addMonths, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { parseCents } from "@ledgerly/domain/shared/money";
@@ -45,10 +43,7 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
   const view = /^[0-9a-f-]{36}$/.test(id) ? await reviewView(ctx, id) : null;
   if (!view) notFound();
   const { document } = view;
-  const blanks = view.evidence.some(
-    (row) => isFieldName(row.field) && llmFillable(row.field) && row.value === null && row.origin === "printed",
-  );
-  const llm = blanks && document.state === "needs_review" && (await llmFallbackAvailable());
+  const llm = view.llmFill;
   const money = (decimal: string | undefined) =>
     decimal && /^-?\d+(\.\d{1,2})?$/.test(decimal) ? formatMoney(parseCents(decimal), ctx.numberFormat) : NULL_DISPLAY;
   const hours = (decimal: string) => formatAmountInput(parseCents(decimal), ctx.numberFormat);
@@ -56,12 +51,7 @@ export default async function ReviewPayslipPage({ params }: PageProps<"/payroll/
   const editable = document.state === "needs_review" || document.state === "verified";
   const groups = fieldGroups(view.evidence, ctx);
   const period = view.identity?.period ?? null;
-  const events =
-    view.payslip?.active === true
-      ? view.appliedEvents
-      : period
-        ? view.assembled.events.map((event) => ({ ...event, usagePeriod: addMonths(period, -1) }))
-        : [];
+  const events = view.leaveEvents;
 
   return (
     <Page title={t("review.title")} parent={{ href: "/payroll", label: t("review.back") }}>

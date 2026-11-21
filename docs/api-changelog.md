@@ -3,6 +3,31 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · payroll (0.50.0)
+
+- `GET /payroll/payslips` (new, `read`): the register of the Payroll page — `years` (each with `rows`:
+  a payslip applied or waiting, `id` of its document, `payslipId`, `period`, `type`, `state`, `applied`,
+  `amounts` as decimal strings, `leaveLeft` in hours as printed, `openWarnings`; `totals` and `averages`;
+  `hasApplied`), `inbox` (documents still being read or waiting), `awaiting`, `inFlight`, `kpis`
+  (`net3`, `net6`, `net12`, `taxRate` as a fraction, `ral` `{amount, basis, year}`), `applied`, `span`.
+- `GET /payroll/payslips/{id}` (new, `read`): one payslip's review — `document`, `payslip`,
+  `periodLabel`, `fields` in the catalogue's order (`value` in canonical form, `read` when corrected,
+  `origin`, `verification`, `confidence`, `page`, `bbox`), `checks`, `warnings`, `blocking`,
+  `leaveEvents` (stored once applied, foreseen before), `lines` with the role of each code, `llmFill`.
+- MCP tools `get_payroll` and `get_payslip` (`id`) (new, read only): the answers of the two routes.
+- `GET /payroll/codes` (new, `read`), `PUT /payroll/codes/{code}` and `DELETE /payroll/codes/{code}`
+  (new, `write`, 204): the code map, with `seeded` for the codes of the reading profile.
+- The writes of a payslip's review (new, `write`): `PUT /payroll/payslips/{id}/fields/{field}`
+  `{value}` (canonical form; answers the review), `POST .../verify` `{acknowledgeFailures}`,
+  `.../apply`, `.../reject`, `.../retry` (204), `.../reopen` (`{restored}`), `PATCH /payroll/payslips/{id}`
+  `{name}` (204), `DELETE /payroll/payslips/{id}` (`{unapplied, restored}`). Errors: `not_found`;
+  `invalid` (`reason` `invalid_value`, `derived_field`, `invalid_name`); `conflict` (`reason`
+  `invalid_state`, `unconfirmed_inferred`, `blocking_checks`, `no_identity`, `conflict`).
+- `POST /payroll/payslips/{id}/llm-fill` (new, scope `session`): «Fill with AI», `{asked, filled}`;
+  `unavailable` (`llm_not_configured`, `llm_failed`). It sends the payslip's text to an external
+  service, so only the web's own session calls it: a token gets 403.
+- The upload of a payslip stays `POST /imports`.
+
 ## 2026-11-21 · time off and the colour of a category (0.49.0)
 
 - `GET /timeoff/{year}` (new, `read`): the Time off page of one year — `allowance` in days, `vacation`

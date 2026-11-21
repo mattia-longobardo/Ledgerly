@@ -318,7 +318,7 @@ export const MODULES: Module[] = [
     ],
     integration: ["apps/web/src/modules/payroll", "packages/domain/src/modules/payroll"],
     flows: ["payroll"],
-    usedBy: ["funds", "timeoff", "export", "imports", "jobs", "e2e:funds"],
+    usedBy: ["funds", "timeoff", "export", "imports", "jobs", "e2e:funds", "api"],
   },
   {
     id: "imports",
@@ -342,7 +342,7 @@ export const MODULES: Module[] = [
       "packages/domain/src/platform/holidays",
     ],
     flows: ["timeoff"],
-    usedBy: ["connections", "export", "jobs", "e2e:connections", "api"],
+    usedBy: ["connections", "export", "jobs", "e2e:connections", "api", "payroll"],
   },
   {
     id: "users",
@@ -440,6 +440,7 @@ export const MODULES: Module[] = [
       "subscriptions",
       "timeoff",
       "interests",
+      "payroll",
       "imports",
       "admin",
       "categories",
@@ -553,7 +554,7 @@ export const MODULES: Module[] = [
       "packages/domain/src/**/queries.ts",
       "packages/domain/src/**/*-queries.ts",
     ],
-    usedBy: ["perf", "e2e:connections", "e2e:transactions"],
+    usedBy: ["perf", "e2e:connections", "e2e:transactions", "payroll"],
   },
   {
     id: "shared-domain",

@@ -147,7 +147,7 @@ function rowCells(row: RegisterRow, format: Format): RegisterCells {
     values: moneyCells(values, format),
     vacationLeft: hours(row.leaveLeft.vacation, format),
     rolLeft: hours(row.leaveLeft.rol, format),
-    warnings: payslip.active ? 0 : payslip.warnings.length,
+    warnings: row.openWarnings,
   };
 }
 

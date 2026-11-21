@@ -10,8 +10,10 @@ import { AWAITING_REVIEW, IN_FLIGHT } from "../imports/rules";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
+import { llmFallbackAvailable } from "../../platform/settings/service";
+import { addMonths } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
-import type { LeaveKind } from "./fields";
+import { isFieldName, type LeaveKind, llmFillable } from "./fields";
 import { hasBlockingFailure } from "./parse/checks";
 import {
   averageNet,
@@ -21,6 +23,7 @@ import {
   meanCents,
   ralEstimate,
   type RalEstimate,
+  isSeededCode,
   SUMMED_FIELDS,
   type SummedField,
 } from "./rules";
@@ -32,6 +35,12 @@ export interface RegisterRow {
   document: Document;
   /** Hours left as the payslip printed them (applied ordinary payslips only). */
   leaveLeft: Partial<Record<LeaveKind, string | null>>;
+  /**
+   * How many things this payslip still asks a person to look at (spec §7.8). Only while it waits:
+   * applying a payslip **is** the decision, so a payslip already in the register is not nagged
+   * about again — its warnings stay on its own page, where they are read in context.
+   */
+  openWarnings: number;
 }
 
 export interface YearSummary {
@@ -108,6 +117,7 @@ export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterVi
     payslip,
     document: documentOf.get(payslip.documentId)!,
     leaveLeft: leaveOf.get(payslip.id) ?? {},
+    openWarnings: payslip.active ? 0 : payslip.warnings.length,
   }));
 
   const years = groupByYear(rows.map((row) => ({ ...row.payslip, row }))).map((group) => {
@@ -149,8 +159,10 @@ interface ReviewView extends Recomputed {
   document: Document;
   evidence: Evidence[];
   blocking: boolean;
-  /** The leave events stored when it was applied; before that, `assembled.events` says what they will be. */
-  appliedEvents: { kind: LeaveKind; hours: string; usagePeriod: string }[];
+  /** The leave taken, by the month it was used in: the events stored once applied, foreseen before. */
+  leaveEvents: { kind: LeaveKind; hours: string; usagePeriod: string }[];
+  /** «Fill with AI» can run: blank fields it may fill, a payslip to review, the fallback configured. */
+  llmFill: boolean;
 }
 
 /** One payslip's review (spec §7.8 "Review payslip"): what was read, from where, and what it implies. */
@@ -166,17 +178,32 @@ export async function reviewView(ctx: Pick<Ctx, "userId">, documentId: string): 
           .where(and(userScoped(ctx).owns(payrollLeaveEvents), eq(payrollLeaveEvents.payslipId, state.payslip.id)))
           .orderBy(payrollLeaveEvents.usagePeriod, payrollLeaveEvents.kind)
       : [];
+  const period = state.identity?.period ?? null;
+  const blanks = evidence.some(
+    (row) => isFieldName(row.field) && llmFillable(row.field) && row.value === null && row.origin === "printed",
+  );
   return {
     ...state,
     document,
     evidence,
     blocking: hasBlockingFailure(state.assembled.checks),
-    appliedEvents: events,
+    leaveEvents:
+      state.payslip?.active === true
+        ? events
+        : period
+          ? state.assembled.events.map((event) => ({ kind: event.kind, hours: event.hours, usagePeriod: addMonths(period, -1) }))
+          : [],
+    llmFill: blanks && document.state === "needs_review" && (await llmFallbackAvailable()),
   };
 }
 
-/** The code map as Settings › Data shows it. */
+/** The code map as Payroll › Settings shows it; `seeded`: the reading profile has the code. */
 export async function codeMapView(ctx: Pick<Ctx, "userId">) {
   await codeMapOf(ctx);
-  return listCodeMap(ctx);
+  return (await listCodeMap(ctx)).map((entry) => ({
+    code: entry.code,
+    role: entry.role,
+    note: entry.note,
+    seeded: isSeededCode(entry.code),
+  }));
 }
