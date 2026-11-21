@@ -11,6 +11,7 @@
     "./core": "./src/core/index.ts",
     "./pockets": "./src/pockets/index.ts",
     "./settings": "./src/settings/index.ts",
+    "./subscriptions": "./src/subscriptions/index.ts",
     "./transactions": "./src/transactions/index.ts"
   },
   "dependencies": {

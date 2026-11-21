@@ -1,5 +1,5 @@
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
-import { csvDocument } from "./csv";
+import { csvDocument } from "@ledgerly/format/csv";
 
 /**
  * One table of an export: the same rows become a CSV and a member of the JSON, so the two can

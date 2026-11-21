@@ -3,18 +3,20 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/en.json";
-import { InactiveSubscriptions, type SubscriptionView } from "./subscriptions-table";
+import { InactiveSubscriptions } from "./inactive-subscriptions";
+import type { SubscriptionView } from "./subscriptions-table";
 
 const notify = vi.fn();
 vi.mock("@ledgerly/ui/toast", () => ({ notify: (...a: unknown[]) => notify(...a) }));
 
 const deleteSubscription = vi.fn();
-vi.mock("../actions", () => ({
-  deleteSubscriptionAction: (...a: unknown[]) => deleteSubscription(...a),
-  setSubscriptionStateAction: vi.fn(),
-  updateSubscriptionAction: vi.fn(),
-  createSubscriptionAction: vi.fn(),
+vi.mock("../calls", () => ({
+  deleteSubscription: (...a: unknown[]) => deleteSubscription(...a),
+  setSubscriptionState: vi.fn(),
+  updateSubscription: vi.fn(),
+  createSubscription: vi.fn(),
 }));
+vi.mock("@ledgerly/ui/router", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 function view(name: string, state: "paused" | "cancelled"): SubscriptionView {
   return {

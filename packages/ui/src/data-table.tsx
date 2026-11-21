@@ -4,7 +4,7 @@ import { Fragment, type HTMLAttributes, type LiHTMLAttributes, type ReactNode } 
 import { cn } from "./cn";
 import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "./table";
 
-interface DataColumn<T> {
+export interface DataColumn<T> {
   key: string;
   header: ReactNode;
   cell: (row: T) => ReactNode;
@@ -58,7 +58,7 @@ function CardCell<T>({ column, row }: { column: DataColumn<T>; row: T }) {
   }
 }
 
-type RowProps = HTMLAttributes<HTMLTableRowElement> & { selected?: boolean };
+type RowProps = HTMLAttributes<HTMLTableRowElement> & { selected?: boolean; "data-testid"?: string };
 
 type DataTableProps<T> = {
   columns: readonly DataColumn<T>[];
@@ -74,6 +74,8 @@ type DataTableProps<T> = {
   frameClassName?: string;
   /** The names a test finds the table and the list by. */
   testIds?: { table: string; list: string };
+  /** The table's `<tfoot>` (a totals row); the cards have none. */
+  footer?: ReactNode;
 } & ({ rows: readonly T[]; groups?: never } | { groups: readonly DataGroup<T>[]; rows?: never });
 
 function TableView<T>({
@@ -85,6 +87,7 @@ function TableView<T>({
   rowProps,
   frameClassName = "overflow-x-auto",
   testIds,
+  footer,
 }: DataTableProps<T>) {
   const widths = columns.some((column) => column.width !== undefined);
   const tableRow = (row: T) => {
@@ -128,6 +131,7 @@ function TableView<T>({
               ))
             : rows.map(tableRow)}
         </TBody>
+        {footer && <tfoot>{footer}</tfoot>}
       </Table>
     </div>
   );

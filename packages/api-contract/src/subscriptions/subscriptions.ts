@@ -201,7 +201,7 @@ export const createSubscription = defineRoute({
   summary:
     "Creates a subscription and checks its charges against the movements. The price is a positive " +
     "decimal string, the tolerance a percentage (5 when left out).",
-  actions: ["createSubscriptionAction"],
+  actions: [],
   body: subscriptionBody,
   response: z.object({ id: id() }),
   status: 201,
@@ -218,7 +218,7 @@ export const updateSubscription = defineRoute({
   summary:
     "Changes a subscription: every field of the dialog, as `POST /subscriptions` takes them; its charges " +
     "are checked again.",
-  actions: ["updateSubscriptionAction"],
+  actions: [],
   params: bySubscription,
   body: subscriptionBody,
   response: null,
@@ -234,7 +234,7 @@ export const setSubscriptionState = defineRoute({
   scope: "write",
   capability: "subscriptions",
   summary: "Pauses, resumes, cancels or brings back a subscription.",
-  actions: ["setSubscriptionStateAction"],
+  actions: [],
   params: bySubscription,
   body: z.object({ state: z.enum(SUBSCRIPTION_STATES) }).strict(),
   response: null,
@@ -252,7 +252,7 @@ export const deleteSubscription = defineRoute({
   summary:
     "Deletes a cancelled subscription and the charges it had checked; the movements stay. `conflict` " +
     "(`not_cancelled`) for one that is not cancelled.",
-  actions: ["deleteSubscriptionAction"],
+  actions: [],
   params: bySubscription,
   response: null,
   status: 204,

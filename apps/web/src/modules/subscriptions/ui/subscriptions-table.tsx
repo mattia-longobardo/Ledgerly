@@ -1,14 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Tag } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
-import { Modal } from "@ledgerly/ui/modal";
-import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
-import { notify } from "@ledgerly/ui/toast";
-import { deleteSubscriptionAction } from "../actions";
+import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
+import { ProgressBar } from "@ledgerly/ui/progress-bar";
+import { TotalRow } from "@ledgerly/ui/table";
 import type { Cycle } from "@ledgerly/domain/subscriptions/client";
 import { type DialogOptions, SubscriptionDialog, type SubscriptionDraft } from "./subscription-dialog";
 
@@ -70,12 +69,16 @@ function compare(a: SubscriptionView, b: SubscriptionView, key: SortKey): number
   }
 }
 
-function UtilityBar({ value }: { value: number }) {
-  const tone = value <= 5 ? "bg-warn" : value >= 8 ? "bg-pos" : "bg-accent";
+/** The utility as a bar beside its number: low is a warning, 8 and up is a good sign. */
+function UtilityBar({ value, label }: { value: number; label: string }) {
   return (
-    <span aria-hidden className="h-1.5 w-[60px] overflow-hidden rounded-full bg-track">
-      <span className={cn("block h-full rounded-full", tone)} style={{ width: `${value * 10}%` }} />
-    </span>
+    <div className="w-[60px] shrink-0">
+      <ProgressBar
+        value={value / 10}
+        tone={value <= 5 ? "warn" : value >= 8 ? "pos" : "accent"}
+        label={label}
+      />
+    </div>
   );
 }
 
@@ -103,22 +106,15 @@ export function SubscriptionsTable({
     const order = compare(a, b, sort.key) * (sort.direction === "asc" ? 1 : -1);
     return order || a.name.localeCompare(b.name) || a.draft.id.localeCompare(b.draft.id);
   });
-  const header = (key: SortKey, label: string, align: "left" | "right" = "left") => (
-    <Th
-      align={align}
-      sort={{
-        direction: sort.key === key ? sort.direction : null,
-        onSort: () =>
-          setSort((current) =>
-            current.key === key
-              ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
-              : { key, direction: "desc" },
-          ),
-      }}
-    >
-      {label}
-    </Th>
-  );
+  const sortOn = (key: SortKey) => ({
+    direction: sort.key === key ? sort.direction : null,
+    onSort: () =>
+      setSort((current) =>
+        current.key === key
+          ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+          : { key, direction: "desc" },
+      ),
+  });
   const pill = (row: SubscriptionView) => (
     <span
       title={row.statusDetail}
@@ -132,126 +128,135 @@ export function SubscriptionsTable({
       <span className="sr-only">: {row.statusDetail}</span>
     </span>
   );
-  const utilityButton = (row: SubscriptionView) => (
-    <button
-      type="button"
-      title={t("setUtility")}
-      aria-label={`${t("setUtility")}: ${row.name}, ${t("utilityOf", { value: row.utility })}`}
-      onClick={() => setEditing(row.draft)}
-      className="focus-ring inline-flex min-h-6 items-center rounded-sm px-1 text-sm tabular-nums hover:bg-hover"
-    >
-      {t("utilityOf", { value: row.utility })}
-    </button>
-  );
+  const columns: DataColumn<SubscriptionView>[] = [
+    {
+      key: "name",
+      header: t("columns.name"),
+      sort: sortOn("name"),
+      className: "py-1.5",
+      // Category and paying account under the name (spec §8.4 point 3): at 1440 px with the sidebar
+      // open there is no room for them as columns of their own.
+      cell: (row) => (
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate font-semibold" title={row.name}>
+            {row.name}
+          </span>
+          <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
+            {row.categoryName && (
+              <Tag>
+                <span
+                  aria-hidden
+                  className="mr-1 inline-block size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: row.categoryColor ?? undefined }}
+                />
+                {row.categoryName}
+              </Tag>
+            )}
+            <span className="truncate" title={`${t("columns.paidFrom")}: ${row.accountName}`}>
+              {row.accountName}
+            </span>
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "utility",
+      header: t("columns.utility"),
+      sort: sortOn("utility"),
+      width: "w-[120px]",
+      cell: (row) => (
+        <div className="flex items-center gap-2">
+          <UtilityBar value={row.utility} label={`${t("columns.utility")}: ${row.name}`} />
+          <button
+            type="button"
+            title={t("setUtility")}
+            aria-label={`${t("setUtility")}: ${row.name}, ${t("utilityOf", { value: row.utility })}`}
+            onClick={() => setEditing(row.draft)}
+            className="focus-ring inline-flex min-h-6 items-center rounded-sm px-1 text-sm tabular-nums hover:bg-hover"
+          >
+            {t("utilityOf", { value: row.utility })}
+          </button>
+        </div>
+      ),
+    },
+    {
+      key: "price",
+      header: t("columns.price"),
+      sort: sortOn("price"),
+      align: "right",
+      width: "w-[92px]",
+      cell: (row) => row.price,
+    },
+    {
+      key: "billing",
+      header: t("columns.billing"),
+      sort: sortOn("billing"),
+      width: "w-[92px]",
+      cell: (row) => (
+        <span
+          className={cn(
+            "rounded-sm px-1.5 py-0.5 text-xs font-medium",
+            row.cycle === "monthly" ? "bg-soft text-accent" : "bg-hover text-muted",
+          )}
+        >
+          {t(`cycles.${row.cycle}`)}
+        </span>
+      ),
+    },
+    {
+      key: "due",
+      header: t("columns.due"),
+      width: "w-[104px]",
+      cell: (row) => (
+        <span className="block truncate" title={t("columns.dueOn", { date: row.dueOn })}>
+          {row.due}
+        </span>
+      ),
+    },
+    {
+      key: "monthly",
+      header: t("columns.monthly"),
+      sort: sortOn("monthly"),
+      align: "right",
+      width: "w-[92px]",
+      cell: (row) => row.monthly,
+    },
+    {
+      key: "yearly",
+      header: t("columns.yearly"),
+      sort: sortOn("yearly"),
+      align: "right",
+      width: "w-[92px]",
+      className: "font-semibold",
+      cell: (row) => row.yearly,
+    },
+    { key: "status", header: t("columns.status"), width: "w-[136px]", cell: pill },
+    {
+      key: "edit",
+      header: t("columns.edit"),
+      hiddenHeader: true,
+      width: "w-[60px]",
+      cell: (row) => (
+        <Button size="xs" variant="ghost" onClick={() => setEditing(row.draft)}>
+          {t("columns.edit")}
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <>
-      <div className="overflow-x-auto max-md:hidden">
-        <Table className="table-fixed">
-          <colgroup>
-            <col />
-            <col className="w-[120px]" />
-            <col className="w-[92px]" />
-            <col className="w-[92px]" />
-            <col className="w-[104px]" />
-            <col className="w-[92px]" />
-            <col className="w-[92px]" />
-            <col className="w-[136px]" />
-            <col className="w-[60px]" />
-          </colgroup>
-          <THead>
-            {header("name", t("columns.name"))}
-            {header("utility", t("columns.utility"))}
-            {header("price", t("columns.price"), "right")}
-            {header("billing", t("columns.billing"))}
-            <Th>{t("columns.due")}</Th>
-            {header("monthly", t("columns.monthly"), "right")}
-            {header("yearly", t("columns.yearly"), "right")}
-            <Th>{t("columns.status")}</Th>
-            <Th>
-              <span className="sr-only">{t("columns.edit")}</span>
-            </Th>
-          </THead>
-          <TBody>
-            {sorted.map((row) => (
-              <Tr key={row.draft.id} data-testid="subscription-row">
-                {/* Category and paying account under the name (spec §8.4 point 3): at 1440 px with the
-                    sidebar open there is no room for them as columns of their own. */}
-                <Td className="py-1.5">
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate font-semibold" title={row.name}>
-                      {row.name}
-                    </span>
-                    <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted">
-                      {row.categoryName && (
-                        <Tag>
-                          <span
-                            aria-hidden
-                            className="mr-1 inline-block size-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: row.categoryColor ?? undefined }}
-                          />
-                          {row.categoryName}
-                        </Tag>
-                      )}
-                      <span className="truncate" title={`${t("columns.paidFrom")}: ${row.accountName}`}>
-                        {row.accountName}
-                      </span>
-                    </span>
-                  </span>
-                </Td>
-                <Td>
-                  <span className="flex items-center gap-2">
-                    <UtilityBar value={row.utility} />
-                    {utilityButton(row)}
-                  </span>
-                </Td>
-                <Td align="right">{row.price}</Td>
-                <Td>
-                  <span
-                    className={cn(
-                      "rounded-sm px-1.5 py-0.5 text-xs font-medium",
-                      row.cycle === "monthly" ? "bg-soft text-accent" : "bg-hover text-muted",
-                    )}
-                  >
-                    {t(`cycles.${row.cycle}`)}
-                  </span>
-                </Td>
-                <Td className="truncate" title={t("columns.dueOn", { date: row.dueOn })}>
-                  {row.due}
-                </Td>
-                <Td align="right">{row.monthly}</Td>
-                <Td align="right" className="font-semibold">
-                  {row.yearly}
-                </Td>
-                <Td>{pill(row)}</Td>
-                <Td>
-                  <Button size="xs" variant="ghost" onClick={() => setEditing(row.draft)}>
-                    {t("columns.edit")}
-                  </Button>
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-          <tfoot>
-            <TotalRow label={t("total")}>
-              <td colSpan={4} className="px-2 text-sm font-normal text-muted">
-                {totals.count}
-              </td>
-              <td className="px-2 text-right tabular-nums">{totals.monthly}</td>
-              <td className="px-2 text-right tabular-nums">{totals.yearly}</td>
-              <td colSpan={2} />
-            </TotalRow>
-          </tfoot>
-        </Table>
-      </div>
-
-      <ul className="flex flex-col md:hidden">
-        {sorted.map((row) => (
-          <li
-            key={row.draft.id}
-            data-testid="subscription-item"
-            className="flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0"
-          >
+      <DataTable
+        columns={columns}
+        rows={sorted}
+        rowKey={(row) => row.draft.id}
+        rowProps={() => ({ "data-testid": "subscription-row" })}
+        cardProps={() => ({
+          "data-testid": "subscription-item",
+          className: "flex flex-col gap-1.5 border-b border-border px-4 py-3 last:border-0",
+        })}
+        card={(row) => (
+          <>
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
@@ -268,146 +273,20 @@ export function SubscriptionsTable({
               </span>
               {pill(row)}
             </div>
-          </li>
-        ))}
-      </ul>
-
+          </>
+        )}
+        footer={
+          <TotalRow label={t("total")}>
+            <td colSpan={4} className="px-2 text-sm font-normal text-muted">
+              {totals.count}
+            </td>
+            <td className="px-2 text-right tabular-nums">{totals.monthly}</td>
+            <td className="px-2 text-right tabular-nums">{totals.yearly}</td>
+            <td colSpan={2} />
+          </TotalRow>
+        }
+      />
       {editing && <SubscriptionDialog draft={editing} options={options} onClose={() => setEditing(null)} />}
     </>
-  );
-}
-
-/**
- * The plans that are not running, folded under the table — the paused and the cancelled in **two**
- * sections rather than one list (owner, 2026-09-21), because they are two different things: one is
- * a plan waiting to come back, the other a plan that is over. Each opens on a click and each is a
- * real table, so a name is not the only thing a person can see before deciding.
- *
- * `deletable` is set only for the cancelled: deleting is offered where it cannot be reached by
- * accident from a row that merely pauses (`deleteSubscription` refuses anything else anyway).
- */
-export function InactiveSubscriptions({
-  rows,
-  options,
-  title,
-  deletable = false,
-}: {
-  rows: readonly SubscriptionView[];
-  options: DialogOptions;
-  title: string;
-  deletable?: boolean;
-}) {
-  const t = useTranslations("subscriptions");
-  const [editing, setEditing] = useState<SubscriptionDraft | null>(null);
-  const [removing, setRemoving] = useState<SubscriptionView | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function onDelete(row: SubscriptionView) {
-    setRemoving(null);
-    startTransition(async () => {
-      const result = await deleteSubscriptionAction(row.draft.id);
-      if (result.ok) {
-        notify(t("inactive.deletedToast", { name: row.name }));
-        return;
-      }
-      // A service code, spelled out one branch at a time so the catalogue keys stay literal.
-      notify(
-        result.error === "not_cancelled"
-          ? t("errors.not_cancelled")
-          : result.error === "not_found"
-            ? t("errors.not_found")
-            : t("errors.failed"),
-        "error",
-      );
-    });
-  }
-
-  if (rows.length === 0) return null;
-  return (
-    <details className="rounded-card border border-border bg-card">
-      <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-medium text-muted marker:content-none">
-        <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden className="transition-transform">
-            ▸
-          </span>
-          {title}
-        </span>
-      </summary>
-      <div className="overflow-x-auto border-t border-border">
-        <Table>
-          <THead>
-            <Th>{t("columns.name")}</Th>
-            <Th>{t("columns.billing")}</Th>
-            <Th align="right">{t("columns.price")}</Th>
-            <Th>{t("columns.paidFrom")}</Th>
-            <Th align="right">
-              <span className="sr-only">{t("columns.edit")}</span>
-            </Th>
-          </THead>
-          <TBody>
-            {rows.map((row) => (
-              <Tr key={row.draft.id} data-testid="inactive-row">
-                <Td className="font-medium">
-                  <span className="flex min-w-0 items-center gap-1.5">
-                    {row.categoryName && (
-                      <span
-                        aria-hidden
-                        className="inline-block size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: row.categoryColor ?? undefined }}
-                      />
-                    )}
-                    <span className="truncate">{row.name}</span>
-                  </span>
-                </Td>
-                <Td muted className="text-sm">
-                  {t(`cycles.${row.cycle}`)}
-                </Td>
-                <Td align="right">{row.price}</Td>
-                <Td muted className="truncate text-sm">
-                  {row.accountName}
-                </Td>
-                <Td align="right">
-                  <span className="inline-flex flex-wrap justify-end gap-1 whitespace-normal">
-                    <Button size="xs" variant="ghost" onClick={() => setEditing(row.draft)}>
-                      {t("columns.edit")}
-                    </Button>
-                    {deletable && (
-                      <Button size="xs" variant="danger" disabled={pending} onClick={() => setRemoving(row)}>
-                        {t("inactive.delete")}
-                      </Button>
-                    )}
-                  </span>
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
-      </div>
-      {editing && <SubscriptionDialog draft={editing} options={options} onClose={() => setEditing(null)} />}
-      <Modal
-        open={removing !== null}
-        onOpenChange={(next) => !next && setRemoving(null)}
-        title={t("inactive.deleteTitle")}
-        description={removing ? t("inactive.deleteWarning", { name: removing.name }) : undefined}
-        width={440}
-        footer={
-          <>
-            <Button size="sm" onClick={() => setRemoving(null)}>
-              {t("inactive.cancelDelete")}
-            </Button>
-            <Button
-              size="sm"
-              variant="danger"
-              disabled={pending}
-              onClick={() => removing && onDelete(removing)}
-            >
-              {t("inactive.delete")}
-            </Button>
-          </>
-        }
-      >
-        <p className="text-muted">{t("inactive.deleteDetail")}</p>
-      </Modal>
-    </details>
   );
 }

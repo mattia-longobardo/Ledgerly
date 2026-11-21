@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100038,
-    "duplicatedLines": 16273,
-    "percent": 16.27,
-    "blocks": 1222
+    "lines": 100037,
+    "duplicatedLines": 16240,
+    "percent": 16.23,
+    "blocks": 1219
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 49
     },
     "app": {
-      "lines": 25138,
-      "duplicatedLines": 4088,
-      "percent": 16.26,
-      "blocks": 318
+      "lines": 25096,
+      "duplicatedLines": 4072,
+      "percent": 16.23,
+      "blocks": 317
     },
     "global.d": {
       "lines": 12,
@@ -36,8 +36,8 @@
     },
     "modules/accounts": {
       "lines": 5130,
-      "duplicatedLines": 984,
-      "percent": 19.18,
+      "duplicatedLines": 978,
+      "percent": 19.06,
       "blocks": 70
     },
     "modules/budgets": {
@@ -48,8 +48,8 @@
     },
     "modules/funds": {
       "lines": 10576,
-      "duplicatedLines": 2013,
-      "percent": 19.03,
+      "duplicatedLines": 2009,
+      "percent": 19,
       "blocks": 150
     },
     "modules/imports": {
@@ -60,8 +60,8 @@
     },
     "modules/interests": {
       "lines": 2372,
-      "duplicatedLines": 465,
-      "percent": 19.6,
+      "duplicatedLines": 469,
+      "percent": 19.77,
       "blocks": 34
     },
     "modules/investments": {
@@ -77,16 +77,16 @@
       "blocks": 46
     },
     "modules/pockets": {
-      "lines": 1731,
+      "lines": 1705,
       "duplicatedLines": 509,
-      "percent": 29.4,
+      "percent": 29.85,
       "blocks": 37
     },
     "modules/subscriptions": {
-      "lines": 2013,
-      "duplicatedLines": 409,
-      "percent": 20.32,
-      "blocks": 28
+      "lines": 2068,
+      "duplicatedLines": 399,
+      "percent": 19.29,
+      "blocks": 26
     },
     "modules/timeoff": {
       "lines": 3874,
@@ -96,8 +96,8 @@
     },
     "modules/transactions": {
       "lines": 13024,
-      "duplicatedLines": 1651,
-      "percent": 12.68,
+      "duplicatedLines": 1650,
+      "percent": 12.67,
       "blocks": 132
     },
     "modules/users": {
@@ -155,9 +155,9 @@
       "blocks": 0
     },
     "platform/export": {
-      "lines": 596,
+      "lines": 579,
       "duplicatedLines": 185,
-      "percent": 31.04,
+      "percent": 31.95,
       "blocks": 9
     },
     "platform/format": {
@@ -334,6 +334,12 @@
       "percent": 0,
       "blocks": 0
     },
+    "platform/writes": {
+      "lines": 29,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
+    },
     "proxy": {
       "lines": 23,
       "duplicatedLines": 0,
@@ -440,9 +446,9 @@
     "app/(app)/funds/[id]/page.tsx": 126,
     "app/(app)/funds/fund-setup.ts": 11,
     "app/(app)/funds/home-skeleton.tsx": 20,
-    "app/(app)/funds/page.tsx": 213,
+    "app/(app)/funds/page.tsx": 211,
     "app/(app)/interests/[id]/page.tsx": 51,
-    "app/(app)/interests/page.tsx": 56,
+    "app/(app)/interests/page.tsx": 45,
     "app/(app)/investments/[accountId]/activity/page.tsx": 95,
     "app/(app)/investments/[accountId]/connection/page.tsx": 29,
     "app/(app)/investments/[accountId]/page.tsx": 204,
@@ -460,7 +466,7 @@
     "app/(app)/pockets/[id]/pocket-lists.tsx": 33,
     "app/(app)/pockets/[id]/pocket-screen.tsx": 15,
     "app/(app)/pockets/pockets-screen.tsx": 14,
-    "app/(app)/settings/categories/labels-card.tsx": 104,
+    "app/(app)/settings/categories/labels-card.tsx": 101,
     "app/(app)/settings/categories/merge-proposals.tsx": 8,
     "app/(app)/settings/categories/page.tsx": 16,
     "app/(app)/settings/categories/source-actions.ts": 13,
@@ -526,7 +532,7 @@
     "modules/accounts/service/snapshot.ts": 9,
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 39,
-    "modules/accounts/ui/balance-entries.tsx": 139,
+    "modules/accounts/ui/balance-entries.tsx": 133,
     "modules/accounts/ui/connections.tsx": 38,
     "modules/accounts/ui/settings-form.tsx": 67,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
@@ -559,7 +565,7 @@
     "modules/funds/ui/fund-contributions.tsx": 95,
     "modules/funds/ui/fund-fees-client.tsx": 8,
     "modules/funds/ui/fund-forms.tsx": 66,
-    "modules/funds/ui/fund-settings-form.tsx": 50,
+    "modules/funds/ui/fund-settings-form.tsx": 46,
     "modules/funds/ui/fund-settings.tsx": 37,
     "modules/funds/ui/fund-sources.tsx": 21,
     "modules/funds/ui/fund-valuations.tsx": 113,
@@ -587,7 +593,7 @@
     "modules/interests/service/records.ts": 30,
     "modules/interests/service/switching.ts": 13,
     "modules/interests/ui/present.ts": 6,
-    "modules/interests/ui/rule-dialog.tsx": 127,
+    "modules/interests/ui/rule-dialog.tsx": 131,
     "modules/investments/actions.ts": 101,
     "modules/investments/activity.ts": 15,
     "modules/investments/api.ts": 15,
@@ -633,14 +639,14 @@
     "modules/pockets/ui/pocket-actions.tsx": 10,
     "modules/pockets/ui/pocket-dialog.tsx": 14,
     "modules/pockets/ui/row-buttons.tsx": 20,
-    "modules/subscriptions/actions.ts": 7,
     "modules/subscriptions/jobs.ts": 9,
     "modules/subscriptions/queries.ts": 24,
     "modules/subscriptions/schema.ts": 78,
     "modules/subscriptions/service.ts": 113,
+    "modules/subscriptions/ui/inactive-subscriptions.tsx": 15,
     "modules/subscriptions/ui/present.ts": 8,
-    "modules/subscriptions/ui/subscription-dialog.tsx": 104,
-    "modules/subscriptions/ui/subscriptions-table.tsx": 53,
+    "modules/subscriptions/ui/subscription-dialog.tsx": 105,
+    "modules/subscriptions/ui/subscriptions-table.tsx": 34,
     "modules/subscriptions/ui/suggestions-dialog.tsx": 13,
     "modules/timeoff/rules/inputs.ts": 21,
     "modules/timeoff/schema.ts": 51,
@@ -690,7 +696,7 @@
     "modules/transactions/ui/details-modal.tsx": 52,
     "modules/transactions/ui/filter-bar.tsx": 26,
     "modules/transactions/ui/manual-dialog.tsx": 47,
-    "modules/transactions/ui/manual-movement.tsx": 7,
+    "modules/transactions/ui/manual-movement.tsx": 6,
     "modules/transactions/ui/review-list.tsx": 9,
     "modules/transactions/ui/similar-dialog.tsx": 9,
     "modules/transactions/ui/spending-card.tsx": 20,

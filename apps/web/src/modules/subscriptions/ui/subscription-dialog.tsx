@@ -10,12 +10,8 @@ import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Input, InputGroup, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import {
-  type ActionResult,
-  createSubscriptionAction,
-  setSubscriptionStateAction,
-  updateSubscriptionAction,
-} from "../actions";
+import { useRouter } from "@ledgerly/ui/router";
+import { type ActionResult, createSubscription, setSubscriptionState, updateSubscription } from "../calls";
 import { CYCLES, type Cycle, type SubscriptionState } from "@ledgerly/domain/subscriptions/client";
 
 /** What the dialog starts from: an existing subscription, a suggestion, or nothing. */
@@ -59,6 +55,7 @@ export function SubscriptionDialog({
   onClose: () => void;
 }) {
   const t = useTranslations("subscriptions");
+  const router = useRouter();
   const id = useId();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +72,7 @@ export function SubscriptionDialog({
       return;
     }
     notify(toast);
+    router.refresh();
     onClose();
   }
 
@@ -87,16 +85,14 @@ export function SubscriptionDialog({
       categoryId,
       paymentAccountId: text("account") || null,
       price: text("price"),
-      cycle: text("cycle"),
+      cycle: CYCLES.find((cycle) => cycle === text("cycle")) ?? draft.cycle,
       nextChargeOn: text("next"),
       payeeMatch: text("match"),
       tolerance: text("tolerance"),
       utility,
     };
     startTransition(async () => {
-      const result = draft.id
-        ? await updateSubscriptionAction(draft.id, input)
-        : await createSubscriptionAction(input);
+      const result = draft.id ? await updateSubscription(draft.id, input) : await createSubscription(input);
       report(result, t("toasts.saved"));
     });
   }
@@ -104,7 +100,7 @@ export function SubscriptionDialog({
   function setState(state: SubscriptionState, toast: string) {
     if (!draft.id) return;
     const subscriptionId = draft.id;
-    startTransition(async () => report(await setSubscriptionStateAction(subscriptionId, state), toast));
+    startTransition(async () => report(await setSubscriptionState(subscriptionId, state), toast));
   }
 
   return (

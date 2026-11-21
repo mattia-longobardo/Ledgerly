@@ -2,8 +2,8 @@
  * One CSV, written the way a spreadsheet in Italy or in the United States opens it without being
  * asked twice: semicolon-separated, CRLF line endings, and a BOM so Excel reads it as UTF-8.
  *
- * Lifted out of `subscriptions/export.csv/route.ts`, which had its own `field()` (plan F8 P4): one
- * quoting rule for the whole application is one place to be wrong in, rather than several.
+ * One quoting rule for the whole application is one place to be wrong in, rather than several (plan
+ * F8 P4): the data export of the server and the subscriptions' file written in the browser share it.
  */
 
 const CSV_SEPARATOR = ";";

@@ -102,6 +102,9 @@
     "syncRuleSchema",
     "syncScheduleSchema"
   ],
+  "packages/api-contract/src/subscriptions/index.ts": [
+    "subscriptions"
+  ],
   "packages/api-contract/src/transactions/index.ts": [
     "manual",
     "movements",

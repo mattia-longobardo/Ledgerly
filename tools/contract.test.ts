@@ -295,9 +295,9 @@ describe("the Server Actions of pockets", () => {
 
 /**
  * The Server Actions of subscriptions (05-refactor.md §5.5) and their routes; no exclusion. The
- * suggestions read a route of their own, with no action.
+ * suggestions read a route of their own, with no action. The dialogs call `/api/v1`: no action left.
  */
-const SUBSCRIPTIONS_ACTION_FILES = ["apps/web/src/modules/subscriptions/actions.ts"];
+const SUBSCRIPTIONS_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of subscriptions", () => {
   const actions = SUBSCRIPTIONS_ACTION_FILES.flatMap((file) =>

@@ -152,15 +152,6 @@
       "verifyPayslipAction"
     ]
   },
-  "apps/web/src/modules/subscriptions/actions.ts": {
-    "closedBy": "R3 of subscriptions",
-    "actions": [
-      "createSubscriptionAction",
-      "deleteSubscriptionAction",
-      "setSubscriptionStateAction",
-      "updateSubscriptionAction"
-    ]
-  },
   "apps/web/src/modules/timeoff/actions.ts": {
     "closedBy": "R3 of timeoff",
     "actions": [

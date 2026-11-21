@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./cents": "./src/cents.ts",
+    "./csv": "./src/csv.ts",
     "./dates": "./src/dates.ts",
     "./format": "./src/format.ts",
     "./ranges": "./src/ranges.ts"

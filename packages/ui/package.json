@@ -22,6 +22,7 @@
     "./date-range-picker": "./src/date-range-picker.tsx",
     "./detail-header": "./src/detail-header.tsx",
     "./dismissable-details": "./src/dismissable-details.tsx",
+    "./download": "./src/download.tsx",
     "./field": "./src/field.tsx",
     "./form-dialog": "./src/form-dialog.tsx",
     "./hero-figure": "./src/hero-figure.tsx",

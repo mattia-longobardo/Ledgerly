@@ -5,13 +5,13 @@ import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { subscriptionsView, suggestions } from "@ledgerly/domain/subscriptions";
 import { newDraft, presentRow, presentSuggestion, toleranceInput } from "@/modules/subscriptions/ui/present";
 import { AddSubscription, type DialogOptions } from "@/modules/subscriptions/ui/subscription-dialog";
-import { InactiveSubscriptions, SubscriptionsTable } from "@/modules/subscriptions/ui/subscriptions-table";
+import { SubscriptionsTable } from "@/modules/subscriptions/ui/subscriptions-table";
+import { ExportLink, InactiveSubscriptions } from "@/modules/subscriptions/client";
 import { SuggestionsButton } from "@/modules/subscriptions/ui/suggestions-dialog";
 import { categoryOptions } from "@ledgerly/domain/transactions";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
-import { buttonClassName } from "@ledgerly/ui/button";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
@@ -58,9 +58,7 @@ export default async function SubscriptionsPage({ searchParams }: PageProps<"/su
   const actions = (
     <>
       <span className="contents max-md:hidden">
-        <a href="/subscriptions/export.csv" download className={buttonClassName("ghost", "sm")}>
-          {t("export")}
-        </a>
+        <ExportLink />
         {suggest}
       </span>
       <AddSubscription draft={empty} options={options} label={t("add")} />

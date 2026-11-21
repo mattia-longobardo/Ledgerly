@@ -68,6 +68,7 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   pending,
+  detail,
 }: {
   onClose: () => void;
   title: string;
@@ -76,6 +77,8 @@ export function ConfirmDialog({
   confirmLabel: string;
   onConfirm: () => void;
   pending: boolean;
+  /** A line under the description: what stays, what goes. */
+  detail?: string;
 }) {
   return (
     <Modal
@@ -93,7 +96,7 @@ export function ConfirmDialog({
         </>
       }
     >
-      {null}
+      {detail ? <p className="text-muted">{detail}</p> : null}
     </Modal>
   );
 }
