@@ -1,17 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import {
-  AreaLine,
-  Bars,
-  MiniBars,
-  MultiLine,
-  extentOf,
-  segmentsOf,
-  Sparkline,
-  StackedArea,
-  stackLayers,
-  strokesOf,
-} from "./chart";
+import { AreaLine } from "./area-line";
+import { Bars } from "./bars";
+import { extentOf, segmentsOf, strokesOf } from "./geometry";
+import { MiniBars } from "./mini-bars";
+import { MultiLine } from "./multi-line";
+import { Sparkline } from "./sparkline";
+import { stackLayers } from "./stack";
+import { StackedArea } from "./stacked-area";
 
 const BOX = { width: 100, height: 20, pad: 0 };
 

@@ -6,7 +6,7 @@ import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
 import type { Cents } from "@ledgerly/format/cents";
 import { formatMoney, formatPercent, type NumberFormat } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
-import { StackedArea } from "@ledgerly/ui/chart";
+import { StackedArea } from "@ledgerly/ui/charts/stacked-area";
 import type { Params } from "@ledgerly/ui/url";
 import type { ChartGrain } from "./filters";
 

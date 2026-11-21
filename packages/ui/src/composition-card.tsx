@@ -3,7 +3,7 @@
 // every figure is the caller's, already written.
 import type { ReactNode } from "react";
 import { Card } from "./card";
-import { CompositionBar } from "./chart";
+import { CompositionBar } from "./charts/composition-bar";
 import { cn } from "./cn";
 
 interface CompositionPart {

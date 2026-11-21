@@ -7,7 +7,7 @@ import type { views } from "@ledgerly/api-contract/accounts";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
-import { Sparkline } from "@ledgerly/ui/chart";
+import { Sparkline } from "@ledgerly/ui/charts/sparkline";
 import { asNumbers } from "@ledgerly/ui/chart-labels";
 import { SyncStatus } from "@ledgerly/ui/sync-status";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";

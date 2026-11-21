@@ -3,7 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Card } from "@ledgerly/ui/card";
-import { CompositionBar } from "@ledgerly/ui/chart";
+import { CompositionBar } from "@ledgerly/ui/charts/composition-bar";
 
 /** One bar of the card as `GET /transactions/spending/breakdown` sizes it, coloured and formatted. */
 interface BreakdownBar {

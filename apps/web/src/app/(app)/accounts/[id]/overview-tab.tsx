@@ -19,7 +19,8 @@ import {
   numberSeparators,
 } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
-import { AreaLine, Bars } from "@ledgerly/ui/chart";
+import { AreaLine } from "@ledgerly/ui/charts/area-line";
+import { Bars } from "@ledgerly/ui/charts/bars";
 import {
   asNumbers,
   axisLabels,

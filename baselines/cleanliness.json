@@ -497,7 +497,6 @@
     "packages/plugin-host/src/service.ts": 1,
     "packages/plugin-host/src/sync.ts": 1,
     "packages/ui/src/chart-data.ts": 3,
-    "packages/ui/src/chart.tsx": 14,
     "packages/ui/src/cn.ts": 1,
     "packages/ui/src/date-range-picker.tsx": 3,
     "packages/ui/src/shell/command-palette.tsx": 3,
@@ -531,8 +530,7 @@
     "packages/domain/src/platform/integrations/wallet/client.ts": 1,
     "packages/domain/src/platform/integrations/wallet/sync.ts": 1,
     "packages/plugin-host/src/service.ts": 1,
-    "packages/plugin-host/src/sync.ts": 1,
-    "packages/ui/src/chart.tsx": 1
+    "packages/plugin-host/src/sync.ts": 1
   },
   "max-lines-per-function": {
     "apps/web/src/app/(app)/accounts/[id]/delete-account.tsx": 1,
@@ -693,7 +691,6 @@
     "packages/plugin-host/src/service.ts": 1,
     "packages/plugin-host/src/sync.ts": 3,
     "packages/ui/src/category-picker.tsx": 1,
-    "packages/ui/src/chart.tsx": 5,
     "packages/ui/src/date-range-picker.tsx": 1,
     "packages/ui/src/period-bar.tsx": 1,
     "packages/ui/src/shell/command-palette.tsx": 1,
@@ -902,7 +899,6 @@
     "packages/format/src/format.ts": 2,
     "packages/plugin-contract/src/kit.ts": 1,
     "packages/plugin-contract/src/manifest.ts": 1,
-    "packages/ui/src/chart.tsx": 2,
     "packages/ui/src/dismissable-details.tsx": 1,
     "packages/ui/src/highlight.tsx": 1,
     "packages/ui/src/segmented.tsx": 1,

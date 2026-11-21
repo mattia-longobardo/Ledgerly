@@ -14,7 +14,8 @@ import {
   type UiLocale,
 } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
-import { StackedArea, stackLayers } from "@ledgerly/ui/chart";
+import { stackLayers } from "@ledgerly/ui/charts/stack";
+import { StackedArea } from "@ledgerly/ui/charts/stacked-area";
 import { asNumbers, axisLabels, dayLabels, monthLabels } from "@ledgerly/ui/chart-labels";
 import { cn } from "@ledgerly/ui/cn";
 import { useApi } from "@ledgerly/ui/data";

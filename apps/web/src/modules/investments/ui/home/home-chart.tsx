@@ -6,7 +6,9 @@
 import { useTranslations } from "next-intl";
 import { asReturns, bestAndWorst, percentAxisLabels, returnScale, toCents } from "@ledgerly/ui/chart-data";
 import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
-import { StackedArea, StackedBars, stackLayers } from "@ledgerly/ui/chart";
+import { stackLayers } from "@ledgerly/ui/charts/stack";
+import { StackedArea } from "@ledgerly/ui/charts/stacked-area";
+import { StackedBars } from "@ledgerly/ui/charts/stacked-bars";
 import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { PerformanceCard, type PerformanceData } from "@ledgerly/ui/performance-card";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";

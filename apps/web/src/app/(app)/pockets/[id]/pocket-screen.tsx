@@ -9,7 +9,7 @@ import type { RouteOutput } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
 import { formatWholePercent, NULL_DISPLAY } from "@ledgerly/format/format";
 import { Card, CardHeader } from "@ledgerly/ui/card";
-import { MiniBars } from "@ledgerly/ui/chart";
+import { MiniBars } from "@ledgerly/ui/charts/mini-bars";
 import { useApi } from "@ledgerly/ui/data";
 import { HeroFigure } from "@ledgerly/ui/hero-figure";
 import { Loaded } from "@ledgerly/ui/loaded";
