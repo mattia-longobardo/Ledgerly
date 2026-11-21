@@ -10,7 +10,7 @@
 #   - the E2E preview and `npm run perf` run on `ledgerly_1_test`, under the same lock, so that no
 #     integration run of a release resets the database under them: a release that starts its
 #     integration tests meanwhile waits, and this script waits for one that is running;
-#   - the preview is its own container (`ledgerly-full-suite`, 127.0.0.1:3998, S3 prefix
+#   - the preview is its own container (`ledgerly-full-suite`, 127.0.0.1:3995, S3 prefix
 #     `tests/full-suite/`) and its own image (`ledgerly:full-suite`): it does not touch the release's
 #     `ledgerly-preview` on 3999 or the image `ledgerly:preview` that `scripts/release.sh` reuses.
 #
@@ -31,9 +31,10 @@ case "$LEDGERLY_ENV_FILE" in /*) ;; *) LEDGERLY_ENV_FILE="$PWD/$LEDGERLY_ENV_FIL
 PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-$PWD/test-results/pw}"
 export LEDGERLY_ENV_FILE PLAYWRIGHT_BROWSERS_PATH
 
-# The second preview, beside the one of a release.
+# The second preview, beside the one of a release. Not 3997 or 3998: the client stream's previews
+# use them, and a port already taken turned a night red.
 LEDGERLY_TEST_DATABASE=ledgerly_1_test
-LEDGERLY_PREVIEW_PORT=3998
+LEDGERLY_PREVIEW_PORT=3995
 LEDGERLY_PREVIEW_NAME=ledgerly-full-suite
 LEDGERLY_PREVIEW_S3_PREFIX=tests/full-suite/
 E2E_BASE_URL="http://localhost:$LEDGERLY_PREVIEW_PORT"
