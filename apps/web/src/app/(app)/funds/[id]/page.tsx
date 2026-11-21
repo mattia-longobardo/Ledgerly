@@ -60,7 +60,6 @@ import { TabLinks } from "@ledgerly/ui/tab-links";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type Params, withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { RebuildCompetencesButton } from "../fund-buttons";
 import { FundDetailSkeleton } from "./fund-skeleton";
 
 const HOME = "/funds";
@@ -313,7 +312,6 @@ async function FundDetail({
         accounts={accounts.map((account) => ({ id: account.id, name: account.name }))}
         movements={movements}
         taken={Object.fromEntries(taken)}
-        rebuild={<RebuildCompetencesButton fundId={fund.id} label={ts("rebuild")} />}
       />,
     );
   }

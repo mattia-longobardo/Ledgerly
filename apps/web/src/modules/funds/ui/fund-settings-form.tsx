@@ -1,12 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
-import { updateFundAction } from "../actions";
+import { updateFundAction } from "../calls";
 import type { FundForm } from "@ledgerly/domain/funds/client";
 import { ErrorLine, errorKey } from "./fund-forms";
 import { FIELD_GRID } from "@ledgerly/ui/section";
@@ -32,6 +33,7 @@ export function FundSettingsForm({
 }) {
   const t = useTranslations("funds");
   const id = useId();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [failure, setFailure] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
@@ -50,7 +52,9 @@ export function FundSettingsForm({
       });
       setDuplicate(!result.ok && result.error === "duplicate_name");
       setFailure(result.ok || result.error === "duplicate_name" ? null : t(errorKey(result.error)));
-      if (result.ok) notify(t("toasts.saved"));
+      if (!result.ok) return;
+      notify(t("toasts.saved"));
+      router.refresh();
     });
   }
 

@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { notify } from "@ledgerly/ui/toast";
-import { rebuildCompetencesAction } from "./fund-setup";
+import { rebuildCompetencesAction } from "../calls";
 
 /** Settings › Contributions › "Rebuild from payslips": the payslip source's competences, read again. */
 export function RebuildCompetencesButton({ fundId, label }: { fundId: string; label: string }) {
-  const t = useTranslations("funds");
+  const text = useTranslations("funds");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -22,11 +22,11 @@ export function RebuildCompetencesButton({ fundId, label }: { fundId: string; la
           startTransition(async () => {
             const result = await rebuildCompetencesAction(fundId);
             if (!result.ok) {
-              setError(t(result.error === "archived" ? "errors.archived" : "errors.failed"));
+              setError(text(result.error === "archived" ? "errors.archived" : "errors.failed"));
               return;
             }
             setError(null);
-            notify(t("sources.rebuilt", { count: result.count ?? 0 }));
+            notify(text("sources.rebuilt", { count: result.count ?? 0 }));
             router.refresh();
           })
         }

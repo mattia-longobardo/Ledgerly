@@ -8,7 +8,7 @@ import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import { clearDecisionAction, decideDifferenceAction } from "../actions";
+import { clearDecisionAction, decideDifferenceAction } from "../calls";
 import { ErrorLine, useResult } from "./fund-forms";
 
 interface DifferenceTarget {

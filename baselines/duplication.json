@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101798,
-    "duplicatedLines": 16397,
-    "percent": 16.11,
-    "blocks": 1235
+    "lines": 101826,
+    "duplicatedLines": 16424,
+    "percent": 16.13,
+    "blocks": 1236
   },
   "units": {
     "api": {
       "lines": 4003,
-      "duplicatedLines": 813,
-      "percent": 20.31,
-      "blocks": 71
+      "duplicatedLines": 806,
+      "percent": 20.13,
+      "blocks": 70
     },
     "app": {
-      "lines": 24907,
-      "duplicatedLines": 4007,
-      "percent": 16.09,
-      "blocks": 313
+      "lines": 24803,
+      "duplicatedLines": 3996,
+      "percent": 16.11,
+      "blocks": 312
     },
     "global.d": {
       "lines": 12,
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10706,
-      "duplicatedLines": 1960,
-      "percent": 18.31,
-      "blocks": 149
+      "lines": 10838,
+      "duplicatedLines": 2008,
+      "percent": 18.53,
+      "blocks": 153
     },
     "modules/imports": {
       "lines": 888,
@@ -60,15 +60,15 @@
     },
     "modules/interests": {
       "lines": 2414,
-      "duplicatedLines": 438,
-      "percent": 18.14,
+      "duplicatedLines": 441,
+      "percent": 18.27,
       "blocks": 32
     },
     "modules/investments": {
       "lines": 10108,
-      "duplicatedLines": 1839,
-      "percent": 18.19,
-      "blocks": 129
+      "duplicatedLines": 1833,
+      "percent": 18.13,
+      "blocks": 128
     },
     "modules/payroll": {
       "lines": 3776,
@@ -413,7 +413,7 @@
     "api/accounts/routes.ts": 44,
     "api/budgets/dto.ts": 10,
     "api/funds/dto.ts": 75,
-    "api/funds/routes.ts": 86,
+    "api/funds/routes.ts": 79,
     "api/interests/dto.ts": 24,
     "api/interests/routes.ts": 32,
     "api/payroll/dto.ts": 24,
@@ -468,7 +468,6 @@
     "app/(app)/expenses/row-view.ts": 6,
     "app/(app)/funds/[id]/fund-skeleton.tsx": 20,
     "app/(app)/funds/[id]/page.tsx": 126,
-    "app/(app)/funds/fund-setup.ts": 11,
     "app/(app)/funds/home-skeleton.tsx": 20,
     "app/(app)/funds/page.tsx": 211,
     "app/(app)/interests/[id]/rule-screen.tsx": 47,
@@ -571,7 +570,8 @@
     "modules/budgets/ui/add-budget.tsx": 45,
     "modules/budgets/ui/budgets-table.tsx": 49,
     "modules/budgets/ui/overview-card.tsx": 18,
-    "modules/funds/actions.ts": 51,
+    "modules/funds/calls.ts": 64,
+    "modules/funds/forms.ts": 34,
     "modules/funds/home-queries.ts": 8,
     "modules/funds/jobs.ts": 8,
     "modules/funds/overview.ts": 48,
@@ -602,10 +602,10 @@
     "modules/funds/ui/fund-chart.tsx": 84,
     "modules/funds/ui/fund-contributions.tsx": 95,
     "modules/funds/ui/fund-fees-client.tsx": 8,
-    "modules/funds/ui/fund-forms.tsx": 66,
-    "modules/funds/ui/fund-settings-form.tsx": 50,
-    "modules/funds/ui/fund-settings.tsx": 37,
-    "modules/funds/ui/fund-sources.tsx": 21,
+    "modules/funds/ui/fund-forms.tsx": 68,
+    "modules/funds/ui/fund-settings-form.tsx": 51,
+    "modules/funds/ui/fund-settings.tsx": 36,
+    "modules/funds/ui/fund-sources.tsx": 20,
     "modules/funds/ui/fund-valuations.tsx": 113,
     "modules/funds/ui/fund-wizard.tsx": 83,
     "modules/funds/ui/projection.tsx": 24,
@@ -628,8 +628,8 @@
     "modules/interests/service/posting.ts": 23,
     "modules/interests/service/records.ts": 30,
     "modules/interests/service/switching.ts": 13,
-    "modules/interests/ui/rule-dialog.tsx": 116,
-    "modules/investments/actions.ts": 97,
+    "modules/interests/ui/rule-dialog.tsx": 119,
+    "modules/investments/actions.ts": 91,
     "modules/investments/activity.ts": 15,
     "modules/investments/api.ts": 16,
     "modules/investments/catalog.ts": 82,

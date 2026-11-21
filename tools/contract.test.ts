@@ -459,10 +459,7 @@ describe("the Server Actions of payroll", () => {
  * The Server Actions of funds (05-refactor.md §5.5) and their routes: every one has a route, none is
  * excluded. `name:variant` is one action that calls two use cases (add or update, and a fee's «Undo»).
  */
-const FUNDS_ACTION_FILES = [
-  "apps/web/src/modules/funds/actions.ts",
-  "apps/web/src/app/(app)/funds/fund-setup.ts",
-];
+const FUNDS_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of funds", () => {
   const actions = FUNDS_ACTION_FILES.flatMap((file) =>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type FormEvent, type RefObject, useId, useRef, useState, useTransition } from "react";
 import { parseAmount } from "@ledgerly/domain/platform/format";
 import { formatMoney, type NumberFormat, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
@@ -11,7 +12,7 @@ import { Checkbox, Input, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { Segmented } from "@ledgerly/ui/segmented";
 import { notify } from "@ledgerly/ui/toast";
-import { deleteContributionAction, saveContributionAction } from "../actions";
+import { deleteContributionAction, saveContributionAction } from "../calls";
 import type { ContributionForm } from "@ledgerly/domain/funds/client";
 import { ErrorLine, errorKey } from "./fund-forms";
 
@@ -83,6 +84,7 @@ function ContributionDialog({
   const [form, setForm] = useState<ContributionForm>(initial ?? setup.defaults[setup.kind]);
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [failure, setFailure] = useState<string | null>(null);
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const fields = useRef<HTMLFormElement>(null);
   const set = (patch: Partial<ContributionForm>) => setForm((current) => ({ ...current, ...patch }));
@@ -165,6 +167,7 @@ function ContributionDialog({
       });
       if (result.ok) {
         notify(t("toasts.deposit"));
+        router.refresh();
         onOpenChange(false);
       } else if (result.error === "movement_taken") {
         setErrors({ movement: t("errors.movement_taken") });
@@ -478,6 +481,7 @@ export function DeleteContributionButton({
   const t = useTranslations("funds");
   const [open, setOpen] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const opener = useRef<HTMLButtonElement>(null);
   return (
@@ -516,6 +520,7 @@ export function DeleteContributionButton({
                   return;
                 }
                 notify(t("toasts.depositDeleted"));
+                router.refresh();
                 setOpen(false);
               })
             }

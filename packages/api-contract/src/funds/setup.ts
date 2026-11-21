@@ -32,7 +32,7 @@ export const addSource = defineRoute({
   summary:
     "Adds a source of contributions: the payslip (components and period), a recurring bank debit, or by " +
     "hand. One active payslip source per fund; a component goes to one fund only.",
-  actions: ["saveSourceAction:add"],
+  actions: [],
   params: byFund,
   body: sourceBody,
   response: published,
@@ -52,7 +52,7 @@ export const updateSource = defineRoute({
   scope: "write",
   capability: "funds",
   summary: "Rewrites a source. A payslip source publishes the applied payslips again.",
-  actions: ["saveSourceAction:update"],
+  actions: [],
   params: bySource,
   body: sourceBody,
   response: published,
@@ -71,7 +71,7 @@ export const setSourceState = defineRoute({
   scope: "write",
   capability: "funds",
   summary: "Pauses a source or makes it active again.",
-  actions: ["setSourceStateAction"],
+  actions: [],
   params: bySource,
   body: z.object({ state: z.enum(SOURCE_STATES) }).strict(),
   response: null,
@@ -92,7 +92,7 @@ export const removeSource = defineRoute({
   summary:
     "Removes a source with no contribution (one with contributions is paused instead: `conflict`). Answers " +
     "the source and its own fees as they were, which `restore_fund_source` takes back.",
-  actions: ["removeSourceAction"],
+  actions: [],
   params: bySource,
   response: removed,
   errors: FUND_ERRORS,
@@ -109,7 +109,7 @@ export const restoreSource = defineRoute({
   scope: "write",
   capability: "funds",
   summary: "«Undo» of a removal: the source and its fees come back with the ids they had.",
-  actions: ["restoreSourceAction"],
+  actions: [],
   params: byFund,
   body: removed,
   response: null,
@@ -126,7 +126,7 @@ export const addFee = defineRoute({
   capability: "funds",
   summary:
     "Adds a fee: an amount or a percentage, on what it is charged, how often, and when it is in force.",
-  actions: ["saveFeeAction:add", "saveFeeAction:restore"],
+  actions: [],
   params: byFund,
   /** `id`: the «Undo» of a removal, the fee comes back as it was. */
   body: feeBody.extend({ id: id().optional() }),
@@ -147,7 +147,7 @@ export const updateFee = defineRoute({
   scope: "write",
   capability: "funds",
   summary: "Rewrites a fee.",
-  actions: ["saveFeeAction:update"],
+  actions: [],
   params: byFee,
   body: feeBody,
   response: null,
@@ -166,7 +166,7 @@ export const removeFee = defineRoute({
   scope: "write",
   capability: "funds",
   summary: "Removes a fee.",
-  actions: ["removeFeeAction"],
+  actions: [],
   params: byFee,
   response: null,
   status: 204,
@@ -184,7 +184,7 @@ export const debitMatch = defineRoute({
   summary:
     "From one movement, the text a recurring debit would match on and the charges it already finds: how " +
     "many, the first and the last, the median amount and the interval. `found` null: nothing to match on.",
-  actions: ["proposeDebitMatchAction"],
+  actions: [],
   params: byFund,
   query: z.object({ transactionId: id(), accountId: id().optional() }),
   response: z.object({
@@ -227,7 +227,7 @@ export const rebuildCompetences = defineRoute({
   capability: "funds",
   summary:
     "Reads again what every applied payslip accrued for the fund. Answers how many periods it published.",
-  actions: ["rebuildCompetencesAction"],
+  actions: [],
   params: byFund,
   response: z.object({ published: z.number().int() }),
   errors: FUND_ERRORS,

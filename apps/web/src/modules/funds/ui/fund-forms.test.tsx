@@ -8,7 +8,8 @@ import { ValuationButton } from "./fund-forms";
 const recordValuation = vi.fn<(fundId: string, input: Record<string, string>) => Promise<{ ok: true }>>(
   async () => ({ ok: true }),
 );
-vi.mock("../actions", () => ({
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("../calls", () => ({
   recordValuationAction: (fundId: string, input: Record<string, string>) => recordValuation(fundId, input),
   updateValuationAction: vi.fn(),
   deleteValuationAction: vi.fn(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type FormEvent, type Ref, useId, useRef, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";
@@ -13,7 +14,7 @@ import {
   setFundStateAction,
   updateValuationAction,
   type ValuationFormInput,
-} from "../actions";
+} from "../calls";
 
 /** The errors a form of Funds has a sentence for; any other reads as "not saved". */
 const KNOWN_ERRORS: readonly string[] = [
@@ -132,12 +133,14 @@ export function ValuationButton({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const { error, setError, ok } = useResult();
+  const router = useRouter();
   const opener = useRef<HTMLButtonElement>(null);
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const input = readValuation(new FormData(event.currentTarget));
     startTransition(async () => {
       if (!ok(await recordValuationAction(fundId, input))) return;
+      router.refresh();
       notify(t("toasts.valuation"));
       setOpen(false);
     });
@@ -188,11 +191,13 @@ export function EditValuationButton({
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const { error, setError, ok } = useResult();
+  const router = useRouter();
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const input = readValuation(new FormData(event.currentTarget));
     startTransition(async () => {
       if (!ok(await updateValuationAction(fundId, draft.id, input))) return;
+      router.refresh();
       notify(t("toasts.valuationUpdated"));
       setOpen(false);
     });
@@ -231,6 +236,7 @@ function ActionButton({
   danger?: boolean;
 }) {
   const t = useTranslations("funds");
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   return (
     <Button
@@ -240,6 +246,7 @@ function ActionButton({
       onClick={() =>
         startTransition(async () => {
           const result = await run();
+          if (result.ok) router.refresh();
           notify(result.ok ? toast : t(errorKey(result.error)), result.ok ? "success" : "error");
         })
       }

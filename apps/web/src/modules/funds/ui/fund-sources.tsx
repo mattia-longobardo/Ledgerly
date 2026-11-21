@@ -1,15 +1,15 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import type { ReactNode } from "react";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Badge } from "@ledgerly/ui/badge";
-import { feeFormOf, sourceFormOf } from "@ledgerly/domain/funds";
+import { sourceFormOf } from "@ledgerly/domain/funds";
 import { calendarOf, type FundDetail } from "@ledgerly/domain/funds";
 import { hasDueDates, nextDueDates, type PayrollComponent } from "@ledgerly/domain/funds";
 import { CompactEmpty } from "./compact-empty";
+import { RebuildCompetencesButton } from "./rebuild-button";
 import type { SourceSetup } from "./source-dialog";
 import { AddSource, SourceActions } from "./source-list-client";
 import { customDueText, dueDatesText, sourceSummary } from "./source-text";
@@ -45,7 +45,6 @@ export async function FundSourcesSection({
   accounts,
   movements,
   taken,
-  rebuild,
 }: {
   ctx: Ctx;
   detail: FundDetail;
@@ -57,8 +56,6 @@ export async function FundSourcesSection({
   movements: readonly { id: string; label: string }[];
   /** The payslip components another fund holds already: component → that fund's name. */
   taken: Partial<Record<PayrollComponent, string>>;
-  /** "Rebuild from payslips": the page gives it, it needs both modules at once. */
-  rebuild: ReactNode;
 }) {
   const t = await getTranslations("funds.sources");
   const { fund, sources } = detail;
@@ -130,9 +127,6 @@ export async function FundSourcesSection({
                     <SourceActions
                       {...setup}
                       source={{ ...form, id: source.id }}
-                      fees={detail.fees
-                        .filter((fee) => fee.sourceId === source.id)
-                        .map((fee) => feeFormOf(fee, ctx.numberFormat))}
                       contributions={detail.sourceContributions.get(source.id) ?? 0}
                       customDue={custom}
                     />
@@ -179,7 +173,7 @@ export async function FundSourcesSection({
                     >
                       {t("codes.open")}
                     </Link>
-                    {!archived && rebuild}
+                    {!archived && <RebuildCompetencesButton fundId={fund.id} label={t("rebuild")} />}
                   </div>
                 </div>
               )}

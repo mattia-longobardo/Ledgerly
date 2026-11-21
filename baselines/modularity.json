@@ -3,7 +3,7 @@
     "crossModuleImports": 81,
     "moduleIndexFiles": 12,
     "reciprocalModulePairs": 0,
-    "reciprocalUnitPairs": 43,
+    "reciprocalUnitPairs": 42,
     "moduleCycleGroups": 0,
     "platformToModuleImports": 67,
     "platformFilesImportingModules": 24,
@@ -99,7 +99,6 @@
     "modules/transactions/service.ts → modules/accounts/index"
   ],
   "reciprocalUnits": [
-    "app ↔ modules/funds",
     "modules/accounts ↔ platform/db",
     "modules/accounts ↔ platform/fx",
     "modules/accounts ↔ platform/jobs",

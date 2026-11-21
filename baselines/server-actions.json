@@ -10,14 +10,6 @@
       "startBankAccessAction"
     ]
   },
-  "apps/web/src/app/(app)/funds/fund-setup.ts": {
-    "closedBy": "R3 of funds",
-    "actions": [
-      "createFundAction",
-      "rebuildCompetencesAction",
-      "saveSourceAction"
-    ]
-  },
   "apps/web/src/app/(app)/settings/categories/actions.ts": {
     "closedBy": "R3 of transactions (Settings › Categories is that module's)",
     "actions": [
@@ -73,26 +65,6 @@
     "closedBy": "kept: web cookie (contract test, EXCLUDED)",
     "actions": [
       "acceptInviteAction"
-    ]
-  },
-  "apps/web/src/modules/funds/actions.ts": {
-    "closedBy": "R3 of funds",
-    "actions": [
-      "clearDecisionAction",
-      "decideDifferenceAction",
-      "deleteContributionAction",
-      "deleteValuationAction",
-      "proposeDebitMatchAction",
-      "recordValuationAction",
-      "removeFeeAction",
-      "removeSourceAction",
-      "restoreSourceAction",
-      "saveContributionAction",
-      "saveFeeAction",
-      "setFundStateAction",
-      "setSourceStateAction",
-      "updateFundAction",
-      "updateValuationAction"
     ]
   },
   "apps/web/src/modules/investments/actions.ts": {

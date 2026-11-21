@@ -203,7 +203,7 @@ export const createFund = defineRoute({
   summary:
     "Creates a fund with its account, sources and fees; `fees[].source` names a source of the same body by " +
     "its place in `sources`. Answers the id and how many payslip periods it received.",
-  actions: ["createFundAction"],
+  actions: [],
   body: z
     .object({
       fund: fundBody,
@@ -241,7 +241,7 @@ export const updateFund = defineRoute({
   scope: "write",
   capability: "funds",
   summary: "Renames a fund or changes its provider, compartment, start day or code.",
-  actions: ["updateFundAction"],
+  actions: [],
   params: byFund,
   body: fundBody,
   response: null,
@@ -266,7 +266,7 @@ export const setFundState = defineRoute({
   scope: "write",
   capability: "funds",
   summary: "Archives a fund or brings it back.",
-  actions: ["setFundStateAction"],
+  actions: [],
   params: byFund,
   body: z.object({ state: z.enum(FUND_STATES) }).strict(),
   response: null,

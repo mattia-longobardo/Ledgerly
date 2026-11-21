@@ -43,6 +43,12 @@
     "SESSION_CSRF_HEADER",
     "searchRecords"
   ],
+  "packages/api-contract/src/funds/index.ts": [
+    "COMPONENTS",
+    "funds",
+    "register",
+    "setup"
+  ],
   "packages/api-contract/src/imports/index.ts": [
     "imports"
   ],

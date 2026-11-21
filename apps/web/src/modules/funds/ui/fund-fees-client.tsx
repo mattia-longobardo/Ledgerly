@@ -6,7 +6,7 @@ import { type ReactNode, useState } from "react";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import type { NumberFormat, UiLocale } from "@ledgerly/domain/platform/format";
 import { notify } from "@ledgerly/ui/toast";
-import { removeFeeAction, saveFeeAction } from "../actions";
+import { removeFeeAction, saveFeeAction } from "../calls";
 import type { FeeForm } from "@ledgerly/domain/funds/client";
 import { CompactEmpty } from "./compact-empty";
 import { FeeManager } from "./fee-list";

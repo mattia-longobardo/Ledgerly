@@ -5,12 +5,12 @@ import { ChevronDown, Ellipsis, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type RefObject, useRef, useState, useTransition } from "react";
-import { saveSourceAction } from "@/app/(app)/funds/fund-setup";
+import { saveSourceAction } from "../calls";
 import { Button, buttonClassName } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { notify } from "@ledgerly/ui/toast";
-import { removeSourceAction, restoreSourceAction, setSourceStateAction } from "../actions";
-import { type FeeForm, newSourceForm, type SourceForm } from "@ledgerly/domain/funds/client";
+import { removeSourceAction, restoreSourceAction, setSourceStateAction } from "../calls";
+import { newSourceForm, type SourceForm } from "@ledgerly/domain/funds/client";
 import type { SourceKind } from "@ledgerly/domain/funds/client";
 import { SourceDialog, type SourceSetup } from "./source-dialog";
 import { freeComponents } from "./source-text";
@@ -86,14 +86,11 @@ function SourceMenu({
  */
 export function SourceActions({
   source,
-  fees,
   contributions,
   customDue,
   ...setup
 }: SourceSetup & {
   source: SourceForm & { id: string };
-  /** The fees that apply to this source alone: they go with it, and "Undo" brings them back. */
-  fees: FeeForm[];
   /** How many contributions the source has. */
   contributions: number;
   customDue?: string | null;
@@ -134,12 +131,10 @@ export function SourceActions({
       notify(t("removed"), "success", {
         label: t("undo"),
         onClick: () => {
-          void restoreSourceAction(fundId, { source, fees, dueEntries: result.dueEntries }).then(
-            (restored) => {
-              if (restored.ok) router.refresh();
-              else notify(t("undoFailed"), "error");
-            },
-          );
+          void restoreSourceAction(fundId, result.removed).then((restored) => {
+            if (restored.ok) router.refresh();
+            else notify(t("undoFailed"), "error");
+          });
         },
       });
       requestAnimationFrame(() => {

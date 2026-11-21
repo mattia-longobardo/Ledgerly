@@ -22,13 +22,26 @@ const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition"
 const { apiRoutes } = await import("@ledgerly/api");
 const funds = await import("@ledgerly/domain/funds");
 const payroll = await import("@ledgerly/domain/payroll");
-const { decideDifferenceAction } = await import("@/modules/funds/actions");
 const { decisionsOf: decisionsByFund } = await import("@domain/modules/funds/pension/service");
 const { fundDetail } = await import("@domain/modules/funds/queries");
 const { homeSummary, firstDataOn } = await import("@domain/modules/funds/home");
 const { fundsHomeRows } = await import("@domain/modules/funds/home-queries");
 const { allPeriod } = await import("@domain/modules/funds/period");
 const { today } = await import("@domain/shared/dates");
+
+/** The deleted Server Action (R3 of funds), line for line: the use case with the fields it read. */
+async function decideDifferenceAction(
+  fundId: string,
+  input: { year: number; quarter: number; component: string; note: string },
+) {
+  await funds.acceptDifference(signedIn, fundId, {
+    year: input.year,
+    quarter: input.quarter,
+    component: input.component as never,
+    note: input.note,
+  });
+  return { ok: true };
+}
 
 function contextFor(userId: string): Ctx {
   return {

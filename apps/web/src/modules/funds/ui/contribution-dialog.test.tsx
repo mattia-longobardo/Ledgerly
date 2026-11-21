@@ -9,7 +9,8 @@ import { ContributionButton, type ContributionSetup, DeleteContributionButton } 
 type Result = { ok: true } | { ok: false; error: string };
 const save = vi.fn<(fundId: string, form: ContributionForm) => Promise<Result>>(async () => ({ ok: true }));
 const remove = vi.fn<(fundId: string, operationId: string) => Promise<Result>>(async () => ({ ok: true }));
-vi.mock("../actions", () => ({
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock("../calls", () => ({
   saveContributionAction: (fundId: string, form: ContributionForm) => save(fundId, form),
   deleteContributionAction: (fundId: string, operationId: string) => remove(fundId, operationId),
 }));

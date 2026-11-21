@@ -23,7 +23,7 @@ vi.mock("next/navigation", () => ({
 
 type Result = { ok: true; id: string } | { ok: false; error: string; detail?: string | null };
 const createFund = vi.fn<(form: WizardForm) => Promise<Result>>(async () => ({ ok: true, id: "f1" }));
-vi.mock("@/app/(app)/funds/fund-setup", () => ({
+vi.mock("../calls", () => ({
   createFundAction: (form: WizardForm) => createFund(form),
 }));
 

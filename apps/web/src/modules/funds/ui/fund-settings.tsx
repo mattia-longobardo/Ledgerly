@@ -33,7 +33,6 @@ export async function FundSettings({
   accounts,
   movements,
   taken,
-  rebuild,
 }: {
   ctx: Ctx;
   detail: FundDetail;
@@ -45,8 +44,6 @@ export async function FundSettings({
   movements: readonly { id: string; label: string }[];
   /** The payslip components another fund already takes, with that fund's name. */
   taken: Record<string, string>;
-  /** "Rebuild from payslips": the page gives it, it needs both modules at once. */
-  rebuild: ReactNode;
 }) {
   const t = await getTranslations("funds");
   const { fund } = detail;
@@ -89,7 +86,6 @@ export async function FundSettings({
             accounts={accounts}
             movements={movements}
             taken={taken}
-            rebuild={rebuild}
           />
         </SettingsSection>
       </Anchor>
