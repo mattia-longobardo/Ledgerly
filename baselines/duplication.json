@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105081,
+    "lines": 105102,
     "duplicatedLines": 16604,
     "percent": 15.8,
     "blocks": 1268
@@ -65,9 +65,9 @@
       "blocks": 33
     },
     "modules/investments": {
-      "lines": 13874,
+      "lines": 13895,
       "duplicatedLines": 2346,
-      "percent": 16.91,
+      "percent": 16.88,
       "blocks": 175
     },
     "modules/payroll": {
@@ -685,7 +685,7 @@
     "modules/investments/ui/connection/key-card.tsx": 23,
     "modules/investments/ui/connection/received-card.tsx": 24,
     "modules/investments/ui/dialog-kit.tsx": 44,
-    "modules/investments/ui/holdings.tsx": 94,
+    "modules/investments/ui/holding-dialogs.tsx": 94,
     "modules/investments/ui/home/home-chart.tsx": 68,
     "modules/investments/ui/home/home-composition.tsx": 9,
     "modules/investments/ui/home/home-hero.tsx": 19,
