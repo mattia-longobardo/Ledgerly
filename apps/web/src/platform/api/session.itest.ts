@@ -20,6 +20,8 @@ const { MAX_PER_WINDOW, resetRateLimits, SESSION_MAX_PER_WINDOW, takeSlot } = aw
 const { getAuth, invalidateAuth } = await import("@domain/platform/auth/auth");
 const { createApiClientWith } = await import("@/platform/auth/api-clients");
 const { readEnv } = await import("@domain/platform/env");
+const { engineService } = await import("../../../../../test/investments");
+const { contextFor } = await import("../../../../../test/fixtures");
 
 const PASSWORD = "correct-horse-battery";
 
@@ -276,6 +278,43 @@ describe("the session cookie on /api/v1", () => {
     expect(reads.filter((tool) => tool.scope === "session")).toEqual([]);
     expect(reads.map((tool) => tool.name)).not.toContain("get_account_iban");
     expect(reads.map((tool) => tool.name)).not.toContain("list_switch_identifiers");
+  });
+
+  it("gives the Connection of a service and the routes that carry a key to the session only (SEC-08)", async () => {
+    const { accountId } = await engineService(contextFor(alice.userId), {
+      name: "Directa",
+      category: "broker",
+      currency: "EUR",
+    });
+    const routes = [
+      { method: "GET", path: `/investments/${accountId}/connection` },
+      {
+        method: "POST",
+        path: "/investments/connections",
+        body: { provider: "nope", credentials: {}, target: { kind: "existing", accountId } },
+      },
+      { method: "PUT", path: `/investments/${accountId}/key`, body: { credentials: { api_key: "x" } } },
+    ];
+    // The session reaches each use case: the tab, an unknown provider, a service with no key.
+    const answers = [];
+    for (const route of routes) answers.push(await call(route.path, alice, route));
+    expect(answers.map((answer) => answer.status)).toEqual([200, 400, 409]);
+    expect(await answers[1].json()).toEqual({ error: "invalid", reason: "unknown_provider" });
+    expect(await answers[2].json()).toEqual({ error: "conflict", reason: "not_connected" });
+    // A token with every scope it can be granted: 403, with or without the cookie.
+    const token = await tokenFor(alice, ["read", "write", "imports", "investments:read"]);
+    for (const who of [{ bearer: token }, { bearer: token, cookie: alice.cookie }]) {
+      for (const route of routes) expect((await call(route.path, who, route)).status, route.path).toBe(403);
+    }
+    // No MCP tool reads or writes any of them.
+    const names = reads.map((tool) => tool.name);
+    for (const name of [
+      "get_investment_connection",
+      "connect_investment_provider",
+      "replace_investment_key",
+    ]) {
+      expect(names).not.toContain(name);
+    }
   });
 
   it("lets only the session ask the LLM fallback for a payslip, never a token", async () => {

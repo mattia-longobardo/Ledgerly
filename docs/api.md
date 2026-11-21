@@ -88,8 +88,9 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |
 | `POST /imports`                            | `imports`          |
-| `GET /investments`                         | `investments:read` |
-| `GET /investments/{accountId}/holdings`    | `investments:read` |
+| `GET /investments`, `/investments/home`, `/investments/catalog`, `/investments/{accountId}`, `/holdings`, `/activity`, `/positions` | `investments:read` |
+| the writes of investments: a manual service, its address and value, operations, reconciliations, an empty reading, transfers, «Sync now», the key's check, disconnection and revocation ([changelog](api-changelog.md)) | `write` |
+| `GET /investments/{accountId}/connection`, `POST /investments/connections`, `PUT /investments/{accountId}/key` (the web's own session only: a token gets 403) | `session` |
 
 Amounts are decimal strings, never JSON numbers. An account balance is in the account's currency;
 the totals of `/summary` are in your display currency. The investment routes never return keys or
@@ -132,6 +133,7 @@ and uses the same services as the REST API.
 | `get_fund`                 | `GET /api/v1/funds/{id}`                    |
 | `list_investments`         | `GET /api/v1/investments`                   |
 | `get_investment_holdings`  | `GET /api/v1/investments/{accountId}/holdings` |
+| `get_investment`           | `GET /api/v1/investments/{accountId}`       |
 
 ### Connect a client
 

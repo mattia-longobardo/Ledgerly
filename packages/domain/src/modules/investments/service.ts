@@ -1078,13 +1078,15 @@ export async function recordOperation(
   });
 }
 
-async function requireEvent(ctx: Pick<Ctx, "userId">, eventId: string, tx: Tx) {
+/** The person's event, of the service `ofAccount` when given: otherwise `not_found`. */
+async function requireEvent(ctx: Pick<Ctx, "userId">, eventId: string, tx: Tx, ofAccount?: string) {
   const [row] = await tx
     .select({ event: investmentEvents, accountId: investmentAccounts.accountId })
     .from(investmentEvents)
     .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentEvents.investmentAccountId))
     .where(and(eq(investmentEvents.id, eventId), userScoped(ctx).owns(investmentEvents)));
-  if (!row) throw new InvestmentError("not_found");
+  if (!row || (ofAccount !== undefined && row.accountId !== ofAccount))
+    throw new InvestmentError("not_found");
   return row;
 }
 
@@ -1164,10 +1166,13 @@ export async function updateOperation(ctx: WriteCtx, eventId: string, input: Ope
   });
 }
 
-/** A manual event deleted, its legs kept in the revisions, the points rewritten from its day. */
-export async function deleteOperation(ctx: WriteCtx, eventId: string): Promise<void> {
+/**
+ * A manual event deleted, its legs kept in the revisions, the points rewritten from its day. With
+ * `ofAccount`, an event of another service is `not_found` (a route names the service in its path).
+ */
+export async function deleteOperation(ctx: WriteCtx, eventId: string, ofAccount?: string): Promise<void> {
   await getDb().transaction(async (tx) => {
-    const { event, accountId } = await requireEvent(ctx, eventId, tx);
+    const { event, accountId } = await requireEvent(ctx, eventId, tx, ofAccount);
     if (event.origin !== "manual") throw new InvestmentError("not_editable");
     const investment = await lockInvestmentAccount(ctx, accountId, tx);
     await keepRevisions(ctx, tx, event, "deleted");
@@ -1281,15 +1286,24 @@ export async function saveReading(
   });
 }
 
-/** "The account was emptied" (R5): a `pending_zero` reading counts from its day. */
-export async function confirmZeroReading(ctx: WriteCtx, readingId: string): Promise<void> {
+/** "The account was emptied" (R5): a `pending_zero` reading counts from its day; of `ofAccount` when given. */
+export async function confirmZeroReading(
+  ctx: WriteCtx,
+  readingId: string,
+  ofAccount?: string,
+): Promise<void> {
   await getDb().transaction(async (tx) => {
     const [row] = await tx
       .select({ reading: investmentReadings, accountId: investmentAccounts.accountId })
       .from(investmentReadings)
       .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentReadings.investmentAccountId))
       .where(and(eq(investmentReadings.id, readingId), userScoped(ctx).owns(investmentReadings)));
-    if (!row || row.reading.status !== "pending_zero") throw new InvestmentError("not_found");
+    if (
+      !row ||
+      row.reading.status !== "pending_zero" ||
+      (ofAccount !== undefined && row.accountId !== ofAccount)
+    )
+      throw new InvestmentError("not_found");
     const investment = await lockInvestmentAccount(ctx, row.accountId, tx);
     await tx
       .update(investmentReadings)
@@ -1317,7 +1331,12 @@ export type ReconciliationInput = z.input<typeof reconciliationInputSchema>;
  * points are rewritten from its decorrenza; "outside the scope" moves the position to the product
  * it really is in.
  */
-export async function reconcileHolding(ctx: WriteCtx, input: ReconciliationInput): Promise<void> {
+export async function reconcileHolding(
+  ctx: WriteCtx,
+  input: ReconciliationInput,
+  /** The service the holding must be of: another one's is `not_found`. */
+  ofAccount?: string,
+): Promise<void> {
   const parsed = reconciliationInputSchema.parse(input);
   notFuture(ctx, parsed.effectiveOn);
   if ((parsed.kind === "partial") !== (parsed.quantity !== null))
@@ -1330,7 +1349,8 @@ export async function reconcileHolding(ctx: WriteCtx, input: ReconciliationInput
       .from(investmentHoldings)
       .innerJoin(investmentAccounts, eq(investmentAccounts.id, investmentHoldings.investmentAccountId))
       .where(and(eq(investmentHoldings.id, parsed.holdingId), userScoped(ctx).owns(investmentHoldings)));
-    if (!row || row.holding.origin !== "manual") throw new InvestmentError("not_found");
+    if (!row || row.holding.origin !== "manual" || (ofAccount !== undefined && row.accountId !== ofAccount))
+      throw new InvestmentError("not_found");
     const investment = await lockInvestmentAccount(ctx, row.accountId, tx);
     if (
       parsed.kind === "outside_scope" &&
@@ -1480,11 +1500,11 @@ export async function linkTransfer(ctx: WriteCtx, input: TransferInput): Promise
   return groupId;
 }
 
-/** Undoes a transfer: both legs are plain deposits and withdrawals again (§2.4). */
-export async function unlinkTransfer(ctx: WriteCtx, eventId: string): Promise<void> {
+/** Undoes a transfer: both legs are plain deposits and withdrawals again (§2.4); a leg of `ofAccount` when given. */
+export async function unlinkTransfer(ctx: WriteCtx, eventId: string, ofAccount?: string): Promise<void> {
   if (!z.uuid().safeParse(eventId).success) throw new InvestmentError("not_found");
   await getDb().transaction(async (tx) => {
-    const { event } = await requireEvent(ctx, eventId, tx);
+    const { event } = await requireEvent(ctx, eventId, tx, ofAccount);
     if (!event.transferGroupId) throw new InvestmentError("not_a_transfer");
     await clearTransferGroup(ctx, tx, event.transferGroupId);
   });

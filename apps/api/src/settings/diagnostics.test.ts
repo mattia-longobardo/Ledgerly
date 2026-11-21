@@ -7,6 +7,7 @@ import type { TransactionCases } from "../transactions/cases";
 import { apiRoutes } from "../index";
 import type { ConnectionCases } from "./connections";
 import type { ServerCases } from "./server";
+import type { InvestmentCases } from "../investments/routes";
 
 const plugins = vi.hoisted(() => ({ rows: [] as unknown[], fails: false }));
 vi.mock("@ledgerly/domain/platform/plugins", () => ({
@@ -29,6 +30,7 @@ const app = () =>
     server: {} as ServerCases,
     accounts: {} as AccountCases,
     transactions: {} as TransactionCases,
+    investments: {} as InvestmentCases,
   });
 
 describe("GET /server/diagnostics", () => {

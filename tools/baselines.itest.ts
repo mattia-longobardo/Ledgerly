@@ -202,6 +202,11 @@ describe("the reference user", () => {
       `/accounts/${user.savingsId}/balances`,
       { on: "2031-10-15", balance: "12050.00" },
     );
+    // Investments (R2), after the write so the identifiers above keep their numbers: the home of
+    // «All», and the broker's Overview of «All». The balance written is no service's.
+    for (const path of ["/investments/home?period=all", `/investments/${user.brokerId}?period=all`]) {
+      answers[`GET ${path}`] = await call("GET", path);
+    }
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/api.json"));
   });
 
@@ -252,6 +257,7 @@ describe("the reference user", () => {
     answers.get_funds = await tool("get_funds", { period: "all" });
     const firstFund = (answers.get_funds as { answer: { funds: { id: string }[] } }).answer.funds[0].id;
     answers.get_fund = await tool("get_fund", { id: firstFund, period: "all" });
+    answers.get_investment = await tool("get_investment", { account_id: user.brokerId, period: "all" });
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/mcp.json"));
   });
 });

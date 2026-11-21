@@ -6,6 +6,7 @@ import type { TransactionCases } from "./transactions/cases";
 import { apiRoutes } from "./index";
 import type { ConnectionCases } from "./settings/connections";
 import type { ServerCases } from "./settings/server";
+import type { InvestmentCases } from "./investments/routes";
 
 describe("GET /meta", () => {
   it("answers without a token: version, levels, capabilities and the scopes granted today", async () => {
@@ -17,6 +18,7 @@ describe("GET /meta", () => {
       server: {} as ServerCases,
       accounts: {} as AccountCases,
       transactions: {} as TransactionCases,
+      investments: {} as InvestmentCases,
     }).request("/meta");
     expect(response.status).toBe(200);
     const body = metaRoute.response.parse(await response.json());
@@ -32,6 +34,7 @@ describe("GET /meta", () => {
         "funds",
         "imports",
         "interests",
+        "investments",
         "meta",
         "payroll",
         "people",

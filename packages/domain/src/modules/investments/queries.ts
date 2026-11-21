@@ -50,6 +50,9 @@ import {
   eligibleAccounts,
   type InvestmentAccount,
   type InvestmentAsset,
+  type InvestmentEvent,
+  type InvestmentPeriod,
+  type InvestmentReading,
   listAssets,
   listInvestmentAccounts,
   type LoadedBook,
@@ -201,8 +204,8 @@ function summaryOf(one: Loaded, todayOn: CivilDate, displayCurrency: string, dis
   } satisfies ServiceSummary;
 }
 
-export interface AllocationSlice {
-  key: string;
+export interface AllocationSlice<K extends string = string> {
+  key: K;
   cents: Cents;
   share: number;
 }
@@ -220,12 +223,13 @@ export interface InvestmentsHome {
     /** Some service is in another currency: gain and returns include the exchange effect (§2.4). */
     fxEffect: boolean;
   };
-  byClass: AllocationSlice[];
+  /** `unclassified`: a manual account kept as a total. */
+  byClass: AllocationSlice<AssetClass | "unclassified">[];
   byService: AllocationSlice[];
   funds: { id: string; name: string; valueCents: Cents | null; kind: string }[];
 }
 
-function slices(parts: Map<string, Cents>): AllocationSlice[] {
+function slices<K extends string>(parts: Map<K, Cents>): AllocationSlice<K>[] {
   const total = [...parts.values()].reduce<Cents>((sum, cents) => sum + (cents > 0n ? cents : 0n), 0n);
   return [...parts.entries()]
     .filter(([, cents]) => cents > 0n)
@@ -357,7 +361,7 @@ export async function investmentsHome(
   const { currency, todayOn, services, totals, live, displayRates } = await portfolioState(ctx, now);
 
   // Allocation: positions by class; cash, and accounts kept as a total, by their own key.
-  const byClass = new Map<string, Cents>();
+  const byClass = new Map<AssetClass | "unclassified", Cents>();
   const byService = new Map<string, Cents>();
   const add = (map: Map<string, Cents>, key: string, cents: Cents) =>
     map.set(key, (map.get(key) ?? 0n) + cents);
@@ -450,9 +454,11 @@ export interface CatalogView {
     id: string;
     name: string;
     currency: string;
-    type: string;
+    type: Account["type"];
     balanceCents: Cents | null;
-    reason: string | null;
+    reason: "fund" | "type" | "managed" | null;
+    /** Its account is read by Wallet. */
+    synced: boolean;
     /** A manual service a provider can be connected to (manual → synced, §2.5). */
     manualService: boolean;
   }[];
@@ -554,13 +560,13 @@ export interface ServiceDetail {
   summary: ServiceSummary;
   currency: string;
   day: DayValue;
-  periods: { fromOn: CivilDate; mode: Mode; origin: AccountOrigin; reason: string }[];
+  periods: { fromOn: CivilDate; mode: Mode; origin: AccountOrigin; reason: InvestmentPeriod["reason"] }[];
   holdings: HoldingRow[];
   operations: OperationRow[];
   readings: {
     id: string;
     on: CivilDate;
-    status: string;
+    status: InvestmentReading["status"];
     totalCents: Cents;
     products: string[];
     /** Products the reading saw but did not read (B4, E2): its value leaves them out. */
@@ -1364,7 +1370,7 @@ export interface ActivityQuery {
 export interface ActivityRow {
   id: string;
   on: CivilDate;
-  origin: string;
+  origin: InvestmentEvent["origin"];
   note: string | null;
   family: ActivityFamily;
   /** The leg that says what the event is: `main`, or a trade's `base` (never shown as a leg). */

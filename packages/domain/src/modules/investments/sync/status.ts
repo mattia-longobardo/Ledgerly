@@ -17,7 +17,11 @@ export interface SyncStatus {
   lastOkAt: Date | null;
   lastError: string | null;
   nextSyncAt: Date | null;
-  lastCheck: { result: string; checkedAt: Date; ipRestricted: boolean | null } | null;
+  lastCheck: {
+    result: (typeof investmentKeyChecks.$inferSelect)["result"];
+    checkedAt: Date;
+    ipRestricted: boolean | null;
+  } | null;
   keySetAt: Date | null;
   /** Retired keys not yet confirmed revoked at the provider (SEC-07). */
   revokePending: boolean;
@@ -28,7 +32,7 @@ export interface SyncStatus {
     stream: string;
     fromAt: Date;
     toAt: Date;
-    status: string;
+    status: (typeof investmentSyncCoverage.$inferSelect)["status"];
     reason: string | null;
   }[];
   /** The first day from which every flow is covered (§2.4); `null` while one never is. */

@@ -310,7 +310,6 @@
     "apps/web/src/modules/funds/ui/source-text.ts": 4,
     "apps/web/src/modules/interests/ui/posting-cell.tsx": 1,
     "apps/web/src/modules/interests/ui/rule-dialog.tsx": 4,
-    "apps/web/src/modules/investments/api.ts": 3,
     "apps/web/src/modules/investments/ui/dialog-rules.ts": 4,
     "apps/web/src/modules/investments/ui/dialogs.tsx": 28,
     "apps/web/src/modules/investments/ui/key-check.tsx": 1,

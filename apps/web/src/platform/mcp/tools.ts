@@ -1,13 +1,9 @@
 import "server-only";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
-import { holdingsJson, pnlJson, portfolioJson } from "@/modules/investments/api";
-import { investmentsPnl, investmentsPortfolio, serviceHoldings } from "@ledgerly/domain/investments";
 import type { ApiScope } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { APP_VERSION } from "@ledgerly/domain/platform/version";
-import { civilDate } from "@ledgerly/api-contract";
 import type { ReadTool } from "@ledgerly/api";
 
 /**
@@ -24,8 +20,6 @@ import type { ReadTool } from "@ledgerly/api";
  * not see the tool at all. The Investments tools need `investments:read`, which `read` does not
  * imply (docs/design/investments.md §5.5).
  */
-
-const civilDateField = civilDate("A date as YYYY-MM-DD");
 
 /** The JSON of a tool's answer, as text: every MCP client reads that, whatever it does with the rest. */
 function json(value: unknown): CallToolResult {
@@ -53,70 +47,14 @@ export function buildMcpServer(
         "user's display currency); dates are YYYY-MM-DD in the user's time zone. Every tool is read-only.",
     },
   );
-  if (scopes.includes("investments:read")) registerInvestmentTools(server, ctx);
-  registerReadTools(
-    server,
-    ctx,
-    reads.filter((tool) => scopes.some((scope) => scope === tool.scope)),
-  );
+  const granted = reads.filter((tool) => scopes.some((scope) => scope === tool.scope));
+  // The Investments tools first, where `tools/list` has always listed them.
+  const investments = (tool: ReadTool) => tool.scope === "investments:read";
+  registerReadTools(server, ctx, [
+    ...granted.filter(investments),
+    ...granted.filter((tool) => !investments(tool)),
+  ]);
   return server;
-}
-
-/** The Investments tools (docs/design/investments.md §5.5): scope `investments:read` only. */
-function registerInvestmentTools(server: McpServer, ctx: Ctx): void {
-  server.registerTool(
-    "list_investments",
-    {
-      title: "Investments",
-      description:
-        "Every investment service (broker, exchange, manual account) with its value in its own " +
-        "`currency` and in the display currency, net invested, gain, simple return and XIRR, plus the " +
-        "portfolio's totals in the display `currency`, as GET /api/v1/investments. Returns are ratios " +
-        "(0.05 = 5 %). Gain and returns are null unless the service's history is complete " +
-        "(`reliable`; `reliableFrom` says from when it is); `xirrStatus` says why XIRR is missing. " +
-        "The portfolio leaves out transfers between its own services and includes the exchange effect. " +
-        "`pnl` is the profit and loss of the period (the year running by default), the number the " +
-        "screen shows: realized, unrealized (open positions only), income, fees, corrections and " +
-        "exchange effect add up to it, and the services add up to the portfolio with `transfers`.",
-      inputSchema: {
-        period: z
-          .string()
-          .regex(/^(\d{4}|all)$/)
-          .optional()
-          .describe("A year (YYYY) or `all`; default the year running."),
-        from: civilDateField.optional().describe("First day, YYYY-MM-DD; with `to`, wins over `period`."),
-        to: civilDateField.optional().describe("Last day, YYYY-MM-DD."),
-      },
-      annotations: READ_ONLY,
-    },
-    async ({ period, from, to }) =>
-      json({
-        ...portfolioJson(await investmentsPortfolio(ctx)),
-        pnl: pnlJson(
-          await investmentsPnl(ctx, { period: period ?? null, from: from ?? null, to: to ?? null }),
-        ),
-      }),
-  );
-
-  server.registerTool(
-    "get_investment_holdings",
-    {
-      title: "Investment holdings",
-      description:
-        "The open positions of one investment service today — asset, product, quantity, price, value " +
-        "and gain in the service's `currency` — as GET /api/v1/investments/{accountId}/holdings. Take " +
-        "the account id from list_investments.",
-      inputSchema: {
-        account_id: z.uuid().describe("The service's accountId, from list_investments."),
-      },
-      annotations: READ_ONLY,
-    },
-    async ({ account_id }) => {
-      const view = await serviceHoldings(ctx, account_id);
-      if (!view) return failure("Investment service not found.");
-      return json(holdingsJson(view));
-    },
-  );
 }
 
 /**

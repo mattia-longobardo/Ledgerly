@@ -64,6 +64,45 @@
     }
    },
    {
+    "name": "get_investment",
+    "title": "Investment service",
+    "description": "One investment service by account id (from list_investments) in a period (default: the year running; `period` = all, a year, or custom with `from` and `to`): its value today, its profit and loss of the period in its own and in the display currency with the parts that add up to it and the Modified Dietz return, what each position added, and its latest events. Amounts are decimal strings, returns are ratios.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {
+      "account_id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|<id-1>|<id-2>)$",
+       "description": "The service's accountId, from list_investments."
+      },
+      "period": {
+       "type": "string",
+       "pattern": "^(all|custom|\\d{4})$"
+      },
+      "from": {
+       "type": "string"
+      },
+      "to": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "account_id"
+     ]
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
+   },
+   {
     "name": "get_preferences",
     "title": "Preferences",
     "description": "The user's preferences, as GET /api/v1/preferences: time zone, language, number format, display currency, first day of the week, theme, and the working day of Time off.",
@@ -2607,9 +2646,11 @@
        "fees": "0.00",
        "corrections": "0.00",
        "fx": "0.00"
-      }
+      },
+      "modifiedDietz": 0.060214
      }
-    ]
+    ],
+    "modifiedDietz": 0.060214
    }
   }
  },
@@ -3095,6 +3136,490 @@
      }
     ]
    }
+  }
+ },
+ "get_investment": {
+  "isError": false,
+  "answer": {
+   "on": "2031-10-15",
+   "currency": "EUR",
+   "period": {
+    "kind": "all",
+    "year": null,
+    "from": null,
+    "to": "2031-10-15",
+    "span": {
+     "from": "2031-03-01",
+     "to": "2031-10-15"
+    },
+    "firstOn": "2031-03-01"
+   },
+   "service": {
+    "accountId": "<id-5>",
+    "name": "Directa",
+    "category": "broker",
+    "provider": null,
+    "origin": "manual",
+    "mode": "total",
+    "currency": "EUR",
+    "value": "12650.00",
+    "displayValue": "12650.00",
+    "change30Days": "2350.00",
+    "invested": "12000.00",
+    "gain": "650.00",
+    "simpleReturn": 0.054167,
+    "xirr": 0.097847,
+    "xirrStatus": "ok",
+    "reliable": true,
+    "reliableFrom": null,
+    "weight": null,
+    "lastUpdate": null,
+    "color": null,
+    "colorIndex": 2,
+    "warnings": {
+     "conflicts": 0,
+     "pendingZero": false,
+     "missingPrices": 0,
+     "openAdjustments": 0,
+     "alerts": 0
+    },
+    "accountOrigin": "manual",
+    "url": null,
+    "managedSince": "2031-03-01",
+    "firstOn": "2031-03-01",
+    "valueEditable": true,
+    "manualPnl": {
+     "value": "12650.00",
+     "invested": "12000.00",
+     "pnl": "650.00",
+     "rate": 0.054167,
+     "valuedOn": "2031-10-14",
+     "stale": false
+    },
+    "sync": null,
+    "assets": [],
+    "coveredProducts": [],
+    "linkOptions": {
+     "out": [
+      {
+       "id": "<id-10>",
+       "on": "2031-10-13",
+       "amount": "48.00",
+       "payee": "Trattoria",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-12>",
+       "on": "2031-10-12",
+       "amount": "61.75",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-14>",
+       "on": "2031-10-08",
+       "amount": "36.50",
+       "payee": "Trenitalia",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-16>",
+       "on": "2031-10-05",
+       "amount": "84.20",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-17>",
+       "on": "2031-10-03",
+       "amount": "12.99",
+       "payee": "Netflix",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-21>",
+       "on": "2031-09-21",
+       "amount": "93.10",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-22>",
+       "on": "2031-09-13",
+       "amount": "48.00",
+       "payee": "Trattoria",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-23>",
+       "on": "2031-09-12",
+       "amount": "61.75",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-24>",
+       "on": "2031-09-08",
+       "amount": "36.50",
+       "payee": "Trenitalia",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-25>",
+       "on": "2031-09-05",
+       "amount": "84.20",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-26>",
+       "on": "2031-09-03",
+       "amount": "12.99",
+       "payee": "Netflix",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-139>",
+       "on": "2031-08-21",
+       "amount": "93.10",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-140>",
+       "on": "2031-08-13",
+       "amount": "48.00",
+       "payee": "Trattoria",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-141>",
+       "on": "2031-08-12",
+       "amount": "61.75",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-142>",
+       "on": "2031-08-08",
+       "amount": "36.50",
+       "payee": "Trenitalia",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-143>",
+       "on": "2031-08-05",
+       "amount": "84.20",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-144>",
+       "on": "2031-08-03",
+       "amount": "12.99",
+       "payee": "Netflix",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-145>",
+       "on": "2031-07-21",
+       "amount": "93.10",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-146>",
+       "on": "2031-07-13",
+       "amount": "48.00",
+       "payee": "Trattoria",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-147>",
+       "on": "2031-07-12",
+       "amount": "61.75",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-148>",
+       "on": "2031-07-08",
+       "amount": "36.50",
+       "payee": "Trenitalia",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-149>",
+       "on": "2031-07-05",
+       "amount": "84.20",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-150>",
+       "on": "2031-07-03",
+       "amount": "12.99",
+       "payee": "Netflix",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-151>",
+       "on": "2031-06-21",
+       "amount": "93.10",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-152>",
+       "on": "2031-06-13",
+       "amount": "48.00",
+       "payee": "Trattoria",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-153>",
+       "on": "2031-06-12",
+       "amount": "61.75",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-154>",
+       "on": "2031-06-08",
+       "amount": "36.50",
+       "payee": "Trenitalia",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-155>",
+       "on": "2031-06-05",
+       "amount": "84.20",
+       "payee": "Esselunga",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-156>",
+       "on": "2031-06-03",
+       "amount": "12.99",
+       "payee": "Netflix",
+       "accountName": "ING Conto Arancio"
+      }
+     ],
+     "in": [
+      {
+       "id": "<id-19>",
+       "on": "2031-09-27",
+       "amount": "2450.00",
+       "payee": "ACME S.p.A.",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-157>",
+       "on": "2031-08-27",
+       "amount": "2450.00",
+       "payee": "ACME S.p.A.",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-158>",
+       "on": "2031-07-27",
+       "amount": "2450.00",
+       "payee": "ACME S.p.A.",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-159>",
+       "on": "2031-07-01",
+       "amount": "2000.00",
+       "payee": "Bonifico",
+       "accountName": "Directa"
+      },
+      {
+       "id": "<id-160>",
+       "on": "2031-06-27",
+       "amount": "2450.00",
+       "payee": "ACME S.p.A.",
+       "accountName": "ING Conto Arancio"
+      },
+      {
+       "id": "<id-161>",
+       "on": "2031-03-03",
+       "amount": "10000.00",
+       "payee": "Bonifico",
+       "accountName": "Directa"
+      }
+     ]
+    }
+   },
+   "pnl": {
+    "accountId": "<id-5>",
+    "status": "verified",
+    "reasons": [],
+    "from": "2031-03-01",
+    "to": "2031-10-15",
+    "partial": false,
+    "start": "0.00",
+    "end": "12650.00",
+    "endCash": null,
+    "openPositions": 1,
+    "local": {
+     "pnl": "650.00",
+     "realized": "0.00",
+     "unrealized": "650.00",
+     "income": "0.00",
+     "fees": "0.00",
+     "corrections": "0.00",
+     "fx": "0.00",
+     "unattributed": "0.00"
+    },
+    "display": {
+     "pnl": "650.00",
+     "realized": "0.00",
+     "unrealized": "650.00",
+     "income": "0.00",
+     "fees": "0.00",
+     "corrections": "0.00",
+     "fx": "0.00",
+     "unattributed": "0.00"
+    },
+    "localReturn": {
+     "modifiedDietz": 0.060214,
+     "method": "dietz",
+     "xirr": null,
+     "xirrStatus": "unavailable",
+     "largeFlows": true
+    },
+    "displayReturn": {
+     "modifiedDietz": 0.060214,
+     "method": "dietz",
+     "xirr": null,
+     "xirrStatus": "unavailable",
+     "largeFlows": true
+    }
+   },
+   "chart": {
+    "barGrain": "month",
+    "intervals": [
+     {
+      "from": "2031-03-01",
+      "to": "2031-03-31"
+     },
+     {
+      "from": "2031-04-01",
+      "to": "2031-04-30"
+     },
+     {
+      "from": "2031-05-01",
+      "to": "2031-05-31"
+     },
+     {
+      "from": "2031-06-01",
+      "to": "2031-06-30"
+     },
+     {
+      "from": "2031-07-01",
+      "to": "2031-07-31"
+     },
+     {
+      "from": "2031-08-01",
+      "to": "2031-08-31"
+     },
+     {
+      "from": "2031-09-01",
+      "to": "2031-09-30"
+     },
+     {
+      "from": "2031-10-01",
+      "to": "2031-10-15"
+     }
+    ],
+    "valueGrain": "month",
+    "valueDays": [
+     "2031-03-31",
+     "2031-04-30",
+     "2031-05-31",
+     "2031-06-30",
+     "2031-07-31",
+     "2031-08-31",
+     "2031-09-30",
+     "2031-10-15"
+    ],
+    "services": [
+     {
+      "accountId": "<id-5>",
+      "bars": [
+       null,
+       null,
+       null,
+       "300.00",
+       "-2000.00",
+       "0.00",
+       "0.00",
+       "2350.00"
+      ],
+      "values": [
+       null,
+       null,
+       null,
+       "10300.00",
+       "10300.00",
+       "10300.00",
+       "10300.00",
+       "12650.00"
+      ]
+     }
+    ],
+    "bars": [
+     null,
+     null,
+     null,
+     "300.00",
+     "-2000.00",
+     "0.00",
+     "0.00",
+     "2350.00"
+    ],
+    "cumulative": [
+     null,
+     null,
+     null,
+     "300.00",
+     "-1700.00",
+     "-1700.00",
+     "-1700.00",
+     "650.00"
+    ],
+    "values": [
+     null,
+     null,
+     null,
+     "10300.00",
+     "10300.00",
+     "10300.00",
+     "10300.00",
+     "12650.00"
+    ],
+    "markers": [
+     "in",
+     null,
+     null,
+     null,
+     "in",
+     null,
+     null,
+     null
+    ]
+   },
+   "contributions": {
+    "rows": [],
+    "income": "0.00",
+    "fees": "0.00",
+    "corrections": "0.00",
+    "valueChange": "650.00",
+    "unattributed": "0.00",
+    "total": "650.00"
+   },
+   "recent": []
   }
  }
 }

@@ -1,7 +1,7 @@
 // What the descriptors of investments share (rewrite plan R2, 05-refactor.md §5.5 «investments»): the
 // vocabularies of the wire, the ids of the examples and the answers of `GET /investments` and
-// `GET /investments/{accountId}/holdings` as `apps/web/src/modules/investments/api.ts` writes them
-// today (baselines/contract/api.json). No route is declared here. Amounts are decimal strings; a
+// `GET /investments/{accountId}/holdings` as `apps/api/src/investments/dto.ts` writes them today
+// (baselines/contract/api.json). No route is declared here. Amounts are decimal strings; a
 // return or a weight is a ratio rounded to 6 decimals (0.05 is 5 %).
 import { z } from "zod";
 import { civilDate, id, money } from "../primitives";

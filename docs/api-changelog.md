@@ -3,6 +3,36 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · investments
+
+- `GET /investments` and the MCP tool `list_investments` (`investments:read`): `pnl.modifiedDietz`,
+  the portfolio's Modified Dietz return of the period, and `pnl.services[].modifiedDietz`, each
+  service's in the display currency (ratios rounded to 6 decimals, `null` when there is no capital
+  to divide by). Every other field is as before; a period it cannot read is still the year running.
+- The reads of the pages (new, `investments:read`), with `period` = `all`, a year or `custom` with
+  `from` and `to` (none is the year running; a year to come is `400`): `GET /investments/home` (today's
+  totals and allocation by class, service and currency, each service with its P&L of the period and
+  its contribution, the parts, the charts, the pension funds), `GET /investments/{accountId}` (the
+  Overview: the service, its P&L with `localReturn`/`displayReturn`, the chart with its markers, the
+  contributions, the five latest events), `/activity` (`family`, `q`, `assetId`, `page`: fifty events
+  a page, or a manual service's bank movements), `/positions` (open, closed in the period and ever,
+  the contributions), and `GET /investments/catalog`. MCP tool `get_investment` (`account_id`,
+  `period`, `from`, `to`; new, read only): the answer of `GET /investments/{accountId}`.
+- `GET /investments/{accountId}/connection`, `POST /investments/connections` and `PUT
+  /investments/{accountId}/key` (new, `session`): the Connection tab, a new connection and a new key.
+  The web's own session only: a token gets `403`, and no MCP tool reads them.
+- The writes of investments (new, `write`): `POST /investments` (201 `{accountId}`), `PATCH
+  /investments/{accountId}`, `PUT /investments/{accountId}/value`; `POST
+  /investments/{accountId}/operations` (201 `{id}`; a deposit, a withdrawal, an account valuation or a
+  correction is `409` `not_editable`) and `DELETE .../operations/{eventId}`; `POST
+  .../holdings/{holdingId}/reconciliation`; `POST .../readings/{readingId}/zero`; `POST
+  .../transfers` (201 `{id}`) and `DELETE .../transfers/{eventId}`; `POST .../sync` (202), `POST
+  .../key/check`, `DELETE .../connection`, `POST .../key/revoked`. An event, a reading or a holding of
+  another service than the path's is `404`. Errors: `not_found`; `invalid` (`reason` `future_date`,
+  `before_period`, `invalid_transaction`, `unknown_provider`, `invalid_credentials`,
+  `unsupported_currency`); `conflict` with the other reasons of the domain (`not_eligible`,
+  `not_read_only`, `cooldown`, `not_connected`, …).
+
 ## 2026-11-21 · funds (0.52.0)
 
 - `GET /funds` (new, `read`): the Funds home of a period (`period` = `all`, a year or `custom` with

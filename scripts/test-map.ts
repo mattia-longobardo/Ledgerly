@@ -306,6 +306,7 @@ export const MODULES: Module[] = [
       "e2e:funds",
       "e2e:connections",
       "e2e:accounts",
+      "e2e:api",
     ],
   },
   {
@@ -458,6 +459,7 @@ export const MODULES: Module[] = [
       "e2e:connections",
       "perf",
       "e2e:transactions",
+      "e2e:investments",
     ],
   },
   {
@@ -479,6 +481,7 @@ export const MODULES: Module[] = [
       "e2e:accounts",
       "e2e:categories",
       "e2e:transactions",
+      "e2e:investments",
     ],
   },
   {

@@ -219,7 +219,7 @@ export async function recordOperationAction(
 export async function deleteOperationAction(accountId: string, eventId: string): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    await deleteOperation(ctx, eventId);
+    await deleteOperation(ctx, eventId, accountId);
     revalidate(accountId);
     return { ok: true };
   } catch (error) {
@@ -239,14 +239,18 @@ interface ReconcileFormInput {
 export async function reconcileAction(accountId: string, input: ReconcileFormInput): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    await reconcileHolding(ctx, {
-      holdingId: input.holdingId,
-      kind: input.kind,
-      effectiveOn: input.effectiveOn,
-      quantity: input.kind === "partial" ? number(input.quantity, ctx.numberFormat, QUANTITY_SCALE) : null,
-      product: input.kind === "outside_scope" ? input.product : null,
-      readingId: input.readingId,
-    });
+    await reconcileHolding(
+      ctx,
+      {
+        holdingId: input.holdingId,
+        kind: input.kind,
+        effectiveOn: input.effectiveOn,
+        quantity: input.kind === "partial" ? number(input.quantity, ctx.numberFormat, QUANTITY_SCALE) : null,
+        product: input.kind === "outside_scope" ? input.product : null,
+        readingId: input.readingId,
+      },
+      accountId,
+    );
     revalidate(accountId);
     return { ok: true };
   } catch (error) {
@@ -257,7 +261,7 @@ export async function reconcileAction(accountId: string, input: ReconcileFormInp
 export async function confirmZeroAction(accountId: string, readingId: string): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    await confirmZeroReading(ctx, readingId);
+    await confirmZeroReading(ctx, readingId, accountId);
     revalidate(accountId);
     return { ok: true };
   } catch (error) {
@@ -285,7 +289,7 @@ export async function linkTransferAction(
 export async function unlinkTransferAction(accountId: string, eventId: string): Promise<ActionResult> {
   const ctx = await requireSession();
   try {
-    await unlinkTransfer(ctx, eventId);
+    await unlinkTransfer(ctx, eventId, accountId);
     revalidate(accountId);
     revalidatePath("/investments/[accountId]", "layout");
     return { ok: true };

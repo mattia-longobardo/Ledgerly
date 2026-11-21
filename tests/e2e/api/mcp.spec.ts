@@ -113,6 +113,7 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
     "get_fund",
     "get_funds",
     "get_interest_rule",
+    "get_investment",
     "get_investment_holdings",
     "get_payroll",
     "get_payslip",

@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101826,
-    "duplicatedLines": 16424,
-    "percent": 16.13,
-    "blocks": 1236
+    "lines": 102702,
+    "duplicatedLines": 16711,
+    "percent": 16.27,
+    "blocks": 1261
   },
   "units": {
     "api": {
-      "lines": 4003,
-      "duplicatedLines": 806,
-      "percent": 20.13,
-      "blocks": 70
+      "lines": 5038,
+      "duplicatedLines": 1078,
+      "percent": 21.4,
+      "blocks": 94
     },
     "app": {
-      "lines": 24803,
-      "duplicatedLines": 3996,
-      "percent": 16.11,
-      "blocks": 312
+      "lines": 24812,
+      "duplicatedLines": 4002,
+      "percent": 16.13,
+      "blocks": 313
     },
     "global.d": {
       "lines": 12,
@@ -36,8 +36,8 @@
     },
     "modules/accounts": {
       "lines": 5130,
-      "duplicatedLines": 981,
-      "percent": 19.12,
+      "duplicatedLines": 983,
+      "percent": 19.16,
       "blocks": 71
     },
     "modules/budgets": {
@@ -65,9 +65,9 @@
       "blocks": 32
     },
     "modules/investments": {
-      "lines": 10108,
-      "duplicatedLines": 1833,
-      "percent": 18.13,
+      "lines": 9997,
+      "duplicatedLines": 1840,
+      "percent": 18.41,
       "blocks": 128
     },
     "modules/payroll": {
@@ -113,9 +113,9 @@
       "blocks": 0
     },
     "platform/api": {
-      "lines": 149,
+      "lines": 148,
       "duplicatedLines": 15,
-      "percent": 10.07,
+      "percent": 10.14,
       "blocks": 1
     },
     "platform/auth": {
@@ -257,7 +257,7 @@
       "blocks": 0
     },
     "platform/mcp": {
-      "lines": 186,
+      "lines": 130,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -410,27 +410,31 @@
   "files": {
     "api/accounts/cases.ts": 6,
     "api/accounts/dto.ts": 51,
-    "api/accounts/routes.ts": 44,
+    "api/accounts/routes.ts": 65,
     "api/budgets/dto.ts": 10,
-    "api/funds/dto.ts": 75,
+    "api/funds/dto.ts": 80,
     "api/funds/routes.ts": 79,
     "api/interests/dto.ts": 24,
     "api/interests/routes.ts": 32,
+    "api/investments/dto.ts": 64,
+    "api/investments/pages.ts": 33,
+    "api/investments/routes.ts": 79,
+    "api/investments/tabs.ts": 56,
     "api/payroll/dto.ts": 24,
     "api/payroll/routes.ts": 36,
-    "api/pockets/dto.ts": 34,
-    "api/pockets/routes.ts": 55,
+    "api/pockets/dto.ts": 35,
+    "api/pockets/routes.ts": 56,
     "api/settings/categories.ts": 39,
-    "api/settings/category-moves.ts": 14,
+    "api/settings/category-moves.ts": 18,
     "api/settings/connections.ts": 16,
-    "api/settings/security.ts": 33,
+    "api/settings/security.ts": 35,
     "api/settings/server.ts": 6,
-    "api/subscriptions/dto.ts": 38,
+    "api/subscriptions/dto.ts": 43,
     "api/subscriptions/routes.ts": 63,
     "api/timeoff/dto.ts": 9,
     "api/timeoff/routes.ts": 35,
     "api/transactions/dto.ts": 21,
-    "api/transactions/review.ts": 26,
+    "api/transactions/review.ts": 27,
     "api/transactions/routes.ts": 12,
     "api/transactions/rules.ts": 24,
     "app/(app)/accounts/[id]/account-screen.tsx": 12,
@@ -474,7 +478,7 @@
     "app/(app)/interests/interests-screen.tsx": 24,
     "app/(app)/investments/[accountId]/activity/page.tsx": 95,
     "app/(app)/investments/[accountId]/connection/page.tsx": 29,
-    "app/(app)/investments/[accountId]/page.tsx": 204,
+    "app/(app)/investments/[accountId]/page.tsx": 210,
     "app/(app)/investments/[accountId]/positions/page.tsx": 103,
     "app/(app)/investments/[accountId]/service-data.ts": 30,
     "app/(app)/investments/catalog/page.tsx": 23,
@@ -544,7 +548,7 @@
     "app/(auth)/sign-in/sign-in-form.tsx": 8,
     "app/(auth)/sign-in/two-factor/challenge-form.tsx": 6,
     "app/not-found.tsx": 12,
-    "modules/accounts/calls.ts": 40,
+    "modules/accounts/calls.ts": 42,
     "modules/accounts/jobs.ts": 18,
     "modules/accounts/queries/directory.ts": 6,
     "modules/accounts/queries/index.ts": 141,
@@ -629,16 +633,15 @@
     "modules/interests/service/records.ts": 30,
     "modules/interests/service/switching.ts": 13,
     "modules/interests/ui/rule-dialog.tsx": 119,
-    "modules/investments/actions.ts": 91,
+    "modules/investments/actions.ts": 94,
     "modules/investments/activity.ts": 15,
-    "modules/investments/api.ts": 16,
     "modules/investments/catalog.ts": 82,
     "modules/investments/managed.ts": 21,
     "modules/investments/pnl.ts": 14,
-    "modules/investments/queries.ts": 92,
+    "modules/investments/queries.ts": 113,
     "modules/investments/rules.ts": 36,
     "modules/investments/schema.ts": 404,
-    "modules/investments/service.ts": 257,
+    "modules/investments/service.ts": 256,
     "modules/investments/sync/connect.ts": 70,
     "modules/investments/sync/history.ts": 78,
     "modules/investments/sync/pass.ts": 55,

@@ -5,14 +5,14 @@
     "reciprocalModulePairs": 0,
     "reciprocalUnitPairs": 42,
     "moduleCycleGroups": 0,
-    "platformToModuleImports": 67,
-    "platformFilesImportingModules": 24,
+    "platformToModuleImports": 64,
+    "platformFilesImportingModules": 22,
     "uiToPlatformImports": 1,
     "forbiddenNameFiles": 89,
     "forbiddenNameKeys": 15,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 105,
+    "deepImports": 103,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -110,7 +110,6 @@
     "modules/imports ↔ platform/jobs",
     "modules/interests ↔ platform/db",
     "modules/interests ↔ platform/jobs",
-    "modules/investments ↔ platform/api",
     "modules/investments ↔ platform/db",
     "modules/investments ↔ platform/integrations",
     "modules/payroll ↔ platform/db",
@@ -396,7 +395,6 @@
     "modules/subscriptions/service.ts → modules/transactions/taxonomy",
     "modules/timeoff/queries.ts → modules/users/service",
     "modules/timeoff/service.ts → modules/users/service",
-    "platform/api/app.ts → modules/investments/api",
     "platform/auth/auth.ts → modules/users/service",
     "platform/integrations/registry.ts → modules/timeoff/jobs",
     "platform/integrations/registry.ts → modules/transactions/jobs",
@@ -417,8 +415,7 @@
     "platform/jobs/registry.ts → modules/interests/jobs",
     "platform/jobs/registry.ts → modules/pockets/jobs",
     "platform/jobs/registry.ts → modules/subscriptions/jobs",
-    "platform/jobs/registry.ts → modules/transactions/jobs",
-    "platform/mcp/tools.ts → modules/investments/api"
+    "platform/jobs/registry.ts → modules/transactions/jobs"
   ],
   "tableAccess": [
     "app/api/metrics/route.ts: documents",

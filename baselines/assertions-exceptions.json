@@ -653,5 +653,40 @@
     "file": "tests/e2e/api/mcp.spec.ts",
     "decision": "R2 funds",
     "reason": "the list of the MCP tools holds the two new read tools get_funds and get_fund: two names added to the expected list; no other value changed"
+  },
+  {
+    "file": "apps/api/src/meta.test.ts",
+    "decision": "R2 investments",
+    "reason": "GET /meta lists the capability of the routes of investments, which this step serves: one name added to the expected list; the adapters of the test lend the new queue of investments; no other value changed"
+  },
+  {
+    "file": "apps/api/src/settings/diagnostics.test.ts",
+    "decision": "R2 investments",
+    "reason": "the adapters of the test lend the new queue of investments (InvestmentCases): one line of setup added; no assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/investments/exposure.itest.ts",
+    "decision": "R2 investments",
+    "reason": "the list of the MCP tools holds the new read tool get_investment: one name added to the two expected lists; no other value changed"
+  },
+  {
+    "file": "apps/web/src/platform/api/api.itest.ts",
+    "decision": "R2 investments",
+    "reason": "the read tools of apps/api now hold list_investments, get_investment_holdings and get_investment: three names added to the expected list; no other value changed"
+  },
+  {
+    "file": "apps/web/src/platform/api/session.itest.ts",
+    "decision": "R2 investments",
+    "reason": "a test added: the three session routes of investments answer the session and 403 to a token with every scope, with or without the cookie; no existing test changed"
+  },
+  {
+    "file": "tools/baselines.itest.ts",
+    "decision": "R2 investments",
+    "reason": "the REST and MCP answers of the reference user now hold GET /investments/home, GET /investments/{accountId} and get_investment too, after every existing answer: answers added; no existing answer or assertion changed (modifiedDietz is added to list_investments)"
+  },
+  {
+    "file": "tests/e2e/api/mcp.spec.ts",
+    "decision": "R2 investments",
+    "reason": "the list of the MCP tools holds the new read tool get_investment: one name added to the expected list; no other value changed"
   }
 ]

@@ -4,6 +4,8 @@ export { readTools } from "./tools";
 export type { ReadTool } from "./tools";
 export type { ApiEnv } from "./serve";
 export type { ConnectionCases } from "./settings/connections";
+export type { InvestmentCases } from "./investments/routes";
+export { pnlJson } from "./investments/dto";
 export type { ServerCases } from "./settings/server";
 export { deleteCategoryEverywhere } from "./settings/categories";
 export {

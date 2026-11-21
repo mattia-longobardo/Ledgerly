@@ -1,6 +1,5 @@
 import "server-only";
 import { Hono } from "hono";
-import { investmentsApi } from "@/modules/investments/api";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { ApiEnv } from "./auth";
 import { fail } from "./errors";
@@ -8,14 +7,13 @@ import { fail } from "./errors";
 /**
  * `/api/v1` (spec §4.2, D5): one entry point, one place that authenticates, one shape of error.
  *
- * Each module exposes its routes in its own `api.ts` and calls **its own services** from them, so
- * nothing here is a second implementation of anything the screen already does. What is *not* here
+ * Every route is `apps/api`'s, mounted here by the composition (`app/api/v1/[[...route]]`), and calls
+ * **the module's own use cases**, so nothing is a second implementation of anything the screen
+ * already does. What is *not* here
  * is as deliberate as what is: no administrative surface exists under `/api/v1` at all, and the
  * interface has to keep working as though this whole directory did not exist (plan F8 §1).
  */
 export const api = new Hono<ApiEnv>().basePath("/api/v1");
-
-api.route("/", investmentsApi);
 
 api.notFound((c) => fail(c, "not_found"));
 

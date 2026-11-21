@@ -358,7 +358,7 @@ describe("/api/v1/investments (§5.5)", () => {
     const token = await tokenFor(["investments:read"], API);
     const on = today(ctx.timeZone);
     const { investmentsPnl } = await import("@domain/modules/investments/queries");
-    const { pnlJson } = await import("./api");
+    const { pnlJson } = await import("@ledgerly/api");
 
     const plain = JSON.parse(await (await get("/investments", token)).text());
     expect(plain.pnl.period).toEqual({ kind: "year", from: `${on.slice(0, 4)}-01-01`, to: on });
@@ -416,15 +416,20 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
     const refused = await callTool(read, "list_investments");
     expect(refused.isError).toBe(true);
 
-    // investments:read alone opens the two Investments tools, and only them.
+    // investments:read alone opens the Investments tools, and only them.
     const investments = await tokenFor(["investments:read"], MCP);
-    expect(await toolNames(investments)).toEqual(["get_investment_holdings", "list_investments"]);
+    expect(await toolNames(investments)).toEqual([
+      "get_investment",
+      "get_investment_holdings",
+      "list_investments",
+    ]);
     const both = await tokenFor(["read", "investments:read"], MCP);
     expect(await toolNames(both)).toEqual([
       "get_account_balances",
       "get_fund",
       "get_funds",
       "get_interest_rule",
+      "get_investment",
       "get_investment_holdings",
       "get_payroll",
       "get_payslip",

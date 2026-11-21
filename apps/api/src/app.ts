@@ -6,6 +6,7 @@ import { serveBudgets } from "./budgets/routes";
 import { serveFunds } from "./funds/routes";
 import { serveImports } from "./imports/routes";
 import { serveInterests } from "./interests/routes";
+import { type InvestmentCases, serveInvestments } from "./investments/routes";
 import { servePayroll } from "./payroll/routes";
 import { serveTimeOff } from "./timeoff/routes";
 import { servePockets } from "./pockets/routes";
@@ -38,6 +39,8 @@ export interface Adapters {
   accounts: AccountCases;
   /** The manual movement, the source of a movement and the queue, until R4 and R5c. */
   transactions: TransactionCases;
+  /** The queue of the worker, for «Sync now» and a new connection, until R4. */
+  investments: InvestmentCases;
 }
 
 /** Every module's routes, served behind the guard; `/meta` lists their capabilities. */
@@ -48,6 +51,7 @@ export function apiRoutes({
   server,
   accounts,
   transactions,
+  investments,
 }: Adapters): Hono<ApiEnv> {
   const app = new Hono<ApiEnv>();
   const served = [
@@ -68,6 +72,7 @@ export function apiRoutes({
     ...servePayroll(app, guard),
     ...serveImports(app, guard),
     ...serveFunds(app, guard),
+    ...serveInvestments(app, guard, investments),
   ];
   app.route("/", metaApi(served));
   return app;
