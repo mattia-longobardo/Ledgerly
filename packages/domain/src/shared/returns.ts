@@ -150,3 +150,12 @@ export function spanXirr(input: {
     { on: to, cents: endCents },
   ]);
 }
+
+/**
+ * The simple return: a gain over the capital it was made on, never annualised. Exact to a
+ * billionth, from integers: no float on the way in. The return of one stretch between two values,
+ * and of a fund's position against what was put in.
+ */
+export function simpleReturn(gainCents: Cents, capitalCents: Cents): number {
+  return Number((gainCents * 1_000_000_000n) / capitalCents) / 1_000_000_000;
+}

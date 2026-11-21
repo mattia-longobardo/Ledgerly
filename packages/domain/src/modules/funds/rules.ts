@@ -1,10 +1,6 @@
 import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
-
-/** A fraction of two amounts as a number, from integers: exact to a millionth, no float on the way in. */
-export function ratio(part: Cents, whole: Cents): number {
-  return Number((part * 1_000_000_000n) / whole) / 1_000_000_000;
-}
+import { simpleReturn } from "../../shared/returns";
 
 export const FUND_STATES = ["active", "archived"] as const;
 export const VALUATION_SOURCES = ["manual", "import"] as const;
@@ -180,7 +176,7 @@ export function periodReturns(
       toCents: end.cents,
       flowsCents,
       gainCents,
-      fraction: ratio(gainCents, base),
+      fraction: simpleReturn(gainCents, base),
     });
   }
   return out;

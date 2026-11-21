@@ -1,6 +1,6 @@
 import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey, monthKey } from "../../../shared/dates";
 import type { Cents } from "../../../shared/money";
-import { ratio } from "../rules";
+import { simpleReturn } from "../../../shared/returns";
 import {
   accruedTotal,
   awaitingCredit,
@@ -227,7 +227,7 @@ export function pensionMetrics(input: {
       // made: the gain is unknown rather than equal to the whole position.
       gainCents = null;
       gainReason = "nothing_paid";
-    } else gainFraction = ratio(gainCents, basis + transfersIn);
+    } else gainFraction = simpleReturn(gainCents, basis + transfersIn);
   }
 
   const pending = pendingQuarters(quarters);

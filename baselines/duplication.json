@@ -47,9 +47,9 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10701,
+      "lines": 10697,
       "duplicatedLines": 1998,
-      "percent": 18.67,
+      "percent": 18.68,
       "blocks": 152
     },
     "modules/imports": {
@@ -395,7 +395,7 @@
       "blocks": 0
     },
     "shared/returns": {
-      "lines": 122,
+      "lines": 126,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
