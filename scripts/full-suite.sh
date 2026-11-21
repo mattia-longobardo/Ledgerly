@@ -78,8 +78,8 @@ browser() {
     node --input-type=module -e 'import { chromium } from "@playwright/test"; await (await chromium.launch()).close()'
 }
 preview() {
+  # `up` puts the preview on the plugins' network too.
   sh scripts/preview-on-test.sh up "$image" || return 1
-  docker network connect ledgerly_plugins "$LEDGERLY_PREVIEW_NAME" || return 1
   i=0
   until curl -fsS "$E2E_BASE_URL/api/health" >/dev/null 2>&1; do
     i=$((i + 1))
