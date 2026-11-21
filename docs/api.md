@@ -84,7 +84,7 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | `GET /payroll/payslips`, `/payroll/payslips/{id}`, `/payroll/codes` | `read` |
 | the writes of payroll: a value, verify, apply, reopen, reject, retry, rename, delete, the code map ([changelog](api-changelog.md)) | `write` |
 | `POST /payroll/payslips/{id}/llm-fill` (the web's own session only: a token gets 403) | `session` |
-| `GET /funds`, `/funds/{id}`, `/funds/{id}/valuations`, `/contributions`, `/settings`, `/debit-match` | `read` |
+| `GET /funds`, `/funds/setup`, `/funds/{id}`, `/funds/{id}/valuations`, `/contributions`, `/settings`, `/debit-match`, `/movement-candidates` | `read` |
 | the writes of funds: the fund, its values, operations, decisions, sources, fees, «Rebuild from payslips» ([changelog](api-changelog.md)) | `write` |
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |

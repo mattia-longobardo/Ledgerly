@@ -7,33 +7,38 @@ import { id } from "../primitives";
 import { defineRoute } from "../route";
 import { feeBody, fundBody, sourceBody, valuationBody } from "./bodies";
 import {
+  CONTRIBUTIONS_EXAMPLE,
   FEE_EXAMPLE,
   FUND_REF_EXAMPLE,
   GAIN_EXAMPLE,
+  HOME_FUND_EXAMPLE,
   LINE_EXAMPLE,
   MEASURE_EXAMPLE,
+  OVERVIEW_EXAMPLE,
   PERIOD_EXAMPLE,
   SOURCE_EXAMPLE,
   VALUES_EXAMPLE,
 } from "./examples";
 import {
+  ACCOUNT_ID,
   byFund,
   FUND_ERRORS,
   FUND_ID,
   FUND_STATES,
-  fundContributions,
   fundOverview,
-  fundSettings,
   fundsHome,
-  fundValuations,
   periodQuery,
+  TRANSACTION_ID,
 } from "./shared";
+import { fundContributions, fundSettings, fundSetup, fundValuations, movementCandidates } from "./tabs";
 
 const FORECAST_EXAMPLE = {
   monthly: "350.00",
   rates: [0.02, 0.04, 0.06],
   rows: [{ years: 1, paidIn: "4200.00", values: ["16700.00", "16900.00", "17100.00"] }],
-};
+  layout: "closed",
+  basis: "average",
+} as const;
 
 export const getFunds = defineRoute({
   id: "get_funds",
@@ -62,7 +67,13 @@ export const getFunds = defineRoute({
       period: PERIOD_EXAMPLE,
       valueToday: "12450.00",
       summary: MEASURE_EXAMPLE,
-      funds: [{ ...FUND_REF_EXAMPLE, line: LINE_EXAMPLE, valueToday: "12450.00", stale: false }],
+      funds: [HOME_FUND_EXAMPLE],
+      onTheWay: "350.00",
+      awaitsPayslips: true,
+      firstValueOn: "2024-03-31",
+      firstPaidOn: "2024-01-20",
+      accrued: null,
+      valuesSeen: 1,
       gain: GAIN_EXAMPLE,
       values: VALUES_EXAMPLE,
       years: [],
@@ -109,6 +120,7 @@ export const getFund = defineRoute({
       gain: GAIN_EXAMPLE,
       values: VALUES_EXAMPLE,
       forecast: FORECAST_EXAMPLE,
+      ...OVERVIEW_EXAMPLE,
     },
   },
 });
@@ -135,6 +147,11 @@ export const getFundValuations = defineRoute({
       best: null,
       worst: null,
       recorded: [],
+      valuesEver: 1,
+      lastValue: { on: "2026-10-01", value: "12450.00" },
+      lastValueClosesPrevious: false,
+      notInValue: "0.00",
+      statements: [],
     },
   },
 });
@@ -162,6 +179,7 @@ export const getFundContributions = defineRoute({
       payroll: null,
       accrued: [],
       debit: null,
+      ...CONTRIBUTIONS_EXAMPLE,
     },
   },
 });
@@ -182,10 +200,62 @@ export const getFundSettings = defineRoute({
     params: { id: FUND_ID },
     response: {
       fund: FUND_REF_EXAMPLE,
-      sources: [SOURCE_EXAMPLE],
-      fees: [FEE_EXAMPLE],
+      sources: [{ ...SOURCE_EXAMPLE, nextDue: ["2027-01-20"], dueDates: [] }],
+      fees: [{ ...FEE_EXAMPLE, expired: false }],
       codes: { worker: ["Z10"] },
       taken: [],
+      payrollSourceId: SOURCE_EXAMPLE.id,
+      assetsEstimate: { state: "none", amount: null, rate: null, value: null, on: null },
+    },
+  },
+});
+
+export const getFundMovementCandidates = defineRoute({
+  id: "get_fund_movement_candidates",
+  method: "GET",
+  path: "/funds/{id}/movement-candidates",
+  scope: "read",
+  capability: "funds",
+  summary:
+    "The movements a contribution or a recurring debit of the fund can be tied to: the last 60 that left " +
+    "the account asked for (any of the person's without one) since the fund started, newest first.",
+  actions: [],
+  params: byFund,
+  query: z.object({ accountId: id().optional() }),
+  response: movementCandidates,
+  errors: ["invalid", "not_found"],
+  example: {
+    params: { id: FUND_ID },
+    query: { accountId: ACCOUNT_ID },
+    response: {
+      movements: [{ id: TRANSACTION_ID, on: "2026-11-02", payee: "Fondo Alfa", amount: "100.00" }],
+    },
+  },
+});
+
+export const getFundSetup = defineRoute({
+  id: "get_fund_setup",
+  method: "GET",
+  path: "/funds/setup",
+  scope: "read",
+  capability: "funds",
+  summary:
+    "What the form that creates a fund starts from: the fund templates, and the payslip components " +
+    "another fund already takes.",
+  actions: [],
+  response: fundSetup,
+  errors: [],
+  example: {
+    response: {
+      templates: [
+        {
+          id: "example",
+          name: "Example Pension",
+          sources: [{ kind: "payroll", accrualPeriod: "quarter", hasDue: true, dueDay: "20" }],
+          fees: [{ label: "Membership", basis: "periodic", value: "12", period: "year", scope: "#0" }],
+        },
+      ],
+      taken: [{ component: "tfr", fund: "Fondo Alfa" }],
     },
   },
 });

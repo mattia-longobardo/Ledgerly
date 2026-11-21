@@ -3,6 +3,53 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · funds: what the pages read (0.54.0)
+
+The reads of Funds answer every figure the pages show, so a client never sums, filters by period or
+compares dates. Every field below is new; nothing that was there changes, but the order of
+`GET /funds/{id}/settings` `fees`, which is now the page's (declared below).
+
+- `origin` (in `summary`, `funds[].line`, `years[].summary`, the Overview's `summary` and `line`):
+  `voluntary`, the part of `you` paid by hand, outside the payslip. Every fund line: `value`, the value
+  the row and the total show (none for an archived fund in a period that reaches today).
+- `gain` (home and Overview): `best` and `worst` (the index of the bar, null with none measured); each
+  bar `stretches` (`{fundId, from, to, gain}`), `cumulative` (running total, null on a gap), `share` and
+  `cumulativeShare` (the Return view: the bar's share of the period's return, a fraction, null with no
+  return to share); each `funds[]` its `share`.
+- `GET /funds`: `onTheWay` (open funds, as of today) and `awaitsPayslips`; `firstValueOn`,
+  `firstPaidOn`; `accrued` (`{fundId, dueOn}` of the «Accrued» note, or null); `valuesSeen`; each fund
+  `lastValueOn` (its newest value), `debit` (the active recurring debit: `sourceId`, `state`, `amount`,
+  `frequency`, `day`, `status` found/awaited/missing/none with `on` or `by`, `accountId`, `accountName`,
+  `payeeMatch`), `hasCalendar`, `onTheWay` (`{amount, periods: [{year, index, amount, due}]}`).
+- `GET /funds/{id}`: `valueTodayOn`, `firstPaidOn`, `firstValueOn`, `units` and `lastPrice` (a fund with
+  unit movements only), `bridge` (`{lines: [{key, amount, total}] | null, on}`, a fund with a payslip
+  source only), `payslipsAccrued`, `debit`, `hasCalendar`, `onTheWay`, `recent` (the last five
+  operations of the period that moved money, newest first, each with `gross` and `origin`),
+  `operationsEver`, `competencesEver`, `valuesEver`; `forecast.layout` (`short`|`closed`) and
+  `forecast.basis` (`plan`|`average`).
+- `GET /funds/{id}/contributions`: `fund`; each operation `gross` (an exit negative) and `origin`
+  (`payroll`|`rule`|`manual`|`import`); `totals` (the register's total row: `worker`, `employer`, `tfr`
+  without the voluntary payments, `voluntary`, `other` with an exit's sign, `fees` as a cost, `net`);
+  `operationsEver`, `fedBySources`; `payslips` (one per competence of the period: `competenceId`,
+  `payslipId`, `documentId`, `month`, `payslipType`, `year`, `index`, `worker`, `employer`, `tfr`,
+  `total`, `status`, `reason`) and `payslipTotals`; `payroll.toleranceDays`,
+  `payroll.periods[].lastCreditedOn`; `debits` (every recurring debit, active or paused, `frequency`
+  never null); `setup` (null for an archived fund: `defaultKind`, `defaultFees {voluntary, payroll}`,
+  `periods` newest first, `pendingPeriod`).
+- `GET /funds/{id}/valuations`: `valuesEver`, `lastValue {on, value}`, `lastValueClosesPrevious`,
+  `notInValue`, `statements` (the positions a statement stated before N6, in the period); each line
+  `valuationId` (the recorded value of that day, or null). `recorded` is newest first.
+- `GET /funds/{id}/settings`: each source `nextDue` (the next due dates of a payslip source) and
+  `dueDates` (the explicit due dates, typed); `payrollSourceId`; each fee `expired`, and `fees` in the
+  page's order (in force first, by basis and by name, then the expired ones); `assetsEstimate`
+  (`state` none/needs_value/estimated, `amount`, `rate` a fraction a year, `value`, `on`).
+- `GET /funds/{id}/movement-candidates?accountId` (new, `read`): `{movements: [{id, on, payee, amount}]}`,
+  the last 60 movements out of the account (any of the person's without `accountId`) since the fund
+  started, newest first. A fund that is not the person's is `404`.
+- `GET /funds/setup` (new, `read`): `{templates, taken}`, the fund templates as the form takes them and
+  the payslip components another fund takes.
+- MCP `get_funds` and `get_fund` answer the same new fields, as they answer the routes.
+
 ## 2026-11-21 · interests: one year to date (0.53.0)
 
 - `GET /interests` (and `list_interest_rules`, the export): `rules[].accruedYtd` and `totals.accruedYtd`

@@ -1468,7 +1468,8 @@
      "you": "7761.00",
      "employer": "0.00",
      "tfr": "0.00",
-     "other": "0.00"
+     "other": "0.00",
+     "voluntary": "7761.00"
     },
     "rate": 0.033680011425130656,
     "xirr": null,
@@ -1513,15 +1514,45 @@
        "you": "7761.00",
        "employer": "0.00",
        "tfr": "0.00",
-       "other": "0.00"
+       "other": "0.00",
+       "voluntary": "7761.00"
       },
       "notInValue": "251.00",
-      "accrued": "0.00"
+      "accrued": "0.00",
+      "value": "7719.00"
      },
      "valueToday": "7719.00",
-     "stale": false
+     "stale": false,
+     "lastValueOn": "2031-09-30",
+     "debit": {
+      "sourceId": "<id-38>",
+      "state": "active",
+      "amount": "251.00",
+      "frequency": {
+       "count": 1,
+       "unit": "month"
+      },
+      "day": 5,
+      "status": "found",
+      "on": "2031-10-05",
+      "by": null,
+      "accountId": null,
+      "accountName": null,
+      "payeeMatch": "no-movement-carries-this"
+     },
+     "hasCalendar": false,
+     "onTheWay": {
+      "amount": "0.00",
+      "periods": []
+     }
     }
    ],
+   "onTheWay": "0.00",
+   "awaitsPayslips": false,
+   "firstValueOn": "2030-12-31",
+   "firstPaidOn": "2030-11-01",
+   "accrued": null,
+   "valuesSeen": 1,
    "gain": {
     "grain": "year",
     "bars": [
@@ -1532,9 +1563,21 @@
       "funds": [
        {
         "fundId": "<id-37>",
+        "gain": "29.00",
+        "share": 0.004673303020711909
+       }
+      ],
+      "stretches": [
+       {
+        "fundId": "<id-37>",
+        "from": "2030-10-31",
+        "to": "2030-12-31",
         "gain": "29.00"
        }
-      ]
+      ],
+      "cumulative": "29.00",
+      "share": 0.004673303020711909,
+      "cumulativeShare": 0.004673303020711909
      },
      {
       "from": "2031-01-01",
@@ -1543,11 +1586,37 @@
       "funds": [
        {
         "fundId": "<id-37>",
-        "gain": "180.00"
+        "gain": "180.00",
+        "share": 0.029006708404418744
        }
-      ]
+      ],
+      "stretches": [
+       {
+        "fundId": "<id-37>",
+        "from": "2030-12-31",
+        "to": "2031-03-31",
+        "gain": "82.00"
+       },
+       {
+        "fundId": "<id-37>",
+        "from": "2031-03-31",
+        "to": "2031-06-30",
+        "gain": "155.00"
+       },
+       {
+        "fundId": "<id-37>",
+        "from": "2031-06-30",
+        "to": "2031-09-30",
+        "gain": "-57.00"
+       }
+      ],
+      "cumulative": "209.00",
+      "share": 0.029006708404418744,
+      "cumulativeShare": 0.033680011425130656
      }
-    ]
+    ],
+    "best": 1,
+    "worst": 0
    },
    "values": [
     {
@@ -1585,7 +1654,8 @@
        "you": "2510.00",
        "employer": "0.00",
        "tfr": "0.00",
-       "other": "0.00"
+       "other": "0.00",
+       "voluntary": "2510.00"
       },
       "rate": 0.02769987852413875,
       "xirr": null,
@@ -1609,7 +1679,8 @@
        "you": "5251.00",
        "employer": "0.00",
        "tfr": "0.00",
-       "other": "0.00"
+       "other": "0.00",
+       "voluntary": "5251.00"
       },
       "rate": 0.005771125451022099,
       "xirr": null,
@@ -1658,7 +1729,8 @@
      "you": "7761.00",
      "employer": "0.00",
      "tfr": "0.00",
-     "other": "0.00"
+     "other": "0.00",
+     "voluntary": "7761.00"
     },
     "rate": 0.033680011425130656,
     "xirr": null,
@@ -1690,10 +1762,12 @@
      "you": "7761.00",
      "employer": "0.00",
      "tfr": "0.00",
-     "other": "0.00"
+     "other": "0.00",
+     "voluntary": "7761.00"
     },
     "notInValue": "251.00",
-    "accrued": "0.00"
+    "accrued": "0.00",
+    "value": "7719.00"
    },
    "valueToday": "7719.00",
    "valueOlderThanOperations": true,
@@ -1707,9 +1781,21 @@
       "funds": [
        {
         "fundId": "<id-37>",
+        "gain": "29.00",
+        "share": 0.004673303020711909
+       }
+      ],
+      "stretches": [
+       {
+        "fundId": "<id-37>",
+        "from": "2030-10-31",
+        "to": "2030-12-31",
         "gain": "29.00"
        }
-      ]
+      ],
+      "cumulative": "29.00",
+      "share": 0.004673303020711909,
+      "cumulativeShare": 0.004673303020711909
      },
      {
       "from": "2031-01-01",
@@ -1718,11 +1804,37 @@
       "funds": [
        {
         "fundId": "<id-37>",
-        "gain": "180.00"
+        "gain": "180.00",
+        "share": 0.029006708404418744
        }
-      ]
+      ],
+      "stretches": [
+       {
+        "fundId": "<id-37>",
+        "from": "2030-12-31",
+        "to": "2031-03-31",
+        "gain": "82.00"
+       },
+       {
+        "fundId": "<id-37>",
+        "from": "2031-03-31",
+        "to": "2031-06-30",
+        "gain": "155.00"
+       },
+       {
+        "fundId": "<id-37>",
+        "from": "2031-06-30",
+        "to": "2031-09-30",
+        "gain": "-57.00"
+       }
+      ],
+      "cumulative": "209.00",
+      "share": 0.029006708404418744,
+      "cumulativeShare": 0.033680011425130656
      }
-    ]
+    ],
+    "best": 1,
+    "worst": 0
    },
    "values": [
     {
@@ -1790,14 +1902,139 @@
        "54604.39"
       ]
      }
-    ]
-   }
+    ],
+    "layout": "short",
+    "basis": "plan"
+   },
+   "valueTodayOn": "2031-09-30",
+   "firstPaidOn": "2030-11-01",
+   "firstValueOn": "2030-12-31",
+   "units": null,
+   "lastPrice": null,
+   "bridge": null,
+   "payslipsAccrued": null,
+   "debit": {
+    "sourceId": "<id-38>",
+    "state": "active",
+    "amount": "251.00",
+    "frequency": {
+     "count": 1,
+     "unit": "month"
+    },
+    "day": 5,
+    "status": "found",
+    "on": "2031-10-05",
+    "by": null,
+    "accountId": null,
+    "accountName": null,
+    "payeeMatch": "no-movement-carries-this"
+   },
+   "hasCalendar": false,
+   "onTheWay": {
+    "amount": "0.00",
+    "periods": []
+   },
+   "recent": [
+    {
+     "id": "<id-39>",
+     "on": "2031-10-05",
+     "classification": "voluntary",
+     "source": "manual",
+     "worker": "251.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00",
+     "fee": "1.00",
+     "net": "250.00",
+     "units": "0",
+     "competence": null,
+     "transactionId": null,
+     "note": null,
+     "gross": "251.00",
+     "origin": "manual"
+    },
+    {
+     "id": "<id-40>",
+     "on": "2031-09-05",
+     "classification": "voluntary",
+     "source": "manual",
+     "worker": "251.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00",
+     "fee": "1.00",
+     "net": "250.00",
+     "units": "0",
+     "competence": null,
+     "transactionId": null,
+     "note": null,
+     "gross": "251.00",
+     "origin": "manual"
+    },
+    {
+     "id": "<id-41>",
+     "on": "2031-08-05",
+     "classification": "voluntary",
+     "source": "manual",
+     "worker": "251.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00",
+     "fee": "1.00",
+     "net": "250.00",
+     "units": "0",
+     "competence": null,
+     "transactionId": null,
+     "note": null,
+     "gross": "251.00",
+     "origin": "manual"
+    },
+    {
+     "id": "<id-42>",
+     "on": "2031-07-05",
+     "classification": "voluntary",
+     "source": "manual",
+     "worker": "251.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00",
+     "fee": "1.00",
+     "net": "250.00",
+     "units": "0",
+     "competence": null,
+     "transactionId": null,
+     "note": null,
+     "gross": "251.00",
+     "origin": "manual"
+    },
+    {
+     "id": "<id-43>",
+     "on": "2031-06-05",
+     "classification": "voluntary",
+     "source": "manual",
+     "worker": "251.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00",
+     "fee": "1.00",
+     "net": "250.00",
+     "units": "0",
+     "competence": null,
+     "transactionId": null,
+     "note": null,
+     "gross": "251.00",
+     "origin": "manual"
+    }
+   ],
+   "operationsEver": 12,
+   "competencesEver": 0,
+   "valuesEver": 4
   }
  },
  "POST /accounts/<id-2>/balances": {
   "status": 201,
   "body": {
-   "id": "<id-38>",
+   "id": "<id-44>",
    "on": "2031-10-15",
    "balance": "12050.00",
    "source": "manual"
@@ -2211,126 +2448,126 @@
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-39>",
+       "id": "<id-45>",
        "on": "2031-08-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-40>",
+       "id": "<id-46>",
        "on": "2031-08-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-41>",
+       "id": "<id-47>",
        "on": "2031-08-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-42>",
+       "id": "<id-48>",
        "on": "2031-08-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-43>",
+       "id": "<id-49>",
        "on": "2031-08-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-44>",
+       "id": "<id-50>",
        "on": "2031-08-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-45>",
+       "id": "<id-51>",
        "on": "2031-07-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-46>",
+       "id": "<id-52>",
        "on": "2031-07-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-47>",
+       "id": "<id-53>",
        "on": "2031-07-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-48>",
+       "id": "<id-54>",
        "on": "2031-07-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-49>",
+       "id": "<id-55>",
        "on": "2031-07-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-50>",
+       "id": "<id-56>",
        "on": "2031-07-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-51>",
+       "id": "<id-57>",
        "on": "2031-06-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-52>",
+       "id": "<id-58>",
        "on": "2031-06-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-53>",
+       "id": "<id-59>",
        "on": "2031-06-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-54>",
+       "id": "<id-60>",
        "on": "2031-06-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-55>",
+       "id": "<id-61>",
        "on": "2031-06-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-56>",
+       "id": "<id-62>",
        "on": "2031-06-03",
        "amount": "12.99",
        "payee": "Netflix",
@@ -2353,28 +2590,28 @@
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-57>",
+       "id": "<id-63>",
        "on": "2031-07-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-58>",
+       "id": "<id-64>",
        "on": "2031-07-01",
        "amount": "2000.00",
        "payee": "Bonifico",
        "accountName": "Directa"
       },
       {
-       "id": "<id-59>",
+       "id": "<id-65>",
        "on": "2031-06-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-60>",
+       "id": "<id-66>",
        "on": "2031-03-03",
        "amount": "10000.00",
        "payee": "Bonifico",

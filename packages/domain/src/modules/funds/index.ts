@@ -53,6 +53,7 @@ export {
   matchDebits,
   moveFundAccount,
   moveFundSourceAccount,
+  movementCandidates,
   proposeDebitMatch,
   recordValuation,
   releaseFormerAccountReferences,
@@ -83,12 +84,31 @@ export {
   valuationLines,
 } from "./tabs";
 export type { ValuationLine } from "./tabs";
+export {
+  accruedNote,
+  assetsEstimate,
+  contributionDefaults,
+  firstPaidOn,
+  gainChart,
+  firstValueOn,
+  newestPoint,
+  operationGross,
+  operationOrigin,
+  operationsIn,
+  payslipLines,
+  recentOperations,
+  registerTotals,
+  voluntaryCents,
+  voluntaryIn,
+} from "./queries/figures";
+export type { OperationOrigin } from "./queries/figures";
 export { FUND_TEMPLATES } from "./templates";
 export {
   fundContributionsView,
   fundOverviewView,
   fundSettingsView,
   fundsHomeView,
+  fundSetupView,
   fundValuationsView,
   viewPeriod,
 } from "./queries/views";

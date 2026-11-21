@@ -46,6 +46,20 @@ export const HOME_STATES = [
   "payslips_only",
   "quiet",
 ] as const;
+/** Where a line of the register came from, as its badge says it. */
+export const OPERATION_ORIGINS = ["payroll", "rule", "manual", "import"] as const;
+export const BRIDGE_KEYS = [
+  "accrued",
+  "pending",
+  "enrollment",
+  "voluntary",
+  "other",
+  "paidIn",
+  "fees",
+  "invested",
+  "market",
+  "value",
+] as const;
 export const LINE_STATUSES = ["measured", "no_value_in_period", "never_valued"] as const;
 export const GAIN_GRAINS = ["month", "year", "stretch"] as const;
 
@@ -82,7 +96,7 @@ export const periodQuery = z.object({
 });
 
 /** The period the server measured: its days, and the first day there is data for. */
-const periodOut = z.object({
+export const periodOut = z.object({
   kind: z.enum(["year", "all", "custom"]),
   year: z.number().int().nullable(),
   from: civilDate().nullable(),
@@ -90,8 +104,17 @@ const periodOut = z.object({
   firstOn: civilDate().nullable(),
 });
 
-/** Of whom the money is (funds-ux §5.3). A voluntary payment is yours. */
-const origin = z.object({ you: money(), employer: money(), tfr: money(), other: money() });
+/**
+ * Of whom the money is (funds-ux §5.3). A voluntary payment is yours: `voluntary` is the part of `you`
+ * paid by hand, outside the payslip (the page shows `you − voluntary` and `voluntary` apart).
+ */
+const origin = z.object({
+  you: money(),
+  employer: money(),
+  tfr: money(),
+  other: money(),
+  voluntary: money(),
+});
 
 /** The money-weighted return over 365 days or more; `none`/`multiple` when no single rate exists. */
 const xirr = z
@@ -146,10 +169,12 @@ const fundLine = z.object({
   origin,
   notInValue: money(),
   accrued: money(),
+  /** The value the fund's row and the total show: none for an archived fund in a period up to today. */
+  value: money().nullable(),
 });
 
 /** A fund as the lists name it. */
-const fundRef = z.object({
+export const fundRef = z.object({
   id: id(),
   name: z.string(),
   provider: z.string().nullable(),
@@ -172,7 +197,22 @@ const gainBar = z.object({
   /** Null when no fund has a reading in the bar: a gap, never a zero. */
   total: money().nullable(),
   /** The gain of each fund in the bar; a fund with no reading there is absent. */
-  funds: z.array(z.object({ fundId: id(), gain: money() })),
+  funds: z.array(z.object({ fundId: id(), gain: money(), share: z.number().nullable() })),
+  /** What each fund did between two readings that ends in the bar: never split over the months it spans. */
+  stretches: z.array(z.object({ fundId: id(), from: civilDate(), to: civilDate(), gain: money() })),
+  /** The running total from the start of the period; null where the bar is a gap. */
+  cumulative: money().nullable(),
+  /** The Return view: the bar's share of the period's return, a fraction; null with no return to share. */
+  share: z.number().nullable(),
+  cumulativeShare: z.number().nullable(),
+});
+
+/** The gain chart: its bars, and the index of its best and worst bar (null with no bar measured). */
+const gainChart = z.object({
+  grain: z.enum(GAIN_GRAINS),
+  bars: z.array(gainBar),
+  best: z.number().int().nullable(),
+  worst: z.number().int().nullable(),
 });
 
 /**
@@ -181,6 +221,39 @@ const gainBar = z.object({
  */
 const valuePoint = z.object({ on: civilDate(), value: money(), paid: money() });
 
+/** The state of a recurring debit's running period: found (`on`), awaited, missing (`by`), or none. */
+export const debitOut = z.object({
+  sourceId: id(),
+  state: z.enum(SOURCE_STATES),
+  amount: money().nullable(),
+  frequency: z.object({ count: z.number().int(), unit: z.enum(INTERVAL_UNITS) }),
+  /** The day of the month it is expected on; null when the plan does not say. */
+  day: z.number().int().nullable(),
+  status: z.enum(["found", "awaited", "missing", "none"]),
+  on: civilDate().nullable(),
+  by: civilDate().nullable(),
+  accountId: id().nullable(),
+  accountName: z.string().nullable(),
+  payeeMatch: z.string().nullable(),
+});
+
+/** One period of the payslip source still on its way to the fund, with its deadline. */
+const pendingPeriod = z.object({
+  year: z.number().int(),
+  index: z.number().int(),
+  amount: money(),
+  due: civilDate().nullable(),
+});
+
+/** What a fund's sources say as of today, whatever the period (funds-ux §5.3). */
+const asOfToday = {
+  /** The active recurring debit; null with none. */
+  debit: debitOut.nullable(),
+  /** The payslip source has due dates: «on the way» has something to say. */
+  hasCalendar: z.boolean(),
+  onTheWay: z.object({ amount: money(), periods: z.array(pendingPeriod) }),
+};
+
 /** The Funds home (funds-ux §5-§6): what the page, `get_funds` and the export of a period show. */
 export const fundsHome = z.object({
   period: periodOut,
@@ -188,16 +261,33 @@ export const fundsHome = z.object({
   valueToday: money().nullable(),
   summary: measure,
   funds: z.array(
-    fundRef.extend({ line: fundLine.nullable(), valueToday: money().nullable(), stale: z.boolean() }),
+    fundRef.extend({
+      line: fundLine.nullable(),
+      valueToday: money().nullable(),
+      stale: z.boolean(),
+      /** The day of the fund's newest value, whatever the period (the «old value» link). */
+      lastValueOn: civilDate().nullable(),
+      ...asOfToday,
+    }),
   ),
-  gain: z.object({ grain: z.enum(GAIN_GRAINS), bars: z.array(gainBar) }),
+  /** «On the way» of the open funds, as of today; `awaitsPayslips`: one of them has a payslip calendar. */
+  onTheWay: money(),
+  awaitsPayslips: z.boolean(),
+  /** The first value ever read and the first day money ever went in, across the funds. */
+  firstValueOn: civilDate().nullable(),
+  firstPaidOn: civilDate().nullable(),
+  /** The «Accrued» note: the first fund of the period with money accrued, and when its months are due. */
+  accrued: z.object({ fundId: id(), dueOn: civilDate().nullable() }).nullable(),
+  /** How many funds have a value the total counts («the value of N funds»). */
+  valuesSeen: z.number().int(),
+  gain: gainChart,
   values: z.array(valuePoint),
   /** The years of the period, newest first, each with its measure: the table of the «All» period. */
   years: z.array(z.object({ year: z.number().int(), summary: measure })),
 });
 
 /** One reading in a period, against the reading before (the Valuations tab, funds-ux §6). */
-const valuationLine = z.object({
+export const valuationLine = z.object({
   on: civilDate(),
   value: money(),
   kind: z.enum(["stretch", "first", "position"]),
@@ -208,11 +298,31 @@ const valuationLine = z.object({
 });
 
 /** A value recorded by hand, as its row edits it. */
-const valuationRow = z.object({
+export const valuationRow = z.object({
   id: id(),
   on: civilDate(),
   value: money(),
   units: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
+/** One operation of the register, as a person or the job wrote it. */
+export const operationRow = z.object({
+  id: id(),
+  on: civilDate(),
+  classification: z.enum(OPERATION_CLASSES),
+  source: z.enum(OPERATION_SOURCES),
+  worker: money(),
+  employer: money(),
+  tfr: money(),
+  other: money(),
+  /** Null while nobody knows the fee. */
+  fee: money().nullable(),
+  net: money(),
+  units: z.string().nullable(),
+  /** The period the operation is for, counted as the payslip source counts it. */
+  competence: z.object({ year: z.number().int(), index: z.number().int() }).nullable(),
+  transactionId: id().nullable(),
   note: z.string().nullable(),
 });
 
@@ -243,146 +353,34 @@ export const fundOverview = z.object({
   valueToday: money().nullable(),
   /** The fund's value is older than its latest operation (GC §11.8). */
   valueOlderThanOperations: z.boolean(),
-  gain: z.object({ grain: z.enum(GAIN_GRAINS), bars: z.array(gainBar) }),
+  gain: gainChart,
   values: z.array(valuePoint),
-  forecast,
-});
-
-/** A fund's Valuations tab: the lines of the period, the best and worst stretch, the recorded values. */
-export const fundValuations = z.object({
-  fundId: id(),
-  period: periodOut,
-  lines: z.array(valuationLine),
-  best: valuationLine.nullable(),
-  worst: valuationLine.nullable(),
-  recorded: z.array(valuationRow),
-});
-
-/** One operation of the register, as a person or the job wrote it. */
-const operationRow = z.object({
-  id: id(),
-  on: civilDate(),
-  classification: z.enum(OPERATION_CLASSES),
-  source: z.enum(OPERATION_SOURCES),
-  worker: money(),
-  employer: money(),
-  tfr: money(),
-  other: money(),
-  /** Null while nobody knows the fee. */
-  fee: money().nullable(),
-  net: money(),
+  forecast: forecast.extend({
+    /** `short` for a fund fed by a recurring debit alone, `closed` otherwise. */
+    layout: z.enum(["short", "closed"]),
+    /** The monthly figure: the debit's plan while it runs, else the average of what went in. */
+    basis: z.enum(["plan", "average"]),
+  }),
+  /** The day of the newest value, the one `valueToday` is. */
+  valueTodayOn: civilDate().nullable(),
+  firstPaidOn: civilDate().nullable(),
+  firstValueOn: civilDate().nullable(),
+  /** Units held and the last price, for a fund with unit movements only. */
   units: z.string().nullable(),
-  /** The period the operation is for, counted as the payslip source counts it. */
-  competence: z.object({ year: z.number().int(), index: z.number().int() }).nullable(),
-  transactionId: id().nullable(),
-  note: z.string().nullable(),
-});
-
-/** One component of a period against the payslips (GC §9-§11). */
-const componentStatus = z.object({
-  component: z.enum(COMPONENTS),
-  accrued: money().nullable(),
-  credited: money().nullable(),
-  difference: money().nullable(),
-  status: z.enum(QUARTER_STATUSES),
-  decision: z.object({ note: z.string(), difference: money() }).nullable(),
-});
-
-/** One period of the payslip source: accrued against credited, with its deadline. */
-const quarterStatus = z.object({
-  year: z.number().int(),
-  /** A quarter, or a month for a source that accrues by month. */
-  index: z.number().int(),
-  due: civilDate().nullable(),
-  toleranceUntil: civilDate().nullable(),
-  status: z.enum(QUARTER_STATUSES),
-  reason: z.enum(["missing_payslip", "stale_export"]).nullable(),
-  components: z.array(componentStatus),
-  missingMonths: z.array(z.string().regex(/^\d{4}-\d{2}$/)),
-  fees: money(),
-  net: money(),
-  /** The payslips whose competences make the period, for the link to their review. */
-  payslips: z.array(z.object({ payslipId: id(), documentId: id().nullable() })),
-});
-
-/** A fund's Contributions tab: the register, the periods of the payslip source and the accrued months. */
-export const fundContributions = z.object({
-  fundId: id(),
-  period: periodOut,
-  operations: z.array(operationRow),
-  /** Null for a fund with no payslip source. */
-  payroll: z
+  lastPrice: z.object({ price: z.string(), on: civilDate() }).nullable(),
+  /** «From accrued to value», for a fund with a payslip source; `lines` null with no value yet. */
+  bridge: z
     .object({
-      accrualPeriod: z.enum(ACCRUAL_PERIODS),
-      components: z.array(z.enum(PAYROLL_COMPONENTS)),
-      /** The source has due dates: the periods and «on the way» are drawn. */
-      hasCalendar: z.boolean(),
-      periods: z.array(quarterStatus),
-      onTheWay: money(),
-    })
-    .nullable(),
-  accrued: z.array(z.object({ on: civilDate(), amount: money(), dueOn: civilDate().nullable() })),
-  /** The active recurring debit's state, when the fund has one. */
-  debit: z
-    .object({
-      sourceId: id(),
-      /** The running period's debit: found (on its day), awaited, or missing (by a day). */
-      status: z.enum(["found", "awaited", "missing", "none"]),
+      lines: z.array(z.object({ key: z.enum(BRIDGE_KEYS), amount: money(), total: z.boolean() })).nullable(),
       on: civilDate().nullable(),
-      amount: money().nullable(),
-      accountName: z.string().nullable(),
     })
     .nullable(),
-});
-
-/** A source of contributions, as its form edits it. */
-export const sourceRow = z.object({
-  id: id(),
-  kind: z.enum(SOURCE_KINDS),
-  state: z.enum(SOURCE_STATES),
-  components: z.array(z.enum(PAYROLL_COMPONENTS)).nullable(),
-  accrualPeriod: z.enum(ACCRUAL_PERIODS).nullable(),
-  employer: z.string().nullable(),
-  due: z.object({ day: z.number().int(), offsetMonths: z.number().int() }).nullable(),
-  /** The explicit due dates a source keeps (`keepDueEntries`): opaque, handed back as they came. */
-  dueEntries: z.unknown(),
-  toleranceDays: z.number().int().nullable(),
-  amount: money().nullable(),
-  frequency: z.object({ count: z.number().int(), unit: z.enum(INTERVAL_UNITS) }).nullable(),
-  debitDay: z.number().int().nullable(),
-  accountId: id().nullable(),
-  accountName: z.string().nullable(),
-  payeeMatch: z.string().nullable(),
-  validFrom: civilDate().nullable(),
-  validTo: civilDate().nullable(),
-  note: z.string().nullable(),
-  /** How many contributions it has: one with contributions is paused, never removed. */
-  contributions: z.number().int(),
-});
-
-/** A fee, as its form edits it. */
-export const feeRow = z.object({
-  id: id(),
-  label: z.string(),
-  basis: z.enum(FEE_BASES),
-  amount: money().nullable(),
-  /** A percentage ("0.45" is 0,45 %). */
-  rate: z.string().nullable(),
-  period: z.enum(FEE_PERIODS).nullable(),
-  sourceId: id().nullable(),
-  component: z.enum(PAYROLL_COMPONENTS).nullable(),
-  validFrom: civilDate().nullable(),
-  validTo: civilDate().nullable(),
-  note: z.string().nullable(),
-});
-
-/** A fund's Settings tab: the fund, its sources and fees, the codes of the payslip, what is taken. */
-export const fundSettings = z.object({
-  fund: fundRef,
-  sources: z.array(sourceRow),
-  fees: z.array(feeRow),
-  /** The payslip codes behind each component, for Settings to show them. */
-  codes: z.record(z.string(), z.array(z.string())),
-  /** The components another fund's payslip source already takes, with that fund's name. */
-  taken: z.array(z.object({ component: z.enum(PAYROLL_COMPONENTS), fund: z.string() })),
+  /** What the payslips accrued (worker, employer, TFR), for a fund with a payslip source. */
+  payslipsAccrued: money().nullable(),
+  ...asOfToday,
+  /** The last five operations of the period that moved money, newest first. */
+  recent: z.array(operationRow.extend({ gross: money(), origin: z.enum(OPERATION_ORIGINS) })),
+  operationsEver: z.number().int(),
+  competencesEver: z.number().int(),
+  valuesEver: z.number().int(),
 });

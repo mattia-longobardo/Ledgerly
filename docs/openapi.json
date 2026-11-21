@@ -12558,13 +12558,18 @@
                             "other": {
                               "type": "string",
                               "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            "voluntary": {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
                             }
                           },
                           "required": [
                             "you",
                             "employer",
                             "tfr",
-                            "other"
+                            "other",
+                            "voluntary"
                           ]
                         },
                         "rate": {
@@ -12910,13 +12915,18 @@
                                       "other": {
                                         "type": "string",
                                         "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "voluntary": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
                                       }
                                     },
                                     "required": [
                                       "you",
                                       "employer",
                                       "tfr",
-                                      "other"
+                                      "other",
+                                      "voluntary"
                                     ]
                                   },
                                   "notInValue": {
@@ -12926,6 +12936,17 @@
                                   "accrued": {
                                     "type": "string",
                                     "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  "value": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
                                   }
                                 },
                                 "required": [
@@ -12942,7 +12963,8 @@
                                   "paidIn",
                                   "origin",
                                   "notInValue",
-                                  "accrued"
+                                  "accrued",
+                                  "value"
                                 ]
                               },
                               {
@@ -12963,6 +12985,189 @@
                           },
                           "stale": {
                             "type": "boolean"
+                          },
+                          "lastValueOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "debit": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "sourceId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "state": {
+                                    "type": "string",
+                                    "enum": [
+                                      "active",
+                                      "paused"
+                                    ]
+                                  },
+                                  "amount": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "frequency": {
+                                    "type": "object",
+                                    "properties": {
+                                      "count": {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      "unit": {
+                                        "type": "string",
+                                        "enum": [
+                                          "week",
+                                          "month",
+                                          "year"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "count",
+                                      "unit"
+                                    ]
+                                  },
+                                  "day": {
+                                    "anyOf": [
+                                      {
+                                        "type": "integer",
+                                        "minimum": -9007199254740991,
+                                        "maximum": 9007199254740991
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "found",
+                                      "awaited",
+                                      "missing",
+                                      "none"
+                                    ]
+                                  },
+                                  "on": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "by": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "accountId": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "format": "uuid",
+                                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "accountName": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "payeeMatch": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "sourceId",
+                                  "state",
+                                  "amount",
+                                  "frequency",
+                                  "day",
+                                  "status",
+                                  "on",
+                                  "by",
+                                  "accountId",
+                                  "accountName",
+                                  "payeeMatch"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "hasCalendar": {
+                            "type": "boolean"
+                          },
+                          "onTheWay": {
+                            "type": "object",
+                            "properties": {
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              "periods": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "year": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "index": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    "due": {
+                                      "type": [
+                                        "string",
+                                        "null"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "year",
+                                    "index",
+                                    "amount",
+                                    "due"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "periods"
+                            ]
                           }
                         },
                         "required": [
@@ -12979,9 +13184,64 @@
                           "accountName",
                           "line",
                           "valueToday",
-                          "stale"
+                          "stale",
+                          "lastValueOn",
+                          "debit",
+                          "hasCalendar",
+                          "onTheWay"
                         ]
                       }
+                    },
+                    "onTheWay": {
+                      "type": "string",
+                      "pattern": "^-?\\d+\\.\\d{2}$"
+                    },
+                    "awaitsPayslips": {
+                      "type": "boolean"
+                    },
+                    "firstValueOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "firstPaidOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "accrued": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "fundId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "dueOn": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "fundId",
+                            "dueOn"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "valuesSeen": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     },
                     "gain": {
                       "type": "object",
@@ -13029,27 +13289,116 @@
                                     "gain": {
                                       "type": "string",
                                       "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    "share": {
+                                      "type": [
+                                        "number",
+                                        "null"
+                                      ]
                                     }
                                   },
                                   "required": [
                                     "fundId",
+                                    "gain",
+                                    "share"
+                                  ]
+                                }
+                              },
+                              "stretches": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "fundId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "from": {
+                                      "type": "string"
+                                    },
+                                    "to": {
+                                      "type": "string"
+                                    },
+                                    "gain": {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "fundId",
+                                    "from",
+                                    "to",
                                     "gain"
                                   ]
                                 }
+                              },
+                              "cumulative": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "share": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "cumulativeShare": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "from",
                               "to",
                               "total",
-                              "funds"
+                              "funds",
+                              "stretches",
+                              "cumulative",
+                              "share",
+                              "cumulativeShare"
                             ]
                           }
+                        },
+                        "best": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "worst": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
                         "grain",
-                        "bars"
+                        "bars",
+                        "best",
+                        "worst"
                       ]
                     },
                     "values": {
@@ -13152,13 +13501,18 @@
                                   "other": {
                                     "type": "string",
                                     "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  "voluntary": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
                                   }
                                 },
                                 "required": [
                                   "you",
                                   "employer",
                                   "tfr",
-                                  "other"
+                                  "other",
+                                  "voluntary"
                                 ]
                               },
                               "rate": {
@@ -13280,6 +13634,12 @@
                     "valueToday",
                     "summary",
                     "funds",
+                    "onTheWay",
+                    "awaitsPayslips",
+                    "firstValueOn",
+                    "firstPaidOn",
+                    "accrued",
+                    "valuesSeen",
                     "gain",
                     "values",
                     "years"
@@ -14115,13 +14475,18 @@
                             "other": {
                               "type": "string",
                               "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            "voluntary": {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
                             }
                           },
                           "required": [
                             "you",
                             "employer",
                             "tfr",
-                            "other"
+                            "other",
+                            "voluntary"
                           ]
                         },
                         "rate": {
@@ -14407,13 +14772,18 @@
                             "other": {
                               "type": "string",
                               "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            "voluntary": {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
                             }
                           },
                           "required": [
                             "you",
                             "employer",
                             "tfr",
-                            "other"
+                            "other",
+                            "voluntary"
                           ]
                         },
                         "notInValue": {
@@ -14423,6 +14793,17 @@
                         "accrued": {
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -14439,7 +14820,8 @@
                         "paidIn",
                         "origin",
                         "notInValue",
-                        "accrued"
+                        "accrued",
+                        "value"
                       ]
                     },
                     "valueToday": {
@@ -14502,27 +14884,116 @@
                                     "gain": {
                                       "type": "string",
                                       "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    "share": {
+                                      "type": [
+                                        "number",
+                                        "null"
+                                      ]
                                     }
                                   },
                                   "required": [
                                     "fundId",
+                                    "gain",
+                                    "share"
+                                  ]
+                                }
+                              },
+                              "stretches": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "fundId": {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    "from": {
+                                      "type": "string"
+                                    },
+                                    "to": {
+                                      "type": "string"
+                                    },
+                                    "gain": {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    }
+                                  },
+                                  "required": [
+                                    "fundId",
+                                    "from",
+                                    "to",
                                     "gain"
                                   ]
                                 }
+                              },
+                              "cumulative": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "share": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "cumulativeShare": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "from",
                               "to",
                               "total",
-                              "funds"
+                              "funds",
+                              "stretches",
+                              "cumulative",
+                              "share",
+                              "cumulativeShare"
                             ]
                           }
+                        },
+                        "best": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "worst": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
                         "grain",
-                        "bars"
+                        "bars",
+                        "best",
+                        "worst"
                       ]
                     },
                     "values": {
@@ -14597,13 +15068,490 @@
                               "values"
                             ]
                           }
+                        },
+                        "layout": {
+                          "type": "string",
+                          "enum": [
+                            "short",
+                            "closed"
+                          ]
+                        },
+                        "basis": {
+                          "type": "string",
+                          "enum": [
+                            "plan",
+                            "average"
+                          ]
                         }
                       },
                       "required": [
                         "monthly",
                         "rates",
-                        "rows"
+                        "rows",
+                        "layout",
+                        "basis"
                       ]
+                    },
+                    "valueTodayOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "firstPaidOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "firstValueOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "units": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lastPrice": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "price": {
+                              "type": "string"
+                            },
+                            "on": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "price",
+                            "on"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "bridge": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lines": {
+                              "anyOf": [
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "key": {
+                                        "type": "string",
+                                        "enum": [
+                                          "accrued",
+                                          "pending",
+                                          "enrollment",
+                                          "voluntary",
+                                          "other",
+                                          "paidIn",
+                                          "fees",
+                                          "invested",
+                                          "market",
+                                          "value"
+                                        ]
+                                      },
+                                      "amount": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "total": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "key",
+                                      "amount",
+                                      "total"
+                                    ]
+                                  }
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "on": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "lines",
+                            "on"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "payslipsAccrued": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "debit": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "sourceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "state": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "paused"
+                              ]
+                            },
+                            "amount": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "frequency": {
+                              "type": "object",
+                              "properties": {
+                                "count": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "unit": {
+                                  "type": "string",
+                                  "enum": [
+                                    "week",
+                                    "month",
+                                    "year"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "count",
+                                "unit"
+                              ]
+                            },
+                            "day": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "found",
+                                "awaited",
+                                "missing",
+                                "none"
+                              ]
+                            },
+                            "on": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "by": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "accountId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "accountName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "payeeMatch": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "sourceId",
+                            "state",
+                            "amount",
+                            "frequency",
+                            "day",
+                            "status",
+                            "on",
+                            "by",
+                            "accountId",
+                            "accountName",
+                            "payeeMatch"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "hasCalendar": {
+                      "type": "boolean"
+                    },
+                    "onTheWay": {
+                      "type": "object",
+                      "properties": {
+                        "amount": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "periods": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "year": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "index": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              "due": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "year",
+                              "index",
+                              "amount",
+                              "due"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "amount",
+                        "periods"
+                      ]
+                    },
+                    "recent": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "on": {
+                            "type": "string"
+                          },
+                          "classification": {
+                            "type": "string",
+                            "enum": [
+                              "contribution",
+                              "enrollment",
+                              "voluntary",
+                              "transfer_in",
+                              "switch",
+                              "withdrawal",
+                              "other"
+                            ]
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "import",
+                              "manual",
+                              "rule"
+                            ]
+                          },
+                          "worker": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "employer": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "tfr": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "other": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "fee": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "net": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "units": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "competence": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "year": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "index": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "year",
+                                  "index"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "transactionId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "note": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "gross": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "payroll",
+                              "rule",
+                              "manual",
+                              "import"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "on",
+                          "classification",
+                          "source",
+                          "worker",
+                          "employer",
+                          "tfr",
+                          "other",
+                          "fee",
+                          "net",
+                          "units",
+                          "competence",
+                          "transactionId",
+                          "note",
+                          "gross",
+                          "origin"
+                        ]
+                      }
+                    },
+                    "operationsEver": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "competencesEver": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "valuesEver": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
                     }
                   },
                   "required": [
@@ -14616,7 +15564,21 @@
                     "valueOlderThanOperations",
                     "gain",
                     "values",
-                    "forecast"
+                    "forecast",
+                    "valueTodayOn",
+                    "firstPaidOn",
+                    "firstValueOn",
+                    "units",
+                    "lastPrice",
+                    "bridge",
+                    "payslipsAccrued",
+                    "debit",
+                    "hasCalendar",
+                    "onTheWay",
+                    "recent",
+                    "operationsEver",
+                    "competencesEver",
+                    "valuesEver"
                   ]
                 }
               }
@@ -14998,6 +15960,77 @@
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     },
+                    "fund": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "provider": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "compartment": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "code": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "startOn": {
+                          "type": "string"
+                        },
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "archived"
+                          ]
+                        },
+                        "currency": {
+                          "type": "string"
+                        },
+                        "color": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "accountId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "accountName": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "provider",
+                        "compartment",
+                        "code",
+                        "startOn",
+                        "state",
+                        "currency",
+                        "color",
+                        "accountId",
+                        "accountName"
+                      ]
+                    },
                     "period": {
                       "type": "object",
                       "properties": {
@@ -15158,6 +16191,19 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "gross": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "origin": {
+                            "type": "string",
+                            "enum": [
+                              "payroll",
+                              "rule",
+                              "manual",
+                              "import"
+                            ]
                           }
                         },
                         "required": [
@@ -15174,9 +16220,436 @@
                           "units",
                           "competence",
                           "transactionId",
-                          "note"
+                          "note",
+                          "gross",
+                          "origin"
                         ]
                       }
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "worker": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "employer": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "tfr": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "voluntary": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "other": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "fees": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "net": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        }
+                      },
+                      "required": [
+                        "worker",
+                        "employer",
+                        "tfr",
+                        "voluntary",
+                        "other",
+                        "fees",
+                        "net"
+                      ]
+                    },
+                    "operationsEver": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "fedBySources": {
+                      "type": "boolean"
+                    },
+                    "payslips": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "competenceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "payslipId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "documentId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "month": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "payslipType": {
+                            "type": "string"
+                          },
+                          "year": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "index": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "worker": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "employer": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "tfr": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "total": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "status": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "accrued_not_due",
+                                  "transferred",
+                                  "to_verify",
+                                  "present",
+                                  "invested",
+                                  "reconciled",
+                                  "discrepancy",
+                                  "incomplete"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reason": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "missing_payslip",
+                                  "stale_export"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "competenceId",
+                          "payslipId",
+                          "documentId",
+                          "month",
+                          "payslipType",
+                          "year",
+                          "index",
+                          "worker",
+                          "employer",
+                          "tfr",
+                          "total",
+                          "status",
+                          "reason"
+                        ]
+                      }
+                    },
+                    "payslipTotals": {
+                      "type": "object",
+                      "properties": {
+                        "worker": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "employer": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "tfr": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "total": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        }
+                      },
+                      "required": [
+                        "worker",
+                        "employer",
+                        "tfr",
+                        "total"
+                      ]
+                    },
+                    "debits": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "sourceId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "paused"
+                            ]
+                          },
+                          "amount": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "frequency": {
+                            "type": "object",
+                            "properties": {
+                              "count": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "unit": {
+                                "type": "string",
+                                "enum": [
+                                  "week",
+                                  "month",
+                                  "year"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "count",
+                              "unit"
+                            ]
+                          },
+                          "day": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "found",
+                              "awaited",
+                              "missing",
+                              "none"
+                            ]
+                          },
+                          "on": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "by": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "accountId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "accountName": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "payeeMatch": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "sourceId",
+                          "state",
+                          "amount",
+                          "frequency",
+                          "day",
+                          "status",
+                          "on",
+                          "by",
+                          "accountId",
+                          "accountName",
+                          "payeeMatch"
+                        ]
+                      }
+                    },
+                    "setup": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "defaultKind": {
+                              "type": "string",
+                              "enum": [
+                                "voluntary",
+                                "payroll"
+                              ]
+                            },
+                            "defaultFees": {
+                              "type": "object",
+                              "properties": {
+                                "voluntary": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "payroll": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                }
+                              },
+                              "required": [
+                                "voluntary",
+                                "payroll"
+                              ]
+                            },
+                            "periods": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "year": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "index": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "year",
+                                  "index"
+                                ]
+                              }
+                            },
+                            "pendingPeriod": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "year": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "index": {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    }
+                                  },
+                                  "required": [
+                                    "year",
+                                    "index"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "defaultKind",
+                            "defaultFees",
+                            "periods",
+                            "pendingPeriod"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "payroll": {
                       "anyOf": [
@@ -15203,6 +16676,11 @@
                             },
                             "hasCalendar": {
                               "type": "boolean"
+                            },
+                            "toleranceDays": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
                             },
                             "periods": {
                               "type": "array",
@@ -15359,6 +16837,12 @@
                                       "pattern": "^\\d{4}-\\d{2}$"
                                     }
                                   },
+                                  "lastCreditedOn": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
                                   "fees": {
                                     "type": "string",
                                     "pattern": "^-?\\d+\\.\\d{2}$"
@@ -15406,6 +16890,7 @@
                                   "reason",
                                   "components",
                                   "missingMonths",
+                                  "lastCreditedOn",
                                   "fees",
                                   "net",
                                   "payslips"
@@ -15421,6 +16906,7 @@
                             "accrualPeriod",
                             "components",
                             "hasCalendar",
+                            "toleranceDays",
                             "periods",
                             "onTheWay"
                           ]
@@ -15515,8 +17001,16 @@
                   },
                   "required": [
                     "fundId",
+                    "fund",
                     "period",
                     "operations",
+                    "totals",
+                    "operationsEver",
+                    "fedBySources",
+                    "payslips",
+                    "payslipTotals",
+                    "debits",
+                    "setup",
                     "payroll",
                     "accrued",
                     "debit"
@@ -16348,6 +17842,142 @@
           }
         ],
         "x-scope": "write"
+      }
+    },
+    "/funds/{id}/movement-candidates": {
+      "get": {
+        "operationId": "get_fund_movement_candidates",
+        "summary": "The movements a contribution or a recurring debit of the fund can be tied to: the last 60 that left the account asked for (any of the person's without one) since the fund started, newest first.",
+        "tags": [
+          "funds"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "accountId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "movements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "on": {
+                            "type": "string"
+                          },
+                          "payee": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "amount": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "on",
+                          "payee",
+                          "amount"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "movements"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
       }
     },
     "/funds/{id}/operations": {
@@ -17702,6 +19332,44 @@
                             "type": "integer",
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
+                          },
+                          "nextDue": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "dueDates": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "period": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "month": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "day": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "nextYear": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "period",
+                                "month",
+                                "day",
+                                "nextYear"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -17723,7 +19391,9 @@
                           "validFrom",
                           "validTo",
                           "note",
-                          "contributions"
+                          "contributions",
+                          "nextDue",
+                          "dueDates"
                         ]
                       }
                     },
@@ -17826,6 +19496,9 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "expired": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -17839,9 +19512,76 @@
                           "component",
                           "validFrom",
                           "validTo",
-                          "note"
+                          "note",
+                          "expired"
                         ]
                       }
+                    },
+                    "payrollSourceId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "assetsEstimate": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "needs_value",
+                            "estimated"
+                          ]
+                        },
+                        "amount": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "rate": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "on": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "amount",
+                        "rate",
+                        "value",
+                        "on"
+                      ]
                     },
                     "codes": {
                       "type": "object",
@@ -17883,6 +19623,8 @@
                     "fund",
                     "sources",
                     "fees",
+                    "payrollSourceId",
+                    "assetsEstimate",
                     "codes",
                     "taken"
                   ]
@@ -19887,6 +21629,18 @@
                               "number",
                               "null"
                             ]
+                          },
+                          "valuationId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -19896,7 +21650,8 @@
                           "fromOn",
                           "paid",
                           "gain",
-                          "rate"
+                          "rate",
+                          "valuationId"
                         ]
                       }
                     },
@@ -20078,6 +21833,138 @@
                           "note"
                         ]
                       }
+                    },
+                    "valuesEver": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "lastValue": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "on": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            }
+                          },
+                          "required": [
+                            "on",
+                            "value"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "lastValueClosesPrevious": {
+                      "type": "boolean"
+                    },
+                    "notInValue": {
+                      "type": "string",
+                      "pattern": "^-?\\d+\\.\\d{2}$"
+                    },
+                    "statements": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "on": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
+                          },
+                          "worker": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "employer": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "tfr": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "inflows": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "outflows": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "reportedGain": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "on",
+                          "value",
+                          "worker",
+                          "employer",
+                          "tfr",
+                          "inflows",
+                          "outflows",
+                          "reportedGain"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -20086,7 +21973,12 @@
                     "lines",
                     "best",
                     "worst",
-                    "recorded"
+                    "recorded",
+                    "valuesEver",
+                    "lastValue",
+                    "lastValueClosesPrevious",
+                    "notInValue",
+                    "statements"
                   ]
                 }
               }
@@ -20530,6 +22422,256 @@
           }
         ],
         "x-scope": "write"
+      }
+    },
+    "/funds/setup": {
+      "get": {
+        "operationId": "get_fund_setup",
+        "summary": "What the form that creates a fund starts from: the fund templates, and the payslip components another fund already takes.",
+        "tags": [
+          "funds"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "templates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "sources": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "payroll",
+                                    "bank_debit",
+                                    "manual"
+                                  ]
+                                },
+                                "state": {
+                                  "type": "string",
+                                  "enum": [
+                                    "active",
+                                    "paused"
+                                  ]
+                                },
+                                "components": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "worker",
+                                      "employer",
+                                      "tfr"
+                                    ]
+                                  }
+                                },
+                                "accrualPeriod": {
+                                  "type": "string",
+                                  "enum": [
+                                    "month",
+                                    "quarter"
+                                  ]
+                                },
+                                "employer": {
+                                  "type": "string"
+                                },
+                                "hasDue": {
+                                  "type": "boolean"
+                                },
+                                "dueDay": {
+                                  "type": "string"
+                                },
+                                "dueOffsetMonths": {
+                                  "type": "string"
+                                },
+                                "toleranceDays": {
+                                  "type": "string"
+                                },
+                                "note": {
+                                  "type": "string"
+                                },
+                                "amount": {
+                                  "type": "string"
+                                },
+                                "frequencyCount": {
+                                  "type": "string"
+                                },
+                                "frequencyUnit": {
+                                  "type": "string",
+                                  "enum": [
+                                    "week",
+                                    "month",
+                                    "year"
+                                  ]
+                                },
+                                "debitDay": {
+                                  "type": "string"
+                                },
+                                "accountId": {
+                                  "type": "string"
+                                },
+                                "payeeMatch": {
+                                  "type": "string"
+                                },
+                                "validFrom": {
+                                  "type": "string"
+                                },
+                                "validTo": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind"
+                              ]
+                            }
+                          },
+                          "fees": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "basis": {
+                                  "type": "string",
+                                  "enum": [
+                                    "one_off",
+                                    "per_contribution",
+                                    "periodic",
+                                    "on_assets",
+                                    "per_request"
+                                  ]
+                                },
+                                "mode": {
+                                  "type": "string",
+                                  "enum": [
+                                    "amount",
+                                    "rate"
+                                  ]
+                                },
+                                "value": {
+                                  "type": "string"
+                                },
+                                "period": {
+                                  "type": "string",
+                                  "enum": [
+                                    "month",
+                                    "quarter",
+                                    "year"
+                                  ]
+                                },
+                                "scope": {
+                                  "type": "string"
+                                },
+                                "validFrom": {
+                                  "type": "string"
+                                },
+                                "validTo": {
+                                  "type": "string"
+                                },
+                                "note": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "basis"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ]
+                      }
+                    },
+                    "taken": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "component": {
+                            "type": "string",
+                            "enum": [
+                              "worker",
+                              "employer",
+                              "tfr"
+                            ]
+                          },
+                          "fund": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "component",
+                          "fund"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "templates",
+                    "taken"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
       }
     },
     "/imports": {

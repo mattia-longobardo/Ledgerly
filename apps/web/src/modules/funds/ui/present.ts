@@ -7,7 +7,7 @@ import {
 import type { Cents } from "@ledgerly/domain/shared/money";
 import type { MoneyOrigin } from "@ledgerly/domain/funds";
 import type { ValuationRow } from "@ledgerly/domain/funds";
-import type { DebitStatus, SourceKind } from "@ledgerly/domain/funds";
+import type { DebitStatus } from "@ledgerly/domain/funds";
 import type { ValuationDraft } from "./fund-forms";
 
 /** A recorded valuation as the "Edit" dialog starts from it. */
@@ -38,48 +38,7 @@ export function monthPill(
   }
 }
 
-/** Where a line of the register came from, as its badge says it. */
-type OperationOrigin = "payroll" | "rule" | "manual" | "import";
-
-const ORIGIN_OF_KIND: Record<SourceKind, OperationOrigin> = {
-  payroll: "payroll",
-  bank_debit: "rule",
-  manual: "manual",
-};
-
-/**
- * The origin of an operation: the kind of the source it belongs to, when it has one — a payslip
- * contribution written by hand belongs to the payslip source —, otherwise who wrote it.
- */
-export function operationOrigin(
-  operation: { source: OperationOrigin | string; sourceId: string | null },
-  sources: readonly { id: string; kind: SourceKind }[],
-): OperationOrigin {
-  const source = operation.sourceId === null ? null : sources.find((one) => one.id === operation.sourceId);
-  if (source) return ORIGIN_OF_KIND[source.kind];
-  return operation.source === "import" ? "import" : operation.source === "rule" ? "rule" : "manual";
-}
-
-interface Amounts {
-  classification: string;
-  workerCents: Cents;
-  employerCents: Cents;
-  tfrCents: Cents;
-  otherCents: Cents;
-}
-
-/** What an operation moved across the fund's boundary, gross: an exit is money out, so it is negative. */
-export function operationGross(operation: Amounts): Cents {
-  const gross = operation.workerCents + operation.employerCents + operation.tfrCents + operation.otherCents;
-  return operation.classification === "withdrawal" && gross > 0n ? -gross : gross;
-}
-
-/** What the voluntary contributions of some operations add up to: the part of "you" paid outside the payslip. */
-export function voluntaryCents(operations: readonly Amounts[]): Cents {
-  return operations
-    .filter((operation) => operation.classification === "voluntary")
-    .reduce<Cents>((sum, operation) => sum + operation.workerCents, 0n);
-}
+export { operationGross, operationOrigin, voluntaryCents } from "@ledgerly/domain/funds";
 
 type OriginPart = "you" | "employer" | "tfr" | "voluntary" | "other";
 

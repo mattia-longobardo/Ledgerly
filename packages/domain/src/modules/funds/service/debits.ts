@@ -175,6 +175,26 @@ export async function matchDebits(
 }
 
 /**
+ * The movements a contribution or a recurring debit can be tied to (the selector of the dialogs): the
+ * last 60 that left the account asked for, or any of the person's, since the fund started; newest first.
+ */
+export async function movementCandidates(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  fundId: string,
+  accountId: string | null,
+  now: Date = new Date(),
+) {
+  const fund = await requireFund(ctx, fundId);
+  const found = await chargeCandidates(ctx, {
+    accountId,
+    from: fund.startOn,
+    to: today(ctx.timeZone, now),
+    types: ["expense", "transfer"],
+  });
+  return found.slice(-60).reverse();
+}
+
+/**
  * "Find this charge everywhere": from one movement of a debit, the most durable name it carries —
  * the creditor identifier of the direct debit, its mandate reference, or failing both its payee
  * (`detect.ts`) — and every other charge that carries the same name.

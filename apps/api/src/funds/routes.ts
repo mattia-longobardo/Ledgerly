@@ -16,9 +16,11 @@ import {
   deleteContribution,
   deleteValuation,
   FundError,
+  movementCandidates,
   fundContributionsView,
   fundOverviewView,
   fundSettingsView,
+  fundSetupView,
   fundsHomeView,
   fundValuationsView,
   proposeDebitMatch,
@@ -41,7 +43,17 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { today } from "@ledgerly/domain/shared/dates";
 import { centsToDecimal, parseCents, percentToFraction } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
-import { contributionsOut, feeOut, homeOut, overviewOut, settingsOut, sourceOut, valuationsOut } from "./dto";
+import {
+  candidatesOut,
+  contributionsOut,
+  feeOut,
+  homeOut,
+  overviewOut,
+  settingsOut,
+  setupOut,
+  sourceOut,
+  valuationsOut,
+} from "./dto";
 
 const { funds, register, setup } = FUNDS;
 
@@ -122,6 +134,8 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, funds.getFunds, async ({ ctx, query }) =>
     homeOut(await fundsHomeView(ctx, await periodOf(ctx, query))),
   );
+  // Before `/funds/{id}`: Hono tries the routes in order.
+  serve(app, guard, funds.getFundSetup, async ({ ctx }) => setupOut(await fundSetupView(ctx)));
   serve(app, guard, funds.getFund, async ({ ctx, params, query }) =>
     overviewOut(await refusing(async () => fundOverviewView(ctx, params.id, await periodOf(ctx, query)))),
   );
@@ -135,6 +149,9 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   );
   serve(app, guard, funds.getFundSettings, async ({ ctx, params }) =>
     settingsOut(await refusing(() => fundSettingsView(ctx, params.id))),
+  );
+  serve(app, guard, funds.getFundMovementCandidates, async ({ ctx, params, query }) =>
+    candidatesOut(await refusing(() => movementCandidates(ctx, params.id, query.accountId ?? null))),
   );
   serve(app, guard, setup.debitMatch, async ({ ctx, params, query }) => {
     const found = await refusing(() =>

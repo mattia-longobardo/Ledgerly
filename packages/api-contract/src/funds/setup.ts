@@ -10,14 +10,13 @@ import {
   ACCOUNT_ID,
   byFund,
   FEE_ID,
-  feeRow,
   FUND_ERRORS,
   FUND_ID,
   SOURCE_ID,
   SOURCE_STATES,
-  sourceRow,
   TRANSACTION_ID,
 } from "./shared";
+import { feeRow, sourceRow } from "./tabs";
 
 const bySource = z.object({ id: id(), sourceId: id() });
 const byFee = z.object({ id: id(), feeId: id() });

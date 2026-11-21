@@ -10,13 +10,13 @@ import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { contributionFee, periodFees } from "@ledgerly/domain/funds";
+import { contributionDefaults } from "@ledgerly/domain/funds";
 import { contributionFormOf, newContributionForm } from "@ledgerly/domain/funds";
-import { type FundPeriod, onTheWay } from "@ledgerly/domain/funds";
+import type { FundPeriod } from "@ledgerly/domain/funds";
 import type { Operation } from "@ledgerly/domain/funds";
 import { type ComponentStatus, MAIN_COMPONENTS, type QuarterStatus } from "@ledgerly/domain/funds";
 import { type FundDetail, hasPayrollCalendar } from "@ledgerly/domain/funds";
-import { competencePeriod, periodsPerYear, periodStart } from "@ledgerly/domain/funds";
+import { competencePeriod } from "@ledgerly/domain/funds";
 import { competenceOn, inPeriod, quarterInPeriod } from "@ledgerly/domain/funds";
 import {
   ContributionButton,
@@ -29,9 +29,6 @@ import { operationOrigin } from "./present";
 import { AcceptDifferenceButton, ClearDecisionButton } from "./reconciliation-buttons";
 import { frequencyText } from "./source-text";
 
-/** More than any contribution: the fees "on each contribution" are read as amounts, whatever is charged. */
-const ANY_AMOUNT: Cents = 1_000_000_000_000n;
-
 /**
  * What "Record contribution" opens with for a fund (§8.1): the kind, the fee the fund's list of fees
  * says, the oldest period still on its way, the periods and the movements to choose from.
@@ -43,62 +40,30 @@ export async function contributionSetup(
   movements: readonly { id: string; label: string }[],
 ): Promise<ContributionSetup> {
   const t = await getTranslations("funds.fund.contributions.register");
-  const { fund, payroll, sources, fees } = detail;
+  const { fund, payroll } = detail;
   const format = ctx.numberFormat;
-  const amounts = fees.filter((fee) => fee.rate === null);
   const text = (cents: Cents) => (cents === 0n ? "" : formatAmountInput(cents, format));
-
-  // A voluntary payment written by hand costs what the recurring debit costs, as it always has.
-  const debit = sources.find((source) => source.kind === "bank_debit" && source.state === "active");
-  const byHand = debit ?? sources.find((source) => source.kind === "manual") ?? null;
-  const voluntaryFee =
-    contributionFee(amounts, { on: todayOn, chargedCents: ANY_AMOUNT, sourceId: byHand?.id ?? null }) ?? 0n;
-  const payrollFee =
-    payroll === null
-      ? 0n
-      : (contributionFee(amounts, { on: todayOn, chargedCents: ANY_AMOUNT, sourceId: payroll.source.id }) ??
-          0n) +
-        periodFees(fees, { sourceId: payroll.source.id, period: payroll.period, on: todayOn }).quarterCents;
-
-  const periods: { value: string; label: string }[] = [];
-  if (payroll !== null) {
-    const firstYear = Math.min(
-      Number(fund.startOn.slice(0, 4)),
-      ...detail.competences.map((competence) => competence.year),
-    );
-    for (let year = Number(todayOn.slice(0, 4)); year >= firstYear; year -= 1) {
-      for (let index = periodsPerYear(payroll.period); index >= 1; index -= 1) {
-        if (periodStart(year, index, payroll.period) > todayOn) continue;
-        periods.push({
-          value: `${year}-${index}`,
-          label: periodLabel(payroll.period, year, index, ctx.locale, (values) => t("quarter", values)),
-        });
-      }
-    }
-  }
-  const pending = hasPayrollCalendar(detail)
-    ? [...onTheWay(detail.quarters).quarters].sort((a, b) => a.year - b.year || a.quarter - b.quarter)[0]
-    : undefined;
-
+  const defaults = contributionDefaults(detail, todayOn);
+  const accrual = payroll?.period ?? "quarter";
   return {
     fundId: fund.id,
     fundName: fund.name,
     today: todayOn,
     format,
     defaults: {
-      voluntary: newContributionForm("voluntary", todayOn, { fee: text(voluntaryFee) }),
+      voluntary: newContributionForm("voluntary", todayOn, { fee: text(defaults.voluntaryFeeCents) }),
       payroll: newContributionForm("payroll", todayOn, {
-        fee: text(payrollFee),
-        period: pending ? `${pending.year}-${pending.quarter}` : "",
+        fee: text(defaults.payrollFeeCents),
+        period: defaults.pending ? `${defaults.pending.year}-${defaults.pending.index}` : "",
       }),
       other: newContributionForm("other", todayOn),
     },
-    kind:
-      payroll !== null && !sources.some((source) => source.kind === "bank_debit" || source.kind === "manual")
-        ? "payroll"
-        : "voluntary",
+    kind: defaults.kind,
     hasPayroll: payroll !== null,
-    periods,
+    periods: defaults.periods.map(({ year, index }) => ({
+      value: `${year}-${index}`,
+      label: periodLabel(accrual, year, index, ctx.locale, (values) => t("quarter", values)),
+    })),
     movements,
   };
 }
