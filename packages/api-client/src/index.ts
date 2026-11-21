@@ -21,15 +21,21 @@ export type RouteInput<R extends RouteContract> = (R["params"] extends z.ZodType
 
 /** A refusal of the API: its code (`errors.ts` of the contract) and, when the route names one, its reason. */
 export class ApiError extends Error {
+  /** `iban_exists` and `iban_archived`: the name of the account that has the IBAN. */
+  readonly other: string | null;
+  /** `not_bookable` of time off: the dates refused and why. */
+  readonly refused: ReadonlyArray<{ on: string; reason: string }>;
+
   constructor(
     readonly status: number,
     readonly code: string,
     readonly reason: string | null,
-    /** `iban_exists` and `iban_archived`: the name of the account that has the IBAN. */
-    readonly other: string | null = null,
+    extra: { other?: string | null; refused?: ReadonlyArray<{ on: string; reason: string }> } = {},
   ) {
     super(`${status} ${code}${reason ? ` (${reason})` : ""}`);
     this.name = "ApiError";
+    this.other = extra.other ?? null;
+    this.refused = extra.refused ?? [];
   }
 }
 
@@ -79,11 +85,18 @@ async function refusalOf(response: Response): Promise<ApiError> {
   const code = isRecord(body) ? body.error : undefined;
   const reason = isRecord(body) ? body.reason : undefined;
   const other = isRecord(body) ? body.other : undefined;
+  const refused = isRecord(body) && Array.isArray(body.refused) ? body.refused : [];
   return new ApiError(
     response.status,
     typeof code === "string" ? code : "server_error",
     typeof reason === "string" ? reason : null,
-    typeof other === "string" ? other : null,
+    {
+      other: typeof other === "string" ? other : null,
+      refused: refused.filter(
+        (one): one is { on: string; reason: string } =>
+          isRecord(one) && typeof one.on === "string" && typeof one.reason === "string",
+      ),
+    },
   );
 }
 

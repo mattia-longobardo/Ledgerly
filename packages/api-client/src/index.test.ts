@@ -65,6 +65,18 @@ describe("call", () => {
     });
   });
 
+  it("carries the dates a booking refused, and drops an entry that is not one", async () => {
+    answer(409, {
+      error: "conflict",
+      reason: "not_bookable",
+      refused: [{ on: "2026-08-15", reason: "holiday" }, { on: 15 }],
+    });
+    await expect(call(profile.updateProfile, { body: { name: "x" } })).rejects.toMatchObject({
+      reason: "not_bookable",
+      refused: [{ on: "2026-08-15", reason: "holiday" }],
+    });
+  });
+
   it("refuses an answer that is not the declared shape", async () => {
     answer(200, { name: 1 });
     await expect(call(profile.getProfile, {})).rejects.toBeInstanceOf(ApiError);
