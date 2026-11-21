@@ -8,9 +8,10 @@ import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { CompositionCard } from "@ledgerly/ui/composition-card";
+import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
 import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Link } from "@ledgerly/ui/router";
-import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
+import { Td, TotalRow } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { money } from "./home-funds-card";
 import type { Say } from "@/platform/say";
@@ -154,7 +155,6 @@ export function YearsCard({ home, words }: { home: Home; words: HomeWords }) {
       <CardHeader title={homeText("years.title")} />
       <p className="-mt-2 px-4 pb-2 text-sm text-muted">{homeText("years.note")}</p>
       <YearsTable home={home} words={words} />
-      <YearsList home={home} words={words} />
     </Card>
   );
 }
@@ -191,57 +191,112 @@ function YearLink({ year, words }: { year: number; words: HomeWords }) {
   );
 }
 
-/** The years as a table, on a wide screen. */
+type YearRow = Home["years"][number];
+
+/** The years' columns: the year links to its period. */
+function useYearColumns(words: HomeWords): DataColumn<YearRow>[] {
+  const homeText = useTranslations("funds.home");
+  const { say } = words;
+  const thisYear = Number(say.todayOn.slice(0, 4));
+  return [
+    {
+      key: "year",
+      header: homeText("years.year"),
+      cell: ({ year }) => (
+        <>
+          <YearLink year={year} words={words} />
+          {year === thisYear && <span className="ml-2 text-xs text-muted">{homeText("years.ytd")}</span>}
+        </>
+      ),
+    },
+    {
+      key: "paidIn",
+      header: homeText("years.paidIn"),
+      align: "right",
+      cell: ({ summary: row }) => money(say, row.paidIn),
+    },
+    {
+      key: "market",
+      header: homeText("years.market"),
+      align: "right",
+      className: ({ summary: row }) => TONE_TEXT[toneOfSign(cents(row.market))],
+      cell: ({ summary: row }) => money(say, row.market, true),
+    },
+    // A year with no measure has no fees here: they wait for the next value, as its gain does.
+    {
+      key: "fees",
+      header: homeText("years.fees"),
+      align: "right",
+      cell: ({ summary: row }) => (row.gain === null ? NULL_DISPLAY : feesText(say, row.fees)),
+    },
+    {
+      key: "gain",
+      header: homeText("years.gain"),
+      align: "right",
+      className: ({ summary: row }) => cn("font-semibold", TONE_TEXT[toneOfSign(cents(row.gain))]),
+      cell: ({ summary: row }) => <YearGain amount={row.gain} say={say} />,
+    },
+    {
+      key: "rate",
+      header: homeText("years.rate"),
+      align: "right",
+      className: ({ summary: row }) => TONE_TEXT[toneOfSign(row.rate)],
+      cell: ({ summary: row }) => percent(say, row.rate),
+    },
+    {
+      key: "value",
+      header: homeText("years.value"),
+      align: "right",
+      cell: ({ summary: row }) => money(say, row.value),
+    },
+  ];
+}
+
+/** The years as a table from `md`, a line each below it (DataTable). */
 function YearsTable({ home, words }: { home: Home; words: HomeWords }) {
   const homeText = useTranslations("funds.home");
   const { say } = words;
-  const { years } = home;
-  const thisYear = Number(say.todayOn.slice(0, 4));
+  const { summary } = home;
   return (
-    <div className="overflow-x-auto @max-3xl:hidden">
-      <Table>
-        <THead>
-          <Th>{homeText("years.year")}</Th>
-          <Th align="right">{homeText("years.paidIn")}</Th>
-          <Th align="right">{homeText("years.market")}</Th>
-          <Th align="right">{homeText("years.fees")}</Th>
-          <Th align="right">{homeText("years.gain")}</Th>
-          <Th align="right">{homeText("years.rate")}</Th>
-          <Th align="right">{homeText("years.value")}</Th>
-        </THead>
-        <TBody>
-          {years.map(({ year, summary: row }) => (
-            <Tr
-              key={year}
-              data-testid="year-row"
-              data-year={year}
-              data-cents={row.gain === null ? "" : String(cents(row.gain))}
-            >
-              <Td>
-                <YearLink year={year} words={words} />
-                {year === thisYear && (
-                  <span className="ml-2 text-xs text-muted">{homeText("years.ytd")}</span>
-                )}
-              </Td>
-              <Td align="right">{money(say, row.paidIn)}</Td>
-              <Td align="right" className={TONE_TEXT[toneOfSign(cents(row.market))]}>
-                {money(say, row.market, true)}
-              </Td>
-              {/* A year with no measure has no fees here: they wait for the next value, as its gain does. */}
-              <Td align="right">{row.gain === null ? NULL_DISPLAY : feesText(say, row.fees)}</Td>
-              <Td align="right" className={cn("font-semibold", TONE_TEXT[toneOfSign(cents(row.gain))])}>
-                <YearGain amount={row.gain} say={say} />
-              </Td>
-              <Td align="right" className={TONE_TEXT[toneOfSign(row.rate)]}>
-                {percent(say, row.rate)}
-              </Td>
-              <Td align="right">{money(say, row.value)}</Td>
-            </Tr>
-          ))}
-          <YearsTotal home={home} say={say} />
-        </TBody>
-      </Table>
-    </div>
+    <DataTable
+      columns={useYearColumns(words)}
+      rows={home.years}
+      rowKey={({ year }) => String(year)}
+      rowProps={({ year, summary: row }) => ({
+        "data-testid": "year-row",
+        "data-year": String(year),
+        "data-cents": row.gain === null ? "" : String(cents(row.gain)),
+      })}
+      cardProps={() => ({
+        "data-testid": "year-item",
+        className: "flex items-start justify-between gap-3 border-t border-border px-4 py-2.5",
+      })}
+      card={({ year, summary: row }) => (
+        <>
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <YearLink year={year} words={words} />
+            <span className="text-xs text-muted tabular-nums">
+              {homeText("years.paidIn")} {money(say, row.paidIn)}
+            </span>
+          </span>
+          <span className="flex shrink-0 flex-col items-end gap-0.5 text-right tabular-nums">
+            <span className={cn("font-semibold", TONE_TEXT[toneOfSign(cents(row.gain))])}>
+              <YearGain amount={row.gain} say={say} />
+            </span>
+            <span className="text-xs text-muted">{money(say, row.value)}</span>
+          </span>
+        </>
+      )}
+      footer={<YearsTotal home={home} say={say} />}
+      cardFooter={
+        <li className="flex justify-between gap-3 border-t border-border bg-bg px-4 py-2.5 font-semibold">
+          <span>{homeText("years.total")}</span>
+          <span className={cn("tabular-nums", TONE_TEXT[toneOfSign(cents(summary.gain))])}>
+            {money(say, summary.gain, true)}
+          </span>
+        </li>
+      }
+    />
   );
 }
 
@@ -262,43 +317,6 @@ function YearsTotal({ home, say }: { home: Home; say: Say }) {
       <Td />
       <Td align="right">{money(say, summary.value)}</Td>
     </TotalRow>
-  );
-}
-
-/** The years as a list, on a narrow screen. */
-function YearsList({ home, words }: { home: Home; words: HomeWords }) {
-  const homeText = useTranslations("funds.home");
-  const { say } = words;
-  const { years, summary } = home;
-  return (
-    <ul className="flex flex-col @3xl:hidden">
-      {years.map(({ year, summary: row }) => (
-        <li
-          key={year}
-          data-testid="year-item"
-          className="flex items-start justify-between gap-3 border-t border-border px-4 py-2.5"
-        >
-          <span className="flex min-w-0 flex-col gap-0.5">
-            <YearLink year={year} words={words} />
-            <span className="text-xs text-muted tabular-nums">
-              {homeText("years.paidIn")} {money(say, row.paidIn)}
-            </span>
-          </span>
-          <span className="flex shrink-0 flex-col items-end gap-0.5 text-right tabular-nums">
-            <span className={cn("font-semibold", TONE_TEXT[toneOfSign(cents(row.gain))])}>
-              <YearGain amount={row.gain} say={say} />
-            </span>
-            <span className="text-xs text-muted">{money(say, row.value)}</span>
-          </span>
-        </li>
-      ))}
-      <li className="flex justify-between gap-3 border-t border-border bg-bg px-4 py-2.5 font-semibold">
-        <span>{homeText("years.total")}</span>
-        <span className={cn("tabular-nums", TONE_TEXT[toneOfSign(cents(summary.gain))])}>
-          {money(say, summary.gain, true)}
-        </span>
-      </li>
-    </ul>
   );
 }
 

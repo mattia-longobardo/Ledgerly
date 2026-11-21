@@ -5,9 +5,10 @@ import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/
 import { Badge } from "@ledgerly/ui/badge";
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
+import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
 import { SeriesToggle } from "@ledgerly/ui/highlight";
 import { Link } from "@ledgerly/ui/router";
-import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
+import { Td, TotalRow } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { ValuationButton } from "./fund-forms";
 import type { Home, HomeFund, HomeWords } from "./home-cards";
@@ -90,7 +91,6 @@ export function FundsCard({
       <CardHeader title={homeText("list.title")} />
       <p className="-mt-2 px-4 pb-2 text-sm text-muted">{homeText("list.note")}</p>
       <FundsTable {...rows} />
-      <FundsList {...rows} />
     </Card>
   );
 }
@@ -164,110 +164,132 @@ function ActionCell({ fund, say }: { fund: HomeFund; say: Say }) {
   );
 }
 
-/** The funds as a table, on a wide screen. */
-function FundsTable({ home, lines, words, subline, paidHeader }: FundRows) {
+/** The funds' columns: the name with its highlight toggle, the figures, the last value's day. */
+function useFundColumns({ words, subline, paidHeader }: FundRows): DataColumn<HomeFund>[] {
   const homeText = useTranslations("funds.home");
   const { say } = words;
-  const { summary } = home;
+  return [
+    {
+      key: "fund",
+      header: homeText("list.fund"),
+      className: "py-1",
+      cell: (fund) => (
+        <span className="flex flex-col items-start">
+          <NameCell fund={fund} words={words} />
+          {subline(fund) && <span className="pl-7 text-xs text-muted">{subline(fund)}</span>}
+        </span>
+      ),
+    },
+    {
+      key: "paid",
+      header: paidHeader,
+      align: "right",
+      cell: (fund) => money(say, fund.line?.paidIn ?? null),
+    },
+    {
+      key: "gain",
+      header: homeText("list.gain"),
+      align: "right",
+      cell: (fund) => <GainCell fund={fund} say={say} />,
+    },
+    {
+      key: "rate",
+      header: homeText("list.rate"),
+      align: "right",
+      cell: (fund) => <RateCell fund={fund} say={say} />,
+    },
+    {
+      key: "value",
+      header: homeText("list.value"),
+      align: "right",
+      className: "font-semibold",
+      cell: (fund) => money(say, fund.line?.value ?? null),
+    },
+    {
+      key: "updated",
+      header: homeText("list.updated"),
+      className: "py-1",
+      cell: (fund) => (
+        <span className="flex flex-col items-start gap-0.5">
+          <span className="text-sm text-muted">{day(say, fund.line?.end?.on ?? null)}</span>
+          <ActionCell fund={fund} say={say} />
+        </span>
+      ),
+    },
+  ];
+}
+
+/** A fund on a phone: its name and value, its gain and rate, what was paid in and its command. */
+function FundItem({ fund, rows }: { fund: HomeFund; rows: FundRows }) {
+  const homeText = useTranslations("funds.home");
+  const { words, subline, paidHeader } = rows;
+  const { say } = words;
   return (
-    <div className="overflow-x-auto @max-3xl:hidden">
-      <Table>
-        <THead>
-          <Th>{homeText("list.fund")}</Th>
-          <Th align="right">{paidHeader}</Th>
-          <Th align="right">{homeText("list.gain")}</Th>
-          <Th align="right">{homeText("list.rate")}</Th>
-          <Th align="right">{homeText("list.value")}</Th>
-          <Th>{homeText("list.updated")}</Th>
-        </THead>
-        <TBody>
-          {lines.map((fund) => (
-            <Tr key={fund.id} data-testid="fund-home-row" data-series-row={fund.id}>
-              <Td className="py-1">
-                <span className="flex flex-col items-start">
-                  <NameCell fund={fund} words={words} />
-                  {subline(fund) && <span className="pl-7 text-xs text-muted">{subline(fund)}</span>}
-                </span>
-              </Td>
-              <Td align="right">{money(say, fund.line?.paidIn ?? null)}</Td>
-              <Td align="right">
-                <GainCell fund={fund} say={say} />
-              </Td>
-              <Td align="right">
-                <RateCell fund={fund} say={say} />
-              </Td>
-              <Td align="right" className="font-semibold">
-                {money(say, fund.line?.value ?? null)}
-              </Td>
-              <Td className="py-1">
-                <span className="flex flex-col items-start gap-0.5">
-                  <span className="text-sm text-muted">{day(say, fund.line?.end?.on ?? null)}</span>
-                  <ActionCell fund={fund} say={say} />
-                </span>
-              </Td>
-            </Tr>
-          ))}
-          <TotalRow label={homeText("list.total")}>
-            <Td align="right">{money(say, summary.paidIn)}</Td>
-            <Td align="right" className={TONE_TEXT[toneOfSign(cents(summary.gain))]}>
-              {money(say, summary.gain, true)}
-            </Td>
-            <Td align="right">{percent(say, summary.rate)}</Td>
-            <Td align="right">{money(say, summary.value)}</Td>
-            <Td />
-          </TotalRow>
-        </TBody>
-      </Table>
-    </div>
+    <>
+      <span className="flex items-start justify-between gap-3">
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <NameCell fund={fund} words={words} />
+          <span className="pl-7 text-xs text-muted tabular-nums">
+            {money(say, fund.line?.value ?? null)}
+            {fund.line?.end && ` · ${homeText("list.updatedShort", { date: day(say, fund.line.end.on) })}`}
+          </span>
+          {subline(fund) && <span className="pl-7 text-xs text-muted">{subline(fund)}</span>}
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-0.5 text-right tabular-nums">
+          <GainCell fund={fund} say={say} />
+          <span className="text-xs">
+            <RateCell fund={fund} say={say} />
+          </span>
+        </span>
+      </span>
+      <span className="flex items-center justify-between gap-3 pl-7">
+        <span className="text-xs text-muted tabular-nums">
+          {paidHeader} {money(say, fund.line?.paidIn ?? null)}
+        </span>
+        <ActionCell fund={fund} say={say} />
+      </span>
+    </>
   );
 }
 
-/** The funds as a list, on a narrow screen. */
-function FundsList({ home, lines, words, subline, paidHeader }: FundRows) {
+/** The funds as a table from `md`, a line each below it (DataTable), then the period's total. */
+function FundsTable(rows: FundRows) {
   const homeText = useTranslations("funds.home");
+  const { home, lines, words } = rows;
   const { say } = words;
   const { summary } = home;
   return (
-    <ul className="flex flex-col @3xl:hidden">
-      {lines.map((fund) => (
-        <li
-          key={fund.id}
-          data-testid="fund-home-item"
-          data-series-row={fund.id}
-          className="flex flex-col gap-1 border-t border-border px-4 py-2.5"
-        >
-          <span className="flex items-start justify-between gap-3">
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <NameCell fund={fund} words={words} />
-              <span className="pl-7 text-xs text-muted tabular-nums">
-                {money(say, fund.line?.value ?? null)}
-                {fund.line?.end &&
-                  ` · ${homeText("list.updatedShort", { date: day(say, fund.line.end.on) })}`}
-              </span>
-              {subline(fund) && <span className="pl-7 text-xs text-muted">{subline(fund)}</span>}
-            </span>
-            <span className="flex shrink-0 flex-col items-end gap-0.5 text-right tabular-nums">
-              <GainCell fund={fund} say={say} />
-              <span className="text-xs">
-                <RateCell fund={fund} say={say} />
-              </span>
-            </span>
-          </span>
-          <span className="flex items-center justify-between gap-3 pl-7">
-            <span className="text-xs text-muted tabular-nums">
-              {paidHeader} {money(say, fund.line?.paidIn ?? null)}
-            </span>
-            <ActionCell fund={fund} say={say} />
+    <DataTable
+      columns={useFundColumns(rows)}
+      rows={lines}
+      rowKey={(fund) => fund.id}
+      rowProps={(fund) => ({ "data-testid": "fund-home-row", "data-series-row": fund.id })}
+      cardProps={(fund) => ({
+        "data-testid": "fund-home-item",
+        "data-series-row": fund.id,
+        className: "flex flex-col gap-1 border-t border-border px-4 py-2.5",
+      })}
+      card={(fund) => <FundItem fund={fund} rows={rows} />}
+      footer={
+        <TotalRow label={homeText("list.total")}>
+          <Td align="right">{money(say, summary.paidIn)}</Td>
+          <Td align="right" className={TONE_TEXT[toneOfSign(cents(summary.gain))]}>
+            {money(say, summary.gain, true)}
+          </Td>
+          <Td align="right">{percent(say, summary.rate)}</Td>
+          <Td align="right">{money(say, summary.value)}</Td>
+          <Td />
+        </TotalRow>
+      }
+      cardFooter={
+        <li className="flex justify-between gap-3 border-t border-border bg-bg px-4 py-2.5 font-semibold">
+          <span>{homeText("list.total")}</span>
+          <span className={cn("tabular-nums", TONE_TEXT[toneOfSign(cents(summary.gain))])}>
+            {money(say, summary.gain, true)}
+            {summary.rate !== null && ` · ${percent(say, summary.rate)}`}
           </span>
         </li>
-      ))}
-      <li className="flex justify-between gap-3 border-t border-border bg-bg px-4 py-2.5 font-semibold">
-        <span>{homeText("list.total")}</span>
-        <span className={cn("tabular-nums", TONE_TEXT[toneOfSign(cents(summary.gain))])}>
-          {money(say, summary.gain, true)}
-          {summary.rate !== null && ` · ${percent(say, summary.rate)}`}
-        </span>
-      </li>
-    </ul>
+      }
+    />
   );
 }

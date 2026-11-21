@@ -20,6 +20,8 @@ export interface DataColumn<T> {
   hiddenHeader?: boolean;
   /** The cell names its row (`<th scope="row">`): the month of a register, say. */
   rowHeader?: boolean;
+  /** `data-*` attributes of the table's cell, for a test that reads one figure. */
+  cellProps?: (row: T) => { [data: `data-${string}`]: string };
   /**
    * How the card shows the cell: the row's name (`title`), a line of its own (`line`), a line after
    * the column's name (`labelled`), or a command (`action`).
@@ -78,7 +80,12 @@ function TableCell<T>({ column, row }: { column: DataColumn<T>; row: T }) {
       </th>
     );
   return (
-    <Td align={column.align} muted={column.muted} className={classOf(column, row)}>
+    <Td
+      align={column.align}
+      muted={column.muted}
+      className={classOf(column, row)}
+      {...column.cellProps?.(row)}
+    >
       {column.cell(row)}
     </Td>
   );

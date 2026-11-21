@@ -8,9 +8,9 @@ import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/
 import { Card, CardHeader } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
 import { useApi, useLatest } from "@ledgerly/ui/data";
+import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
 import { Loaded } from "@ledgerly/ui/loaded";
 import type { SectionApiQuery } from "@ledgerly/ui/period";
-import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { DeleteValuation, EditValuationButton } from "./fund-forms";
 import { valuationDraft } from "./present";
@@ -19,6 +19,7 @@ import { cents } from "./wire-forms";
 
 type Valuations = RouteOutput<typeof funds.getFundValuations>;
 type ValuationLine = Valuations["lines"][number];
+type Statement = Valuations["statements"][number];
 
 interface TabProps {
   fundId: string;
@@ -94,6 +95,75 @@ function ValuationsBody({
     );
   };
 
+  const lineColumns: DataColumn<ValuationLine>[] = [
+    {
+      key: "date",
+      header: t("date"),
+      cell: (line) => (
+        <span className="flex flex-col">
+          <span className="font-medium whitespace-nowrap">{long(line.on)}</span>
+          <span className="text-sm text-muted">{fromText(line)}</span>
+        </span>
+      ),
+    },
+    {
+      key: "value",
+      header: t("value"),
+      align: "right",
+      className: "font-semibold",
+      cell: (line) => money(line.value),
+    },
+    {
+      key: "paid",
+      header: t("paid"),
+      align: "right",
+      muted: true,
+      cell: (line) => (line.paid === null ? NULL_DISPLAY : money(line.paid)),
+    },
+    {
+      key: "gain",
+      header: t("gain"),
+      align: "right",
+      className: (line) => tone(line.gain),
+      cellProps: (line) => ({
+        "data-testid": "line-gain",
+        "data-cents": line.gain === null ? "" : String(cents(line.gain)),
+      }),
+      cell: (line) => (line.gain === null ? NULL_DISPLAY : signed(line.gain)),
+    },
+    {
+      key: "rate",
+      header: t("rate"),
+      align: "right",
+      className: (line) => cn(line.rate !== null && tone(line.gain)),
+      cellProps: () => ({ "data-testid": "line-rate" }),
+      cell: (line) => percent(line.rate),
+    },
+    { key: "actions", header: t("edit"), hiddenHeader: true, align: "right", cell: actions },
+  ];
+  const statementColumns: DataColumn<Statement>[] = [
+    { key: "date", header: t("date"), muted: true, cell: (one) => long(one.on) },
+    {
+      key: "value",
+      header: t("value"),
+      align: "right",
+      className: "font-semibold",
+      cell: (one) => money(one.value),
+    },
+    { key: "you", header: t("statements.you"), align: "right", cell: (one) => money(one.worker) },
+    { key: "employer", header: t("statements.employer"), align: "right", cell: (one) => money(one.employer) },
+    { key: "tfr", header: t("statements.tfr"), align: "right", cell: (one) => money(one.tfr) },
+    { key: "inflows", header: t("statements.inflows"), align: "right", cell: (one) => money(one.inflows) },
+    { key: "outflows", header: t("statements.outflows"), align: "right", cell: (one) => money(one.outflows) },
+    {
+      key: "gain",
+      header: t("statements.gain"),
+      align: "right",
+      className: (one) => tone(one.reportedGain),
+      cell: (one) => (one.reportedGain === null ? NULL_DISPLAY : signed(one.reportedGain)),
+    },
+  ];
+
   return (
     <>
       <Card padded={false} className="min-w-0" data-testid="fund-valuations">
@@ -114,63 +184,14 @@ function ValuationsBody({
           </div>
         ) : (
           <>
-            <div className="hidden overflow-x-auto @5xl:block">
-              <Table>
-                <THead>
-                  <Th>{t("date")}</Th>
-                  <Th align="right">{t("value")}</Th>
-                  <Th align="right">{t("paid")}</Th>
-                  <Th align="right">{t("gain")}</Th>
-                  <Th align="right">{t("rate")}</Th>
-                  <Th align="right">
-                    <span className="sr-only">{t("edit")}</span>
-                  </Th>
-                </THead>
-                <TBody>
-                  {lines.map((line) => (
-                    <Tr key={line.on} data-testid="valuation-line" data-on={line.on}>
-                      <Td>
-                        <span className="flex flex-col">
-                          <span className="font-medium whitespace-nowrap">{long(line.on)}</span>
-                          <span className="text-sm text-muted">{fromText(line)}</span>
-                        </span>
-                      </Td>
-                      <Td align="right" className="font-semibold">
-                        {money(line.value)}
-                      </Td>
-                      <Td align="right" muted>
-                        {line.paid === null ? NULL_DISPLAY : money(line.paid)}
-                      </Td>
-                      <Td
-                        align="right"
-                        data-testid="line-gain"
-                        data-cents={line.gain === null ? "" : String(cents(line.gain))}
-                        className={tone(line.gain)}
-                      >
-                        {line.gain === null ? NULL_DISPLAY : signed(line.gain)}
-                      </Td>
-                      <Td
-                        align="right"
-                        data-testid="line-rate"
-                        className={cn(line.rate !== null && tone(line.gain))}
-                      >
-                        {percent(line.rate)}
-                      </Td>
-                      <Td align="right">{actions(line)}</Td>
-                    </Tr>
-                  ))}
-                </TBody>
-              </Table>
-            </div>
-
-            <ul className="flex flex-col @5xl:hidden">
-              {lines.map((line) => (
-                <li
-                  key={line.on}
-                  data-testid="valuation-item"
-                  data-on={line.on}
-                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
-                >
+            <DataTable
+              columns={lineColumns}
+              rows={lines}
+              rowKey={(line) => line.on}
+              rowProps={(line) => ({ "data-testid": "valuation-line", "data-on": line.on })}
+              cardProps={(line) => ({ "data-testid": "valuation-item", "data-on": line.on })}
+              card={(line) => (
+                <>
                   <div className="flex items-start justify-between gap-2">
                     <span className="flex min-w-0 flex-col">
                       <span className="font-medium">{long(line.on)}</span>
@@ -195,9 +216,9 @@ function ValuationsBody({
                     </div>
                   </dl>
                   {actions(line)}
-                </li>
-              ))}
-            </ul>
+                </>
+              )}
+            />
 
             <div className="flex flex-col gap-1 border-t border-border px-4 py-3 text-sm text-muted">
               <p data-testid="stretch-rate-note">{t("rateNote")}</p>
@@ -223,75 +244,31 @@ function ValuationsBody({
       {statements.length > 0 && (
         <Card padded={false} className="min-w-0" data-testid="fund-statements">
           <CardHeader title={t("read.title")} />
-          <>
-            <div className="hidden overflow-x-auto @5xl:block">
-              <Table>
-                <THead>
-                  <Th>{t("date")}</Th>
-                  <Th align="right">{t("value")}</Th>
-                  <Th align="right">{t("statements.you")}</Th>
-                  <Th align="right">{t("statements.employer")}</Th>
-                  <Th align="right">{t("statements.tfr")}</Th>
-                  <Th align="right">{t("statements.inflows")}</Th>
-                  <Th align="right">{t("statements.outflows")}</Th>
-                  <Th align="right">{t("statements.gain")}</Th>
-                </THead>
-                <TBody>
-                  {statements.map((one) => (
-                    <Tr key={one.id} data-testid="statement-line">
-                      <Td muted>{long(one.on)}</Td>
-                      <Td align="right" className="font-semibold">
-                        {money(one.value)}
-                      </Td>
-                      <Td align="right">{money(one.worker)}</Td>
-                      <Td align="right">{money(one.employer)}</Td>
-                      <Td align="right">{money(one.tfr)}</Td>
-                      <Td align="right">{money(one.inflows)}</Td>
-                      <Td align="right">{money(one.outflows)}</Td>
-                      <Td align="right" className={tone(one.reportedGain)}>
-                        {one.reportedGain === null ? NULL_DISPLAY : signed(one.reportedGain)}
-                      </Td>
-                    </Tr>
+          <DataTable
+            columns={statementColumns}
+            rows={statements}
+            rowKey={(one) => one.id}
+            rowProps={() => ({ "data-testid": "statement-line" })}
+            cardProps={() => ({ "data-testid": "statement-line-item" })}
+            card={(one) => (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-muted">{long(one.on)}</span>
+                  <span className="shrink-0 font-semibold tabular-nums">{money(one.value)}</span>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
+                  {statementColumns.slice(2).map((column) => (
+                    <span
+                      key={column.key}
+                      className={column.key === "gain" ? tone(one.reportedGain) : undefined}
+                    >
+                      {column.header} {column.cell(one)}
+                    </span>
                   ))}
-                </TBody>
-              </Table>
-            </div>
-            <ul className="flex flex-col @5xl:hidden">
-              {statements.map((one) => (
-                <li
-                  key={one.id}
-                  data-testid="statement-line-item"
-                  className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="text-muted">{long(one.on)}</span>
-                    <span className="shrink-0 font-semibold tabular-nums">{money(one.value)}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular-nums">
-                    <span>
-                      {t("statements.you")} {money(one.worker)}
-                    </span>
-                    <span>
-                      {t("statements.employer")} {money(one.employer)}
-                    </span>
-                    <span>
-                      {t("statements.tfr")} {money(one.tfr)}
-                    </span>
-                    <span>
-                      {t("statements.inflows")} {money(one.inflows)}
-                    </span>
-                    <span>
-                      {t("statements.outflows")} {money(one.outflows)}
-                    </span>
-                    <span className={tone(one.reportedGain)}>
-                      {t("statements.gain")}{" "}
-                      {one.reportedGain === null ? NULL_DISPLAY : signed(one.reportedGain)}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
+                </div>
+              </>
+            )}
+          />
           <p className="border-t border-border px-4 py-3 text-sm text-muted">{t("read.note")}</p>
         </Card>
       )}
