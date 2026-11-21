@@ -183,6 +183,31 @@ export function lastDayOfMonth(month: MonthKey): CivilDate {
   return addDays(addMonths(monthKey(month), 1), -1);
 }
 
+/** A run of days, both ends included (audit INT-6: the one shape of a period). */
+export interface Period {
+  from: CivilDate;
+  to: CivilDate;
+}
+
+/** The calendar month that contains `date`. */
+export function monthOf(date: CivilDate): Period {
+  const first = monthKey(date);
+  return { from: first, to: lastDayOfMonth(first) };
+}
+
+/** The calendar quarter that contains `date`. */
+export function quarterOf(date: CivilDate): Period {
+  const [year, month] = parts(date);
+  const first = `${pad(year, 4)}-${pad(month - ((month - 1) % 3))}-01`;
+  return { from: first, to: lastDayOfMonth(addMonths(first, 2)) };
+}
+
+/** The calendar year that contains `date`. */
+export function yearOf(date: CivilDate): Period {
+  const year = pad(parts(date)[0], 4);
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
 /** Every month from `from` to `to`, both included; empty when `from` is after `to`. */
 export function monthsBetween(from: MonthKey, to: MonthKey): MonthKey[] {
   const result: MonthKey[] = [];

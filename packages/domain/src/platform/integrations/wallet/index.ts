@@ -16,3 +16,5 @@ export {
   syncWalletFor as syncSourceNow,
   walletEditableIds as editableAtSource,
 } from "./records";
+// The ledger interests publishes on (port `LedgerPosting`, audit INT-1), by a name that is no provider's.
+export { walletPosting as ledgerPosting } from "./posting";

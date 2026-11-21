@@ -387,6 +387,7 @@
     "DAY_BASES",
     "FreshnessOptions",
     "InterestError",
+    "LedgerPosting",
     "PlainRule",
     "RuleRow",
     "SETTLEMENTS",
@@ -417,7 +418,8 @@
     "setRuleState",
     "stopPublishing",
     "stopPublishingOnAccounts",
-    "updateRule"
+    "updateRule",
+    "wireInterests"
   ],
   "packages/domain/src/modules/investments/client.ts": [
     "AdjustmentClass",
@@ -1055,6 +1057,7 @@
     "isSyncBusy",
     "isTokenRejected",
     "isUsableToken",
+    "ledgerPosting",
     "requestWalletBackfill",
     "syncSourceNow",
     "syncWalletNow",

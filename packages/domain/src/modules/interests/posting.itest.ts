@@ -9,7 +9,8 @@ import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { linkExternal, resolveExternal } from "../../platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
-import { lookUpUnsure, markPosted, postEntry, postPending, type PostingClient } from "./posting";
+import { lookUpUnsure, markPosted, postEntry, postPending } from "./service/posting";
+import type { LedgerPosting } from "./ports";
 import { ruleDetail } from "./queries";
 import { CATEGORY_NOT_LINKED, type RuleInput } from "./rules";
 import { interestEntries } from "./schema";
@@ -30,7 +31,7 @@ function fakeWallet(
     note: string;
     categoryId?: string | null;
   }[] = [];
-  const client: PostingClient = {
+  const client: LedgerPosting = {
     async recordsWithNote() {
       return (options.existing ?? []).map((record) => ({ ...record, note: "marker" }));
     },

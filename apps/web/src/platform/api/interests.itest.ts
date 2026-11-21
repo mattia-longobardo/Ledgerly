@@ -214,7 +214,7 @@ describe("parity of interests: action = route = MCP tool = export", () => {
       route.rules.map((row: { accruedYtd: string; grossYtd: string }) => [row.accruedYtd, row.grossYtd]),
     );
     const page = await interests.ruleDetail(alice, ruleId);
-    expect(centsToDecimal(page.accruedYtdCents)).toBe(detail.accruedYtd);
+    expect(centsToDecimal(page.pageYtdCents)).toBe(detail.accruedYtd);
     expect(centsToDecimal(page.pendingCents)).toBe(detail.pending);
     // While no day of last year waits for its settlement, the two years to date are one number.
     expect(detail.accruedYtd).toBe(detail.rule.accruedYtd);

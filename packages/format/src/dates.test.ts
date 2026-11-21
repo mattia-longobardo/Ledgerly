@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   addDays,
   addMonths,
+  monthOf,
+  quarterOf,
+  yearOf,
   civilDateIn,
   dayOfWeek,
   isCivilDate,
@@ -118,5 +121,15 @@ describe("wallClockIn", () => {
     // The repeated hour of the autumn change: its first occurrence.
     expect(wallClockIn("2026-10-25", 2 * 60 + 30, "Europe/Rome")).toEqual(new Date("2026-10-25T00:30:00Z"));
     expect(minutesOfDayIn(new Date("2026-07-01T05:15:00Z"), "Europe/Rome")).toBe(7 * 60 + 15);
+  });
+});
+
+describe("monthOf, quarterOf, yearOf (INT-6)", () => {
+  it("give the calendar period that contains a day", () => {
+    expect(monthOf("2028-02-10")).toEqual({ from: "2028-02-01", to: "2028-02-29" });
+    expect(quarterOf("2026-12-31")).toEqual({ from: "2026-10-01", to: "2026-12-31" });
+    expect(quarterOf("2026-05-15")).toEqual({ from: "2026-04-01", to: "2026-06-30" });
+    expect(quarterOf("2026-01-01")).toEqual({ from: "2026-01-01", to: "2026-03-31" });
+    expect(yearOf("2026-07-04")).toEqual({ from: "2026-01-01", to: "2026-12-31" });
   });
 });

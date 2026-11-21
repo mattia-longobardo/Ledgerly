@@ -43,11 +43,7 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
     return interestsList(view, accounts, today(ctx.timeZone).slice(0, 4));
   });
   serve(app, guard, interests.getInterestRule, async ({ ctx, params }) => {
-    const [detail, view] = await Promise.all([
-      refusing(() => ruleDetail(ctx, params.id)),
-      interestsView(ctx),
-    ]);
-    return interestRule(detail, view.find((row) => row.rule.id === params.id) ?? null);
+    return interestRule(await refusing(() => ruleDetail(ctx, params.id)));
   });
 }
 

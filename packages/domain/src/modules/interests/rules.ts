@@ -1,4 +1,4 @@
-import { addDays, type CivilDate, lastDayOfMonth, monthKey } from "../../shared/dates";
+import { addDays, type CivilDate, monthOf, type Period, quarterOf, yearOf } from "../../shared/dates";
 import { payeeKeyOf } from "../transactions/rules";
 import { z } from "zod";
 import { civilDate, optionalText } from "../../shared/inputs";
@@ -246,25 +246,12 @@ export function runsAt(runHour: number | null, instant: Date, timeZone: string):
   return hourIn(instant, timeZone) === (runHour ?? DEFAULT_RUN_HOUR);
 }
 
-const QUARTER_START = [1, 1, 1, 4, 4, 4, 7, 7, 7, 10, 10, 10];
-
 /** The calendar period of a frequency that contains `on`. */
-export function periodOf(frequency: Settlement, on: CivilDate): { from: CivilDate; to: CivilDate } {
-  const year = on.slice(0, 4);
-  const month = Number(on.slice(5, 7));
+export function periodOf(frequency: Settlement, on: CivilDate): Period {
   // Some banks pay every day: the period is the day itself, settled the day after.
   if (frequency === "daily") return { from: on, to: on };
-  if (frequency === "monthly") {
-    const first = monthKey(on);
-    return { from: first, to: lastDayOfMonth(first) };
-  }
-  if (frequency === "quarterly") {
-    const start = QUARTER_START[month - 1];
-    const first = `${year}-${String(start).padStart(2, "0")}-01`;
-    const last = `${year}-${String(start + 2).padStart(2, "0")}-01`;
-    return { from: first, to: lastDayOfMonth(last) };
-  }
-  return { from: `${year}-01-01`, to: `${year}-12-31` };
+  if (frequency === "monthly") return monthOf(on);
+  return frequency === "quarterly" ? quarterOf(on) : yearOf(on);
 }
 
 /**

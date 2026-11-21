@@ -114,7 +114,7 @@ export default async function RulePage({ params }: PageProps<"/interests/[id]">)
       )}
 
       <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
-        <KpiTile label={t("detail.accruedYtd")} value={money(detail.accruedYtdCents)} valueTone="pos" />
+        <KpiTile label={t("detail.accruedYtd")} value={money(detail.pageYtdCents)} valueTone="pos" />
         <KpiTile label={t("detail.pending")} value={money(detail.pendingCents)} />
         <KpiTile
           label={t("detail.mode")}

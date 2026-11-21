@@ -16,7 +16,7 @@ const money = centsToDecimal;
 const maybe = (cents: Cents | null): string | null => (cents === null ? null : money(cents));
 
 /** The row of the list, of the export and of both tools; the rule's page reads the same. */
-function ruleRow(row: Pick<ViewRow, "rule" | "tiers" | "accountName">, sums: ViewRow | null): Row {
+function ruleRow(row: ViewRow): Row {
   const { rule } = row;
   return {
     id: rule.id,
@@ -36,9 +36,9 @@ function ruleRow(row: Pick<ViewRow, "rule" | "tiers" | "accountName">, sums: Vie
     mode: rule.mode,
     categoryId: rule.postingCategoryId,
     state: rule.state,
-    accruedYtd: money(sums?.accruedYtdCents ?? 0n),
-    grossYtd: money(sums?.grossYtdCents ?? 0n),
-    nextPayout: sums?.nextPayout ?? null,
+    accruedYtd: money(row.accruedYtdCents),
+    grossYtd: money(row.grossYtdCents),
+    nextPayout: row.nextPayout,
   };
 }
 
@@ -49,7 +49,7 @@ export function interestsList(
   year: string,
 ): List {
   return {
-    rules: view.map((row) => ruleRow(row, row)),
+    rules: view.map(ruleRow),
     totals: {
       year,
       accruedYtd: money(view.reduce((sum, row) => sum + row.accruedYtdCents, 0n)),
@@ -59,13 +59,13 @@ export function interestsList(
   };
 }
 
-/** `GET /interests/{id}`: one rule's page; the row's sums are the list's. */
-export function interestRule(detail: DetailView, listed: ViewRow | null): Detail {
+/** `GET /interests/{id}`: one rule's page; its row is the list's. */
+export function interestRule(detail: DetailView): Detail {
   return {
-    rule: ruleRow(detail, listed),
+    rule: ruleRow(detail),
     category: detail.categoryName,
     pending: money(detail.pendingCents),
-    accruedYtd: money(detail.accruedYtdCents),
+    accruedYtd: money(detail.pageYtdCents),
     balance: {
       synced: detail.balance.synced,
       lastSyncedAt: detail.balance.lastSyncedAt?.toISOString() ?? null,

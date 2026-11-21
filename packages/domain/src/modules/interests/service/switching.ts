@@ -5,11 +5,11 @@
  * by themselves. Every write takes the caller's transaction.
  */
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { Ctx } from "../../platform/context";
-import type { Tx } from "../../platform/db/client";
-import { userScoped } from "../../platform/db/scope";
-import { RULE_MODES, type RuleMode } from "./rules";
-import { interestRules } from "./schema";
+import type { Ctx } from "../../../platform/context";
+import type { Tx } from "../../../platform/db/client";
+import { userScoped } from "../../../platform/db/scope";
+import { RULE_MODES, type RuleMode } from "../rules";
+import { interestRules } from "../schema";
 
 type Who = Pick<Ctx, "userId">;
 

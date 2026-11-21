@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
-import { accountNames, listAccounts } from "../accounts";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { type Account, accountNames, listAccounts } from "../accounts";
 import { findMovements } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";
@@ -11,22 +11,22 @@ import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
 import {
   assignPayments,
-  fixedFromDecimal,
   isFreshReading,
   paymentWindow,
   paysInterest,
   periodOf,
   reconcile,
   type ReconciliationStatus,
-  roundToCents,
   type Tier,
 } from "./rules";
 import { interestAccruals, interestEntries, interestRules } from "./schema";
 import {
+  type AccrualSum,
   type InterestAccrual,
   type InterestEntry,
   type InterestRule,
   InterestError,
+  sumAccruals,
   tiersOf,
 } from "./service";
 
@@ -42,13 +42,32 @@ export interface RuleRow {
   nextPayout: CivilDate | null;
 }
 
+/** A rule with its sums since 1 January (INT-4: `sumAccruals`) and its next payout. */
+function ruleRow(
+  rule: InterestRule,
+  parts: { tiers: Tier[]; accountName: string; sum: AccrualSum | undefined; todayOn: CivilDate },
+): RuleRow {
+  const period = periodOf(rule.settlement, parts.todayOn);
+  const running = rule.state === "active" && (rule.validTo === null || rule.validTo >= parts.todayOn);
+  const end = rule.validTo !== null && rule.validTo < period.to ? rule.validTo : period.to;
+  return {
+    rule,
+    tiers: parts.tiers,
+    accountName: parts.accountName,
+    accruedYtdCents: parts.sum?.netCents ?? 0n,
+    grossYtdCents: parts.sum?.grossCents ?? 0n,
+    nextPayout: running ? addDays(end, 1) : null,
+  };
+}
+
+const yearStartOf = (day: CivilDate): CivilDate => `${day.slice(0, 4)}-01-01`;
+
 /** The Interests table (spec §7.6, design): every rule with its year to date and next payout. */
 export async function interestsView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   now: Date = new Date(),
 ): Promise<RuleRow[]> {
   const todayOn = today(ctx.timeZone, now);
-  const yearStart = `${todayOn.slice(0, 4)}-01-01`;
   const [rules, accounts] = await Promise.all([
     getDb()
       .select()
@@ -57,43 +76,21 @@ export async function interestsView(
       .orderBy(asc(interestRules.validFrom), asc(interestRules.id)),
     listAccounts(ctx, { includeArchived: true }),
   ]);
-  const ids = rules.map((rule) => rule.id);
+  if (rules.length === 0) return [];
+  const ruleIds = rules.map((rule) => rule.id);
   const [tiers, sums] = await Promise.all([
-    tiersOf(ctx, ids),
-    ids.length === 0
-      ? []
-      : getDb()
-          .select({
-            ruleId: interestAccruals.ruleId,
-            net: sql<string>`coalesce(sum(${interestAccruals.netCents}), 0)`,
-            gross: sql<string>`coalesce(sum(${interestAccruals.gross}), 0)`,
-          })
-          .from(interestAccruals)
-          .where(
-            and(
-              userScoped(ctx).owns(interestAccruals),
-              inArray(interestAccruals.ruleId, ids),
-              gte(interestAccruals.on, yearStart),
-            ),
-          )
-          .groupBy(interestAccruals.ruleId),
+    tiersOf(ctx, ruleIds),
+    sumAccruals(ctx, "rule", { ruleIds, from: yearStartOf(todayOn) }),
   ]);
   const accountName = accountNames(accounts);
-  const sumOf = new Map(sums.map((row) => [row.ruleId, row]));
-  return rules.map((rule) => {
-    const period = periodOf(rule.settlement, todayOn);
-    const running = rule.state === "active" && (rule.validTo === null || rule.validTo >= todayOn);
-    const end = rule.validTo !== null && rule.validTo < period.to ? rule.validTo : period.to;
-    const sum = sumOf.get(rule.id);
-    return {
-      rule,
+  return rules.map((rule) =>
+    ruleRow(rule, {
       tiers: tiers.get(rule.id) ?? [],
       accountName: accountName.get(rule.accountId) ?? "",
-      accruedYtdCents: BigInt(sum?.net ?? "0"),
-      grossYtdCents: roundToCents(fixedFromDecimal(sum?.gross ?? "0")),
-      nextPayout: running ? addDays(end, 1) : null,
-    };
-  });
+      sum: sums.get(rule.id),
+      todayOn,
+    }),
+  );
 }
 
 interface SettlementRow {
@@ -117,11 +114,8 @@ interface BalanceState {
   stale: boolean;
 }
 
-interface RuleDetail {
-  rule: InterestRule;
-  tiers: Tier[];
-  accountName: string;
-  /** The category each published settlement is filed under in Wallet; `null` for none. */
+interface RuleDetail extends RuleRow {
+  /** The category each published settlement is filed under on the source; `null` for none. */
   categoryName: string | null;
   balance: BalanceState;
   settlements: SettlementRow[];
@@ -129,106 +123,89 @@ interface RuleDetail {
   days: InterestAccrual[];
   /** Net accrued in the period under way, not settled yet. */
   pendingCents: Cents;
-  /** The page's own year to date: the settlements that start this year, plus what is pending. */
-  accruedYtdCents: Cents;
+  /**
+   * The rule page's own year to date: the settlements that start this year, plus what is pending.
+   * Not `accruedYtdCents` while days of last year wait for their settlement (kept apart: V.2).
+   */
+  pageYtdCents: Cents;
+}
+
+/** How many days of each settlement accrued and how many were skipped. */
+async function dayCounts(ctx: Pick<Ctx, "userId">, ruleId: string) {
+  const rows = await getDb()
+    .select({
+      entryId: interestAccruals.entryId,
+      accrued: sql<number>`count(*) filter (where ${interestAccruals.status} = 'accrued')`,
+      skipped: sql<number>`count(*) filter (where ${interestAccruals.status} <> 'accrued')`,
+    })
+    .from(interestAccruals)
+    .where(and(eq(interestAccruals.ruleId, ruleId), userScoped(ctx).owns(interestAccruals)))
+    .groupBy(interestAccruals.entryId);
+  return new Map(rows.map((row) => [row.entryId, row]));
 }
 
 /**
- * One rule's page (plan F4 §3.6.12): its settlements, each reconciled with what was really paid
- * (spec §7.6), and its day ledger. In `post_to_provider` the paid amount is the posted settlement;
- * otherwise it is the account's income in the payment window whose payee, category or note contains
- * the rule's match text (plan F4 §3.6.1).
+ * What the bank paid for each settlement (plan F4 §3.4.5): its income in the payment windows whose
+ * payee, category or note contains the rule's match text, read once for every window and each payment
+ * counted for one settlement only — windows overlap, and a daily payout's overlap every day.
  */
-export async function ruleDetail(
+async function paidBySettlement(
   ctx: Pick<Ctx, "userId" | "timeZone">,
-  id: string,
-  now: Date = new Date(),
-): Promise<RuleDetail> {
-  const todayOn = today(ctx.timeZone, now);
-  const [rule] = await getDb()
-    .select()
-    .from(interestRules)
-    .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
-  if (!rule) throw new InterestError("not_found");
-  const [tiers, accounts, categories, entries, days, counts, pending] = await Promise.all([
-    tiersOf(ctx, [id]),
-    listAccounts(ctx, { includeArchived: true }),
-    listCategories(ctx, { includeArchived: true }),
-    getDb()
-      .select()
-      .from(interestEntries)
-      .where(and(eq(interestEntries.ruleId, id), userScoped(ctx).owns(interestEntries)))
-      .orderBy(desc(interestEntries.periodFrom)),
-    getDb()
-      .select()
-      .from(interestAccruals)
-      .where(and(eq(interestAccruals.ruleId, id), userScoped(ctx).owns(interestAccruals)))
-      .orderBy(desc(interestAccruals.on))
-      .limit(90),
-    getDb()
-      .select({
-        entryId: interestAccruals.entryId,
-        accrued: sql<number>`count(*) filter (where ${interestAccruals.status} = 'accrued')`,
-        skipped: sql<number>`count(*) filter (where ${interestAccruals.status} <> 'accrued')`,
-      })
-      .from(interestAccruals)
-      .where(and(eq(interestAccruals.ruleId, id), userScoped(ctx).owns(interestAccruals)))
-      .groupBy(interestAccruals.entryId),
-    getDb()
-      .select({ net: sql<string>`coalesce(sum(${interestAccruals.netCents}), 0)` })
-      .from(interestAccruals)
-      .where(
-        and(
-          eq(interestAccruals.ruleId, id),
-          userScoped(ctx).owns(interestAccruals),
-          sql`${interestAccruals.entryId} is null`,
-        ),
-      ),
-  ]);
-  const countOf = new Map(counts.map((row) => [row.entryId, row]));
-  const needle = payeeKeyOf(rule.payeeMatch);
-
-  // The bank's payments, read once for every window and each counted for one settlement only
-  // (plan F4 §3.4.5): windows overlap, and a daily payout's overlap every day.
-  const windows = entries.map((entry) => ({
-    entry,
-    window: paymentWindow(rule.settlement, { to: entry.periodTo, settleOn: entry.settleOn }),
-  }));
-  const payments =
-    rule.mode === "post_to_provider" || needle === null || windows.length === 0
-      ? []
-      : (
-          await findMovements(ctx, {
-            types: ["income"],
-            accountIds: [rule.accountId],
-            from: windows.reduce(
-              (first, one) => (one.window.from < first ? one.window.from : first),
-              windows[0].window.from,
-            ),
-            to: todayOn,
-          })
-        ).filter((row) => paysInterest(rule.payeeMatch, row));
+  rule: InterestRule,
+  entries: readonly InterestEntry[],
+  todayOn: CivilDate,
+): Promise<Map<string, Cents>> {
+  const windows = entries.map((entry) =>
+    paymentWindow(rule.settlement, { to: entry.periodTo, settleOn: entry.settleOn }),
+  );
+  if (windows.length === 0) return new Map();
+  const payments = (
+    await findMovements(ctx, {
+      types: ["income"],
+      accountIds: [rule.accountId],
+      from: windows.reduce((first, one) => (one.from < first ? one.from : first), windows[0].from),
+      to: todayOn,
+    })
+  ).filter((row) => paysInterest(rule.payeeMatch, row));
   const assigned = assignPayments(
     rule.settlement,
     entries.map((entry) => ({ id: entry.id, to: entry.periodTo, settleOn: entry.settleOn })),
     payments,
   );
   const amountOf = new Map(payments.map((payment) => [payment.id, payment.cents]));
+  return new Map(
+    entries.map((entry) => [
+      entry.id,
+      (assigned.get(entry.id) ?? []).reduce<Cents>(
+        (sum, paymentId) => sum + (amountOf.get(paymentId) ?? 0n),
+        0n,
+      ),
+    ]),
+  );
+}
 
-  const settlements: SettlementRow[] = windows.map(({ entry, window }) => {
-    const paidCents: Cents | null =
-      rule.mode === "post_to_provider"
-        ? entry.posting === "posted"
-          ? entry.netCents
-          : 0n
-        : needle === null
-          ? null
-          : (assigned.get(entry.id) ?? []).reduce<Cents>(
-              (sum, paymentId) => sum + (amountOf.get(paymentId) ?? 0n),
-              0n,
-            );
-    const count = countOf.get(entry.id);
+/**
+ * Each settlement reconciled with what was really paid (spec §7.6). In `post_to_provider` the paid
+ * amount is the posted settlement; otherwise what the bank paid, `null` without a match text.
+ */
+async function settlementRows(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  rule: InterestRule,
+  entries: readonly InterestEntry[],
+  todayOn: CivilDate,
+): Promise<SettlementRow[]> {
+  const publishes = rule.mode === "post_to_provider";
+  const looked = !publishes && payeeKeyOf(rule.payeeMatch) !== null;
+  const [counts, paid] = await Promise.all([
+    dayCounts(ctx, rule.id),
+    looked ? paidBySettlement(ctx, rule, entries, todayOn) : new Map<string, Cents>(),
+  ]);
+  return entries.map((entry) => {
+    const posted = entry.posting === "posted" ? entry.netCents : 0n;
+    const paidCents = publishes ? posted : looked ? (paid.get(entry.id) ?? 0n) : null;
+    const count = counts.get(entry.id);
     const accruedDays = Number(count?.accrued ?? 0);
+    const window = paymentWindow(rule.settlement, { to: entry.periodTo, settleOn: entry.settleOn });
     return {
       entry,
       accruedDays,
@@ -243,28 +220,64 @@ export async function ruleDetail(
       }),
     };
   });
+}
 
-  const account = accounts.find((one) => one.id === rule.accountId) ?? null;
+/** The balance the accrual reads, for the rule's page. */
+function balanceOf(account: Account | null, now: Date): BalanceState {
   const synced = account?.origin === "synced" && account.providerAccountId !== null;
+  const lastSyncedAt = account?.lastSyncedAt ?? null;
+  return { synced, lastSyncedAt, stale: synced && !isFreshReading(lastSyncedAt, now) };
+}
+
+/**
+ * One rule's page (plan F4 §3.6.12): its row, its settlements, each reconciled with what was really
+ * paid (spec §7.6), and its day ledger.
+ */
+export async function ruleDetail(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  id: string,
+  now: Date = new Date(),
+): Promise<RuleDetail> {
+  const todayOn = today(ctx.timeZone, now);
+  const [rule] = await getDb()
+    .select()
+    .from(interestRules)
+    .where(and(eq(interestRules.id, id), userScoped(ctx).owns(interestRules)));
+  if (!rule) throw new InterestError("not_found");
+  const [tiers, accounts, categories, entries, days, sums] = await Promise.all([
+    tiersOf(ctx, [id]),
+    listAccounts(ctx, { includeArchived: true }),
+    listCategories(ctx, { includeArchived: true }),
+    getDb()
+      .select()
+      .from(interestEntries)
+      .where(and(eq(interestEntries.ruleId, id), userScoped(ctx).owns(interestEntries)))
+      .orderBy(desc(interestEntries.periodFrom)),
+    getDb()
+      .select()
+      .from(interestAccruals)
+      .where(and(eq(interestAccruals.ruleId, id), userScoped(ctx).owns(interestAccruals)))
+      .orderBy(desc(interestAccruals.on))
+      .limit(90),
+    sumAccruals(ctx, "rule", { ruleIds: [id], from: yearStartOf(todayOn) }),
+  ]);
+  const account = accounts.find((one) => one.id === rule.accountId) ?? null;
+  const sum = sums.get(id);
+  const pendingCents = sum?.pendingCents ?? 0n;
+  const year = todayOn.slice(0, 4);
   return {
-    rule,
-    tiers: tiers.get(id) ?? [],
-    accountName: account?.name ?? "",
+    ...ruleRow(rule, { tiers: tiers.get(id) ?? [], accountName: account?.name ?? "", sum, todayOn }),
     categoryName:
       rule.postingCategoryId === null
         ? null
         : (categories.find((one) => one.id === rule.postingCategoryId)?.name ?? null),
-    balance: {
-      synced,
-      lastSyncedAt: account?.lastSyncedAt ?? null,
-      stale: synced && !isFreshReading(account?.lastSyncedAt ?? null, now),
-    },
-    settlements,
+    balance: balanceOf(account, now),
+    settlements: await settlementRows(ctx, rule, entries, todayOn),
     days,
-    pendingCents: BigInt(pending[0]?.net ?? "0"),
-    accruedYtdCents: entries
-      .filter((entry) => entry.periodFrom.startsWith(todayOn.slice(0, 4)))
-      .reduce((sum, entry) => sum + entry.netCents, BigInt(pending[0]?.net ?? "0")),
+    pendingCents,
+    pageYtdCents: entries
+      .filter((entry) => entry.periodFrom.startsWith(year))
+      .reduce((total, entry) => total + entry.netCents, pendingCents),
   };
 }
 
