@@ -346,9 +346,20 @@ describe("the session cookie on /api/v1", () => {
     } finally {
       await deleteFolder(`payslips/${alice.userId}/`);
     }
-    // `investments:read` stays a token's own scope, and `admin` an admin's.
-    expect((await call("/investments", alice)).status).toBe(403);
+    // `admin` stays an admin's.
     expect((await call("/people", alice)).status).toBe(403);
+  });
+
+  /*
+    R2 investments: the session gets `investments:read`, so the Investments screens read `/api/v1`.
+    A token without it still gets 403, with or without the cookie, and no token gains a scope.
+  */
+  it("gives the session investments:read and refuses it to a token without the scope", async () => {
+    expect((await call("/investments", alice)).status).toBe(200);
+    const token = await tokenFor(alice, ["read", "write", "imports"]);
+    for (const who of [{ bearer: token }, { bearer: token, cookie: alice.cookie }]) {
+      expect((await call("/investments", who)).status).toBe(403);
+    }
   });
 
   it("refuses POST /imports with 403 to a token without imports, and gives no token a new scope", async () => {

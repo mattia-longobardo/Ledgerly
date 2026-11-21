@@ -14,7 +14,7 @@ describe("parseScopes", () => {
 });
 
 describe("API_SCOPES", () => {
-  it("grants a token the same four scopes as before: the session's `imports` adds none (R2 imports)", () => {
+  it("grants a token the same four scopes as before: the session's `imports` and `investments:read` add none (R2 imports, R2 investments)", () => {
     expect(API_SCOPES).toEqual(["read", "write", "imports", "investments:read"]);
   });
 });
