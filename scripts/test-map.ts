@@ -322,9 +322,13 @@ export const MODULES: Module[] = [
   },
   {
     id: "imports",
-    files: ["apps/web/src/modules/imports/**", "packages/domain/src/modules/imports/**"],
+    files: [
+      "apps/web/src/modules/imports/**",
+      "packages/domain/src/modules/imports/**",
+      "apps/web/src/app/document-kinds.ts",
+    ],
     integration: ["apps/web/src/modules/imports", "packages/domain/src/modules/imports"],
-    usedBy: ["payroll", "funds", "api", "export", "jobs", "e2e:payroll"],
+    usedBy: ["payroll", "funds", "api", "export", "jobs", "e2e:payroll", "e2e:api"],
   },
   {
     id: "timeoff",
