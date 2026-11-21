@@ -613,5 +613,10 @@
     "file": "tools/baselines.itest.ts",
     "decision": "R2 funds",
     "reason": "the REST and MCP answers of the reference user now hold GET /funds, GET /funds/{id}, get_funds and get_fund too: answers added; no existing answer or assertion changed"
+  },
+  {
+    "file": "packages/domain/src/modules/funds/period.test.ts",
+    "decision": "FND-10",
+    "reason": "a test added: closingDay and describedDay, the rule of the 1st of a month read both ways, undo each other; no existing assertion changed"
   }
 ]

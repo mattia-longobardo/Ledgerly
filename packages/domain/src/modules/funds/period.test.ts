@@ -4,6 +4,7 @@ import type { Cents } from "../../shared/money";
 import {
   allPeriod,
   closingDay,
+  describedDay,
   documentedEntries,
   documentedPoints,
   type FundFlow,
@@ -505,4 +506,22 @@ it("does not depend on the order of the points or of the flows", () => {
   const measure = (p: typeof points, f: typeof flows) =>
     measurePeriod({ points: p, flows: f, period: allPeriod(TODAY) }).gainCents;
   expect(measure([...points].reverse(), [...flows].reverse())).toBe(measure(points, flows));
+});
+
+describe("the 1st of a month closes the month before (decision 3 of §9; audit FND-10)", () => {
+  it("is one rule read both ways: closingDay and describedDay undo each other", () => {
+    for (const lastDay of ["2026-01-31", "2026-02-28", "2028-02-29", "2026-12-31"]) {
+      const reading = closingDay(lastDay);
+      expect(reading.endsWith("-01")).toBe(true);
+      expect(describedDay(reading)).toBe(lastDay);
+    }
+    for (const first of ["2026-02-01", "2027-01-01", "2028-03-01"]) {
+      expect(closingDay(describedDay(first))).toBe(first);
+    }
+    // Any other day is its own reading, both ways.
+    for (const day of ["2026-01-15", "2026-02-27", "2026-12-30"]) {
+      expect(closingDay(day)).toBe(day);
+      expect(describedDay(day)).toBe(day);
+    }
+  });
 });
