@@ -12,7 +12,8 @@ import {
 /* The residual, and where it comes from (spec §7.9, the binding rule) */
 
 /** Which of the two formulas produced a residual — the interface always says which. */
-export type ResidualBasis = "payslip" | "allowance" | "unknown";
+export const RESIDUAL_BASES = ["payslip", "allowance", "unknown"] as const;
+export type ResidualBasis = (typeof RESIDUAL_BASES)[number];
 
 interface ResidualSnapshot {
   /** The month of the payslip that printed it. */

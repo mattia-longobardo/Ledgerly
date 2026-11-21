@@ -43,4 +43,6 @@ export const errorBody = z.object({
   reason: z.string().optional(),
   /** `iban_exists` and `iban_archived`: the name of the account that has the IBAN, never the IBAN (H45). */
   other: z.string().optional(),
+  /** `not_bookable` of time off: the dates refused and why (TOF-5: the reason travels with the error). */
+  refused: z.array(z.object({ on: z.string(), reason: z.enum(["weekend", "holiday"]) })).optional(),
 });

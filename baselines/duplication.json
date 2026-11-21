@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100037,
-    "duplicatedLines": 16240,
-    "percent": 16.23,
-    "blocks": 1219
+    "lines": 100046,
+    "duplicatedLines": 16247,
+    "percent": 16.24,
+    "blocks": 1220
   },
   "units": {
     "api": {
-      "lines": 3026,
-      "duplicatedLines": 524,
-      "percent": 17.32,
-      "blocks": 49
+      "lines": 3027,
+      "duplicatedLines": 531,
+      "percent": 17.54,
+      "blocks": 50
     },
     "app": {
       "lines": 25096,
@@ -83,13 +83,13 @@
       "blocks": 37
     },
     "modules/subscriptions": {
-      "lines": 2068,
+      "lines": 2075,
       "duplicatedLines": 399,
-      "percent": 19.29,
+      "percent": 19.23,
       "blocks": 26
     },
     "modules/timeoff": {
-      "lines": 3874,
+      "lines": 3875,
       "duplicatedLines": 287,
       "percent": 7.41,
       "blocks": 28
@@ -403,7 +403,7 @@
     "api/settings/connections.ts": 16,
     "api/settings/security.ts": 33,
     "api/settings/server.ts": 6,
-    "api/subscriptions/dto.ts": 27,
+    "api/subscriptions/dto.ts": 34,
     "api/subscriptions/routes.ts": 63,
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 26,

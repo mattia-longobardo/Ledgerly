@@ -11,6 +11,7 @@ import {
   POCKETS_ROUTES,
   SETTINGS_ROUTES,
   SUBSCRIPTIONS_ROUTES,
+  TIMEOFF_ROUTES,
   TRANSACTIONS_ROUTES,
   type RouteContract,
 } from "@ledgerly/api-contract";
@@ -25,6 +26,9 @@ import * as subscriptionsWire from "../packages/api-contract/src/subscriptions/s
 import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
 import * as interestsWire from "../packages/api-contract/src/interests/shared";
 import * as interestsDomain from "@domain/modules/interests/rules";
+import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
+import * as timeoffDomain from "@domain/modules/timeoff/rules";
+import { HOLIDAY_SOURCES } from "@domain/platform/holidays/rules";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -346,6 +350,37 @@ describe("the Server Actions of interests", () => {
     expect(interestsWire.ACCRUAL_STATUSES).toEqual(interestsDomain.ACCRUAL_STATUSES);
     expect(interestsWire.POSTING_STATES).toEqual(interestsDomain.POSTING_STATES);
     expect(interestsWire.MAX_MATCH).toBe(interestsDomain.MAX_MATCH);
+  });
+});
+
+/**
+ * The Server Actions of time off (05-refactor.md §5.5) and their routes; no exclusion. The page and
+ * Time off › Settings read routes of their own, with no action. Trek's figures beside the cards and
+ * its connection stay on the web until R5c (they are not actions of this module).
+ */
+const TIMEOFF_ACTION_FILES = [
+  "apps/web/src/modules/timeoff/actions.ts",
+  "apps/web/src/app/(app)/timeoff/settings/holiday-actions.ts",
+];
+
+describe("the Server Actions of time off", () => {
+  const actions = TIMEOFF_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(TIMEOFF_ROUTES.flatMap((route) => route.actions.map((name) => name.split(":")[0])));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(timeoffWire.LEAVE_KINDS).toEqual(timeoffDomain.LEAVE_DAY_KINDS);
+    expect(timeoffWire.RESIDUAL_BASES).toEqual(timeoffDomain.RESIDUAL_BASES);
+    expect(timeoffWire.SYNC_STATES).toEqual(timeoffDomain.PENDING_STATES);
+    expect(timeoffWire.LEAVE_ORIGINS.length).toBe(timeoffDomain.LEAVE_ORIGINS.length);
+    expect(timeoffWire.MAX_RANGE_DAYS).toBe(timeoffDomain.MAX_RANGE_DAYS);
+    expect(timeoffWire.HOLIDAY_SOURCES).toEqual(HOLIDAY_SOURCES);
   });
 });
 

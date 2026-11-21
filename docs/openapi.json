@@ -26484,6 +26484,3264 @@
         "x-scope": "read"
       }
     },
+    "/timeoff/{year}": {
+      "get": {
+        "operationId": "get_time_off",
+        "summary": "One year of time off: the residual of vacation and ROL with the formula that gave it, the year's totals by month and kind, the days and the payslips' months, the forecasts and the warnings.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "year": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "today": {
+                      "type": "string"
+                    },
+                    "minutesPerDay": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "weekStart": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 6
+                    },
+                    "allowance": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "year": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "vacationDays": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            },
+                            "rolDays": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            },
+                            "totalDays": {
+                              "type": [
+                                "number",
+                                "null"
+                              ]
+                            },
+                            "note": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "year",
+                            "vacationDays",
+                            "rolDays",
+                            "totalDays",
+                            "note"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "vacation": {
+                      "type": "object",
+                      "properties": {
+                        "residual": {
+                          "type": "object",
+                          "properties": {
+                            "basis": {
+                              "type": "string",
+                              "enum": [
+                                "payslip",
+                                "allowance",
+                                "unknown"
+                              ]
+                            },
+                            "remainingMinutes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "takenMinutes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "plannedMinutes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "snapshotPeriod": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "countedThrough": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "basis",
+                            "remainingMinutes",
+                            "takenMinutes",
+                            "plannedMinutes",
+                            "snapshotPeriod",
+                            "countedThrough"
+                          ]
+                        },
+                        "allowanceMinutes": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "carriedMinutes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "residual",
+                        "allowanceMinutes",
+                        "carriedMinutes"
+                      ]
+                    },
+                    "rol": {
+                      "type": "object",
+                      "properties": {
+                        "residual": {
+                          "type": "object",
+                          "properties": {
+                            "basis": {
+                              "type": "string",
+                              "enum": [
+                                "payslip",
+                                "allowance",
+                                "unknown"
+                              ]
+                            },
+                            "remainingMinutes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "takenMinutes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "plannedMinutes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "snapshotPeriod": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "countedThrough": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "basis",
+                            "remainingMinutes",
+                            "takenMinutes",
+                            "plannedMinutes",
+                            "snapshotPeriod",
+                            "countedThrough"
+                          ]
+                        },
+                        "allowanceMinutes": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "carriedMinutes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "residual",
+                        "allowanceMinutes",
+                        "carriedMinutes"
+                      ]
+                    },
+                    "bars": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "month": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "takenMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "plannedMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "month",
+                          "takenMinutes",
+                          "plannedMinutes"
+                        ]
+                      }
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "source": {
+                                "type": "string",
+                                "const": "day"
+                              },
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "on": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "vacation",
+                                  "rol",
+                                  "comp",
+                                  "sick",
+                                  "other"
+                                ]
+                              },
+                              "fraction": {
+                                "type": "number"
+                              },
+                              "note": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "origin": {
+                                "type": "string",
+                                "enum": [
+                                  "manual",
+                                  "external"
+                                ]
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "taken",
+                                  "planned"
+                                ]
+                              },
+                              "sync": {
+                                "type": "string",
+                                "enum": [
+                                  "none",
+                                  "upsert",
+                                  "delete"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "source",
+                              "id",
+                              "on",
+                              "kind",
+                              "fraction",
+                              "note",
+                              "origin",
+                              "status",
+                              "sync"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "source": {
+                                "type": "string",
+                                "const": "payroll"
+                              },
+                              "id": {
+                                "type": "string"
+                              },
+                              "usagePeriod": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "vacation",
+                                  "rol",
+                                  "permit"
+                                ]
+                              },
+                              "hours": {
+                                "type": "number"
+                              },
+                              "payrollPeriod": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                              }
+                            },
+                            "required": [
+                              "source",
+                              "id",
+                              "usagePeriod",
+                              "kind",
+                              "hours",
+                              "payrollPeriod"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "years": {
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "unrecorded": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "month": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "vacation",
+                              "rol"
+                            ]
+                          },
+                          "payrollMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "recordedMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "missingMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "month",
+                          "kind",
+                          "payrollMinutes",
+                          "recordedMinutes",
+                          "missingMinutes"
+                        ]
+                      }
+                    },
+                    "overdrawn": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "vacation",
+                              "rol"
+                            ]
+                          },
+                          "byMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "basis": {
+                            "type": "string",
+                            "enum": [
+                              "payslip",
+                              "allowance",
+                              "unknown"
+                            ]
+                          },
+                          "snapshotPeriod": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "onDate": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "byMinutes",
+                          "basis",
+                          "snapshotPeriod",
+                          "onDate"
+                        ]
+                      }
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "takenMinutes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "plannedMinutes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "totalMinutes": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "byKind": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "vacation",
+                                  "rol",
+                                  "comp",
+                                  "sick",
+                                  "other"
+                                ]
+                              },
+                              "minutes": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "minutes"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "takenMinutes",
+                        "plannedMinutes",
+                        "totalMinutes",
+                        "byKind"
+                      ]
+                    },
+                    "countedThrough": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "months": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "month": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                          },
+                          "payroll": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "vacationMinutes": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "rolMinutes": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "vacationMinutes",
+                                  "rolMinutes"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "recorded": {
+                            "type": "object",
+                            "properties": {
+                              "vacationMinutes": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "rolMinutes": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              "otherMinutes": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "vacationMinutes",
+                              "rolMinutes",
+                              "otherMinutes"
+                            ]
+                          },
+                          "plannedMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "missingMinutes": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "counted": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "month",
+                          "payroll",
+                          "recorded",
+                          "plannedMinutes",
+                          "missingMinutes",
+                          "counted"
+                        ]
+                      }
+                    },
+                    "totalAllowanceMinutes": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "allowanceMismatch": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "holidays": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "residualInputs": {
+                      "type": "object",
+                      "properties": {
+                        "vacation": {
+                          "type": "object",
+                          "properties": {
+                            "snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "period": {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                    },
+                                    "remainingHours": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "period",
+                                    "remainingHours"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "allowanceMinutes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "carriedMinutes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "days": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "on": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "vacation",
+                                      "rol",
+                                      "comp",
+                                      "sick",
+                                      "other"
+                                    ]
+                                  },
+                                  "fraction": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "on",
+                                  "kind",
+                                  "fraction"
+                                ]
+                              }
+                            },
+                            "countedThrough": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "minutesPerDay": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "snapshot",
+                            "allowanceMinutes",
+                            "carriedMinutes",
+                            "days",
+                            "countedThrough",
+                            "minutesPerDay"
+                          ]
+                        },
+                        "rol": {
+                          "type": "object",
+                          "properties": {
+                            "snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "period": {
+                                      "type": "string",
+                                      "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                    },
+                                    "remainingHours": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "period",
+                                    "remainingHours"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "allowanceMinutes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "carriedMinutes": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "days": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "on": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "vacation",
+                                      "rol",
+                                      "comp",
+                                      "sick",
+                                      "other"
+                                    ]
+                                  },
+                                  "fraction": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "on",
+                                  "kind",
+                                  "fraction"
+                                ]
+                              }
+                            },
+                            "countedThrough": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "minutesPerDay": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "snapshot",
+                            "allowanceMinutes",
+                            "carriedMinutes",
+                            "days",
+                            "countedThrough",
+                            "minutesPerDay"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "vacation",
+                        "rol"
+                      ]
+                    },
+                    "accrual": {
+                      "type": "object",
+                      "properties": {
+                        "vacation": {
+                          "type": "object",
+                          "properties": {
+                            "rate": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "minutesPerMonth": {
+                                      "type": "number"
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "enum": [
+                                        "payslip",
+                                        "allowance"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "minutesPerMonth",
+                                    "source"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "yearEndMinutes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "payslipPeriod": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "leads": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "rate",
+                            "yearEndMinutes",
+                            "payslipPeriod",
+                            "leads"
+                          ]
+                        },
+                        "rol": {
+                          "type": "object",
+                          "properties": {
+                            "rate": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "minutesPerMonth": {
+                                      "type": "number"
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "enum": [
+                                        "payslip",
+                                        "allowance"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "minutesPerMonth",
+                                    "source"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "yearEndMinutes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "payslipPeriod": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "leads": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "rate",
+                            "yearEndMinutes",
+                            "payslipPeriod",
+                            "leads"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "vacation",
+                        "rol"
+                      ]
+                    },
+                    "forecastInputs": {
+                      "type": "object",
+                      "properties": {
+                        "vacation": {
+                          "type": "object",
+                          "properties": {
+                            "rate": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "minutesPerMonth": {
+                                      "type": "number"
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "enum": [
+                                        "payslip",
+                                        "allowance"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "minutesPerMonth",
+                                    "source"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "opening": {
+                              "type": "object",
+                              "properties": {
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "payslip",
+                                    "year"
+                                  ]
+                                },
+                                "minutes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "accruedThrough": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                "spentFrom": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "source",
+                                "minutes",
+                                "accruedThrough",
+                                "spentFrom"
+                              ]
+                            },
+                            "days": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "on": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "vacation",
+                                      "rol",
+                                      "comp",
+                                      "sick",
+                                      "other"
+                                    ]
+                                  },
+                                  "fraction": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "on",
+                                  "kind",
+                                  "fraction"
+                                ]
+                              }
+                            },
+                            "minutesPerDay": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "rate",
+                            "opening",
+                            "days",
+                            "minutesPerDay"
+                          ]
+                        },
+                        "rol": {
+                          "type": "object",
+                          "properties": {
+                            "rate": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "minutesPerMonth": {
+                                      "type": "number"
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "enum": [
+                                        "payslip",
+                                        "allowance"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "minutesPerMonth",
+                                    "source"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "opening": {
+                              "type": "object",
+                              "properties": {
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "payslip",
+                                    "year"
+                                  ]
+                                },
+                                "minutes": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                "accruedThrough": {
+                                  "type": "string",
+                                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                                },
+                                "spentFrom": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "source",
+                                "minutes",
+                                "accruedThrough",
+                                "spentFrom"
+                              ]
+                            },
+                            "days": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "on": {
+                                    "type": "string"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "vacation",
+                                      "rol",
+                                      "comp",
+                                      "sick",
+                                      "other"
+                                    ]
+                                  },
+                                  "fraction": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "on",
+                                  "kind",
+                                  "fraction"
+                                ]
+                              }
+                            },
+                            "minutesPerDay": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "rate",
+                            "opening",
+                            "days",
+                            "minutesPerDay"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "vacation",
+                        "rol"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "year",
+                    "today",
+                    "minutesPerDay",
+                    "weekStart",
+                    "allowance",
+                    "vacation",
+                    "rol",
+                    "bars",
+                    "rows",
+                    "years",
+                    "unrecorded",
+                    "overdrawn",
+                    "totals",
+                    "countedThrough",
+                    "months",
+                    "totalAllowanceMinutes",
+                    "allowanceMismatch",
+                    "holidays",
+                    "residualInputs",
+                    "accrual",
+                    "forecastInputs"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/timeoff/allowances": {
+      "get": {
+        "operationId": "list_time_off_allowances",
+        "summary": "The allowance stated for each year, newest first.",
+        "tags": [
+          "timeoff"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "allowances": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "year": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "vacationDays": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "rolDays": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "totalDays": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "note": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "year",
+                          "vacationDays",
+                          "rolDays",
+                          "totalDays",
+                          "note"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "allowances"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/timeoff/allowances/{year}": {
+      "put": {
+        "operationId": "save_time_off_allowance",
+        "summary": "States the allowance of a year, in days; null for a part nobody states.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "vacationDays": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 400
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "rolDays": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 400
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "totalDays": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 400
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "vacationDays",
+                  "rolDays",
+                  "totalDays",
+                  "note"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "year": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "vacationDays": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "rolDays": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "totalDays": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "note": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "year",
+                    "vacationDays",
+                    "rolDays",
+                    "totalDays",
+                    "note"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/timeoff/days/{date}": {
+      "delete": {
+        "operationId": "remove_leave_on_date",
+        "summary": "Removes all the leave of one date. Answers what «Undo» sends back.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "undo": {
+                      "type": "object",
+                      "properties": {
+                        "dates": {
+                          "minItems": 1,
+                          "maxItems": 366,
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "rows": {
+                          "maxItems": 1830,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "on": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "vacation",
+                                  "rol",
+                                  "comp",
+                                  "sick",
+                                  "other"
+                                ]
+                              },
+                              "fraction": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "const": 0.5
+                                  },
+                                  {
+                                    "type": "number",
+                                    "const": 1
+                                  }
+                                ]
+                              },
+                              "note": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 200
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "on",
+                              "kind",
+                              "fraction",
+                              "note"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "dates",
+                        "rows"
+                      ]
+                    },
+                    "days": {
+                      "type": "number"
+                    },
+                    "removed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pending": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "undo",
+                    "days",
+                    "removed",
+                    "pending"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/timeoff/holidays/calendars": {
+      "get": {
+        "operationId": "list_holiday_calendars",
+        "summary": "The holiday calendars the person keeps, each with its days of this year and its last fetch.",
+        "tags": [
+          "timeoff"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "calendars": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "openholidays",
+                              "nager"
+                            ]
+                          },
+                          "country": {
+                            "type": "string"
+                          },
+                          "subdivision": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lastSyncedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lastError": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "days": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "source",
+                          "country",
+                          "subdivision",
+                          "lastSyncedAt",
+                          "lastError",
+                          "days"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "calendars"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      },
+      "post": {
+        "operationId": "add_holiday_calendar",
+        "summary": "Keeps a calendar and fetches this year and the next. A fetch that fails keeps the calendar, with its error, and answers `unavailable`: the daily pass tries again.",
+        "tags": [
+          "timeoff"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "openholidays",
+                      "nager"
+                    ]
+                  },
+                  "country": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 3
+                  },
+                  "subdivision": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  }
+                },
+                "required": [
+                  "source",
+                  "country",
+                  "subdivision",
+                  "label"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/timeoff/holidays/calendars/{id}": {
+      "delete": {
+        "operationId": "remove_holiday_calendar",
+        "summary": "Stops keeping a calendar; its days are no longer holidays.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/timeoff/holidays/calendars/{id}/refresh": {
+      "post": {
+        "operationId": "refresh_holiday_calendar",
+        "summary": "Fetches a calendar again, this year and the next, as the daily pass does.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/timeoff/holidays/countries": {
+      "get": {
+        "operationId": "list_holiday_countries",
+        "summary": "Every country either source can answer for, named in the person's language.",
+        "tags": [
+          "timeoff"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "countries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "openholidays",
+                              "nager"
+                            ]
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "hasSubdivisions": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "source",
+                          "code",
+                          "name",
+                          "hasSubdivisions"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "countries"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/timeoff/holidays/subdivisions": {
+      "get": {
+        "operationId": "list_holiday_subdivisions",
+        "summary": "The places inside a country, when the source can name them; none otherwise.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "openholidays",
+                "nager"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "places": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "code",
+                          "name",
+                          "path"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "places"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/timeoff/leave": {
+      "delete": {
+        "operationId": "remove_leave_range",
+        "summary": "Removes all the leave between two dates, ends included. Answers what «Undo» sends back.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "undo": {
+                      "type": "object",
+                      "properties": {
+                        "dates": {
+                          "minItems": 1,
+                          "maxItems": 366,
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "rows": {
+                          "maxItems": 1830,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "on": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "vacation",
+                                  "rol",
+                                  "comp",
+                                  "sick",
+                                  "other"
+                                ]
+                              },
+                              "fraction": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "const": 0.5
+                                  },
+                                  {
+                                    "type": "number",
+                                    "const": 1
+                                  }
+                                ]
+                              },
+                              "note": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 200
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "on",
+                              "kind",
+                              "fraction",
+                              "note"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "dates",
+                        "rows"
+                      ]
+                    },
+                    "days": {
+                      "type": "number"
+                    },
+                    "removed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pending": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "undo",
+                    "days",
+                    "removed",
+                    "pending"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      },
+      "post": {
+        "operationId": "save_leave",
+        "summary": "Books a range of days, one kind and one size for every day; weekends and holidays are left out. `editedKind` edits the row of one day; `otherKind` books «½ + ½». Answers what «Undo» sends back.",
+        "tags": [
+          "timeoff"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "vacation",
+                      "rol",
+                      "comp",
+                      "sick",
+                      "other"
+                    ]
+                  },
+                  "fraction": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "const": 0.5
+                      },
+                      {
+                        "type": "number",
+                        "const": 1
+                      }
+                    ]
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "editedKind": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "vacation",
+                          "rol",
+                          "comp",
+                          "sick",
+                          "other"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "otherKind": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "vacation",
+                          "rol",
+                          "comp",
+                          "sick",
+                          "other"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "kind",
+                  "fraction",
+                  "note",
+                  "editedKind",
+                  "otherKind"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "undo": {
+                      "type": "object",
+                      "properties": {
+                        "dates": {
+                          "minItems": 1,
+                          "maxItems": 366,
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "rows": {
+                          "maxItems": 1830,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "on": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "vacation",
+                                  "rol",
+                                  "comp",
+                                  "sick",
+                                  "other"
+                                ]
+                              },
+                              "fraction": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "const": 0.5
+                                  },
+                                  {
+                                    "type": "number",
+                                    "const": 1
+                                  }
+                                ]
+                              },
+                              "note": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 200
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "on",
+                              "kind",
+                              "fraction",
+                              "note"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "dates",
+                        "rows"
+                      ]
+                    },
+                    "days": {
+                      "type": "number"
+                    },
+                    "removed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pending": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "undo",
+                    "days",
+                    "removed",
+                    "pending"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/timeoff/leave/{id}": {
+      "delete": {
+        "operationId": "remove_leave_day",
+        "summary": "Removes one row of leave. Answers what «Undo» sends back.",
+        "tags": [
+          "timeoff"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "undo": {
+                      "type": "object",
+                      "properties": {
+                        "dates": {
+                          "minItems": 1,
+                          "maxItems": 366,
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "rows": {
+                          "maxItems": 1830,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "on": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "vacation",
+                                  "rol",
+                                  "comp",
+                                  "sick",
+                                  "other"
+                                ]
+                              },
+                              "fraction": {
+                                "anyOf": [
+                                  {
+                                    "type": "number",
+                                    "const": 0.5
+                                  },
+                                  {
+                                    "type": "number",
+                                    "const": 1
+                                  }
+                                ]
+                              },
+                              "note": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 200
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "on",
+                              "kind",
+                              "fraction",
+                              "note"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "dates",
+                        "rows"
+                      ]
+                    },
+                    "days": {
+                      "type": "number"
+                    },
+                    "removed": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pending": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "undo",
+                    "days",
+                    "removed",
+                    "pending"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/timeoff/leave/undo": {
+      "post": {
+        "operationId": "undo_leave",
+        "summary": "Puts the touched days back as they were before a write, in one transaction.",
+        "tags": [
+          "timeoff"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "dates": {
+                    "minItems": 1,
+                    "maxItems": 366,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "rows": {
+                    "maxItems": 1830,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "on": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "vacation",
+                            "rol",
+                            "comp",
+                            "sick",
+                            "other"
+                          ]
+                        },
+                        "fraction": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "const": 0.5
+                            },
+                            {
+                              "type": "number",
+                              "const": 1
+                            }
+                          ]
+                        },
+                        "note": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "maxLength": 200
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "on",
+                        "kind",
+                        "fraction",
+                        "note"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "dates",
+                  "rows"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
     "/transactions": {
       "get": {
         "operationId": "list_transactions",
@@ -31842,6 +35100,28 @@
           },
           "other": {
             "type": "string"
+          },
+          "refused": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "on": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "weekend",
+                    "holiday"
+                  ]
+                }
+              },
+              "required": [
+                "on",
+                "reason"
+              ]
+            }
           }
         },
         "required": [

@@ -28,6 +28,8 @@ import * as review from "./transactions/review";
 import * as rules from "./transactions/rules";
 import * as spending from "./transactions/spending";
 import * as subscriptions from "./subscriptions/subscriptions";
+import * as holidays from "./timeoff/holidays";
+import * as timeoff from "./timeoff/timeoff";
 
 /** The routes of users and settings by area, for `apps/api` to serve each one by name. */
 export const SETTINGS = {
@@ -108,6 +110,15 @@ export const INTERESTS = { interests } as const;
 /** Interests, the seventh module of R2 (05-refactor.md §5.2). */
 export const INTERESTS_ROUTES: readonly RouteContract[] = Object.values(interests);
 
+/** Time off by area, for `apps/api` to serve each one by name. */
+export const TIMEOFF = { timeoff, holidays } as const;
+
+/** Time off, the eighth module of R2 (05-refactor.md §5.2), with its holiday calendars (TOF-6). */
+export const TIMEOFF_ROUTES: readonly RouteContract[] = [
+  ...Object.values(timeoff),
+  ...Object.values(holidays),
+];
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
@@ -117,4 +128,5 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...POCKETS_ROUTES,
   ...SUBSCRIPTIONS_ROUTES,
   ...INTERESTS_ROUTES,
+  ...TIMEOFF_ROUTES,
 ];

@@ -23,7 +23,7 @@ export {
   minuteWeight,
 } from "./days";
 export type { LeaveDayKind, LeaveDayView } from "./days";
-export { residual, monthBars, calendar } from "./residual";
+export { RESIDUAL_BASES, residual, monthBars, calendar } from "./residual";
 export type {
   ResidualBasis,
   ResidualInput,
