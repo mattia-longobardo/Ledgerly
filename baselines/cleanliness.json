@@ -121,7 +121,7 @@
     "packages/domain/src/modules/investments/cutoff.ts": 1,
     "packages/domain/src/modules/investments/history.ts": 1,
     "packages/domain/src/modules/investments/period.ts": 1,
-    "packages/domain/src/modules/investments/pnl.ts": 8,
+    "packages/domain/src/modules/investments/pnl.ts": 7,
     "packages/domain/src/modules/investments/queries.ts": 5,
     "packages/domain/src/modules/investments/rules.ts": 3,
     "packages/domain/src/modules/investments/service.ts": 1,
@@ -392,7 +392,7 @@
     "packages/domain/src/modules/investments/activity.ts": 1,
     "packages/domain/src/modules/investments/cutoff.ts": 7,
     "packages/domain/src/modules/investments/history.ts": 4,
-    "packages/domain/src/modules/investments/pnl.ts": 38,
+    "packages/domain/src/modules/investments/pnl.ts": 28,
     "packages/domain/src/modules/investments/positions.ts": 4,
     "packages/domain/src/modules/investments/queries.ts": 19,
     "packages/domain/src/modules/investments/rules.ts": 36,
@@ -504,7 +504,7 @@
     "plugins/enablebanking/src/server.ts": 2
   },
   "max-depth": {
-    "packages/domain/src/modules/investments/pnl.ts": 3,
+    "packages/domain/src/modules/investments/pnl.ts": 2,
     "packages/domain/src/modules/investments/queries.ts": 2,
     "packages/domain/src/modules/investments/rules.ts": 4,
     "plugins/enablebanking/src/handlers.ts": 2
@@ -845,7 +845,6 @@
     "packages/domain/src/modules/imports/pdf/text.ts": 1,
     "packages/domain/src/modules/investments/activity.ts": 1,
     "packages/domain/src/modules/investments/period.ts": 3,
-    "packages/domain/src/modules/investments/pnl.ts": 3,
     "packages/domain/src/modules/investments/queries.ts": 3,
     "packages/domain/src/modules/investments/service.ts": 5,
     "packages/domain/src/modules/investments/sync/connect.ts": 1,

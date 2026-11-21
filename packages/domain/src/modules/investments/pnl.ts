@@ -881,22 +881,31 @@ function basisOf(
   return { states, unheld };
 }
 
-/**
- * The P&L of one service over `[s, e]` (§4): V(e) − V(s⁻) − flows, split into realized, change of
- * the unrealized, income, fees, corrections and what is left unattributed — in the account's
- * currency and in the display one with the exchange effect — measured from the first day it can be
- * trusted, with its status (§4.6) and its return (§4.3). `s = null` is "All".
- */
-export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, display: Display): ServicePnl {
-  const { book, rates } = service;
-  const reasons = new Set<PnlReason>();
-  const empty = (from: CivilDate | null): ServicePnl => ({
+// ——— The steps of a service's P&L (§4, audit INV-8) ——————————————————————————————————————————————
+
+type Reasons = Set<PnlReason>;
+
+/** Where a period is measured from (§4.6): its first day, the day before it and the value then. */
+interface MeasuredStart {
+  from: CivilDate;
+  base: CivilDate;
+  startCents: Cents;
+}
+
+/** A service's P&L with nothing to measure: undetermined, with the reasons why (§4.6). */
+function undetermined(
+  service: PnlService,
+  from: CivilDate | null,
+  to: CivilDate,
+  reasons: Reasons,
+): ServicePnl {
+  return {
     accountId: service.accountId,
     currency: service.currency,
     status: "undetermined",
     reasons: [...reasons],
     from,
-    to: e,
+    to,
     partial: false,
     startCents: null,
     endCents: null,
@@ -912,115 +921,153 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     exits: [],
     transfers: [],
     holdings: [],
-  });
+  };
+}
 
-  const asked = s ?? firstDayOf(book) ?? e;
-  let from = asked;
-  if (from > e) {
-    reasons.add("no_value");
-    return empty(null);
-  }
+interface Span {
+  from: CivilDate;
+  to: CivilDate;
+  /** The cut-off of a synced service ({@link cutoffOf}). */
+  cutoff: CivilDate | null;
+}
 
-  // The service's own start (PERS-145): a synced service opens on its cut-off with its provider's
-  // opening, a flow in; what its provider covers before that day is no gap of the service.
-  const cutoff = cutoffOf(book);
-
-  // The flows (§4.6): from the end of the last gap that touches the period, and never before a
-  // stream starts. A gap still open on the last day leaves nothing to measure.
-  if (service.coverage !== null) {
-    const coverage = service.coverage
-      .filter((window) => cutoff === null || window.toOn > cutoff)
-      .map((window) => (cutoff !== null && window.fromOn < cutoff ? { ...window, fromOn: cutoff } : window));
-    const streams = new Set(coverage.map((window) => window.stream));
-    if (streams.size === 0) {
+/**
+ * The first day after the gaps of one stream's windows (§4.6); `null` when a gap is still open on
+ * the last day.
+ */
+function afterGaps(
+  book: Book,
+  windows: readonly CoverageWindow[],
+  span: Span,
+  reasons: Reasons,
+): CivilDate | null {
+  const { to, cutoff } = span;
+  let from = span.from;
+  for (const window of windows) {
+    if (window.complete || window.fromOn > to) continue;
+    // A stretch of the window read every day at one value, with nothing booked in it, moved no
+    // money (§4.6): covered. The cut-off's own day is its opening, a flow already booked.
+    const first = [window.fromOn, from, cutoff === null ? from : addDays(cutoff, 1)].sort().at(-1)!;
+    const last = addDays(window.toOn, -1) < to ? addDays(window.toOn, -1) : to;
+    if (first <= last && flatSince(book, last) <= first) continue;
+    if (window.toOn > to) {
       reasons.add("flows_gap");
-      return empty(null);
+      return null;
     }
-    for (const stream of streams) {
-      const windows = coverage.filter((window) => window.stream === stream);
-      const start = windows.reduce(
-        (min, window) => (window.fromOn < min ? window.fromOn : min),
-        windows[0].fromOn,
-      );
-      if (start > from && (cutoff === null || start > cutoff)) {
-        from = start;
-        reasons.add("flows_gap");
-      }
-      for (const window of windows) {
-        if (window.complete || window.fromOn > e) continue;
-        // A stretch of the window read every day at one value, with nothing booked in it, moved no
-        // money (§4.6): covered. The cut-off's own day is its opening, a flow already booked.
-        const first = [window.fromOn, from, cutoff === null ? from : addDays(cutoff, 1)].sort().at(-1)!;
-        const last = addDays(window.toOn, -1) < e ? addDays(window.toOn, -1) : e;
-        if (first <= last && flatSince(book, last) <= first) continue;
-        if (window.toOn > e) {
-          reasons.add("flows_gap");
-          return empty(null);
-        }
-        if (window.toOn > from) {
-          // A stretch read every day at one value, with nothing booked in it, moved no money (§4.6).
-          const flat = flatSince(book, addDays(window.toOn, -1));
-          const resumes = flat > from ? (flat < window.toOn ? flat : window.toOn) : from;
-          if (resumes > from) {
-            from = resumes;
-            reasons.add("flows_gap");
-          }
-        }
-      }
+    const resumes = resumedAfter(book, window, from);
+    if (resumes > from) {
+      from = resumes;
+      reasons.add("flows_gap");
     }
   }
+  return from;
+}
 
-  // The value before the first day: known, zero before an account whose flows hold its whole
-  // history — a manual one, a synced one from its cut-off on, or one with no opening inferred — or
-  // unknown: then the period starts after the first day with a value (never a base of 0).
-  const periods = sortedPeriods(book);
-  let base = addDays(from, -1);
-  let startCents = valueAt(book, base, rates).valueCents;
-  if (startCents === null) {
-    const before = periods.length === 0 || base < periods[0].fromOn;
-    const inferredOpening = book.events.some(
-      (event) => event.origin === "provider" && event.operations.some((op) => op.kind === "opening_position"),
+/**
+ * Where the flows resume after a gap that ended inside the period: the end of the window, or the
+ * start of the stretch before it read every day at one value with nothing booked, which moved no
+ * money (§4.6).
+ */
+function resumedAfter(book: Book, window: CoverageWindow, from: CivilDate): CivilDate {
+  if (window.toOn <= from) return from;
+  const flat = flatSince(book, addDays(window.toOn, -1));
+  return flat > from ? (flat < window.toOn ? flat : window.toOn) : from;
+}
+
+/**
+ * Step 1, the flows (§4.6): the period starts at the end of the last gap that touches it, and never
+ * before a stream starts; what a synced service's provider covers before its cut-off is no gap of
+ * the service (PERS-145). `null` when a gap is still open on the last day.
+ */
+function coveredFrom(service: PnlService, span: Span, reasons: Reasons): CivilDate | null {
+  if (service.coverage === null) return span.from;
+  const { cutoff } = span;
+  const coverage = service.coverage
+    .filter((window) => cutoff === null || window.toOn > cutoff)
+    .map((window) => (cutoff !== null && window.fromOn < cutoff ? { ...window, fromOn: cutoff } : window));
+  const streams = new Set(coverage.map((window) => window.stream));
+  if (streams.size === 0) {
+    reasons.add("flows_gap");
+    return null;
+  }
+  let from: CivilDate | null = span.from;
+  for (const stream of streams) {
+    const windows = coverage.filter((window) => window.stream === stream);
+    const start = windows.reduce(
+      (min, window) => (window.fromOn < min ? window.fromOn : min),
+      windows[0].fromOn,
     );
-    const whole =
-      periods[0]?.origin === "manual" || cutoff !== null || (service.coverage !== null && !inferredOpening);
-    if (before && whole) startCents = 0n;
-    else {
-      const days = [
-        ...new Set([...book.readings.map((reading) => reading.on), ...book.events.map((event) => event.on)]),
-      ]
-        .filter((day) => day >= from && day < e)
-        .sort();
-      for (const day of days) {
-        const value = valueAt(book, day, rates).valueCents;
-        if (value !== null) {
-          base = day;
-          startCents = value;
-          from = addDays(day, 1);
-          break;
-        }
-      }
-      reasons.add("base_unknown");
-      if (startCents === null) return empty(null);
+    if (start > from && (cutoff === null || start > cutoff)) {
+      from = start;
+      reasons.add("flows_gap");
     }
+    from = afterGaps(service.book, windows, { ...span, from }, reasons);
+    if (from === null) return null;
   }
+  return from;
+}
 
-  const end = valueAt(book, e, rates);
-  const start = valueAt(book, base, rates);
-  if (end.valueCents === null) {
-    reasons.add("no_value");
-    return empty(from);
+/**
+ * Step 2, the value before the first day: known; zero before an account whose flows hold its whole
+ * history — a manual one, a synced one from its cut-off on, or one with no opening inferred — or
+ * unknown: then the period starts after the first day with a value (never a base of 0). `null`
+ * when no day of the period has one.
+ */
+function startOf(service: PnlService, span: Span, reasons: Reasons): MeasuredStart | null {
+  const { book, rates } = service;
+  const base = addDays(span.from, -1);
+  const known = valueAt(book, base, rates).valueCents;
+  if (known !== null) return { from: span.from, base, startCents: known };
+  const periods = sortedPeriods(book);
+  const before = periods.length === 0 || base < periods[0].fromOn;
+  const inferredOpening = book.events.some(
+    (event) =>
+      event.origin === "provider" &&
+      event.operations.some((operation) => operation.kind === "opening_position"),
+  );
+  const whole =
+    periods[0]?.origin === "manual" ||
+    span.cutoff !== null ||
+    (service.coverage !== null && !inferredOpening);
+  if (before && whole) return { from: span.from, base, startCents: 0n };
+  reasons.add("base_unknown");
+  const days = [
+    ...new Set([...book.readings.map((reading) => reading.on), ...book.events.map((event) => event.on)]),
+  ]
+    .filter((day) => day >= span.from && day < span.to)
+    .sort();
+  for (const day of days) {
+    const value = valueAt(book, day, rates).valueCents;
+    if (value !== null) return { from: addDays(day, 1), base: day, startCents: value };
   }
-  const endCents = end.valueCents;
-  if (end.missing > 0 || start.missing > 0) reasons.add("stale_price");
+  return null;
+}
 
-  // The flows of [from, e], and the corrections of class `capital` as flows (§4.9).
-  const classOf = (eventId: string) => service.adjustmentClasses?.get(eventId) ?? "data";
-  const entries: {
-    on: CivilDate;
-    cents: Cents;
-    transferGroupId: string | null;
-    converted?: string | null;
-  }[] = flowEntriesOn(book, e)
+/**
+ * Steps 1 and 2: the days a service can be measured over from `asked` to `to` (§4.6), and its value
+ * before the first of them; `null` when none can.
+ */
+export function measuredStart(
+  service: PnlService,
+  asked: CivilDate,
+  to: CivilDate,
+  reasons: Reasons = new Set(),
+): MeasuredStart | null {
+  const cutoff = cutoffOf(service.book);
+  const from = coveredFrom(service, { from: asked, to, cutoff }, reasons);
+  return from === null ? null : startOf(service, { from, to, cutoff }, reasons);
+}
+
+const classOf = (service: PnlService, eventId: string): AdjustmentClass =>
+  service.adjustmentClasses?.get(eventId) ?? "data";
+
+/** A flow of the period before its conversion into the display currency. */
+type PeriodEntry = Omit<PeriodFlow, "displayCents">;
+
+/** Step 3, the flows of `[from, to]` (§4.6), and the corrections of class `capital` as flows (§4.9), by day. */
+export function periodFlows(service: PnlService, from: CivilDate, to: CivilDate): PeriodEntry[] {
+  const { book } = service;
+  const entries: PeriodEntry[] = flowEntriesOn(book, to)
     .filter((entry) => entry.on >= from)
     .map((entry) => ({
       on: entry.on,
@@ -1029,43 +1076,143 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
       converted: entry.converted ?? null,
     }));
   for (const event of book.events) {
-    if (classOf(event.id) !== "capital") continue;
-    for (const op of event.operations) {
-      if (op.kind !== "adjustment") continue;
-      if (event.on >= from && event.on <= e)
-        entries.push({ on: event.on, cents: op.amountCents, transferGroupId: null });
-      const ends = op.validUntil === null ? null : addDays(op.validUntil, 1);
-      if (ends !== null && ends >= from && ends <= e)
-        entries.push({ on: ends, cents: -op.amountCents, transferGroupId: null });
+    if (classOf(service, event.id) !== "capital") continue;
+    for (const operation of event.operations) {
+      if (operation.kind !== "adjustment") continue;
+      if (event.on >= from && event.on <= to)
+        entries.push({ on: event.on, cents: operation.amountCents, transferGroupId: null });
+      const ends = operation.validUntil === null ? null : addDays(operation.validUntil, 1);
+      if (ends !== null && ends >= from && ends <= to)
+        entries.push({ on: ends, cents: -operation.amountCents, transferGroupId: null });
     }
   }
-  entries.sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
-  const flowCents = entries.reduce((sum, entry) => sum + entry.cents, 0n);
-  const pnlCents = endCents - startCents - flowCents;
+  return entries.sort((left, right) => (left.on < right.on ? -1 : left.on > right.on ? 1 : 0));
+}
 
-  // The parts (§4.2) on the period's own basis (§4.4, PERS-145): a position open at s⁻ costs its
-  // value at s⁻, one bought in the period what it cost; a sale is realized against that basis; the
-  // unrealized is only that of the positions still open at e.
+/** Step 4, the income and the fees booked in `[from, to]` (§4.2). */
+export function incomeAndFees(
+  book: Book,
+  from: CivilDate,
+  to: CivilDate,
+): { incomeCents: Cents; feesCents: Cents } {
   let incomeCents = 0n;
   let feesCents = 0n;
   for (const event of book.events) {
-    if (event.on < from || event.on > e) continue;
-    for (const op of event.operations) {
-      if (op.kind === "income") incomeCents += op.amountCents;
-      else if (op.kind === "fee") feesCents += op.amountCents;
+    if (event.on < from || event.on > to) continue;
+    for (const operation of event.operations) {
+      if (operation.kind === "income") incomeCents += operation.amountCents;
+      else if (operation.kind === "fee") feesCents += operation.amountCents;
     }
   }
-  const correctionsCents =
-    correctionsOn(book, e, classOf, DATA_RESULT) - correctionsOn(book, base, classOf, DATA_RESULT);
+  return { incomeCents, feesCents };
+}
 
-  const replayBase = replayHoldings(book, base, service.externalIds);
+interface CostBases {
+  atStart: PositionsAt;
+  atEnd: PositionsAt;
+  basis: { states: Map<string, CostState>; unheld: Map<string, Cents> };
+  replayEnd: Replay;
+  /** No conversion between the two ends: the positions of both can be compared. */
+  samePeriod: boolean;
+}
+
+/**
+ * Step 5, the replay and the cost bases (§4.4, PERS-145): the positions at the end of `base` and
+ * of `to`, on the period's own basis — a position open at s⁻ costs its value at s⁻, one bought in
+ * the period what it cost.
+ */
+export function costBases(service: PnlService, base: CivilDate, to: CivilDate): CostBases {
+  const { book, rates, externalIds } = service;
+  const replayBase = replayHoldings(book, base, externalIds);
   const atStart = positionsOn(book, base, rates, replayBase);
   const basis = basisOf(book, atStart, replayBase);
-  const replayEnd = replayHoldings(book, e, service.externalIds, { on: base, states: basis.states });
-  const atEnd = positionsOn(book, e, rates, replayEnd);
-  const exits = replayEnd.exits.filter((exit) => exit.on >= from);
-  const samePeriod = periodIndexAt(book, base) === periodIndexAt(book, e) || periodIndexAt(book, base) < 0;
+  const replayEnd = replayHoldings(book, to, externalIds, { on: base, states: basis.states });
+  const atEnd = positionsOn(book, to, rates, replayEnd);
+  const startIndex = periodIndexAt(book, base);
+  return {
+    atStart,
+    atEnd,
+    basis,
+    replayEnd,
+    samePeriod: startIndex === periodIndexAt(book, to) || startIndex < 0,
+  };
+}
 
+/** What the parts are measured against: the P&L and the parts that are not a position's. */
+interface Known {
+  pnlCents: Cents;
+  endCents: Cents;
+  incomeCents: Cents;
+  feesCents: Cents;
+  correctionsCents: Cents;
+}
+
+/** The parts of the positions, by {@link groupKey}: realized, unrealized, the basis they stand on. */
+interface Attribution {
+  groupOfHolding: Map<string, string>;
+  realizedBy: Map<string, Cents>;
+  soldKeys: Set<string>;
+  startBy: Map<string, PositionAt>;
+  endBy: Map<string, PositionAt>;
+  unrealizedBy: Map<string, Cents>;
+  basisBy: Map<string, Cents>;
+  costUnknown: Set<string>;
+  unrealizedChangeCents: Cents | null;
+  openPositions: number;
+}
+
+const addTo = (map: Map<string, Cents>, key: string, cents: Cents) =>
+  map.set(key, (map.get(key) ?? 0n) + cents);
+
+/**
+ * The basis left at the last day, by {@link groupKey}; a position no event and no day of s⁻ speaks
+ * of costs what its provider says, or is unknown: the keys returned.
+ */
+function basisAtEnd(attribution: Attribution, replayEnd: Replay): Set<string> {
+  const { groupOfHolding, basisBy, endBy } = attribution;
+  for (const [holdingId, state] of replayEnd.costs) {
+    addTo(basisBy, groupOfHolding.get(holdingId) ?? holdingId, state.costCents);
+  }
+  const unknown = new Set<string>();
+  for (const [key, held] of endBy) {
+    if (basisBy.has(key)) continue;
+    if (held.costCents !== null) basisBy.set(key, held.costCents);
+    else unknown.add(key);
+  }
+  return unknown;
+}
+
+/**
+ * What is left of the basis at the last day (PERS-145), by asset (a provider's coin across its
+ * products) or by manual holding: against the value of a position still open, the unrealized;
+ * against a position gone or left as dust, what its closing realized.
+ */
+function measureOpen(attribution: Attribution, replayEnd: Replay): void {
+  const { basisBy, endBy, unrealizedBy, realizedBy, costUnknown } = attribution;
+  const unknown = basisAtEnd(attribution, replayEnd);
+  let openPositions = 0;
+  for (const key of new Set([...basisBy.keys(), ...endBy.keys()])) {
+    const held = endBy.get(key);
+    const open = held !== undefined && isOpen(held);
+    if (open) openPositions += 1;
+    if (unknown.has(key)) continue;
+    const rest = (held?.valueCents ?? 0n) - (basisBy.get(key) ?? 0n);
+    if (open) unrealizedBy.set(key, rest);
+    else if (rest !== 0n) addTo(realizedBy, key, rest);
+  }
+  attribution.unrealizedChangeCents =
+    unknown.size > 0 && unrealizedBy.size === 0 ? null : sumOf(unrealizedBy);
+  attribution.openPositions = openPositions;
+  for (const key of unknown) costUnknown.add(key);
+}
+
+/**
+ * Step 6, the parts of the positions (§4.2): a sale realized against the period's basis, the
+ * unrealized only of the positions still open at the last day. "Value only" (no positions): what is
+ * not income, fee or correction is the change of value; positions unknown at either end (a
+ * conversion in the period, a day of history with a total only): their change stays out.
+ */
+export function attribute(book: Book, bases: CostBases, exits: readonly Exit[], known: Known): Attribution {
   const groupOfHolding = new Map(
     book.holdings.map((holding) => [
       holding.id,
@@ -1074,66 +1221,48 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
   );
   const realizedBy = new Map<string, Cents>();
   const soldKeys = new Set<string>();
-  const addTo = (map: Map<string, Cents>, key: string, cents: Cents) =>
-    map.set(key, (map.get(key) ?? 0n) + cents);
   for (const exit of exits) {
     const key = groupOfHolding.get(exit.holdingId) ?? exit.holdingId;
     addTo(realizedBy, key, exit.proceedsCents - exit.costCents);
     soldKeys.add(key);
   }
-
-  const startBy = groupPositions(atStart.positions);
-  const endBy = groupPositions(atEnd.positions);
-  const unrealizedBy = new Map<string, Cents>();
-  const basisBy = new Map<string, Cents>(basis.unheld);
-  const costUnknown = new Set<string>();
-  let unrealizedChangeCents: Cents | null = 0n;
-  let openPositions = 0;
+  const { atStart, atEnd, samePeriod } = bases;
+  const attribution: Attribution = {
+    groupOfHolding,
+    realizedBy,
+    soldKeys,
+    startBy: groupPositions(atStart.positions),
+    endBy: groupPositions(atEnd.positions),
+    unrealizedBy: new Map(),
+    basisBy: new Map(bases.basis.unheld),
+    costUnknown: new Set(),
+    unrealizedChangeCents: 0n,
+    openPositions: 0,
+  };
   if (samePeriod && atEnd.kind === "total" && atStart.kind !== "positions") {
-    // "Value only" (§4.2): no positions — what is not income, fee or correction is the change of value.
-    unrealizedChangeCents = pnlCents - sumOf(realizedBy) - incomeCents - feesCents - correctionsCents;
-    openPositions = endCents !== 0n ? 1 : 0;
+    const { pnlCents, incomeCents, feesCents, correctionsCents } = known;
+    attribution.unrealizedChangeCents =
+      pnlCents - sumOf(realizedBy) - incomeCents - feesCents - correctionsCents;
+    attribution.openPositions = known.endCents !== 0n ? 1 : 0;
   } else if (
     !samePeriod ||
     atEnd.kind === "unknown" ||
     atEnd.kind === "total" ||
     atStart.kind === "unknown"
   ) {
-    // The positions of the last day are unknown (a conversion in the period, a day of history
-    // with a total only): their change stays out of the parts.
-    unrealizedChangeCents = null;
+    attribution.unrealizedChangeCents = null;
   } else {
-    // What is left of the basis at e, by asset (a provider's coin across its products) or by
-    // manual holding: against the value of a position still open, the unrealized; against a
-    // position gone or left as dust, what its closing realized.
-    for (const [holdingId, state] of replayEnd.costs) {
-      addTo(basisBy, groupOfHolding.get(holdingId) ?? holdingId, state.costCents);
-    }
-    // A position no event and no day of s⁻ speaks of: what its provider says it cost, or unknown.
-    const unknown = new Set<string>();
-    for (const [key, at] of endBy) {
-      if (basisBy.has(key)) continue;
-      if (at.costCents !== null) basisBy.set(key, at.costCents);
-      else unknown.add(key);
-    }
-    for (const key of new Set([...basisBy.keys(), ...endBy.keys()])) {
-      const at = endBy.get(key);
-      if (unknown.has(key)) {
-        if (at !== undefined && isOpen(at)) openPositions += 1;
-        continue;
-      }
-      const value = at?.valueCents ?? 0n;
-      const rest = value - (basisBy.get(key) ?? 0n);
-      if (at !== undefined && isOpen(at)) {
-        unrealizedBy.set(key, rest);
-        openPositions += 1;
-      } else if (rest !== 0n) addTo(realizedBy, key, rest);
-    }
-    unrealizedChangeCents = unknown.size > 0 && unrealizedBy.size === 0 ? null : sumOf(unrealizedBy);
-    for (const key of unknown) costUnknown.add(key);
+    measureOpen(attribution, bases.replayEnd);
   }
-  const realizedCents = sumOf(realizedBy);
-  const local: PnlParts = {
+  return attribution;
+}
+
+/** The parts in the account's currency (§4.2): what no part explains is left unattributed. */
+function localParts(attribution: Attribution, known: Known): PnlParts {
+  const { pnlCents, incomeCents, feesCents, correctionsCents } = known;
+  const { unrealizedChangeCents } = attribution;
+  const realizedCents = sumOf(attribution.realizedBy);
+  return {
     pnlCents,
     realizedCents,
     unrealizedChangeCents,
@@ -1144,32 +1273,50 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     unattributedCents:
       pnlCents - realizedCents - (unrealizedChangeCents ?? 0n) - incomeCents - feesCents - correctionsCents,
   };
+}
 
-  // By position: what each one added in the period (realized + unrealized), the sold ones too
-  // (PERS-113 · 4), on the same basis as the parts.
+/**
+ * Step 7, by position: what each one added in the period (realized + unrealized), the sold ones too
+ * (PERS-113 · 4), on the same basis as the parts.
+ */
+function holdingRows(book: Book, attribution: Attribution): HoldingPnl[] {
+  const { groupOfHolding, realizedBy, startBy, endBy, unrealizedBy, basisBy, costUnknown, soldKeys } =
+    attribution;
   const holdingIdOf = new Map<string, string>();
   for (const [holdingId, key] of groupOfHolding) if (!holdingIdOf.has(key)) holdingIdOf.set(key, holdingId);
   const assetOf = new Map(book.holdings.map((holding) => [holding.id, holding]));
-  const measured = unrealizedChangeCents !== null;
+  const measured = attribution.unrealizedChangeCents !== null;
   // A position open at e, with the period's basis as its cost: its unrealized is the part's.
   const endOf = (key: string): PositionAt | null => {
-    const at = endBy.get(key);
-    if (!at || !unrealizedBy.has(key)) return at ?? null;
-    const costCents = basisBy.get(key) ?? 0n;
-    return { ...at, costCents, costSource: "period", unrealizedCents: unrealizedBy.get(key)! };
-  };
-  const keys = new Set([...realizedBy.keys(), ...startBy.keys(), ...endBy.keys()]);
-  const holdings: HoldingPnl[] = [...keys].sort().map((key) => {
-    const realized = realizedBy.get(key) ?? 0n;
-    const change = measured && !costUnknown.has(key) ? (unrealizedBy.get(key) ?? 0n) : null;
-    const position = endBy.get(key) ?? startBy.get(key) ?? null;
-    const holdingId = position?.holdingId ?? holdingIdOf.get(key) ?? null;
-    const holding = holdingId === null ? undefined : assetOf.get(holdingId);
+    const held = endBy.get(key);
+    if (!held || !unrealizedBy.has(key)) return held ?? null;
     return {
-      key,
+      ...held,
+      costCents: basisBy.get(key) ?? 0n,
+      costSource: "period",
+      unrealizedCents: unrealizedBy.get(key)!,
+    };
+  };
+  // The holding, the asset and the product of a key: the position's, or its holding's when closed.
+  const positionOf = (key: string) => endBy.get(key) ?? startBy.get(key) ?? null;
+  const holdingOf = (holdingId: string | null) => (holdingId === null ? undefined : assetOf.get(holdingId));
+  const identity = (key: string) => {
+    const position = positionOf(key);
+    const holdingId = position?.holdingId ?? holdingIdOf.get(key) ?? null;
+    const holding = holdingOf(holdingId);
+    return {
       holdingId,
       assetId: position?.assetId ?? holding?.assetId ?? null,
       product: position?.product ?? holding?.product ?? null,
+    };
+  };
+  const keys = new Set([...realizedBy.keys(), ...startBy.keys(), ...endBy.keys()]);
+  return [...keys].sort().map((key) => {
+    const realized = realizedBy.get(key) ?? 0n;
+    const change = measured && !costUnknown.has(key) ? (unrealizedBy.get(key) ?? 0n) : null;
+    return {
+      key,
+      ...identity(key),
       realizedCents: realized,
       unrealizedChangeCents: change,
       contributionCents: change === null ? null : realized + change,
@@ -1179,77 +1326,200 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
       end: endOf(key),
     };
   });
+}
 
-  // The display currency (§4.5): V and every flow at the rate of its own day; the parts at the
-  // rate of the last day; the exchange effect is the difference, rounding included.
+/** The two ends of a period of a service, in its currency. */
+interface Ends extends MeasuredStart {
+  to: CivilDate;
+  endCents: Cents;
+}
+
+/**
+ * The P&L in the display currency (§4.5): V and every flow at the rate of its own day. `null` when
+ * a rate is missing.
+ */
+function displayTotal(
+  service: PnlService,
+  display: Display,
+  ends: Ends,
+  flows: readonly PeriodFlow[],
+): { startCents: Cents; endCents: Cents; pnlCents: Cents } | null {
   const toDisplay = (cents: Cents, on: CivilDate) =>
     convertCents(cents, service.currency, display.currency, on, display.rates);
-  const flows: PeriodFlow[] = entries.map((entry) => ({
+  const endCents = toDisplay(ends.endCents, ends.to);
+  const startCents = toDisplay(ends.startCents, ends.base);
+  if (endCents === null || startCents === null || flows.some((flow) => flow.displayCents === null))
+    return null;
+  const flowCents = flows.reduce((sum, flow) => sum + flow.displayCents!, 0n);
+  return { startCents, endCents, pnlCents: endCents - startCents - flowCents };
+}
+
+/**
+ * Step 8, the display currency (§4.5): the P&L at the rates of its days, the parts at the rate of
+ * the last day, the exchange effect the difference, rounding included; and the period's return.
+ */
+function inDisplay(
+  service: PnlService,
+  display: Display,
+  measure: { ends: Ends; entries: readonly PeriodEntry[]; local: PnlParts },
+  reasons: Reasons,
+) {
+  const { ends, local } = measure;
+  const toDisplay = (cents: Cents, on: CivilDate) =>
+    convertCents(cents, service.currency, display.currency, on, display.rates);
+  const flows: PeriodFlow[] = measure.entries.map((entry) => ({
     ...entry,
     displayCents: toDisplay(entry.cents, entry.on),
   }));
-  const endD = toDisplay(endCents, e);
-  const startD = toDisplay(startCents, base);
-  let displayParts: PnlParts | null = null;
-  let displayReturn: PeriodReturn | null = null;
-  let displayCapitalCents: number | null = null;
-  if (endD === null || startD === null || flows.some((flow) => flow.displayCents === null)) {
+  const total = displayTotal(service, display, ends, flows);
+  const startCents = toDisplay(ends.startCents, ends.base);
+  if (total === null) {
     reasons.add("no_rate");
-  } else {
-    const pnlD = endD - startD - flows.reduce((sum, flow) => sum + (flow.displayCents as Cents), 0n);
-    const at = (cents: Cents) => toDisplay(cents, e) as Cents;
-    const parts = {
-      realizedCents: at(realizedCents),
-      unrealizedChangeCents: unrealizedChangeCents === null ? null : at(unrealizedChangeCents),
-      incomeCents: at(incomeCents),
-      feesCents: at(feesCents),
-      correctionsCents: at(correctionsCents),
-      unattributedCents: at(local.unattributedCents),
-    };
-    const converted =
-      parts.realizedCents +
-      (parts.unrealizedChangeCents ?? 0n) +
-      parts.incomeCents +
-      parts.feesCents +
-      parts.correctionsCents +
-      parts.unattributedCents;
-    displayParts = { pnlCents: pnlD, ...parts, fxCents: pnlD - converted };
-    const displayFlows = flows.map((flow) => ({ on: flow.on, cents: flow.displayCents as Cents }));
-    displayReturn = periodReturn({
-      from,
-      to: e,
-      startCents: startD,
-      endCents: endD,
-      pnlCents: pnlD,
-      flows: displayFlows,
-    });
-    displayCapitalCents = displayReturn.averageCapitalCents;
+    return { flows, startCents, parts: null, periodReturn: null, capitalCents: null };
   }
+  const atEnd = (cents: Cents) => toDisplay(cents, ends.to)!;
+  const parts = {
+    realizedCents: atEnd(local.realizedCents),
+    unrealizedChangeCents: local.unrealizedChangeCents === null ? null : atEnd(local.unrealizedChangeCents),
+    incomeCents: atEnd(local.incomeCents),
+    feesCents: atEnd(local.feesCents),
+    correctionsCents: atEnd(local.correctionsCents),
+    unattributedCents: atEnd(local.unattributedCents),
+  };
+  const converted =
+    parts.realizedCents +
+    (parts.unrealizedChangeCents ?? 0n) +
+    parts.incomeCents +
+    parts.feesCents +
+    parts.correctionsCents +
+    parts.unattributedCents;
+  const measured = periodReturn({
+    from: ends.from,
+    to: ends.to,
+    startCents: total.startCents,
+    endCents: total.endCents,
+    pnlCents: total.pnlCents,
+    flows: flows.map((flow) => ({ on: flow.on, cents: flow.displayCents! })),
+  });
+  return {
+    flows,
+    startCents,
+    parts: { pnlCents: total.pnlCents, ...parts, fxCents: total.pnlCents - converted },
+    periodReturn: measured,
+    capitalCents: measured.averageCapitalCents,
+  };
+}
 
-  const status: PnlStatus = reasons.has("stale_price") ? "stale" : "verified";
+/** Steps 3 and 4 summed: the P&L of the ends and the flows, the income, the fees and the corrections. */
+function knownOf(service: PnlService, ends: Ends, entries: readonly PeriodEntry[]): Known {
+  const { book } = service;
+  const classes = (eventId: string) => classOf(service, eventId);
+  return {
+    pnlCents: ends.endCents - ends.startCents - entries.reduce((sum, entry) => sum + entry.cents, 0n),
+    endCents: ends.endCents,
+    ...incomeAndFees(book, ends.from, ends.to),
+    correctionsCents:
+      correctionsOn(book, ends.to, classes, DATA_RESULT) -
+      correctionsOn(book, ends.base, classes, DATA_RESULT),
+  };
+}
+
+/** Step 9, the status (§4.6): `stale` when a price or a rate of either end is an old one. */
+function statusOf(reasons: Reasons): PnlStatus {
+  return reasons.has("stale_price") ? "stale" : "verified";
+}
+
+/**
+ * The P&L of one service over `[since, until]` (§4): V(e) − V(s⁻) − flows, split into realized,
+ * change of the unrealized, income, fees, corrections and what is left unattributed — in the
+ * account's currency and in the display one with the exchange effect — measured from the first day
+ * it can be trusted, with its status (§4.6) and its return (§4.3). `since = null` is "All".
+ */
+export function pnlOf(
+  service: PnlService,
+  since: CivilDate | null,
+  until: CivilDate,
+  display: Display,
+): ServicePnl {
+  const { book, rates } = service;
+  const reasons: Reasons = new Set();
+  const asked = since ?? firstDayOf(book) ?? until;
+  if (asked > until) {
+    reasons.add("no_value");
+    return undetermined(service, null, until, reasons);
+  }
+  const start = measuredStart(service, asked, until, reasons);
+  if (start === null) return undetermined(service, null, until, reasons);
+  const { from, base, startCents } = start;
+  const end = valueAt(book, until, rates);
+  if (end.valueCents === null) {
+    reasons.add("no_value");
+    return undetermined(service, from, until, reasons);
+  }
+  const endCents = end.valueCents;
+  if (end.missing > 0 || valueAt(book, base, rates).missing > 0) reasons.add("stale_price");
+
+  const entries = periodFlows(service, from, until);
+  const ends: Ends = { ...start, to: until, endCents };
+  const known = knownOf(service, ends, entries);
+  const bases = costBases(service, base, until);
+  const exits = bases.replayEnd.exits.filter((exit) => exit.on >= from);
+  const attribution = attribute(book, bases, exits, known);
+  const local = localParts(attribution, known);
+  const shown = inDisplay(service, display, { ends, entries, local }, reasons);
   return {
     accountId: service.accountId,
     currency: service.currency,
-    status,
+    status: statusOf(reasons),
     reasons: [...reasons],
     from,
-    to: e,
+    to: until,
     partial: from > asked,
     startCents,
     endCents,
-    endCashCents: atEnd.cashCents,
-    openPositions,
+    endCashCents: bases.atEnd.cashCents,
+    openPositions: attribution.openPositions,
     local,
-    display: displayParts,
-    localReturn: periodReturn({ from, to: e, startCents, endCents, pnlCents, flows: entries }),
-    displayReturn,
-    displayStartCents: startD,
-    displayCapitalCents,
-    flows,
+    display: shown.parts,
+    localReturn: periodReturn({
+      from,
+      to: until,
+      startCents,
+      endCents,
+      pnlCents: known.pnlCents,
+      flows: entries,
+    }),
+    displayReturn: shown.periodReturn,
+    displayStartCents: shown.startCents,
+    displayCapitalCents: shown.capitalCents,
+    flows: shown.flows,
     exits,
-    transfers: replayEnd.transfers.filter((one) => one.on >= from),
-    holdings,
+    transfers: bases.replayEnd.transfers.filter((one) => one.on >= from),
+    holdings: holdingRows(book, attribution),
   };
+}
+
+/**
+ * The P&L of a service from the first day of `whole` to each of `days` (audit INV-8), in the
+ * display currency: what `pnlOf(service, whole.from, day)` says of it — the same start, the value
+ * of the day and the flows of `whole` up to it — without replaying the positions for each day.
+ * `null` where nothing can be measured. The bars of the P&L chart are its differences.
+ */
+export function pnlThrough(
+  service: PnlService,
+  whole: ServicePnl,
+  days: readonly CivilDate[],
+  display: Display,
+): (Cents | null)[] {
+  return days.map((day) => {
+    if (whole.from === null || day < whole.from) return null;
+    const start = measuredStart(service, whole.from, day);
+    if (start === null) return null;
+    const endCents = valueAt(service.book, day, service.rates).valueCents;
+    if (endCents === null) return null;
+    const flows = whole.flows.filter((flow) => flow.on >= start.from && flow.on <= day);
+    return displayTotal(service, display, { ...start, to: day, endCents }, flows)?.pnlCents ?? null;
+  });
 }
 
 // ——— The portfolio (§4.6, §4.8, §4.9) ——————————————————————————————————————————————————————

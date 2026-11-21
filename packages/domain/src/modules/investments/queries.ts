@@ -68,6 +68,7 @@ import {
   type PnlPeriod,
   pnlOf,
   type PnlService,
+  pnlThrough,
   portfolioPnl,
   type PortfolioPnl,
   replayHoldings,
@@ -1300,24 +1301,25 @@ async function pnlView(
       return cents === null ? null : convertCents(cents, one.account.currency, display.currency, day, rates);
     });
 
-    const bars: (Cents | null)[] = [];
+    // The P&L from the first day measured to the end of each bar, the last the hero's own (INV-8).
+    const through =
+      whole.display === null
+        ? intervals.map(() => null)
+        : [
+            ...pnlThrough(
+              service,
+              whole,
+              intervals.slice(0, -1).map((interval) => interval.to),
+              display,
+            ),
+            whole.display.pnlCents,
+          ];
     let before: Cents = 0n;
-    intervals.forEach((interval, index) => {
-      const from = whole.from;
-      if (whole.display === null || from === null || interval.to < from) {
-        bars.push(null);
-        return;
-      }
-      const last = index === intervals.length - 1;
-      const through = last
-        ? whole.display.pnlCents
-        : pnlOf(service, from, interval.to, display).display?.pnlCents;
-      if (through === null || through === undefined) {
-        bars.push(null);
-        return;
-      }
-      bars.push(through - before);
-      before = through;
+    const bars = through.map((cents) => {
+      if (cents === null) return null;
+      const bar = cents - before;
+      before = cents;
+      return bar;
     });
     return {
       accountId: one.account.id,
