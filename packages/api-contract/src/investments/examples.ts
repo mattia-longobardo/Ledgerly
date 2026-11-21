@@ -11,7 +11,7 @@ export const PARTS_EXAMPLE = {
   fx: "0.00",
 } as const;
 
-const FULL_PARTS = { ...PARTS_EXAMPLE, unattributed: "0.00" };
+export const FULL_PARTS = { ...PARTS_EXAMPLE, unattributed: "0.00", feesAndFx: "0.00", beforeFx: "650.00" };
 
 export const PERIOD_EXAMPLE = {
   kind: "year",
@@ -93,6 +93,8 @@ export const CHART_EXAMPLE = {
   bars: ["650.00"],
   cumulative: ["650.00"],
   values: ["12650.00"],
+  returns: [0.054167],
+  cumulativeReturns: [0.054167],
 } as const;
 
 export const CONTRIBUTIONS_EXAMPLE = {

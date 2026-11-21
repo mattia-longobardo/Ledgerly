@@ -17,7 +17,7 @@ import {
   servicePositions,
   unitPriceOf,
 } from "@ledgerly/domain/investments";
-import type { CivilDate } from "@ledgerly/domain/shared/dates";
+import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { type Cents, formatDecimal } from "@ledgerly/domain/shared/money";
 import {
   assetOut,
@@ -137,6 +137,8 @@ function openOut(detail: ServiceDetail, view: PositionsData) {
     }),
     cash: maybe(cash),
     total: money(total),
+    pnl: money(open.reduce<Cents>((sum, row) => sum + (row.contributionCents ?? 0n), 0n)),
+    cashShare: ratio(share(cash)),
     noCost: open.filter((row) => row.end.costCents === null).length,
     byClass: byClassOf(open, view.assets).map((group) => ({
       key: group.key,
@@ -161,6 +163,7 @@ export function positionsOut(detail: ServiceDetail, view: PositionsData): Positi
       service.display === null
         ? null
         : { pnl: money(service.display.pnlCents), fx: money(service.display.fxCents) },
+    startOn: service.from === null ? null : addDays(service.from, -1),
     open: openOut(detail, view),
     closedInPeriod: closedOut(service.exits, view.holdings),
     closedEver: closedOut(view.allExits, view.holdings),
@@ -171,7 +174,44 @@ export function positionsOut(detail: ServiceDetail, view: PositionsData): Positi
   };
 }
 
-function syncOut(sync: Sync, connectionId: string | null): NonNullable<Connection["sync"]> {
+type CoverageRow = Sync["coverage"][number];
+
+function coverageOut(row: CoverageRow) {
+  return {
+    kind: row.kind,
+    stream: row.stream,
+    from: row.fromAt.toISOString(),
+    to: row.toAt.toISOString(),
+    status: row.status,
+    reason: row.reason,
+  };
+}
+
+/**
+ * The coverage on the days the service reads (PERS-145), by the person's day as the engine reads them:
+ * before `managedSince` nothing is kept, so a window that ends on or before it goes, one across it starts there.
+ */
+function visibleCoverage(sync: Sync, managedSince: CivilDate, timeZone: string) {
+  const dayOf = (moment: Date) => civilDateIn(moment, timeZone);
+  const since = new Date(`${managedSince}T00:00:00Z`);
+  const visible = sync.coverage
+    .filter((row) => dayOf(row.toAt) > managedSince)
+    .map((row) => (dayOf(row.fromAt) < managedSince ? { ...row, fromAt: since } : row));
+  const flows = visible.filter(
+    (row) => row.kind === "flows" && row.stream !== "quantities" && row.stream !== "balance_history",
+  );
+  return {
+    visibleCoverage: visible.map(coverageOut),
+    activityFrom: flows.length === 0 ? null : flows.map((row) => dayOf(row.fromAt)).sort()[0],
+  };
+}
+
+function syncOut(
+  sync: Sync,
+  connectionId: string | null,
+  managedSince: CivilDate,
+  timeZone: string,
+): NonNullable<Connection["sync"]> {
   return {
     provider: sync.provider,
     connected: sync.connected,
@@ -191,16 +231,10 @@ function syncOut(sync: Sync, connectionId: string | null): NonNullable<Connectio
     keySetAt: iso(sync.keySetAt),
     rotateDue: sync.rotateDue,
     revokePending: sync.revokePending,
-    coverage: sync.coverage.map((row) => ({
-      kind: row.kind,
-      stream: row.stream,
-      from: row.fromAt.toISOString(),
-      to: row.toAt.toISOString(),
-      status: row.status,
-      reason: row.reason,
-    })),
+    coverage: sync.coverage.map(coverageOut),
     reliableFrom: iso(sync.reliableFrom),
     complete: sync.complete,
+    ...visibleCoverage(sync, managedSince, timeZone),
   };
 }
 
@@ -209,6 +243,7 @@ export function connectionOut(
   detail: ServiceDetail,
   todayOn: CivilDate,
   connectionId: string | null,
+  timeZone: string,
 ): Connection {
   const { summary } = detail;
   return {
@@ -218,7 +253,10 @@ export function connectionOut(
     currency: detail.currency,
     warnings: warningsOut(summary.warnings),
     provider: detail.sync === null ? null : connectableOut(detail.sync.provider),
-    sync: detail.sync === null ? null : syncOut(detail.sync, connectionId),
+    sync:
+      detail.sync === null
+        ? null
+        : syncOut(detail.sync, connectionId, summary.investment.managedSince, timeZone),
     readings: detail.readings.map((reading) => ({
       id: reading.id,
       on: reading.on,

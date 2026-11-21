@@ -3,6 +3,30 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · investments: what the pages read (0.55.0)
+
+The reads of Investments answer every figure the pages show, so a client never sums or scales. Every
+field below is new; nothing that was there changes.
+
+- Every P&L's parts (`pnl.parts` of the home, `local` and `display` of each service's P&L): `feesAndFx`
+  (`fees` + `fx`, the tile «Fees and exchange») and `beforeFx` (`pnl` − `fx`, the bridge from the
+  account's currency).
+- `chart` (home and Overview): `returns` and `cumulativeReturns`, the Return view — each bar and the
+  running total as a fraction of the period's capital, so the running total ends on the period's return
+  (the portfolio's on the home, the service's display return on the Overview); all null when the period
+  has no return to share.
+- `GET /investments/{accountId}`: `service.manualPnl.staleDays`, the days after which a value typed by
+  hand is old.
+- `GET /investments/{accountId}/positions`: `startOn` (the day before the P&L's measured days start, for
+  «positions on <date>»); `open.pnl` (the total row: Σ of the rows' `pnl`) and `open.cashShare` (the
+  cash's share of `open.total`).
+- `GET /investments/{accountId}/activity`: `sums.net` (deposits + withdrawals), `first` and `last` (the
+  page's rows among `total`, 1-based, both 0 with none); for a manual service, `net`.
+- `GET /investments/{accountId}/connection`: `sync.visibleCoverage` (`coverage` on the days the service
+  reads: the windows that end after `managedSince`, by the person's day, those across it started there)
+  and `sync.activityFrom` (the earliest day the flows cover, but quantities and balance history).
+- MCP `get_investment` answers the same new fields, as it answers the route.
+
 ## 2026-11-21 · funds: what the pages read (0.54.0)
 
 The reads of Funds answer every figure the pages show, so a client never sums, filters by period or

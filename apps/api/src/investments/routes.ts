@@ -213,7 +213,7 @@ function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
     const connected = sync?.connected
       ? ((await listConnections(ctx)).find((one) => one.provider === sync.provider) ?? null)
       : null;
-    return connectionOut(detail, today(ctx.timeZone), connected?.id ?? null);
+    return connectionOut(detail, today(ctx.timeZone), connected?.id ?? null, ctx.timeZone);
   });
 }
 

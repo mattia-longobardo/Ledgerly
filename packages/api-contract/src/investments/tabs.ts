@@ -63,6 +63,8 @@ export const investmentPositions = z.object({
   status: z.enum(PNL_STATUSES),
   /** Display P&L and its exchange effect, for the bridge from the account's currency. */
   display: z.object({ pnl: money(), fx: money() }).nullable(),
+  /** The day before the P&L's measured days start: «positions on <date>»; null when nothing is measured. */
+  startOn: civilDate().nullable(),
   open: z.object({
     /** By value, largest first. */
     rows: z.array(
@@ -84,6 +86,10 @@ export const investmentPositions = z.object({
     ),
     cash: money().nullable(),
     total: money(),
+    /** Σ of the rows' `pnl`: the total row. */
+    pnl: money(),
+    /** Share of `total` the cash is. */
+    cashShare: ratio(),
     /** Rows with no cost. */
     noCost: z.number().int(),
     byClass: z.array(z.object({ key: z.enum(ASSET_CLASSES), value: money(), pnl: money(), share: ratio() })),
@@ -96,6 +102,15 @@ export const investmentPositions = z.object({
   assets: z.array(asset),
   /** The reading a reconciliation refers to. */
   latestReading: z.object({ id: id(), on: civilDate() }).nullable(),
+});
+
+const coverageRow = z.object({
+  kind: z.string(),
+  stream: z.string(),
+  from: instant(),
+  to: instant(),
+  status: z.enum(COVERAGE_STATUSES),
+  reason: z.string().nullable(),
 });
 
 /**
@@ -130,18 +145,16 @@ export const investmentConnection = z.object({
       rotateDue: z.boolean(),
       /** Retired keys not yet confirmed revoked at the provider. */
       revokePending: z.boolean(),
-      coverage: z.array(
-        z.object({
-          kind: z.string(),
-          stream: z.string(),
-          from: instant(),
-          to: instant(),
-          status: z.enum(COVERAGE_STATUSES),
-          reason: z.string().nullable(),
-        }),
-      ),
+      coverage: z.array(coverageRow),
       reliableFrom: instant().nullable(),
       complete: z.boolean(),
+      /**
+       * `coverage` on the days the service reads: the windows that end after `managedSince` (by the person's
+       * day), the earlier ones started on it. What the page lists.
+       */
+      visibleCoverage: z.array(coverageRow),
+      /** The earliest day the flows (but quantities and balance history) cover, of `visibleCoverage`. */
+      activityFrom: civilDate().nullable(),
     })
     .nullable(),
   /** Newest first. */

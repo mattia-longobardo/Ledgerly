@@ -3431,7 +3431,8 @@
      "pnl": "650.00",
      "rate": 0.054167,
      "valuedOn": "2031-10-14",
-     "stale": false
+     "stale": false,
+     "staleDays": 30
     },
     "sync": null,
     "assets": [],
@@ -3707,7 +3708,9 @@
      "fees": "0.00",
      "corrections": "0.00",
      "fx": "0.00",
-     "unattributed": "0.00"
+     "unattributed": "0.00",
+     "feesAndFx": "0.00",
+     "beforeFx": "650.00"
     },
     "display": {
      "pnl": "650.00",
@@ -3717,7 +3720,9 @@
      "fees": "0.00",
      "corrections": "0.00",
      "fx": "0.00",
-     "unattributed": "0.00"
+     "unattributed": "0.00",
+     "feesAndFx": "0.00",
+     "beforeFx": "650.00"
     },
     "localReturn": {
      "modifiedDietz": 0.060214,
@@ -3835,6 +3840,26 @@
      "10300.00",
      "10300.00",
      "12650.00"
+    ],
+    "returns": [
+     null,
+     null,
+     null,
+     0.027791,
+     -0.185275,
+     0,
+     0,
+     0.217698
+    ],
+    "cumulativeReturns": [
+     null,
+     null,
+     null,
+     0.027791,
+     -0.157484,
+     -0.157484,
+     -0.157484,
+     0.060214
     ],
     "markers": [
      "in",

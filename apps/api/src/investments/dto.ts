@@ -132,9 +132,15 @@ function partsJson(parts: PnlParts | null) {
   };
 }
 
-/** The parts with what no part explains, as the pages' P&L reads them. */
+/** The parts with what no part explains, and the two sums the pages print, as the pages' P&L reads them. */
 export function fullParts(parts: PnlParts | null) {
-  return parts === null ? null : { ...partsJson(parts)!, unattributed: money(parts.unattributedCents) };
+  if (parts === null) return null;
+  return {
+    ...partsJson(parts)!,
+    unattributed: money(parts.unattributedCents),
+    feesAndFx: money(parts.feesCents + parts.fxCents),
+    beforeFx: money(parts.pnlCents - parts.fxCents),
+  };
 }
 
 /**
@@ -275,12 +281,28 @@ const runningTotal = (values: readonly (Cents | null)[]) => {
   return values.map((cents) => (cents === null ? null : (total += cents)));
 };
 
-/** The charts of the period, with the sums the page draws: each bar of the services, its running total, each day's value. */
-export function chartOut(view: View) {
+/**
+ * The Return view's scale: a bar's money as a fraction of the period's capital, so the bars add up to
+ * `rate`, the period's return of `totalCents` (the page's `returnScale`). Null with no return to share.
+ */
+function returnScale(totalCents: Cents | null, rate: number | null): number | null {
+  if (totalCents === null || rate === null || totalCents === 0n || rate === 0) return null;
+  return rate / Number(totalCents);
+}
+
+/**
+ * The charts of the period, with the sums the page draws: each bar of the services, its running total, each
+ * day's value, and both as returns over `totalCents`, the P&L whose return `rate` is.
+ */
+export function chartOut(view: View, totalCents: Cents | null, rate: number | null) {
   const bars = view.intervals.map((_interval, index) => {
     const known = view.chart.map((one) => one.bars[index]).filter((cents) => cents !== null);
     return known.length === 0 ? null : known.reduce<Cents>((sum, cents) => sum + cents!, 0n);
   });
+  const cumulative = runningTotal(bars);
+  const scale = returnScale(totalCents, rate);
+  const asReturns = (values: readonly (Cents | null)[]) =>
+    values.map((cents) => (cents === null || scale === null ? null : ratio(Number(cents) * scale)));
   return {
     barGrain: view.barGrain,
     intervals: view.intervals,
@@ -292,10 +314,12 @@ export function chartOut(view: View) {
       values: one.values.map(maybe),
     })),
     bars: bars.map(maybe),
-    cumulative: runningTotal(bars).map(maybe),
+    cumulative: cumulative.map(maybe),
     values: view.valueDays.map((_day, index) =>
       maybe(sumCents(view.chart.map((one) => one.values[index])).total),
     ),
+    returns: asReturns(bars),
+    cumulativeReturns: asReturns(cumulative),
   };
 }
 

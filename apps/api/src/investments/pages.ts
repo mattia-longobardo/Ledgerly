@@ -3,6 +3,7 @@
 import type { z } from "zod";
 import type { INVESTMENTS } from "@ledgerly/api-contract";
 import {
+  ACTIVITY_PAGE_SIZE,
   contributionsOf,
   investmentsHome,
   type ServiceDetail,
@@ -10,6 +11,7 @@ import {
   type ServicePnl,
   serviceActivity,
   serviceMovements,
+  STALE_VALUE_DAYS,
 } from "@ledgerly/domain/investments";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { type Cents, sumCents } from "@ledgerly/domain/shared/money";
@@ -177,7 +179,7 @@ export function homeOut(home: HomeData, pnl: View): Home {
       period.to < todayOn ? maybe(sumCents(pnl.chart.map((one) => one.values.at(-1) ?? null)).total) : null,
     services: homeServices(rows, portfolio),
     pnl: homePnl(portfolio),
-    chart: chartOut(pnl),
+    chart: chartOut(pnl, portfolio.parts?.pnlCents ?? null, portfolio.rate),
     ...composition(home, rows),
     funds: {
       total: maybe(sumCents(home.funds.map((fund) => fund.valueCents)).total),
@@ -215,6 +217,7 @@ function serviceHeaderOut(detail: ServiceDetail, colorIndex: number, firstOn: Ci
             rate: ratio(manual.rate),
             valuedOn: manual.valuedOn,
             stale: manual.stale,
+            staleDays: STALE_VALUE_DAYS,
           },
     sync:
       sync === null
@@ -249,7 +252,10 @@ export function overviewOut(detail: ServiceDetail, pnl: View, activity: Activity
     period: periodOut(pnl),
     service: serviceHeaderOut(detail, pnl.colorIndex.get(service.accountId) ?? 0, pnl.firstOn),
     pnl: servicePnlOut(service),
-    chart: { ...chartOut(pnl), markers },
+    chart: {
+      ...chartOut(pnl, service.display?.pnlCents ?? null, service.displayReturn?.dietz ?? null),
+      markers,
+    },
     contributions: contributionsOut(contributionsOf(service)),
     recent: (activity?.rows ?? []).slice(0, 5).map((row) => activityRowOut(row, realized)),
   };
@@ -280,7 +286,10 @@ export function activityOut(detail: ServiceDetail, pnl: View, activity: Activity
       deposits: money(activity.sums.depositsCents),
       withdrawals: money(activity.sums.withdrawalsCents),
       fees: money(activity.sums.feesCents),
+      net: money(activity.sums.depositsCents + activity.sums.withdrawalsCents),
     },
+    first: activity.total === 0 ? 0 : (activity.page - 1) * ACTIVITY_PAGE_SIZE + 1,
+    last: Math.min(activity.page * ACTIVITY_PAGE_SIZE, activity.total),
     rows: activity.rows.map((row) => activityRowOut(row, realized)),
     transferProposals: detail.transferProposals.map((row) => ({
       withdrawalId: row.withdrawalId,
@@ -306,5 +315,6 @@ export function movementsOut(pnl: View, movements: Movements): Activity {
     })),
     deposits: money(movements.depositsCents),
     withdrawals: money(movements.withdrawalsCents),
+    net: money(movements.depositsCents + movements.withdrawalsCents),
   };
 }

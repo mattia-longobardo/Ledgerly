@@ -25590,6 +25590,11 @@
                                 },
                                 "stale": {
                                   "type": "boolean"
+                                },
+                                "staleDays": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
                                 }
                               },
                               "required": [
@@ -25598,7 +25603,8 @@
                                 "pnl",
                                 "rate",
                                 "valuedOn",
-                                "stale"
+                                "stale",
+                                "staleDays"
                               ]
                             },
                             {
@@ -25964,6 +25970,14 @@
                                 "unattributed": {
                                   "type": "string",
                                   "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "feesAndFx": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "beforeFx": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
                                 }
                               },
                               "required": [
@@ -25974,7 +25988,9 @@
                                 "fees",
                                 "corrections",
                                 "fx",
-                                "unattributed"
+                                "unattributed",
+                                "feesAndFx",
+                                "beforeFx"
                               ]
                             },
                             {
@@ -26025,6 +26041,14 @@
                                 "unattributed": {
                                   "type": "string",
                                   "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "feesAndFx": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "beforeFx": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
                                 }
                               },
                               "required": [
@@ -26035,7 +26059,9 @@
                                 "fees",
                                 "corrections",
                                 "fx",
-                                "unattributed"
+                                "unattributed",
+                                "feesAndFx",
+                                "beforeFx"
                               ]
                             },
                             {
@@ -26291,6 +26317,24 @@
                             ]
                           }
                         },
+                        "returns": {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "cumulativeReturns": {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
                         "markers": {
                           "type": "array",
                           "items": {
@@ -26319,6 +26363,8 @@
                         "bars",
                         "cumulative",
                         "values",
+                        "returns",
+                        "cumulativeReturns",
                         "markers"
                       ]
                     },
@@ -27135,13 +27181,28 @@
                             "fees": {
                               "type": "string",
                               "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            "net": {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
                             }
                           },
                           "required": [
                             "deposits",
                             "withdrawals",
-                            "fees"
+                            "fees",
+                            "net"
                           ]
+                        },
+                        "first": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "last": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
                         },
                         "rows": {
                           "type": "array",
@@ -27462,6 +27523,8 @@
                         "counts",
                         "months",
                         "sums",
+                        "first",
+                        "last",
                         "rows",
                         "transferProposals"
                       ]
@@ -27575,6 +27638,10 @@
                         "withdrawals": {
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "net": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
                         }
                       },
                       "required": [
@@ -27582,7 +27649,8 @@
                         "period",
                         "rows",
                         "deposits",
-                        "withdrawals"
+                        "withdrawals",
+                        "net"
                       ]
                     }
                   ]
@@ -28092,6 +28160,58 @@
                             },
                             "complete": {
                               "type": "boolean"
+                            },
+                            "visibleCoverage": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string"
+                                  },
+                                  "stream": {
+                                    "type": "string"
+                                  },
+                                  "from": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                  },
+                                  "to": {
+                                    "type": "string",
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "complete",
+                                      "partial",
+                                      "gap"
+                                    ]
+                                  },
+                                  "reason": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "stream",
+                                  "from",
+                                  "to",
+                                  "status",
+                                  "reason"
+                                ]
+                              }
+                            },
+                            "activityFrom": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
                             }
                           },
                           "required": [
@@ -28108,7 +28228,9 @@
                             "revokePending",
                             "coverage",
                             "reliableFrom",
-                            "complete"
+                            "complete",
+                            "visibleCoverage",
+                            "activityFrom"
                           ]
                         },
                         {
@@ -29716,6 +29838,12 @@
                         }
                       ]
                     },
+                    "startOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
                     "open": {
                       "type": "object",
                       "properties": {
@@ -29934,6 +30062,16 @@
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
                         },
+                        "pnl": {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "cashShare": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
                         "noCost": {
                           "type": "integer",
                           "minimum": -9007199254740991,
@@ -29985,6 +30123,8 @@
                         "rows",
                         "cash",
                         "total",
+                        "pnl",
+                        "cashShare",
                         "noCost",
                         "byClass"
                       ]
@@ -30473,6 +30613,7 @@
                     "displayCurrency",
                     "status",
                     "display",
+                    "startOn",
                     "open",
                     "closedInPeriod",
                     "closedEver",
@@ -32022,6 +32163,14 @@
                                           "unattributed": {
                                             "type": "string",
                                             "pattern": "^-?\\d+\\.\\d{2}$"
+                                          },
+                                          "feesAndFx": {
+                                            "type": "string",
+                                            "pattern": "^-?\\d+\\.\\d{2}$"
+                                          },
+                                          "beforeFx": {
+                                            "type": "string",
+                                            "pattern": "^-?\\d+\\.\\d{2}$"
                                           }
                                         },
                                         "required": [
@@ -32032,7 +32181,9 @@
                                           "fees",
                                           "corrections",
                                           "fx",
-                                          "unattributed"
+                                          "unattributed",
+                                          "feesAndFx",
+                                          "beforeFx"
                                         ]
                                       },
                                       {
@@ -32083,6 +32234,14 @@
                                           "unattributed": {
                                             "type": "string",
                                             "pattern": "^-?\\d+\\.\\d{2}$"
+                                          },
+                                          "feesAndFx": {
+                                            "type": "string",
+                                            "pattern": "^-?\\d+\\.\\d{2}$"
+                                          },
+                                          "beforeFx": {
+                                            "type": "string",
+                                            "pattern": "^-?\\d+\\.\\d{2}$"
                                           }
                                         },
                                         "required": [
@@ -32093,7 +32252,9 @@
                                           "fees",
                                           "corrections",
                                           "fx",
-                                          "unattributed"
+                                          "unattributed",
+                                          "feesAndFx",
+                                          "beforeFx"
                                         ]
                                       },
                                       {
@@ -32340,6 +32501,14 @@
                                 "unattributed": {
                                   "type": "string",
                                   "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "feesAndFx": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                "beforeFx": {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
                                 }
                               },
                               "required": [
@@ -32350,7 +32519,9 @@
                                 "fees",
                                 "corrections",
                                 "fx",
-                                "unattributed"
+                                "unattributed",
+                                "feesAndFx",
+                                "beforeFx"
                               ]
                             },
                             {
@@ -32583,6 +32754,24 @@
                               }
                             ]
                           }
+                        },
+                        "returns": {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
+                        },
+                        "cumulativeReturns": {
+                          "type": "array",
+                          "items": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -32593,7 +32782,9 @@
                         "services",
                         "bars",
                         "cumulative",
-                        "values"
+                        "values",
+                        "returns",
+                        "cumulativeReturns"
                       ]
                     },
                     "byClass": {

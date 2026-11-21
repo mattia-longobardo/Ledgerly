@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 103397,
-    "duplicatedLines": 16711,
-    "percent": 16.16,
-    "blocks": 1266
+    "lines": 103454,
+    "duplicatedLines": 16745,
+    "percent": 16.19,
+    "blocks": 1270
   },
   "units": {
     "api": {
-      "lines": 5278,
-      "duplicatedLines": 1106,
-      "percent": 20.95,
-      "blocks": 97
+      "lines": 5335,
+      "duplicatedLines": 1135,
+      "percent": 21.27,
+      "blocks": 100
     },
     "app": {
       "lines": 24810,
-      "duplicatedLines": 3995,
-      "percent": 16.1,
-      "blocks": 313
+      "duplicatedLines": 4000,
+      "percent": 16.12,
+      "blocks": 314
     },
     "global.d": {
       "lines": 12,
@@ -413,12 +413,12 @@
     "api/accounts/routes.ts": 65,
     "api/budgets/dto.ts": 10,
     "api/funds/dto/home.ts": 52,
-    "api/funds/dto/tabs.ts": 54,
+    "api/funds/dto/tabs.ts": 61,
     "api/funds/routes.ts": 78,
     "api/interests/dto.ts": 24,
     "api/interests/routes.ts": 32,
-    "api/investments/dto.ts": 77,
-    "api/investments/pages.ts": 31,
+    "api/investments/dto.ts": 83,
+    "api/investments/pages.ts": 47,
     "api/investments/routes.ts": 74,
     "api/investments/tabs.ts": 54,
     "api/payroll/dto.ts": 23,
@@ -483,7 +483,7 @@
     "app/(app)/investments/[accountId]/positions/page.tsx": 103,
     "app/(app)/investments/[accountId]/service-data.ts": 18,
     "app/(app)/investments/catalog/page.tsx": 23,
-    "app/(app)/investments/page.tsx": 274,
+    "app/(app)/investments/page.tsx": 279,
     "app/(app)/navigation.ts": 108,
     "app/(app)/overview-screen.tsx": 27,
     "app/(app)/payroll/[id]/page.tsx": 7,

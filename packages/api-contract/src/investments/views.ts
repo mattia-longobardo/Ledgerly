@@ -41,7 +41,13 @@ export const periodOut = z.object({
 });
 
 /** The parts of a P&L, with what no part explains (zero on consistent data). */
-const parts = legacyParts.extend({ unattributed: money() });
+const parts = legacyParts.extend({
+  unattributed: money(),
+  /** `fees` + `fx`: the tile «Fees and exchange». */
+  feesAndFx: money(),
+  /** `pnl` − `fx`: the P&L before the exchange effect, the bridge from the account's currency. */
+  beforeFx: money(),
+});
 
 /** The return of a period: Modified Dietz, or the P&L on the money put in when there is no capital. */
 const periodReturn = z.object({
@@ -106,6 +112,12 @@ const chart = z.object({
   bars: z.array(money().nullable()),
   cumulative: z.array(money().nullable()),
   values: z.array(money().nullable()),
+  /**
+   * The Return view: `bars` and `cumulative` as fractions of the period's capital, so the running total
+   * ends on the period's return. All null when the period has no return to share.
+   */
+  returns: z.array(ratio()),
+  cumulativeReturns: z.array(ratio()),
 });
 
 /** What one position added to the period, open or sold (PERS-113 · 9), in the account's currency. */
@@ -269,6 +281,8 @@ const serviceHeader = legacyService.extend({
       rate: ratio(),
       valuedOn: civilDate().nullable(),
       stale: z.boolean(),
+      /** The days after which a value typed by hand is old (`stale`). */
+      staleDays: z.number().int(),
     })
     .nullable(),
   sync: z
@@ -318,7 +332,11 @@ export const investmentActivity = z.discriminatedUnion("source", [
     /** The months of the filtered events, newest first, with what their sales realized. */
     months: z.array(z.object({ month: month(), count: z.number().int(), realized: money() })),
     /** The period's money in and out and its fees, in the account's currency. */
-    sums: z.object({ deposits: money(), withdrawals: money(), fees: money() }),
+    /** `net`: deposits + withdrawals. */
+    sums: z.object({ deposits: money(), withdrawals: money(), fees: money(), net: money() }),
+    /** The rows of this page among `total`, 1-based («1–50 of 120»); both 0 with none. */
+    first: z.number().int(),
+    last: z.number().int(),
     rows: z.array(activityRow),
     /** Withdrawals and deposits of two services that can be linked as one transfer. */
     transferProposals: z.array(
@@ -338,6 +356,8 @@ export const investmentActivity = z.discriminatedUnion("source", [
     rows: z.array(z.object({ id: id(), on: civilDate(), payee: z.string().nullable(), amount: money() })),
     deposits: money(),
     withdrawals: money(),
+    /** Deposits + withdrawals. */
+    net: money(),
   }),
 ]);
 
