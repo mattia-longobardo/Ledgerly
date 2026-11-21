@@ -573,5 +573,20 @@
     "file": "apps/web/src/platform/api/category-board.itest.ts",
     "decision": "R3 subscriptions",
     "reason": "a test added for displayColor of GET /categories; no existing test or assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/interests/ui/present.test.ts",
+    "decision": "R2 interests, percentInput",
+    "reason": "the API gives the rate as a percentage: only the inputs of the tests change, from a fraction to a percentage; the expected values are the same"
+  },
+  {
+    "file": "apps/web/src/platform/api/session.itest.ts",
+    "decision": "PAY-8",
+    "reason": "a test added: «Fill with AI» of payroll answers the session and refuses a token with 403 (scope session); no existing assertion changed"
+  },
+  {
+    "file": "packages/domain/src/modules/payroll/pension.test.ts",
+    "decision": "PAY-5",
+    "reason": "the quarter of a payslip's competence moves to the payroll source of funds: the same cases and the same verdicts in packages/domain/src/modules/funds/pension/payroll-source.test.ts, through competenceOf"
   }
 ]
