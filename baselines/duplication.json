@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105399,
-    "duplicatedLines": 16485,
-    "percent": 15.64,
-    "blocks": 1265
+    "lines": 105519,
+    "duplicatedLines": 16457,
+    "percent": 15.6,
+    "blocks": 1263
   },
   "units": {
     "api": {
@@ -18,7 +18,7 @@
     },
     "app": {
       "lines": 20032,
-      "duplicatedLines": 2943,
+      "duplicatedLines": 2942,
       "percent": 14.69,
       "blocks": 229
     },
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 13930,
-      "duplicatedLines": 2227,
-      "percent": 15.99,
-      "blocks": 182
+      "lines": 14050,
+      "duplicatedLines": 2200,
+      "percent": 15.66,
+      "blocks": 180
     },
     "modules/imports": {
       "lines": 888,
@@ -464,7 +464,7 @@
     "app/(app)/budgets/[id]/page.tsx": 9,
     "app/(app)/expenses/categories/[id]/category-blocks.tsx": 29,
     "app/(app)/expenses/categories/[id]/category-screen.tsx": 29,
-    "app/(app)/expenses/categories/board-dialogs.tsx": 108,
+    "app/(app)/expenses/categories/board-dialogs.tsx": 107,
     "app/(app)/expenses/categories/board-rows.tsx": 20,
     "app/(app)/expenses/categories/board-screen.tsx": 17,
     "app/(app)/expenses/categories/board-view.ts": 14,
@@ -600,7 +600,8 @@
     "modules/funds/service/reads.ts": 71,
     "modules/funds/service/valuations.ts": 15,
     "modules/funds/sources.ts": 13,
-    "modules/funds/ui/contribution-dialog.tsx": 97,
+    "modules/funds/ui/contribution-dialog.tsx": 14,
+    "modules/funds/ui/contribution-fields.tsx": 57,
     "modules/funds/ui/contribution-sections.tsx": 9,
     "modules/funds/ui/fee-dialog.tsx": 102,
     "modules/funds/ui/fee-list.tsx": 40,
@@ -623,7 +624,7 @@
     "modules/funds/ui/overview-cards.tsx": 16,
     "modules/funds/ui/payslips-card.tsx": 22,
     "modules/funds/ui/projection.tsx": 9,
-    "modules/funds/ui/reconciliation-buttons.tsx": 26,
+    "modules/funds/ui/reconciliation-buttons.tsx": 25,
     "modules/funds/ui/register-cells.tsx": 28,
     "modules/funds/ui/source-dialog.tsx": 42,
     "modules/funds/ui/source-fields.tsx": 108,
