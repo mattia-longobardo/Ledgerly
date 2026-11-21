@@ -5145,7 +5145,14 @@
       "cancel": "Annulla",
       "uploaded": "{count, plural, one {# cedolino caricato: lo sto leggendo} other {# cedolini caricati: li sto leggendo}}",
       "duplicates": "{count, plural, one {# era già importato} other {# erano già importati}}",
-      "refused": "{name}: {error}"
+      "refused": "{name}: {error}",
+      "progress": {
+        "waiting": "In attesa",
+        "sending": "Caricamento…",
+        "uploaded": "Caricato",
+        "duplicate": "Già importato",
+        "refused": "Rifiutato"
+      }
     },
     "review": {
       "title": "Revisione cedolino",

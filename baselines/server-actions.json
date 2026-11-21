@@ -115,12 +115,6 @@
       "verifyKeyAction"
     ]
   },
-  "apps/web/src/modules/payroll/actions.ts": {
-    "closedBy": "uploadPayslipsAction kept until the web session has the scope imports (R2 imports)",
-    "actions": [
-      "uploadPayslipsAction"
-    ]
-  },
   "apps/web/src/modules/users/actions.ts": {
     "closedBy": "revokeOtherSessionsAction kept (web cookie)",
     "actions": [

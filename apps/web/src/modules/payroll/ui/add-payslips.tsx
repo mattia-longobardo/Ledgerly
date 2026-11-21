@@ -8,12 +8,11 @@ import { cn } from "@ledgerly/ui/cn";
 import { Modal } from "@ledgerly/ui/modal";
 import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
-import { uploadPayslipsAction } from "../actions";
-import { payrollChanged } from "../calls";
+import { type FileProgress, payrollChanged, uploadPayslips } from "../calls";
 
 /**
- * "Add payslip" (spec §7.8 D13: one, in the topbar): PDFs chosen or dropped, uploaded together.
- * One new payslip opens its review, which follows the reading as it happens; several go back to
+ * "Add payslip" (spec §7.8 D13: one, in the topbar): PDFs chosen or dropped, uploaded one by one,
+ * each with where it is. One new payslip opens its review, which follows the reading as it happens; several go back to
  * the register, which does the same.
  */
 export function AddPayslips({ label, size = "sm" }: { label: string; size?: "sm" | "md" }) {
@@ -24,12 +23,15 @@ export function AddPayslips({ label, size = "sm" }: { label: string; size?: "sm"
   const [files, setFiles] = useState<File[]>([]);
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Record<number, FileProgress>>({});
   const [pending, startTransition] = useTransition();
+  const errorText = (code: string) => t(`errors.${code}` as never);
 
   function reset(next: boolean) {
     setOpen(next);
     setFiles([]);
     setError(null);
+    setProgress({});
   }
 
   function onDrop(event: DragEvent<HTMLLabelElement>) {
@@ -39,12 +41,11 @@ export function AddPayslips({ label, size = "sm" }: { label: string; size?: "sm"
   }
 
   function onSubmit() {
-    const data = new FormData();
-    for (const file of files) data.append("files", file);
+    setProgress({});
     startTransition(async () => {
-      const result = await uploadPayslipsAction(data);
+      const result = await uploadPayslips(files, (index, now) => setProgress((was) => ({ ...was, [index]: now })));
       if (!result.ok) {
-        setError(t(`errors.${result.error}` as never));
+        setError(errorText(result.error));
         return;
       }
       const added = result.uploaded.filter((one) => !one.duplicate);
@@ -52,7 +53,7 @@ export function AddPayslips({ label, size = "sm" }: { label: string; size?: "sm"
       if (added.length > 0) notify(t("upload.uploaded", { count: added.length }));
       if (duplicates > 0) notify(t("upload.duplicates", { count: duplicates }));
       for (const refused of result.refused) {
-        notify(t("upload.refused", { name: refused.name, error: t(`errors.${refused.error}` as never) }), "error");
+        notify(t("upload.refused", { name: refused.name, error: errorText(refused.error) }), "error");
       }
       reset(false);
       payrollChanged();
@@ -109,12 +110,16 @@ export function AddPayslips({ label, size = "sm" }: { label: string; size?: "sm"
         {files.length > 0 && (
           <div className="flex flex-col gap-1 text-sm">
             <span className="font-medium">{t("upload.selected", { count: files.length })}</span>
-            <ul className="max-h-32 overflow-auto text-muted">
-              {files.map((file) => (
-                <li key={`${file.name}-${file.size}`} className="truncate">
-                  {file.name}
-                </li>
-              ))}
+            <ul aria-live="polite" className="max-h-32 overflow-auto text-muted">
+              {files.map((file, index) => {
+                const now = progress[index] ?? (pending ? "waiting" : null);
+                return (
+                  <li key={`${file.name}-${file.size}`} className="flex justify-between gap-3">
+                    <span className="truncate">{file.name}</span>
+                    {now && <span className="shrink-0">{t(`upload.progress.${now}`)}</span>}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

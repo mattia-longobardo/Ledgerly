@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 88,
+    "crossModuleImports": 87,
     "moduleIndexFiles": 12,
     "reciprocalModulePairs": 1,
     "reciprocalUnitPairs": 44,
@@ -65,7 +65,6 @@
     "modules/investments/service.ts → modules/transactions/queries",
     "modules/investments/sync.ts → modules/accounts/index",
     "modules/investments/sync.ts → modules/users/jobs",
-    "modules/payroll/actions.ts → modules/imports/index",
     "modules/payroll/fields.ts → modules/imports/rules",
     "modules/payroll/llm.ts → modules/imports/pdf/text",
     "modules/payroll/llm.ts → modules/imports/service",

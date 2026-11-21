@@ -1,8 +1,9 @@
 // The calls of the Payroll screens to `/api/v1` (rewrite plan R3): each keeps the name and the answer
 // of the Server Action it replaces, so the screens read one shape. A refusal keeps its words: the
 // reason of the route (`invalid_state`, `blocking_checks`…) or its code. A number typed in the
-// person's format is read here and goes on the wire in canonical form ("1234.56"). The upload stays
-// `uploadPayslipsAction` until `POST /imports` takes the web's session. The code map has its own.
+// person's format is read here and goes on the wire in canonical form ("1234.56"). The upload is
+// `POST /imports`, one file per call. The code map has its own.
+import { imports } from "@ledgerly/api-contract/imports";
 import { payroll } from "@ledgerly/api-contract/payroll";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate, remember } from "@ledgerly/ui/data";
@@ -108,4 +109,52 @@ export async function fillWithLlmAction(documentId: string) {
       return { ok: false as const, error: error.reason };
     throw error;
   }
+}
+
+/** At most this many files in one upload, the use case's `MAX_FILES`: one call carries one file. */
+// shortcut: the number is written twice (here and in the domain); read it from the contract when it has it.
+const MAX_FILES = 24;
+
+/** Where one file of an upload is: on its way, received (new or already there), refused. */
+export type FileProgress = "sending" | "uploaded" | "duplicate" | "refused";
+
+interface Uploaded {
+  ok: true;
+  uploaded: { id: string; name: string; duplicate: boolean }[];
+  refused: { name: string; error: string }[];
+}
+
+/** The use case's code of a refused file. */
+function refusedAs(error: unknown, file: File): string {
+  const { error: code } = refusal(error);
+  // shortcut: the route answers `invalid` for a file with no bytes and for one the storage refused,
+  // without the use case's code; read its `reason` when the route sends one.
+  if (code === "invalid") return file.size === 0 ? "empty" : "storage_failed";
+  return code;
+}
+
+/**
+ * Uploads payslips one by one to `POST /imports` (audit PAY-2, UI-FND-6) and answers as the Server
+ * Action did: the documents received, the files refused with their code. No file, or more than
+ * `MAX_FILES`, refuses the whole upload. `onFile` follows each file; a failure of the server throws.
+ */
+export async function uploadPayslips(
+  files: readonly File[],
+  onFile: (index: number, progress: FileProgress) => void = () => {},
+): Promise<Uploaded | Failure> {
+  if (files.length === 0) return { ok: false, error: "empty" };
+  if (files.length > MAX_FILES) return { ok: false, error: "too_many" };
+  const result: Uploaded = { ok: true, uploaded: [], refused: [] };
+  for (const [index, file] of files.entries()) {
+    onFile(index, "sending");
+    try {
+      const document = await call(imports.uploadDocument, { body: { kind: "payslip", file } });
+      result.uploaded.push({ id: document.id, name: document.fileName, duplicate: document.duplicate });
+      onFile(index, document.duplicate ? "duplicate" : "uploaded");
+    } catch (error) {
+      result.refused.push({ name: file.name, error: refusedAs(error, file) });
+      onFile(index, "refused");
+    }
+  }
+  return result;
 }

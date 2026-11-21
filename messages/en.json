@@ -5145,7 +5145,14 @@
       "cancel": "Cancel",
       "uploaded": "{count, plural, one {# payslip uploaded: reading it now} other {# payslips uploaded: reading them now}}",
       "duplicates": "{count, plural, one {# was already imported} other {# were already imported}}",
-      "refused": "{name}: {error}"
+      "refused": "{name}: {error}",
+      "progress": {
+        "waiting": "Waiting",
+        "sending": "Uploading…",
+        "uploaded": "Uploaded",
+        "duplicate": "Already imported",
+        "refused": "Refused"
+      }
     },
     "review": {
       "title": "Review payslip",

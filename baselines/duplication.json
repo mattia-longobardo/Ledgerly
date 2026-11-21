@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101196,
+    "lines": 101215,
     "duplicatedLines": 16254,
     "percent": 16.06,
     "blocks": 1222
@@ -71,9 +71,9 @@
       "blocks": 130
     },
     "modules/payroll": {
-      "lines": 3757,
+      "lines": 3776,
       "duplicatedLines": 760,
-      "percent": 20.23,
+      "percent": 20.13,
       "blocks": 43
     },
     "modules/pockets": {

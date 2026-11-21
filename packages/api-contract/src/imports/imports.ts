@@ -22,7 +22,7 @@ export const uploadDocument = defineRoute({
     "Receives one document as `multipart/form-data` (`kind`, `file`) and starts its reading. The format " +
     "is read from the content: a payslip is a PDF, of at most 10 MiB. The same file sent again is the " +
     "same document (`duplicate: true`, 200). A fund's kinds are refused with 415 and nothing is kept.",
-  actions: ["uploadPayslipsAction"],
+  actions: [],
   bodyFormat: "multipart",
   // No size here: the use case checks it once (IMP-4), after the kind, as before the contract.
   body: z.object({ kind: z.enum(DOCUMENT_KINDS), file: z.file() }),
