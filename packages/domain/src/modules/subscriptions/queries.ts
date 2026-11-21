@@ -10,6 +10,7 @@ import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
 import { groupBy, searchByName } from "../../shared/collections";
 import {
+  commitPercent,
   foundCharges,
   PRICE_CURRENCY,
   LOW_UTILITY,
@@ -62,6 +63,8 @@ interface Projection {
   balanceCents: Cents | null;
   commitCents: Cents;
   projectedCents: Cents | null;
+  /** The part of the balance `commitCents` takes, one decimal (`commitPercent`). */
+  percent: number | null;
 }
 
 interface SubscriptionsView {
@@ -124,6 +127,7 @@ function project(
         balanceCents,
         commitCents,
         projectedCents: balanceCents === null ? null : balanceCents - commitCents,
+        percent: commitPercent(commitCents, balanceCents),
       };
     })
     .sort(

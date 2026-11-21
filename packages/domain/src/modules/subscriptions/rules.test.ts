@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { dueMoment as clientDueMoment, type DueMoment } from "@ledgerly/domain/subscriptions/client";
 import {
   dueMoment,
   addCycles,
+  commitPercent,
   cadenceOf,
   type CheckedSubscription,
   dueDates,
@@ -409,5 +411,40 @@ describe("toleranceOf (SUB-7)", () => {
 
   it("refuses what is not a percentage between 0 and 100", () => {
     for (const bad of ["100.01", "-1", "2,5", "abc"]) expect(() => toleranceOf(bad)).toThrow(RangeError);
+  });
+});
+
+describe("commitPercent", () => {
+  // The rule the Subscriptions page applied before R3 (`share`, a fraction to the thousandth).
+  const pageShare = (commit: bigint, balance: bigint | null) =>
+    balance !== null && balance > 0n ? Number((commit * 1000n) / balance) / 1000 : null;
+
+  it("is the page's share as a percentage, truncated to one decimal", () => {
+    for (const [commit, balance] of [
+      [1299n, 90000n], // 14.43… ‰ → 1.4
+      [15588n, 90000n], // 173.2 ‰ → 17.3
+      [2n, 3n], // 666.6… ‰ → 66.6, not 66.7
+      [50000n, 100000n],
+      [120000n, 100000n],
+      [0n, 100000n],
+    ] as const) {
+      expect(commitPercent(commit, balance)).toBe(Math.round(pageShare(commit, balance)! * 1000) / 10);
+    }
+    expect(commitPercent(2n, 3n)).toBe(66.6);
+    expect(commitPercent(1299n, 90000n)).toBe(1.4);
+  });
+
+  it("is null without a balance or with one at or below zero", () => {
+    for (const balance of [null, 0n, -500n]) {
+      expect(commitPercent(1299n, balance)).toBeNull();
+      expect(pageShare(1299n, balance)).toBeNull();
+    }
+  });
+});
+
+describe("the client entry", () => {
+  it("exports dueMoment and its type", () => {
+    const moment: DueMoment = clientDueMoment("quarterly", "2026-08-15");
+    expect(moment).toEqual({ kind: "quarter", quarter: 3 });
   });
 });

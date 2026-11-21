@@ -163,7 +163,7 @@ const PARTS_PER_UNIT = 1_000_000n;
  * one is "September". A weekly one is a weekday. The exact date is still there — the cell carries
  * it as its title — but the column says the thing a person is actually scanning for.
  */
-type DueMoment =
+export type DueMoment =
   | { kind: "weekday"; weekday: number }
   | { kind: "day"; day: number }
   | { kind: "quarter"; quarter: 1 | 2 | 3 | 4 }
@@ -181,6 +181,14 @@ export function dueMoment(cycle: Cycle, on: CivilDate): DueMoment {
     case "yearly":
       return { kind: "month", month };
   }
+}
+
+/**
+ * The part of a balance the subscriptions commit, as a percentage with one decimal, truncated:
+ * `⌊commit × 1000 / balance⌋ / 10`. Null without a balance, or with one at or below zero.
+ */
+export function commitPercent(commit: Cents, balance: Cents | null): number | null {
+  return balance !== null && balance > 0n ? Number((commit * 1000n) / balance) / 10 : null;
 }
 
 /** A stored `numeric(10,6)` fraction as millionths, read from its text: no float on the way. */

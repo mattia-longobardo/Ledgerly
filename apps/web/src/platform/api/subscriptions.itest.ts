@@ -130,6 +130,7 @@ describe("the routes of subscriptions", () => {
       balance: "887.01",
       commit: "0.00",
       projected: "887.01",
+      percent: 0,
     });
 
     // Nothing of Alice's is Bob's.

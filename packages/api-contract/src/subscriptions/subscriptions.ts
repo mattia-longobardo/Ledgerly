@@ -101,6 +101,7 @@ export const listSubscriptions = defineRoute({
             balance: "900.00",
             commit: "12.99",
             projected: "887.01",
+            percent: 1.4,
           },
         ],
         year: [
@@ -111,6 +112,7 @@ export const listSubscriptions = defineRoute({
             balance: "900.00",
             commit: "155.88",
             projected: "744.12",
+            percent: 17.3,
           },
         ],
       },

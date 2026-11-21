@@ -59,6 +59,7 @@ function projection(one: View["projections"]["month"][number]): List["projection
     balance: maybe(one.balanceCents),
     commit: money(one.commitCents),
     projected: maybe(one.projectedCents),
+    percent: one.percent,
   };
 }
 

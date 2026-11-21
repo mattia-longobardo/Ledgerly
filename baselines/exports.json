@@ -585,7 +585,9 @@
   "packages/domain/src/modules/subscriptions/client.ts": [
     "CYCLES",
     "Cycle",
-    "SubscriptionState"
+    "DueMoment",
+    "SubscriptionState",
+    "dueMoment"
   ],
   "packages/domain/src/modules/subscriptions/index.ts": [
     "CYCLES",

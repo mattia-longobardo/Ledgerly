@@ -3,6 +3,13 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased
+
+- `GET /subscriptions`: every entry of `projections.month` and `projections.year` has `percent`
+  (new, `number | null`), the part of `balance` that `commit` takes, as a percentage with one decimal,
+  truncated (`⌊commit × 1000 / balance⌋ / 10`); null when `balance` is null or not above zero. The
+  MCP tool `list_subscriptions` answers it too, from the same descriptor.
+
 ## 2026-11-21 · interests (0.48.0)
 
 - `GET /interests` (new, `read`): the Interests page — the `rules`, oldest first (`id`, `accountId`,

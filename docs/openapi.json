@@ -25458,6 +25458,12 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "percent": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
@@ -25466,7 +25472,8 @@
                               "count",
                               "balance",
                               "commit",
-                              "projected"
+                              "projected",
+                              "percent"
                             ]
                           }
                         },
@@ -25523,6 +25530,12 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "percent": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
@@ -25531,7 +25544,8 @@
                               "count",
                               "balance",
                               "commit",
-                              "projected"
+                              "projected",
+                              "percent"
                             ]
                           }
                         }

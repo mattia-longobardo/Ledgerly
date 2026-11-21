@@ -88,6 +88,11 @@ export const projection = z.object({
   commit: money(),
   /** `balance − commit`; null as `balance`. */
   projected: money().nullable(),
+  /**
+   * The part of `balance` that `commit` takes, as a percentage with one decimal, truncated
+   * (`⌊commit × 1000 / balance⌋ / 10`); null when `balance` is null or not above zero.
+   */
+  percent: z.number().nullable(),
 });
 
 export const alert = z.object({
