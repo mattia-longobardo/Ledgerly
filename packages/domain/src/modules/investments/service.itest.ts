@@ -13,6 +13,8 @@ import {
 import type { Ctx } from "../../platform/context";
 import { addDays, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
+import { convertCents } from "../../platform/fx/rules";
+import { ratesOn, saveRates } from "../../platform/fx/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { debitFund } from "../../../../../test/funds";
 import {
@@ -396,6 +398,36 @@ describe("§2.1 the Directa example, end to end", () => {
     await expect(
       recordOperation(ctx, accountId, { kind: "deposit", on: addDays(todayOn, 1), amountCents: eur(1) }),
     ).rejects.toMatchObject({ code: "future_date" });
+  });
+});
+
+describe("one conversion (audit PLT-1, D11)", () => {
+  it("converts a new operation in another currency as the screens do, rounding once", async () => {
+    // 1.17 USD in GBP is 0.854999… GBP: one rounding gives 0.85. The old cross rate, rounded first
+    // to 0.7307692308, gave 0.86.
+    await saveRates([
+      { on: "2026-03-02", currency: "USD", eurPerUnit: "0.8547008547" },
+      { on: "2026-03-02", currency: "GBP", eurPerUnit: "1.1695906433" },
+    ]);
+    const { accountId } = await engineService(ctx, {
+      name: "IBKR",
+      category: "broker",
+      currency: "GBP",
+      mode: "assets",
+    });
+    await backdate(accountId, "2026-03-01");
+    await addAsset(ctx, accountId, {
+      asset: { create: { class: "etf", name: "SPDR S&P 500", symbol: "SPY", currency: "USD" } },
+      product: "custody",
+      on: "2026-03-02",
+      quantity: qty("1"),
+      unitPrice: price("1.17"),
+    });
+    const rates = await ratesOn(["USD", "GBP"], "2026-03-02", "2026-03-02");
+    const converted = convertCents(117n, "USD", "GBP", "2026-03-02", rates);
+    expect(converted).toBe(85n);
+    const buy = (await serviceDetail(ctx, accountId))?.operations.find((row) => row.kind === "buy");
+    expect(buy?.legs.map((leg) => leg.amountCents)).toEqual([-converted!]);
   });
 });
 

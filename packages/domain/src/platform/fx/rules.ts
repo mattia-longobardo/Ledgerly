@@ -198,3 +198,13 @@ export function convertCents(
   if (twice < target) return quotient;
   return numerator < 0n ? quotient - 1n : quotient + 1n;
 }
+
+/**
+ * Units of `to` one unit of `from` was worth on `on`, scaled by 10¹⁰ like `fx_rates`: the rate an
+ * operation stores beside its amount (§1.8, A5). The amount itself is `convertCents`, rounded once
+ * (audit PLT-1); this rate only records which fixing it used. `null` when no rate applies: the
+ * same currency, or a missing fixing on either side.
+ */
+export function crossRate(rates: RateTable, from: string, to: string, on: CivilDate): bigint | null {
+  return from === to ? null : convertCents(SCALE, from, to, on, rates);
+}

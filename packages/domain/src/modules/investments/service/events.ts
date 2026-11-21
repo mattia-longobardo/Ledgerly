@@ -5,7 +5,7 @@ import type { Ctx } from "../../../platform/context";
 import { type CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { eurPerUnitOn } from "../../../platform/fx/rules";
+import { convertCents, crossRate } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
 import type { Cents } from "../../../shared/money";
 import {
@@ -20,7 +20,6 @@ import {
   QUANTITY_SCALE,
   RATE_SCALE,
 } from "../rules";
-import { divRound } from "../../../shared/money";
 import { investmentEvents, investmentOperations } from "../schema";
 import { civilDate } from "../../../shared/inputs";
 import { assetInputSchema, createAsset, holdingFor, requireAsset } from "./assets";
@@ -125,28 +124,31 @@ export function periodOn(book: LoadedBook, on: CivilDate): InvestmentPeriod | nu
   return found;
 }
 
-/**
- * The rate from an asset's quote currency to the account's on a day (§1.8): the one typed, or the
- * ECB one, saved with its source on the operation (A5). `null` when neither exists.
- */
-export async function rateOf(
-  from: string,
-  to: string,
-  on: CivilDate,
-  typed: bigint | null,
-): Promise<{ fxRate: bigint | null; fxSource: string | null }> {
-  if (from === to) return { fxRate: null, fxSource: null };
-  if (typed !== null) return { fxRate: typed, fxSource: "manual" };
-  const rates = await ratesOn([from, to], on, on);
-  const source = eurPerUnitOn(rates, from, on);
-  const target = eurPerUnitOn(rates, to, on);
-  if (source === null || target === null) return { fxRate: null, fxSource: null };
-  return { fxRate: divRound(source * 10n ** BigInt(RATE_SCALE), target), fxSource: `ecb:${on}` };
+interface Rate {
+  fxRate: bigint | null;
+  fxSource: string | null;
+  /** A price typed in the asset's currency, in cents of the account's (rounded once). */
+  inAccount: (cents: Cents) => Cents;
 }
 
-/** A price typed in the asset's currency, in cents of the account's (rounded once). */
-export function inAccount(cents: Cents, fxRate: bigint | null): Cents {
-  return fxRate === null ? cents : atRate(cents, fxRate);
+/**
+ * The rate from an asset's quote currency to the account's on a day (§1.8): the one typed, or the
+ * ECB one, saved with its source on the operation (A5). `null` when neither exists. At the ECB rate
+ * an amount is fx's `convertCents`, the conversion of every screen (audit PLT-1, D11).
+ */
+export async function rateOf(from: string, to: string, on: CivilDate, typed: bigint | null): Promise<Rate> {
+  const none: Rate = { fxRate: null, fxSource: null, inAccount: (cents) => cents };
+  if (from === to) return none;
+  if (typed !== null)
+    return { fxRate: typed, fxSource: "manual", inAccount: (cents) => atRate(cents, typed) };
+  const rates = await ratesOn([from, to], on, on);
+  const fxRate = crossRate(rates, from, to, on);
+  if (fxRate === null) return none;
+  return {
+    fxRate,
+    fxSource: `ecb:${on}`,
+    inAccount: (cents) => convertCents(cents, from, to, on, rates)!,
+  };
 }
 
 export const optionalNote = z
@@ -201,7 +203,7 @@ export async function addAsset(
         ? await requireAsset(ctx, parsed.asset.id, tx)
         : await createAsset(ctx, parsed.asset.create, tx);
     const holding = await holdingFor(ctx, tx, investment.id, asset.id, parsed.product, parsed.on);
-    const { fxRate, fxSource } = await rateOf(asset.currency, account.currency, parsed.on, parsed.fxRate);
+    const rate = await rateOf(asset.currency, account.currency, parsed.on, parsed.fxRate);
     const native =
       parsed.quantity !== null && parsed.unitPrice !== null
         ? positionCents(parsed.quantity, parsed.unitPrice)
@@ -216,13 +218,13 @@ export async function addAsset(
         priceCurrency: asset.currency,
         nativeAmount: native * 10n ** BigInt(PRICE_SCALE - 2),
         nativeCurrency: asset.currency,
-        fxRate,
-        fxSource,
-        amountCents: -inAccount(native, fxRate),
+        fxRate: rate.fxRate,
+        fxSource: rate.fxSource,
+        amountCents: -rate.inAccount(native),
       },
     ];
     if (parsed.feeCents > 0n)
-      legs.push({ leg: "fee", kind: "fee", amountCents: -inAccount(parsed.feeCents, fxRate) });
+      legs.push({ leg: "fee", kind: "fee", amountCents: -rate.inAccount(parsed.feeCents) });
     const event = await insertEvent(ctx, tx, investment.id, {
       on: parsed.on,
       occurredAt: new Date(),

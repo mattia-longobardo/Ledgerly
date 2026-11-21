@@ -4,7 +4,7 @@ import type { Ctx } from "../../../platform/context";
 import { addDays, type CivilDate, civilDateIn, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { type RateTable } from "../../../platform/fx/rules";
+import { crossRate, type RateTable } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
 import {
   type FlowsRead,
@@ -34,7 +34,7 @@ import {
   investmentReadings,
 } from "../schema";
 import { type InvestmentAccount, insertEvent, type WriteCtx } from "../service";
-import { SOURCE_RATE_SCALE, rateBetween } from "./events";
+import { SOURCE_RATE_SCALE } from "./events";
 import { providerHoldingFor, retireKeys, writeCoverage } from "./readings";
 import { BACKOFF_KEY, DEFAULT_BACKOFF_SECONDS } from "./sources";
 
@@ -101,7 +101,7 @@ export async function noteFailure(
 export function fxLookupOf(rates: RateTable): FxLookup {
   return (from, to, on) => {
     if (from === to) return "1";
-    const rate = rateBetween(rates, from, to, on);
+    const rate = crossRate(rates, from, to, on);
     return rate === null ? null : formatDecimal(rate, RATE_SCALE);
   };
 }

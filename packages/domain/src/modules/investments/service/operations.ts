@@ -18,16 +18,7 @@ import {
 } from "../schema";
 import { civilDate } from "../../../shared/inputs";
 import { currencyOf, loadBook, type LoadedBook, lockInvestmentAccount, rebuild } from "./book";
-import {
-  inAccount,
-  insertEvent,
-  insertLegs,
-  type LegInput,
-  optionalNote,
-  periodOn,
-  positive,
-  rateOf,
-} from "./events";
+import { insertEvent, insertLegs, type LegInput, optionalNote, periodOn, positive, rateOf } from "./events";
 import { clearTransferGroup } from "./transfers";
 import {
   type InvestmentAccount,
@@ -158,7 +149,7 @@ async function legsOf(
       const holding = book.holdingRows.find((one) => one.id === input.holdingId && one.origin === "manual");
       if (!holding) throw new InvestmentError("not_found");
       const currency = holding.asset.currency;
-      const { fxRate, fxSource } = await rateOf(currency, account.currency, input.on, null);
+      const { fxRate, fxSource, inAccount } = await rateOf(currency, account.currency, input.on, null);
       if (input.kind === "valuation") {
         if ((input.unitPrice === null) === (input.amountCents === null))
           throw new RangeError("A price or a value");
@@ -172,7 +163,7 @@ async function legsOf(
               priceCurrency: currency,
               fxRate,
               fxSource,
-              amountCents: input.amountCents === null ? 0n : inAccount(input.amountCents, fxRate),
+              amountCents: input.amountCents === null ? 0n : inAccount(input.amountCents),
             },
           ],
           transactionId: null,
@@ -193,11 +184,11 @@ async function legsOf(
           priceCurrency: currency,
           fxRate,
           fxSource,
-          amountCents: inAccount(proceeds, fxRate),
+          amountCents: inAccount(proceeds),
         },
       ];
       if (input.feeCents > 0n)
-        legs.push({ leg: "fee", kind: "fee", amountCents: -inAccount(input.feeCents, fxRate) });
+        legs.push({ leg: "fee", kind: "fee", amountCents: -inAccount(input.feeCents) });
       return { legs, transactionId: null };
     }
   }

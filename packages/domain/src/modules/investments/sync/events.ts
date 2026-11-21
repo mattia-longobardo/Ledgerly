@@ -1,6 +1,6 @@
 import { type CivilDate, civilDateIn } from "../../../shared/dates";
 import { type Tx } from "../../../platform/db/client";
-import { eurPerUnitOn, type RateTable } from "../../../platform/fx/rules";
+import { convertCents, crossRate, type RateTable } from "../../../platform/fx/rules";
 import { type ProviderEvent } from "../../../platform/integrations/investments/source";
 import { linkExternal } from "../../../platform/integrations/service";
 import { type OperationKind, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE } from "../rules";
@@ -8,15 +8,6 @@ import { divRound, parseDecimal } from "../../../shared/money";
 import { type InvestmentAccount, insertEvent, type LegInput, type WriteCtx } from "../service";
 import { assetFor, providerHoldingFor } from "./readings";
 import { SyncError } from "./sources";
-
-/** Account units per unit of `from` on `on`, scaled; `null` without a rate. */
-export function rateBetween(rates: RateTable, from: string, to: string, on: CivilDate): bigint | null {
-  if (from === to) return null;
-  const source = eurPerUnitOn(rates, from, on);
-  const target = eurPerUnitOn(rates, to, on);
-  if (source === null || target === null) return null;
-  return divRound(source * 10n ** BigInt(RATE_SCALE), target);
-}
 
 /** A rate a source gives, read at the precision of a coin's quantity before it is rounded. */
 export const SOURCE_RATE_SCALE = 18;
@@ -69,7 +60,7 @@ export async function writeEvents(
         ? sourcedRate === null
           ? null
           : divRound(sourcedRate, 10n ** BigInt(SOURCE_RATE_SCALE - RATE_SCALE))
-        : rateBetween(rates, leg.nativeCurrency, currency, on);
+        : crossRate(rates, leg.nativeCurrency, currency, on);
       if (!sourced && leg.nativeCurrency !== currency && fxRate === null)
         throw new SyncError("provider_unavailable");
       const amount = sourced
@@ -78,7 +69,8 @@ export async function writeEvents(
           : divRound(native * sourcedRate, 10n ** BigInt(PRICE_SCALE + SOURCE_RATE_SCALE - 2))
         : fxRate === null
           ? nativeCents
-          : divRound(nativeCents * fxRate, 10n ** BigInt(RATE_SCALE));
+          : // One rounding, as every conversion on screen (audit PLT-1, D11).
+            convertCents(nativeCents, leg.nativeCurrency, currency, on, rates)!;
       const holdingId =
         leg.asset === null || leg.product === null
           ? null
