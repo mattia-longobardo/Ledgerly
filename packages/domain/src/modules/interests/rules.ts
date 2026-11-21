@@ -183,32 +183,18 @@ export function accrueDay(input: {
 export const CATEGORY_NOT_LINKED = "category_not_linked";
 
 /**
- * How old the last provider reading of a synced account may be before its daily balances are
- * treated as out of date (spec §7.6, §10.2): one hour, the sync tier's own interval, so a reading
- * older than that means the pass that should have brought it never landed.
+ * How old the last provider reading of a synced account may be before the accrual refuses its daily
+ * balances (spec §7.6, §10.2; D7): one hour, the sync tier's own interval, so a reading older than
+ * that means the pass that should have brought it never landed. The threshold of the accrual, with a
+ * name of its own: an account's `staleAfterHours` (36 by default) is another one, for Accounts, and
+ * both go through the one rule `isStale` of accounts.
  *
  * It matters because a synced account's day balances are *reconstructed from its latest reading*
  * and its movements (`dailySeries` in the accounts module, mode `movements`): a reading an hour
  * stale does not make one wrong day, it moves every day of the window. Accruing on that is the
  * silent wrong number this guard exists to refuse.
  */
-export const FRESH_READING_MS = 60 * 60 * 1000;
-
-/**
- * Whether a synced account's last reading is recent enough to accrue on. A `null` — an account
- * never read — is never fresh: no reading at all is the strongest form of out of date.
- */
-export function isFreshReading(
-  lastSyncedAt: Date | null,
-  now: Date,
-  maxAgeMs: number = FRESH_READING_MS,
-): boolean {
-  if (lastSyncedAt === null) return false;
-  const age = now.getTime() - lastSyncedAt.getTime();
-  // A reading stamped slightly ahead of `now` (a pass that started after this one) is fresh, not
-  // suspicious: the clock the two are measured against is the same.
-  return age <= maxAgeMs;
-}
+export const ACCRUAL_READING_MAX_AGE_HOURS = 1;
 
 /**
  * The hour a rule with no hour of its own accrues at: noon, where the job ran for everyone when it

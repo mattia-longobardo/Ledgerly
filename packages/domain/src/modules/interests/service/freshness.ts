@@ -17,12 +17,12 @@
  * Nothing here writes to the interest tables, and nothing here accrues.
  */
 import { redactForLog } from "../../../platform/auth/logger";
-import { type Account, listAccounts } from "../../accounts";
+import { type Account, isStale, listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { WALLET_PROVIDER } from "../../../platform/integrations/rules";
 import { listConnections } from "../../../platform/integrations/service";
 import { isSyncBusy, syncWalletNow, type WalletSyncResult } from "../../../platform/integrations/wallet/sync";
-import { FRESH_READING_MS, isFreshReading } from "../rules";
+import { ACCRUAL_READING_MAX_AGE_HOURS } from "../rules";
 
 /**
  * Why an account's balance is not one to accrue on. Each is a fact about this pass, not a verdict
@@ -52,8 +52,6 @@ export interface FreshnessOptions {
   sync?: (connectionId: string) => Promise<WalletSyncResult>;
   /** Injected in tests so the wait for a concurrent pass is not actually waited through. */
   sleep?: (ms: number) => Promise<void>;
-  /** How old a reading may be; {@link FRESH_READING_MS} by default. */
-  maxAgeMs?: number;
   /** How long to wait for a pass that already held the lock. */
   busyWaitMs?: number;
   busyPollMs?: number;
@@ -127,13 +125,14 @@ async function waitForReadings(
   ctx: Ctx,
   synced: readonly Account[],
   wanted: ReadonlySet<string>,
-  wait: { now: Date; maxAgeMs: number; sleep: (ms: number) => Promise<void>; waitMs: number; pollMs: number },
+  wait: { now: Date; sleep: (ms: number) => Promise<void>; waitMs: number; pollMs: number },
 ): Promise<{ after: Map<string, Account>; timedOut: boolean }> {
   let after = await accountsById(ctx, wanted);
   const deadline = Date.now() + wait.waitMs;
   const fresh = () =>
-    synced.every((account) =>
-      isFreshReading(after.get(account.id)?.lastSyncedAt ?? null, wait.now, wait.maxAgeMs),
+    synced.every(
+      (account) =>
+        !isStale(after.get(account.id)?.lastSyncedAt ?? null, ACCRUAL_READING_MAX_AGE_HOURS, wait.now),
     );
   while (!fresh()) {
     if (Date.now() >= deadline) return { after, timedOut: true };
@@ -144,7 +143,7 @@ async function waitForReadings(
 }
 
 /**
- * Makes sure every synced account among `accountIds` has a reading no older than `maxAgeMs`, and
+ * Makes sure every synced account among `accountIds` has a reading no older than {@link ACCRUAL_READING_MAX_AGE_HOURS}, and
  * says for each one whether it has.
  *
  * The order is: look at what is in hand, run **one** pass per Wallet connection, look again. The
@@ -178,7 +177,7 @@ export async function ensureFreshBalances(
     const lastSyncedAt = waited.after.get(account.id)?.lastSyncedAt ?? null;
     readings.set(
       account.id,
-      isFreshReading(lastSyncedAt, wait.now, wait.maxAgeMs)
+      !isStale(lastSyncedAt, ACCRUAL_READING_MAX_AGE_HOURS, wait.now)
         ? { state: "fresh", reason: null, lastSyncedAt }
         : { state: "stale", reason, lastSyncedAt },
     );
@@ -190,7 +189,6 @@ export async function ensureFreshBalances(
 function waitOf(options: FreshnessOptions) {
   return {
     now: options.now ?? new Date(),
-    maxAgeMs: options.maxAgeMs ?? FRESH_READING_MS,
     sleep: options.sleep ?? defaultSleep,
     waitMs: options.busyWaitMs ?? BUSY_WAIT_MS,
     pollMs: options.busyPollMs ?? BUSY_POLL_MS,

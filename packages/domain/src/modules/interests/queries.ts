@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { type Account, accountNames, listAccounts } from "../accounts";
+import { type Account, accountNames, isStale, listAccounts } from "../accounts";
 import { findMovements } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";
@@ -10,8 +10,8 @@ import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
 import {
+  ACCRUAL_READING_MAX_AGE_HOURS,
   assignPayments,
-  isFreshReading,
   paymentWindow,
   paysInterest,
   periodOf,
@@ -226,7 +226,7 @@ async function settlementRows(
 function balanceOf(account: Account | null, now: Date): BalanceState {
   const synced = account?.origin === "synced" && account.providerAccountId !== null;
   const lastSyncedAt = account?.lastSyncedAt ?? null;
-  return { synced, lastSyncedAt, stale: synced && !isFreshReading(lastSyncedAt, now) };
+  return { synced, lastSyncedAt, stale: synced && isStale(lastSyncedAt, ACCRUAL_READING_MAX_AGE_HOURS, now) };
 }
 
 /**

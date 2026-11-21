@@ -23,6 +23,7 @@ export {
   changeBetween,
   hasIbanField,
   isFutureDate,
+  isStale,
   movementEffect,
   shareOf,
   stepsOf,

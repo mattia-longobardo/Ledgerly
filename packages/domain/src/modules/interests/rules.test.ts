@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { isStale } from "../accounts";
 import {
   accrueDay,
   DEFAULT_RUN_HOUR,
-  FRESH_READING_MS,
-  isFreshReading,
+  ACCRUAL_READING_MAX_AGE_HOURS,
   formatRunHour,
   hourIn,
   runsAt,
@@ -297,26 +297,34 @@ describe("the hour a rule runs at (spec §10.2, the hourly pass)", () => {
   });
 });
 
-describe("a balance fresh enough to accrue on (spec §7.6)", () => {
+describe("a balance fresh enough to accrue on (spec §7.6; D7: one rule, two thresholds)", () => {
   const now = new Date("2026-01-15T12:00:00Z");
+  const staleForAccrual = (lastSyncedAt: Date | null) =>
+    isStale(lastSyncedAt, ACCRUAL_READING_MAX_AGE_HOURS, now);
 
   it("takes a reading of this hour and refuses one older than the sync interval", () => {
-    expect(FRESH_READING_MS).toBe(60 * 60 * 1000);
-    expect(isFreshReading(now, now)).toBe(true);
-    expect(isFreshReading(new Date("2026-01-15T11:30:00Z"), now)).toBe(true);
+    expect(ACCRUAL_READING_MAX_AGE_HOURS).toBe(1);
+    expect(staleForAccrual(now)).toBe(false);
+    expect(staleForAccrual(new Date("2026-01-15T11:30:00Z"))).toBe(false);
     // Exactly the interval is still in; one second past it is a pass that never landed.
-    expect(isFreshReading(new Date("2026-01-15T11:00:00Z"), now)).toBe(true);
-    expect(isFreshReading(new Date("2026-01-15T10:59:59Z"), now)).toBe(false);
-    expect(isFreshReading(new Date("2026-01-14T12:00:00Z"), now)).toBe(false);
+    expect(staleForAccrual(new Date("2026-01-15T11:00:00Z"))).toBe(false);
+    expect(staleForAccrual(new Date("2026-01-15T10:59:59Z"))).toBe(true);
+    expect(staleForAccrual(new Date("2026-01-14T12:00:00Z"))).toBe(true);
   });
 
   it("never calls an account that was never read fresh", () => {
-    expect(isFreshReading(null, now)).toBe(false);
-    expect(isFreshReading(null, now, 10 * 60 * 60 * 1000)).toBe(false);
+    expect(staleForAccrual(null)).toBe(true);
+    expect(isStale(null, 10, now)).toBe(true);
   });
 
   it("accepts a reading stamped by a pass that started after this one", () => {
-    expect(isFreshReading(new Date("2026-01-15T12:00:30Z"), now)).toBe(true);
+    expect(staleForAccrual(new Date("2026-01-15T12:00:30Z"))).toBe(false);
+  });
+
+  it("keeps the accrual's threshold apart from the account's: one reading, two answers", () => {
+    const reading = new Date("2026-01-15T09:00:00Z");
+    expect(staleForAccrual(reading)).toBe(true);
+    expect(isStale(reading, 36, now)).toBe(false);
   });
 });
 
