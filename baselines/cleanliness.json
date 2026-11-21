@@ -427,7 +427,7 @@
     "packages/domain/src/modules/investments/service/transfers.ts": 3,
     "packages/domain/src/modules/investments/service/types.ts": 1,
     "packages/domain/src/modules/investments/sync/connect.ts": 2,
-    "packages/domain/src/modules/investments/sync/events.ts": 3,
+    "packages/domain/src/modules/investments/sync/events.ts": 2,
     "packages/domain/src/modules/investments/sync/history.ts": 6,
     "packages/domain/src/modules/investments/sync/pass.ts": 2,
     "packages/domain/src/modules/investments/sync/quantities.ts": 3,
