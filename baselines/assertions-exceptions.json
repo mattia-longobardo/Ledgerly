@@ -588,5 +588,10 @@
     "file": "packages/domain/src/modules/payroll/pension.test.ts",
     "decision": "PAY-5",
     "reason": "the quarter of a payslip's competence moves to the payroll source of funds: the same cases and the same verdicts in packages/domain/src/modules/funds/pension/payroll-source.test.ts, through competenceOf"
+  },
+  {
+    "file": "packages/domain/src/modules/imports/rules.test.ts",
+    "decision": "IMP-2, E1",
+    "reason": "the folder of a kind comes from the registry of the readers: storageKeyFor takes the folder (payslips) instead of the kind (payslip); the expected key is the same"
   }
 ]
