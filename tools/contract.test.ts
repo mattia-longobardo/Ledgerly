@@ -8,6 +8,7 @@ import {
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
   INTERESTS_ROUTES,
+  PAYROLL_ROUTES,
   POCKETS_ROUTES,
   SETTINGS_ROUTES,
   SUBSCRIPTIONS_ROUTES,
@@ -29,6 +30,11 @@ import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
 import * as timeoffDomain from "@domain/modules/timeoff/rules";
 import { HOLIDAY_SOURCES } from "@domain/platform/holidays/rules";
+import * as payrollWire from "../packages/api-contract/src/payroll/shared";
+import * as payrollRules from "@domain/modules/payroll/rules";
+import * as payrollFields from "@domain/modules/payroll/fields";
+import * as payrollChecks from "@domain/modules/payroll/parse/checks";
+import * as importsRules from "@domain/modules/imports/rules";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -390,6 +396,45 @@ describe("the Server Actions of time off", () => {
     expect(timeoffWire.LEAVE_ORIGINS.length).toBe(timeoffDomain.LEAVE_ORIGINS.length);
     expect(timeoffWire.MAX_RANGE_DAYS).toBe(timeoffDomain.MAX_RANGE_DAYS);
     expect(timeoffWire.HOLIDAY_SOURCES).toEqual(HOLIDAY_SOURCES);
+  });
+});
+
+/**
+ * The Server Actions of payroll (05-refactor.md §5.5) and their routes. The register, the review and
+ * the code map read routes of their own, with no action. One exclusion, written here.
+ */
+const PAYROLL_ACTION_FILES = ["apps/web/src/modules/payroll/actions.ts"];
+const PAYROLL_EXCLUDED: Record<string, string> = {
+  // The upload is `POST /imports` (scope `imports`), one file per call; the many files of one call
+  // come with `uploadDocuments(kind, files)` of the documents step (PAY-2, IMP-4).
+  uploadPayslipsAction: "POST /imports",
+};
+
+describe("the Server Actions of payroll", () => {
+  const actions = PAYROLL_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(PAYROLL_ROUTES.flatMap((route) => route.actions));
+
+  it("each have a route or a written exclusion, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name) && !(name in PAYROLL_EXCLUDED))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+    expect(Object.keys(PAYROLL_EXCLUDED).filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(payrollWire.PAYSLIP_TYPES).toEqual(payrollRules.PAYSLIP_TYPES);
+    expect(payrollWire.CODE_ROLES).toEqual(payrollRules.CODE_ROLES);
+    expect(payrollWire.LINE_UNITS).toEqual(payrollRules.LINE_UNITS);
+    expect(payrollWire.SUMMED_FIELDS).toEqual(payrollRules.SUMMED_FIELDS);
+    expect(payrollWire.FIELD_GROUPS).toEqual(payrollFields.FIELD_GROUPS);
+    expect(payrollWire.LEAVE_KINDS).toEqual(payrollFields.LEAVE_KINDS);
+    expect(payrollWire.CHECK_IDS).toEqual(payrollChecks.CHECK_IDS);
+    expect(payrollWire.WARNING_CODES).toEqual(payrollChecks.WARNING_CODES);
+    expect(payrollWire.DOCUMENT_STATES).toEqual(importsRules.DOCUMENT_STATES);
+    expect(payrollWire.FIELD_UNITS).toEqual(importsRules.EVIDENCE_UNITS);
+    expect(payrollWire.EVIDENCE_ORIGINS).toEqual(importsRules.EVIDENCE_ORIGINS);
+    expect(payrollWire.VERIFICATION_STATES).toEqual(importsRules.VERIFICATION_STATES);
   });
 });
 

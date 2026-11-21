@@ -63,6 +63,8 @@
     "MIN_CLIENT_LEVEL",
     "MIN_SYNC_GAP_MINUTES",
     "OVERVIEW_BUDGETS",
+    "PAYROLL",
+    "PAYROLL_ROUTES",
     "POCKETS",
     "POCKETS_ROUTES",
     "RouteContract",

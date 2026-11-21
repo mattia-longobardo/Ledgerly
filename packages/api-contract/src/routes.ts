@@ -10,6 +10,8 @@ import * as views from "./accounts/views";
 import * as budgets from "./budgets/budgets";
 import * as interests from "./interests/interests";
 import { metaRoute } from "./meta";
+import * as payrollCodes from "./payroll/codes";
+import * as payroll from "./payroll/payroll";
 import * as pockets from "./pockets/pockets";
 import * as search from "./search";
 import type { RouteContract } from "./route";
@@ -119,6 +121,15 @@ export const TIMEOFF_ROUTES: readonly RouteContract[] = [
   ...Object.values(holidays),
 ];
 
+/** Payroll by area, for `apps/api` to serve each one by name. */
+export const PAYROLL = { payroll, codes: payrollCodes } as const;
+
+/** Payroll, the ninth module of R2 (05-refactor.md §5.2): the register, the review and the code map. */
+export const PAYROLL_ROUTES: readonly RouteContract[] = [
+  ...Object.values(payroll),
+  ...Object.values(payrollCodes),
+];
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
@@ -129,4 +140,5 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...SUBSCRIPTIONS_ROUTES,
   ...INTERESTS_ROUTES,
   ...TIMEOFF_ROUTES,
+  ...PAYROLL_ROUTES,
 ];
