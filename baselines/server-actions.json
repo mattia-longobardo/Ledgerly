@@ -95,16 +95,6 @@
       "updateValuationAction"
     ]
   },
-  "apps/web/src/modules/interests/actions.ts": {
-    "closedBy": "R3 of interests",
-    "actions": [
-      "createRuleAction",
-      "markPostedAction",
-      "postEntryAction",
-      "setRuleStateAction",
-      "updateRuleAction"
-    ]
-  },
   "apps/web/src/modules/investments/actions.ts": {
     "closedBy": "R3 of investments",
     "actions": [

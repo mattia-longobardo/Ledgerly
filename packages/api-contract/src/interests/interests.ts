@@ -215,7 +215,7 @@ export const createInterestRule = defineRoute({
     "Creates a rule and accrues it at once up to yesterday, settling the periods that have closed. " +
     "Rates are percentages; `conflict` (`not_synced`) for a rule that publishes on an account no " +
     "source reads.",
-  actions: ["createRuleAction"],
+  actions: [],
   body: ruleBody,
   response: z.object({ id: id() }),
   status: 201,
@@ -232,7 +232,7 @@ export const updateInterestRule = defineRoute({
   summary:
     "Changes a rule: every field of the dialog, as `POST /interests` takes them. What is settled stays; " +
     "the days after the last settled period are accrued again with the new terms.",
-  actions: ["updateRuleAction"],
+  actions: [],
   params: byRule,
   body: ruleBody,
   response: null,
@@ -248,7 +248,7 @@ export const setInterestRuleState = defineRoute({
   scope: "write",
   capability: "interests",
   summary: "Pauses or resumes a rule; resuming catches its days up.",
-  actions: ["setRuleStateAction"],
+  actions: [],
   params: byRule,
   body: z.object({ state: z.enum(RULE_STATES) }).strict(),
   response: null,
@@ -269,7 +269,7 @@ export const postInterestSettlement = defineRoute({
     "«Post now» (from not posted) or, with `retry`, «Retry» (from unsure): publishes a settlement on " +
     "the account's source once, and answers where its posting stands. A posting that could not land " +
     "is an answer, not an error.",
-  actions: ["postEntryAction"],
+  actions: [],
   params: bySettlement,
   body: z.object({ retry: z.boolean() }).strict(),
   response: postingAnswer,
@@ -288,7 +288,7 @@ export const markInterestSettlementPosted = defineRoute({
   scope: "write",
   capability: "interests",
   summary: "«Mark as posted»: the person saw the record on the source; nothing is sent.",
-  actions: ["markPostedAction"],
+  actions: [],
   params: bySettlement,
   response: postingAnswer,
   errors: ["not_found"],

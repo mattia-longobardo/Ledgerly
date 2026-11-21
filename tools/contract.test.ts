@@ -339,9 +339,9 @@ describe("the Server Actions of subscriptions", () => {
 
 /**
  * The Server Actions of interests (05-refactor.md §5.5) and their routes; no exclusion. The two pages
- * read routes of their own, with no action.
+ * read routes of their own, with no action. The dialog and the posting call `/api/v1`: no action left.
  */
-const INTERESTS_ACTION_FILES = ["apps/web/src/modules/interests/actions.ts"];
+const INTERESTS_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of interests", () => {
   const actions = INTERESTS_ACTION_FILES.flatMap((file) =>

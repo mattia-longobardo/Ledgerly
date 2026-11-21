@@ -42,6 +42,7 @@
     "./progress-bar": "./src/progress-bar.tsx",
     "./qr-code": "./src/qr-code.tsx",
     "./range-picker": "./src/range-picker.tsx",
+    "./recurrence-field": "./src/recurrence-field.tsx",
     "./router": "./src/router.tsx",
     "./schedule": "./src/schedule/schedule-control.tsx",
     "./schedule/form": "./src/schedule/form.ts",

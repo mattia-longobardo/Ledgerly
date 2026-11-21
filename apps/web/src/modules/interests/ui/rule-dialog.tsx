@@ -9,8 +9,10 @@ import { Field } from "@ledgerly/ui/field";
 import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Checkbox, Input, InputGroup, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
+import { RecurrenceField } from "@ledgerly/ui/recurrence-field";
 import { notify } from "@ledgerly/ui/toast";
-import { type ActionResult, createRuleAction, setRuleStateAction, updateRuleAction } from "../actions";
+import { type ActionResult, createRuleAction, setRuleStateAction, updateRuleAction } from "../calls";
+import { SETTLEMENTS } from "@ledgerly/api-contract/interests";
 import { DEFAULT_RUN_HOUR, formatRunHour, RUN_HOURS } from "@ledgerly/domain/interests/client";
 
 /** What the dialog starts from, every value already written the way the person types it. */
@@ -219,14 +221,13 @@ export function RuleDialog({
             <option value="360">{t("basis.360")}</option>
           </Select>
         </Field>
-        <Field label={t("form.payout")} htmlFor={`${id}-settlement`}>
-          <Select id={`${id}-settlement`} name="settlement" defaultValue={draft.settlement}>
-            <option value="daily">{t("settlement.daily")}</option>
-            <option value="monthly">{t("settlement.monthly")}</option>
-            <option value="quarterly">{t("settlement.quarterly")}</option>
-            <option value="annual">{t("settlement.annual")}</option>
-          </Select>
-        </Field>
+        <RecurrenceField
+          id={`${id}-settlement`}
+          name="settlement"
+          label={t("form.payout")}
+          defaultValue={draft.settlement}
+          options={SETTLEMENTS.map((value) => ({ value, label: t(`settlement.${value}`) }))}
+        />
         {/* The hour of the person's own day the rule accrues at; empty keeps the default one. */}
         <Field label={t("form.runHour")} htmlFor={`${id}-run-hour`} hint={t("form.runHourHint")}>
           <Select id={`${id}-run-hour`} name="runHour" defaultValue={draft.runHour}>

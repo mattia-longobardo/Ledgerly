@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { NumberStyle } from "@domain/platform/format";
+import type { NumberStyle } from "@ledgerly/format/format";
 import { formatRate, rateInput, readRate } from "./present";
 
 const style = (overrides: Partial<NumberStyle>): NumberStyle => ({
@@ -11,15 +11,15 @@ const style = (overrides: Partial<NumberStyle>): NumberStyle => ({
 
 describe("rates in the person's own separators", () => {
   it("writes the format's own separator when none is chosen", () => {
-    expect(formatRate("0.025000", "it-IT")).toBe("2,5 %");
-    expect(formatRate("0.025000", "en-US")).toBe("2.5%");
-    expect(formatRate("0.025000", style({}))).toBe("2,5 %");
+    expect(formatRate("2.5", "it-IT")).toBe("2,5 %");
+    expect(formatRate("2.5", "en-US")).toBe("2.5%");
+    expect(formatRate("2.5", style({}))).toBe("2,5 %");
   });
 
   it("writes the decimal point chosen in Settings, on the Italian format too", () => {
-    expect(formatRate("0.025000", style({ decimalSeparator: "." }))).toBe("2.5 %");
-    expect(rateInput("0.027500", style({ decimalSeparator: "." }))).toBe("2.75");
-    expect(formatRate("0.025000", style({ format: "en-US", decimalSeparator: "," }))).toBe("2,5%");
+    expect(formatRate("2.5", style({ decimalSeparator: "." }))).toBe("2.5 %");
+    expect(rateInput("2.75", style({ decimalSeparator: "." }))).toBe("2.75");
+    expect(formatRate("2.5", style({ format: "en-US", decimalSeparator: "," }))).toBe("2,5%");
   });
 
   it("reads back what it writes", () => {

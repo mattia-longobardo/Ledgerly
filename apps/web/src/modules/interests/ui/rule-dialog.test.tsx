@@ -7,7 +7,7 @@ import { newDraft } from "./present";
 import { RuleDialog } from "./rule-dialog";
 
 const update = vi.fn();
-vi.mock("../actions", () => ({
+vi.mock("../calls", () => ({
   createRuleAction: vi.fn(),
   updateRuleAction: (...args: unknown[]) => update(...args),
   setRuleStateAction: vi.fn(),

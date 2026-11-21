@@ -439,6 +439,7 @@ export const MODULES: Module[] = [
       "pockets",
       "subscriptions",
       "timeoff",
+      "interests",
       "imports",
       "admin",
       "categories",

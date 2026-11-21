@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100295,
-    "duplicatedLines": 16270,
-    "percent": 16.22,
-    "blocks": 1221
+    "lines": 100418,
+    "duplicatedLines": 16211,
+    "percent": 16.14,
+    "blocks": 1217
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 55
     },
     "app": {
-      "lines": 25062,
-      "duplicatedLines": 4047,
-      "percent": 16.15,
-      "blocks": 314
+      "lines": 25145,
+      "duplicatedLines": 4024,
+      "percent": 16,
+      "blocks": 312
     },
     "global.d": {
       "lines": 12,
@@ -36,21 +36,21 @@
     },
     "modules/accounts": {
       "lines": 5130,
-      "duplicatedLines": 984,
-      "percent": 19.18,
-      "blocks": 70
+      "duplicatedLines": 980,
+      "percent": 19.1,
+      "blocks": 71
     },
     "modules/budgets": {
       "lines": 1525,
-      "duplicatedLines": 229,
-      "percent": 15.02,
+      "duplicatedLines": 230,
+      "percent": 15.08,
       "blocks": 20
     },
     "modules/funds": {
       "lines": 10576,
-      "duplicatedLines": 2013,
-      "percent": 19.03,
-      "blocks": 150
+      "duplicatedLines": 2005,
+      "percent": 18.96,
+      "blocks": 149
     },
     "modules/imports": {
       "lines": 837,
@@ -59,10 +59,10 @@
       "blocks": 16
     },
     "modules/interests": {
-      "lines": 2372,
-      "duplicatedLines": 465,
-      "percent": 19.6,
-      "blocks": 34
+      "lines": 2414,
+      "duplicatedLines": 438,
+      "percent": 18.14,
+      "blocks": 32
     },
     "modules/investments": {
       "lines": 10301,
@@ -83,9 +83,9 @@
       "blocks": 37
     },
     "modules/subscriptions": {
-      "lines": 2067,
-      "duplicatedLines": 390,
-      "percent": 18.87,
+      "lines": 2065,
+      "duplicatedLines": 392,
+      "percent": 18.98,
       "blocks": 25
     },
     "modules/timeoff": {
@@ -449,8 +449,8 @@
     "app/(app)/funds/fund-setup.ts": 11,
     "app/(app)/funds/home-skeleton.tsx": 20,
     "app/(app)/funds/page.tsx": 211,
-    "app/(app)/interests/[id]/page.tsx": 51,
-    "app/(app)/interests/page.tsx": 45,
+    "app/(app)/interests/[id]/rule-screen.tsx": 47,
+    "app/(app)/interests/interests-screen.tsx": 24,
     "app/(app)/investments/[accountId]/activity/page.tsx": 95,
     "app/(app)/investments/[accountId]/connection/page.tsx": 29,
     "app/(app)/investments/[accountId]/page.tsx": 204,
@@ -459,8 +459,8 @@
     "app/(app)/investments/catalog/page.tsx": 32,
     "app/(app)/investments/page.tsx": 274,
     "app/(app)/navigation.ts": 108,
-    "app/(app)/overview-screen.tsx": 20,
-    "app/(app)/payroll/[id]/page.tsx": 26,
+    "app/(app)/overview-screen.tsx": 27,
+    "app/(app)/payroll/[id]/page.tsx": 23,
     "app/(app)/payroll/page.tsx": 19,
     "app/(app)/payroll/settings/code-map-card.tsx": 8,
     "app/(app)/payroll/settings/page.tsx": 17,
@@ -487,7 +487,7 @@
     "app/(app)/settings/integrations/wallet-card.tsx": 160,
     "app/(app)/settings/profile/name-form.tsx": 15,
     "app/(app)/settings/profile/page.tsx": 8,
-    "app/(app)/settings/profile/preferences-form.tsx": 103,
+    "app/(app)/settings/profile/preferences-form.tsx": 101,
     "app/(app)/settings/profile/profile-screen.tsx": 14,
     "app/(app)/settings/rules/apply-dialog.tsx": 28,
     "app/(app)/settings/rules/page.tsx": 8,
@@ -533,7 +533,7 @@
     "modules/accounts/service/snapshot.ts": 9,
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 39,
-    "modules/accounts/ui/balance-entries.tsx": 139,
+    "modules/accounts/ui/balance-entries.tsx": 135,
     "modules/accounts/ui/connections.tsx": 38,
     "modules/accounts/ui/settings-form.tsx": 67,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
@@ -543,10 +543,9 @@
     "modules/budgets/schema.ts": 34,
     "modules/budgets/service.ts": 49,
     "modules/budgets/ui/add-budget.tsx": 45,
-    "modules/budgets/ui/budgets-table.tsx": 48,
+    "modules/budgets/ui/budgets-table.tsx": 49,
     "modules/budgets/ui/overview-card.tsx": 18,
     "modules/funds/actions.ts": 44,
-    "modules/funds/forms.ts": 6,
     "modules/funds/home-queries.ts": 8,
     "modules/funds/home.ts": 7,
     "modules/funds/jobs.ts": 8,
@@ -562,7 +561,7 @@
     "modules/funds/ui/fee-dialog.tsx": 102,
     "modules/funds/ui/fee-list.tsx": 40,
     "modules/funds/ui/fee-text.ts": 10,
-    "modules/funds/ui/fund-chart.tsx": 86,
+    "modules/funds/ui/fund-chart.tsx": 84,
     "modules/funds/ui/fund-contributions.tsx": 95,
     "modules/funds/ui/fund-fees-client.tsx": 8,
     "modules/funds/ui/fund-forms.tsx": 66,
@@ -583,7 +582,6 @@
     "modules/imports/rules.ts": 7,
     "modules/imports/schema.ts": 84,
     "modules/imports/service.ts": 85,
-    "modules/interests/actions.ts": 10,
     "modules/interests/jobs.ts": 21,
     "modules/interests/queries.ts": 45,
     "modules/interests/rules.ts": 14,
@@ -593,8 +591,7 @@
     "modules/interests/service/posting.ts": 23,
     "modules/interests/service/records.ts": 30,
     "modules/interests/service/switching.ts": 13,
-    "modules/interests/ui/present.ts": 6,
-    "modules/interests/ui/rule-dialog.tsx": 127,
+    "modules/interests/ui/rule-dialog.tsx": 116,
     "modules/investments/actions.ts": 101,
     "modules/investments/activity.ts": 15,
     "modules/investments/api.ts": 15,
@@ -644,8 +641,8 @@
     "modules/subscriptions/queries.ts": 24,
     "modules/subscriptions/schema.ts": 78,
     "modules/subscriptions/service.ts": 113,
-    "modules/subscriptions/ui/inactive-subscriptions.tsx": 15,
-    "modules/subscriptions/ui/subscription-dialog.tsx": 104,
+    "modules/subscriptions/ui/inactive-subscriptions.tsx": 16,
+    "modules/subscriptions/ui/subscription-dialog.tsx": 105,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
     "modules/subscriptions/ui/suggestions-dialog.tsx": 13,
     "modules/timeoff/rules/inputs.ts": 21,

@@ -7,8 +7,9 @@ import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picke
 import { cn } from "@ledgerly/ui/cn";
 import { Field } from "@ledgerly/ui/field";
 import { AccountSelect } from "@ledgerly/ui/account-select";
-import { Input, InputGroup, Select } from "@ledgerly/ui/input";
+import { Input, InputGroup } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
+import { RecurrenceField } from "@ledgerly/ui/recurrence-field";
 import { notify } from "@ledgerly/ui/toast";
 import { type ActionResult, createSubscription, setSubscriptionState, updateSubscription } from "../calls";
 import { CYCLES, type Cycle, type SubscriptionState } from "@ledgerly/domain/subscriptions/client";
@@ -157,15 +158,13 @@ export function SubscriptionDialog({
             defaultValue={draft.priceInput}
           />
         </Field>
-        <Field label={t("form.billing")} htmlFor={`${id}-cycle`}>
-          <Select id={`${id}-cycle`} name="cycle" defaultValue={draft.cycle}>
-            {CYCLES.map((cycle) => (
-              <option key={cycle} value={cycle}>
-                {t(`cycles.${cycle}`)}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        <RecurrenceField
+          id={`${id}-cycle`}
+          name="cycle"
+          label={t("form.billing")}
+          defaultValue={draft.cycle}
+          options={CYCLES.map((value) => ({ value, label: t(`cycles.${value}`) }))}
+        />
         <Field label={t("form.nextCharge")} htmlFor={`${id}-next`}>
           <Input id={`${id}-next`} name="next" type="date" required defaultValue={draft.nextChargeOn} />
         </Field>

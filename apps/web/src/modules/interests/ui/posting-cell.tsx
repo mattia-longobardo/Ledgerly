@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { notify } from "@ledgerly/ui/toast";
-import { markPostedAction, postEntryAction } from "../actions";
+import { markPostedAction, postEntryAction } from "../calls";
 import { CATEGORY_NOT_LINKED, type PostingState } from "@ledgerly/domain/interests/client";
 
 const TONE: Record<PostingState, string> = {

@@ -21,7 +21,6 @@ import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/pl
 import { connectionSummary, keepManifestsFresh, returnAddress } from "@ledgerly/plugin-host";
 import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { listAccounts } from "@ledgerly/domain/accounts";
-import { interestsView } from "@ledgerly/domain/interests";
 import { providerOf } from "@ledgerly/domain/investments";
 import { listInvestmentAccounts } from "@ledgerly/domain/investments";
 import { pendingCount } from "@ledgerly/domain/timeoff";
@@ -51,6 +50,7 @@ import { DeactivateZone } from "./deactivate-zone";
 import { DeletedAccounts } from "./deleted-accounts";
 import { PluginRow } from "./plugin-row";
 import { ScheduleCell } from "./schedule-cell";
+import { SourceWrites } from "./source-writes";
 import { TrekCard } from "./trek-card";
 import { WalletAccounts, WalletCard } from "./wallet-card";
 
@@ -242,43 +242,17 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
             <DeletedAccounts slug={source} rows={await deletedSourceAccounts(ctx, WALLET_PROVIDER)} />
           </>
         );
-        // What Ledgerly writes to Wallet: the interest rules that publish, the movements waiting.
-        const sourceAccounts = accounts.filter((account) => account.provider === WALLET_PROVIDER);
-        const ids = new Set(sourceAccounts.map((account) => account.id));
-        const [rules, waiting] = await Promise.all([
-          interestsView(ctx, now),
-          pendingSends(ctx, [...ids], 1000),
-        ]);
-        const publishing = rules.filter(
-          (rule) => rule.rule.mode === "post_to_provider" && ids.has(rule.rule.accountId),
-        );
-        const waitingAccounts = [...new Set(waiting.map((one) => one.accountId))];
+        // What Ledgerly writes to Wallet: the interest rules that publish (from `/api/v1`), the
+        // movements waiting.
+        const ids = accounts
+          .filter((account) => account.provider === WALLET_PROVIDER)
+          .map((account) => account.id);
+        const waiting = await pendingSends(ctx, ids, 1000);
         writes = (
-          <ul className="flex flex-col text-sm" data-testid="source-writes">
-            {publishing.length === 0 && waiting.length === 0 && (
-              <li className="px-4 py-3.5 text-muted">{plugin("writes.none")}</li>
-            )}
-            {publishing.map((rule) => (
-              <li key={rule.rule.id} className="border-t border-border px-4 py-3 first:border-t-0">
-                <Link
-                  href={`/interests/${rule.rule.id}` as Route}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent underline underline-offset-2"
-                >
-                  {plugin("writes.rule", { account: rule.accountName })}
-                </Link>
-              </li>
-            ))}
-            {waiting.length > 0 && (
-              <li className="border-t border-border px-4 py-3 first:border-t-0">
-                <Link
-                  href={`/expenses?acc=${waitingAccounts.join(",")}` as Route}
-                  className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent underline underline-offset-2"
-                >
-                  {plugin("writes.unsent", { count: waiting.length })}
-                </Link>
-              </li>
-            )}
-          </ul>
+          <SourceWrites
+            accountIds={ids}
+            waiting={{ count: waiting.length, accountIds: [...new Set(waiting.map((one) => one.accountId))] }}
+          />
         );
       }
     } else if (source === TREK_PROVIDER) {
