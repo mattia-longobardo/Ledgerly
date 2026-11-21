@@ -5,7 +5,8 @@ import type { Cents } from "../../../shared/money";
 import { valueAt } from "../rules";
 import { periodReturn } from "../../../shared/returns";
 import { attribute, costBases, holdingRows, type Known, localParts } from "./parts";
-import { correctionsOn, DATA_RESULT, firstDayOf } from "./positions";
+import { firstDayOf } from "./period";
+import { correctionsOn, DATA_RESULT } from "./positions";
 import {
   classOf,
   incomeAndFees,
@@ -90,14 +91,8 @@ function inDisplay(
     parts.feesCents +
     parts.correctionsCents +
     parts.unattributedCents;
-  const measured = periodReturn({
-    from: ends.from,
-    to: ends.to,
-    startCents: total.startCents,
-    endCents: total.endCents,
-    pnlCents: total.pnlCents,
-    flows: flows.map((flow) => ({ on: flow.on, cents: flow.displayCents! })),
-  });
+  const displayFlows = flows.map((flow) => ({ on: flow.on, cents: flow.displayCents! }));
+  const measured = periodReturn({ ...total, from: ends.from, to: ends.to, flows: displayFlows });
   return {
     flows,
     startCents,

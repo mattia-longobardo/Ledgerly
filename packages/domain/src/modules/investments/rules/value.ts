@@ -11,7 +11,7 @@ import { type RateTable } from "../../../platform/fx/rules";
 import type { Cents } from "../../../shared/money";
 import { divRound } from "../../../shared/money";
 import {
-  balanceAt,
+  type AccountBalanceLike,
   type Book,
   type EventLike,
   eventsOn,
@@ -163,6 +163,16 @@ export function readingOn(book: Book, on: CivilDate): ReadingLike | null {
   const { period } = eventsOn(book, on);
   if (period === null || period.origin === "manual") return null;
   return readingIn(book, period, on);
+}
+
+/** The last row of `balances` on or before `on`; `null` before the first. */
+function balanceAt(balances: readonly AccountBalanceLike[], on: CivilDate): AccountBalanceLike | null {
+  let found: AccountBalanceLike | null = null;
+  for (const one of balances) {
+    if (one.on > on) break;
+    found = one;
+  }
+  return found;
 }
 
 /**

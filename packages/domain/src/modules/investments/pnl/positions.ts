@@ -42,12 +42,6 @@ export function flatSince(book: Book, end: CivilDate): CivilDate {
   }
 }
 
-/** The first day the book knows anything of: its first period or its first event. */
-export function firstDayOf(book: Book): CivilDate | null {
-  const days = [...book.periods.map((period) => period.fromOn), ...book.events.map((event) => event.on)];
-  return days.length === 0 ? null : days.reduce((a, b) => (a < b ? a : b));
-}
-
 /** Corrections in force at the end of `on`, of the classes asked (R3, §4.9). */
 export function correctionsOn(
   book: Book,

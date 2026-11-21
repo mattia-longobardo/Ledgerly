@@ -110,16 +110,6 @@ export interface AccountBalanceLike {
   observed: boolean;
 }
 
-/** The last row of `balances` on or before `on`; `null` before the first. */
-export function balanceAt(balances: readonly AccountBalanceLike[], on: CivilDate): AccountBalanceLike | null {
-  let found: AccountBalanceLike | null = null;
-  for (const one of balances) {
-    if (one.on > on) break;
-    found = one;
-  }
-  return found;
-}
-
 /** The deterministic order of events (A2): day, then the moment, then the insertion sequence. */
 export function compareEvents(a: EventLike, b: EventLike): number {
   if (a.on !== b.on) return a.on < b.on ? -1 : 1;

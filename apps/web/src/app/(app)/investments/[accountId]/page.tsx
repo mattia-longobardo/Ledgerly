@@ -9,7 +9,7 @@ import { describeEvent } from "@ledgerly/domain/investments";
 import { legacyPeriodQuery, sectionPeriod, type Query } from "@ledgerly/domain/investments";
 import { contributionsOf } from "@ledgerly/domain/investments";
 import { STALE_VALUE_DAYS } from "@ledgerly/domain/investments";
-import { serviceActivity, servicePnlView } from "@ledgerly/domain/investments";
+import { serviceActivity } from "@ledgerly/domain/investments";
 import {
   asReturns,
   bestAndWorst,
@@ -32,7 +32,7 @@ import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { loadService, loadSnapshot } from "./service-data";
+import { loadService, loadPnlView } from "./service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
@@ -62,9 +62,7 @@ export default async function InvestmentServiceOverview({
   const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "pnl";
   const [detail, pnl] = await Promise.all([
     loadService(accountId),
-    loadSnapshot(accountId).then((snapshot) =>
-      servicePnlView(ctx, accountId, sectionPeriod(query, today(ctx.timeZone)).period, snapshot),
-    ),
+    loadPnlView(accountId, sectionPeriod(query, today(ctx.timeZone)).period),
   ]);
   if (!detail || !pnl) notFound();
   const service = pnl.portfolio.services[0];

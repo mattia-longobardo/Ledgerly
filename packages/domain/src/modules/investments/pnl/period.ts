@@ -1,6 +1,7 @@
 // The period of the URL (docs/design/investments-ux.md §1.2, §2.1), as the engine of the P&L reads it.
 import { type CivilDate, isCivilDate } from "../../../shared/dates";
 import { allPeriod, isFutureYear, type Period, yearPeriod } from "../../../shared/period";
+import type { Book } from "../rules";
 
 // ——— The period (§1.2, §2.1) ————————————————————————————————————————————————————————————————
 
@@ -31,4 +32,10 @@ export function periodOf(params: PeriodParams, todayOn: CivilDate): Period {
     if (year >= 1970 && !isFutureYear(params.period, todayOn)) return yearOf(year);
   }
   return yearOf(Number(todayOn.slice(0, 4)));
+}
+
+/** The first day the book knows anything of: its first period or its first event. */
+export function firstDayOf(book: Book): CivilDate | null {
+  const days = [...book.periods.map((period) => period.fromOn), ...book.events.map((event) => event.on)];
+  return days.length === 0 ? null : days.reduce((a, b) => (a < b ? a : b));
 }

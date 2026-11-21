@@ -13,7 +13,7 @@ import {
   onCostOf,
   periodReturnOf,
 } from "@ledgerly/domain/investments";
-import { type HoldingRow, servicePositions } from "@ledgerly/domain/investments";
+import type { HoldingRow } from "@ledgerly/domain/investments";
 import { PRICE_SCALE, QUANTITY_SCALE, unitPriceOf } from "@ledgerly/domain/investments";
 import { formatDecimal } from "@ledgerly/domain/shared/money";
 import { type HoldingSummary, HoldingMenu, ReconcileButton } from "@/modules/investments/ui/dialogs";
@@ -30,7 +30,7 @@ import { GroupRow, Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/u
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { loadService, loadSnapshot, serviceContextOf } from "../service-data";
+import { loadService, loadPositions, serviceContextOf } from "../service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 const STATUSES = ["open", "closed", "all"] as const;
@@ -61,9 +61,7 @@ export default async function InvestmentServicePositions({
   const tp = await getTranslations("common.period");
   const [detail, view] = await Promise.all([
     loadService(accountId),
-    loadSnapshot(accountId).then((snapshot) =>
-      servicePositions(ctx, accountId, sectionPeriod(query, civilToday(ctx.timeZone)).period, snapshot),
-    ),
+    loadPositions(accountId, sectionPeriod(query, civilToday(ctx.timeZone)).period),
   ]);
   if (!detail || !view) notFound();
   // A manual service keeps no positions (PERS-335): its value and P&L are on the Overview.

@@ -6,7 +6,10 @@ import {
   type InvestmentsSnapshot,
   type ServiceDetail,
   serviceDetail,
+  servicePnlView,
+  servicePositions,
 } from "@ledgerly/domain/investments";
+import type { PnlPeriod } from "@ledgerly/domain/investments/client";
 import { ensureAssetSeed } from "@ledgerly/domain/investments";
 import type { ConnectableProvider, OperationSummary, ServiceContext } from "@/modules/investments/ui/dialogs";
 import type { ActivityRow } from "@ledgerly/domain/investments";
@@ -19,10 +22,20 @@ import { formatDate } from "@ledgerly/domain/platform/format";
  * The book of the service, read once per request (audit INV-4): the layout, the page of a tab and
  * its P&L derive from it, and `cache` keeps them from loading the book twice.
  */
-export const loadSnapshot = cache(async (accountId: string): Promise<InvestmentsSnapshot> => {
+const loadSnapshot = cache(async (accountId: string): Promise<InvestmentsSnapshot> => {
   const ctx = await requireSession();
   return investmentsSnapshot(ctx, { accountId });
 });
+
+/** The P&L of the service's period, on the book the request read once (INV-4). */
+export async function loadPnlView(accountId: string, period: PnlPeriod) {
+  return servicePnlView(await requireSession(), accountId, period, await loadSnapshot(accountId));
+}
+
+/** The Positions of the service's period, on the book the request read once (INV-4). */
+export async function loadPositions(accountId: string, period: PnlPeriod) {
+  return servicePositions(await requireSession(), accountId, period, await loadSnapshot(accountId));
+}
 
 /** The service as its layout and its tabs read it, once per request. */
 export const loadService = cache(async (accountId: string): Promise<ServiceDetail | null> => {

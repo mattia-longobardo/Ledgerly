@@ -9,7 +9,6 @@ import {
   ACTIVITY_PAGE_SIZE,
   serviceActivity,
   serviceMovements,
-  servicePnlView,
 } from "@ledgerly/domain/investments";
 import { LinkTransferButton, OperationMenu, UnlinkTransferButton } from "@/modules/investments/ui/dialogs";
 import { requireSession } from "@/platform/auth/session";
@@ -26,7 +25,7 @@ import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type Params, withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { loadService, loadSnapshot, operationOf, serviceContextOf } from "../service-data";
+import { loadService, loadPnlView, operationOf, serviceContextOf } from "../service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
@@ -55,12 +54,9 @@ export default async function InvestmentServiceActivity({
   const q = one(query.q)?.trim() || null;
   const assetId = one(query.asset) || null;
   const page = Number(one(query.p) ?? "1") || 1;
-
   const [detail, pnl] = await Promise.all([
     loadService(accountId),
-    loadSnapshot(accountId).then((snapshot) =>
-      servicePnlView(ctx, accountId, sectionPeriod(query, todayOn(ctx.timeZone)).period, snapshot),
-    ),
+    loadPnlView(accountId, sectionPeriod(query, todayOn(ctx.timeZone)).period),
   ]);
   if (!detail || !pnl) notFound();
   const { span } = pnl;

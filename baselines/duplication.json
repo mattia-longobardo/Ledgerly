@@ -4,22 +4,22 @@
     "minLines": 6
   },
   "total": {
-    "lines": 102702,
-    "duplicatedLines": 16711,
-    "percent": 16.27,
-    "blocks": 1261
+    "lines": 103006,
+    "duplicatedLines": 16702,
+    "percent": 16.21,
+    "blocks": 1260
   },
   "units": {
     "api": {
-      "lines": 5038,
-      "duplicatedLines": 1078,
-      "percent": 21.4,
-      "blocks": 94
+      "lines": 5051,
+      "duplicatedLines": 1073,
+      "percent": 21.24,
+      "blocks": 93
     },
     "app": {
-      "lines": 24812,
-      "duplicatedLines": 4002,
-      "percent": 16.13,
+      "lines": 24826,
+      "duplicatedLines": 4001,
+      "percent": 16.12,
       "blocks": 313
     },
     "global.d": {
@@ -47,9 +47,9 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10838,
+      "lines": 10819,
       "duplicatedLines": 2008,
-      "percent": 18.53,
+      "percent": 18.56,
       "blocks": 153
     },
     "modules/imports": {
@@ -65,9 +65,9 @@
       "blocks": 32
     },
     "modules/investments": {
-      "lines": 9997,
-      "duplicatedLines": 1840,
-      "percent": 18.41,
+      "lines": 10180,
+      "duplicatedLines": 1839,
+      "percent": 18.06,
       "blocks": 128
     },
     "modules/payroll": {
@@ -90,8 +90,8 @@
     },
     "modules/timeoff": {
       "lines": 4246,
-      "duplicatedLines": 314,
-      "percent": 7.4,
+      "duplicatedLines": 312,
+      "percent": 7.35,
       "blocks": 29
     },
     "modules/transactions": {
@@ -389,13 +389,13 @@
       "blocks": 0
     },
     "shared/period": {
-      "lines": 52,
+      "lines": 120,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
     },
     "shared/returns": {
-      "lines": 126,
+      "lines": 171,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -418,7 +418,7 @@
     "api/interests/routes.ts": 32,
     "api/investments/dto.ts": 64,
     "api/investments/pages.ts": 33,
-    "api/investments/routes.ts": 79,
+    "api/investments/routes.ts": 74,
     "api/investments/tabs.ts": 56,
     "api/payroll/dto.ts": 24,
     "api/payroll/routes.ts": 36,
@@ -480,7 +480,7 @@
     "app/(app)/investments/[accountId]/connection/page.tsx": 29,
     "app/(app)/investments/[accountId]/page.tsx": 210,
     "app/(app)/investments/[accountId]/positions/page.tsx": 103,
-    "app/(app)/investments/[accountId]/service-data.ts": 30,
+    "app/(app)/investments/[accountId]/service-data.ts": 29,
     "app/(app)/investments/catalog/page.tsx": 23,
     "app/(app)/investments/page.tsx": 274,
     "app/(app)/navigation.ts": 108,
@@ -637,11 +637,24 @@
     "modules/investments/activity.ts": 15,
     "modules/investments/catalog.ts": 82,
     "modules/investments/managed.ts": 21,
-    "modules/investments/pnl.ts": 14,
-    "modules/investments/queries.ts": 113,
-    "modules/investments/rules.ts": 36,
+    "modules/investments/pnl/period.ts": 7,
+    "modules/investments/pnl/positions.ts": 7,
+    "modules/investments/queries/activity-tab.ts": 31,
+    "modules/investments/queries/detail.ts": 33,
+    "modules/investments/queries/export.ts": 20,
+    "modules/investments/queries/home.ts": 9,
+    "modules/investments/queries/views.ts": 20,
+    "modules/investments/rules/value.ts": 7,
+    "modules/investments/rules/vocabulary.ts": 29,
     "modules/investments/schema.ts": 404,
-    "modules/investments/service.ts": 256,
+    "modules/investments/service/assets.ts": 18,
+    "modules/investments/service/book.ts": 95,
+    "modules/investments/service/operations.ts": 29,
+    "modules/investments/service/readings.ts": 49,
+    "modules/investments/service/reads.ts": 8,
+    "modules/investments/service/services.ts": 14,
+    "modules/investments/service/transfers.ts": 23,
+    "modules/investments/service/types.ts": 19,
     "modules/investments/sync/connect.ts": 70,
     "modules/investments/sync/history.ts": 78,
     "modules/investments/sync/pass.ts": 55,
@@ -692,7 +705,7 @@
     "modules/timeoff/schema.ts": 51,
     "modules/timeoff/service/external.ts": 25,
     "modules/timeoff/service/ranges.ts": 13,
-    "modules/timeoff/service/records.ts": 16,
+    "modules/timeoff/service/records.ts": 14,
     "modules/timeoff/ui/booked.ts": 8,
     "modules/timeoff/ui/leave-board.tsx": 68,
     "modules/timeoff/ui/leave-panel.tsx": 56,
