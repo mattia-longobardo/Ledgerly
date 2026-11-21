@@ -59,6 +59,13 @@ export interface Screen {
 
 /** The page fades in: colours read while `<main>` is transparent are not the page's colours. */
 export async function settled(page: Page): Promise<void> {
+  // A client screen can draw nothing until its first read answers: with no `<main>` yet, the checks
+  // below pass at once, and under load the layout rule then found "nothing matching main".
+  await page
+    .locator("main")
+    .first()
+    .waitFor({ state: "attached", timeout: 15_000 })
+    .catch(() => undefined);
   await page
     .waitForFunction(() => getComputedStyle(document.querySelector("main")!).opacity === "1", null, {
       timeout: 15_000,
