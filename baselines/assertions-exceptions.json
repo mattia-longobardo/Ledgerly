@@ -513,5 +513,25 @@
     "file": "tests/e2e/categories/keyboard.spec.ts",
     "decision": "UI-EXP-3, Mattia 20/11",
     "reason": "the accounts menu is now a closed button ahead of the groups, so the group is looked for in the board's section; the assertions are the same"
+  },
+  {
+    "file": "apps/web/src/platform/api/interests.itest.ts",
+    "decision": "INT-4",
+    "reason": "the rule page's own year to date gets its own name in the domain (pageYtdCents) when sumAccruals gives the rule's row the list's; the test, new in the same release, reads it by that name; no assertion changed"
+  },
+  {
+    "file": "packages/domain/src/modules/interests/posting.itest.ts",
+    "decision": "INT-1",
+    "reason": "the fake ledger is typed by the port LedgerPosting of interests instead of the Wallet client's PostingClient; no assertion changed"
+  },
+  {
+    "file": "packages/format/src/dates.test.ts",
+    "decision": "INT-6",
+    "reason": "tests added for monthOf, quarterOf and yearOf, the shared Period (INT-6); no existing test or assertion changed"
+  },
+  {
+    "file": "packages/domain/src/modules/interests/rules.test.ts",
+    "decision": "D7",
+    "reason": "«stale» becomes one rule, isStale of accounts, with the accrual's threshold ACCRUAL_READING_MAX_AGE_HOURS (D7): the same cases and the same verdicts through it (fresh = not stale), and a test added that one reading is stale for the accrual and fresh for Accounts"
   }
 ]
