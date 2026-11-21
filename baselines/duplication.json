@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101793,
-    "duplicatedLines": 16435,
-    "percent": 16.15,
-    "blocks": 1238
+    "lines": 101798,
+    "duplicatedLines": 16397,
+    "percent": 16.11,
+    "blocks": 1235
   },
   "units": {
     "api": {
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10701,
-      "duplicatedLines": 1998,
-      "percent": 18.67,
-      "blocks": 152
+      "lines": 10706,
+      "duplicatedLines": 1960,
+      "percent": 18.31,
+      "blocks": 149
     },
     "modules/imports": {
       "lines": 888,
@@ -581,7 +581,6 @@
     "modules/funds/pension/service.ts": 99,
     "modules/funds/queries/detail.ts": 22,
     "modules/funds/queries/lists.ts": 6,
-    "modules/funds/queries/views.ts": 38,
     "modules/funds/schema/funds.ts": 124,
     "modules/funds/schema/pension.ts": 67,
     "modules/funds/schema/register.ts": 126,

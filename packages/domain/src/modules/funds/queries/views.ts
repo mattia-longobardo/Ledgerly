@@ -84,6 +84,18 @@ export async function fundsHomeView(
   };
 }
 
+/** One fund read as the home reads it, measured in a period: what every tab of a fund starts from. */
+async function fundInPeriod(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  id: string,
+  period: ViewPeriod,
+  now: Date,
+) {
+  const todayOn = today(ctx.timeZone, now);
+  const row = await fundHomeRow(ctx, id, now);
+  return { todayOn, row, ...fundSummary({ fund: row.home, period, todayOn }) };
+}
+
 /** A fund's Overview in a period: the same line as its row in the home. */
 export async function fundOverviewView(
   ctx: Pick<Ctx, "userId" | "timeZone">,
@@ -91,9 +103,7 @@ export async function fundOverviewView(
   period: ViewPeriod,
   now = new Date(),
 ) {
-  const todayOn = today(ctx.timeZone, now);
-  const row = await fundHomeRow(ctx, id, now);
-  const { firstOn, summary, line, beforeFirst } = fundSummary({ fund: row.home, period, todayOn });
+  const { todayOn, row, firstOn, summary, line, beforeFirst } = await fundInPeriod(ctx, id, period, now);
   return {
     row,
     period,
@@ -114,9 +124,7 @@ export async function fundValuationsView(
   period: ViewPeriod,
   now = new Date(),
 ) {
-  const todayOn = today(ctx.timeZone, now);
-  const row = await fundHomeRow(ctx, id, now);
-  const { firstOn, line } = fundSummary({ fund: row.home, period, todayOn });
+  const { row, firstOn, line } = await fundInPeriod(ctx, id, period, now);
   const lines = valuationLines(line, period);
   return { row, period, firstOn, lines, ...bestAndWorst(lines), recorded: row.detail.valuations };
 }
@@ -128,10 +136,8 @@ export async function fundContributionsView(
   period: ViewPeriod,
   now = new Date(),
 ) {
-  const todayOn = today(ctx.timeZone, now);
-  const row = await fundHomeRow(ctx, id, now);
+  const { row, firstOn } = await fundInPeriod(ctx, id, period, now);
   const { detail } = row;
-  const { firstOn } = fundSummary({ fund: row.home, period, todayOn });
   const accrualPeriod = detail.payroll?.period ?? "quarter";
   return {
     row,
