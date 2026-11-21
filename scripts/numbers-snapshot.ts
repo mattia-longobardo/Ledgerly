@@ -30,7 +30,12 @@ import { fundsHomeRows } from "@domain/modules/funds/home-queries";
 import { fundsExport } from "@domain/modules/funds/overview";
 import { interestsView, ruleDetail } from "@domain/modules/interests/queries";
 import { periodOf } from "@domain/modules/investments/pnl";
-import { investmentsHome, investmentsPnl, investmentsPnlView } from "@domain/modules/investments/queries";
+import {
+  investmentServices,
+  investmentsHome,
+  investmentsPnl,
+  investmentsPnlView,
+} from "@domain/modules/investments/queries";
 import { registerView } from "@domain/modules/payroll/queries";
 import { pocketsView } from "@domain/modules/pockets/queries";
 import { subscriptionsView } from "@domain/modules/subscriptions/queries";
@@ -85,6 +90,17 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
     const pnl = await investmentsPnl(ctx, { period }, now);
     investmentPeriods[period] = pnl.portfolio;
   }
+
+  // What the export's section `investment-services` prints (decisions D9, D10).
+  const exportInvestments = (await investmentServices(ctx)).map((row) => ({
+    name: row.name,
+    valueCents: row.valueCents,
+    investedCents: row.investedCents,
+    gainCents: row.gainCents,
+    simpleReturn: row.simpleReturn,
+    xirr: row.xirr,
+    reliableFrom: row.reliableFrom,
+  }));
 
   // With the history: the valuations and what the statements left are numbers of a fund too.
   const fundRows = await fundsHomeRows(ctx, now, { history: true });
@@ -181,6 +197,7 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
       byService: investments.byService,
       funds: investments.funds,
       periods: investmentPeriods,
+      export: exportInvestments,
     },
     funds: {
       valueToday: valueToday(homes, todayOn),

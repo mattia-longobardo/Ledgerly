@@ -2033,6 +2033,18 @@
     "share": 1
    }
   },
+  "export": {
+   "Directa": {
+    "gainCents": "65000",
+    "investedCents": "1200000",
+    "reliableFrom": null,
+    "simpleReturn": 0.05416666666666667,
+    "valueCents": "1265000",
+    "xirr": {
+     "rate": 0.09784668118618334
+    }
+   }
+  },
   "funds": {
    "Fideuram Piano Accumulo": {
     "valueCents": "771900"

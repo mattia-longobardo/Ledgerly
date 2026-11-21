@@ -1,10 +1,18 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAccount, runSnapshot, saveBalanceEntry } from "@domain/modules/accounts/service";
+import {
+  archiveAccount,
+  createAccount,
+  runSnapshot,
+  saveBalanceEntry,
+} from "@domain/modules/accounts/service";
 import { recordValuation, updateValuation } from "@domain/modules/funds/service";
 import { uploadPayslip } from "@domain/modules/payroll/service";
 import type { IncomingTransaction } from "@domain/modules/transactions/rules";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import type { Ctx } from "@domain/platform/context";
+import { createManualService } from "@domain/modules/investments/service";
+import { saveRates } from "@domain/platform/fx/service";
+import { addDays, today } from "@domain/shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { debitFund, payrollFund } from "../../../../../test/funds";
 import { createTestUser } from "../../../../../test/users";
@@ -230,5 +238,64 @@ describe("exportFileName", () => {
     expect(zip.has("fund-fees.csv")).toBe(true);
     // No value of the type of before is written anywhere in the archive's tables.
     expect(zip.get("funds.csv")!.toString("utf8")).not.toMatch(/\bpac\b/i);
+  });
+});
+
+describe("the investments of the export", () => {
+  /** A manual service whose account held `before` ten days ago and holds `now` today. */
+  async function service(ctx: Ctx, name: string, currency: string, before: bigint, now: bigint) {
+    const todayOn = today(ctx.timeZone);
+    const account = await createAccount(ctx, { name, type: "investment", currency });
+    await saveBalanceEntry(ctx, account.id, { on: addDays(todayOn, -10), cents: before });
+    await saveBalanceEntry(ctx, account.id, { on: todayOn, cents: now });
+    await createManualService(ctx, { accountId: account.id, category: "broker", url: null });
+    return account.id;
+  }
+
+  it("lists every service, the archived ones too, in its own currency (decisions D9, D10)", async () => {
+    const ctx = await newContext();
+    const todayOn = today(ctx.timeZone);
+    const rates = [];
+    for (let on = addDays(todayOn, -400); on <= todayOn; on = addDays(on, 1))
+      rates.push({ on, currency: "USD", eurPerUnit: "0.8500000000" });
+    await saveRates(rates);
+    await service(ctx, "Directa", "EUR", 100_000n, 110_000n);
+    await service(ctx, "IBKR", "USD", 200_000n, 230_000n);
+    await archiveAccount(ctx, await service(ctx, "Vecchio", "EUR", 50_000n, 50_000n));
+    const zip = await readZip(await exportUserBytes(ctx));
+    const json = JSON.parse(zip.get("ledgerly.json")!.toString("utf8")) as Record<string, unknown[]>;
+    const common = { category: "broker", provider: "manual", mode: "total", reliableFrom: null };
+    expect(json["investment-services"]).toEqual([
+      {
+        ...common,
+        name: "Directa",
+        currency: "EUR",
+        value: "1100.00",
+        invested: "1000.00",
+        gain: "100.00",
+        simpleReturn: 0.1,
+        xirr: "none",
+      },
+      {
+        ...common,
+        name: "IBKR",
+        currency: "USD",
+        value: "2300.00",
+        invested: "2000.00",
+        gain: "300.00",
+        simpleReturn: 0.15,
+        xirr: "none",
+      },
+      {
+        ...common,
+        name: "Vecchio",
+        currency: "EUR",
+        value: "500.00",
+        invested: "500.00",
+        gain: "0.00",
+        simpleReturn: 0,
+        xirr: "multiple",
+      },
+    ]);
   });
 });
