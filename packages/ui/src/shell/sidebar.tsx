@@ -34,6 +34,7 @@ function Item({ link, active, sidebar }: { link: NavLink; active: boolean; sideb
   return (
     <Link
       href={link.href}
+      prefetch={false}
       title={link.label}
       aria-current={active ? "page" : undefined}
       className={navItemClassName(active)}
@@ -95,6 +96,7 @@ export function Sidebar({ links, user }: { links: NavLink[]; user: { name: strin
       <div className="flex h-9 items-center gap-2.5 px-1.5">
         <Link
           href="/settings/profile"
+          prefetch={false}
           title={labels.profile}
           className="focus-ring group flex min-w-0 flex-1 items-center gap-2.5 rounded-ctl"
         >

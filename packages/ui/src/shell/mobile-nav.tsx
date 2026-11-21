@@ -46,6 +46,7 @@ export function MobileNav({ links, user }: { links: NavLink[]; user: { name: str
             <Link
               key={link.id}
               href={link.href}
+              prefetch={false}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "focus-ring-inset flex flex-col items-center justify-center gap-1 text-micro font-medium",
@@ -100,6 +101,7 @@ export function MobileNav({ links, user }: { links: NavLink[]; user: { name: str
                     <Link
                       key={link.id}
                       href={link.href}
+                      prefetch={false}
                       onClick={() => setMoreOpen(false)}
                       aria-current={active ? "page" : undefined}
                       className={cn(

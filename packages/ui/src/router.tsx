@@ -17,6 +17,8 @@ export interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>,
   /** An address of the app (`/settings/profile?tab=x`), or an absolute URL. */
   href: string;
   ref?: Ref<HTMLAnchorElement>;
+  /** `false`: the router loads nothing before the click (the menu: one request per link on each page). */
+  prefetch?: false;
 }
 
 /** What a screen asks of the router. */
@@ -34,7 +36,8 @@ export interface RouterAdapter {
 }
 
 function PlainLink(props: LinkProps) {
-  return <a {...props} />;
+  // A plain anchor loads nothing before the click: `prefetch` is not an attribute of it.
+  return <a {...{ ...props, prefetch: undefined }} />;
 }
 
 const PLAIN_ROUTER: AppRouter = {

@@ -9,8 +9,12 @@ import { appRoute, isAppAddress } from "./route";
 import { type AppRouter, type LinkProps, type RouterAdapter, RouterProvider } from "@ledgerly/ui/router";
 
 /** A link of the app goes through Next; an absolute URL stays a plain anchor, as `next/link` drew it. */
-function Link({ href, ...props }: LinkProps) {
-  return isAppAddress(href) ? <NextLink href={href} {...props} /> : <a href={href} {...props} />;
+function Link({ href, prefetch, ...props }: LinkProps) {
+  return isAppAddress(href) ? (
+    <NextLink href={href} prefetch={prefetch} {...props} />
+  ) : (
+    <a href={href} {...props} />
+  );
 }
 
 /** The same object while Next's router stays the same: a shell's context holds what it builds. */

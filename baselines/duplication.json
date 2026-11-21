@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 103000,
+    "lines": 103004,
     "duplicatedLines": 16678,
     "percent": 16.19,
     "blocks": 1259
@@ -305,7 +305,7 @@
       "blocks": 0
     },
     "platform/router": {
-      "lines": 21,
+      "lines": 25,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
