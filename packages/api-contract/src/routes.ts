@@ -13,6 +13,9 @@ import * as fundsRegister from "./funds/register";
 import * as fundsSetup from "./funds/setup";
 import * as imports from "./imports/imports";
 import * as interests from "./interests/interests";
+import * as investmentsConnection from "./investments/connection";
+import * as investments from "./investments/investments";
+import * as investmentsRegister from "./investments/register";
 import { metaRoute } from "./meta";
 import * as payrollCodes from "./payroll/codes";
 import * as payroll from "./payroll/payroll";
@@ -150,6 +153,20 @@ export const FUNDS_ROUTES: readonly RouteContract[] = [
   ...Object.values(fundsSetup),
 ];
 
+/** Investments by area, for `apps/api` to serve each one by name. */
+export const INVESTMENTS = {
+  investments,
+  register: investmentsRegister,
+  connection: investmentsConnection,
+} as const;
+
+/** Investments, the twelfth module of R2 (05-refactor.md §5.2): the pages' reads and their writes. */
+export const INVESTMENTS_ROUTES: readonly RouteContract[] = [
+  ...Object.values(investments),
+  ...Object.values(investmentsRegister),
+  ...Object.values(investmentsConnection),
+];
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
@@ -163,4 +180,5 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...PAYROLL_ROUTES,
   ...IMPORTS_ROUTES,
   ...FUNDS_ROUTES,
+  ...INVESTMENTS_ROUTES,
 ];

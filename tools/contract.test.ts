@@ -10,6 +10,7 @@ import {
   FUNDS_ROUTES,
   IMPORTS_ROUTES,
   INTERESTS_ROUTES,
+  INVESTMENTS_ROUTES,
   PAYROLL_ROUTES,
   POCKETS_ROUTES,
   SETTINGS_ROUTES,
@@ -37,6 +38,12 @@ import * as fundsSources from "@domain/modules/funds/sources";
 import * as fundsRules from "@domain/modules/funds/rules";
 import * as fundsPension from "@domain/modules/funds/pension/rules";
 import { FEE_BASES, FEE_PERIODS } from "@domain/shared/fees";
+import * as investmentsWire from "../packages/api-contract/src/investments/shared";
+import * as investmentsRules from "@domain/modules/investments/rules";
+import { ACTIVITY_FAMILIES } from "@domain/modules/investments/activity";
+import { CONNECTION_STATES } from "@domain/platform/integrations/rules";
+import type { InvestmentErrorCode } from "@domain/modules/investments/service";
+import type { SyncErrorCode } from "@domain/modules/investments/sync/sources";
 import * as payrollWire from "../packages/api-contract/src/payroll/shared";
 import * as payrollRules from "@domain/modules/payroll/rules";
 import * as payrollFields from "@domain/modules/payroll/fields";
@@ -68,6 +75,9 @@ function keysOf(value: unknown, found: string[] = []): string[] {
   }
   return found;
 }
+
+/** A provider's credential fields keep the provider's names (`credentialFields` of the catalog). */
+const PROVIDER_FIELDS = ["api_key", "user_key"];
 
 const label = (route: RouteContract) => `${route.method} ${route.path}`;
 
@@ -113,9 +123,11 @@ describe("the contract of /api/v1", () => {
     expect(unknown.map(label)).toEqual([]);
   });
 
-  it("makes an MCP tool only of a read with the scope read", () => {
+  it("makes an MCP tool only of a read with the scope read or investments:read", () => {
     const wrong = CONTRACT_ROUTES.filter(
-      (route) => route.mcp && (route.method !== "GET" || route.scope !== "read"),
+      (route) =>
+        route.mcp &&
+        (route.method !== "GET" || (route.scope !== "read" && route.scope !== "investments:read")),
     );
     expect(wrong.map(label)).toEqual([]);
   });
@@ -143,7 +155,11 @@ describe("the contract of /api/v1", () => {
   it("speaks camelCase in every example", () => {
     const wrong = CONTRACT_ROUTES.flatMap((route) =>
       keysOf([route.example.body, route.example.response])
-        .filter((key) => !CAMEL.test(key) && !(route.id.includes("undo") || key.startsWith("acc-")))
+        .filter(
+          (key) =>
+            !CAMEL.test(key) &&
+            !(route.id.includes("undo") || key.startsWith("acc-") || PROVIDER_FIELDS.includes(key)),
+        )
         .map((key) => `${label(route)}: ${key}`),
     );
     expect(wrong).toEqual([]);
@@ -471,6 +487,73 @@ describe("the Server Actions of funds", () => {
     expect(fundsWire.OPERATION_CLASSES).toEqual(fundsPension.OPERATION_CLASSES);
     expect(fundsWire.OPERATION_SOURCES).toEqual(fundsPension.OPERATION_SOURCES);
     expect(fundsWire.COMPONENTS).toEqual(fundsPension.COMPONENTS);
+  });
+});
+
+/** The Server Actions of investments (05-refactor.md §5.5) and their routes: every one has a route, none is excluded. */
+const INVESTMENTS_ACTION_FILE = "apps/web/src/modules/investments/actions.ts";
+
+/** Every code of the domain's refusals: the compiler holds this record to the two unions, no more and no less. */
+const INVESTMENT_CODES: Record<InvestmentErrorCode | SyncErrorCode, true> = {
+  not_found: true,
+  future_date: true,
+  not_eligible: true,
+  wrong_mode: true,
+  negative_cash: true,
+  no_value: true,
+  duplicate_asset: true,
+  duplicate_holding: true,
+  invalid_transaction: true,
+  already_linked: true,
+  not_editable: true,
+  before_period: true,
+  not_a_transfer: true,
+  unknown_provider: true,
+  invalid_credentials: true,
+  not_read_only: true,
+  provider_auth: true,
+  provider_unavailable: true,
+  rate_limited: true,
+  unsupported_currency: true,
+  already_connected: true,
+  not_connected: true,
+  cooldown: true,
+  different_account: true,
+};
+
+describe("the Server Actions of investments", () => {
+  const actions = [
+    ...readFileSync(INVESTMENTS_ACTION_FILE, "utf8").matchAll(/^export async function (\w+)/gm),
+  ].map((match) => match[1]);
+  const routed = new Set(INVESTMENTS_ROUTES.flatMap((route) => route.actions));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(investmentsWire.INVESTMENT_CATEGORIES).toEqual(investmentsRules.INVESTMENT_CATEGORIES);
+    expect(investmentsWire.MODES).toEqual(investmentsRules.MODES);
+    expect(investmentsWire.ORIGINS).toEqual(investmentsRules.ORIGINS);
+    expect(investmentsWire.ASSET_CLASSES).toEqual(investmentsRules.ASSET_CLASSES);
+    expect(investmentsWire.HOLDING_ORIGINS).toEqual(investmentsRules.HOLDING_ORIGINS);
+    expect(investmentsWire.EVENT_ORIGINS).toEqual(investmentsRules.EVENT_ORIGINS);
+    expect(investmentsWire.PERIOD_REASONS).toEqual(investmentsRules.PERIOD_REASONS);
+    expect(investmentsWire.OPERATION_KINDS).toEqual(investmentsRules.OPERATION_KINDS);
+    expect(investmentsWire.ADJUSTMENT_CLASSES).toEqual(investmentsRules.ADJUSTMENT_CLASSES);
+    expect(investmentsWire.RECONCILIATION_KINDS).toEqual(investmentsRules.RECONCILIATION_KINDS);
+    expect(investmentsWire.READING_STATUSES).toEqual(investmentsRules.READING_STATUSES);
+    expect(investmentsWire.KEY_CHECK_RESULTS).toEqual(investmentsRules.KEY_CHECK_RESULTS);
+    expect(investmentsWire.COVERAGE_STATUSES).toEqual(investmentsRules.COVERAGE_STATUSES);
+    expect(investmentsWire.PRODUCT_PATTERN).toEqual(investmentsRules.PRODUCT_PATTERN);
+    expect(investmentsWire.ACTIVITY_FAMILIES).toEqual(ACTIVITY_FAMILIES);
+    expect(investmentsWire.CONNECTION_STATES).toEqual(CONNECTION_STATES);
+  });
+
+  it("name every refusal of the domain as a reason", () => {
+    const codes = Object.keys(INVESTMENT_CODES).filter((code) => code !== "not_found");
+    expect([...investmentsWire.INVESTMENT_REFUSALS].sort()).toEqual(codes.sort());
   });
 });
 
