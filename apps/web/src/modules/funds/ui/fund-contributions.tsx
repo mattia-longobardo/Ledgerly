@@ -18,7 +18,7 @@ import {
 } from "./contribution-dialog";
 import { DebitCards, PayslipsCard, PeriodsCard } from "./contribution-sections";
 import { type Contributions, contributionSetupOf, useMovements, usePeriodLabel } from "./contribution-setup";
-import { type Say, useSay } from "./say";
+import { type Say, useSay } from "@/platform/say";
 import { cents, contributionFormOfRow } from "./wire-forms";
 
 type Operation = Contributions["operations"][number];

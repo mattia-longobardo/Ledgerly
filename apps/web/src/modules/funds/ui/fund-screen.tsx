@@ -13,7 +13,8 @@ import { formatDate, formatMoney } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { useApi, useLatest } from "@ledgerly/ui/data";
-import { DetailHeader } from "@ledgerly/ui/detail-header";
+import type { DetailHeader } from "@ledgerly/ui/detail-header";
+import { PortfolioDetail } from "@ledgerly/ui/portfolio-detail";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { parseSectionQuery, SECTION_PRESETS, type SectionQuery } from "@ledgerly/ui/period";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
@@ -29,7 +30,7 @@ import { ValuationButton } from "./fund-forms";
 import { FundOverview } from "./fund-overview";
 import { FundSettings } from "./fund-settings";
 import { FundValuations } from "./fund-valuations";
-import { type Say, useSay } from "./say";
+import { type Say, useSay } from "@/platform/say";
 import { FundDetailSkeleton } from "./fund-skeleton";
 
 const HOME = "/funds";
@@ -114,12 +115,21 @@ function keptOf({ tab, view }: Place): Params {
   };
 }
 
+/** A tab's link with the period, and a year's link with the tab and the view. */
+function linksOf({ base, section, say }: Place, kept: Params) {
+  return {
+    tabHref: (name: string) =>
+      withParams(base, section.params, { tab: name === "overview" ? undefined : name }),
+    yearHref: (year: number) => withParams(base, kept, yearQuery(year, say.todayOn)),
+  };
+}
+
 function FundPage({ place, settings }: { place: Place; settings: Settings }) {
   const fundsText = useTranslations("funds");
   const fundText = useTranslations("funds.fund");
   const periodText = useTranslations("common.period");
   const { fund, sources } = settings;
-  const { say, base, section, tab } = place;
+  const { say, section, tab } = place;
   const archived = fund.state === "archived";
   const byHand = sources.some((source) => source.kind === "manual");
   const accrual =
@@ -127,13 +137,14 @@ function FundPage({ place, settings }: { place: Place; settings: Settings }) {
   const label = usePeriodLabel(accrual, say);
   const period = useTabPeriod(place);
   const kept = keptOf(place);
-  const tabHref = (name: string) =>
-    withParams(base, section.params, { tab: name === "overview" ? undefined : name });
-  const yearHref = (year: number) => withParams(base, kept, yearQuery(year, say.todayOn));
+  const { tabHref, yearHref } = linksOf(place, kept);
   const name = period ? answeredPeriodText(period, say.todayOn, say.locale, periodText) : "";
   const when = usePeriodWhen(period, say);
   const recordContribution = (variant: "primary" | "secondary", size: "sm" | "md" | "lg" = "sm") =>
     archived ? null : <RecordContribution place={place} variant={variant} size={size} label={label} />;
+  // On a phone the top bar has room for one command: the second sits beside the title (§11.1).
+  const aside = byHand && <span className="md:hidden">{recordContribution("secondary", "lg")}</span>;
+  const header = useFundHeader(settings, say, aside);
   const valuationButton = (text: string, where: "page" | "card") => (
     <UpdateValue place={place} fundName={fund.name} label={text} where={where} />
   );
@@ -151,95 +162,97 @@ function FundPage({ place, settings }: { place: Place; settings: Settings }) {
         )
       }
     >
-      <FundHeader
-        settings={settings}
-        say={say}
-        // On a phone the top bar has room for one command: the second sits beside the title (§11.1).
-        aside={byHand && <span className="md:hidden">{recordContribution("secondary", "lg")}</span>}
-      />
-      <FundNav place={place} period={period} name={name} kept={kept} tabHref={tabHref} />
-      {tab === "settings" ? (
-        <FundSettings fundId={fund.id} />
-      ) : (
-        <TabBody
-          place={place}
-          archived={archived}
-          name={name}
-          when={when}
-          label={label}
-          tabHref={tabHref}
-          yearHref={yearHref}
-          recordContribution={(variant) => recordContribution(variant)}
-          valuationButton={valuationButton}
-        />
-      )}
+      <PortfolioDetail
+        header={header}
+        tabs={<FundTabs place={place} tabHref={tabHref} />}
+        period={<FundPeriod place={place} period={period} name={name} kept={kept} />}
+      >
+        {tab === "settings" ? (
+          <FundSettings fundId={fund.id} />
+        ) : (
+          <TabBody
+            place={place}
+            archived={archived}
+            name={name}
+            when={when}
+            label={label}
+            tabHref={tabHref}
+            yearHref={yearHref}
+            recordContribution={(variant) => recordContribution(variant)}
+            valuationButton={valuationButton}
+          />
+        )}
+      </PortfolioDetail>
     </Page>
   );
 }
 
 /** The fund's name, its badge when archived, and its provider, compartment and start. */
-function FundHeader({ settings, say, aside }: { settings: Settings; say: Say; aside: React.ReactNode }) {
+function useFundHeader(
+  settings: Settings,
+  say: Say,
+  aside: React.ReactNode,
+): Parameters<typeof DetailHeader>[0] {
   const fundsText = useTranslations("funds");
   const home = useTranslations("funds.home");
   const { fund } = settings;
+  return {
+    metaTestId: "fund-meta",
+    meta: [
+      fund.provider,
+      fund.compartment,
+      fundsText("detail.since", { date: formatDate(fund.startOn, "monthYear", say.locale) }),
+    ],
+    title: (
+      <>
+        {fund.name}
+        {fund.state === "archived" && <Badge tone="neutral">{home("list.archived")}</Badge>}
+      </>
+    ),
+    titleAside: aside,
+  };
+}
+
+/** The tabs, and the period bar on every tab that follows the period. */
+function FundTabs({ place, tabHref }: { place: Place; tabHref: (tab: string) => string }) {
+  const fundsText = useTranslations("funds");
+  const fundText = useTranslations("funds.fund");
   return (
-    <DetailHeader
-      metaTestId="fund-meta"
-      meta={[
-        fund.provider,
-        fund.compartment,
-        fundsText("detail.since", { date: formatDate(fund.startOn, "monthYear", say.locale) }),
-      ]}
-      title={
-        <>
-          {fund.name}
-          {fund.state === "archived" && <Badge tone="neutral">{home("list.archived")}</Badge>}
-        </>
-      }
-      titleAside={aside}
+    <TabLinks
+      label={fundsText("detail.tabs.label")}
+      tabs={TABS.map((one) => ({
+        href: tabHref(one),
+        label: fundText(`tabs.${one}`),
+        active: one === place.tab,
+      }))}
     />
   );
 }
 
-/** The tabs, and the period bar on every tab that follows the period. */
-function FundNav({
+/** The period bar, on every tab that follows the period. */
+function FundPeriod({
   place,
   period,
   name,
   kept,
-  tabHref,
 }: {
   place: Place;
   period: AnsweredPeriod | undefined;
   name: string;
   kept: Params;
-  tabHref: (tab: string) => string;
 }) {
-  const fundsText = useTranslations("funds");
-  const fundText = useTranslations("funds.fund");
   const { say, base, section, tab } = place;
+  if (tab === "settings" || !period) return null;
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <TabLinks
-        label={fundsText("detail.tabs.label")}
-        tabs={TABS.map((one) => ({
-          href: tabHref(one),
-          label: fundText(`tabs.${one}`),
-          active: one === tab,
-        }))}
-      />
-      {tab !== "settings" && period && (
-        <PeriodBar
-          period={section}
-          path={base}
-          carry={kept}
-          locale={say.locale}
-          presets={SECTION_PRESETS}
-          name={period.kind === "year" ? name : undefined}
-          whole={{ range: period.span, text: name }}
-        />
-      )}
-    </div>
+    <PeriodBar
+      period={section}
+      path={base}
+      carry={kept}
+      locale={say.locale}
+      presets={SECTION_PRESETS}
+      name={period.kind === "year" ? name : undefined}
+      whole={{ range: period.span, text: name }}
+    />
   );
 }
 

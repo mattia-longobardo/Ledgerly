@@ -4,14 +4,12 @@ import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 import { parseCents } from "@ledgerly/format/cents";
 import { formatDate, formatMoney, formatPercent } from "@ledgerly/format/format";
-import { Badge } from "@ledgerly/ui/badge";
 import { cn } from "@ledgerly/ui/cn";
-import { Popover } from "@ledgerly/ui/popover";
-import { Link } from "@ledgerly/ui/router";
+import { AlertsSummary } from "@ledgerly/ui/alerts-summary";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { ValuationButton } from "./fund-forms";
 import { type Home, type HomeFund, type HomeWords } from "./home-cards";
-import { type Say } from "./say";
+import { type Say } from "@/platform/say";
 
 type Summary = Home["summary"];
 
@@ -208,39 +206,13 @@ function StaleLink({ open, words }: { open: readonly HomeFund[]; words: HomeWord
   const homeText = useTranslations("funds.home");
   const day = (date: string | null) => formatDate(date, "dayMonth", words.say.locale);
   const stale = open.filter((one) => one.stale);
-  if (stale.length === 0) return null;
-  if (stale.length === 1)
-    return (
-      <Link
-        href={words.fundHref(stale[0].id)}
-        className="focus-ring inline-flex min-h-6 items-center gap-1.5 rounded-sm text-sm hover:underline"
-      >
-        <Badge tone="warn">1</Badge>
-        {homeText("stale.one", { name: stale[0].name, date: day(stale[0].lastValueOn) })}
-      </Link>
-    );
+  const textOf = (one: HomeFund) => homeText("stale.one", { name: one.name, date: day(one.lastValueOn) });
   return (
-    <Popover
-      triggerLabel={homeText("stale.label", { count: stale.length })}
-      trigger={
-        <>
-          <Badge tone="warn">{stale.length}</Badge>
-          {homeText("stale.many", { count: stale.length })}
-        </>
-      }
-    >
-      <ul className="flex max-w-80 flex-col">
-        {stale.map((one) => (
-          <li key={one.id}>
-            <Link
-              href={words.fundHref(one.id)}
-              className="focus-ring flex min-h-8 items-center rounded-sm px-2 text-sm hover:bg-hover"
-            >
-              {homeText("stale.one", { name: one.name, date: day(one.lastValueOn) })}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </Popover>
+    <AlertsSummary
+      items={stale.map((one) => ({ key: one.id, href: words.fundHref(one.id), text: textOf(one) }))}
+      one={(item) => item.text}
+      many={homeText("stale.many", { count: stale.length })}
+      manyLabel={homeText("stale.label", { count: stale.length })}
+    />
   );
 }

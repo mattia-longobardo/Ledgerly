@@ -12,7 +12,7 @@ import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { ValuationButton } from "./fund-forms";
 import type { Home, HomeFund, HomeWords } from "./home-cards";
 import { wireMonthPill } from "./present";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { frequencyText } from "./source-text";
 import { cents } from "./wire-forms";
 

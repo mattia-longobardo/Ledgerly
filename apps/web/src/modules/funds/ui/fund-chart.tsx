@@ -13,7 +13,7 @@ import { MultiLine, StackedBars, stackLayers } from "@ledgerly/ui/chart";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import type { Params } from "@ledgerly/ui/url";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { cents } from "./wire-forms";
 
 type Home = RouteOutput<typeof funds.getFunds>;

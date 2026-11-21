@@ -8,7 +8,7 @@ import { Link } from "@ledgerly/ui/router";
 import { CompactEmpty } from "./compact-empty";
 import type { Settings } from "./fund-settings";
 import { RebuildCompetencesButton } from "./rebuild-button";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import type { SourceSetup } from "./source-dialog";
 import { AddSource, SourceActions } from "./source-list-client";
 import { customDueText, dueDatesText, sourceSummary } from "./source-text";

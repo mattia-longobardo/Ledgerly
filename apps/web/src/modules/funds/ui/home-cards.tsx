@@ -13,7 +13,7 @@ import { Link } from "@ledgerly/ui/router";
 import { Table, TBody, Td, Th, THead, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { money } from "./home-funds-card";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { cents } from "./wire-forms";
 
 export { FundsCard } from "./home-funds-card";

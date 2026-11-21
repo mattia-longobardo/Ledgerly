@@ -1,5 +1,5 @@
 "use client";
-// How the screens of Funds speak to the person (rewrite plan R3): their number format, language, time
+// How the screens of Funds and Investments speak to the person (rewrite plan R3): their number format, language, time
 // zone and today, from the preferences of `/api/v1`. The screens format with them and compute nothing.
 import { profile } from "@ledgerly/api-contract/settings";
 import { type CivilDate, today } from "@ledgerly/format/dates";

@@ -5,7 +5,7 @@ import { formatDate, formatMoney, formatPercent } from "@ledgerly/format/format"
 import type { FeeScopeOption } from "./fee-text";
 import type { Settings } from "./fund-settings";
 import { FundFeesList } from "./fund-fees-client";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { cents, feeFormOfRow } from "./wire-forms";
 
 /**

@@ -14,7 +14,7 @@ import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { DeleteValuation, EditValuationButton } from "./fund-forms";
 import { valuationDraft } from "./present";
-import { type Say, useSay } from "./say";
+import { type Say, useSay } from "@/platform/say";
 import { cents } from "./wire-forms";
 
 type Valuations = RouteOutput<typeof funds.getFundValuations>;

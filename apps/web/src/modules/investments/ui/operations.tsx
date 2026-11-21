@@ -26,7 +26,7 @@ type OperationKind =
   | "account_valuation"
   | "adjustment";
 
-export interface OperationSummary {
+interface OperationSummary {
   id: string;
   kind: OperationKind;
   on: string;

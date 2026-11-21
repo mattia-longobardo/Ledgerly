@@ -507,12 +507,11 @@
   "packages/domain/src/modules/investments/client.ts": [
     "AssetClass",
     "InvestmentCategory",
-    "PERIOD_KEYS",
     "PRODUCTS",
-    "PnlPeriod",
-    "SECTION_PRESETS",
-    "periodSpan",
-    "sectionPeriod"
+    "PROVIDER_SCHEDULE",
+    "describeEvent",
+    "priceText",
+    "quantityText"
   ],
   "packages/domain/src/modules/investments/index.ts": [
     "ACTIVITY_FAMILIES",

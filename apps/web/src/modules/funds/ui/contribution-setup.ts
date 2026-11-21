@@ -11,7 +11,7 @@ import { useApi } from "@ledgerly/ui/data";
 import { newContributionForm } from "@ledgerly/domain/funds/client";
 import type { ContributionSetup } from "./contribution-dialog";
 import { periodLabel } from "./pension-present";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { cents, movementOptions } from "./wire-forms";
 
 export type Contributions = RouteOutput<typeof funds.getFundContributions>;

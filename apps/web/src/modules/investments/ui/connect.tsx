@@ -2,8 +2,7 @@
 
 // The key of a provider (§4.2, §5): its fields, write only, and «Connect» from the catalog. A key
 // stays in the page no longer than the call: the fields are cleared whatever the answer.
-import { useMessages, useTranslations } from "next-intl";
-import { z } from "zod";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import type { NumberFormat } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
@@ -15,6 +14,7 @@ import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
 import { connectProvider } from "../calls";
 import { FORM_GRID, Opener, useInvestmentResult } from "./dialog-kit";
+import { useProviderWords } from "./provider-words";
 import { type ExistingChoice, optionText, reasonText } from "./manual-service";
 
 export interface ConnectableProvider {
@@ -32,14 +32,6 @@ export interface ConnectableProvider {
 
 const FIELDS = ["api_key", "user_key", "secret"] as const;
 const STEPS = ["1", "2", "3", "4"] as const;
-/** The steps of each provider in the catalogue, by the provider's id with `_` for every other sign. */
-const STEP_TEXTS = z.object({
-  investments: z.object({
-    connect: z.object({
-      steps: z.record(z.string(), z.object({ 1: z.string(), 2: z.string(), 3: z.string(), 4: z.string() })),
-    }),
-  }),
-});
 
 type Text = ReturnType<typeof useTranslations<"investments">>;
 
@@ -132,8 +124,7 @@ function UnrestrictedNotice({ provider, onOpen }: { provider: ConnectableProvide
 function ConnectSteps({ provider }: { provider: ConnectableProvider }) {
   const text = useTranslations("investments");
   // Message keys cannot hold a colon: the provider's id with `_` for every other sign.
-  const steps =
-    STEP_TEXTS.parse(useMessages()).investments.connect.steps[provider.id.replace(/[^a-z0-9]/g, "_")];
+  const steps = useProviderWords(provider.id)?.steps;
   return (
     <>
       {steps && (

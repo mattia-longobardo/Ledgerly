@@ -11,7 +11,7 @@ import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import type { Contributions } from "./contribution-setup";
 import { STATUS_TONE } from "./pension-present";
 import { AcceptDifferenceButton, ClearDecisionButton } from "./reconciliation-buttons";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { frequencyText } from "./source-text";
 import { cents } from "./wire-forms";
 

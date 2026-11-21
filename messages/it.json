@@ -4566,20 +4566,6 @@
       "open": "Collega",
       "title": "Collega {name}",
       "description": "Una chiave in sola lettura: Ledgerly legge saldi, posizioni e storico, e controlla i permessi della chiave a ogni sincronizzazione.",
-      "steps": {
-        "etoro": {
-          "1": "Su eToro apri Impostazioni e la pagina delle chiavi API.",
-          "2": "Crea una chiave per l'ambiente Real con il solo permesso Read: lascia spento Write.",
-          "3": "Copia la chiave API pubblica e la chiave utente: eToro mostra la chiave utente una sola volta.",
-          "4": "Incollale qui. Ledgerly controlla che ogni permesso della chiave sia di sola lettura prima di salvare qualcosa."
-        },
-        "ccxt_binance": {
-          "1": "Su Binance apri Account › Gestione API e crea una chiave generata dal sistema.",
-          "2": "Lascia acceso solo “Abilita lettura”: trading, prelievi, trasferimenti, margin, futures e opzioni restano spenti.",
-          "3": "Copia la chiave API e la chiave segreta: Binance mostra la chiave segreta una sola volta.",
-          "4": "Incollale qui. Ledgerly legge da Binance i permessi della chiave e la rifiuta se uno di essi permette più della lettura."
-        }
-      },
       "readOnlyNote": "Una chiave con un permesso che non è di lettura viene rifiutata, ora e a ogni sincronizzazione successiva.",
       "ipSuggested": "Consigliato: su {name} limita la chiave all'IP pubblico dell'homelab. È facoltativo: la chiave funziona anche senza.",
       "ipUnsupported": "{name} non ha una IP whitelist per queste chiavi.",
@@ -4661,8 +4647,6 @@
       },
       "reliableFrom": "attendibile dal {date}",
       "notReliable": "storico incompleto",
-      "etoroBrand": "Dati di eToro, letti con la tua chiave.",
-      "binanceBrand": "Dati di Binance, letti con la tua chiave.",
       "readingsNote": "Si conserva una lettura al giorno."
     },
     "transfers": {
@@ -4806,7 +4790,7 @@
         "revoked": "Errore: chiave rifiutata",
         "disconnected": "Disconnesso: tenuto a mano",
         "manual": "Tenuto a mano",
-        "wallet": "Sincronizzato da Wallet"
+        "bySource": "Sincronizzato da Wallet"
       },
       "today": "oggi {time}",
       "openSite": "Apri {name}",
@@ -4838,7 +4822,6 @@
         "income": "Proventi",
         "incomeNote": "dividendi, staking",
         "incomeIncluded": "inclusi",
-        "incomeIncludedNote": "{name} li somma al valore",
         "fees": "Commissioni",
         "feesNote": "tutte le commissioni del periodo"
       },
@@ -5020,7 +5003,6 @@
       "closedTitle": "Chiuse · {period}",
       "allTitle": "Tutte le chiuse",
       "closedNote": "Realizzato = incassato − costo medio uscito; le commissioni sono a parte.",
-      "closedNoteEtoro": "Realizzato = incassato − investito, commissioni di eToro incluse.",
       "emptyClosed": "Nessuna posizione chiusa in {period}.",
       "emptyAll": "Ancora nessuna posizione chiusa.",
       "dates": "Aperta → chiusa",
@@ -5058,6 +5040,28 @@
       "description": "Il valore che leggi dal broker in quel giorno. Diventa il saldo del conto in Conti.",
       "amount": "Valore",
       "submit": "Salva"
+    },
+    "providers": {
+      "etoro": {
+        "steps": {
+          "1": "Su eToro apri Impostazioni e la pagina delle chiavi API.",
+          "2": "Crea una chiave per l'ambiente Real con il solo permesso Read: lascia spento Write.",
+          "3": "Copia la chiave API pubblica e la chiave utente: eToro mostra la chiave utente una sola volta.",
+          "4": "Incollale qui. Ledgerly controlla che ogni permesso della chiave sia di sola lettura prima di salvare qualcosa."
+        },
+        "brand": "Dati di eToro, letti con la tua chiave.",
+        "closedNote": "Realizzato = incassato − investito, commissioni di eToro incluse.",
+        "incomeIncludedNote": "{name} li somma al valore"
+      },
+      "ccxt_binance": {
+        "steps": {
+          "1": "Su Binance apri Account › Gestione API e crea una chiave generata dal sistema.",
+          "2": "Lascia acceso solo “Abilita lettura”: trading, prelievi, trasferimenti, margin, futures e opzioni restano spenti.",
+          "3": "Copia la chiave API e la chiave segreta: Binance mostra la chiave segreta una sola volta.",
+          "4": "Incollale qui. Ledgerly legge da Binance i permessi della chiave e la rifiuta se uno di essi permette più della lettura."
+        },
+        "brand": "Dati di Binance, letti con la tua chiave."
+      }
     }
   },
   "payroll": {

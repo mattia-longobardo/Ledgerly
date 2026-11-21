@@ -33,7 +33,7 @@ import {
   WhoPaidCard,
   YearsCard,
 } from "./home-cards";
-import { type Say, useSay } from "./say";
+import { type Say, useSay } from "@/platform/say";
 import { Hero, toCents } from "./home-hero";
 import { FundsHomeSkeleton } from "./home-skeleton";
 

@@ -4566,20 +4566,6 @@
       "open": "Connect",
       "title": "Connect {name}",
       "description": "A read-only key: Ledgerly reads balances, positions and history, and checks the key's permissions on every sync.",
-      "steps": {
-        "etoro": {
-          "1": "On eToro, open Settings and its API keys page.",
-          "2": "Create a key for the Real environment with the Read permission only: leave Write off.",
-          "3": "Copy the public API key and the user key: eToro shows the user key once.",
-          "4": "Paste both here. Ledgerly checks that every permission of the key only reads before it saves anything."
-        },
-        "ccxt_binance": {
-          "1": "On Binance, open Account › API Management and create a system-generated key.",
-          "2": "Leave only “Enable Reading” on: trading, withdrawals, transfers, margin, futures and options stay off.",
-          "3": "Copy the API key and the secret key: Binance shows the secret once.",
-          "4": "Paste both here. Ledgerly reads the key's permissions from Binance and refuses it if any of them can do more than read."
-        }
-      },
       "readOnlyNote": "A key with any permission that is not read is refused, now and on every later sync.",
       "ipSuggested": "Recommended: on {name}, restrict the key to the homelab's public IP. It is optional, and the key works without it.",
       "ipUnsupported": "{name} has no IP whitelist for these keys.",
@@ -4661,8 +4647,6 @@
       },
       "reliableFrom": "reliable from {date}",
       "notReliable": "history incomplete",
-      "etoroBrand": "Data from eToro, read with your key.",
-      "binanceBrand": "Data from Binance, read with your key.",
       "readingsNote": "One reading a day is kept."
     },
     "transfers": {
@@ -4806,7 +4790,7 @@
         "revoked": "Error: key refused",
         "disconnected": "Disconnected: kept by hand",
         "manual": "Kept by hand",
-        "wallet": "Synced by Wallet"
+        "bySource": "Synced by Wallet"
       },
       "today": "today {time}",
       "openSite": "Open {name}",
@@ -4838,7 +4822,6 @@
         "income": "Income",
         "incomeNote": "dividends, staking",
         "incomeIncluded": "included",
-        "incomeIncludedNote": "{name} adds it to the value",
         "fees": "Fees",
         "feesNote": "every fee of the period"
       },
@@ -5020,7 +5003,6 @@
       "closedTitle": "Closed · {period}",
       "allTitle": "All closed",
       "closedNote": "Realized = what came back − what it cost at average cost; fees are apart.",
-      "closedNoteEtoro": "Realized = what came back − what was invested, eToro's fees included.",
       "emptyClosed": "No position closed in {period}.",
       "emptyAll": "No position closed yet.",
       "dates": "Opened → closed",
@@ -5058,6 +5040,28 @@
       "description": "The value you read at the broker on that day. It becomes the account balance in Accounts.",
       "amount": "Value",
       "submit": "Save"
+    },
+    "providers": {
+      "etoro": {
+        "steps": {
+          "1": "On eToro, open Settings and its API keys page.",
+          "2": "Create a key for the Real environment with the Read permission only: leave Write off.",
+          "3": "Copy the public API key and the user key: eToro shows the user key once.",
+          "4": "Paste both here. Ledgerly checks that every permission of the key only reads before it saves anything."
+        },
+        "brand": "Data from eToro, read with your key.",
+        "closedNote": "Realized = what came back − what was invested, eToro's fees included.",
+        "incomeIncludedNote": "{name} adds it to the value"
+      },
+      "ccxt_binance": {
+        "steps": {
+          "1": "On Binance, open Account › API Management and create a system-generated key.",
+          "2": "Leave only “Enable Reading” on: trading, withdrawals, transfers, margin, futures and options stay off.",
+          "3": "Copy the API key and the secret key: Binance shows the secret once.",
+          "4": "Paste both here. Ledgerly reads the key's permissions from Binance and refuses it if any of them can do more than read."
+        },
+        "brand": "Data from Binance, read with your key."
+      }
     }
   },
   "payroll": {

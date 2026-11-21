@@ -19,7 +19,7 @@ import {
   RecentCard,
 } from "./overview-cards";
 import { ClosedProjection, ShortProjection } from "./projection";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { cents } from "./wire-forms";
 
 interface OverviewProps {

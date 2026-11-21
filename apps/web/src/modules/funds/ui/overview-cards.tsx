@@ -12,7 +12,7 @@ import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { Link } from "@ledgerly/ui/router";
 import { toneOfSign } from "@ledgerly/ui/tone";
 import { wireMonthPill } from "./present";
-import type { Say } from "./say";
+import type { Say } from "@/platform/say";
 import { frequencyText } from "./source-text";
 import { cents } from "./wire-forms";
 

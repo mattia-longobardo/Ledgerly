@@ -16,9 +16,6 @@ export { barIntervals, legacyPeriodQuery, periodSpan, valueDays, yearQuery } fro
 export type { BarGrain, Interval } from "../../shared/period";
 export type { Query } from "../../shared/period";
 
-/** The names of those parameters: the only ones a tab carries to the next. */
-export const PERIOD_KEYS = ["preset", "from", "to", "off"] as const;
-
 /**
  * The presets of Funds and Investments: the four of Expenses, and "All" — the whole history, which
  * a P&L needs and a month of spending does not.

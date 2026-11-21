@@ -84,7 +84,10 @@ function TableCell<T>({ column, row }: { column: DataColumn<T>; row: T }) {
   );
 }
 
-type RowProps = HTMLAttributes<HTMLTableRowElement> & { selected?: boolean; "data-testid"?: string };
+type RowProps = HTMLAttributes<HTMLTableRowElement> & {
+  selected?: boolean;
+  [data: `data-${string}`]: string;
+};
 
 type DataTableProps<T> = {
   columns: readonly DataColumn<T>[];
@@ -95,13 +98,15 @@ type DataTableProps<T> = {
   /** The whole card of a row, in place of its cells one per line. */
   card?: (row: T) => ReactNode;
   /** Attributes of each card; its `className` replaces the default one. */
-  cardProps?: (row: T) => LiHTMLAttributes<HTMLLIElement>;
+  cardProps?: (row: T) => LiHTMLAttributes<HTMLLIElement> & { [data: `data-${string}`]: string };
   /** Classes of the box around the table (it is hidden below `md` whatever they are). */
   frameClassName?: string;
   /** The names a test finds the table and the list by. */
   testIds?: { table: string; list: string };
-  /** The table's `<tfoot>` (a totals row); the cards have none. */
+  /** The table's `<tfoot>` (a totals row). */
   footer?: ReactNode;
+  /** The same totals as the last items of the cards' list (`<li>`s). */
+  cardFooter?: ReactNode;
   /** The header stays at the top of the frame while its rows scroll (the frame sets the height). */
   stickyHeader?: boolean;
 } & ({ rows: readonly T[]; groups?: never } | { groups: readonly DataGroup<T>[]; rows?: never });
@@ -165,7 +170,16 @@ function TableView<T>({
   );
 }
 
-function CardList<T>({ columns, rows, groups, rowKey, card, cardProps, testIds }: DataTableProps<T>) {
+function CardList<T>({
+  columns,
+  rows,
+  groups,
+  rowKey,
+  card,
+  cardProps,
+  testIds,
+  cardFooter,
+}: DataTableProps<T>) {
   const cardRow = (row: T) => {
     const { className, ...props } = cardProps?.(row) ?? {};
     return (
@@ -190,6 +204,7 @@ function CardList<T>({ columns, rows, groups, rowKey, card, cardProps, testIds }
             </li>
           ))
         : rows.map(cardRow)}
+      {cardFooter}
     </ul>
   );
 }

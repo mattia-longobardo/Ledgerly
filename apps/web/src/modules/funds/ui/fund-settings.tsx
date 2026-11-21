@@ -14,7 +14,7 @@ import { FundFeesSection } from "./fund-fees";
 import { FundStateButton } from "./fund-forms";
 import { FundSettingsForm } from "./fund-settings-form";
 import { FundSourcesSection } from "./fund-sources";
-import { type Say, useSay } from "./say";
+import { type Say, useSay } from "@/platform/say";
 import { movementOptions } from "./wire-forms";
 
 export type Settings = RouteOutput<typeof funds.getFundSettings>;

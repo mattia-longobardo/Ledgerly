@@ -8,7 +8,7 @@ import { funds as fundRoutes } from "@ledgerly/api-contract/funds";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { FundWizard } from "./fund-wizard";
-import { useSay } from "./say";
+import { useSay } from "@/platform/say";
 import { WizardSkeleton } from "./wizard-skeleton";
 
 export function NewFundScreen() {

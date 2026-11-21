@@ -57,6 +57,8 @@ test("the service's P&L in the display currency is its row on the home, to the c
   ] as const) {
     await page.goto(`/investments${query}`);
     const row = page.getByTestId("service-row").filter({ hasText: name }).first();
+    // The home is drawn on the client: its rows are there once it has read them.
+    await row.waitFor();
     const cell = row.getByTestId("service-pnl");
     const home = (await cell.count()) === 0 ? "" : await cell.getAttribute("data-cents");
     await openService(page, name, query);
