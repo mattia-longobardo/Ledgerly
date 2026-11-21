@@ -110,6 +110,8 @@ test("an MCP client discovers, registers, gets consent and reads only through /a
   const { tools } = await client.listTools();
   expect(tools.map((tool) => tool.name).sort()).toEqual([
     "get_account_balances",
+    "get_fund",
+    "get_funds",
     "get_interest_rule",
     "get_investment_holdings",
     "get_payroll",

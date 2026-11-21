@@ -648,5 +648,10 @@
     "file": "apps/web/src/modules/investments/exposure.itest.ts",
     "decision": "R2 funds",
     "reason": "the list of the MCP tools holds the two new read tools get_funds and get_fund: two names added to the expected list; no other value changed"
+  },
+  {
+    "file": "tests/e2e/api/mcp.spec.ts",
+    "decision": "R2 funds",
+    "reason": "the list of the MCP tools holds the two new read tools get_funds and get_fund: two names added to the expected list; no other value changed"
   }
 ]
