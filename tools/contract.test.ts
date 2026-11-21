@@ -7,6 +7,7 @@ import {
   BUDGETS_ROUTES,
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
+  FUNDS_ROUTES,
   IMPORTS_ROUTES,
   INTERESTS_ROUTES,
   PAYROLL_ROUTES,
@@ -31,6 +32,11 @@ import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
 import * as timeoffDomain from "@domain/modules/timeoff/rules";
 import { HOLIDAY_SOURCES } from "@domain/platform/holidays/rules";
+import * as fundsWire from "../packages/api-contract/src/funds/shared";
+import * as fundsSources from "@domain/modules/funds/sources";
+import * as fundsRules from "@domain/modules/funds/rules";
+import * as fundsPension from "@domain/modules/funds/pension/rules";
+import { FEE_BASES, FEE_PERIODS } from "@domain/shared/fees";
 import * as payrollWire from "../packages/api-contract/src/payroll/shared";
 import * as payrollRules from "@domain/modules/payroll/rules";
 import * as payrollFields from "@domain/modules/payroll/fields";
@@ -430,6 +436,41 @@ describe("the Server Actions of payroll", () => {
     expect(payrollWire.FIELD_UNITS).toEqual(importsRules.EVIDENCE_UNITS);
     expect(payrollWire.EVIDENCE_ORIGINS).toEqual(importsRules.EVIDENCE_ORIGINS);
     expect(payrollWire.VERIFICATION_STATES).toEqual(importsRules.VERIFICATION_STATES);
+  });
+});
+
+/**
+ * The Server Actions of funds (05-refactor.md §5.5) and their routes: every one has a route, none is
+ * excluded. `name:variant` is one action that calls two use cases (add or update, and a fee's «Undo»).
+ */
+const FUNDS_ACTION_FILES = [
+  "apps/web/src/modules/funds/actions.ts",
+  "apps/web/src/app/(app)/funds/fund-setup.ts",
+];
+
+describe("the Server Actions of funds", () => {
+  const actions = FUNDS_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
+  const routed = new Set(FUNDS_ROUTES.flatMap((route) => route.actions.map((name) => name.split(":")[0])));
+
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
+    expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
+  });
+
+  it("speak the vocabularies of the domain", () => {
+    expect(fundsWire.FUND_STATES).toEqual(fundsRules.FUND_STATES);
+    expect(fundsWire.SOURCE_KINDS).toEqual(fundsSources.SOURCE_KINDS);
+    expect(fundsWire.SOURCE_STATES).toEqual(fundsSources.SOURCE_STATES);
+    expect(fundsWire.PAYROLL_COMPONENTS).toEqual(fundsSources.PAYROLL_COMPONENTS);
+    expect(fundsWire.ACCRUAL_PERIODS).toEqual(fundsSources.ACCRUAL_PERIODS);
+    expect(fundsWire.INTERVAL_UNITS).toEqual(fundsSources.INTERVAL_UNITS);
+    expect(fundsWire.FEE_BASES).toEqual(FEE_BASES);
+    expect(fundsWire.FEE_PERIODS).toEqual(FEE_PERIODS);
+    expect(fundsWire.OPERATION_CLASSES).toEqual(fundsPension.OPERATION_CLASSES);
+    expect(fundsWire.OPERATION_SOURCES).toEqual(fundsPension.OPERATION_SOURCES);
+    expect(fundsWire.COMPONENTS).toEqual(fundsPension.COMPONENTS);
   });
 });
 

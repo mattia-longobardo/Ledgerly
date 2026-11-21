@@ -8,6 +8,9 @@ import * as accountSummary from "./accounts/summary";
 import * as accountSwitch from "./accounts/switch";
 import * as views from "./accounts/views";
 import * as budgets from "./budgets/budgets";
+import * as fundsHome from "./funds/funds";
+import * as fundsRegister from "./funds/register";
+import * as fundsSetup from "./funds/setup";
 import * as imports from "./imports/imports";
 import * as interests from "./interests/interests";
 import { metaRoute } from "./meta";
@@ -137,6 +140,16 @@ export const IMPORTS = { imports } as const;
 /** Imports, the tenth module of R2 (05-refactor.md §5.2): the upload of a document. */
 export const IMPORTS_ROUTES: readonly RouteContract[] = [imports.uploadDocument];
 
+/** Funds by area, for `apps/api` to serve each one by name. */
+export const FUNDS = { funds: fundsHome, register: fundsRegister, setup: fundsSetup } as const;
+
+/** Funds, the eleventh module of R2 (05-refactor.md §5.2): the home, a fund's tabs and their writes. */
+export const FUNDS_ROUTES: readonly RouteContract[] = [
+  ...Object.values(fundsHome),
+  ...Object.values(fundsRegister),
+  ...Object.values(fundsSetup),
+];
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
@@ -149,4 +162,5 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...TIMEOFF_ROUTES,
   ...PAYROLL_ROUTES,
   ...IMPORTS_ROUTES,
+  ...FUNDS_ROUTES,
 ];

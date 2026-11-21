@@ -55,6 +55,8 @@
     "CONTRACT_ROUTES",
     "CONTRACT_SCOPES",
     "ContractScope",
+    "FUNDS",
+    "FUNDS_ROUTES",
     "IMPORTS",
     "IMPORTS_ROUTES",
     "INTERESTS",
