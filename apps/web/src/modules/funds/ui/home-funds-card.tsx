@@ -172,7 +172,8 @@ function useFundColumns({ words, subline, paidHeader }: FundRows): DataColumn<Ho
     {
       key: "fund",
       header: homeText("list.fund"),
-      className: "py-1",
+      // The name and the gain's words wrap: from `md`, with the sidebar, the table fits a tablet.
+      className: "py-1 whitespace-normal",
       cell: (fund) => (
         <span className="flex flex-col items-start">
           <NameCell fund={fund} words={words} />
@@ -190,6 +191,7 @@ function useFundColumns({ words, subline, paidHeader }: FundRows): DataColumn<Ho
       key: "gain",
       header: homeText("list.gain"),
       align: "right",
+      className: "whitespace-normal",
       cell: (fund) => <GainCell fund={fund} say={say} />,
     },
     {
