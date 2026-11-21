@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105127,
-    "duplicatedLines": 16519,
-    "percent": 15.71,
-    "blocks": 1266
+    "lines": 105399,
+    "duplicatedLines": 16485,
+    "percent": 15.64,
+    "blocks": 1265
   },
   "units": {
     "api": {
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 13658,
-      "duplicatedLines": 2274,
-      "percent": 16.65,
-      "blocks": 184
+      "lines": 13930,
+      "duplicatedLines": 2227,
+      "percent": 15.99,
+      "blocks": 182
     },
     "modules/imports": {
       "lines": 888,
@@ -66,8 +66,8 @@
     },
     "modules/investments": {
       "lines": 13895,
-      "duplicatedLines": 2366,
-      "percent": 17.03,
+      "duplicatedLines": 2371,
+      "percent": 17.06,
       "blocks": 177
     },
     "modules/payroll": {
@@ -84,8 +84,8 @@
     },
     "modules/subscriptions": {
       "lines": 2065,
-      "duplicatedLines": 409,
-      "percent": 19.81,
+      "duplicatedLines": 410,
+      "percent": 19.85,
       "blocks": 27
     },
     "modules/timeoff": {
@@ -96,9 +96,9 @@
     },
     "modules/transactions": {
       "lines": 13024,
-      "duplicatedLines": 1658,
-      "percent": 12.73,
-      "blocks": 133
+      "duplicatedLines": 1665,
+      "percent": 12.78,
+      "blocks": 134
     },
     "modules/users": {
       "lines": 862,
@@ -615,10 +615,9 @@
     "modules/funds/ui/fund-settings.tsx": 11,
     "modules/funds/ui/fund-skeleton.tsx": 20,
     "modules/funds/ui/fund-valuations.tsx": 110,
-    "modules/funds/ui/fund-wizard.tsx": 83,
     "modules/funds/ui/funds-screen.tsx": 21,
     "modules/funds/ui/home-cards.tsx": 46,
-    "modules/funds/ui/home-funds-card.tsx": 78,
+    "modules/funds/ui/home-funds-card.tsx": 79,
     "modules/funds/ui/home-hero.tsx": 48,
     "modules/funds/ui/home-skeleton.tsx": 20,
     "modules/funds/ui/overview-cards.tsx": 16,
@@ -631,6 +630,9 @@
     "modules/funds/ui/source-list-client.tsx": 8,
     "modules/funds/ui/source-text.ts": 13,
     "modules/funds/ui/wire-forms.ts": 25,
+    "modules/funds/ui/wizard-fund-step.tsx": 21,
+    "modules/funds/ui/wizard-leave.tsx": 7,
+    "modules/funds/ui/wizard-review.tsx": 7,
     "modules/imports/jobs.ts": 10,
     "modules/imports/pdf/layout.ts": 47,
     "modules/imports/rules.ts": 21,
@@ -691,7 +693,7 @@
     "modules/investments/ui/home/home-composition.tsx": 9,
     "modules/investments/ui/home/home-hero.tsx": 19,
     "modules/investments/ui/home/home-screen.tsx": 9,
-    "modules/investments/ui/home/home-services.tsx": 82,
+    "modules/investments/ui/home/home-services.tsx": 87,
     "modules/investments/ui/manual-service.tsx": 43,
     "modules/investments/ui/overview/overview-chart.tsx": 59,
     "modules/investments/ui/overview/overview-hero.tsx": 22,
@@ -742,7 +744,7 @@
     "modules/subscriptions/ui/inactive-subscriptions.tsx": 16,
     "modules/subscriptions/ui/subscription-dialog.tsx": 113,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
-    "modules/subscriptions/ui/suggestions-dialog.tsx": 13,
+    "modules/subscriptions/ui/suggestions-dialog.tsx": 14,
     "modules/timeoff/ports.ts": 19,
     "modules/timeoff/rules/inputs.ts": 21,
     "modules/timeoff/schema.ts": 51,
@@ -800,7 +802,7 @@
     "modules/transactions/ui/review-list.tsx": 9,
     "modules/transactions/ui/similar-dialog.tsx": 9,
     "modules/transactions/ui/spending-card.tsx": 20,
-    "modules/transactions/ui/transaction-row-menu.tsx": 14,
+    "modules/transactions/ui/transaction-row-menu.tsx": 21,
     "modules/transactions/ui/view.ts": 6,
     "modules/users/calls.ts": 25,
     "modules/users/schema.ts": 26,
