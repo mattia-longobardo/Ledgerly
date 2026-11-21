@@ -1,0 +1,236 @@
+// Writing events (§1.5): an event and its legs, the rate of a leg, a buy that adds an asset.
+import { z } from "zod";
+import { getAccount } from "../../accounts";
+import type { Ctx } from "../../../platform/context";
+import { type CivilDate } from "../../../shared/dates";
+import { getDb, type Tx } from "../../../platform/db/client";
+import { userScoped } from "../../../platform/db/scope";
+import { eurPerUnitOn } from "../../../platform/fx/rules";
+import { ratesOn } from "../../../platform/fx/service";
+import type { Cents } from "../../../shared/money";
+import {
+  type AdjustmentClass,
+  atRate,
+  type EventOrigin,
+  type Leg,
+  type OperationKind,
+  PRICE_SCALE,
+  PRODUCT_PATTERN,
+  positionCents,
+  QUANTITY_SCALE,
+  RATE_SCALE,
+} from "../rules";
+import { divRound } from "../../../shared/money";
+import { investmentEvents, investmentOperations } from "../schema";
+import { civilDate } from "../../../shared/inputs";
+import { assetInputSchema, createAsset, holdingFor, requireAsset } from "./assets";
+import { loadBook, type LoadedBook, lockInvestmentAccount, rebuild } from "./book";
+import {
+  decimal,
+  InvestmentError,
+  type InvestmentEvent,
+  type InvestmentPeriod,
+  notFuture,
+  translated,
+  type WriteCtx,
+} from "./types";
+
+// ——— Events ———————————————————————————————————————————————————————————————————————————————
+
+export interface LegInput {
+  leg: Leg;
+  kind: OperationKind;
+  holdingId?: string | null;
+  quantity?: bigint | null;
+  unitPrice?: bigint | null;
+  priceCurrency?: string | null;
+  nativeAmount?: bigint | null;
+  nativeCurrency?: string | null;
+  fxRate?: bigint | null;
+  fxSource?: string | null;
+  amountCents: Cents;
+  validUntil?: CivilDate | null;
+  /** `inferred` for the opening a provider's history implies (A6); `reported` otherwise. */
+  quantityBasis?: "reported" | "reconstructed" | "inferred";
+  /** A correction's class (§4.9 of the UX design); only on an `adjustment`. */
+  adjustmentClass?: AdjustmentClass | null;
+}
+
+export async function insertEvent(
+  ctx: Pick<Ctx, "userId">,
+  tx: Tx,
+  investmentAccountId: string,
+  input: {
+    on: CivilDate;
+    occurredAt: Date;
+    origin: EventOrigin;
+    note?: string | null;
+    transactionId?: string | null;
+    legs: readonly LegInput[];
+  },
+): Promise<InvestmentEvent> {
+  const [event] = await translated(
+    tx
+      .insert(investmentEvents)
+      .values(
+        userScoped(ctx).stamp({
+          investmentAccountId,
+          on: input.on,
+          occurredAt: input.occurredAt,
+          origin: input.origin,
+          note: input.note ?? null,
+          transactionId: input.transactionId ?? null,
+        }),
+      )
+      .returning(),
+  );
+  await insertLegs(ctx, tx, event.id, input.legs);
+  return event;
+}
+
+export async function insertLegs(
+  ctx: Pick<Ctx, "userId">,
+  tx: Tx,
+  eventId: string,
+  legs: readonly LegInput[],
+) {
+  if (legs.length === 0) return;
+  await tx.insert(investmentOperations).values(
+    legs.map((leg) =>
+      userScoped(ctx).stamp({
+        eventId,
+        leg: leg.leg,
+        kind: leg.kind,
+        holdingId: leg.holdingId ?? null,
+        quantity: decimal(leg.quantity ?? null, QUANTITY_SCALE),
+        unitPrice: decimal(leg.unitPrice ?? null, PRICE_SCALE),
+        priceCurrency: leg.priceCurrency ?? null,
+        nativeAmount: decimal(leg.nativeAmount ?? null, PRICE_SCALE),
+        nativeCurrency: leg.nativeCurrency ?? null,
+        fxRate: decimal(leg.fxRate ?? null, RATE_SCALE),
+        fxSource: leg.fxSource ?? null,
+        amountCents: leg.amountCents,
+        validUntil: leg.validUntil ?? null,
+        quantityBasis: leg.quantityBasis ?? "reported",
+        adjustmentClass: leg.adjustmentClass ?? null,
+      }),
+    ),
+  );
+}
+
+/** The period in force at the end of `on` (the book's), or `null` before the first one. */
+export function periodOn(book: LoadedBook, on: CivilDate): InvestmentPeriod | null {
+  let found: InvestmentPeriod | null = null;
+  for (const period of book.periodRows) if (period.fromOn <= on) found = period;
+  return found;
+}
+
+/**
+ * The rate from an asset's quote currency to the account's on a day (§1.8): the one typed, or the
+ * ECB one, saved with its source on the operation (A5). `null` when neither exists.
+ */
+export async function rateOf(
+  from: string,
+  to: string,
+  on: CivilDate,
+  typed: bigint | null,
+): Promise<{ fxRate: bigint | null; fxSource: string | null }> {
+  if (from === to) return { fxRate: null, fxSource: null };
+  if (typed !== null) return { fxRate: typed, fxSource: "manual" };
+  const rates = await ratesOn([from, to], on, on);
+  const source = eurPerUnitOn(rates, from, on);
+  const target = eurPerUnitOn(rates, to, on);
+  if (source === null || target === null) return { fxRate: null, fxSource: null };
+  return { fxRate: divRound(source * 10n ** BigInt(RATE_SCALE), target), fxSource: `ecb:${on}` };
+}
+
+/** A price typed in the asset's currency, in cents of the account's (rounded once). */
+export function inAccount(cents: Cents, fxRate: bigint | null): Cents {
+  return fxRate === null ? cents : atRate(cents, fxRate);
+}
+
+export const optionalNote = z
+  .string()
+  .trim()
+  .max(200)
+  .transform((value) => (value === "" ? null : value))
+  .nullable()
+  .default(null);
+
+export const positive = z.bigint().positive();
+
+export const buyInputSchema = z.object({
+  asset: z.union([z.object({ id: z.uuid() }), z.object({ create: assetInputSchema })]),
+  product: z.string().regex(new RegExp(PRODUCT_PATTERN)).default("custody"),
+  on: civilDate(),
+  /** Quantity and unit price, or only the total (a BTP, a fund bought for an amount, A3). */
+  quantity: positive.nullable().default(null),
+  unitPrice: z.bigint().nonnegative().nullable().default(null),
+  /** The total in the asset's currency, when no quantity is typed. */
+  totalCents: positive.nullable().default(null),
+  feeCents: z.bigint().nonnegative().default(0n),
+  fxRate: positive.nullable().default(null),
+  note: optionalNote,
+});
+export type BuyInput = z.input<typeof buyInputSchema>;
+
+/**
+ * "Add asset" (§4.4): a `buy` event with its legs — the position, and the fee as its own leg — and
+ * the points rewritten from its day. Only where the period of that day keeps assets.
+ */
+export async function addAsset(
+  ctx: WriteCtx,
+  accountId: string,
+  input: BuyInput,
+): Promise<{ eventId: string }> {
+  const parsed = buyInputSchema.parse(input);
+  notFuture(ctx, parsed.on);
+  if (parsed.quantity === null ? parsed.totalCents === null : parsed.unitPrice === null) {
+    throw new RangeError("A buy needs a quantity and a price, or a total");
+  }
+  const account = await getAccount(ctx, accountId);
+  if (!account) throw new InvestmentError("not_found");
+  return getDb().transaction(async (tx) => {
+    const investment = await lockInvestmentAccount(ctx, accountId, tx);
+    const book = await loadBook(ctx, investment, account.currency, tx);
+    const period = periodOn(book, parsed.on);
+    if (period === null) throw new InvestmentError("before_period");
+    if (period.mode !== "assets") throw new InvestmentError("wrong_mode");
+    const asset =
+      "id" in parsed.asset
+        ? await requireAsset(ctx, parsed.asset.id, tx)
+        : await createAsset(ctx, parsed.asset.create, tx);
+    const holding = await holdingFor(ctx, tx, investment.id, asset.id, parsed.product, parsed.on);
+    const { fxRate, fxSource } = await rateOf(asset.currency, account.currency, parsed.on, parsed.fxRate);
+    const native =
+      parsed.quantity !== null && parsed.unitPrice !== null
+        ? positionCents(parsed.quantity, parsed.unitPrice)
+        : (parsed.totalCents as Cents);
+    const legs: LegInput[] = [
+      {
+        leg: "main",
+        kind: "buy",
+        holdingId: holding.id,
+        quantity: parsed.quantity,
+        unitPrice: parsed.quantity === null ? null : parsed.unitPrice,
+        priceCurrency: asset.currency,
+        nativeAmount: native * 10n ** BigInt(PRICE_SCALE - 2),
+        nativeCurrency: asset.currency,
+        fxRate,
+        fxSource,
+        amountCents: -inAccount(native, fxRate),
+      },
+    ];
+    if (parsed.feeCents > 0n)
+      legs.push({ leg: "fee", kind: "fee", amountCents: -inAccount(parsed.feeCents, fxRate) });
+    const event = await insertEvent(ctx, tx, investment.id, {
+      on: parsed.on,
+      occurredAt: new Date(),
+      origin: "manual",
+      note: parsed.note,
+      legs,
+    });
+    await rebuild(ctx, investment, account.currency, parsed.on, tx);
+    return { eventId: event.id };
+  });
+}
