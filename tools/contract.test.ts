@@ -7,6 +7,7 @@ import {
   BUDGETS_ROUTES,
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
+  IMPORTS_ROUTES,
   INTERESTS_ROUTES,
   PAYROLL_ROUTES,
   POCKETS_ROUTES,
@@ -35,6 +36,7 @@ import * as payrollRules from "@domain/modules/payroll/rules";
 import * as payrollFields from "@domain/modules/payroll/fields";
 import * as payrollChecks from "@domain/modules/payroll/parse/checks";
 import * as importsRules from "@domain/modules/imports/rules";
+import * as importsWire from "../packages/api-contract/src/imports/imports";
 import { BALANCE_KINDS } from "@domain/modules/timeoff/ports";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
@@ -402,25 +404,20 @@ describe("the Server Actions of time off", () => {
 
 /**
  * The Server Actions of payroll (05-refactor.md §5.5) and their routes. The register, the review and
- * the code map read routes of their own, with no action. One exclusion, written here.
+ * the code map read routes of their own, with no action. The upload is `POST /imports`, the route of
+ * the imports step (PAY-2, IMP-4): no exclusion is left.
  */
 const PAYROLL_ACTION_FILES = ["apps/web/src/modules/payroll/actions.ts"];
-const PAYROLL_EXCLUDED: Record<string, string> = {
-  // The upload is `POST /imports` (scope `imports`), one file per call; the many files of one call
-  // come with `uploadDocuments(kind, files)` of the documents step (PAY-2, IMP-4).
-  uploadPayslipsAction: "POST /imports",
-};
 
 describe("the Server Actions of payroll", () => {
   const actions = PAYROLL_ACTION_FILES.flatMap((file) =>
     [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
   );
-  const routed = new Set(PAYROLL_ROUTES.flatMap((route) => route.actions));
+  const routed = new Set([...PAYROLL_ROUTES, ...IMPORTS_ROUTES].flatMap((route) => route.actions));
 
-  it("each have a route or a written exclusion, and a route names only actions that exist", () => {
-    expect(actions.filter((name) => !routed.has(name) && !(name in PAYROLL_EXCLUDED))).toEqual([]);
+  it("each have a route, and a route names only actions that exist", () => {
+    expect(actions.filter((name) => !routed.has(name))).toEqual([]);
     expect([...routed].filter((name) => !actions.includes(name))).toEqual([]);
-    expect(Object.keys(PAYROLL_EXCLUDED).filter((name) => !actions.includes(name))).toEqual([]);
   });
 
   it("speak the vocabularies of the domain", () => {
@@ -438,6 +435,19 @@ describe("the Server Actions of payroll", () => {
     expect(payrollWire.FIELD_UNITS).toEqual(importsRules.EVIDENCE_UNITS);
     expect(payrollWire.EVIDENCE_ORIGINS).toEqual(importsRules.EVIDENCE_ORIGINS);
     expect(payrollWire.VERIFICATION_STATES).toEqual(importsRules.VERIFICATION_STATES);
+  });
+});
+
+describe("the route of imports", () => {
+  it("speaks the vocabulary of the domain", () => {
+    expect(importsWire.DOCUMENT_KINDS).toEqual(importsRules.DOCUMENT_KINDS);
+  });
+
+  it("takes the file as multipart/form-data, and answers 200 for a file already received", () => {
+    const doc = json(DOCUMENT) as { paths: Record<string, Record<string, Record<string, unknown>>> };
+    const upload = doc.paths["/imports"].post;
+    expect(Object.keys((upload.requestBody as { content: object }).content)).toEqual(["multipart/form-data"]);
+    expect(Object.keys(upload.responses as object)).toEqual(expect.arrayContaining(["200", "201"]));
   });
 });
 

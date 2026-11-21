@@ -64,7 +64,10 @@ function responses(route: RouteContract): Json {
       },
     ]),
   );
-  return { [status]: success, ...failures };
+  const other = route.otherStatus
+    ? { [String(route.otherStatus.status)]: { ...success, description: route.otherStatus.when } }
+    : {};
+  return { [status]: success, ...other, ...failures };
 }
 
 function operation(route: RouteContract): Json {
@@ -78,7 +81,11 @@ function operation(route: RouteContract): Json {
       ? {
           requestBody: {
             required: true,
-            content: { "application/json": { schema: schemaOf(route.body, "input") } },
+            content: {
+              [route.bodyFormat === "multipart" ? "multipart/form-data" : "application/json"]: {
+                schema: schemaOf(route.body, "input"),
+              },
+            },
           },
         }
       : {}),

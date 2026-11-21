@@ -8,6 +8,7 @@ import * as accountSummary from "./accounts/summary";
 import * as accountSwitch from "./accounts/switch";
 import * as views from "./accounts/views";
 import * as budgets from "./budgets/budgets";
+import * as imports from "./imports/imports";
 import * as interests from "./interests/interests";
 import { metaRoute } from "./meta";
 import * as payrollCodes from "./payroll/codes";
@@ -130,6 +131,12 @@ export const PAYROLL_ROUTES: readonly RouteContract[] = [
   ...Object.values(payrollCodes),
 ];
 
+/** Imports by area, for `apps/api` to serve each one by name. */
+export const IMPORTS = { imports } as const;
+
+/** Imports, the tenth module of R2 (05-refactor.md §5.2): the upload of a document. */
+export const IMPORTS_ROUTES: readonly RouteContract[] = [imports.uploadDocument];
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
@@ -141,4 +148,5 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...INTERESTS_ROUTES,
   ...TIMEOFF_ROUTES,
   ...PAYROLL_ROUTES,
+  ...IMPORTS_ROUTES,
 ];

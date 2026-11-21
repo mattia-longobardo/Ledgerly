@@ -23,10 +23,14 @@ export interface RouteContract {
   params?: z.ZodObject;
   query?: z.ZodObject;
   body?: z.ZodType;
+  /** How the body travels: JSON unless the route takes files (`multipart/form-data`). */
+  bodyFormat?: "json" | "multipart";
   /** The body of the answer; `null` for a `204` without a body. */
   response: z.ZodType | null;
   /** The status of a success: 200 unless the route says otherwise. */
   status?: 200 | 201 | 202 | 204;
+  /** A second success with the same body, and when it answers (a file already received: 200). */
+  otherStatus?: { status: 200; when: string };
   /** The codes of `errors.ts` the route answers with, besides `unauthorized`, `forbidden`, `rate_limited`. */
   errors: readonly ApiErrorCode[];
   /**
