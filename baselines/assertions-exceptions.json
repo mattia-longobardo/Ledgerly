@@ -598,5 +598,10 @@
     "file": "packages/domain/src/platform/auth/scopes.test.ts",
     "decision": "R2 imports, session scope",
     "reason": "a test added: the scopes a token is granted stay the same four; no existing assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/funds/removed.test.ts",
+    "decision": "FND-12",
+    "reason": "the schema of funds is a folder of parts (rule Q6): the one file that names the tariffs' table is now its part and the folder's index; the check and its verdict are the same"
   }
 ]

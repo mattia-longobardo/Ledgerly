@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101095,
-    "duplicatedLines": 16237,
-    "percent": 16.06,
-    "blocks": 1219
+    "lines": 101089,
+    "duplicatedLines": 16214,
+    "percent": 16.04,
+    "blocks": 1220
   },
   "units": {
     "api": {
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10579,
-      "duplicatedLines": 1973,
-      "percent": 18.65,
-      "blocks": 147
+      "lines": 10573,
+      "duplicatedLines": 1953,
+      "percent": 18.47,
+      "blocks": 148
     },
     "modules/imports": {
       "lines": 888,
@@ -66,8 +66,8 @@
     },
     "modules/investments": {
       "lines": 10108,
-      "duplicatedLines": 1842,
-      "percent": 18.22,
+      "duplicatedLines": 1839,
+      "percent": 18.19,
       "blocks": 129
     },
     "modules/payroll": {
@@ -577,9 +577,21 @@
     "modules/funds/pension/payroll-source.ts": 9,
     "modules/funds/pension/rules.ts": 7,
     "modules/funds/pension/service.ts": 99,
-    "modules/funds/queries.ts": 28,
-    "modules/funds/schema.ts": 426,
-    "modules/funds/service.ts": 223,
+    "modules/funds/queries/detail.ts": 22,
+    "modules/funds/queries/lists.ts": 6,
+    "modules/funds/schema/funds.ts": 124,
+    "modules/funds/schema/pension.ts": 67,
+    "modules/funds/schema/register.ts": 126,
+    "modules/funds/schema/sources.ts": 93,
+    "modules/funds/service/accounts.ts": 35,
+    "modules/funds/service/contribution-sources.ts": 9,
+    "modules/funds/service/debits.ts": 36,
+    "modules/funds/service/fees.ts": 19,
+    "modules/funds/service/fund.ts": 13,
+    "modules/funds/service/model.ts": 7,
+    "modules/funds/service/operations.ts": 14,
+    "modules/funds/service/reads.ts": 71,
+    "modules/funds/service/valuations.ts": 15,
     "modules/funds/sources.ts": 13,
     "modules/funds/ui/contribution-dialog.tsx": 97,
     "modules/funds/ui/fee-dialog.tsx": 102,
@@ -624,7 +636,7 @@
     "modules/investments/queries.ts": 92,
     "modules/investments/rules.ts": 36,
     "modules/investments/schema.ts": 404,
-    "modules/investments/service.ts": 260,
+    "modules/investments/service.ts": 257,
     "modules/investments/sync/connect.ts": 70,
     "modules/investments/sync/history.ts": 78,
     "modules/investments/sync/pass.ts": 55,

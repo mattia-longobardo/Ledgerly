@@ -78,7 +78,8 @@ describe("what release N6 removed from Funds", () => {
       ]).sort(),
     ).toEqual([
       // The table stays in the schema, untouched, for the image before the release: removed in R5f.
-      "packages/domain/src/modules/funds/schema.ts",
+      "packages/domain/src/modules/funds/schema/index.ts",
+      "packages/domain/src/modules/funds/schema/register.ts",
     ]);
   });
 });
