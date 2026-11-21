@@ -997,7 +997,8 @@
       "count": 1,
       "balance": "11302.40",
       "commit": "12.99",
-      "projected": "11289.41"
+      "projected": "11289.41",
+      "percent": 0.1
      }
     ],
     "year": [
@@ -1007,7 +1008,8 @@
       "count": 1,
       "balance": "11302.40",
       "commit": "155.88",
-      "projected": "11146.52"
+      "projected": "11146.52",
+      "percent": 1.3
      }
     ]
    },
