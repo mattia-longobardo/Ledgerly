@@ -1,29 +1,29 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
-import type { Ctx } from "../../platform/context";
-import { today } from "../../shared/dates";
-import { type Db, getDb, type Tx } from "../../platform/db/client";
-import { hasPgError, UNIQUE_VIOLATION } from "../../platform/db/errors";
-import { userScoped } from "../../platform/db/scope";
-import { deleteObject, getObject, putObject } from "../../platform/storage";
+import { and, asc, eq, inArray, isNotNull, lt, notInArray, type SQL, sql } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import type { Ctx } from "../../../platform/context";
+import { today } from "../../../shared/dates";
+import { type Db, getDb, type Tx } from "../../../platform/db/client";
+import { hasPgError, UNIQUE_VIOLATION } from "../../../platform/db/errors";
+import { userScoped } from "../../../platform/db/scope";
+import { deleteObject, getObject, putObject } from "../../../platform/storage";
 import {
   cleanFileName,
   documentName,
   type DocumentKind,
-  type ReadKind,
   type DocumentState,
   type EvidenceOrigin,
   type EvidenceUnit,
-  FORMATS_OF,
   IN_FLIGHT,
   MAX_DOCUMENT_BYTES,
   MIME_OF,
   retentionEnd,
   sniffFormat,
+  type SniffedFormat,
   sourcesOf,
   storageKeyFor,
-} from "./rules";
-import { documentEvidence, documents } from "./schema";
+} from "../rules";
+import { documentEvidence, documents } from "../schema";
 
 export type Document = typeof documents.$inferSelect;
 export type Evidence = typeof documentEvidence.$inferSelect;
@@ -33,6 +33,7 @@ export type ImportErrorCode =
   | "not_found"
   | "empty"
   | "too_large"
+  | "too_many"
   | "unsupported_format"
   | "storage_failed"
   | "invalid_state"
@@ -45,8 +46,14 @@ export class ImportError extends Error {
   }
 }
 
+/** What an upload needs of a kind of document (E1): the formats it is read from, its folder in S3. */
+export interface StoredKind {
+  kind: DocumentKind;
+  formats: readonly SniffedFormat[];
+  folder: string;
+}
+
 export interface Upload {
-  kind: ReadKind;
   fileName: string;
   bytes: Uint8Array;
 }
@@ -59,14 +66,14 @@ export interface Upload {
  */
 export async function uploadDocument(
   ctx: Pick<Ctx, "userId" | "timeZone">,
+  stored: StoredKind,
   upload: Upload,
   now: Date = new Date(),
 ): Promise<{ document: Document; duplicate: boolean }> {
   if (upload.bytes.length === 0) throw new ImportError("empty");
   if (upload.bytes.length > MAX_DOCUMENT_BYTES) throw new ImportError("too_large");
   const format = sniffFormat(upload.bytes);
-  if (format === null || !FORMATS_OF[upload.kind].includes(format))
-    throw new ImportError("unsupported_format");
+  if (format === null || !stored.formats.includes(format)) throw new ImportError("unsupported_format");
 
   const sha256 = createHash("sha256").update(upload.bytes).digest("hex");
   const existing = await findBySha(ctx, sha256);
@@ -74,7 +81,7 @@ export async function uploadDocument(
 
   const receivedOn = today(ctx.timeZone, now);
   const storageKey = storageKeyFor(
-    upload.kind,
+    stored.folder,
     ctx.userId,
     Number(receivedOn.slice(0, 4)),
     randomBytes(16).toString("hex"),
@@ -86,7 +93,7 @@ export async function uploadDocument(
       .insert(documents)
       .values(
         userScoped(ctx).stamp({
-          kind: upload.kind,
+          kind: stored.kind,
           sha256,
           fileName: cleanFileName(upload.fileName),
           mime: MIME_OF[format],
@@ -320,88 +327,70 @@ export interface EvidenceInput {
 }
 
 /**
- * Writes what a reading found (spec §7.8 "Evidenza per ogni valore"), one row per field. A field
- * read again with the same value keeps what the person decided about it; a field whose value
- * changed goes back to `unverified`, its old correction dropped, since it was about another value.
- * Fields no longer produced are removed.
+ * Writes what a reading found (spec §7.8 "Evidenza per ogni valore"), one row per field, in one
+ * statement (audit IMP-5). A field read again with the same value keeps what the person decided
+ * about it, and so does a derived value; a field whose value changed goes back to `unverified`, its
+ * old correction dropped, since it was about another value. `prune`: the fields no longer produced
+ * are removed, which a full reading does and a few values filled in (the LLM) do not.
  */
-export async function writeEvidence(
+export async function saveEvidence(
   ctx: Pick<Ctx, "userId">,
   documentId: string,
   rows: readonly EvidenceInput[],
+  { prune }: { prune: boolean },
   tx: Tx,
 ): Promise<void> {
-  const current = await tx
-    .select()
-    .from(documentEvidence)
-    .where(and(eq(documentEvidence.documentId, documentId), userScoped(ctx).owns(documentEvidence)));
-  const fields = new Set(rows.map((row) => row.field));
-  const gone = current.filter((row) => !fields.has(row.field)).map((row) => row.id);
-  if (gone.length > 0) {
+  const owned = and(eq(documentEvidence.documentId, documentId), userScoped(ctx).owns(documentEvidence));
+  if (prune) {
+    const fields = rows.map((row) => row.field);
     await tx
       .delete(documentEvidence)
-      .where(and(inArray(documentEvidence.id, gone), userScoped(ctx).owns(documentEvidence)));
+      .where(fields.length > 0 ? and(owned, notInArray(documentEvidence.field, fields)) : owned);
   }
-  await upsertRows(ctx, documentId, rows, current, tx);
-}
-
-/** Like `writeEvidence` for some fields only, leaving the others as they are: derived values. */
-export async function upsertEvidence(
-  ctx: Pick<Ctx, "userId">,
-  documentId: string,
-  rows: readonly EvidenceInput[],
-  tx: Tx,
-): Promise<void> {
-  const current = await tx
-    .select()
-    .from(documentEvidence)
-    .where(and(eq(documentEvidence.documentId, documentId), userScoped(ctx).owns(documentEvidence)));
-  await upsertRows(ctx, documentId, rows, current, tx);
-}
-
-async function upsertRows(
-  ctx: Pick<Ctx, "userId">,
-  documentId: string,
-  rows: readonly EvidenceInput[],
-  current: readonly Evidence[],
-  tx: Tx,
-): Promise<void> {
-  const byField = new Map(current.map((row) => [row.field, row]));
-  for (const row of rows) {
-    const values = {
-      value: row.value,
-      unit: row.unit,
-      sourceLabel: row.sourceLabel,
-      page: row.page,
-      bbox: row.bbox,
-      origin: row.origin,
-      confidence: row.confidence.toFixed(2),
-      rawText: row.rawText,
-      derivedFrom: row.derivedFrom ?? null,
-    };
-    const before = byField.get(row.field);
-    if (!before) {
-      await tx
-        .insert(documentEvidence)
-        .values(userScoped(ctx).stamp({ documentId, field: row.field, ...values }));
-      continue;
-    }
-    const same = before.value === row.value && before.origin === row.origin;
-    await tx
-      .update(documentEvidence)
-      .set(
-        same || row.origin === "derived"
-          ? values
-          : {
-              ...values,
-              verification: "unverified",
-              correctedValue: null,
-              correctedBy: null,
-              correctedAt: null,
-            },
-      )
-      .where(and(eq(documentEvidence.id, before.id), userScoped(ctx).owns(documentEvidence)));
-  }
+  // One row per field, the last one given: one statement cannot touch a row twice.
+  const unique = [...new Map(rows.map((row) => [row.field, row])).values()];
+  if (unique.length === 0) return;
+  const kept = sql`(${documentEvidence.value} is not distinct from excluded.value and ${documentEvidence.origin} = excluded.origin) or excluded.origin = 'derived'`;
+  const keptOr = (column: AnyPgColumn, reset: SQL) => sql`case when ${kept} then ${column} else ${reset} end`;
+  await tx
+    .insert(documentEvidence)
+    .values(
+      unique.map((row) =>
+        userScoped(ctx).stamp({
+          documentId,
+          field: row.field,
+          value: row.value,
+          unit: row.unit,
+          sourceLabel: row.sourceLabel,
+          page: row.page,
+          bbox: row.bbox,
+          origin: row.origin,
+          confidence: row.confidence.toFixed(2),
+          rawText: row.rawText,
+          derivedFrom: row.derivedFrom ?? null,
+        }),
+      ),
+    )
+    .onConflictDoUpdate({
+      target: [documentEvidence.documentId, documentEvidence.field],
+      set: {
+        value: sql`excluded.value`,
+        unit: sql`excluded.unit`,
+        sourceLabel: sql`excluded.source_label`,
+        page: sql`excluded.page`,
+        bbox: sql`excluded.bbox`,
+        origin: sql`excluded.origin`,
+        confidence: sql`excluded.confidence`,
+        rawText: sql`excluded.raw_text`,
+        derivedFrom: sql`excluded.derived_from`,
+        verification: keptOr(documentEvidence.verification, sql`'unverified'`),
+        correctedValue: keptOr(documentEvidence.correctedValue, sql`null`),
+        correctedBy: keptOr(documentEvidence.correctedBy, sql`null`),
+        correctedAt: keptOr(documentEvidence.correctedAt, sql`null`),
+        updatedAt: new Date(),
+      },
+      setWhere: userScoped(ctx).owns(documentEvidence),
+    });
 }
 
 export async function listEvidence(

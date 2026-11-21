@@ -384,15 +384,20 @@
   ],
   "packages/domain/src/modules/imports/index.ts": [
     "DOCUMENT_KINDS",
+    "DocumentReader",
     "IN_FLIGHT",
     "ImportError",
     "MAX_DOCUMENT_BYTES",
-    "ReadKind",
+    "Reading",
+    "documentReaderOf",
     "expireOriginals",
-    "isReadKind",
     "listDocuments",
+    "readDocument",
+    "readKinds",
     "readOriginal",
-    "stuckDocuments"
+    "registerDocumentKind",
+    "stuckDocuments",
+    "uploadDocuments"
   ],
   "packages/domain/src/modules/interests/client.ts": [
     "CATEGORY_NOT_LINKED",
@@ -550,6 +555,7 @@
   ],
   "packages/domain/src/modules/payroll/index.ts": [
     "FIELDS",
+    "PAYSLIP_DOCUMENT",
     "PayrollError",
     "appliedPayslips",
     "applyPayslip",

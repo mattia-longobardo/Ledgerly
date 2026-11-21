@@ -3,6 +3,15 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · imports (0.51.0)
+
+- `POST /imports` (`imports`) is now in the OpenAPI document as `upload_document`, with the same
+  request and answers as before: `multipart/form-data` with `kind` and one `file`; `201` with `{id,
+  kind, fileName, state, duplicate}` for a new document, `200` with `duplicate: true` for a file
+  already received; `400` `invalid`, `413` `too_large`, `415` `unsupported_format` (also for the kinds
+  `cometa_operations` and `cometa_position`, before the size). The Payroll screen's upload is the same
+  use case.
+
 ## 2026-11-21 · payroll (0.50.0)
 
 - `GET /payroll/payslips` (new, `read`): the register of the Payroll page — `years` (each with `rows`:

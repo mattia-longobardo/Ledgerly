@@ -10,6 +10,8 @@ import { connectionCases } from "@/app/(app)/settings/integrations/api-cases";
 import { serverCases } from "@/app/(app)/settings/server/api-cases";
 import { api } from "@/platform/api/app";
 import { withToken } from "@/platform/api/auth";
+// Registers the readers of the documents before an upload asks for one (`document-kinds.ts`).
+import "@/app/document-kinds";
 import { sourceNameOf } from "@/platform/integrations/registry";
 
 export const adapters = {

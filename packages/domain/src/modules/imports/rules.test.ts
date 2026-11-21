@@ -59,7 +59,7 @@ describe("sniffFormat (spec §9.3: the format from the content)", () => {
 
 describe("storageKeyFor", () => {
   it("builds the key of spec §7.8 with nothing from the file's name", () => {
-    expect(storageKeyFor("payslip", "0190a1b2-0000-7000-8000-000000000001", 2026, "ab12", "pdf")).toBe(
+    expect(storageKeyFor("payslips", "0190a1b2-0000-7000-8000-000000000001", 2026, "ab12", "pdf")).toBe(
       "payslips/0190a1b2-0000-7000-8000-000000000001/2026/ab12.pdf",
     );
   });

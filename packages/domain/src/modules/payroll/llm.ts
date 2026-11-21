@@ -1,4 +1,4 @@
-import { listEvidence, readOriginal, upsertEvidence } from "../imports/service";
+import { listEvidence, readOriginal, saveEvidence } from "../imports/service";
 import { readPdfText } from "../imports/pdf/text";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
@@ -65,7 +65,7 @@ export async function fillWithLlm(
   if (filled.length === 0) return { asked, filled };
 
   await getDb().transaction(async (tx) => {
-    await upsertEvidence(
+    await saveEvidence(
       ctx,
       documentId,
       filled.map((field) => ({
@@ -79,6 +79,7 @@ export async function fillWithLlm(
         confidence: INFERRED_CONFIDENCE,
         rawText: null,
       })),
+      { prune: false },
       tx,
     );
     await recompute(ctx, documentId, tx);

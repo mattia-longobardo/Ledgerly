@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
-import { claimForExtraction, type Document, type EvidenceInput, failExtraction, getDocument, listEvidence, readOriginal, transition, upsertEvidence, uploadDocument, writeEvidence } from "../../imports/service";
+import { type Document, type EvidenceInput, getDocument, listEvidence, saveEvidence, uploadDocument } from "../../imports/service";
+import { type DocumentReader, readDocument, type Reading } from "../../imports";
 import { readPdfText } from "../../imports/pdf/text";
 import { MIN_TEXT_CHARS } from "../../imports/rules";
 import type { Ctx } from "../../../platform/context";
@@ -18,49 +19,58 @@ import { PayrollError, codeMapOf, type Payslip, type RawLineRow } from "./codes"
 
 // ——— Reading (spec §7.8, §9.3 step 3) ———
 
+/**
+ * The payslip as a kind of document (extension point E1): a PDF in `payslips/`, read by the parser
+ * of the payroll's layout. The app registers it; payroll's own calls pass it directly.
+ */
+export const PAYSLIP_DOCUMENT: DocumentReader = {
+  kind: "payslip",
+  formats: ["pdf"],
+  folder: "payslips",
+  read: readPayslip,
+  failureOf: (error) => (error instanceof PayrollError ? error.code : null),
+};
+
 /** Steps 1–2 for a payslip; the caller starts the reading right after (`processPayslip`). */
 export async function uploadPayslip(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   file: { name: string; bytes: Uint8Array },
 ): Promise<{ document: Document; duplicate: boolean }> {
-  return uploadDocument(ctx, { kind: "payslip", fileName: file.name, bytes: file.bytes });
+  return uploadDocument(ctx, PAYSLIP_DOCUMENT, { fileName: file.name, bytes: file.bytes });
 }
 
-/**
- * Reads a payslip: claims it, reads its original (outside any transaction), parses it and writes
- * the raw lines, the evidence and the payslip in one short transaction. A PDF with too little text
- * waits for OCR (spec D11); anything unexpected fails the document with a code, never with its text.
- */
-export async function processPayslip(
+/** Reads a payslip through the pipeline of every document (`readDocument`). */
+export function processPayslip(
   ctx: Pick<Ctx, "userId">,
   documentId: string,
   options: { stuckBefore?: Date } = {},
 ): Promise<Document | null> {
-  const claimed = await claimForExtraction(ctx, documentId, options);
-  if (!claimed || claimed.kind !== "payslip") return null;
+  return readDocument(ctx, documentId, { ...options, reader: PAYSLIP_DOCUMENT });
+}
+
+/**
+ * Step 3 for a payslip: the text of the PDF, too little of it waits for OCR (spec D11), then the
+ * parser. The raw lines are written, and the payslip recomputed, with the evidence.
+ */
+async function readPayslip(ctx: Pick<Ctx, "userId">, documentId: string, bytes: Uint8Array): Promise<Reading> {
+  let pages;
   try {
-    const original = await readOriginal(ctx, documentId);
-    if (!original) {
-      await failExtraction(ctx, documentId, "original_missing");
-      return getDocument(ctx, documentId);
-    }
-    let pages;
-    try {
-      pages = await readPdfText(original.bytes);
-    } catch {
-      await failExtraction(ctx, documentId, "unreadable_pdf");
-      return getDocument(ctx, documentId);
-    }
-    const textChars = pages.reduce(
-      (sum, page) => sum + page.items.reduce((count, item) => count + item.text.trim().length, 0),
-      0,
-    );
-    if (textChars < MIN_TEXT_CHARS) {
-      return transition(ctx, documentId, "needs_ocr", { parserVersion: PARSER_VERSION, extractedAt: new Date() });
-    }
-    const codeMap = await codeMapOf(ctx);
-    const parsed = parseReplyTeamsystem(pages, codeMap);
-    return await getDb().transaction(async (tx) => {
+    pages = await readPdfText(bytes);
+  } catch {
+    return { outcome: "failed", reason: "unreadable_pdf" };
+  }
+  const textChars = pages.reduce(
+    (sum, page) => sum + page.items.reduce((count, item) => count + item.text.trim().length, 0),
+    0,
+  );
+  if (textChars < MIN_TEXT_CHARS) return { outcome: "needs_ocr", parserVersion: PARSER_VERSION };
+  const codeMap = await codeMapOf(ctx);
+  const parsed = parseReplyTeamsystem(pages, codeMap);
+  return {
+    outcome: "read",
+    parserVersion: PARSER_VERSION,
+    evidence: parsed.fields,
+    async write(tx) {
       await tx
         .delete(payrollRawLines)
         .where(and(eq(payrollRawLines.documentId, documentId), userScoped(ctx).owns(payrollRawLines)));
@@ -85,22 +95,9 @@ export async function processPayslip(
           ),
         );
       }
-      await writeEvidence(ctx, documentId, parsed.fields, tx);
       await recompute(ctx, documentId, tx);
-      const done = await transition(
-        ctx,
-        documentId,
-        "needs_review",
-        { parserVersion: PARSER_VERSION, extractedAt: new Date(), error: null },
-        tx,
-      );
-      if (!done) throw new PayrollError("conflict");
-      return done;
-    });
-  } catch (error) {
-    await failExtraction(ctx, documentId, error instanceof PayrollError ? error.code : "extraction_failed");
-    return getDocument(ctx, documentId);
-  }
+    },
+  };
 }
 
 // ——— The fields as they stand ———
@@ -230,7 +227,7 @@ export async function recompute(ctx: Pick<Ctx, "userId">, documentId: string, tx
     rawText: null,
     derivedFrom: assembled.derived.from[field] ?? null,
   }));
-  await upsertEvidence(ctx, documentId, derivedRows, tx);
+  await saveEvidence(ctx, documentId, derivedRows, { prune: false }, tx);
 
   const current = state.payslip;
   if (!identity) {

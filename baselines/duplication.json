@@ -4,20 +4,20 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100786,
-    "duplicatedLines": 16341,
-    "percent": 16.21,
+    "lines": 100852,
+    "duplicatedLines": 16362,
+    "percent": 16.22,
     "blocks": 1224
   },
   "units": {
     "api": {
-      "lines": 3385,
+      "lines": 3431,
       "duplicatedLines": 646,
-      "percent": 19.08,
+      "percent": 18.83,
       "blocks": 58
     },
     "app": {
-      "lines": 25131,
+      "lines": 25132,
       "duplicatedLines": 4026,
       "percent": 16.02,
       "blocks": 312
@@ -53,9 +53,9 @@
       "blocks": 150
     },
     "modules/imports": {
-      "lines": 837,
-      "duplicatedLines": 233,
-      "percent": 27.84,
+      "lines": 888,
+      "duplicatedLines": 250,
+      "percent": 28.15,
       "blocks": 16
     },
     "modules/interests": {
@@ -71,10 +71,10 @@
       "blocks": 129
     },
     "modules/payroll": {
-      "lines": 3436,
-      "duplicatedLines": 841,
-      "percent": 24.48,
-      "blocks": 47
+      "lines": 3413,
+      "duplicatedLines": 834,
+      "percent": 24.44,
+      "blocks": 46
     },
     "modules/pockets": {
       "lines": 1705,
@@ -84,9 +84,9 @@
     },
     "modules/subscriptions": {
       "lines": 2065,
-      "duplicatedLines": 392,
-      "percent": 18.98,
-      "blocks": 25
+      "duplicatedLines": 402,
+      "percent": 19.47,
+      "blocks": 26
     },
     "modules/timeoff": {
       "lines": 4021,
@@ -113,9 +113,9 @@
       "blocks": 0
     },
     "platform/api": {
-      "lines": 150,
+      "lines": 149,
       "duplicatedLines": 15,
-      "percent": 10,
+      "percent": 10.07,
       "blocks": 1
     },
     "platform/auth": {
@@ -233,9 +233,9 @@
       "blocks": 18
     },
     "platform/jobs": {
-      "lines": 507,
+      "lines": 499,
       "duplicatedLines": 28,
-      "percent": 5.52,
+      "percent": 5.61,
       "blocks": 3
     },
     "platform/keyring": {
@@ -282,8 +282,8 @@
     },
     "platform/plugins": {
       "lines": 2018,
-      "duplicatedLines": 198,
-      "percent": 9.81,
+      "duplicatedLines": 199,
+      "percent": 9.86,
       "blocks": 14
     },
     "platform/ranges": {
@@ -588,9 +588,9 @@
     "modules/funds/ui/source-text.ts": 13,
     "modules/imports/jobs.ts": 10,
     "modules/imports/pdf/layout.ts": 47,
-    "modules/imports/rules.ts": 7,
+    "modules/imports/rules.ts": 21,
     "modules/imports/schema.ts": 84,
-    "modules/imports/service.ts": 85,
+    "modules/imports/service/index.ts": 88,
     "modules/interests/jobs.ts": 21,
     "modules/interests/queries.ts": 45,
     "modules/interests/rules.ts": 14,
@@ -629,7 +629,7 @@
     "modules/payroll/schema.ts": 184,
     "modules/payroll/service/codes.ts": 18,
     "modules/payroll/service/leave.ts": 63,
-    "modules/payroll/service/reading.ts": 62,
+    "modules/payroll/service/reading.ts": 55,
     "modules/payroll/service/review.ts": 16,
     "modules/payroll/ui/present.ts": 9,
     "modules/payroll/ui/register-table.tsx": 59,
@@ -649,7 +649,7 @@
     "modules/subscriptions/jobs.ts": 9,
     "modules/subscriptions/queries.ts": 24,
     "modules/subscriptions/schema.ts": 78,
-    "modules/subscriptions/service.ts": 113,
+    "modules/subscriptions/service.ts": 123,
     "modules/subscriptions/ui/inactive-subscriptions.tsx": 16,
     "modules/subscriptions/ui/subscription-dialog.tsx": 105,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
@@ -754,7 +754,7 @@
     "platform/notifications/schema.ts": 15,
     "platform/plugins/queries.ts": 56,
     "platform/plugins/schema.ts": 65,
-    "platform/plugins/service.ts": 53,
+    "platform/plugins/service.ts": 54,
     "platform/plugins/sync.ts": 24,
     "platform/settings/schema.ts": 10,
     "platform/settings/service.ts": 20,

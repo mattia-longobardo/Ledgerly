@@ -2,12 +2,9 @@
 // revalidate. Amounts and hours arrive as typed, in the person's own number format.
 "use server";
 
-import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { tasks } from "@/platform/jobs/queue";
 import { revalidatePath } from "next/cache";
 import { parseAmount } from "@ledgerly/domain/platform/format";
-import { ImportError } from "@ledgerly/domain/imports";
-import { MAX_DOCUMENT_BYTES } from "@ledgerly/domain/imports";
+import { ImportError, uploadDocuments } from "@ledgerly/domain/imports";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { centsToDecimal } from "@ledgerly/domain/shared/money";
@@ -23,8 +20,8 @@ import {
   reopenPayslip,
   resetCode,
   retryPayslip,
+  PAYSLIP_DOCUMENT,
   setCodeRole,
-  uploadPayslip,
   verifyPayslip,
 } from "@ledgerly/domain/payroll";
 
@@ -35,9 +32,6 @@ interface UploadResult {
   uploaded: { id: string; name: string; duplicate: boolean }[];
   refused: { name: string; error: string }[];
 }
-
-/** At most this many files in one go. */
-const MAX_FILES = 24;
 
 function failed(error: unknown): { ok: false; error: string } {
   if (error instanceof PayrollError || error instanceof ImportError) return { ok: false, error: error.code };
@@ -51,39 +45,24 @@ function revalidate(documentId?: string): void {
 }
 
 /**
- * Reads a document in the worker: the upload answers at once (spec §7.8 "subito dopo"). A reading
- * that fails leaves it `extracting`, and `documents-sweep` reads it again (spec §10.2).
+ * Steps 1–2 of spec §9.3 for each file, the use case of `POST /imports` too (PAY-2); the reading of
+ * each new one goes to the worker right after.
  */
-async function readLater(ctx: Ctx, documentId: string): Promise<void> {
-  await enqueue(tasks.readDocument(ctx.userId, documentId));
-}
-
-/** Steps 1–2 of spec §9.3 for each file; the reading of each new one starts right after. */
 export async function uploadPayslipsAction(data: FormData): Promise<UploadResult | { ok: false; error: string }> {
   const ctx = await requireSession();
   const files = data.getAll("files").filter((entry): entry is File => entry instanceof File);
-  if (files.length === 0) return { ok: false, error: "empty" };
-  if (files.length > MAX_FILES) return { ok: false, error: "too_many" };
-  const result: UploadResult = { ok: true, uploaded: [], refused: [] };
-  for (const file of files) {
-    if (file.size > MAX_DOCUMENT_BYTES) {
-      result.refused.push({ name: file.name, error: "too_large" });
-      continue;
-    }
-    try {
-      const { document, duplicate } = await uploadPayslip(ctx, {
-        name: file.name,
-        bytes: new Uint8Array(await file.arrayBuffer()),
-      });
-      result.uploaded.push({ id: document.id, name: document.fileName, duplicate });
-      if (!duplicate) await readLater(ctx, document.id);
-    } catch (error) {
-      if (!(error instanceof ImportError)) throw error;
-      result.refused.push({ name: file.name, error: error.code });
-    }
+  try {
+    const { uploaded, refused } = await uploadDocuments(ctx, PAYSLIP_DOCUMENT, files);
+    revalidate();
+    return {
+      ok: true,
+      uploaded: uploaded.map(({ document, duplicate }) => ({ id: document.id, name: document.fileName, duplicate })),
+      refused,
+    };
+  } catch (error) {
+    if (error instanceof ImportError) return { ok: false, error: error.code };
+    throw error;
   }
-  revalidate();
-  return result;
 }
 
 /** A typed value in the service's canonical form: amounts and hours in the person's format. */

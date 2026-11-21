@@ -20,12 +20,6 @@ export const tasks = {
   job: (name: string): Task => ({ kind: "job", key: `job:${name}`, payload: { name } }),
   /** The jobs that read the movements, after a sync that changed them (docs/scheduler.md). */
   afterSync: (tier: RecordedTier): Task => ({ kind: "after-sync", key: "after-sync", payload: { tier } }),
-  /** The reading of a document just uploaded (spec §7.8 "subito dopo"). */
-  readDocument: (userId: string, documentId: string): Task => ({
-    kind: "document-read",
-    key: `document-read:${documentId}`,
-    payload: { userId, documentId },
-  }),
   /** The memory and the cascade of the categories, after a person chose. */
   categorise: (userId: string, train: boolean): Task => ({
     kind: "categorise",

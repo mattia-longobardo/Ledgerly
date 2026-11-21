@@ -9,13 +9,6 @@ import { addDays, type CivilDate } from "../../shared/dates";
 export const DOCUMENT_KINDS = ["payslip", "cometa_operations", "cometa_position"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
-/** The kinds the app reads and stores. */
-const READ_KINDS = ["payslip"] as const;
-export type ReadKind = (typeof READ_KINDS)[number];
-
-export const isReadKind = (kind: DocumentKind): kind is ReadKind =>
-  (READ_KINDS as readonly string[]).includes(kind);
-
 /** The document states of spec §7.8, one list for every kind of document (§9.3). */
 export const DOCUMENT_STATES = [
   "received",
@@ -81,7 +74,7 @@ export const MIN_TEXT_CHARS = 200;
 /** How long an original is kept by default (spec §7.8); an admin setting from F8. */
 const RETENTION_YEARS = 10;
 
-type SniffedFormat = "pdf" | "xls_html" | "xls" | "xlsx";
+export type SniffedFormat = "pdf" | "xls_html" | "xls" | "xlsx";
 
 const startsWith = (bytes: Uint8Array, signature: readonly number[], at = 0) =>
   signature.every((byte, index) => bytes[at + index] === byte);
@@ -100,11 +93,6 @@ export function sniffFormat(bytes: Uint8Array): SniffedFormat | null {
   return null;
 }
 
-/** The formats each kind of document is read from. */
-export const FORMATS_OF: Record<ReadKind, readonly SniffedFormat[]> = {
-  payslip: ["pdf"],
-};
-
 export const MIME_OF: Record<SniffedFormat, string> = {
   pdf: "application/pdf",
   xls_html: "text/html",
@@ -112,24 +100,21 @@ export const MIME_OF: Record<SniffedFormat, string> = {
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 };
 
-const FOLDER_OF: Record<ReadKind, string> = {
-  payslip: "payslips",
-};
-
 const EXTENSION_OF: Record<SniffedFormat, string> = { pdf: "pdf", xls_html: "xls", xls: "xls", xlsx: "xlsx" };
 
 /**
- * Where an original lives in S3 (spec §7.8): `payslips/<userId>/<year>/<random>.pdf`. Nothing in
- * the key comes from the person: the name they gave the file stays in the database.
+ * Where an original lives in S3 (spec §7.8): `<folder>/<userId>/<year>/<random>.pdf`, the folder
+ * of its kind (`payslips`). Nothing in the key comes from the person: the name they gave the file
+ * stays in the database.
  */
 export function storageKeyFor(
-  kind: ReadKind,
+  folder: string,
   userId: string,
   year: number,
   random: string,
   format: SniffedFormat,
 ): string {
-  return `${FOLDER_OF[kind]}/${userId}/${year}/${random}.${EXTENSION_OF[format]}`;
+  return `${folder}/${userId}/${year}/${random}.${EXTENSION_OF[format]}`;
 }
 
 /** The last day an original is kept: `years` after the day it arrived. */

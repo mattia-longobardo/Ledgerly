@@ -2,17 +2,17 @@
   "counts": {
     "crossModuleImports": 91,
     "moduleIndexFiles": 12,
-    "reciprocalModulePairs": 2,
-    "reciprocalUnitPairs": 47,
-    "moduleCycleGroups": 2,
-    "platformToModuleImports": 69,
+    "reciprocalModulePairs": 1,
+    "reciprocalUnitPairs": 44,
+    "moduleCycleGroups": 1,
+    "platformToModuleImports": 67,
     "platformFilesImportingModules": 24,
     "uiToPlatformImports": 1,
     "forbiddenNameFiles": 89,
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 133,
+    "deepImports": 132,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -42,7 +42,6 @@
     "modules/funds/service.ts → modules/transactions/rules",
     "modules/funds/tabs.ts → modules/investments/period",
     "modules/funds/ui/fund-chart.tsx → modules/investments/ui/chart-data",
-    "modules/imports/api.ts → modules/payroll/index",
     "modules/imports/jobs.ts → modules/users/index",
     "modules/interests/jobs.ts → modules/accounts/index",
     "modules/interests/jobs.ts → modules/users/index",
@@ -77,6 +76,7 @@
     "modules/payroll/queries.ts → modules/imports/rules",
     "modules/payroll/queries.ts → modules/imports/service",
     "modules/payroll/schema.ts → modules/imports/schema",
+    "modules/payroll/service.ts → modules/imports/index",
     "modules/payroll/service.ts → modules/imports/pdf/text",
     "modules/payroll/service.ts → modules/imports/rules",
     "modules/payroll/service.ts → modules/imports/service",
@@ -118,8 +118,6 @@
     "modules/funds ↔ modules/investments",
     "modules/funds ↔ platform/db",
     "modules/funds ↔ platform/jobs",
-    "modules/imports ↔ modules/payroll",
-    "modules/imports ↔ platform/api",
     "modules/imports ↔ platform/db",
     "modules/imports ↔ platform/jobs",
     "modules/interests ↔ platform/db",
@@ -128,7 +126,6 @@
     "modules/investments ↔ platform/db",
     "modules/investments ↔ platform/integrations",
     "modules/payroll ↔ platform/db",
-    "modules/payroll ↔ platform/jobs",
     "modules/pockets ↔ platform/db",
     "modules/pockets ↔ platform/jobs",
     "modules/subscriptions ↔ platform/db",
@@ -161,10 +158,6 @@
     [
       "modules/funds",
       "modules/investments"
-    ],
-    [
-      "modules/imports",
-      "modules/payroll"
     ]
   ],
   "forbiddenNames": [
@@ -449,7 +442,6 @@
     "modules/subscriptions/service.ts → modules/transactions/taxonomy",
     "modules/timeoff/queries.ts → modules/users/service",
     "modules/timeoff/service.ts → modules/users/service",
-    "platform/api/app.ts → modules/imports/api",
     "platform/api/app.ts → modules/investments/api",
     "platform/auth/auth.ts → modules/users/service",
     "platform/integrations/registry.ts → modules/timeoff/jobs",

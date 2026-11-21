@@ -6,7 +6,7 @@
 import "server-only";
 import { z } from "zod";
 import { readFirstFlows } from "@ledgerly/domain/investments";
-import { processPayslip } from "@ledgerly/domain/payroll";
+import { readDocument } from "@ledgerly/domain/imports";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { findConnection, isPluginProvider } from "@ledgerly/domain/platform/integrations";
 import type { Task } from "@ledgerly/domain/platform/jobs";
@@ -20,6 +20,8 @@ import { runJobByHand, runTier } from "@/platform/jobs/tick";
 import { bankSink } from "./(app)/banks/sink";
 // Registers the passes of the plugins before any task runs (`plugin-wiring.ts` says why here).
 import "./plugin-wiring";
+// Registers the readers of the documents before a reading or the sweep asks for one.
+import "./document-kinds";
 
 export { tasks } from "@/platform/jobs/queue";
 export { SCHEDULE, SCHEDULE_TIME_ZONE, SCHEDULED_TIERS } from "@/platform/jobs/registry";
@@ -101,7 +103,7 @@ export async function runTask(raw: Pick<Task, "kind" | "payload">): Promise<void
   switch (task.kind) {
     case "document-read":
       // A failure leaves the document `extracting`: `documents-sweep` reads it again (spec §10.2).
-      await processPayslip(ctx, task.payload.documentId);
+      await readDocument(ctx, task.payload.documentId);
       return;
     case "categorise":
       await categorise(ctx, await categorisableAccountIds(ctx), { train: task.payload.train });

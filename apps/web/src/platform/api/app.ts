@@ -1,6 +1,5 @@
 import "server-only";
 import { Hono } from "hono";
-import { importsApi } from "@/modules/imports/api";
 import { investmentsApi } from "@/modules/investments/api";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { ApiEnv } from "./auth";
@@ -16,7 +15,6 @@ import { fail } from "./errors";
  */
 export const api = new Hono<ApiEnv>().basePath("/api/v1");
 
-api.route("/", importsApi);
 api.route("/", investmentsApi);
 
 api.notFound((c) => fail(c, "not_found"));

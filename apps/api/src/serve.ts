@@ -36,6 +36,11 @@ export class ApiRefusal extends Error {
   }
 }
 
+/** The answer of a route's `otherStatus` (a file already received): the same body, another status. */
+export class OtherStatus<T> {
+  constructor(readonly body: T) {}
+}
+
 type Parsed<S> = S extends z.ZodType ? z.output<S> : undefined;
 
 /** What a handler gets: the person, and the input already checked against the contract. */
@@ -50,7 +55,9 @@ interface RouteInput<R extends RouteContract> {
 
 type Answer<R extends RouteContract> = R["response"] extends z.ZodType ? z.input<R["response"]> : void;
 
-type Handler<R extends RouteContract> = (input: RouteInput<R>) => Promise<Answer<R>>;
+type Handler<R extends RouteContract> = (
+  input: RouteInput<R>,
+) => Promise<Answer<R> | (R["otherStatus"] extends object ? OtherStatus<Answer<R>> : never)>;
 
 /** The status of an error code, as Hono types it. */
 function statusOf(status: number): ContentfulStatusCode {
@@ -85,8 +92,10 @@ function fail(
   return context.json(body, statusOf(API_ERRORS[code]));
 }
 
-async function readBody(context: Context): Promise<unknown> {
+async function readBody(context: Context, format: RouteContract["bodyFormat"]): Promise<unknown> {
   try {
+    // A form's fields by name, a file as the `File` it arrived as; a field sent twice: the last one.
+    if (format === "multipart") return Object.fromEntries(await context.req.formData());
     return await context.req.json();
   } catch {
     return undefined;
@@ -117,6 +126,15 @@ function fitsContract<R extends RouteContract>(route: R, input: RawInput): input
     input[part] = result.data;
   }
   return true;
+}
+
+/** The answer of a success: no body, the route's status, or its `otherStatus`. */
+function respond(context: Context, route: RouteContract, answer: unknown): Response {
+  if (route.response === null) return context.body(null, route.status === 202 ? 202 : 204);
+  if (answer instanceof OtherStatus && route.otherStatus) {
+    return context.json(route.response.parse(answer.body), route.otherStatus.status);
+  }
+  return context.json(route.response.parse(answer), route.status === 201 ? 201 : 200);
 }
 
 /** The handlers each app serves, by route id: a read of the contract is also an MCP tool. */
@@ -150,7 +168,7 @@ export function serve<R extends RouteContract>(
       headers: context.req.raw.headers,
       params: context.req.param(),
       query: context.req.query(),
-      body: route.body ? await readBody(context) : undefined,
+      body: route.body ? await readBody(context, route.bodyFormat) : undefined,
     };
     // `admin` is the second gate, never the first: the role is checked at every call (plan F8 §3.4.8).
     if (route.scope === "admin" && input.ctx.role !== "admin") return fail(context, "forbidden");
@@ -165,7 +183,6 @@ export function serve<R extends RouteContract>(
       if (error instanceof Error && error.name === "ZodError") return fail(context, "invalid");
       throw error;
     }
-    if (route.response === null) return context.body(null, route.status === 202 ? 202 : 204);
-    return context.json(route.response.parse(answer), route.status === 201 ? 201 : 200);
+    return respond(context, route, answer);
   });
 }
