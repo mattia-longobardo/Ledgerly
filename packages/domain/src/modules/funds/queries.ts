@@ -167,7 +167,7 @@ const asOperation = (operation: Operation, units: string): OperationLike => ({
 });
 
 /** The payslip source a fund counts its periods by: the active one, else the oldest. */
-export function payrollSourceOf<T extends Pick<FundSource, "kind" | "state">>(
+function payrollSourceOf<T extends Pick<FundSource, "kind" | "state">>(
   sources: readonly T[],
 ): T | null {
   const payroll = sources.filter((source) => source.kind === "payroll");

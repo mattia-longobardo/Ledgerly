@@ -5,9 +5,9 @@ import { type CivilDate, daysBetween, lastDayOfMonth, monthKey, monthsBetween } 
 import type { Cents } from "../../shared/money";
 import { moneyWeighted, type Xirr } from "../../shared/returns";
 import {
-  closingDay,
   describedDay,
   type FundFlow,
+  fundValueAt,
   type FundPeriod,
   measurePeriod,
   type MoneyOrigin,
@@ -255,7 +255,7 @@ export function homeSummary(input: {
 export function valueToday(funds: readonly HomeFund[], todayOn: CivilDate): Cents | null {
   const values = funds
     .filter((fund) => !fund.archived)
-    .map((fund) => lastUpTo(fund.points, closingDay(todayOn)))
+    .map((fund) => fundValueAt(fund.points, todayOn))
     .filter((point) => point !== null);
   return values.length === 0 ? null : sum(values.map((point) => point.cents));
 }

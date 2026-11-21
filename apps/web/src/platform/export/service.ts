@@ -1,7 +1,7 @@
 import "server-only";
 import { readingsAt, listAccounts, listBalanceEntries } from "@ledgerly/domain/accounts";
 import { budgetsView } from "@ledgerly/domain/budgets";
-import { fundsConfiguration, fundsOverview } from "@ledgerly/domain/funds";
+import { fundsConfiguration, fundsExport } from "@ledgerly/domain/funds";
 import { interestsView } from "@ledgerly/domain/interests";
 import { investmentOperationsExport, investmentServices } from "@ledgerly/domain/investments";
 import { DOCUMENT_KINDS } from "@ledgerly/domain/imports";
@@ -110,7 +110,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     subscriptionsView(ctx, now),
     pocketsView(ctx, now),
     budgetsView(ctx, month),
-    fundsOverview(ctx, now),
+    fundsExport(ctx, now),
     fundsConfiguration(ctx),
     interestsView(ctx, now),
     listAllowances(ctx),
@@ -238,30 +238,17 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     {
       name: "funds",
       columns: ["name", "kind", "provider", "isin", "paidIn", "value", "gain", "lastValuation", "state"],
-      rows: [
-        ...funds.rows.map((row) => ({
-          name: row.fund.name,
-          kind: FUND_KIND,
-          provider: row.fund.provider,
-          isin: row.fund.code,
-          paidIn: amount(row.paidInCents),
-          value: amount(row.valueCents),
-          gain: amount(row.gainCents),
-          lastValuation: row.lastValuation,
-          state: row.fund.state,
-        })),
-        ...funds.archived.map((fund) => ({
-          name: fund.name,
-          kind: FUND_KIND,
-          provider: fund.provider,
-          isin: fund.code,
-          paidIn: null,
-          value: null,
-          gain: null,
-          lastValuation: null,
-          state: fund.state,
-        })),
-      ],
+      rows: funds.map((row) => ({
+        name: row.fund.name,
+        kind: FUND_KIND,
+        provider: row.fund.provider,
+        isin: row.fund.code,
+        paidIn: amount(row.paidInCents),
+        value: amount(row.valueCents),
+        gain: amount(row.gainCents),
+        lastValuation: row.lastValuation,
+        state: row.fund.state,
+      })),
     },
     // Where each fund's money comes from and what it costs (release N6, exception X3): additive.
     {

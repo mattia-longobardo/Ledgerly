@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101167,
-    "duplicatedLines": 16240,
-    "percent": 16.05,
-    "blocks": 1220
+    "lines": 101095,
+    "duplicatedLines": 16237,
+    "percent": 16.06,
+    "blocks": 1219
   },
   "units": {
     "api": {
@@ -36,9 +36,9 @@
     },
     "modules/accounts": {
       "lines": 5130,
-      "duplicatedLines": 980,
-      "percent": 19.1,
-      "blocks": 71
+      "duplicatedLines": 974,
+      "percent": 18.99,
+      "blocks": 70
     },
     "modules/budgets": {
       "lines": 1525,
@@ -47,9 +47,9 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10638,
-      "duplicatedLines": 1990,
-      "percent": 18.71,
+      "lines": 10579,
+      "duplicatedLines": 1973,
+      "percent": 18.65,
       "blocks": 147
     },
     "modules/imports": {
@@ -78,9 +78,9 @@
     },
     "modules/pockets": {
       "lines": 1705,
-      "duplicatedLines": 509,
-      "percent": 29.85,
-      "blocks": 37
+      "duplicatedLines": 502,
+      "percent": 29.44,
+      "blocks": 36
     },
     "modules/subscriptions": {
       "lines": 2065,
@@ -161,10 +161,10 @@
       "blocks": 0
     },
     "platform/export": {
-      "lines": 579,
-      "duplicatedLines": 185,
-      "percent": 31.95,
-      "blocks": 9
+      "lines": 566,
+      "duplicatedLines": 212,
+      "percent": 37.46,
+      "blocks": 10
     },
     "platform/format": {
       "lines": 0,
@@ -553,7 +553,7 @@
     "modules/accounts/service/connections.ts": 50,
     "modules/accounts/service/guards.ts": 27,
     "modules/accounts/service/lifecycle.ts": 57,
-    "modules/accounts/service/provider-accounts.ts": 18,
+    "modules/accounts/service/provider-accounts.ts": 12,
     "modules/accounts/service/snapshot.ts": 9,
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 39,
@@ -572,7 +572,7 @@
     "modules/funds/actions.ts": 44,
     "modules/funds/home-queries.ts": 8,
     "modules/funds/jobs.ts": 8,
-    "modules/funds/overview.ts": 65,
+    "modules/funds/overview.ts": 48,
     "modules/funds/pension/operations.ts": 33,
     "modules/funds/pension/payroll-source.ts": 9,
     "modules/funds/pension/rules.ts": 7,
@@ -652,7 +652,7 @@
     "modules/payroll/ui/review-sections.tsx": 10,
     "modules/payroll/ui/review-workspace.tsx": 15,
     "modules/pockets/jobs.ts": 19,
-    "modules/pockets/queries.ts": 58,
+    "modules/pockets/queries.ts": 51,
     "modules/pockets/schema.ts": 111,
     "modules/pockets/service.ts": 154,
     "modules/pockets/ui/add-to-pocket-dialog.tsx": 35,
@@ -743,7 +743,7 @@
     "platform/auth/people.ts": 33,
     "platform/auth/profile.ts": 14,
     "platform/auth/schema.ts": 69,
-    "platform/export/service.ts": 185,
+    "platform/export/service.ts": 212,
     "platform/fx/rules.ts": 31,
     "platform/fx/sources.ts": 9,
     "platform/holidays/schema.ts": 52,

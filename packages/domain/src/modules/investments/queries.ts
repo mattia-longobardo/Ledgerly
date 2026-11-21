@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, exists, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { type Account, readingsAt, listAccounts, reconstructedBalances } from "../accounts";
-import { fundsOverview } from "../funds/overview";
+import { fundValues } from "../funds/overview";
 import { escapeLike, findMovements, movementsByAccount, transactionsByIds } from "../transactions/queries";
 import type { Ctx } from "../../platform/context";
 import { addDays, civilDateIn, type CivilDate, type MonthKey, today } from "../../shared/dates";
@@ -398,14 +398,14 @@ export async function investmentsHome(
     if (total - placed > 0n) add(byClass, "cash", total - placed);
   }
 
-  const funds = await fundsOverview(ctx, now);
+  const funds = await fundValues(ctx, now);
   return {
     currency,
     services,
     totals,
     byClass: slices(byClass),
     byService: slices(byService),
-    funds: funds.rows.map((row) => ({
+    funds: funds.map((row) => ({
       id: row.fund.id,
       name: row.fund.name,
       valueCents: row.valueCents,

@@ -1,3 +1,6 @@
+// What other readers take of the funds (decision D8; audit FND-1, FND-3): Investments the value of
+// today, the export the numbers of «All», and the configuration the export lists beside them. One
+// engine: the value is `fundValueAt`, the paid-in money and the gain are the period's (period.ts).
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { listAccounts, listBalanceEntries } from "../accounts";
 import type { Ctx } from "../../platform/context";
@@ -5,117 +8,28 @@ import { type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
-import { periodFees } from "./fees";
-import { closingDay, documentedPoints, type ValuePoint } from "./period";
+import { fundSummary } from "./detail";
+import { fundsHomeRows } from "./home-queries";
+import { allPeriod, documentedPoints, fundValueAt } from "./period";
 import type { MovementLike } from "./pension/metrics";
-import { netOfFees } from "./pension/rules";
-import { competenceFor } from "./pension/service";
-import { calendarOf, payrollSourceOf } from "./queries";
-import { fundOperations, funds, pensionCompetences, unitMovements } from "./schema";
+import { fundOperations, funds, unitMovements } from "./schema";
 import { feesOf, type Fund, type FundFee, type FundSource, sourcesOf } from "./service";
-import { competencePeriod, dueOn } from "./sources";
 
-/** One open fund as another module lists it: what it is worth, what went in, what it gained. */
-interface FundOverviewRow {
+/** One open fund as Investments lists it: what it is worth, with the day of that value. */
+interface FundValueRow {
   fund: Fund;
-  /** The last documented value, with its own day: never "as of today". */
+  /** The fund's value today (`fundValueAt`): never a value the period of a page would not see. */
   valueCents: Cents | null;
   lastValuation: CivilDate | null;
-  /** Contributions, enrolment and voluntary payments, gross, to today. */
-  paidInCents: Cents;
-  /** Value − what had been paid in by the value's day; `null` with no value or nothing paid in. */
+}
+
+/** One fund as the export prints it: the numbers of «All» on the Funds pages (decision D8). */
+interface FundExportRow {
+  fund: Fund;
+  paidInCents: Cents | null;
+  valueCents: Cents | null;
   gainCents: Cents | null;
-}
-
-interface FundsOverview {
-  rows: FundOverviewRow[];
-  archived: Fund[];
-}
-
-interface Inflow {
-  on: CivilDate;
-  chargedCents: Cents;
-}
-
-const INFLOWS = ["contribution", "enrollment", "voluntary"];
-
-/**
- * What each fund has paid in: the gross inflows of its register. A fund with no such operation and
- * a payslip source has nothing to put on that line yet, and an empty row says less than the money
- * the payslips already carry: for those funds the accrued periods stand in, each once its due date
- * has passed and dated by it, net of nothing — the gross is what is paid in. The first operation
- * ends the stand-in.
- */
-async function inflowsOf(
-  ctx: Pick<Ctx, "userId">,
-  fundIds: readonly string[],
-  todayOn: CivilDate,
-): Promise<Map<string, Inflow[]>> {
-  const flows = new Map<string, Inflow[]>(fundIds.map((id) => [id, []]));
-  if (fundIds.length === 0) return flows;
-  const rows = await getDb()
-    .select({
-      fundId: fundOperations.fundId,
-      on: fundOperations.operationDate,
-      classification: fundOperations.classification,
-      worker: fundOperations.workerCents,
-      employer: fundOperations.employerCents,
-      tfr: fundOperations.tfrCents,
-      other: fundOperations.otherCents,
-    })
-    .from(fundOperations)
-    .where(and(userScoped(ctx).owns(fundOperations), inArray(fundOperations.fundId, [...fundIds])))
-    .orderBy(asc(fundOperations.operationDate), asc(fundOperations.id));
-  for (const row of rows) {
-    if (!INFLOWS.includes(row.classification)) continue;
-    flows
-      .get(row.fundId)!
-      .push({ on: row.on, chargedCents: row.worker + row.employer + row.tfr + row.other });
-  }
-
-  const bare = fundIds.filter((id) => flows.get(id)!.length === 0);
-  if (bare.length === 0) return flows;
-  const sources = (await sourcesOf(ctx, bare)).filter((source) => source.kind === "payroll");
-  if (sources.length === 0) return flows;
-  const [fees, accrued] = await Promise.all([
-    feesOf(ctx, bare),
-    getDb()
-      .select()
-      .from(pensionCompetences)
-      .where(and(userScoped(ctx).owns(pensionCompetences), inArray(pensionCompetences.fundId, bare)))
-      .orderBy(asc(pensionCompetences.year), asc(pensionCompetences.quarter), asc(pensionCompetences.id)),
-  ]);
-  for (const fundId of bare) {
-    const source = payrollSourceOf(sources.filter((one) => one.fundId === fundId));
-    if (!source || source.accrualPeriod === null) continue;
-    const period = source.accrualPeriod;
-    const calendar = calendarOf(source);
-    const estimate = periodFees(
-      fees.filter((fee) => fee.fundId === fundId),
-      { sourceId: source.id, period, on: todayOn },
-    );
-    const byPeriod = new Map<string, { due: CivilDate; contribution: Cents; enrollment: Cents }>();
-    for (const raw of accrued) {
-      if (raw.fundId !== fundId) continue;
-      const row = competenceFor(raw, source.components ?? []);
-      const index = competencePeriod(row, period);
-      // The money leaves on its period's deadline, whatever month the payslip was: a period still
-      // running has accrued something and paid in nothing.
-      const due = dueOn(row.year, index, period, calendar);
-      if (due === null || due > todayOn) continue;
-      const key = `${row.year}-${index}`;
-      const one = byPeriod.get(key) ?? { due, contribution: 0n, enrollment: 0n };
-      one.contribution += (row.workerCents ?? 0n) + (row.employerCents ?? 0n) + (row.tfrCents ?? 0n);
-      one.enrollment += (row.workerEnrollmentCents ?? 0n) + (row.employerEnrollmentCents ?? 0n);
-      byPeriod.set(key, one);
-    }
-    for (const one of byPeriod.values()) {
-      if (one.contribution === 0n) continue;
-      const flow = netOfFees(one.contribution, one.enrollment, estimate);
-      flows.get(fundId)!.push({ on: one.due, chargedCents: flow.grossCents });
-    }
-  }
-  return flows;
+  lastValuation: CivilDate | null;
 }
 
 /** The unit movements of each fund, for the points they document. */
@@ -143,53 +57,65 @@ async function unitMovementsOf(
 }
 
 /**
- * The funds as Investments and the export list them: one row per open fund, with the value its own
- * page reads. A fund's value is its last documented point, with its own date (funds-ux §5.2) — never
- * "as of today", which would leave a fund valued only in the future blank.
+ * The open funds as Investments lists them, with the value a fund's own page reads today (FND-3).
+ * Only the readings: Investments shows the value, and nothing else of a fund.
  */
-export async function fundsOverview(
+export async function fundValues(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   now: Date = new Date(),
-): Promise<FundsOverview> {
+): Promise<FundValueRow[]> {
   const todayOn = today(ctx.timeZone, now);
-  const all = await getDb()
+  const open = await getDb()
     .select()
     .from(funds)
-    .where(userScoped(ctx).owns(funds))
+    .where(and(userScoped(ctx).owns(funds), eq(funds.state, "active")))
     .orderBy(asc(funds.name), asc(funds.id));
-  const open = all.filter((fund) => fund.state === "active");
-  const ids = open.map((fund) => fund.id);
-  const [movementsOf, inflows] = await Promise.all([unitMovementsOf(ctx, ids), inflowsOf(ctx, ids, todayOn)]);
-  const rows: FundOverviewRow[] = [];
+  const movementsOf = await unitMovementsOf(
+    ctx,
+    open.map((fund) => fund.id),
+  );
+  const rows: FundValueRow[] = [];
   for (const fund of open) {
     const points = documentedPoints(
       await listBalanceEntries(ctx, fund.valuationAccountId, 200),
       movementsOf.get(fund.id) ?? [],
     );
-    const newest = (from: readonly ValuePoint[]) =>
-      from.reduce<ValuePoint | null>(
-        (last, point) => (last === null || point.on > last.on ? point : last),
-        null,
-      );
-    // What the home calls today's value; a point after today only when there is nothing else.
-    const latest = newest(points.filter((point) => point.on <= closingDay(todayOn))) ?? newest(points);
-    const own = inflows.get(fund.id) ?? [];
-    const paidInCents = own.reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n);
-    // The gain is measured against what had gone in by the date of the value: money that left
-    // afterwards is not inside the position it would be compared to. With nothing gone in, a value
-    // is a position and not a gain, so it stays unknown rather than being claimed whole.
-    const basis = own
-      .filter((flow) => latest === null || flow.on <= latest.on)
-      .reduce<Cents>((sum, flow) => sum + flow.chargedCents, 0n);
-    rows.push({
-      fund,
-      valueCents: latest?.cents ?? null,
-      lastValuation: latest?.on ?? null,
-      paidInCents,
-      gainCents: latest === null || basis === 0n ? null : latest.cents - basis,
-    });
+    const value = fundValueAt(points, todayOn);
+    rows.push({ fund, valueCents: value?.cents ?? null, lastValuation: value?.on ?? null });
   }
-  return { rows, archived: all.filter((fund) => fund.state === "archived") };
+  return rows;
+}
+
+/**
+ * The funds as the export prints them, open and archived (decision D8): the paid-in money and the
+ * gain of «All» on the Funds pages, the same engine, and the value of today. An archived fund has
+ * no number: it is not money held today.
+ */
+export async function fundsExport(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  now: Date = new Date(),
+): Promise<FundExportRow[]> {
+  const todayOn = today(ctx.timeZone, now);
+  const rows = await fundsHomeRows(ctx, now);
+  // The open funds first, the archived ones after them, each by name: the order the export has.
+  const ordered = [
+    ...rows.filter((row) => row.fund.state === "active"),
+    ...rows.filter((row) => row.fund.state !== "active"),
+  ];
+  return ordered.map(({ fund, home }) => {
+    if (fund.state !== "active") {
+      return { fund, paidInCents: null, valueCents: null, gainCents: null, lastValuation: null };
+    }
+    const { measure } = fundSummary({ fund: home, period: allPeriod(todayOn), todayOn }).line;
+    const value = fundValueAt(home.points, todayOn);
+    return {
+      fund,
+      paidInCents: measure.paidInCents,
+      valueCents: value?.cents ?? null,
+      gainCents: measure.gainCents,
+      lastValuation: value?.on ?? null,
+    };
+  });
 }
 
 /** A fund's sources and fees with the names an export needs: the fund's, the account's, the source's kind. */

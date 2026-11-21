@@ -14,7 +14,7 @@ import { fundSummary } from "./detail";
 import { firstDataOn, homeSummary } from "./home";
 import { fundHomeRow, fundsHomeRows } from "./home-queries";
 import { fundsDepositsJob } from "../../../../../apps/web/src/modules/funds/jobs";
-import { fundsOverview } from "./overview";
+import { fundsExport } from "./overview";
 import { allPeriod } from "./period";
 import { type FundDetail, fundDetail, fundDetailFlows, hasPayrollCalendar } from "./queries";
 import { periodReturns } from "./rules";
@@ -153,7 +153,7 @@ describe("a PAC (spec §7.7)", () => {
 
     const view = await accountsView(ctx);
     expect(view.rows.find((row) => row.account.id === fund.valuationAccountId)?.balance).toBe(560_000n);
-    expect((await fundsOverview(ctx)).rows[0].lastValuation).toBe("2026-03-31");
+    expect((await fundsExport(ctx))[0].lastValuation).toBe("2026-03-31");
   });
 
   it("loses a valuation deleted from Account detail, and deletes one's balance", async () => {
@@ -263,7 +263,9 @@ describe("a PAC (spec §7.7)", () => {
     ).rejects.toMatchObject({
       code: "archived",
     });
-    expect((await fundsOverview(ctx)).archived.map((one) => one.id)).toEqual([fund.id]);
+    expect(
+      (await fundsExport(ctx)).filter((one) => one.fund.state === "archived").map((one) => one.fund.id),
+    ).toEqual([fund.id]);
   });
 
   it("refuses a second fund of the same name, and its account is not deleted while the fund rests on it", async () => {
@@ -456,7 +458,7 @@ describe("isolation between users (spec §4.4, §11)", () => {
     const fund = await debitFund(ctx, input());
     const valuation = await recordValuation(ctx, fund.id, { on: "2026-02-28", cents: 530_000n });
     const other = await newContext();
-    expect((await fundsOverview(other)).rows).toEqual([]);
+    expect(await fundsExport(other)).toEqual([]);
     await expect(fundDetail(other, fund.id)).rejects.toBeInstanceOf(FundError);
     for (const attempt of [
       () => recordValuation(other, fund.id, { on: "2026-02-28", cents: 1n }),
@@ -494,8 +496,8 @@ describe("a fund's system copies (funds-ux §4, n. 1)", () => {
       source: "system",
     });
 
-    const view = await fundsOverview(ctx, NOW);
-    expect(view.rows[0]).toMatchObject({ lastValuation: "2026-09-30", valueCents: 223_536n });
+    const view = await fundsExport(ctx, NOW);
+    expect(view[0]).toMatchObject({ lastValuation: "2026-09-30", valueCents: 223_536n });
   });
 
   it("measures the gain against the money in by that date, not by the copy's", async () => {
@@ -503,8 +505,8 @@ describe("a fund's system copies (funds-ux §4, n. 1)", () => {
     await recordValuation(ctx, fund.id, { on: "2026-09-30", cents: 110_000n });
     await addDeposit(ctx, fund.id, { on: "2026-10-15", chargedCents: 25_100n, feeCents: 100n, note: null });
     await runSnapshot(ctx, "2026-10-01");
-    const view = await fundsOverview(ctx, NOW);
-    expect(view.rows[0]).toMatchObject({ lastValuation: "2026-09-30", gainCents: 10_000n });
+    const view = await fundsExport(ctx, NOW);
+    expect(view[0]).toMatchObject({ lastValuation: "2026-09-30", gainCents: 10_000n });
     // What went in after the value: the figure `paidInAfterValueCents` held before release N6.
     expect((await fundDetail(ctx, fund.id, NOW)).metrics.laterCents).toBe(25_100n);
   });
@@ -515,8 +517,8 @@ describe("a fund's system copies (funds-ux §4, n. 1)", () => {
     await runSnapshot(ctx, "2026-10-01");
     // The value is corrected after the copy was made: the copy still says the old one, a day later.
     await updateValuation(ctx, valuation.id, { on: "2026-09-30", cents: 120_000n });
-    const view = await fundsOverview(ctx, NOW);
-    expect(view.rows[0]).toMatchObject({
+    const view = await fundsExport(ctx, NOW);
+    expect(view[0]).toMatchObject({
       lastValuation: "2026-09-30",
       valueCents: 120_000n,
       gainCents: 20_000n,

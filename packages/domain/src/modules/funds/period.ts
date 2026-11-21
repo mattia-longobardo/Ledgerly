@@ -42,6 +42,15 @@ export function latestDocumented<T extends EntryLike>(entries: readonly T[]): T 
   return documentedEntries(entries)[0] ?? null;
 }
 
+/**
+ * What a fund is worth on a day (audit FND-3): its last documented value up to the reading that
+ * describes that day — one taken on the 1st of the next month closes it. The home, a fund's page,
+ * Investments and the export all read this one.
+ */
+export function fundValueAt<T extends ValuePoint>(points: readonly T[], on: CivilDate): T | null {
+  return lastUpTo(points, closingDay(on));
+}
+
 export interface ValuePoint {
   on: CivilDate;
   cents: Cents;

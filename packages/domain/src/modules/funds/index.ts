@@ -26,7 +26,7 @@ export {
   yearRows,
 } from "./home";
 export type { FundLine, GainGrain } from "./home";
-export { fundsConfiguration, fundsOverview } from "./overview";
+export { fundsConfiguration, fundsExport } from "./overview";
 export type { Operation, ValuationRow } from "./pension/operations";
 export { MAIN_COMPONENTS } from "./pension/reconcile";
 export type { ComponentStatus, QuarterStatus, Status } from "./pension/reconcile";
