@@ -3,7 +3,6 @@ import type { CivilDate } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
 import {
   type AccruedLine,
-  describedDay,
   firstDataOn,
   gainBars,
   gainGrain,
@@ -16,7 +15,7 @@ import {
   valueToday,
   yearRows,
 } from "./home";
-import { allPeriod, type FundFlow, yearPeriod } from "./period";
+import { allPeriod, describedDay, type FundFlow, yearPeriod } from "./period";
 
 const TODAY = "2028-06-15";
 

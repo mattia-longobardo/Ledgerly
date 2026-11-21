@@ -73,7 +73,7 @@ import {
 } from "./pnl";
 import { type BarGrain, barIntervals, type Interval, periodSpan, valueDays } from "./period";
 import { type SyncStatus, syncStatus } from "./sync";
-import { type Xirr, xirr } from "./xirr";
+import { type Xirr, xirr } from "../../shared/returns";
 
 /** The home chart looks back this far, as the legacy page did. */
 const HISTORY_MONTHS = 36;

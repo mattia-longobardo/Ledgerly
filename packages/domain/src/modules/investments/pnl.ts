@@ -22,7 +22,13 @@ import {
   valueOn,
 } from "./rules";
 import { divRound } from "../../shared/money";
-import { xirr, type Xirr } from "./xirr";
+import {
+  MIN_CAPITAL_CENTS,
+  MIN_CAPITAL_SHARE,
+  modifiedDietz,
+  spanXirr,
+  type Xirr,
+} from "../../shared/returns";
 import { abs } from "../../shared/money";
 
 // ——— The period (§1.2, §2.1) ————————————————————————————————————————————————————————————————
@@ -495,8 +501,6 @@ export interface ServicePnl {
 }
 
 /** Below this, an average capital is "almost nothing" (§4.3): 1 €, or 1 % of the gross capital. */
-const MIN_CAPITAL_CENTS = 100n;
-const MIN_CAPITAL_SHARE = 0.01;
 
 /**
  * The first day `t` of the stretch ending on `end` in which no money can have moved although the
@@ -777,34 +781,6 @@ function periodIndexAt(book: Book, on: CivilDate): number {
   return index;
 }
 
-/**
- * Modified Dietz (§4.3) over `[from, to]`: flows at the end of their day, weighted by the days left.
- * `null` when the average capital is ≤ 0 or below the threshold of {@link MIN_CAPITAL_CENTS} and
- * {@link MIN_CAPITAL_SHARE} of the gross capital (the start plus the money put in).
- */
-export function modifiedDietz(input: {
-  from: CivilDate;
-  to: CivilDate;
-  startCents: Cents;
-  pnlCents: Cents;
-  flows: readonly { on: CivilDate; cents: Cents }[];
-}): { rate: number | null; averageCapital: number; gross: number } {
-  const base = addDays(input.from, -1);
-  const days = daysBetween(base, input.to);
-  let capital = Number(input.startCents);
-  let gross = Number(input.startCents > 0n ? input.startCents : 0n);
-  for (const flow of input.flows) {
-    capital += (Number(flow.cents) * daysBetween(flow.on, input.to)) / days;
-    if (flow.cents > 0n) gross += Number(flow.cents);
-  }
-  const floor = Math.max(Number(MIN_CAPITAL_CENTS), MIN_CAPITAL_SHARE * gross);
-  return {
-    rate: capital <= 0 || capital < floor ? null : Number(input.pnlCents) / capital,
-    averageCapital: capital,
-    gross,
-  };
-}
-
 function returnOf(
   from: CivilDate,
   to: CivilDate,
@@ -815,7 +791,6 @@ function returnOf(
 ): PeriodReturn {
   const dietz = modifiedDietz({ from, to, startCents, pnlCents, flows });
   const base = addDays(from, -1);
-  const covered = daysBetween(base, to);
   const moved = flows.reduce((sum, flow) => sum + abs(flow.cents), 0n);
   // Money put in before the last day (an opening on the last day is no capital yet, §4.3).
   const putIn = startCents > 0n || flows.some((flow) => flow.cents > 0n && flow.on < to);
@@ -824,14 +799,7 @@ function returnOf(
     dietz: invested ? Number(pnlCents) / dietz.gross : dietz.rate,
     method: invested ? "invested" : "dietz",
     averageCapitalCents: dietz.averageCapital,
-    xirr:
-      covered >= 365
-        ? xirr([
-            { on: base, cents: -startCents },
-            ...flows.map((flow) => ({ on: flow.on, cents: -flow.cents })),
-            { on: to, cents: endCents },
-          ])
-        : null,
+    xirr: spanXirr({ from: base, to, startCents, endCents, flows }),
     largeFlows: moved > abs(startCents),
   };
 }

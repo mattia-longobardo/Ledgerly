@@ -1,6 +1,11 @@
 import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
 
+/** A fraction of two amounts as a number, from integers: exact to a millionth, no float on the way in. */
+export function ratio(part: Cents, whole: Cents): number {
+  return Number((part * 1_000_000_000n) / whole) / 1_000_000_000;
+}
+
 export const FUND_STATES = ["active", "archived"] as const;
 export const VALUATION_SOURCES = ["manual", "import"] as const;
 
@@ -10,11 +15,6 @@ interface DepositLike {
   chargedCents: Cents;
   /** `null` while the fee is unknown. */
   feeCents: Cents | null;
-}
-
-/** A fraction of two amounts as a number, from integers: exact to a millionth, no float on the way in. */
-function ratio(part: Cents, whole: Cents): number {
-  return Number((part * 1_000_000_000n) / whole) / 1_000_000_000;
 }
 
 /* Where the fund is heading (owner, 2026-09-20) */

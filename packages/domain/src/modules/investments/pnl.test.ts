@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { addDays } from "../../shared/dates";
 import { NO_RATES, rateTable } from "../../platform/fx/rules";
+import { modifiedDietz } from "../../shared/returns";
 import {
   type AdjustmentClass,
   type CoverageWindow,
-  modifiedDietz,
   type PnlParts,
   periodOf,
   pnlOf,

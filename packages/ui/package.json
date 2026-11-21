@@ -11,6 +11,7 @@
     "./card": "./src/card.tsx",
     "./category-picker": "./src/category-picker.tsx",
     "./chart": "./src/chart.tsx",
+    "./chart-data": "./src/chart-data.ts",
     "./chart-hover": "./src/chart-hover.tsx",
     "./chart-labels": "./src/chart-labels.ts",
     "./cn": "./src/cn.ts",

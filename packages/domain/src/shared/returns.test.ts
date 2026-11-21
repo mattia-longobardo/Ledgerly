@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { xirr } from "./xirr";
+import { xirr } from "./returns";
 
 const eur = (value: number) => BigInt(Math.round(value * 100));
 

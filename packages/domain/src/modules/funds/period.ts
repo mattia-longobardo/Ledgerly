@@ -1,15 +1,8 @@
 import { type Cents } from "../../shared/money";
-import {
-  addDays,
-  type CivilDate,
-  daysBetween,
-  lastDayOfMonth,
-  type MonthKey,
-  monthKey,
-} from "../../shared/dates";
+import { addDays, type CivilDate, lastDayOfMonth, type MonthKey, monthKey } from "../../shared/dates";
 import { SOURCE_PRECEDENCE } from "../accounts";
-import { modifiedDietz } from "../investments/pnl";
-import { xirr, type Xirr } from "../investments/xirr";
+import { moneyWeighted, type Xirr } from "../../shared/returns";
+import { lastUpTo } from "./points";
 import { type MovementLike, valuePoints } from "./pension/metrics";
 import { accruedTotal, type OperationLike, pendingQuarters, type QuarterStatus } from "./pension/reconcile";
 import { netOfFees, NO_FEES, type PensionFees } from "./pension/rules";
@@ -204,11 +197,13 @@ export function closingDay(to: CivilDate): CivilDate {
   return to === lastDayOfMonth(monthKey(to)) ? addDays(to, 1) : to;
 }
 
-const lastUpTo = (points: readonly ValuePoint[], on: CivilDate): ValuePoint | null => {
-  let found: ValuePoint | null = null;
-  for (const point of points) if (point.on <= on && (found === null || point.on > found.on)) found = point;
-  return found;
-};
+/**
+ * The inverse of {@link closingDay}: the day a reading describes. One taken on the 1st closes the month
+ * before (decision 3 of §9); any other describes its own day.
+ */
+export function describedDay(on: CivilDate): CivilDate {
+  return on.endsWith("-01") ? addDays(on, -1) : on;
+}
 
 export interface PeriodMeasure {
   /** `no_value`: no documented value falls in the period, so its gain is not determinable, never 0. */
@@ -243,7 +238,8 @@ export interface PeriodMeasure {
 const inCalendar = (flow: FundFlow, period: FundPeriod) =>
   (period.from === null || flow.on >= period.from) && flow.on <= period.to;
 
-function sumOrigin(flows: readonly FundFlow[]): MoneyOrigin {
+/** Σ of the origins of flows or of measures. */
+export function sumOrigin(flows: readonly { origin: MoneyOrigin }[]): MoneyOrigin {
   const origin = { ...NO_ORIGIN };
   for (const { origin: one } of flows) {
     origin.youCents += one.youCents;
@@ -321,7 +317,6 @@ export function measurePeriod(input: {
   const feesCents = counted.reduce<Cents>((sum, flow) => sum + (flow.feeCents ?? 0n), 0n);
   const gainCents = end.cents - start.cents - flowsCents;
   const dated = counted.map((flow) => ({ on: flow.on, cents: flow.chargedCents }));
-  const days = daysBetween(start.on, end.on);
   return {
     status: "measured",
     start,
@@ -331,24 +326,14 @@ export function measurePeriod(input: {
     feesPartial: counted.some((flow) => flow.feeCents === null),
     gainCents,
     marketCents: gainCents + feesCents,
-    rate:
-      days <= 0
-        ? null
-        : modifiedDietz({
-            from: addDays(start.on, 1),
-            to: end.on,
-            startCents: start.cents,
-            pnlCents: gainCents,
-            flows: dated,
-          }).rate,
-    xirr:
-      days >= 365
-        ? xirr([
-            { on: start.on, cents: -start.cents },
-            ...dated.map((flow) => ({ on: flow.on, cents: -flow.cents })),
-            { on: end.on, cents: end.cents },
-          ])
-        : null,
+    ...moneyWeighted({
+      from: start.on,
+      to: end.on,
+      startCents: start.cents,
+      endCents: end.cents,
+      pnlCents: gainCents,
+      flows: dated,
+    }),
     ...common,
   };
 }

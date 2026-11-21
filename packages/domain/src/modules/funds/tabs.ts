@@ -1,7 +1,7 @@
 // The numbers of a fund's tabs (docs/design/funds-ux.md §4, §5.3, §6, F4). Pure, and on top of `home.ts`:
 // a stretch here is the stretch the chart draws, so its gains add up to the gain of the Overview.
 import { addDays, addMonths, type CivilDate, type MonthKey, monthKey } from "../../shared/dates";
-import { legacyPeriodQuery, type Query } from "../investments/period";
+import { legacyPeriodQuery, type Query } from "../../shared/period";
 import type { Cents } from "../../shared/money";
 import { type FundLine, stretchesOf } from "./home";
 import { closingDay, type FundPeriod, type ValuePoint } from "./period";

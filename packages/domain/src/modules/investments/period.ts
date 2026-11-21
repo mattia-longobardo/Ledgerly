@@ -20,11 +20,10 @@ import {
   shiftRange,
 } from "../../platform/ranges";
 import type { PnlPeriod } from "./pnl";
+import { first, type PeriodQuery, type Query, yearQuery } from "../../shared/period";
 
-export type Query = Record<string, string | string[] | undefined>;
-
-/** The parameters of the period (§1.2): what a link carries from one page or tab to the next. */
-type PeriodQuery = { preset?: string; from?: string; to?: string; off?: string };
+export { legacyPeriodQuery, periodSpan, yearQuery } from "../../shared/period";
+export type { Query } from "../../shared/period";
 
 /** The names of those parameters: the only ones a tab carries to the next. */
 export const PERIOD_KEYS = ["preset", "from", "to", "off"] as const;
@@ -116,72 +115,11 @@ export function sectionPeriod(query: Query, todayOn: CivilDate): SectionPeriod {
   };
 }
 
-/** A calendar year as the parameters that ask for it; the year running is the default and needs none. */
-export function yearQuery(year: number, todayOn: CivilDate): PeriodQuery {
-  const back = Number(todayOn.slice(0, 4)) - year;
-  return back > 0 ? { off: String(back) } : {};
-}
-
-const first = (value: string | string[] | undefined): string | undefined =>
-  Array.isArray(value) ? value[0] : value;
-
-const MONTH = /^\d{4}-\d{2}$/;
-
-/**
- * The address of the charts before U2 (`range=3m|1y|all`, `from`/`to` by month, `grain`) sent to
- * the nearest new one (§1.2), so a saved link still opens: `1y` → the year running, `all` → `all`,
- * `3m` → the three months to today by day, months → their first and last day. `grain` goes, the
- * granularity is automatic (§2.2). Every other parameter stays. `null` when nothing is old.
- */
-export function legacyPeriodQuery(query: Query, todayOn: CivilDate): Record<string, string> | null {
-  const range = first(query.range);
-  const grain = first(query.grain);
-  const from = first(query.from);
-  const to = first(query.to);
-  const months = from !== undefined && to !== undefined && MONTH.test(from) && MONTH.test(to);
-  const period = first(query.period);
-  if (range === undefined && grain === undefined && !months && period === undefined) return null;
-
-  const kept: Record<string, string> = {};
-  for (const [name, value] of Object.entries(query)) {
-    const one = first(value);
-    if (one === undefined || ["range", "grain", "from", "to", "period"].includes(name)) continue;
-    kept[name] = one;
-  }
-  if (months) {
-    const [start, end] = from! <= to! ? [from!, to!] : [to!, from!];
-    return { ...kept, from: `${start}-01`, to: lastDayOfMonth(`${end}-01`) };
-  }
-  // A day range the picker wrote stays: only `range` or `grain` came along with it.
-  if (from !== undefined && to !== undefined && isCivilDate(from) && isCivilDate(to)) {
-    return { ...kept, from, to };
-  }
-  if (range === "all") return { ...kept, preset: "all" };
-  if (range === "3m") return { ...kept, from: addMonths(monthKey(todayOn), -2), to: todayOn };
-  // The period before the presets: `period=all`, or a year.
-  if (period === "all") return { ...kept, preset: "all" };
-  if (period !== undefined && /^\d{4}$/.test(period)) {
-    const year = Number(period);
-    if (year >= 1970) return { ...kept, ...yearQuery(year, todayOn) };
-  }
-  return kept;
-}
-
 /** A period as the parameters that ask for it; the year running is the default and needs none. */
 export function periodQuery(period: PnlPeriod, todayOn: CivilDate): PeriodQuery {
   if (period.kind === "all") return { preset: "all" };
   if (period.kind === "custom") return { from: period.from!, to: period.to };
   return yearQuery(period.year!, todayOn);
-}
-
-/**
- * The days the period really spans: "All" starts on the first day with data (today when there is
- * none), a year never before it either, so the chart does not draw an empty stretch.
- */
-export function periodSpan(period: PnlPeriod, firstOn: CivilDate | null): { from: CivilDate; to: CivilDate } {
-  const start = period.from ?? firstOn ?? period.to;
-  const from = period.kind === "custom" || firstOn === null || start >= firstOn ? start : firstOn;
-  return { from: from > period.to ? period.to : from, to: period.to };
 }
 
 /** The years the stepper walks (§2.1): from the first with data to the one running. */

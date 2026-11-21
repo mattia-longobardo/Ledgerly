@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101215,
-    "duplicatedLines": 16254,
-    "percent": 16.06,
-    "blocks": 1222
+    "lines": 101167,
+    "duplicatedLines": 16240,
+    "percent": 16.05,
+    "blocks": 1220
   },
   "units": {
     "api": {
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10667,
-      "duplicatedLines": 1997,
-      "percent": 18.72,
-      "blocks": 148
+      "lines": 10638,
+      "duplicatedLines": 1990,
+      "percent": 18.71,
+      "blocks": 147
     },
     "modules/imports": {
       "lines": 888,
@@ -65,10 +65,10 @@
       "blocks": 32
     },
     "modules/investments": {
-      "lines": 10301,
-      "duplicatedLines": 1849,
-      "percent": 17.95,
-      "blocks": 130
+      "lines": 10108,
+      "duplicatedLines": 1842,
+      "percent": 18.22,
+      "blocks": 129
     },
     "modules/payroll": {
       "lines": 3776,
@@ -388,6 +388,18 @@
       "percent": 0,
       "blocks": 0
     },
+    "shared/period": {
+      "lines": 52,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
+    },
+    "shared/returns": {
+      "lines": 122,
+      "duplicatedLines": 0,
+      "percent": 0,
+      "blocks": 0
+    },
     "ui": {
       "lines": 246,
       "duplicatedLines": 0,
@@ -559,7 +571,6 @@
     "modules/budgets/ui/overview-card.tsx": 18,
     "modules/funds/actions.ts": 44,
     "modules/funds/home-queries.ts": 8,
-    "modules/funds/home.ts": 7,
     "modules/funds/jobs.ts": 8,
     "modules/funds/overview.ts": 65,
     "modules/funds/pension/operations.ts": 33,
@@ -609,7 +620,7 @@
     "modules/investments/api.ts": 16,
     "modules/investments/catalog.ts": 82,
     "modules/investments/managed.ts": 21,
-    "modules/investments/pnl.ts": 21,
+    "modules/investments/pnl.ts": 14,
     "modules/investments/queries.ts": 92,
     "modules/investments/rules.ts": 36,
     "modules/investments/schema.ts": 404,

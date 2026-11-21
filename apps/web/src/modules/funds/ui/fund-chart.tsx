@@ -10,7 +10,7 @@ import {
   runningTotal,
   sampled,
   toCents,
-} from "@/modules/investments/ui/chart-data";
+} from "@ledgerly/ui/chart-data";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";

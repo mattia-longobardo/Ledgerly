@@ -1,5 +1,6 @@
 import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey, monthKey } from "../../../shared/dates";
 import type { Cents } from "../../../shared/money";
+import { ratio } from "../rules";
 import {
   accruedTotal,
   awaitingCredit,
@@ -151,10 +152,6 @@ export function currentCompartment(
 
 export function operationUnits(movements: readonly MovementLike[]): string {
   return sumUnits(movements.map((movement) => movement.units)) ?? "0";
-}
-
-function ratio(part: Cents, whole: Cents): number {
-  return Number((part * 1_000_000_000n) / whole) / 1_000_000_000;
 }
 
 const gross = (operation: OperationLike) =>

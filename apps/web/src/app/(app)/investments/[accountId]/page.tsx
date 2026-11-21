@@ -18,7 +18,7 @@ import {
   runningTotal,
   sampled,
   toCents,
-} from "@/modules/investments/ui/chart-data";
+} from "@ledgerly/ui/chart-data";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";

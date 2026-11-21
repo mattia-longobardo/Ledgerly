@@ -75,5 +75,5 @@ export {
   verifyKey,
 } from "./sync";
 export type { ConnectTarget } from "./sync";
-export type { Xirr } from "./xirr";
+export type { Xirr } from "../../shared/returns";
 export { managedAccountsOfInvestments } from "./ports";

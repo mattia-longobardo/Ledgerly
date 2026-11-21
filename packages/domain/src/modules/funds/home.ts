@@ -1,28 +1,23 @@
 // The numbers of the Funds home (docs/design/funds-ux.md §5.3, §6, F2). Pure: the caller reads the
 // rows, and `measurePeriod` (period.ts) stays the only place that says what a gain is. This file adds
 // the portfolio on top of it: which funds count in a period, the state of the page, the chart.
-import {
-  addDays,
-  type CivilDate,
-  daysBetween,
-  lastDayOfMonth,
-  monthKey,
-  monthsBetween,
-} from "../../shared/dates";
+import { type CivilDate, daysBetween, lastDayOfMonth, monthKey, monthsBetween } from "../../shared/dates";
 import type { Cents } from "../../shared/money";
-import { modifiedDietz } from "../investments/pnl";
-import { xirr, type Xirr } from "../investments/xirr";
+import { moneyWeighted, type Xirr } from "../../shared/returns";
 import {
   closingDay,
+  describedDay,
   type FundFlow,
   type FundPeriod,
   measurePeriod,
   type MoneyOrigin,
   type PeriodMeasure,
   startOf,
+  sumOrigin,
   type ValuePoint,
   yearPeriod,
 } from "./period";
+import { lastUpTo, sortedPoints } from "./points";
 
 /**
  * What the address cannot mean (§6): a year still to come goes back to the year running. A year older
@@ -55,20 +50,6 @@ export interface HomeFund {
   flows: readonly FundFlow[];
   accrued: readonly AccruedLine[];
 }
-
-/** The day a reading describes: one taken on the 1st closes the month before (decision 3 of §9). */
-export function describedDay(on: CivilDate): CivilDate {
-  return on.endsWith("-01") ? addDays(on, -1) : on;
-}
-
-const sortedPoints = (points: readonly ValuePoint[]) =>
-  [...points].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
-
-const lastUpTo = (points: readonly ValuePoint[], on: CivilDate): ValuePoint | null => {
-  let found: ValuePoint | null = null;
-  for (const point of points) if (point.on <= on && (found === null || point.on > found.on)) found = point;
-  return found;
-};
 
 /**
  * The first day the stepper has to reach (§6): a deposit, a value, an operation or a payslip. A first
@@ -179,8 +160,6 @@ function belongs(line: FundLine, period: FundPeriod, todayOn: CivilDate): boolea
   return period.to >= todayOn || measure.end !== null;
 }
 
-const NO_ORIGIN: MoneyOrigin = { youCents: 0n, employerCents: 0n, tfrCents: 0n, otherCents: 0n };
-
 const sum = (values: readonly Cents[]) => values.reduce<Cents>((total, one) => total + one, 0n);
 
 const flowsIn = (fund: HomeFund, from: CivilDate, to: CivilDate) =>
@@ -199,7 +178,6 @@ function aggregateReturn(lines: readonly FundLine[]): { rate: number | null; xir
   const to = ends[ends.length - 1];
   if (daysBetween(ends[0], to) > AGGREGATE_RATE_DAYS) return { rate: null, xirr: null };
   const from = measured.map((line) => line.measure.start!.on).sort()[0];
-  if (daysBetween(from, to) <= 0) return { rate: null, xirr: null };
 
   let startCents = 0n;
   const flows: { on: CivilDate; cents: Cents }[] = [];
@@ -213,17 +191,7 @@ function aggregateReturn(lines: readonly FundLine[]): { rate: number | null; xir
   }
   const pnlCents = sum(measured.map((line) => line.measure.gainCents!));
   const endCents = sum(measured.map((line) => line.measure.end!.cents));
-  return {
-    rate: modifiedDietz({ from: addDays(from, 1), to, startCents, pnlCents, flows }).rate,
-    xirr:
-      daysBetween(from, to) >= 365
-        ? xirr([
-            { on: from, cents: -startCents },
-            ...flows.map((flow) => ({ on: flow.on, cents: -flow.cents })),
-            { on: to, cents: endCents },
-          ])
-        : null,
-  };
+  return moneyWeighted({ from, to, startCents, endCents, pnlCents, flows });
 }
 
 function stateOf(input: {
@@ -256,13 +224,7 @@ export function homeSummary(input: {
   const measured = lines.filter((line) => line.status === "measured");
   const seen = lines.filter((line) => lineValue(line, period, todayOn) !== null);
   const days = seen.map((line) => line.measure.end!.on).sort();
-  const origin = { ...NO_ORIGIN };
-  for (const { measure } of lines) {
-    origin.youCents += measure.origin.youCents;
-    origin.employerCents += measure.origin.employerCents;
-    origin.tfrCents += measure.origin.tfrCents;
-    origin.otherCents += measure.origin.otherCents;
-  }
+  const origin = sumOrigin(lines.map((line) => line.measure));
   const paidInCents = sum(lines.map((line) => line.measure.paidInCents));
   const accruedCents = sum(lines.map((line) => line.accruedCents));
   const { rate, xirr: yearly } = aggregateReturn(lines);
