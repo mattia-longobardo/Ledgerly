@@ -746,6 +746,7 @@ export const CRITICAL: { files: string[]; why: string }[] = [
       "apps/web/src/global.d.ts",
       "Makefile",
       ".github/workflows/ci.yml",
+      ".github/dependabot.yml",
     ],
   },
   {
