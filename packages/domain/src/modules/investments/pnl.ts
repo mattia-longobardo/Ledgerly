@@ -19,7 +19,7 @@ import {
   readingOn,
   reconciliationOn,
   sortedPeriods,
-  valueOn,
+  valueAt,
 } from "./rules";
 import { divRound } from "../../shared/money";
 import { MIN_CAPITAL_CENTS, MIN_CAPITAL_SHARE, type PeriodReturn, periodReturn } from "../../shared/returns";
@@ -637,7 +637,7 @@ export function positionsOn(book: Book, on: CivilDate, rates: RateTable, replay:
   const states = holdingStates(book, on, rates);
   const byId = new Map(book.holdings.map((holding) => [holding.id, holding]));
   const positions: PositionAt[] = [];
-  const day = valueOn(book, on, rates);
+  const day = valueAt(book, on, rates);
   const conflicted = new Set(day.conflicts.map((conflict) => conflict.holdingId));
   const replaced = new Set<string>();
 
@@ -975,7 +975,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
   // unknown: then the period starts after the first day with a value (never a base of 0).
   const periods = sortedPeriods(book);
   let base = addDays(from, -1);
-  let startCents = valueOn(book, base, rates).valueCents;
+  let startCents = valueAt(book, base, rates).valueCents;
   if (startCents === null) {
     const before = periods.length === 0 || base < periods[0].fromOn;
     const inferredOpening = book.events.some(
@@ -991,7 +991,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
         .filter((day) => day >= from && day < e)
         .sort();
       for (const day of days) {
-        const value = valueOn(book, day, rates).valueCents;
+        const value = valueAt(book, day, rates).valueCents;
         if (value !== null) {
           base = day;
           startCents = value;
@@ -1004,8 +1004,8 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     }
   }
 
-  const end = valueOn(book, e, rates);
-  const start = valueOn(book, base, rates);
+  const end = valueAt(book, e, rates);
+  const start = valueAt(book, base, rates);
   if (end.valueCents === null) {
     reasons.add("no_value");
     return empty(from);

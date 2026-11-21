@@ -614,7 +614,10 @@ export function readingOn(book: Book, on: CivilDate): ReadingLike | null {
 }
 
 /**
- * V(A,d) (§2): the value of the account at the end of `on`, in its currency.
+ * V(A,d) (§2): the value of the account at the end of `on`, in its currency — the one value of a
+ * service (audit INV-3). The hero, the KPIs, `/api/v1/investments`, the MCP and the P&L read it on
+ * the book; the `portfolio` balances Accounts, Overview and `GET /summary` read are its projection,
+ * written by `rebuild` through {@link computePoints}.
  *
  * - manual, `assets`: cash + Σ positions (§2.1);
  * - manual, `total`: the last account valuation + the net flows after it, never below zero;
@@ -623,7 +626,7 @@ export function readingOn(book: Book, on: CivilDate): ReadingLike | null {
  *
  * Adjustments (R3) apply in every mode. Only the events of the period in force count (A3).
  */
-export function valueOn(book: Book, on: CivilDate, rates: RateTable): DayValue {
+export function valueAt(book: Book, on: CivilDate, rates: RateTable): DayValue {
   const { period, events } = eventsOn(book, on);
   if (period === null) return EMPTY;
   const adjustmentCents = adjustmentsOn(events, on);
@@ -789,7 +792,7 @@ export function computePoints(book: Book, rates: RateTable, today: CivilDate, fr
   const points: Point[] = [];
   for (const on of pointDays(book, today)) {
     if (from !== undefined && on < from) continue;
-    const value = valueOn(book, on, rates).valueCents;
+    const value = valueAt(book, on, rates).valueCents;
     if (value !== null) points.push({ on, cents: value });
   }
   return points;

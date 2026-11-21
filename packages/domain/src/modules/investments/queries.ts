@@ -34,7 +34,7 @@ import {
   QUANTITY_SCALE,
   sumFlows,
   transferProposals,
-  valueOn,
+  valueAt,
 } from "./rules";
 import { formatDecimal, parseDecimal } from "../../shared/money";
 import {
@@ -57,8 +57,8 @@ import {
   listInvestmentAccounts,
   type LoadedBook,
   loadBook,
-  ratesFor,
   transferLegs,
+  valuedBook,
 } from "./service";
 import {
   type CoverageWindow,
@@ -142,9 +142,8 @@ async function loadAll(
     if (only !== undefined && investment.accountId !== only) continue;
     const account = byId.get(investment.accountId);
     if (!account) continue;
-    const book = await loadBook(ctx, investment, account.currency);
-    const rates = await ratesFor(book, todayOn);
-    const day = valueOn(book, todayOn, rates);
+    const { book, rates } = await valuedBook(ctx, investment, { currency: account.currency, todayOn });
+    const day = valueAt(book, todayOn, rates);
     // Also after a disconnection: the retired key still asks to be revoked (SEC-07).
     const sync = await syncStatus(ctx, investment);
     loaded.push({ account, investment, book, rates, day, sync });
@@ -177,7 +176,7 @@ function lastUpdateOf(book: LoadedBook): CivilDate | null {
 
 function summaryOf(one: Loaded, todayOn: CivilDate, displayCurrency: string, displayRates: RateTable) {
   const valueCents = one.day.valueCents;
-  const before = valueOn(one.book, addDays(todayOn, -30), one.rates).valueCents;
+  const before = valueAt(one.book, addDays(todayOn, -30), one.rates).valueCents;
   const reliable = one.day.origin !== "synced" || (one.sync?.complete ?? false);
   const entries = flowEntriesOn(one.book, todayOn);
   const measured = performance(sumFlows(entries), valueCents);

@@ -18,7 +18,7 @@ export const GAP_NOTES = {
   balance: "balance_difference",
 } as const;
 
-/** The readings that count, as `valueOn` reads them (R1, R5). */
+/** The readings that count, as `valueAt` reads them (R1, R5). */
 const COUNTING = new Set(["complete", "partial", "confirmed_zero", "reconstructed"]);
 
 /**

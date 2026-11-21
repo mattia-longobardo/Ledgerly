@@ -24,7 +24,7 @@ import {
   PRICE_SCALE,
   QUANTITY_SCALE,
   type ReadingLike,
-  valueOn,
+  valueAt as valueOn,
 } from "./rules";
 import { parseDecimal } from "../../shared/money";
 

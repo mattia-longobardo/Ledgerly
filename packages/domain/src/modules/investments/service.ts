@@ -388,8 +388,22 @@ export async function ratesFor(book: Book, to: CivilDate): Promise<RateTable> {
 }
 
 /**
+ * A service's book with the rates that value it up to `todayOn`: what `valueAt` reads, loaded the
+ * same way for the pages and the API and for the `portfolio` balances `rebuild` writes (audit INV-3).
+ */
+export async function valuedBook(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  investment: InvestmentAccount,
+  valuing: { currency: string; todayOn: CivilDate; transaction?: Tx },
+): Promise<{ book: LoadedBook; rates: RateTable }> {
+  const book = await loadBook(ctx, investment, valuing.currency, valuing.transaction);
+  return { book, rates: await ratesFor(book, valuing.todayOn) };
+}
+
+/**
  * Rewrites the account's `portfolio` points from `from` on (§1.7), inside the transaction that
- * changed its data: the engine on the book as the transaction now sees it.
+ * changed its data: `valueAt` on the book as the transaction now sees it, the projection of the
+ * value the pages read.
  */
 export async function rebuild(
   ctx: WriteCtx,
@@ -400,9 +414,8 @@ export async function rebuild(
 ): Promise<void> {
   // A manual service writes no balance (§1.3, PERS-342): Accounts holds its value.
   if (investment.provider === MANUAL_PROVIDER) return;
-  const book = await loadBook(ctx, investment, currency, tx);
   const todayOn = today(ctx.timeZone);
-  const rates = await ratesFor(book, todayOn);
+  const { book, rates } = await valuedBook(ctx, investment, { currency, todayOn, transaction: tx });
   const points = computePoints(book, rates, todayOn, from);
   await replacePortfolioPoints(ctx, { accountId: investment.accountId, from, points }, tx);
 }

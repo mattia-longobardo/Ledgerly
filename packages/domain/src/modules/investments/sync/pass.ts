@@ -24,7 +24,7 @@ import {
 } from "../../../platform/integrations/service";
 import { withJobLock } from "../../../platform/jobs/lock";
 import { connectableProvider, credentialSchemaOf } from "../catalog";
-import { MANUAL_MODE, valueOn } from "../rules";
+import { MANUAL_MODE, valueAt } from "../rules";
 import {
   investmentAccountPeriods,
   investmentAccounts,
@@ -275,7 +275,7 @@ export async function disconnectProvider(
     const current = periodOn(book, todayOn);
     if (current === null || current.origin !== "synced") throw new SyncError("not_connected");
     const rates = await ratesFor(book, todayOn);
-    const value = valueOn(book, todayOn, rates).valueCents;
+    const value = valueAt(book, todayOn, rates).valueCents;
     const startsAt =
       current.startsAt.getTime() >= now.getTime() ? new Date(current.startsAt.getTime() + 1) : now;
     await tx.insert(investmentAccountPeriods).values(

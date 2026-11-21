@@ -20,7 +20,7 @@ import {
   type TransferLeg,
   transferProposals,
   unitPriceOf,
-  valueOn,
+  valueAt as valueOn,
 } from "./rules";
 import { formatDecimal, parseDecimal } from "../../shared/money";
 
