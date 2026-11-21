@@ -27,6 +27,7 @@ import { budgetsView } from "@domain/modules/budgets/queries";
 import { fundSummary } from "@domain/modules/funds/detail";
 import { firstDataOn, homeSummary, valueToday } from "@domain/modules/funds/home";
 import { fundsHomeRows } from "@domain/modules/funds/home-queries";
+import { fundsOverview } from "@domain/modules/funds/overview";
 import { interestsView, ruleDetail } from "@domain/modules/interests/queries";
 import { periodOf } from "@domain/modules/investments/pnl";
 import { investmentsHome, investmentsPnl, investmentsPnlView } from "@domain/modules/investments/queries";
@@ -113,6 +114,16 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
     pension: { ...row.detail, freshness: undefined },
   }));
 
+  // What the export's section `funds` prints (decision D8): the paid-in, the value, the gain.
+  const exported = await fundsOverview(ctx, now);
+  const exportFunds = exported.rows.map((row) => ({
+    name: row.fund.name,
+    paidInCents: row.paidInCents,
+    valueCents: row.valueCents,
+    gainCents: row.gainCents,
+    lastValuation: row.lastValuation,
+  }));
+
   const timeOffNow = await timeOffView(ctx, thisYear);
   const timeOff: Record<string, unknown> = {};
   for (const year of timeOffNow.years) {
@@ -169,7 +180,12 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
       funds: investments.funds,
       periods: investmentPeriods,
     },
-    funds: { valueToday: valueToday(homes, todayOn), periods: fundPeriods, funds: fundDetails },
+    funds: {
+      valueToday: valueToday(homes, todayOn),
+      periods: fundPeriods,
+      funds: fundDetails,
+      export: exportFunds,
+    },
     timeOff,
     payroll: {
       years: payroll.years.map(({ year, totals, averages }) => ({ year, totals, averages })),

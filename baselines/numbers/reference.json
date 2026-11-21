@@ -627,6 +627,14 @@
   "totalPartial": false
  },
  "funds": {
+  "export": {
+   "Fideuram Piano Accumulo": {
+    "gainCents": "20900",
+    "lastValuation": "2031-09-30",
+    "paidInCents": "776100",
+    "valueCents": "771900"
+   }
+  },
   "funds": {
    "Fideuram Piano Accumulo": {
     "month": {
