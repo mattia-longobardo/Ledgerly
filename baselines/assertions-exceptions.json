@@ -623,5 +623,15 @@
     "file": "apps/web/src/platform/api/imports.itest.ts",
     "decision": "R2 funds, client request on POST /imports",
     "reason": "a test added: a 400 of POST /imports names the use case's refusal in reason (empty); no existing assertion changed"
+  },
+  {
+    "file": "packages/api-client/src/index.test.ts",
+    "decision": "R3 imports",
+    "reason": "a test added: a route with a multipart body is sent as a form; no existing assertion changed"
+  },
+  {
+    "file": "tests/e2e/payroll/a11y.spec.ts",
+    "decision": "R3 imports",
+    "reason": "a screen added to the layout and accessibility check: the dialog that adds payslips, with its files; no existing screen or assertion changed"
   }
 ]
