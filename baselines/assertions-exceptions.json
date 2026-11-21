@@ -693,5 +693,15 @@
     "file": "tools/test-map.test.ts",
     "decision": "@site on origin (Mattia, 2026-11-21)",
     "reason": "the @site commands that the selection prints now start with E2E_ORIGIN=127.0.0.1, as @smoke: the three expected commands of siteCommands change by that prefix only"
+  },
+  {
+    "file": "apps/web/src/platform/api/session.itest.ts",
+    "decision": "R2 investments, session scope",
+    "reason": "the session gets investments:read: GET /investments with the cookie is 200, not 403; a token without the scope is still 403, with or without the cookie (test added)"
+  },
+  {
+    "file": "packages/domain/src/platform/auth/scopes.test.ts",
+    "decision": "R2 investments, session scope",
+    "reason": "the name of the test names investments:read too; the expected scopes of a token are the same four"
   }
 ]

@@ -41,6 +41,9 @@ written before it keeps working.
   `before_period`, `invalid_transaction`, `unknown_provider`, `invalid_credentials`,
   `unsupported_currency`); `conflict` with the other reasons of the domain (`not_eligible`,
   `not_read_only`, `cooldown`, `not_connected`, …).
+- The web's own session gets the scope `investments:read`, so the Investments screens can read
+  `/api/v1`. A token gets no new scope: it is still granted `read`, `write`, `imports` and
+  `investments:read`, and an Investments route without `investments:read` is still `403`.
 
 ## 2026-11-21 · funds (0.52.0)
 
