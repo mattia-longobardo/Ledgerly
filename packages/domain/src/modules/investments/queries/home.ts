@@ -72,6 +72,11 @@ interface PortfolioState extends Portfolio {
   months: MonthKey[];
 }
 
+/** Which services a read takes: the live ones, or every one for the export (audit INV-5, D10). */
+export interface ArchivedOption {
+  includeArchived?: boolean;
+}
+
 /**
  * Every live service with its value in its currency and in the display currency, and the
  * portfolio's totals in the display currency (§1.8, §2.4): net invested, gain, simple return and
@@ -80,12 +85,13 @@ interface PortfolioState extends Portfolio {
 async function portfolioState(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   source: Date | InvestmentsSnapshot,
+  options: ArchivedOption = {},
 ): Promise<PortfolioState> {
   const { now, todayOn, loaded } = await snapshotOf(ctx, source);
   const currency = ctx.displayCurrency;
   const months = monthsBack(todayOn, HISTORY_MONTHS);
   const firstDay = months[0];
-  const live = loaded.filter((one) => one.account.state !== "archived");
+  const live = options.includeArchived ? loaded : loaded.filter((one) => one.account.state !== "archived");
 
   // The portfolio's flows (§2.4): a transfer between two of its services moves no money in or out,
   // so both legs drop out — but only when both are here; a lone leg is a flow like any other.
@@ -157,12 +163,13 @@ async function portfolioState(
   };
 }
 
-/** The services and the portfolio's totals, for `/api/v1/investments` and the MCP (§5.5). */
+/** The services and the portfolio's totals, for `/api/v1/investments`, the MCP (§5.5) and the export. */
 export async function investmentsPortfolio(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   source: Date | InvestmentsSnapshot = new Date(),
+  options: ArchivedOption = {},
 ): Promise<Portfolio> {
-  const { currency, todayOn, services, totals } = await portfolioState(ctx, source);
+  const { currency, todayOn, services, totals } = await portfolioState(ctx, source, options);
   return { currency, todayOn, services, totals };
 }
 

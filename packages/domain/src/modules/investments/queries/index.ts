@@ -17,7 +17,7 @@ export type {
   TransferProposalRow,
 } from "./holdings";
 export { serviceDetail } from "./detail";
-export { investmentOperationsExport, investmentServices } from "./export";
+export { investmentOperationsExport, investmentsExport } from "./export";
 export { investmentsPnl, investmentsPnlView, servicePnlView, servicePositions } from "./views";
 export type { InvestmentsPnl, InvestmentsPnlView, PnlChartService, ServicePositions } from "./views";
 export { ACTIVITY_PAGE_SIZE, serviceActivity, serviceMovements } from "./activity-tab";

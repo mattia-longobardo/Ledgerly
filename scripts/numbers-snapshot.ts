@@ -31,7 +31,7 @@ import { fundsExport } from "@domain/modules/funds/overview";
 import { interestsView, ruleDetail } from "@domain/modules/interests/queries";
 import { periodOf } from "@domain/modules/investments/pnl";
 import {
-  investmentServices,
+  investmentsExport,
   investmentsHome,
   investmentsPnl,
   investmentsPnlView,
@@ -92,14 +92,23 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
   }
 
   // What the export's section `investment-services` prints (decisions D9, D10).
-  const exportInvestments = (await investmentServices(ctx)).map((row) => ({
-    name: row.name,
-    valueCents: row.valueCents,
-    investedCents: row.investedCents,
-    gainCents: row.gainCents,
-    simpleReturn: row.simpleReturn,
-    xirr: row.xirr,
-    reliableFrom: row.reliableFrom,
+  const investmentsExported = await investmentsExport(ctx, now);
+  const dietz = new Map(
+    investmentsExported.pnl.portfolio.services.map((one) => [
+      one.accountId,
+      one.displayReturn?.dietz ?? null,
+    ]),
+  );
+  const exportInvestments = investmentsExported.portfolio.services.map((one) => ({
+    name: one.account.name,
+    valueCents: one.valueCents,
+    investedCents: one.performance.investedCents,
+    gainCents: one.performance.gainCents,
+    simpleReturn: one.performance.simpleReturn,
+    xirr: one.xirr,
+    reliableFrom: one.reliableFrom,
+    modifiedDietz: dietz.get(one.account.id) ?? null,
+    archived: one.account.state === "archived",
   }));
 
   // With the history: the valuations and what the statements left are numbers of a fund too.

@@ -452,6 +452,7 @@ export const MODULES: Module[] = [
       "categories",
       "connections",
       "users",
+      "export",
       "e2e:accounts",
       "e2e:admin",
       "e2e:auth",

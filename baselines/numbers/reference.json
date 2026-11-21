@@ -2035,8 +2035,10 @@
   },
   "export": {
    "Directa": {
+    "archived": false,
     "gainCents": "65000",
     "investedCents": "1200000",
+    "modifiedDietz": 0.07572815533980583,
     "reliableFrom": null,
     "simpleReturn": 0.05416666666666667,
     "valueCents": "1265000",

@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 103006,
-    "duplicatedLines": 16702,
-    "percent": 16.21,
-    "blocks": 1260
+    "lines": 103000,
+    "duplicatedLines": 16678,
+    "percent": 16.19,
+    "blocks": 1259
   },
   "units": {
     "api": {
-      "lines": 5051,
-      "duplicatedLines": 1073,
-      "percent": 21.24,
+      "lines": 5075,
+      "duplicatedLines": 1074,
+      "percent": 21.16,
       "blocks": 93
     },
     "app": {
@@ -65,10 +65,10 @@
       "blocks": 32
     },
     "modules/investments": {
-      "lines": 10180,
-      "duplicatedLines": 1839,
-      "percent": 18.06,
-      "blocks": 128
+      "lines": 10155,
+      "duplicatedLines": 1827,
+      "percent": 17.99,
+      "blocks": 127
     },
     "modules/payroll": {
       "lines": 3776,
@@ -161,9 +161,9 @@
       "blocks": 0
     },
     "platform/export": {
-      "lines": 566,
-      "duplicatedLines": 213,
-      "percent": 37.63,
+      "lines": 550,
+      "duplicatedLines": 200,
+      "percent": 36.36,
       "blocks": 10
     },
     "platform/format": {
@@ -173,9 +173,9 @@
       "blocks": 0
     },
     "platform/fx": {
-      "lines": 308,
+      "lines": 319,
       "duplicatedLines": 40,
-      "percent": 12.99,
+      "percent": 12.54,
       "blocks": 2
     },
     "platform/holidays": {
@@ -412,12 +412,12 @@
     "api/accounts/dto.ts": 51,
     "api/accounts/routes.ts": 65,
     "api/budgets/dto.ts": 10,
-    "api/funds/dto.ts": 80,
+    "api/funds/dto.ts": 79,
     "api/funds/routes.ts": 79,
     "api/interests/dto.ts": 24,
     "api/interests/routes.ts": 32,
-    "api/investments/dto.ts": 64,
-    "api/investments/pages.ts": 33,
+    "api/investments/dto.ts": 76,
+    "api/investments/pages.ts": 23,
     "api/investments/routes.ts": 74,
     "api/investments/tabs.ts": 56,
     "api/payroll/dto.ts": 24,
@@ -641,7 +641,7 @@
     "modules/investments/pnl/positions.ts": 7,
     "modules/investments/queries/activity-tab.ts": 31,
     "modules/investments/queries/detail.ts": 33,
-    "modules/investments/queries/export.ts": 20,
+    "modules/investments/queries/export.ts": 8,
     "modules/investments/queries/home.ts": 9,
     "modules/investments/queries/views.ts": 20,
     "modules/investments/rules/value.ts": 7,
@@ -773,7 +773,7 @@
     "platform/auth/people.ts": 33,
     "platform/auth/profile.ts": 14,
     "platform/auth/schema.ts": 69,
-    "platform/export/service.ts": 213,
+    "platform/export/service.ts": 200,
     "platform/fx/rules.ts": 31,
     "platform/fx/sources.ts": 9,
     "platform/holidays/schema.ts": 52,

@@ -264,7 +264,14 @@ describe("the investments of the export", () => {
     await archiveAccount(ctx, await service(ctx, "Vecchio", "EUR", 50_000n, 50_000n));
     const zip = await readZip(await exportUserBytes(ctx));
     const json = JSON.parse(zip.get("ledgerly.json")!.toString("utf8")) as Record<string, unknown[]>;
-    const common = { category: "broker", provider: "manual", mode: "total", reliableFrom: null };
+    // A service that opened today has no return of the year yet: `modifiedDietz` is null (D9).
+    const common = {
+      category: "broker",
+      provider: "manual",
+      mode: "total",
+      reliableFrom: null,
+      modifiedDietz: null,
+    };
     expect(json["investment-services"]).toEqual([
       {
         ...common,
@@ -275,6 +282,7 @@ describe("the investments of the export", () => {
         gain: "100.00",
         simpleReturn: 0.1,
         xirr: "none",
+        archived: false,
       },
       {
         ...common,
@@ -285,6 +293,7 @@ describe("the investments of the export", () => {
         gain: "300.00",
         simpleReturn: 0.15,
         xirr: "none",
+        archived: false,
       },
       {
         ...common,
@@ -295,6 +304,7 @@ describe("the investments of the export", () => {
         gain: "0.00",
         simpleReturn: 0,
         xirr: "multiple",
+        archived: true,
       },
     ]);
   });

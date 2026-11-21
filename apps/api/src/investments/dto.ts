@@ -76,6 +76,37 @@ function serviceJson(one: ServiceSummary) {
   };
 }
 
+/** The export's own form of XIRR, from before the contract: the rate, or why there is none. */
+const EXPORT_XIRR = { unavailable: null, no_solution: "none", multiple_solutions: "multiple" } as const;
+
+/**
+ * The export's section `investment-services` (decisions D9, D10, audit INV-5): each service as
+ * `GET /investments` lists it, the archived ones too with `archived`, and `modifiedDietz`, its
+ * return of the period of `result` (the API's field). The export keeps its columns: `xirr` and
+ * `reliableFrom` (the instant) stay in the forms it always wrote.
+ */
+export function exportServicesOut(portfolio: Portfolio, result: InvestmentsPnl) {
+  const dietz = new Map(pnlJson(result).services.map((one) => [one.accountId, one.modifiedDietz]));
+  return portfolio.services.map((one) => {
+    const json = serviceJson(one);
+    return {
+      name: json.name,
+      category: json.category,
+      provider: json.provider,
+      mode: json.mode,
+      currency: json.currency,
+      value: json.value,
+      invested: json.invested,
+      gain: json.gain,
+      simpleReturn: json.simpleReturn,
+      xirr: json.xirrStatus === "ok" ? json.xirr : EXPORT_XIRR[json.xirrStatus],
+      reliableFrom: iso(one.reliableFrom),
+      modifiedDietz: dietz.get(one.account.id) ?? null,
+      archived: one.account.state === "archived",
+    };
+  });
+}
+
 export function totalsJson(totals: Portfolio["totals"]) {
   return {
     value: maybe(totals.valueCents),

@@ -3,7 +3,7 @@ import { readingsAt, listAccounts, listBalanceEntries } from "@ledgerly/domain/a
 import { budgetsView } from "@ledgerly/domain/budgets";
 import { fundsConfiguration, fundsExport } from "@ledgerly/domain/funds";
 import { interestsView } from "@ledgerly/domain/interests";
-import { investmentOperationsExport, investmentServices } from "@ledgerly/domain/investments";
+import { investmentsExport } from "@ledgerly/domain/investments";
 import { DOCUMENT_KINDS } from "@ledgerly/domain/imports";
 import { listDocuments, readOriginal } from "@ledgerly/domain/imports";
 import { pocketsView } from "@ledgerly/domain/pockets";
@@ -13,9 +13,10 @@ import { listAllowances, listLeaveDays } from "@ledgerly/domain/timeoff";
 import { listTransactions, MAX_LIMIT, rulesForExport } from "@ledgerly/domain/transactions";
 import { getPreferences } from "@ledgerly/domain/users";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
+import { exportServicesOut } from "@ledgerly/api";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
-import { amount, day, ratio, type Row, type Section, sectionCsv, sectionsJson } from "./sections";
+import { amount, day, type Row, type Section, sectionCsv, sectionsJson } from "./sections";
 import { type ZipEntry, zipStream, zipToBytes } from "./zip";
 
 /**
@@ -103,7 +104,6 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     leave,
     payroll,
     investments,
-    investmentOperations,
     rules,
   ] = await Promise.all([
     allTransactions(ctx),
@@ -116,8 +116,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     listAllowances(ctx),
     listLeaveDays(ctx, LEAVE_WINDOW),
     registerView(ctx),
-    investmentServices(ctx),
-    investmentOperationsExport(ctx),
+    investmentsExport(ctx, now),
     rulesForExport(ctx),
   ]);
 
@@ -337,21 +336,10 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         "simpleReturn",
         "xirr",
         "reliableFrom",
+        "modifiedDietz",
+        "archived",
       ],
-      rows: investments.map((row) => ({
-        name: row.name,
-        category: row.category,
-        provider: row.provider,
-        mode: row.mode,
-        currency: row.currency,
-        value: amount(row.valueCents),
-        invested: amount(row.investedCents),
-        gain: amount(row.gainCents),
-        simpleReturn: ratio(row.simpleReturn),
-        // A rate when there is one; "none" or "multiple" when XIRR is not computable (§2.4).
-        xirr: row.xirr === null ? null : row.xirr.status === "ok" ? ratio(row.xirr.rate) : row.xirr.status,
-        reliableFrom: day(row.reliableFrom),
-      })),
+      rows: exportServicesOut(investments.portfolio, investments.pnl),
     },
     {
       name: "investment-operations",
@@ -368,7 +356,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         "transferWith",
         "note",
       ],
-      rows: investmentOperations.map((row) => ({
+      rows: investments.operations.map((row) => ({
         on: row.on,
         service: row.service,
         currency: row.currency,

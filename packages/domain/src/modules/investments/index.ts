@@ -18,7 +18,7 @@ export {
   ACTIVITY_PAGE_SIZE,
   catalogView,
   investmentOperationsExport,
-  investmentServices,
+  investmentsExport,
   investmentsHome,
   investmentsPnl,
   investmentsPnlView,

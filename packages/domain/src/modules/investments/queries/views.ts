@@ -27,7 +27,7 @@ import {
 import { type BarGrain, barIntervals, type Interval, periodSpan, valueDays } from "../period";
 import { type SyncStatus } from "../sync";
 import { trimmed } from "./holdings";
-import { readingPositionsOf } from "./home";
+import { type ArchivedOption, readingPositionsOf } from "./home";
 import { type InvestmentsSnapshot, type Loaded, servicesOf, snapshotOf } from "./snapshot";
 
 // ——— Profit and loss of a period (docs/design/investments-ux.md §4, U1) ——————————————————————————
@@ -123,10 +123,11 @@ export async function investmentsPnl(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   params: PeriodParams | PnlPeriod,
   source: Date | InvestmentsSnapshot = new Date(),
+  options: ArchivedOption = {},
 ): Promise<InvestmentsPnl> {
   const { todayOn, loaded } = await snapshotOf(ctx, source);
   const period = "kind" in params ? params : periodOf(params, todayOn);
-  const live = loaded.filter((one) => one.account.state !== "archived");
+  const live = options.includeArchived ? loaded : loaded.filter((one) => one.account.state !== "archived");
   const { services, display } = await pnlInputs(ctx, live, period, todayOn);
   return {
     period,
