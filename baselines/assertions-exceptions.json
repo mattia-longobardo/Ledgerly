@@ -533,5 +533,45 @@
     "file": "packages/domain/src/modules/interests/rules.test.ts",
     "decision": "D7",
     "reason": "«stale» becomes one rule, isStale of accounts, with the accrual's threshold ACCRUAL_READING_MAX_AGE_HOURS (D7): the same cases and the same verdicts through it (fresh = not stale), and a test added that one reading is stale for the accrual and fresh for Accounts"
+  },
+  {
+    "file": "apps/web/src/modules/timeoff/actions.test.ts",
+    "decision": "TOF-3",
+    "reason": "the actions raise LeaveChanged through the port of the external calendar: the test wires the domain's ports (wireDomain) in beforeAll, as every process does; no assertion changed"
+  },
+  {
+    "file": "apps/web/src/modules/timeoff/ui/settings-forms.test.tsx",
+    "decision": "TOF-6",
+    "reason": "saveTimeOffPreferencesAction moves into the one file of actions of timeoff: the two mocks become one of ../actions; no assertion changed"
+  },
+  {
+    "file": "packages/domain/src/modules/timeoff/range.itest.ts",
+    "decision": "TOF-7",
+    "reason": "the view loses the calendar no page read (Q9): the test draws it with calendar() of timeoff/client from the rows still booked, as the leave board does; the same assertions on the same cell"
+  },
+  {
+    "file": "apps/api/src/meta.test.ts",
+    "decision": "TOF-7",
+    "reason": "the capability timeoff joins the list of GET /meta with the routes of time off"
+  },
+  {
+    "file": "apps/web/src/platform/mcp/mcp.itest.ts",
+    "decision": "TOF-7",
+    "reason": "the read tool get_time_off joins the list of the tools"
+  },
+  {
+    "file": "apps/web/src/modules/investments/exposure.itest.ts",
+    "decision": "TOF-7",
+    "reason": "the read tool get_time_off joins the list of the tools"
+  },
+  {
+    "file": "tools/baselines.itest.ts",
+    "decision": "TOF-7",
+    "reason": "the reference answers gain GET /timeoff/2031 and get_time_off; nothing else changes"
+  },
+  {
+    "file": "apps/web/src/platform/api/category-board.itest.ts",
+    "decision": "R3 subscriptions",
+    "reason": "a test added for displayColor of GET /categories; no existing test or assertion changed"
   }
 ]
