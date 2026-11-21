@@ -26,6 +26,8 @@ import {
 export const fundValuations = z.object({
   fundId: id(),
   period: periodOut,
+  /** The period ends before the fund's first data. */
+  beforeFirst: z.boolean(),
   /** `valuationId`: the recorded value of that day, the one «Edit» opens; null for a value read elsewhere. */
   lines: z.array(valuationLine.extend({ valuationId: id().nullable() })),
   best: valuationLine.nullable(),
@@ -75,7 +77,8 @@ const quarterStatus = z.object({
   status: z.enum(QUARTER_STATUSES),
   reason: z.enum(["missing_payslip", "stale_export"]).nullable(),
   components: z.array(componentStatus),
-  missingMonths: z.array(z.string().regex(/^\d{4}-\d{2}$/)),
+  /** The months with no payslip, each as its first day (`2031-05-01`). */
+  missingMonths: z.array(civilDate()),
   /** The day of the period's last credit; null before any. */
   lastCreditedOn: civilDate().nullable(),
   fees: money(),
@@ -89,6 +92,8 @@ export const fundContributions = z.object({
   fundId: id(),
   fund: fundRef,
   period: periodOut,
+  /** The period ends before the fund's first data. */
+  beforeFirst: z.boolean(),
   /** `gross`: what the operation moved, an exit negative; `origin`: the badge of the line. */
   operations: z.array(operationRow.extend({ gross: money(), origin: z.enum(OPERATION_ORIGINS) })),
   /** The register's total row: the payslip's parts without the voluntary payments; the fees as a cost. */

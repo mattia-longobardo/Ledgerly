@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 103454,
-    "duplicatedLines": 16745,
-    "percent": 16.19,
-    "blocks": 1270
+    "lines": 103481,
+    "duplicatedLines": 16760,
+    "percent": 16.2,
+    "blocks": 1273
   },
   "units": {
     "api": {
-      "lines": 5335,
-      "duplicatedLines": 1135,
-      "percent": 21.27,
-      "blocks": 100
+      "lines": 5346,
+      "duplicatedLines": 1150,
+      "percent": 21.51,
+      "blocks": 103
     },
     "app": {
       "lines": 24810,
@@ -47,9 +47,9 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 11093,
+      "lines": 11109,
       "duplicatedLines": 2038,
-      "percent": 18.37,
+      "percent": 18.35,
       "blocks": 156
     },
     "modules/imports": {
@@ -412,25 +412,25 @@
     "api/accounts/dto.ts": 51,
     "api/accounts/routes.ts": 65,
     "api/budgets/dto.ts": 10,
-    "api/funds/dto/home.ts": 52,
-    "api/funds/dto/tabs.ts": 61,
+    "api/funds/dto/home.ts": 57,
+    "api/funds/dto/tabs.ts": 68,
     "api/funds/routes.ts": 78,
     "api/interests/dto.ts": 24,
     "api/interests/routes.ts": 32,
     "api/investments/dto.ts": 83,
-    "api/investments/pages.ts": 47,
+    "api/investments/pages.ts": 45,
     "api/investments/routes.ts": 74,
     "api/investments/tabs.ts": 54,
     "api/payroll/dto.ts": 23,
     "api/payroll/routes.ts": 36,
     "api/pockets/dto.ts": 33,
-    "api/pockets/routes.ts": 56,
+    "api/pockets/routes.ts": 63,
     "api/settings/categories.ts": 39,
     "api/settings/category-moves.ts": 18,
     "api/settings/connections.ts": 16,
     "api/settings/security.ts": 35,
     "api/settings/server.ts": 6,
-    "api/subscriptions/dto.ts": 45,
+    "api/subscriptions/dto.ts": 43,
     "api/subscriptions/routes.ts": 63,
     "api/timeoff/dto.ts": 9,
     "api/timeoff/routes.ts": 35,

@@ -12471,6 +12471,21 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "span": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ]
                         }
                       },
                       "required": [
@@ -12478,7 +12493,8 @@
                         "year",
                         "from",
                         "to",
-                        "firstOn"
+                        "firstOn",
+                        "span"
                       ]
                     },
                     "valueToday": {
@@ -12659,6 +12675,39 @@
                         "accrued": {
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "valueToClosesPrevious": {
+                          "type": "boolean"
+                        },
+                        "originShares": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "enum": [
+                                  "you",
+                                  "employer",
+                                  "tfr",
+                                  "voluntary",
+                                  "other"
+                                ]
+                              },
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              "share": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "amount",
+                              "share"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -12675,7 +12724,9 @@
                         "valueFrom",
                         "valueTo",
                         "notInValue",
-                        "accrued"
+                        "accrued",
+                        "valueToClosesPrevious",
+                        "originShares"
                       ]
                     },
                     "funds": {
@@ -12947,6 +12998,9 @@
                                         "type": "null"
                                       }
                                     ]
+                                  },
+                                  "endClosesPrevious": {
+                                    "type": "boolean"
                                   }
                                 },
                                 "required": [
@@ -12964,7 +13018,8 @@
                                   "origin",
                                   "notInValue",
                                   "accrued",
-                                  "value"
+                                  "value",
+                                  "endClosesPrevious"
                                 ]
                               },
                               {
@@ -13323,13 +13378,20 @@
                                     "gain": {
                                       "type": "string",
                                       "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    "share": {
+                                      "type": [
+                                        "number",
+                                        "null"
+                                      ]
                                     }
                                   },
                                   "required": [
                                     "fundId",
                                     "from",
                                     "to",
-                                    "gain"
+                                    "gain",
+                                    "share"
                                   ]
                                 }
                               },
@@ -13602,6 +13664,39 @@
                               "accrued": {
                                 "type": "string",
                                 "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              "valueToClosesPrevious": {
+                                "type": "boolean"
+                              },
+                              "originShares": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string",
+                                      "enum": [
+                                        "you",
+                                        "employer",
+                                        "tfr",
+                                        "voluntary",
+                                        "other"
+                                      ]
+                                    },
+                                    "amount": {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    "share": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "amount",
+                                    "share"
+                                  ]
+                                }
                               }
                             },
                             "required": [
@@ -13618,7 +13713,9 @@
                               "valueFrom",
                               "valueTo",
                               "notInValue",
-                              "accrued"
+                              "accrued",
+                              "valueToClosesPrevious",
+                              "originShares"
                             ]
                           }
                         },
@@ -14396,6 +14493,21 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "span": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ]
                         }
                       },
                       "required": [
@@ -14403,7 +14515,8 @@
                         "year",
                         "from",
                         "to",
-                        "firstOn"
+                        "firstOn",
+                        "span"
                       ]
                     },
                     "beforeFirst": {
@@ -14576,6 +14689,39 @@
                         "accrued": {
                           "type": "string",
                           "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        "valueToClosesPrevious": {
+                          "type": "boolean"
+                        },
+                        "originShares": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string",
+                                "enum": [
+                                  "you",
+                                  "employer",
+                                  "tfr",
+                                  "voluntary",
+                                  "other"
+                                ]
+                              },
+                              "amount": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              "share": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "amount",
+                              "share"
+                            ]
+                          }
                         }
                       },
                       "required": [
@@ -14592,7 +14738,9 @@
                         "valueFrom",
                         "valueTo",
                         "notInValue",
-                        "accrued"
+                        "accrued",
+                        "valueToClosesPrevious",
+                        "originShares"
                       ]
                     },
                     "line": {
@@ -14804,6 +14952,9 @@
                               "type": "null"
                             }
                           ]
+                        },
+                        "endClosesPrevious": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -14821,7 +14972,8 @@
                         "origin",
                         "notInValue",
                         "accrued",
-                        "value"
+                        "value",
+                        "endClosesPrevious"
                       ]
                     },
                     "valueToday": {
@@ -14918,13 +15070,20 @@
                                     "gain": {
                                       "type": "string",
                                       "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    "share": {
+                                      "type": [
+                                        "number",
+                                        "null"
+                                      ]
                                     }
                                   },
                                   "required": [
                                     "fundId",
                                     "from",
                                     "to",
-                                    "gain"
+                                    "gain",
+                                    "share"
                                   ]
                                 }
                               },
@@ -15096,6 +15255,20 @@
                       "type": [
                         "string",
                         "null"
+                      ]
+                    },
+                    "accrualPeriod": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "month",
+                            "quarter"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
                       ]
                     },
                     "firstPaidOn": {
@@ -15566,6 +15739,7 @@
                     "values",
                     "forecast",
                     "valueTodayOn",
+                    "accrualPeriod",
                     "firstPaidOn",
                     "firstValueOn",
                     "units",
@@ -16068,6 +16242,21 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "span": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ]
                         }
                       },
                       "required": [
@@ -16075,8 +16264,12 @@
                         "year",
                         "from",
                         "to",
-                        "firstOn"
+                        "firstOn",
+                        "span"
                       ]
+                    },
+                    "beforeFirst": {
+                      "type": "boolean"
                     },
                     "operations": {
                       "type": "array",
@@ -16833,8 +17026,7 @@
                                   "missingMonths": {
                                     "type": "array",
                                     "items": {
-                                      "type": "string",
-                                      "pattern": "^\\d{4}-\\d{2}$"
+                                      "type": "string"
                                     }
                                   },
                                   "lastCreditedOn": {
@@ -17003,6 +17195,7 @@
                     "fundId",
                     "fund",
                     "period",
+                    "beforeFirst",
                     "operations",
                     "totals",
                     "operationsEver",
@@ -21566,6 +21759,21 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "span": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "from",
+                            "to"
+                          ]
                         }
                       },
                       "required": [
@@ -21573,8 +21781,12 @@
                         "year",
                         "from",
                         "to",
-                        "firstOn"
+                        "firstOn",
+                        "span"
                       ]
+                    },
+                    "beforeFirst": {
+                      "type": "boolean"
                     },
                     "lines": {
                       "type": "array",
@@ -21970,6 +22182,7 @@
                   "required": [
                     "fundId",
                     "period",
+                    "beforeFirst",
                     "lines",
                     "best",
                     "worst",

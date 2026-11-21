@@ -2798,7 +2798,11 @@
     "year": null,
     "from": null,
     "to": "2031-10-15",
-    "firstOn": "2030-11-01"
+    "firstOn": "2030-11-01",
+    "span": {
+     "from": "2030-11-01",
+     "to": "2031-10-15"
+    }
    },
    "valueToday": "7719.00",
    "summary": {
@@ -2821,7 +2825,15 @@
     "valueFrom": "2031-09-30",
     "valueTo": "2031-09-30",
     "notInValue": "251.00",
-    "accrued": "0.00"
+    "accrued": "0.00",
+    "valueToClosesPrevious": false,
+    "originShares": [
+     {
+      "key": "voluntary",
+      "amount": "7761.00",
+      "share": 1
+     }
+    ]
    },
    "funds": [
     {
@@ -2863,7 +2875,8 @@
       },
       "notInValue": "251.00",
       "accrued": "0.00",
-      "value": "7719.00"
+      "value": "7719.00",
+      "endClosesPrevious": false
      },
      "valueToday": "7719.00",
      "stale": false,
@@ -2916,7 +2929,8 @@
         "fundId": "<id-138>",
         "from": "2030-10-31",
         "to": "2030-12-31",
-        "gain": "29.00"
+        "gain": "29.00",
+        "share": 0.004673303020711909
        }
       ],
       "cumulative": "29.00",
@@ -2939,19 +2953,22 @@
         "fundId": "<id-138>",
         "from": "2030-12-31",
         "to": "2031-03-31",
-        "gain": "82.00"
+        "gain": "82.00",
+        "share": 0.013214167162012984
        },
        {
         "fundId": "<id-138>",
         "from": "2031-03-31",
         "to": "2031-06-30",
-        "gain": "155.00"
+        "gain": "155.00",
+        "share": 0.024977998903805032
        },
        {
         "fundId": "<id-138>",
         "from": "2031-06-30",
         "to": "2031-09-30",
-        "gain": "-57.00"
+        "gain": "-57.00",
+        "share": -0.00918545766139927
        }
       ],
       "cumulative": "209.00",
@@ -3007,7 +3024,15 @@
       "valueFrom": "2031-09-30",
       "valueTo": "2031-09-30",
       "notInValue": "251.00",
-      "accrued": "0.00"
+      "accrued": "0.00",
+      "valueToClosesPrevious": false,
+      "originShares": [
+       {
+        "key": "voluntary",
+        "amount": "2510.00",
+        "share": 1
+       }
+      ]
      }
     },
     {
@@ -3032,7 +3057,15 @@
       "valueFrom": "2030-12-31",
       "valueTo": "2030-12-31",
       "notInValue": "0.00",
-      "accrued": "0.00"
+      "accrued": "0.00",
+      "valueToClosesPrevious": false,
+      "originShares": [
+       {
+        "key": "voluntary",
+        "amount": "5251.00",
+        "share": 1
+       }
+      ]
      }
     }
    ]
@@ -3059,7 +3092,11 @@
     "year": null,
     "from": null,
     "to": "2031-10-15",
-    "firstOn": "2030-11-01"
+    "firstOn": "2030-11-01",
+    "span": {
+     "from": "2030-11-01",
+     "to": "2031-10-15"
+    }
    },
    "beforeFirst": false,
    "summary": {
@@ -3082,7 +3119,15 @@
     "valueFrom": "2031-09-30",
     "valueTo": "2031-09-30",
     "notInValue": "251.00",
-    "accrued": "0.00"
+    "accrued": "0.00",
+    "valueToClosesPrevious": false,
+    "originShares": [
+     {
+      "key": "voluntary",
+      "amount": "7761.00",
+      "share": 1
+     }
+    ]
    },
    "line": {
     "fundId": "<id-138>",
@@ -3111,7 +3156,8 @@
     },
     "notInValue": "251.00",
     "accrued": "0.00",
-    "value": "7719.00"
+    "value": "7719.00",
+    "endClosesPrevious": false
    },
    "valueToday": "7719.00",
    "valueOlderThanOperations": true,
@@ -3134,7 +3180,8 @@
         "fundId": "<id-138>",
         "from": "2030-10-31",
         "to": "2030-12-31",
-        "gain": "29.00"
+        "gain": "29.00",
+        "share": 0.004673303020711909
        }
       ],
       "cumulative": "29.00",
@@ -3157,19 +3204,22 @@
         "fundId": "<id-138>",
         "from": "2030-12-31",
         "to": "2031-03-31",
-        "gain": "82.00"
+        "gain": "82.00",
+        "share": 0.013214167162012984
        },
        {
         "fundId": "<id-138>",
         "from": "2031-03-31",
         "to": "2031-06-30",
-        "gain": "155.00"
+        "gain": "155.00",
+        "share": 0.024977998903805032
        },
        {
         "fundId": "<id-138>",
         "from": "2031-06-30",
         "to": "2031-09-30",
-        "gain": "-57.00"
+        "gain": "-57.00",
+        "share": -0.00918545766139927
        }
       ],
       "cumulative": "209.00",
@@ -3251,6 +3301,7 @@
     "basis": "plan"
    },
    "valueTodayOn": "2031-09-30",
+   "accrualPeriod": null,
    "firstPaidOn": "2030-11-01",
    "firstValueOn": "2030-12-31",
    "units": null,

@@ -3,6 +3,23 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · funds: missing months and the last figures of the pages (0.56.0)
+
+- Fix: `GET /funds/{id}/contributions` answered `500` for a fund with a month without its payslip:
+  `payroll.periods[].missingMonths` is now what the domain holds, each month as its first day
+  (`2031-05-01`), and the schema says so (it said `2031-05`, which no answer ever carried). This is the
+  one change of a pattern; everything else is new.
+- `period.span` (every read with a period): the days the period covers, `{from, to}`; «all» and a
+  period that starts before the first data start at the first data.
+- The measure (`summary` and `years[].summary` of `GET /funds`, `summary` of `GET /funds/{id}`):
+  `valueToClosesPrevious` (`valueTo` is inside the period's dates but closes the period before) and
+  `originShares` («Who paid in»: `[{key, amount, share}]`, the parts with money in the page's order,
+  `you` without the voluntary payments, `share` of `paidIn`, 0 when nothing was paid).
+- Every fund line (`funds[].line`, the Overview's `line`): `endClosesPrevious`, the same rule on `end`.
+- `gain.bars[].stretches[].share`: the stretch's share of the period's return (null with no return).
+- `GET /funds/{id}`: `accrualPeriod` (`month`|`quarter`, null without a payslip source).
+- `GET /funds/{id}/contributions` and `/valuations`: `beforeFirst`.
+
 ## 2026-11-21 · investments: what the pages read (0.55.0)
 
 The reads of Investments answer every figure the pages show, so a client never sums or scales. Every

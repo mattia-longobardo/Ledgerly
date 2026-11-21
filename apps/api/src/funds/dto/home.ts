@@ -4,10 +4,13 @@
 import type { z } from "zod";
 import type { FUNDS } from "@ledgerly/api-contract";
 import {
+  closesPeriodBefore,
+  type FundPeriod,
   type fundOverviewView,
   type fundsHomeView,
   operationGross,
   operationOrigin,
+  originShares,
 } from "@ledgerly/domain/funds";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
@@ -32,8 +35,8 @@ const origin = (one: Summary["origin"], voluntaryCents: Cents) => ({
   voluntary: money(voluntaryCents),
 });
 
-export function periodOut(period: HomeData["period"], firstOn: string | null) {
-  return { kind: period.kind, year: period.year, from: period.from, to: period.to, firstOn };
+export function periodOut(period: HomeData["period"], firstOn: string | null, span: HomeData["span"]) {
+  return { kind: period.kind, year: period.year, from: period.from, to: period.to, firstOn, span };
 }
 
 export function fundRef(row: Row) {
@@ -53,7 +56,7 @@ export function fundRef(row: Row) {
   };
 }
 
-function measureOut(summary: Summary, voluntaryCents: Cents) {
+function measureOut(summary: Summary, voluntaryCents: Cents, period: FundPeriod) {
   return {
     state: summary.state,
     gain: maybe(summary.gainCents),
@@ -69,10 +72,16 @@ function measureOut(summary: Summary, voluntaryCents: Cents) {
     valueTo: summary.valueTo,
     notInValue: money(summary.notInValueCents),
     accrued: money(summary.accruedCents),
+    valueToClosesPrevious: summary.valueTo !== null && closesPeriodBefore(summary.valueTo, period),
+    originShares: originShares(summary.origin, voluntaryCents, summary.paidInCents).map((part) => ({
+      key: part.key,
+      amount: money(part.cents),
+      share: part.share,
+    })),
   };
 }
 
-function lineOut(line: Line, voluntaryCents: Cents, valueCents: Cents | null) {
+function lineOut(line: Line, voluntaryCents: Cents, valueCents: Cents | null, period: FundPeriod) {
   const { measure } = line;
   return {
     fundId: line.fund.id,
@@ -90,6 +99,7 @@ function lineOut(line: Line, voluntaryCents: Cents, valueCents: Cents | null) {
     notInValue: money(measure.notInValueCents),
     accrued: money(line.accruedCents),
     value: maybe(valueCents),
+    endClosesPrevious: measure.end !== null && closesPeriodBefore(measure.end.on, period),
   };
 }
 
@@ -115,6 +125,7 @@ function chartOut(view: Pick<HomeData, "grain" | "bars" | "chart" | "values">) {
           from: stretch.from,
           to: stretch.to,
           gain: money(stretch.gainCents),
+          share: shareOf(stretch.gainCents, scale),
         })),
         cumulative: maybe(cumulative[index]),
         share: shareOf(bar.totalCents, scale),
@@ -192,12 +203,12 @@ export const operationOut = (detail: Detail) => (one: Detail["operations"][numbe
 /** The Funds home of a period. */
 export function homeOut(view: HomeData): Home {
   return {
-    period: periodOut(view.period, view.firstOn),
+    period: periodOut(view.period, view.firstOn, view.span),
     valueToday: maybe(view.valueToday),
-    summary: measureOut(view.summary, view.voluntaryCents),
+    summary: measureOut(view.summary, view.voluntaryCents, view.period),
     funds: view.funds.map((one) => ({
       ...fundRef(one.row),
-      line: one.line === null ? null : lineOut(one.line, one.voluntaryCents, one.lineValueCents),
+      line: one.line === null ? null : lineOut(one.line, one.voluntaryCents, one.lineValueCents, view.period),
       valueToday: maybe(one.valueToday),
       stale: one.stale,
       lastValueOn: one.lastValueOn,
@@ -212,7 +223,7 @@ export function homeOut(view: HomeData): Home {
     ...chartOut(view),
     years: view.years.map((year) => ({
       year: year.year,
-      summary: measureOut(year.summary, year.voluntaryCents),
+      summary: measureOut(year.summary, year.voluntaryCents, year.period),
     })),
   };
 }
@@ -222,10 +233,10 @@ export function overviewOut(view: OverviewData): Overview {
   const { forecast, row } = view;
   return {
     fund: fundRef(row),
-    period: periodOut(view.period, view.firstOn),
+    period: periodOut(view.period, view.firstOn, view.span),
     beforeFirst: view.beforeFirst,
-    summary: measureOut(view.summary, view.summaryVoluntaryCents),
-    line: lineOut(view.line, view.lineVoluntaryCents, view.lineValueCents),
+    summary: measureOut(view.summary, view.summaryVoluntaryCents, view.period),
+    line: lineOut(view.line, view.lineVoluntaryCents, view.lineValueCents, view.period),
     valueToday: maybe(view.valueToday),
     valueOlderThanOperations: row.detail.valueOlderThanOperations,
     ...chartOut(view),
@@ -240,6 +251,7 @@ export function overviewOut(view: OverviewData): Overview {
       ...view.projection,
     },
     valueTodayOn: view.valueTodayOn,
+    accrualPeriod: view.accrualPeriod,
     firstPaidOn: view.firstPaidOn,
     firstValueOn: view.firstValueOn,
     units: view.units,

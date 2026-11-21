@@ -125,6 +125,7 @@ export async function fundsHomeView(
   return {
     period,
     firstOn,
+    span: periodSpan(period, firstOn),
     summary,
     voluntaryCents: voluntaryIn(summary.lines, detailOf, period),
     valueToday: valueToday(homes, todayOn),
@@ -151,10 +152,14 @@ export async function fundsHomeView(
     ...chartOf(summary.lines, period, firstOn, { totalCents: summary.gainCents, rate: summary.rate }),
     years:
       period.kind === "all"
-        ? yearRows(homes, todayOn, firstOn).map((year) => ({
-            ...year,
-            voluntaryCents: voluntaryIn(year.summary.lines, detailOf, yearPeriod(year.year, todayOn)),
-          }))
+        ? yearRows(homes, todayOn, firstOn).map((year) => {
+            const yearly = yearPeriod(year.year, todayOn);
+            return {
+              ...year,
+              period: yearly,
+              voluntaryCents: voluntaryIn(year.summary.lines, detailOf, yearly),
+            };
+          })
         : [],
   };
 }
@@ -186,7 +191,9 @@ export async function fundOverviewView(
     row,
     period,
     firstOn,
+    span: periodSpan(period, firstOn),
     beforeFirst,
+    accrualPeriod: detail.payroll?.period ?? null,
     summary,
     summaryVoluntaryCents: voluntaryIn(summary.lines, detailOf, period),
     line,
@@ -237,13 +244,15 @@ export async function fundValuationsView(
   period: ViewPeriod,
   now = new Date(),
 ) {
-  const { row, firstOn, line } = await fundInPeriod(ctx, id, period, now);
+  const { row, firstOn, line, beforeFirst } = await fundInPeriod(ctx, id, period, now);
   const lines = valuationLines(line, period);
   const lastValue = newestPoint(row.home);
   return {
     row,
     period,
     firstOn,
+    span: periodSpan(period, firstOn),
+    beforeFirst,
     lines,
     ...bestAndWorst(lines),
     recorded: row.detail.valuations,
@@ -262,7 +271,7 @@ export async function fundContributionsView(
   period: ViewPeriod,
   now = new Date(),
 ) {
-  const { row, firstOn, todayOn } = await fundInPeriod(ctx, id, period, now);
+  const { row, firstOn, todayOn, beforeFirst } = await fundInPeriod(ctx, id, period, now);
   const { detail } = row;
   const accrualPeriod = detail.payroll?.period ?? "quarter";
   const operations = operationsIn(detail, period);
@@ -270,6 +279,8 @@ export async function fundContributionsView(
     row,
     period,
     firstOn,
+    span: periodSpan(period, firstOn),
+    beforeFirst,
     operations,
     totals: registerTotals(operations),
     operationsEver: detail.operations.length,

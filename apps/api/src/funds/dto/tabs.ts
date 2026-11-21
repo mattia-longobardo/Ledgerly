@@ -38,7 +38,8 @@ export function valuationsOut(view: ValuationsData): Valuations {
   const recordedOn = new Map(view.recorded.map((one) => [one.on, one.id]));
   return {
     fundId: view.row.fund.id,
-    period: periodOut(view.period, view.firstOn),
+    period: periodOut(view.period, view.firstOn, view.span),
+    beforeFirst: view.beforeFirst,
     lines: view.lines.map((line) => ({
       ...valuationLineOut(line),
       valuationId: recordedOn.get(line.on) ?? null,
@@ -176,7 +177,8 @@ export function contributionsOut(view: ContributionsData): Contributions {
   return {
     fundId: detail.fund.id,
     fund: fundRef(view.row),
-    period: periodOut(view.period, view.firstOn),
+    period: periodOut(view.period, view.firstOn, view.span),
+    beforeFirst: view.beforeFirst,
     operations: view.operations.map(operationOut(detail)),
     totals: totalsOut(view.totals),
     operationsEver: view.operationsEver,

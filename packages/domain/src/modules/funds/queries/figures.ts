@@ -6,7 +6,7 @@ import { contributionFee, periodFees, assetsCost } from "../fees";
 import { feeValidOn } from "../../../shared/fees";
 import type { FundLine, HomeFund } from "../home";
 import type { Operation } from "../pension/operations";
-import { type FundPeriod, onTheWay } from "../period";
+import { type FundPeriod, type MoneyOrigin, onTheWay } from "../period";
 import type { FundDetail } from "./detail";
 import { hasPayrollCalendar } from "./lists";
 import { competencePeriod, periodStart, periodsPerYear, type SourceKind } from "../sources";
@@ -54,6 +54,29 @@ export function voluntaryCents(operations: readonly Amounts[]): Cents {
     .filter((operation) => operation.classification === "voluntary")
     .reduce<Cents>((sum, operation) => sum + operation.workerCents, 0n);
 }
+
+type OriginPart = "you" | "employer" | "tfr" | "voluntary" | "other";
+
+/**
+ * Of whom the money is, one part per line and the empty ones left out. The voluntary payments are
+ * taken out of "you": they are yours, and they did not come from the payslip.
+ */
+export function originParts(origin: MoneyOrigin, voluntary: Cents): { key: OriginPart; cents: Cents }[] {
+  const parts: { key: OriginPart; cents: Cents }[] = [
+    { key: "you", cents: origin.youCents - voluntary },
+    { key: "employer", cents: origin.employerCents },
+    { key: "tfr", cents: origin.tfrCents },
+    { key: "voluntary", cents: voluntary },
+    { key: "other", cents: origin.otherCents },
+  ];
+  return parts.filter((part) => part.cents !== 0n);
+}
+
+/** «Who paid in»: the parts with money, each with its share of what was paid in (0 when nothing was). */
+export const originShares = (origin: MoneyOrigin, voluntary: Cents, paidInCents: Cents) =>
+  originParts(origin, voluntary)
+    .filter((part) => part.cents > 0n)
+    .map((part) => ({ ...part, share: paidInCents > 0n ? Number(part.cents) / Number(paidInCents) : 0 }));
 
 /** The operations of a fund in a period, in the register's order. */
 export const operationsIn = (detail: Pick<FundDetail, "operations">, period: FundPeriod): Operation[] =>

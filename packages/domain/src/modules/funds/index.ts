@@ -95,6 +95,8 @@ export {
   operationGross,
   operationOrigin,
   operationsIn,
+  originParts,
+  originShares,
   payslipLines,
   recentOperations,
   registerTotals,

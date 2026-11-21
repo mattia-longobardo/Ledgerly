@@ -147,6 +147,7 @@ export const getFundValuations = defineRoute({
       best: null,
       worst: null,
       recorded: [],
+      beforeFirst: false,
       valuesEver: 1,
       lastValue: { on: "2026-10-01", value: "12450.00" },
       lastValueClosesPrevious: false,

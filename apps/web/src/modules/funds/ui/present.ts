@@ -4,8 +4,6 @@ import {
   type NumberFormat,
   type UiLocale,
 } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/shared/money";
-import type { MoneyOrigin } from "@ledgerly/domain/funds";
 import type { ValuationRow } from "@ledgerly/domain/funds";
 import type { DebitStatus } from "@ledgerly/domain/funds";
 import type { ValuationDraft } from "./fund-forms";
@@ -38,21 +36,4 @@ export function monthPill(
   }
 }
 
-export { operationGross, operationOrigin, voluntaryCents } from "@ledgerly/domain/funds";
-
-type OriginPart = "you" | "employer" | "tfr" | "voluntary" | "other";
-
-/**
- * Of whom the money is, one part per line and the empty ones left out. The voluntary payments are
- * taken out of "you": they are yours, and they did not come from the payslip.
- */
-export function originParts(origin: MoneyOrigin, voluntary: Cents): { key: OriginPart; cents: Cents }[] {
-  const parts: { key: OriginPart; cents: Cents }[] = [
-    { key: "you", cents: origin.youCents - voluntary },
-    { key: "employer", cents: origin.employerCents },
-    { key: "tfr", cents: origin.tfrCents },
-    { key: "voluntary", cents: voluntary },
-    { key: "other", cents: origin.otherCents },
-  ];
-  return parts.filter((part) => part.cents !== 0n);
-}
+export { operationGross, operationOrigin, originParts, voluntaryCents } from "@ledgerly/domain/funds";

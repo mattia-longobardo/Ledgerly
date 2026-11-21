@@ -102,6 +102,8 @@ export const periodOut = z.object({
   from: civilDate().nullable(),
   to: civilDate(),
   firstOn: civilDate().nullable(),
+  /** The days the period covers: «all» and a period that starts before the first data start there. */
+  span: z.object({ from: civilDate(), to: civilDate() }),
 });
 
 /**
@@ -151,6 +153,19 @@ const measure = z.object({
   notInValue: money(),
   /** What the payslips accrued and the fund has not received yet. */
   accrued: money(),
+  /** `valueTo` is inside the period's dates but closes the period before (decision 3 of §9). */
+  valueToClosesPrevious: z.boolean(),
+  /**
+   * «Who paid in»: the parts of `paidIn` with money, in the page's order (`you` without the voluntary
+   * payments, `employer`, `tfr`, `voluntary`, `other`), each with its share of `paidIn` (0 when nothing was paid).
+   */
+  originShares: z.array(
+    z.object({
+      key: z.enum(["you", "employer", "tfr", "voluntary", "other"]),
+      amount: money(),
+      share: z.number(),
+    }),
+  ),
 });
 
 /** One fund in a period: its own measure, and why it has none. */
@@ -171,6 +186,8 @@ const fundLine = z.object({
   accrued: money(),
   /** The value the fund's row and the total show: none for an archived fund in a period up to today. */
   value: money().nullable(),
+  /** `end` is inside the period's dates but closes the period before. */
+  endClosesPrevious: z.boolean(),
 });
 
 /** A fund as the lists name it. */
@@ -199,7 +216,15 @@ const gainBar = z.object({
   /** The gain of each fund in the bar; a fund with no reading there is absent. */
   funds: z.array(z.object({ fundId: id(), gain: money(), share: z.number().nullable() })),
   /** What each fund did between two readings that ends in the bar: never split over the months it spans. */
-  stretches: z.array(z.object({ fundId: id(), from: civilDate(), to: civilDate(), gain: money() })),
+  stretches: z.array(
+    z.object({
+      fundId: id(),
+      from: civilDate(),
+      to: civilDate(),
+      gain: money(),
+      share: z.number().nullable(),
+    }),
+  ),
   /** The running total from the start of the period; null where the bar is a gap. */
   cumulative: money().nullable(),
   /** The Return view: the bar's share of the period's return, a fraction; null with no return to share. */
@@ -363,6 +388,8 @@ export const fundOverview = z.object({
   }),
   /** The day of the newest value, the one `valueToday` is. */
   valueTodayOn: civilDate().nullable(),
+  /** How the payslip source counts its periods; null for a fund with no payslip source. */
+  accrualPeriod: z.enum(ACCRUAL_PERIODS).nullable(),
   firstPaidOn: civilDate().nullable(),
   firstValueOn: civilDate().nullable(),
   /** Units held and the last price, for a fund with unit movements only. */

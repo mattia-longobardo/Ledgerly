@@ -3,8 +3,11 @@
 // `[id]/page.tsx` and the tabs, copied), on the two funds of the reference (B3) and a few more rows —
 // units and a statement, an archived fund, an expired fee, two movements —, for «all», a year and a
 // custom period.
+import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { pensionCompetences } from "@domain/modules/funds/schema";
 import type { Ctx } from "@domain/platform/context";
+import { getDb } from "@domain/platform/db/client";
 import { feeValidOn } from "@domain/shared/fees";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
@@ -131,6 +134,10 @@ beforeAll(async () => {
     ],
     { provider: WALLET_PROVIDER, now: NOW },
   );
+  // A month with no payslip: its period answers it in `missingMonths` (the 500 of v0.54.0).
+  await getDb()
+    .delete(pensionCompetences)
+    .where(and(eq(pensionCompetences.fundId, payslipId), eq(pensionCompetences.payrollPeriod, "2031-05-01")));
   ids = { debitId, payslipId, archivedId: archived.id, accountId };
 }, 120_000);
 
@@ -172,6 +179,7 @@ function expectChart(
           from: one.from,
           to: one.to,
           gain: dec(one.gainCents),
+          share: scale === null ? null : asReturns([one.gainCents], scale)[0],
         })),
       ),
     );
@@ -253,6 +261,22 @@ describe("GET /funds, against the home page", () => {
         )
         .map((row) => [row.fund.id, row.lastOn]),
     );
+    expect(answer.period.span).toEqual(span);
+    expect(answer.summary.valueToClosesPrevious).toBe(
+      summary.valueTo !== null && funds.closesPeriodBefore(summary.valueTo, period),
+    );
+    // «Who paid in», as the page draws it.
+    const paidTotal = summary.paidInCents;
+    expect(answer.summary.originShares).toEqual(
+      funds
+        .originParts(summary.origin, voluntary)
+        .filter((part) => part.cents > 0n)
+        .map((part) => ({
+          key: part.key,
+          amount: dec(part.cents),
+          share: paidTotal > 0n ? Number(part.cents) / Number(paidTotal) : 0,
+        })),
+    );
     for (const fund of answer.funds) {
       const row = rowOf.get(fund.id)!;
       expectAsOfToday(fund, row);
@@ -260,6 +284,8 @@ describe("GET /funds, against the home page", () => {
       const line = summary.lines.find((each) => each.fund.id === fund.id);
       if (line === undefined) continue;
       expect(fund.line.value).toBe(dec(funds.lineValue(line, period, TODAY)));
+      const end = line.measure.end;
+      expect(fund.line.endClosesPrevious).toBe(end !== null && funds.closesPeriodBefore(end.on, period));
       expect(fund.line.origin.voluntary).toBe(dec(funds.voluntaryCents(inPeriodOf(fund.id))));
     }
     expectChart(answer.gain, summary.lines, period, firstOn, {
@@ -277,6 +303,10 @@ describe("GET /funds/{id}, against the Overview", () => {
       const { detail, home } = row;
       const period = pagePeriod(one);
       const { firstOn, line } = funds.fundSummary({ fund: home, period, todayOn: TODAY });
+      expect(answer.period.span).toEqual(periodSpan(period, firstOn));
+      expect(answer.accrualPeriod).toBe(detail.payroll?.period ?? null);
+      const end = line.measure.end;
+      expect(answer.line.endClosesPrevious).toBe(end !== null && funds.closesPeriodBefore(end.on, period));
       const operations = detail.operations.filter((operation) =>
         funds.inPeriod(operation.operationDate, period),
       );
@@ -345,6 +375,17 @@ describe("GET /funds/{id}/contributions, against the tab", () => {
       const row = await funds.fundHomeRow(ctx, id, NOW);
       const { detail } = row;
       const period = pagePeriod(one);
+      const summed = funds.fundSummary({ fund: row.home, period, todayOn: TODAY });
+      expect(answer.beforeFirst).toBe(summed.beforeFirst);
+      expect(answer.period.span).toEqual(periodSpan(period, summed.firstOn));
+      if (detail.payroll !== null) {
+        const touched = detail.quarters.filter((quarter) =>
+          funds.quarterInPeriod(quarter, period, detail.payroll!.period),
+        );
+        expect(answer.payroll.periods.map((each: Json) => each.missingMonths)).toEqual(
+          touched.map((quarter) => quarter.missingMonths),
+        );
+      }
       const rows = detail.operations.filter((each) => funds.inPeriod(each.operationDate, period));
       const add = <T>(list: readonly T[], pick: (each: T) => Cents | null) =>
         list.reduce<Cents>((sum, each) => sum + (pick(each) ?? 0n), 0n);
@@ -455,7 +496,9 @@ describe("GET /funds/{id}/valuations, against the tab", () => {
       const answer = await get(`/funds/${id}/valuations?${query(one)}`);
       const { detail, home } = await funds.fundHomeRow(ctx, id, NOW);
       const period = pagePeriod(one);
-      const { line } = funds.fundSummary({ fund: home, period, todayOn: TODAY });
+      const { line, beforeFirst, firstOn } = funds.fundSummary({ fund: home, period, todayOn: TODAY });
+      expect(answer.beforeFirst).toBe(beforeFirst);
+      expect(answer.period.span).toEqual(periodSpan(period, firstOn));
       const newest = [...home.points].sort((a, b) => (a.on < b.on ? 1 : -1))[0] ?? null;
       const recordedOn = new Map(detail.valuations.map((row) => [row.on, row.id]));
       expect(answer.valuesEver).toBe(home.points.length);
@@ -574,6 +617,9 @@ describe("the data of these tests", () => {
     expect(overview.recent.length).toBeGreaterThan(0);
     expect(overview.line.origin.voluntary).not.toBe("0.00");
     const contributions = await get(`/funds/${ids.payslipId}/contributions?period=all`);
+    expect(contributions.payroll.periods.flatMap((period: Json) => period.missingMonths)).toContain(
+      "2031-05-01",
+    );
     expect(contributions.payslips.length).toBeGreaterThan(0);
     expect(contributions.setup.periods.length).toBeGreaterThan(0);
     const valuations = await get(`/funds/${ids.payslipId}/valuations?period=all`);

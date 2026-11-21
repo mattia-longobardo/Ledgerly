@@ -18,6 +18,12 @@ export const MEASURE_EXAMPLE = {
   valueTo: "2026-10-01",
   notInValue: "0.00",
   accrued: "350.00",
+  valueToClosesPrevious: false,
+  originShares: [
+    { key: "you", amount: "240.00", share: 0.2286 },
+    { key: "employer", amount: "180.00", share: 0.1714 },
+    { key: "tfr", amount: "630.00", share: 0.6 },
+  ],
 } as const;
 
 export const PERIOD_EXAMPLE = {
@@ -26,6 +32,7 @@ export const PERIOD_EXAMPLE = {
   from: "2026-01-01",
   to: "2026-11-21",
   firstOn: "2024-01-20",
+  span: { from: "2026-01-01", to: "2026-11-21" },
 } as const;
 
 export const FUND_REF_EXAMPLE = {
@@ -58,6 +65,7 @@ export const LINE_EXAMPLE = {
   notInValue: "0.00",
   accrued: "350.00",
   value: "12450.00",
+  endClosesPrevious: false,
 } as const;
 
 export const GAIN_EXAMPLE = {
@@ -68,7 +76,7 @@ export const GAIN_EXAMPLE = {
       to: "2026-09-30",
       total: "48.10",
       funds: [{ fundId: FUND_ID, gain: "48.10", share: 0.0048 }],
-      stretches: [{ fundId: FUND_ID, from: "2026-08-31", to: "2026-09-30", gain: "48.10" }],
+      stretches: [{ fundId: FUND_ID, from: "2026-08-31", to: "2026-09-30", gain: "48.10", share: 0.0048 }],
       cumulative: "48.10",
       share: 0.0048,
       cumulativeShare: 0.0048,
@@ -149,6 +157,7 @@ export const HOME_FUND_EXAMPLE = {
 /** The Overview's fields beside the measure and the charts. */
 export const OVERVIEW_EXAMPLE = {
   valueTodayOn: "2026-10-01",
+  accrualPeriod: "quarter",
   firstPaidOn: "2024-01-20",
   firstValueOn: "2024-03-31",
   units: null,
@@ -171,6 +180,7 @@ export const OVERVIEW_EXAMPLE = {
 /** The Contributions tab's fields beside the register and the periods. */
 export const CONTRIBUTIONS_EXAMPLE = {
   fund: FUND_REF_EXAMPLE,
+  beforeFirst: false,
   totals: {
     worker: "240.00",
     employer: "180.00",

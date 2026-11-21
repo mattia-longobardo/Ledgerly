@@ -2,7 +2,7 @@
 // may reach the database, the network or a secret: a client component bundles every file it names.
 export { arrangeFees } from "./fees";
 
-export { fractionOfPercent, newFeeForm, newSourceForm, parseScope } from "./forms";
+export { fractionOfPercent, newContributionForm, newFeeForm, newSourceForm, parseScope } from "./forms";
 export type { ContributionForm, FeeForm, FundForm, SourceForm, WizardForm } from "./forms";
 export { ACCRUAL_PERIODS, INTERVAL_UNITS, PAYROLL_COMPONENTS, SOURCE_KINDS, nextDueDates } from "./sources";
 export type { DueCalendar, DueEntry, IntervalUnit, PayrollComponent, SourceKind } from "./sources";
