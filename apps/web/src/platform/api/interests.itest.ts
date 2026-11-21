@@ -4,7 +4,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
 import type { PlainRule } from "@ledgerly/domain/interests";
-import { today } from "@domain/shared/dates";
+import { startOfDayIn, today } from "@domain/shared/dates";
 import { centsToDecimal } from "@domain/shared/money";
 import { parseAmount } from "@ledgerly/format/format";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
@@ -76,7 +76,7 @@ const body = (accountId: string, overrides: Record<string, unknown> = {}) => ({
 });
 
 /** A manual savings account with a balance since 2025, and one rule on it. */
-async function seed(ctx: Ctx) {
+async function seed(ctx: Ctx, overrides: Record<string, unknown> = {}) {
   const created = await send(ctx, "POST", "/accounts", {
     name: "Savings",
     type: "savings",
@@ -84,7 +84,7 @@ async function seed(ctx: Ctx) {
   });
   expect(created.status).toBe(201);
   const accountId = created.body.id as string;
-  const rule = await send(ctx, "POST", "/interests", body(accountId));
+  const rule = await send(ctx, "POST", "/interests", body(accountId, overrides));
   expect(rule.status, JSON.stringify(rule.body)).toBe(201);
   return { accountId, ruleId: rule.body.id as string };
 }
@@ -134,6 +134,26 @@ describe("the routes of interests", () => {
     expect((await send(alice, "PUT", `/interests/${ruleId}/state`, { state: "paused" })).status).toBe(204);
     const after = (await send(alice, "GET", "/interests")).body.rules[0];
     expect(after).toMatchObject({ tax: "0", state: "paused", nextPayout: null });
+  });
+
+  it("answers the same year to date in the list and on the rule across a pause over the new year", async () => {
+    // Paused from 20/12 to 05/01: on 03/01 the days of December still wait for their settlement.
+    const noon = (day: string) => new Date(startOfDayIn(day, alice.timeZone).getTime() + 12 * 3_600_000);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(noon("2025-12-20"));
+      const { ruleId } = await seed(alice, { validFrom: "2025-12-01" });
+      expect((await send(alice, "PUT", `/interests/${ruleId}/state`, { state: "paused" })).status).toBe(204);
+      vi.setSystemTime(noon("2026-01-03"));
+
+      const list = (await send(alice, "GET", "/interests")).body;
+      const detail = (await send(alice, "GET", `/interests/${ruleId}`)).body;
+      expect(Number(detail.accruedYtd)).toBeGreaterThan(0);
+      expect(list.rules[0].accruedYtd).toBe(detail.accruedYtd);
+      expect(detail.rule.accruedYtd).toBe(detail.accruedYtd);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("refuses what is not a rate, a band, a reference of the person or an account that publishes", async () => {
@@ -214,9 +234,9 @@ describe("parity of interests: action = route = MCP tool = export", () => {
       route.rules.map((row: { accruedYtd: string; grossYtd: string }) => [row.accruedYtd, row.grossYtd]),
     );
     const page = await interests.ruleDetail(alice, ruleId);
-    expect(centsToDecimal(page.pageYtdCents)).toBe(detail.accruedYtd);
+    expect(centsToDecimal(page.accruedYtdCents)).toBe(detail.accruedYtd);
     expect(centsToDecimal(page.pendingCents)).toBe(detail.pending);
-    // While no day of last year waits for its settlement, the two years to date are one number.
+    // The list and the rule's page answer one year to date (`accruedYtd` of the domain).
     expect(detail.accruedYtd).toBe(detail.rule.accruedYtd);
   });
 });

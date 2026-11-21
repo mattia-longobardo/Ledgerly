@@ -65,7 +65,7 @@ export function interestRule(detail: DetailView): Detail {
     rule: ruleRow(detail),
     category: detail.categoryName,
     pending: money(detail.pendingCents),
-    accruedYtd: money(detail.pageYtdCents),
+    accruedYtd: money(detail.accruedYtdCents),
     balance: {
       synced: detail.balance.synced,
       lastSyncedAt: detail.balance.lastSyncedAt?.toISOString() ?? null,

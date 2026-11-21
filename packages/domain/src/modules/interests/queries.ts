@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { type Account, accountNames, isStale, listAccounts } from "../accounts";
 import { findMovements } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
@@ -34,7 +34,7 @@ export interface RuleRow {
   rule: InterestRule;
   tiers: Tier[];
   accountName: string;
-  /** Net accrued since 1 January. */
+  /** Net accrued this year (`accruedYtd`): the list, the export and the rule's page show this one. */
   accruedYtdCents: Cents;
   /** Gross accrued since 1 January, rounded once. */
   grossYtdCents: Cents;
@@ -42,10 +42,29 @@ export interface RuleRow {
   nextPayout: CivilDate | null;
 }
 
-/** A rule with its sums since 1 January (INT-4: `sumAccruals`) and its next payout. */
+type EntryAmount = Pick<InterestEntry, "periodFrom" | "netCents">;
+
+/**
+ * Net accrued this year: the settlements that start this year, plus what is not settled yet — days of
+ * last year included until their settlement. The one figure of the list and of the rule's page.
+ */
+function accruedYtd(entries: readonly EntryAmount[], pendingCents: Cents, todayOn: CivilDate): Cents {
+  const year = todayOn.slice(0, 4);
+  return entries
+    .filter((entry) => entry.periodFrom.startsWith(year))
+    .reduce((total, entry) => total + entry.netCents, pendingCents);
+}
+
+/** A rule with its year to date (INT-4: `sumAccruals`) and its next payout. */
 function ruleRow(
   rule: InterestRule,
-  parts: { tiers: Tier[]; accountName: string; sum: AccrualSum | undefined; todayOn: CivilDate },
+  parts: {
+    tiers: Tier[];
+    accountName: string;
+    sum: AccrualSum | undefined;
+    entries: readonly EntryAmount[];
+    todayOn: CivilDate;
+  },
 ): RuleRow {
   const period = periodOf(rule.settlement, parts.todayOn);
   const running = rule.state === "active" && (rule.validTo === null || rule.validTo >= parts.todayOn);
@@ -54,7 +73,7 @@ function ruleRow(
     rule,
     tiers: parts.tiers,
     accountName: parts.accountName,
-    accruedYtdCents: parts.sum?.netCents ?? 0n,
+    accruedYtdCents: accruedYtd(parts.entries, parts.sum?.pendingCents ?? 0n, parts.todayOn),
     grossYtdCents: parts.sum?.grossCents ?? 0n,
     nextPayout: running ? addDays(end, 1) : null,
   };
@@ -78,9 +97,23 @@ export async function interestsView(
   ]);
   if (rules.length === 0) return [];
   const ruleIds = rules.map((rule) => rule.id);
-  const [tiers, sums] = await Promise.all([
+  const [tiers, sums, entries] = await Promise.all([
     tiersOf(ctx, ruleIds),
     sumAccruals(ctx, "rule", { ruleIds, from: yearStartOf(todayOn) }),
+    getDb()
+      .select({
+        ruleId: interestEntries.ruleId,
+        periodFrom: interestEntries.periodFrom,
+        netCents: interestEntries.netCents,
+      })
+      .from(interestEntries)
+      .where(
+        and(
+          inArray(interestEntries.ruleId, ruleIds),
+          gte(interestEntries.periodFrom, yearStartOf(todayOn)),
+          userScoped(ctx).owns(interestEntries),
+        ),
+      ),
   ]);
   const accountName = accountNames(accounts);
   return rules.map((rule) =>
@@ -88,6 +121,7 @@ export async function interestsView(
       tiers: tiers.get(rule.id) ?? [],
       accountName: accountName.get(rule.accountId) ?? "",
       sum: sums.get(rule.id),
+      entries: entries.filter((entry) => entry.ruleId === rule.id),
       todayOn,
     }),
   );
@@ -123,11 +157,6 @@ interface RuleDetail extends RuleRow {
   days: InterestAccrual[];
   /** Net accrued in the period under way, not settled yet. */
   pendingCents: Cents;
-  /**
-   * The rule page's own year to date: the settlements that start this year, plus what is pending.
-   * Not `accruedYtdCents` while days of last year wait for their settlement (kept apart: V.2).
-   */
-  pageYtdCents: Cents;
 }
 
 /** How many days of each settlement accrued and how many were skipped. */
@@ -263,10 +292,8 @@ export async function ruleDetail(
   ]);
   const account = accounts.find((one) => one.id === rule.accountId) ?? null;
   const sum = sums.get(id);
-  const pendingCents = sum?.pendingCents ?? 0n;
-  const year = todayOn.slice(0, 4);
   return {
-    ...ruleRow(rule, { tiers: tiers.get(id) ?? [], accountName: account?.name ?? "", sum, todayOn }),
+    ...ruleRow(rule, { tiers: tiers.get(id) ?? [], accountName: account?.name ?? "", sum, entries, todayOn }),
     categoryName:
       rule.postingCategoryId === null
         ? null
@@ -274,10 +301,7 @@ export async function ruleDetail(
     balance: balanceOf(account, now),
     settlements: await settlementRows(ctx, rule, entries, todayOn),
     days,
-    pendingCents,
-    pageYtdCents: entries
-      .filter((entry) => entry.periodFrom.startsWith(year))
-      .reduce((total, entry) => total + entry.netCents, pendingCents),
+    pendingCents: sum?.pendingCents ?? 0n,
   };
 }
 

@@ -187,6 +187,23 @@ describe("the rest of the page", () => {
     ]);
   });
 
+  it("shows the same year to date in the list and on the rule's page across a pause over the new year", async () => {
+    // Paused from 20/12 to 05/01: on 03/01 the days of December still wait for their settlement.
+    const noon = (day: string) => new Date(startOfDayIn(day, ctx.timeZone).getTime() + 12 * 3_600_000);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(noon("2025-12-20"));
+    await saveBalanceEntry(ctx, accountId, { on: "2025-11-30", cents: 1_000_000n });
+    const created = await createRule(ctx, rule({ validFrom: "2025-12-01", validTo: null }));
+    await setRuleState(ctx, created.id, "paused");
+    vi.setSystemTime(noon("2026-01-03"));
+    await interestsAccrualJob.run();
+
+    const [row] = await interestsView(ctx);
+    const page = await ruleDetail(ctx, created.id);
+    expect(page.accruedYtdCents).toBe(1_900n);
+    expect(row.accruedYtdCents).toBe(page.accruedYtdCents);
+  });
+
   it("refuses bad tiers, publishing from a manual account, and archives the account it is on", async () => {
     await expect(
       createRule(ctx, rule({ tiers: [{ upToCents: 100n, annualRate: "0.01" }] })),

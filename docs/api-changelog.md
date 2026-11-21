@@ -3,6 +3,14 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · interests: one year to date
+
+- `GET /interests` (and `list_interest_rules`, the export): `rules[].accruedYtd` and `totals.accruedYtd`
+  are now the figure of the rule's page — the settlements that start this year plus what is not
+  settled yet — instead of the accruals since 1 January. `GET /interests/{id}` answers the same figure
+  in `accruedYtd` and `rule.accruedYtd`. The two differed while days of last year waited for their
+  settlement, for example on a rule paused across the new year. `grossYtd` is as before.
+
 ## 2026-11-21 · investments
 
 - `GET /investments` and the MCP tool `list_investments` (`investments:read`): `pnl.modifiedDietz`,

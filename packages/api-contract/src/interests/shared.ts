@@ -71,7 +71,7 @@ export const ruleRow = z.object({
   /** The category a published settlement is filed under; null: none. */
   categoryId: id().nullable(),
   state: z.enum(RULE_STATES),
-  /** Net accrued since 1 January. */
+  /** Net accrued this year: the settlements that start this year plus what is not settled yet. */
   accruedYtd: money(),
   /** Gross accrued since 1 January, rounded once. */
   grossYtd: money(),

@@ -81,10 +81,7 @@ export const getInterestRule = defineRoute({
     category: z.string().nullable(),
     /** Net accrued in the period under way, not settled yet. */
     pending: money(),
-    /**
-     * The page's year to date: the settlements that start this year plus `pending`. It differs from
-     * `rule.accruedYtd` (the accruals since 1 January) while days of last year are still unsettled.
-     */
+    /** The page's year to date: the same figure as `rule.accruedYtd`. */
     accruedYtd: money(),
     /**
      * The balance the accrual reads (D7: the threshold of the accrual, not the account's own
