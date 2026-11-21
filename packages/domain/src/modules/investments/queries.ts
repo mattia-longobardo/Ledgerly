@@ -87,6 +87,77 @@ const LINK_WINDOW_DAYS = 400;
 /** How many of the newest bank movements of each way the picker offers. */
 const LINK_LIMIT = 300;
 
+// ——— The read-model of a request (audit INV-4) ——————————————————————————————————————————————————
+// Every book of the person, valued, loaded once: the portfolio, the P&L, the positions, the home and
+// a service's views all derive from one snapshot, so a page or a route that shows two of them reads
+// the books once.
+
+/** One service of the snapshot: its book, the rates that value it, and its value today. */
+export interface Loaded {
+  account: Account;
+  investment: InvestmentAccount;
+  book: LoadedBook;
+  rates: RateTable;
+  day: DayValue;
+  sync: SyncStatus | null;
+}
+
+/** The person's services as one request reads them, valued on `todayOn`. */
+export interface InvestmentsSnapshot {
+  /** The instant the snapshot was read at, and its day in the person's time zone. */
+  now: Date;
+  todayOn: CivilDate;
+  /** Every service, the archived ones too; only the one asked when the snapshot was loaded for it. */
+  loaded: Loaded[];
+  /** Every account of the person, the archived ones too: the names and the order of Overview. */
+  accounts: Account[];
+}
+
+/**
+ * Loads the snapshot of a request: every service, or only the one of `accountId`, with its book,
+ * its rates and its value today (`valueAt`), and the state of its sync.
+ */
+export async function investmentsSnapshot(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  options: { now?: Date; accountId?: string } = {},
+): Promise<InvestmentsSnapshot> {
+  const now = options.now ?? new Date();
+  const todayOn = today(ctx.timeZone, now);
+  const [investments, accounts] = await Promise.all([
+    listInvestmentAccounts(ctx),
+    listAccounts(ctx, { includeArchived: true }),
+  ]);
+  const byId = new Map(accounts.map((account) => [account.id, account]));
+  const loaded: Loaded[] = [];
+  for (const investment of investments) {
+    if (options.accountId !== undefined && investment.accountId !== options.accountId) continue;
+    const account = byId.get(investment.accountId);
+    if (!account) continue;
+    const { book, rates } = await valuedBook(ctx, investment, { currency: account.currency, todayOn });
+    const day = valueAt(book, todayOn, rates);
+    // Also after a disconnection: the retired key still asks to be revoked (SEC-07).
+    const sync = await syncStatus(ctx, investment);
+    loaded.push({ account, investment, book, rates, day, sync });
+  }
+  return { now, todayOn, loaded, accounts };
+}
+
+/** The snapshot a view reads: the one given, or one loaded now (for `accountId` alone when given). */
+export async function snapshotOf(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  source: Date | InvestmentsSnapshot,
+  accountId?: string,
+): Promise<InvestmentsSnapshot> {
+  return source instanceof Date ? investmentsSnapshot(ctx, { now: source, accountId }) : source;
+}
+
+/** The services of the snapshot: every one, or the one of `accountId`. */
+export function servicesOf(snapshot: InvestmentsSnapshot, accountId?: string): Loaded[] {
+  return accountId === undefined
+    ? snapshot.loaded
+    : snapshot.loaded.filter((one) => one.investment.accountId === accountId);
+}
+
 export interface ServiceSummary {
   account: Account;
   investment: InvestmentAccount;
@@ -116,39 +187,6 @@ export interface ServiceSummary {
    * net money put in, with the day of that value. `null` for a synced service.
    */
   manualPnl: AccountPnl | null;
-}
-
-interface Loaded {
-  account: Account;
-  investment: InvestmentAccount;
-  book: LoadedBook;
-  rates: RateTable;
-  day: DayValue;
-  sync: SyncStatus | null;
-}
-
-async function loadAll(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  todayOn: CivilDate,
-  only?: string,
-): Promise<{ loaded: Loaded[]; accounts: Account[] }> {
-  const [investments, accounts] = await Promise.all([
-    listInvestmentAccounts(ctx),
-    listAccounts(ctx, { includeArchived: true }),
-  ]);
-  const byId = new Map(accounts.map((account) => [account.id, account]));
-  const loaded: Loaded[] = [];
-  for (const investment of investments) {
-    if (only !== undefined && investment.accountId !== only) continue;
-    const account = byId.get(investment.accountId);
-    if (!account) continue;
-    const { book, rates } = await valuedBook(ctx, investment, { currency: account.currency, todayOn });
-    const day = valueAt(book, todayOn, rates);
-    // Also after a disconnection: the retired key still asks to be revoked (SEC-07).
-    const sync = await syncStatus(ctx, investment);
-    loaded.push({ account, investment, book, rates, day, sync });
-  }
-  return { loaded, accounts };
 }
 
 function warningsOf(one: Loaded, todayOn: CivilDate): ServiceSummary["warnings"] {
@@ -244,6 +282,7 @@ export interface Portfolio {
 }
 
 interface PortfolioState extends Portfolio {
+  now: Date;
   live: Loaded[];
   /** The portfolio's flows, transfers between its services left out, in the display currency. */
   flows: FlowEntry[];
@@ -258,11 +297,10 @@ interface PortfolioState extends Portfolio {
  */
 async function portfolioState(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  now: Date,
+  source: Date | InvestmentsSnapshot,
 ): Promise<PortfolioState> {
-  const todayOn = today(ctx.timeZone, now);
+  const { now, todayOn, loaded } = await snapshotOf(ctx, source);
   const currency = ctx.displayCurrency;
-  const { loaded } = await loadAll(ctx, todayOn);
   const months = monthsBack(todayOn, HISTORY_MONTHS);
   const firstDay = months[0];
   const live = loaded.filter((one) => one.account.state !== "archived");
@@ -318,6 +356,7 @@ async function portfolioState(
 
   return {
     currency,
+    now,
     todayOn,
     services,
     totals: {
@@ -339,9 +378,9 @@ async function portfolioState(
 /** The services and the portfolio's totals, for `/api/v1/investments` and the MCP (§5.5). */
 export async function investmentsPortfolio(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<Portfolio> {
-  const { currency, todayOn, services, totals } = await portfolioState(ctx, now);
+  const { currency, todayOn, services, totals } = await portfolioState(ctx, source);
   return { currency, todayOn, services, totals };
 }
 
@@ -352,9 +391,9 @@ export async function investmentsPortfolio(
  */
 export async function investmentsHome(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<InvestmentsHome> {
-  const { currency, todayOn, services, totals, live, displayRates } = await portfolioState(ctx, now);
+  const { currency, now, todayOn, services, totals, live, displayRates } = await portfolioState(ctx, source);
 
   // Allocation: positions by class; cash, and accounts kept as a total, by their own key.
   const byClass = new Map<AssetClass | "unclassified", Cents>();
@@ -680,11 +719,11 @@ async function holdingsOf(ctx: Pick<Ctx, "userId">, one: Loaded, todayOn: CivilD
 export async function serviceHoldings(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountId: string,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<{ account: Account; currency: string; on: CivilDate; holdings: HoldingRow[] } | null> {
-  const todayOn = today(ctx.timeZone, now);
-  const { loaded } = await loadAll(ctx, todayOn, accountId);
-  const one = loaded[0];
+  const snapshot = await snapshotOf(ctx, source, accountId);
+  const { todayOn } = snapshot;
+  const one = servicesOf(snapshot, accountId)[0];
   if (!one) return null;
   return {
     account: one.account,
@@ -703,11 +742,11 @@ function trimmed(value: string): string {
 export async function serviceDetail(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   accountId: string,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<ServiceDetail | null> {
-  const todayOn = today(ctx.timeZone, now);
-  const { loaded, accounts } = await loadAll(ctx, todayOn, accountId);
-  const one = loaded[0];
+  const snapshot = await snapshotOf(ctx, source, accountId);
+  const { todayOn, accounts } = snapshot;
+  const one = servicesOf(snapshot, accountId)[0];
   if (!one) return null;
   const currency = ctx.displayCurrency;
   const displayRates = await ratesOn(
@@ -929,8 +968,7 @@ export async function investmentServices(ctx: Pick<Ctx, "userId" | "timeZone" | 
     reliableFrom: Date | null;
   }[]
 > {
-  const todayOn = today(ctx.timeZone);
-  const { loaded } = await loadAll(ctx, todayOn);
+  const { todayOn, loaded } = await investmentsSnapshot(ctx);
   return loaded.map((one) => {
     const summary = summaryOf(one, todayOn, one.account.currency, NO_RATES);
     return {
@@ -952,8 +990,7 @@ export async function investmentServices(ctx: Pick<Ctx, "userId" | "timeZone" | 
 
 /** For the export: every operation leg of every service, oldest first, with its transfer (§2.4). */
 export async function investmentOperationsExport(ctx: Pick<Ctx, "userId" | "timeZone">) {
-  const todayOn = today(ctx.timeZone);
-  const { loaded } = await loadAll(ctx, todayOn);
+  const { loaded } = await investmentsSnapshot(ctx);
   const names = new Map(loaded.map((one) => [one.investment.id, one.account.name]));
   const groups = new Map<string, string[]>();
   for (const one of loaded) {
@@ -1083,11 +1120,10 @@ function firstDayOfAll(live: Loaded[]): CivilDate | null {
 export async function investmentsPnl(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   params: PeriodParams | PnlPeriod,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<InvestmentsPnl> {
-  const todayOn = today(ctx.timeZone, now);
+  const { todayOn, loaded } = await snapshotOf(ctx, source);
   const period = "kind" in params ? params : periodOf(params, todayOn);
-  const { loaded } = await loadAll(ctx, todayOn);
   const live = loaded.filter((one) => one.account.state !== "archived");
   const { services, display } = await pnlInputs(ctx, live, period, todayOn);
   return {
@@ -1134,9 +1170,9 @@ export interface InvestmentsPnlView extends InvestmentsPnl {
 export async function investmentsPnlView(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   params: PeriodParams | PnlPeriod,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<InvestmentsPnlView> {
-  return pnlView(ctx, params, now);
+  return pnlView(ctx, params, await snapshotOf(ctx, source));
 }
 
 /**
@@ -1148,9 +1184,9 @@ export async function servicePnlView(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   accountId: string,
   params: PeriodParams | PnlPeriod,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<InvestmentsPnlView | null> {
-  const view = await pnlView(ctx, params, now, accountId);
+  const view = await pnlView(ctx, params, await snapshotOf(ctx, source, accountId), accountId);
   return view.portfolio.services.length === 0 ? null : view;
 }
 
@@ -1181,12 +1217,12 @@ export async function servicePositions(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   accountId: string,
   params: PeriodParams | PnlPeriod,
-  now: Date = new Date(),
+  source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<ServicePositions | null> {
-  const todayOn = today(ctx.timeZone, now);
+  const snapshot = await snapshotOf(ctx, source, accountId);
+  const { todayOn } = snapshot;
   const period = "kind" in params ? params : periodOf(params, todayOn);
-  const { loaded } = await loadAll(ctx, todayOn, accountId);
-  const one = loaded[0];
+  const one = servicesOf(snapshot, accountId)[0];
   if (!one) return null;
   const { services, display } = await pnlInputs(ctx, [one], period, todayOn);
   const firstOn = firstDayOfAll([one]);
@@ -1229,12 +1265,12 @@ export async function servicePositions(
 async function pnlView(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   params: PeriodParams | PnlPeriod,
-  now: Date,
+  snapshot: InvestmentsSnapshot,
   only?: string,
 ): Promise<InvestmentsPnlView> {
-  const todayOn = today(ctx.timeZone, now);
+  const { todayOn, accounts } = snapshot;
   const period = "kind" in params ? params : periodOf(params, todayOn);
-  const { loaded, accounts } = await loadAll(ctx, todayOn, only);
+  const loaded = servicesOf(snapshot, only);
   // A service asked by name is shown archived too, as its page always was.
   const live = loaded.filter((one) => only !== undefined || one.account.state !== "archived");
   const { services, display } = await pnlInputs(ctx, live, period, todayOn);

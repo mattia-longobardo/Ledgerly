@@ -21,6 +21,7 @@ import {
   investmentsPnl,
   investmentsPnlView,
   investmentsPortfolio,
+  investmentsSnapshot,
   linkTransfer,
   type PeriodParams,
   PRICE_SCALE,
@@ -127,13 +128,22 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, investments.listInvestments, async ({ ctx, query }) => {
     // The legacy query: a value it cannot read is the year running, never a 400 (`periodOf`).
     const params = { period: query.period ?? null, from: query.from ?? null, to: query.to ?? null };
-    const [portfolio, pnl] = await Promise.all([investmentsPortfolio(ctx), investmentsPnl(ctx, params)]);
+    // One read of the books for both (INV-4).
+    const snapshot = await investmentsSnapshot(ctx);
+    const [portfolio, pnl] = await Promise.all([
+      investmentsPortfolio(ctx, snapshot),
+      investmentsPnl(ctx, params, snapshot),
+    ]);
     return listOut(portfolio, pnl);
   });
   // The literal paths first: `/investments/{accountId}` would take them.
   serve(app, guard, investments.getInvestmentsHome, async ({ ctx, query }) => {
     const period = periodOf(ctx, query);
-    const [home, pnl] = await Promise.all([investmentsHome(ctx), investmentsPnlView(ctx, period)]);
+    const snapshot = await investmentsSnapshot(ctx);
+    const [home, pnl] = await Promise.all([
+      investmentsHome(ctx, snapshot),
+      investmentsPnlView(ctx, period, snapshot),
+    ]);
     return homeOut(home, pnl);
   });
   serve(app, guard, investments.getInvestmentsCatalog, async ({ ctx }) => catalogOut(await catalogView(ctx)));
@@ -142,9 +152,10 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   );
   serve(app, guard, investments.getInvestment, async ({ ctx, params, query }) => {
     const period = periodOf(ctx, query);
+    const snapshot = await investmentsSnapshot(ctx, { accountId: params.accountId });
     const [detail, pnl] = await Promise.all([
-      serviceDetail(ctx, params.accountId),
-      servicePnlView(ctx, params.accountId, period),
+      serviceDetail(ctx, params.accountId, snapshot),
+      servicePnlView(ctx, params.accountId, period, snapshot),
     ]);
     if (!detail || !pnl) throw notFound();
     const activity = await serviceActivity(ctx, params.accountId, {
@@ -162,9 +173,10 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
 function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, investments.getInvestmentActivity, async ({ ctx, params, query }) => {
     const period = periodOf(ctx, query);
+    const snapshot = await investmentsSnapshot(ctx, { accountId: params.accountId });
     const [detail, pnl] = await Promise.all([
-      serviceDetail(ctx, params.accountId),
-      servicePnlView(ctx, params.accountId, period),
+      serviceDetail(ctx, params.accountId, snapshot),
+      servicePnlView(ctx, params.accountId, period, snapshot),
     ]);
     if (!detail || !pnl) throw notFound();
     // A manual service counts its account's movements (PERS-342): they are its activity.
@@ -183,9 +195,10 @@ function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
   });
   serve(app, guard, investments.getInvestmentPositions, async ({ ctx, params, query }) => {
     const period = periodOf(ctx, query);
+    const snapshot = await investmentsSnapshot(ctx, { accountId: params.accountId });
     const [detail, view] = await Promise.all([
-      serviceDetail(ctx, params.accountId),
-      servicePositions(ctx, params.accountId, period),
+      serviceDetail(ctx, params.accountId, snapshot),
+      servicePositions(ctx, params.accountId, period, snapshot),
     ]);
     if (!detail || !view) throw notFound();
     return positionsOut(detail, view);

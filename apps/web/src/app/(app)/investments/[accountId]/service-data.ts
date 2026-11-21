@@ -1,7 +1,12 @@
 import "server-only";
 import { cache } from "react";
 import { accountTypeOf, connectableProvider } from "@ledgerly/domain/investments";
-import { type ServiceDetail, serviceDetail } from "@ledgerly/domain/investments";
+import {
+  investmentsSnapshot,
+  type InvestmentsSnapshot,
+  type ServiceDetail,
+  serviceDetail,
+} from "@ledgerly/domain/investments";
 import { ensureAssetSeed } from "@ledgerly/domain/investments";
 import type { ConnectableProvider, OperationSummary, ServiceContext } from "@/modules/investments/ui/dialogs";
 import type { ActivityRow } from "@ledgerly/domain/investments";
@@ -11,14 +16,20 @@ import { civilDateIn, type CivilDate, today } from "@ledgerly/domain/shared/date
 import { formatDate } from "@ledgerly/domain/platform/format";
 
 /**
- * The service as its layout and its tabs read it, once per request: the layout and the page of a
- * tab render in the same request, and `cache` keeps them from loading the book twice.
+ * The book of the service, read once per request (audit INV-4): the layout, the page of a tab and
+ * its P&L derive from it, and `cache` keeps them from loading the book twice.
  */
+export const loadSnapshot = cache(async (accountId: string): Promise<InvestmentsSnapshot> => {
+  const ctx = await requireSession();
+  return investmentsSnapshot(ctx, { accountId });
+});
+
+/** The service as its layout and its tabs read it, once per request. */
 export const loadService = cache(async (accountId: string): Promise<ServiceDetail | null> => {
   const ctx = await requireSession();
   // The editable seed of the asset catalog (§1.4), written once, before the dialogs list it.
   await ensureAssetSeed(ctx);
-  return serviceDetail(ctx, accountId);
+  return serviceDetail(ctx, accountId, await loadSnapshot(accountId));
 });
 
 /** What every dialog of the service needs to know about it. */

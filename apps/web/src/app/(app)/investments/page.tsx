@@ -8,7 +8,7 @@ import { asNumbers, axisLabels, dayLabels } from "@ledgerly/ui/chart-labels";
 import { PALETTE } from "@ledgerly/design-tokens";
 import { legacyPeriodQuery, SECTION_PRESETS, sectionPeriod, type Query } from "@ledgerly/domain/investments";
 import type { PnlParts, ServicePnl } from "@ledgerly/domain/investments";
-import { investmentsHome, investmentsPnlView } from "@ledgerly/domain/investments";
+import { investmentsHome, investmentsPnlView, investmentsSnapshot } from "@ledgerly/domain/investments";
 import {
   asReturns,
   bestAndWorst,
@@ -65,9 +65,11 @@ export default async function InvestmentsPage({ searchParams }: PageProps<"/inve
 
   const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "pnl";
   const by = (["class", "ccy"] as const).find((key) => key === one(query.by)) ?? "service";
+  // One read of the books for both (INV-4).
+  const snapshot = await investmentsSnapshot(ctx);
   const [home, pnl] = await Promise.all([
-    investmentsHome(ctx),
-    investmentsPnlView(ctx, sectionPeriod(query, today(ctx.timeZone)).period),
+    investmentsHome(ctx, snapshot),
+    investmentsPnlView(ctx, sectionPeriod(query, today(ctx.timeZone)).period, snapshot),
   ]);
   const currency = pnl.currency;
   const money = (cents: Cents | null, signed = false, code = currency) =>

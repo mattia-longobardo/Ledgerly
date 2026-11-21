@@ -26,7 +26,7 @@ import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type Params, withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { loadService, operationOf, serviceContextOf } from "../service-data";
+import { loadService, loadSnapshot, operationOf, serviceContextOf } from "../service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
@@ -58,7 +58,9 @@ export default async function InvestmentServiceActivity({
 
   const [detail, pnl] = await Promise.all([
     loadService(accountId),
-    servicePnlView(ctx, accountId, sectionPeriod(query, todayOn(ctx.timeZone)).period),
+    loadSnapshot(accountId).then((snapshot) =>
+      servicePnlView(ctx, accountId, sectionPeriod(query, todayOn(ctx.timeZone)).period, snapshot),
+    ),
   ]);
   if (!detail || !pnl) notFound();
   const { span } = pnl;

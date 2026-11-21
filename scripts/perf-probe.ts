@@ -27,6 +27,7 @@ import {
   investmentsHome,
   investmentsPnlView,
   serviceDetail,
+  investmentsSnapshot,
   servicePnlView,
 } from "@domain/modules/investments/queries";
 import { updateServiceValue } from "@domain/modules/investments/service";
@@ -347,10 +348,23 @@ const views: [string, () => Promise<unknown>, { fromCleanHeap: boolean }?][] = [
       await listBalanceEntries(ctx, first.id),
     ],
   ],
-  ["Investments (home)", async () => [await investmentsHome(ctx), await investmentsPnlView(ctx, {})]],
+  // The books read once for both views, as the page does (INV-4).
+  [
+    "Investments (home)",
+    async () => {
+      const snapshot = await investmentsSnapshot(ctx);
+      return [await investmentsHome(ctx, snapshot), await investmentsPnlView(ctx, {}, snapshot)];
+    },
+  ],
   [
     "Investments (servizio)",
-    async () => [await serviceDetail(ctx, brokers[0]), await servicePnlView(ctx, brokers[0], {})],
+    async () => {
+      const snapshot = await investmentsSnapshot(ctx, { accountId: brokers[0] });
+      return [
+        await serviceDetail(ctx, brokers[0], snapshot),
+        await servicePnlView(ctx, brokers[0], {}, snapshot),
+      ];
+    },
   ],
   ["Funds (home)", () => fundsHomeRows(ctx)],
   ["Funds (fondo)", () => fundHomeRow(ctx, funds[0])],

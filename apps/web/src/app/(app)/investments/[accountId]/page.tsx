@@ -32,7 +32,7 @@ import { KpiTile } from "@ledgerly/ui/kpi-tile";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { loadService } from "./service-data";
+import { loadService, loadSnapshot } from "./service-data";
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
@@ -62,7 +62,9 @@ export default async function InvestmentServiceOverview({
   const view = (["value", "return"] as const).find((key) => key === one(query.view)) ?? "pnl";
   const [detail, pnl] = await Promise.all([
     loadService(accountId),
-    servicePnlView(ctx, accountId, sectionPeriod(query, today(ctx.timeZone)).period),
+    loadSnapshot(accountId).then((snapshot) =>
+      servicePnlView(ctx, accountId, sectionPeriod(query, today(ctx.timeZone)).period, snapshot),
+    ),
   ]);
   if (!detail || !pnl) notFound();
   const service = pnl.portfolio.services[0];
