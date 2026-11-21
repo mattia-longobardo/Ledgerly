@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 95,
+    "crossModuleImports": 96,
     "moduleIndexFiles": 12,
     "reciprocalModulePairs": 3,
     "reciprocalUnitPairs": 49,
@@ -8,7 +8,7 @@
     "platformToModuleImports": 68,
     "platformFilesImportingModules": 23,
     "uiToPlatformImports": 1,
-    "forbiddenNameFiles": 93,
+    "forbiddenNameFiles": 92,
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
@@ -46,6 +46,7 @@
     "modules/funds/ui/fund-chart.tsx → modules/investments/ui/chart-data",
     "modules/imports/api.ts → modules/payroll/index",
     "modules/imports/jobs.ts → modules/users/index",
+    "modules/interests/jobs.ts → modules/accounts/index",
     "modules/interests/jobs.ts → modules/users/index",
     "modules/interests/queries.ts → modules/accounts/index",
     "modules/interests/queries.ts → modules/transactions/queries",
@@ -205,7 +206,6 @@
     "modules/interests/jobs.ts: wallet",
     "modules/interests/rules.ts: wallet",
     "modules/interests/schema.ts: wallet",
-    "modules/interests/service.ts: wallet",
     "modules/interests/ui/posting-cell.tsx: wallet",
     "modules/interests/ui/rule-dialog.tsx: wallet",
     "modules/investments/activity.ts: etoro",
