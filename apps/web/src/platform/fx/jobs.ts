@@ -13,9 +13,7 @@ import { forEachUser } from "@ledgerly/domain/users";
 import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
-import { rangesToFetch } from "@ledgerly/domain/platform/fx";
-import { saveRates, storedRange } from "@ledgerly/domain/platform/fx";
-import { fetchEcbRates, type FxFetchOptions } from "@ledgerly/domain/platform/fx";
+import { ensureRange, storedRange, type FxFetchOptions } from "@ledgerly/domain/platform/fx";
 
 /** The oldest balance day of the whole instance: the earliest of every user's own. */
 async function instanceFirstBalanceDay(): Promise<CivilDate | null> {
@@ -31,22 +29,9 @@ export async function refreshFxRates(
   options: FxFetchOptions = {},
   now: Date = new Date(),
 ): Promise<JobDetail> {
-  const stored = await storedRange();
-  const ranges = rangesToFetch({
-    firstBalanceOn: await instanceFirstBalanceDay(),
-    earliest: stored.earliest,
-    latest: stored.latest,
-    today: today("UTC", now),
-  });
-  let fetched = 0;
-  let inserted = 0;
-  for (const range of ranges) {
-    const rates = await fetchEcbRates(range, options);
-    fetched += rates.length;
-    inserted += await saveRates(rates, now);
-  }
+  const done = await ensureRange(await instanceFirstBalanceDay(), today("UTC", now), options, now);
   const after = await storedRange();
-  return { ranges: ranges.length, fetched, inserted, earliest: after.earliest, latest: after.latest };
+  return { ...done, earliest: after.earliest, latest: after.latest };
 }
 
 function createFxRatesRefreshJob(options: FxFetchOptions = {}): JobDefinition {

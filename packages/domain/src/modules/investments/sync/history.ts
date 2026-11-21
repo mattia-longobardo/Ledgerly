@@ -3,7 +3,7 @@ import { openedNoLaterThan } from "../../accounts";
 import { addDays, type CivilDate, civilDateIn, today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { ratesOn } from "../../../platform/fx/service";
+import { ensureRange, ratesOn } from "../../../platform/fx/service";
 import {
   type Connection,
   readCredentials,
@@ -25,7 +25,7 @@ import {
   investmentReadings,
 } from "../schema";
 import { lockInvestmentAccount, rebuild, translated, type WriteCtx } from "../service";
-import { ensureRatesFrom, writeEvents } from "./events";
+import { writeEvents } from "./events";
 import {
   LOOKUP_CURRENCIES,
   checkQuantities,
@@ -73,7 +73,8 @@ export async function syncFlows(
         .map((leg) => leg.nativeCurrency),
     ),
   ]);
-  if (first !== null && currencies.size > 1) await ensureRatesFrom(first, todayOn);
+  // A trade of 2021 is converted at the rate of its own day (§1.8), never at today's.
+  if (first !== null && currencies.size > 1) await ensureRange(first, todayOn, { forward: false });
   const rates =
     first === null || currencies.size === 1 ? new Map() : await ratesOn(currencies, first, todayOn);
   const known = new Set(

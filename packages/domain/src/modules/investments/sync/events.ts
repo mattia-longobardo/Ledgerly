@@ -1,8 +1,6 @@
-import { addDays, type CivilDate, civilDateIn } from "../../../shared/dates";
+import { type CivilDate, civilDateIn } from "../../../shared/dates";
 import { type Tx } from "../../../platform/db/client";
 import { eurPerUnitOn, type RateTable } from "../../../platform/fx/rules";
-import { saveRates, storedRange } from "../../../platform/fx/service";
-import { fetchEcbRates } from "../../../platform/fx/sources";
 import { type ProviderEvent } from "../../../platform/integrations/investments/source";
 import { linkExternal } from "../../../platform/integrations/service";
 import { type OperationKind, PRICE_SCALE, QUANTITY_SCALE, RATE_SCALE } from "../rules";
@@ -10,18 +8,6 @@ import { divRound, parseDecimal } from "../../../shared/money";
 import { type InvestmentAccount, insertEvent, type LegInput, type WriteCtx } from "../service";
 import { assetFor, providerHoldingFor } from "./readings";
 import { SyncError } from "./sources";
-
-/**
- * The ECB rates the events of a window need, fetched once when `fx_rates` starts after them: a
- * trade of 2021 is converted at the rate of its own day (§1.8), never at today's.
- */
-export async function ensureRatesFrom(day: CivilDate, todayOn: CivilDate): Promise<void> {
-  const stored = await storedRange();
-  if (stored.earliest !== null && stored.earliest <= day) return;
-  const to = stored.earliest === null ? todayOn : addDays(stored.earliest, -1);
-  if (to < day) return;
-  await saveRates(await fetchEcbRates({ from: day, to }));
-}
 
 /** Account units per unit of `from` on `on`, scaled; `null` without a rate. */
 export function rateBetween(rates: RateTable, from: string, to: string, on: CivilDate): bigint | null {

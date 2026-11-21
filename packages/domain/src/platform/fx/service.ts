@@ -1,8 +1,9 @@
 import { and, asc, desc, eq, gte, inArray, lt, lte, max, min } from "drizzle-orm";
 import type { CivilDate } from "../../shared/dates";
 import { getDb } from "../db/client";
-import { type FxRate, NO_RATES, type RateTable, rateTable } from "./rules";
+import { type FxRate, NO_RATES, type RateTable, rangesToFetch, rateTable } from "./rules";
 import { fxRates } from "./schema";
+import { type FxFetchOptions, fetchEcbRates } from "./sources";
 
 /** Postgres takes at most 65,535 parameters a statement; five columns a row stays well below. */
 const BATCH = 2_000;
@@ -33,6 +34,32 @@ export async function saveRates(rates: readonly FxRate[], fetchedAt: Date = new 
     }
     return inserted;
   });
+}
+
+/**
+ * The one way rates enter `fx_rates` (audit PLT-2, INV-10): fetches from the ECB the days of
+ * `from`..`to` the table lacks (`rangesToFetch`) and stores them. `from` is `null` when there is
+ * nothing to convert. With `forward: false` only the days before the first stored one are fetched:
+ * a sync needs the rates of its past events, and the daily job brings the newest days.
+ */
+export async function ensureRange(
+  from: CivilDate | null,
+  to: CivilDate,
+  options: FxFetchOptions & { forward?: boolean } = {},
+  now: Date = new Date(),
+): Promise<{ ranges: number; fetched: number; inserted: number }> {
+  const stored = await storedRange();
+  const ranges = rangesToFetch({ firstBalanceOn: from, ...stored, today: to }).filter(
+    (range) => options.forward !== false || stored.earliest === null || range.to < stored.earliest,
+  );
+  let fetched = 0;
+  let inserted = 0;
+  for (const range of ranges) {
+    const rates = await fetchEcbRates(range, options);
+    fetched += rates.length;
+    inserted += await saveRates(rates, now);
+  }
+  return { ranges: ranges.length, fetched, inserted };
 }
 
 /** Every stored rate of one currency from `from` on, oldest first: what the tests compare. */

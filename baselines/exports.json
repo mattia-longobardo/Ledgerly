@@ -1016,10 +1016,8 @@
     "FxFetchOptions",
     "NO_RATES",
     "convertCents",
-    "fetchEcbRates",
-    "rangesToFetch",
+    "ensureRange",
     "ratesOn",
-    "saveRates",
     "storedRange"
   ],
   "packages/domain/src/platform/holidays/client.ts": [
