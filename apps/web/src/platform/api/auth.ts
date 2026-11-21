@@ -27,9 +27,10 @@ interface ApiIdentity {
 
 /**
  * What the web's session may do: everything the person may, `admin` only for an admin, and `session`,
- * what only the pages of Ledgerly read (the IBAN, H45) and no token is ever granted.
+ * what only the pages of Ledgerly read (the IBAN, H45) and no token is ever granted. `imports`: the
+ * Payroll screen uploads its payslips through `POST /imports` (R2 imports), as it did by its action.
  */
-const SESSION_SCOPES: readonly ContractScope[] = ["read", "write", "security", "session"];
+const SESSION_SCOPES: readonly ContractScope[] = ["read", "write", "imports", "security", "session"];
 
 /** The methods that change nothing: the only ones a session may call without the CSRF proof. */
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
@@ -88,8 +89,8 @@ function sameOriginWrite(context: Context): boolean {
  * The one place `/api/v1` authenticates (plan F8 §3.4.9, docs/auth-design.md D3/D4).
  *
  * Two credentials: a Bearer access token, or the web's session cookie (same origin, R4). A session
- * is read by the same rules as every page (`sessionCtxOf`) and gets `read`, `write`, `security`, and
- * `admin` for an admin; its writes need the CSRF proof (`sameOriginWrite`). No CORS answer is ever
+ * is read by the same rules as every page (`sessionCtxOf`) and gets `read`, `write`, `imports`,
+ * `security`, and `admin` for an admin; its writes need the CSRF proof (`sameOriginWrite`). No CORS answer is ever
  * given, so no other origin can send the cookie with a readable answer.
  *
  * The credential becomes the same `Ctx` a session would, so every service underneath scopes its

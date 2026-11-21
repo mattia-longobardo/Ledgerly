@@ -593,5 +593,10 @@
     "file": "packages/domain/src/modules/imports/rules.test.ts",
     "decision": "IMP-2, E1",
     "reason": "the folder of a kind comes from the registry of the readers: storageKeyFor takes the folder (payslips) instead of the kind (payslip); the expected key is the same"
+  },
+  {
+    "file": "packages/domain/src/platform/auth/scopes.test.ts",
+    "decision": "R2 imports, session scope",
+    "reason": "a test added: the scopes a token is granted stay the same four; no existing assertion changed"
   }
 ]

@@ -44,8 +44,8 @@ curl -sS -H "Authorization: Bearer $TOKEN" https://dash.longobardo.me/api/v1/sum
 ### The web's session
 
 The web app of the instance calls `/api/v1` with its session cookie, from the same origin. A session
-gets the scopes `read`, `write`, `security` and `session`, and `admin` for an admin. `session` is
-never granted to a token: the routes that ask for it (the IBAN, H45) answer the web's pages only,
+gets the scopes `read`, `write`, `imports`, `security` and `session`, and `admin` for an admin.
+`session` is never granted to a token: the routes that ask for it (the IBAN, H45) answer the web's pages only,
 and a token gets `403`. It follows the rules of
 every page: a session that still owes its TOTP setup, a revoked session or a blocked person gets
 `401`. A write (any method but `GET`, `HEAD`, `OPTIONS`) by cookie must carry `Origin` equal to the
