@@ -3,7 +3,7 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
-## 2026-11-21 · interests: one year to date
+## 2026-11-21 · interests: one year to date (0.53.0)
 
 - `GET /interests` (and `list_interest_rules`, the export): `rules[].accruedYtd` and `totals.accruedYtd`
   are now the figure of the rule's page — the settlements that start this year plus what is not
@@ -12,7 +12,7 @@ written before it keeps working.
   settlement, for example on a rule paused across the new year. `grossYtd` (rules and totals) reads
   the same days, gross, so the net never exceeds it.
 
-## 2026-11-21 · investments
+## 2026-11-21 · investments (0.53.0)
 
 - `GET /investments` and the MCP tool `list_investments` (`investments:read`): `pnl.modifiedDietz`,
   the portfolio's Modified Dietz return of the period, and `pnl.services[].modifiedDietz`, each
