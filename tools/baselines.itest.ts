@@ -191,6 +191,11 @@ describe("the reference user", () => {
     ]) {
       answers[`GET ${path}`] = await call("GET", path);
     }
+    // Funds (R2): the home of «All», and the first fund's Overview of «All».
+    const fundsHome = await call("GET", "/funds?period=all");
+    answers["GET /funds?period=all"] = fundsHome;
+    const firstFund = (fundsHome.body as { funds: { id: string }[] }).funds[0].id;
+    answers[`GET /funds/${firstFund}?period=all`] = await call("GET", `/funds/${firstFund}?period=all`);
     // Last, because it writes: the answer of the one writing route that needs no file.
     answers[`POST /accounts/${user.savingsId}/balances`] = await call(
       "POST",
@@ -244,6 +249,9 @@ describe("the reference user", () => {
     answers.list_investments = await tool("list_investments", { period: "all" });
     answers.get_investment_holdings = await tool("get_investment_holdings", { account_id: user.brokerId });
     answers.get_payroll = await tool("get_payroll");
+    answers.get_funds = await tool("get_funds", { period: "all" });
+    const firstFund = (answers.get_funds as { answer: { funds: { id: string }[] } }).answer.funds[0].id;
+    answers.get_fund = await tool("get_fund", { id: firstFund, period: "all" });
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/mcp.json"));
   });
 });

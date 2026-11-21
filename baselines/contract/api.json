@@ -1442,10 +1442,358 @@
    ]
   }
  },
+ "GET /funds?period=all": {
+  "status": 200,
+  "body": {
+   "period": {
+    "kind": "all",
+    "year": null,
+    "from": null,
+    "to": "2031-10-15",
+    "firstOn": "2030-11-01"
+   },
+   "valueToday": "7719.00",
+   "summary": {
+    "state": "measured",
+    "gain": "209.00",
+    "market": "219.00",
+    "fees": "10.00",
+    "feesPartial": false,
+    "paidIn": "7761.00",
+    "origin": {
+     "you": "7761.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00"
+    },
+    "rate": 0.033680011425130656,
+    "xirr": null,
+    "value": "7719.00",
+    "valueFrom": "2031-09-30",
+    "valueTo": "2031-09-30",
+    "notInValue": "251.00",
+    "accrued": "0.00"
+   },
+   "funds": [
+    {
+     "id": "<id-37>",
+     "name": "Fideuram Piano Accumulo",
+     "provider": "Fideuram",
+     "compartment": "Bilanciato",
+     "code": "LU0987654321",
+     "startOn": "2030-11-01",
+     "state": "active",
+     "currency": "EUR",
+     "color": null,
+     "accountId": "<id-4>",
+     "accountName": "Fideuram Piano Accumulo",
+     "line": {
+      "fundId": "<id-37>",
+      "status": "measured",
+      "start": {
+       "on": "2030-10-31",
+       "value": "0.00"
+      },
+      "end": {
+       "on": "2031-09-30",
+       "value": "7719.00"
+      },
+      "gain": "209.00",
+      "market": "219.00",
+      "fees": "10.00",
+      "feesPartial": false,
+      "rate": 0.033680011425130656,
+      "xirr": null,
+      "paidIn": "7761.00",
+      "origin": {
+       "you": "7761.00",
+       "employer": "0.00",
+       "tfr": "0.00",
+       "other": "0.00"
+      },
+      "notInValue": "251.00",
+      "accrued": "0.00"
+     },
+     "valueToday": "7719.00",
+     "stale": false
+    }
+   ],
+   "gain": {
+    "grain": "year",
+    "bars": [
+     {
+      "from": "2030-01-01",
+      "to": "2030-12-31",
+      "total": "29.00",
+      "funds": [
+       {
+        "fundId": "<id-37>",
+        "gain": "29.00"
+       }
+      ]
+     },
+     {
+      "from": "2031-01-01",
+      "to": "2031-12-31",
+      "total": "180.00",
+      "funds": [
+       {
+        "fundId": "<id-37>",
+        "gain": "180.00"
+       }
+      ]
+     }
+    ]
+   },
+   "values": [
+    {
+     "on": "2030-12-31",
+     "value": "5280.00",
+     "paid": "5251.00"
+    },
+    {
+     "on": "2031-03-31",
+     "value": "6115.00",
+     "paid": "6004.00"
+    },
+    {
+     "on": "2031-06-30",
+     "value": "7023.00",
+     "paid": "6757.00"
+    },
+    {
+     "on": "2031-09-30",
+     "value": "7719.00",
+     "paid": "7510.00"
+    }
+   ],
+   "years": [
+    {
+     "year": 2031,
+     "summary": {
+      "state": "measured",
+      "gain": "180.00",
+      "market": "189.00",
+      "fees": "9.00",
+      "feesPartial": false,
+      "paidIn": "2510.00",
+      "origin": {
+       "you": "2510.00",
+       "employer": "0.00",
+       "tfr": "0.00",
+       "other": "0.00"
+      },
+      "rate": 0.02769987852413875,
+      "xirr": null,
+      "value": "7719.00",
+      "valueFrom": "2031-09-30",
+      "valueTo": "2031-09-30",
+      "notInValue": "251.00",
+      "accrued": "0.00"
+     }
+    },
+    {
+     "year": 2030,
+     "summary": {
+      "state": "measured",
+      "gain": "29.00",
+      "market": "30.00",
+      "fees": "1.00",
+      "feesPartial": false,
+      "paidIn": "5251.00",
+      "origin": {
+       "you": "5251.00",
+       "employer": "0.00",
+       "tfr": "0.00",
+       "other": "0.00"
+      },
+      "rate": 0.005771125451022099,
+      "xirr": null,
+      "value": "5280.00",
+      "valueFrom": "2030-12-31",
+      "valueTo": "2030-12-31",
+      "notInValue": "0.00",
+      "accrued": "0.00"
+     }
+    }
+   ]
+  }
+ },
+ "GET /funds/<id-37>?period=all": {
+  "status": 200,
+  "body": {
+   "fund": {
+    "id": "<id-37>",
+    "name": "Fideuram Piano Accumulo",
+    "provider": "Fideuram",
+    "compartment": "Bilanciato",
+    "code": "LU0987654321",
+    "startOn": "2030-11-01",
+    "state": "active",
+    "currency": "EUR",
+    "color": null,
+    "accountId": "<id-4>",
+    "accountName": "Fideuram Piano Accumulo"
+   },
+   "period": {
+    "kind": "all",
+    "year": null,
+    "from": null,
+    "to": "2031-10-15",
+    "firstOn": "2030-11-01"
+   },
+   "beforeFirst": false,
+   "summary": {
+    "state": "measured",
+    "gain": "209.00",
+    "market": "219.00",
+    "fees": "10.00",
+    "feesPartial": false,
+    "paidIn": "7761.00",
+    "origin": {
+     "you": "7761.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00"
+    },
+    "rate": 0.033680011425130656,
+    "xirr": null,
+    "value": "7719.00",
+    "valueFrom": "2031-09-30",
+    "valueTo": "2031-09-30",
+    "notInValue": "251.00",
+    "accrued": "0.00"
+   },
+   "line": {
+    "fundId": "<id-37>",
+    "status": "measured",
+    "start": {
+     "on": "2030-10-31",
+     "value": "0.00"
+    },
+    "end": {
+     "on": "2031-09-30",
+     "value": "7719.00"
+    },
+    "gain": "209.00",
+    "market": "219.00",
+    "fees": "10.00",
+    "feesPartial": false,
+    "rate": 0.033680011425130656,
+    "xirr": null,
+    "paidIn": "7761.00",
+    "origin": {
+     "you": "7761.00",
+     "employer": "0.00",
+     "tfr": "0.00",
+     "other": "0.00"
+    },
+    "notInValue": "251.00",
+    "accrued": "0.00"
+   },
+   "valueToday": "7719.00",
+   "valueOlderThanOperations": true,
+   "gain": {
+    "grain": "year",
+    "bars": [
+     {
+      "from": "2030-01-01",
+      "to": "2030-12-31",
+      "total": "29.00",
+      "funds": [
+       {
+        "fundId": "<id-37>",
+        "gain": "29.00"
+       }
+      ]
+     },
+     {
+      "from": "2031-01-01",
+      "to": "2031-12-31",
+      "total": "180.00",
+      "funds": [
+       {
+        "fundId": "<id-37>",
+        "gain": "180.00"
+       }
+      ]
+     }
+    ]
+   },
+   "values": [
+    {
+     "on": "2030-12-31",
+     "value": "5280.00",
+     "paid": "5251.00"
+    },
+    {
+     "on": "2031-03-31",
+     "value": "6115.00",
+     "paid": "6004.00"
+    },
+    {
+     "on": "2031-06-30",
+     "value": "7023.00",
+     "paid": "6757.00"
+    },
+    {
+     "on": "2031-09-30",
+     "value": "7719.00",
+     "paid": "7510.00"
+    }
+   ],
+   "forecast": {
+    "monthly": "251.00",
+    "rates": [
+     0.02,
+     0.04,
+     0.06
+    ],
+    "rows": [
+     {
+      "years": 1,
+      "paidIn": "10773.00",
+      "values": [
+       "10912.89",
+       "11094.59",
+       "11276.10"
+      ]
+     },
+     {
+      "years": 3,
+      "paidIn": "16797.00",
+      "values": [
+       "17493.58",
+       "18256.24",
+       "19043.38"
+      ]
+     },
+     {
+      "years": 5,
+      "paidIn": "22821.00",
+      "values": [
+       "24340.14",
+       "26002.28",
+       "27770.70"
+      ]
+     },
+     {
+      "years": 10,
+      "paidIn": "37881.00",
+      "values": [
+       "42691.22",
+       "48246.68",
+       "54604.39"
+      ]
+     }
+    ]
+   }
+  }
+ },
  "POST /accounts/<id-2>/balances": {
   "status": 201,
   "body": {
-   "id": "<id-37>",
+   "id": "<id-38>",
    "on": "2031-10-15",
    "balance": "12050.00",
    "source": "manual"

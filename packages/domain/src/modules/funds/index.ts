@@ -1,5 +1,6 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export { fundSummary, hypothesesOnly, isFundId } from "./detail";
+export { acceptDifference } from "./service/decisions";
 export { assetsCost, contributionFee, periodFees } from "./fees";
 export {
   contributionFormOf,
@@ -32,7 +33,7 @@ export { MAIN_COMPONENTS } from "./pension/reconcile";
 export type { ComponentStatus, QuarterStatus, Status } from "./pension/reconcile";
 export type { Component, Decision } from "./pension/rules";
 export { competencesFromPayslips, payrollSource } from "./pension/payroll-source";
-export { clearDecision, decideDifference, replaceCompetences } from "./pension/service";
+export { clearDecision, replaceCompetences } from "./pension/service";
 export { onTheWay } from "./period";
 export type { FundPeriod, MoneyOrigin } from "./period";
 export { wireFunds } from "./ports";
@@ -83,3 +84,12 @@ export {
 } from "./tabs";
 export type { ValuationLine } from "./tabs";
 export { FUND_TEMPLATES } from "./templates";
+export {
+  fundContributionsView,
+  fundOverviewView,
+  fundSettingsView,
+  fundsHomeView,
+  fundValuationsView,
+  viewPeriod,
+} from "./queries/views";
+export type { Fund, FundFee, FundSource } from "./service";

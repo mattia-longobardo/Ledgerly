@@ -3,6 +3,35 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · funds (0.52.0)
+
+- `GET /funds` (new, `read`): the Funds home of a period (`period` = `all`, a year or `custom` with
+  `from` and `to`; none is the year running; a year to come is `400`) — `period` with `firstOn`,
+  `valueToday`, `summary` (the measure: `state`, `gain`, `market`, `fees`, `feesPartial`, `paidIn`,
+  `origin` by you/employer/TFR/other, `rate` and `xirr` as fractions, `value` with `valueFrom`/`valueTo`,
+  `notInValue`, `accrued`), `funds` (each with its `line`, `valueToday` and `stale`), `gain` (`grain`,
+  `bars`), `values` (`{on, value, paid}`), `years` under «All». Amounts are decimal strings.
+- `GET /funds/{id}` (new, `read`): a fund's Overview in the same period, with `beforeFirst`,
+  `valueOlderThanOperations` and the `forecast` at the hypothesis rates. `GET /funds/{id}/valuations`,
+  `/contributions` (the register, the periods of the payslip source, the accrued months, the recurring
+  debit) and `/settings` (sources, fees with the rate as a percentage, payslip codes, taken
+  components) (new, `read`): the other tabs.
+- MCP tools `get_funds` (`period`, `from`, `to`) and `get_fund` (`id`, `period`, `from`, `to`) (new,
+  read only): the answers of `GET /funds` and `GET /funds/{id}`.
+- The writes of funds (new, `write`): `POST /funds` (201 `{id, published}`), `PATCH /funds/{id}`,
+  `PUT /funds/{id}/state`; `POST`, `PATCH`, `DELETE /funds/{id}/valuations[/{valuationId}]`; the same
+  for `/funds/{id}/operations`; `PUT` and `DELETE /funds/{id}/periods/{year}/{index}/{component}/decision`
+  (the note only: the difference is the server's); `POST /funds/{id}/sources` and `PATCH
+  /funds/{id}/sources/{sourceId}` (`{id, published}`), `PUT .../state`, `DELETE` (answers the source
+  and its fees), `POST /funds/{id}/sources/restore`; `POST`, `PATCH`, `DELETE /funds/{id}/fees[/{feeId}]`;
+  `POST /funds/{id}/competences/rebuild` (`{published}`). `GET /funds/{id}/debit-match`
+  (`transactionId`, `accountId`; `read`): «Find this charge everywhere». Errors: `not_found`; `invalid`
+  (`reason` `invalid`, `invalid_account`, `future_date`, `before_start`); `conflict` (`reason`
+  `account_taken`, `duplicate_name`, `archived`, `linked`, `movement_taken`, `payroll_active`,
+  `has_contributions`, `component_taken` with the other fund's name in `other`).
+- The export's section `funds` reads the engine of the Funds pages (decision D8): `paidIn` and `gain`
+  are those of «All», `value` today's.
+
 ## 2026-11-21 · imports (0.51.0)
 
 - `POST /imports` (`imports`) is now in the OpenAPI document as `upload_document`, with the same

@@ -32,7 +32,7 @@ import {
 const FORECAST_EXAMPLE = {
   monthly: "350.00",
   rates: [0.02, 0.04, 0.06],
-  rows: [{ years: 1, values: ["16700.00", "16900.00", "17100.00"] }],
+  rows: [{ years: 1, paidIn: "4200.00", values: ["16700.00", "16900.00", "17100.00"] }],
 };
 
 export const getFunds = defineRoute({

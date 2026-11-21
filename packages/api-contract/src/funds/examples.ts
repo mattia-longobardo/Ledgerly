@@ -61,12 +61,12 @@ export const LINE_EXAMPLE = {
 
 export const GAIN_EXAMPLE = {
   grain: "month",
-  bars: [{ from: "2026-09-01", to: "2026-09-30", funds: [{ fundId: FUND_ID, gain: "48.10" }] }],
+  bars: [
+    { from: "2026-09-01", to: "2026-09-30", total: "48.10", funds: [{ fundId: FUND_ID, gain: "48.10" }] },
+  ],
 } as const;
 
-export const VALUES_EXAMPLE = [
-  { on: "2026-10-01", value: "12450.00", funds: [{ fundId: FUND_ID, value: "12450.00" }] },
-] as const;
+export const VALUES_EXAMPLE = [{ on: "2026-10-01", value: "12450.00", paid: "11050.00" }] as const;
 
 export const SOURCE_EXAMPLE = {
   id: SOURCE_ID,

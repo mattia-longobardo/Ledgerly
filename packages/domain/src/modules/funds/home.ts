@@ -8,6 +8,8 @@ import {
   describedDay,
   type FundFlow,
   fundValueAt,
+  lastUpTo,
+  sortedPoints,
   type FundPeriod,
   measurePeriod,
   type MoneyOrigin,
@@ -17,7 +19,6 @@ import {
   type ValuePoint,
   yearPeriod,
 } from "./period";
-import { lastUpTo, sortedPoints } from "./points";
 
 /**
  * What the address cannot mean (§6): a year still to come goes back to the year running. A year older

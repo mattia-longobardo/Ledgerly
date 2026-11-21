@@ -2,7 +2,6 @@ import { type Cents } from "../../shared/money";
 import { addDays, type CivilDate, lastDayOfMonth, type MonthKey, monthKey } from "../../shared/dates";
 import { SOURCE_PRECEDENCE } from "../accounts";
 import { moneyWeighted, type Xirr } from "../../shared/returns";
-import { lastUpTo } from "./points";
 import { type MovementLike, valuePoints } from "./pension/metrics";
 import { accruedTotal, type OperationLike, pendingQuarters, type QuarterStatus } from "./pension/reconcile";
 import { netOfFees, NO_FEES, type PensionFees } from "./pension/rules";
@@ -50,6 +49,22 @@ export function latestDocumented<T extends EntryLike>(entries: readonly T[]): T 
 export function fundValueAt<T extends ValuePoint>(points: readonly T[], on: CivilDate): T | null {
   return lastUpTo(points, closingDay(on));
 }
+
+/** A dated amount: a documented value of a fund. */
+interface Dated {
+  on: CivilDate;
+}
+
+/** Oldest first. */
+export const sortedPoints = <T extends Dated>(points: readonly T[]): T[] =>
+  [...points].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : 0));
+
+/** The newest point on or before a day; `null` when there is none. */
+export const lastUpTo = <T extends Dated>(points: readonly T[], on: CivilDate): T | null => {
+  let found: T | null = null;
+  for (const point of points) if (point.on <= on && (found === null || point.on > found.on)) found = point;
+  return found;
+};
 
 export interface ValuePoint {
   on: CivilDate;

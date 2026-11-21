@@ -12718,7 +12718,10 @@
                             "type": "string"
                           },
                           "color": {
-                            "type": "string"
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           },
                           "accountId": {
                             "type": "string",
@@ -12729,215 +12732,222 @@
                             "type": "string"
                           },
                           "line": {
-                            "type": "object",
-                            "properties": {
-                              "fundId": {
-                                "type": "string",
-                                "format": "uuid",
-                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                              },
-                              "status": {
-                                "type": "string",
-                                "enum": [
-                                  "measured",
-                                  "no_value_in_period",
-                                  "never_valued"
-                                ]
-                              },
-                              "start": {
-                                "anyOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "on": {
-                                        "type": "string"
-                                      },
-                                      "value": {
-                                        "type": "string",
-                                        "pattern": "^-?\\d+\\.\\d{2}$"
-                                      }
-                                    },
-                                    "required": [
-                                      "on",
-                                      "value"
-                                    ]
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "end": {
-                                "anyOf": [
-                                  {
-                                    "type": "object",
-                                    "properties": {
-                                      "on": {
-                                        "type": "string"
-                                      },
-                                      "value": {
-                                        "type": "string",
-                                        "pattern": "^-?\\d+\\.\\d{2}$"
-                                      }
-                                    },
-                                    "required": [
-                                      "on",
-                                      "value"
-                                    ]
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "gain": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "pattern": "^-?\\d+\\.\\d{2}$"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "market": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "pattern": "^-?\\d+\\.\\d{2}$"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "fees": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "pattern": "^-?\\d+\\.\\d{2}$"
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "feesPartial": {
-                                "type": "boolean"
-                              },
-                              "rate": {
-                                "type": [
-                                  "number",
-                                  "null"
-                                ]
-                              },
-                              "xirr": {
-                                "anyOf": [
-                                  {
-                                    "oneOf": [
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "status": {
-                                            "type": "string",
-                                            "const": "ok"
-                                          },
-                                          "rate": {
-                                            "type": "number"
-                                          }
-                                        },
-                                        "required": [
-                                          "status",
-                                          "rate"
-                                        ]
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "status": {
-                                            "type": "string",
-                                            "const": "none"
-                                          }
-                                        },
-                                        "required": [
-                                          "status"
-                                        ]
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "status": {
-                                            "type": "string",
-                                            "const": "multiple"
-                                          }
-                                        },
-                                        "required": [
-                                          "status"
-                                        ]
-                                      }
-                                    ]
-                                  },
-                                  {
-                                    "type": "null"
-                                  }
-                                ]
-                              },
-                              "paidIn": {
-                                "type": "string",
-                                "pattern": "^-?\\d+\\.\\d{2}$"
-                              },
-                              "origin": {
+                            "anyOf": [
+                              {
                                 "type": "object",
                                 "properties": {
-                                  "you": {
+                                  "fundId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "enum": [
+                                      "measured",
+                                      "no_value_in_period",
+                                      "never_valued"
+                                    ]
+                                  },
+                                  "start": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "on": {
+                                            "type": "string"
+                                          },
+                                          "value": {
+                                            "type": "string",
+                                            "pattern": "^-?\\d+\\.\\d{2}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "on",
+                                          "value"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "end": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "on": {
+                                            "type": "string"
+                                          },
+                                          "value": {
+                                            "type": "string",
+                                            "pattern": "^-?\\d+\\.\\d{2}$"
+                                          }
+                                        },
+                                        "required": [
+                                          "on",
+                                          "value"
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "gain": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "market": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "fees": {
+                                    "anyOf": [
+                                      {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "feesPartial": {
+                                    "type": "boolean"
+                                  },
+                                  "rate": {
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ]
+                                  },
+                                  "xirr": {
+                                    "anyOf": [
+                                      {
+                                        "oneOf": [
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "status": {
+                                                "type": "string",
+                                                "const": "ok"
+                                              },
+                                              "rate": {
+                                                "type": "number"
+                                              }
+                                            },
+                                            "required": [
+                                              "status",
+                                              "rate"
+                                            ]
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "status": {
+                                                "type": "string",
+                                                "const": "none"
+                                              }
+                                            },
+                                            "required": [
+                                              "status"
+                                            ]
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "status": {
+                                                "type": "string",
+                                                "const": "multiple"
+                                              }
+                                            },
+                                            "required": [
+                                              "status"
+                                            ]
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  },
+                                  "paidIn": {
                                     "type": "string",
                                     "pattern": "^-?\\d+\\.\\d{2}$"
                                   },
-                                  "employer": {
+                                  "origin": {
+                                    "type": "object",
+                                    "properties": {
+                                      "you": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "employer": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "tfr": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      },
+                                      "other": {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+\\.\\d{2}$"
+                                      }
+                                    },
+                                    "required": [
+                                      "you",
+                                      "employer",
+                                      "tfr",
+                                      "other"
+                                    ]
+                                  },
+                                  "notInValue": {
                                     "type": "string",
                                     "pattern": "^-?\\d+\\.\\d{2}$"
                                   },
-                                  "tfr": {
-                                    "type": "string",
-                                    "pattern": "^-?\\d+\\.\\d{2}$"
-                                  },
-                                  "other": {
+                                  "accrued": {
                                     "type": "string",
                                     "pattern": "^-?\\d+\\.\\d{2}$"
                                   }
                                 },
                                 "required": [
-                                  "you",
-                                  "employer",
-                                  "tfr",
-                                  "other"
+                                  "fundId",
+                                  "status",
+                                  "start",
+                                  "end",
+                                  "gain",
+                                  "market",
+                                  "fees",
+                                  "feesPartial",
+                                  "rate",
+                                  "xirr",
+                                  "paidIn",
+                                  "origin",
+                                  "notInValue",
+                                  "accrued"
                                 ]
                               },
-                              "notInValue": {
-                                "type": "string",
-                                "pattern": "^-?\\d+\\.\\d{2}$"
-                              },
-                              "accrued": {
-                                "type": "string",
-                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              {
+                                "type": "null"
                               }
-                            },
-                            "required": [
-                              "fundId",
-                              "status",
-                              "start",
-                              "end",
-                              "gain",
-                              "market",
-                              "fees",
-                              "feesPartial",
-                              "rate",
-                              "xirr",
-                              "paidIn",
-                              "origin",
-                              "notInValue",
-                              "accrued"
                             ]
                           },
                           "valueToday": {
@@ -12995,6 +13005,17 @@
                               "to": {
                                 "type": "string"
                               },
+                              "total": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "funds": {
                                 "type": "array",
                                 "items": {
@@ -13020,6 +13041,7 @@
                             "required": [
                               "from",
                               "to",
+                              "total",
                               "funds"
                             ]
                           }
@@ -13042,32 +13064,15 @@
                             "type": "string",
                             "pattern": "^-?\\d+\\.\\d{2}$"
                           },
-                          "funds": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "fundId": {
-                                  "type": "string",
-                                  "format": "uuid",
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                                },
-                                "value": {
-                                  "type": "string",
-                                  "pattern": "^-?\\d+\\.\\d{2}$"
-                                }
-                              },
-                              "required": [
-                                "fundId",
-                                "value"
-                              ]
-                            }
+                          "paid": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
                           }
                         },
                         "required": [
                           "on",
                           "value",
-                          "funds"
+                          "paid"
                         ]
                       }
                     },
@@ -13966,7 +13971,10 @@
                           "type": "string"
                         },
                         "color": {
-                          "type": "string"
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         },
                         "accountId": {
                           "type": "string",
@@ -14470,6 +14478,17 @@
                               "to": {
                                 "type": "string"
                               },
+                              "total": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "funds": {
                                 "type": "array",
                                 "items": {
@@ -14495,6 +14514,7 @@
                             "required": [
                               "from",
                               "to",
+                              "total",
                               "funds"
                             ]
                           }
@@ -14517,32 +14537,15 @@
                             "type": "string",
                             "pattern": "^-?\\d+\\.\\d{2}$"
                           },
-                          "funds": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "fundId": {
-                                  "type": "string",
-                                  "format": "uuid",
-                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                                },
-                                "value": {
-                                  "type": "string",
-                                  "pattern": "^-?\\d+\\.\\d{2}$"
-                                }
-                              },
-                              "required": [
-                                "fundId",
-                                "value"
-                              ]
-                            }
+                          "paid": {
+                            "type": "string",
+                            "pattern": "^-?\\d+\\.\\d{2}$"
                           }
                         },
                         "required": [
                           "on",
                           "value",
-                          "funds"
+                          "paid"
                         ]
                       }
                     },
@@ -14569,16 +14572,28 @@
                                 "minimum": -9007199254740991,
                                 "maximum": 9007199254740991
                               },
+                              "paidIn": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
                               "values": {
                                 "type": "array",
                                 "items": {
-                                  "type": "string",
-                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
                                 }
                               }
                             },
                             "required": [
                               "years",
+                              "paidIn",
                               "values"
                             ]
                           }
@@ -15452,15 +15467,32 @@
                               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                             },
                             "status": {
-                              "type": "string"
+                              "type": "string",
+                              "enum": [
+                                "found",
+                                "awaited",
+                                "missing",
+                                "none"
+                              ]
                             },
-                            "accountName": {
+                            "on": {
                               "type": [
                                 "string",
                                 "null"
                               ]
                             },
-                            "nextOn": {
+                            "amount": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "pattern": "^-?\\d+\\.\\d{2}$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "accountName": {
                               "type": [
                                 "string",
                                 "null"
@@ -15470,8 +15502,9 @@
                           "required": [
                             "sourceId",
                             "status",
-                            "accountName",
-                            "nextOn"
+                            "on",
+                            "amount",
+                            "accountName"
                           ]
                         },
                         {
@@ -17441,7 +17474,10 @@
                           "type": "string"
                         },
                         "color": {
-                          "type": "string"
+                          "type": [
+                            "string",
+                            "null"
+                          ]
                         },
                         "accountId": {
                           "type": "string",

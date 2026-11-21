@@ -603,5 +603,15 @@
     "file": "apps/web/src/modules/funds/removed.test.ts",
     "decision": "FND-12",
     "reason": "the schema of funds is a folder of parts (rule Q6): the one file that names the tariffs' table is now its part and the folder's index; the check and its verdict are the same"
+  },
+  {
+    "file": "apps/api/src/meta.test.ts",
+    "decision": "R2 funds",
+    "reason": "GET /meta lists the capability of the routes of funds, which this step serves: one name added to the expected list; no other value changed"
+  },
+  {
+    "file": "tools/baselines.itest.ts",
+    "decision": "R2 funds",
+    "reason": "the REST and MCP answers of the reference user now hold GET /funds, GET /funds/{id}, get_funds and get_fund too: answers added; no existing answer or assertion changed"
   }
 ]

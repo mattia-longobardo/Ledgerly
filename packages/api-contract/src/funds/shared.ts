@@ -159,8 +159,8 @@ const fundRef = z.object({
   state: z.enum(FUND_STATES),
   /** The currency of the account that holds the value. */
   currency: z.string(),
-  /** The colour of the fund in the charts: its account's, or the palette's by position. */
-  color: z.string(),
+  /** The colour of the fund's account; null: the palette's colour by the fund's place in the list. */
+  color: z.string().nullable(),
   accountId: id(),
   accountName: z.string(),
 });
@@ -169,16 +169,17 @@ const fundRef = z.object({
 const gainBar = z.object({
   from: civilDate(),
   to: civilDate(),
-  /** The gain of each fund in the bar; a fund with no measure there is absent. */
+  /** Null when no fund has a reading in the bar: a gap, never a zero. */
+  total: money().nullable(),
+  /** The gain of each fund in the bar; a fund with no reading there is absent. */
   funds: z.array(z.object({ fundId: id(), gain: money() })),
 });
 
-/** The value chart: the portfolio's value on each day a fund was read. */
-const valuePoint = z.object({
-  on: civilDate(),
-  value: money(),
-  funds: z.array(z.object({ fundId: id(), value: money() })),
-});
+/**
+ * The value chart: one point per reading. Each fund counts with its own last reading and only the
+ * money that reading could see, so the gap between the two lines is always a documented gain.
+ */
+const valuePoint = z.object({ on: civilDate(), value: money(), paid: money() });
 
 /** The Funds home (funds-ux §5-§6): what the page, `get_funds` and the export of a period show. */
 export const fundsHome = z.object({
@@ -186,7 +187,9 @@ export const fundsHome = z.object({
   /** Σ of the open funds' last values up to today. */
   valueToday: money().nullable(),
   summary: measure,
-  funds: z.array(fundRef.extend({ line: fundLine, valueToday: money().nullable(), stale: z.boolean() })),
+  funds: z.array(
+    fundRef.extend({ line: fundLine.nullable(), valueToday: money().nullable(), stale: z.boolean() }),
+  ),
   gain: z.object({ grain: z.enum(GAIN_GRAINS), bars: z.array(gainBar) }),
   values: z.array(valuePoint),
   /** The years of the period, newest first, each with its measure: the table of the «All» period. */
@@ -218,7 +221,15 @@ const forecast = z.object({
   monthly: money(),
   /** The hypothesis rates, fractions. The fund's own rate is not one of them (decision 2 of §9). */
   rates: z.array(z.number()),
-  rows: z.array(z.object({ years: z.number().int(), values: z.array(money()) })),
+  rows: z.array(
+    z.object({
+      years: z.number().int(),
+      /** What will have been paid in, if the present rhythm holds. */
+      paidIn: money(),
+      /** The value at each rate; null with no value to grow. */
+      values: z.array(money().nullable()),
+    }),
+  ),
 });
 
 /** A fund's Overview tab: the fund, its measure in the period, its charts and its projection. */
@@ -315,9 +326,11 @@ export const fundContributions = z.object({
   debit: z
     .object({
       sourceId: id(),
-      status: z.string(),
+      /** The running period's debit: found (on its day), awaited, or missing (by a day). */
+      status: z.enum(["found", "awaited", "missing", "none"]),
+      on: civilDate().nullable(),
+      amount: money().nullable(),
       accountName: z.string().nullable(),
-      nextOn: civilDate().nullable(),
     })
     .nullable(),
 });

@@ -4,17 +4,17 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101089,
-    "duplicatedLines": 16214,
-    "percent": 16.04,
-    "blocks": 1220
+    "lines": 101786,
+    "duplicatedLines": 16435,
+    "percent": 16.15,
+    "blocks": 1238
   },
   "units": {
     "api": {
-      "lines": 3431,
-      "duplicatedLines": 646,
-      "percent": 18.83,
-      "blocks": 58
+      "lines": 4000,
+      "duplicatedLines": 813,
+      "percent": 20.32,
+      "blocks": 71
     },
     "app": {
       "lines": 24907,
@@ -36,9 +36,9 @@
     },
     "modules/accounts": {
       "lines": 5130,
-      "duplicatedLines": 974,
-      "percent": 18.99,
-      "blocks": 70
+      "duplicatedLines": 981,
+      "percent": 19.12,
+      "blocks": 71
     },
     "modules/budgets": {
       "lines": 1525,
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 10573,
-      "duplicatedLines": 1953,
-      "percent": 18.47,
-      "blocks": 148
+      "lines": 10701,
+      "duplicatedLines": 1998,
+      "percent": 18.67,
+      "blocks": 152
     },
     "modules/imports": {
       "lines": 888,
@@ -162,8 +162,8 @@
     },
     "platform/export": {
       "lines": 566,
-      "duplicatedLines": 212,
-      "percent": 37.46,
+      "duplicatedLines": 213,
+      "percent": 37.63,
       "blocks": 10
     },
     "platform/format": {
@@ -222,8 +222,8 @@
     },
     "platform/integrations/trek": {
       "lines": 973,
-      "duplicatedLines": 82,
-      "percent": 8.43,
+      "duplicatedLines": 83,
+      "percent": 8.53,
       "blocks": 6
     },
     "platform/integrations/wallet": {
@@ -412,12 +412,14 @@
     "api/accounts/dto.ts": 51,
     "api/accounts/routes.ts": 44,
     "api/budgets/dto.ts": 10,
+    "api/funds/dto.ts": 75,
+    "api/funds/routes.ts": 86,
     "api/interests/dto.ts": 24,
     "api/interests/routes.ts": 32,
     "api/payroll/dto.ts": 24,
-    "api/payroll/routes.ts": 34,
-    "api/pockets/dto.ts": 32,
-    "api/pockets/routes.ts": 54,
+    "api/payroll/routes.ts": 36,
+    "api/pockets/dto.ts": 34,
+    "api/pockets/routes.ts": 55,
     "api/settings/categories.ts": 39,
     "api/settings/category-moves.ts": 14,
     "api/settings/connections.ts": 16,
@@ -426,7 +428,7 @@
     "api/subscriptions/dto.ts": 38,
     "api/subscriptions/routes.ts": 63,
     "api/timeoff/dto.ts": 9,
-    "api/timeoff/routes.ts": 34,
+    "api/timeoff/routes.ts": 35,
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 26,
     "api/transactions/routes.ts": 12,
@@ -543,7 +545,7 @@
     "app/(auth)/sign-in/sign-in-form.tsx": 8,
     "app/(auth)/sign-in/two-factor/challenge-form.tsx": 6,
     "app/not-found.tsx": 12,
-    "modules/accounts/calls.ts": 33,
+    "modules/accounts/calls.ts": 40,
     "modules/accounts/jobs.ts": 18,
     "modules/accounts/queries/directory.ts": 6,
     "modules/accounts/queries/index.ts": 141,
@@ -569,7 +571,7 @@
     "modules/budgets/ui/add-budget.tsx": 45,
     "modules/budgets/ui/budgets-table.tsx": 49,
     "modules/budgets/ui/overview-card.tsx": 18,
-    "modules/funds/actions.ts": 44,
+    "modules/funds/actions.ts": 51,
     "modules/funds/home-queries.ts": 8,
     "modules/funds/jobs.ts": 8,
     "modules/funds/overview.ts": 48,
@@ -579,6 +581,7 @@
     "modules/funds/pension/service.ts": 99,
     "modules/funds/queries/detail.ts": 22,
     "modules/funds/queries/lists.ts": 6,
+    "modules/funds/queries/views.ts": 38,
     "modules/funds/schema/funds.ts": 124,
     "modules/funds/schema/pension.ts": 67,
     "modules/funds/schema/register.ts": 126,
@@ -755,7 +758,7 @@
     "platform/auth/people.ts": 33,
     "platform/auth/profile.ts": 14,
     "platform/auth/schema.ts": 69,
-    "platform/export/service.ts": 212,
+    "platform/export/service.ts": 213,
     "platform/fx/rules.ts": 31,
     "platform/fx/sources.ts": 9,
     "platform/holidays/schema.ts": 52,
@@ -774,7 +777,7 @@
     "platform/integrations/service/sources.ts": 76,
     "platform/integrations/status.ts": 20,
     "platform/integrations/trek/client.ts": 64,
-    "platform/integrations/trek/sync.ts": 18,
+    "platform/integrations/trek/sync.ts": 19,
     "platform/integrations/wallet/categories.ts": 84,
     "platform/integrations/wallet/client.ts": 80,
     "platform/integrations/wallet/mapping.ts": 33,

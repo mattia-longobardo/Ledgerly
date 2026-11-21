@@ -15,8 +15,8 @@ import {
   type SourceForm,
   sourceInputOf,
 } from "@ledgerly/domain/funds";
-import type { Component, Decision } from "@ledgerly/domain/funds";
-import { clearDecision, decideDifference } from "@ledgerly/domain/funds";
+import type { Component } from "@ledgerly/domain/funds";
+import { acceptDifference, clearDecision } from "@ledgerly/domain/funds";
 import {
   addContribution,
   addFee,
@@ -267,39 +267,24 @@ export async function proposeDebitMatchAction(
 
 // ——— The reviewer's word on a difference —————————————————————————————————————————————————————
 
+/** What the page sends: the period and the component, with the note. The numbers are the server's. */
 interface DecisionFormInput {
   year: number;
   quarter: number;
   component: string;
   note: string;
-  differenceCents: string;
-  accruedCents: string | null;
-  creditedCents: string | null;
-  competenceIds: string[];
-  operationIds: string[];
 }
-
-const decimal = z.string().regex(/^-?\d+(\.\d{1,2})?$/);
 
 export async function decideDifferenceAction(
   fundId: string,
   input: DecisionFormInput,
 ): Promise<ActionResult> {
   return run(fundId, async (ctx) => {
-    // Cents arrive as the integer text the page printed in `data-` attributes.
-    const cents = (value: string | null) =>
-      value === null ? null : BigInt(decimal.parse(value).replace(".", ""));
-    await decideDifference(ctx, fundId, {
+    await acceptDifference(ctx, fundId, {
       year: z.number().int().min(1990).max(2200).parse(input.year),
       quarter: input.quarter,
       component: input.component as Component,
-      decision: "accepted_difference" as Decision,
       note: input.note,
-      differenceCents: cents(input.differenceCents)!,
-      accruedCents: cents(input.accruedCents),
-      creditedCents: cents(input.creditedCents),
-      competenceIds: input.competenceIds,
-      operationIds: input.operationIds,
     });
   });
 }
