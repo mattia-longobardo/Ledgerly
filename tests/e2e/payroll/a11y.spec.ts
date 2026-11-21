@@ -31,6 +31,20 @@ const OVERLAYS: Screen[] = [
       await settledDialog(page);
     },
   },
+  {
+    name: "the add payslips dialog, with its files",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/payroll");
+      await settled(page);
+      await page.getByRole("button", { name: /^(Add payslip|Aggiungi cedolino)$/ }).first().click();
+      await settledDialog(page);
+      await page.locator('[role="dialog"] input[type="file"]').setInputFiles([
+        { name: "payslip.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-") },
+      ]);
+    },
+  },
 ];
 
 test.describe("every screen", () => audit(PAGES));
