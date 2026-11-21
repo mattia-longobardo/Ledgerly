@@ -12,6 +12,7 @@
     "./funds": "./src/funds/index.ts",
     "./imports": "./src/imports/index.ts",
     "./interests": "./src/interests/index.ts",
+    "./investments": "./src/investments/index.ts",
     "./payroll": "./src/payroll/index.ts",
     "./pockets": "./src/pockets/index.ts",
     "./settings": "./src/settings/index.ts",

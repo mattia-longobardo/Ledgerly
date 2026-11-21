@@ -3,4 +3,4 @@
 export { PERIOD_KEYS, SECTION_PRESETS, periodSpan, sectionPeriod } from "./period";
 export type { PnlPeriod } from "./pnl";
 export { PRODUCTS } from "./rules";
-export type { AdjustmentClass, AssetClass, InvestmentCategory } from "./rules";
+export type { AssetClass, InvestmentCategory } from "./rules";

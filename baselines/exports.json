@@ -108,6 +108,11 @@
     "SETTLEMENTS",
     "interests"
   ],
+  "packages/api-contract/src/investments/index.ts": [
+    "connection",
+    "investments",
+    "register"
+  ],
   "packages/api-contract/src/payroll/index.ts": [
     "CODE_ROLES",
     "FIELD_GROUPS",
@@ -497,7 +502,6 @@
     "wireInterests"
   ],
   "packages/domain/src/modules/investments/client.ts": [
-    "AdjustmentClass",
     "AssetClass",
     "InvestmentCategory",
     "PERIOD_KEYS",

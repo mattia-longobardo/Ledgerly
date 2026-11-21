@@ -293,6 +293,18 @@ export function parseAmount(input: string, format: NumberFormat): Cents {
 }
 
 /**
+ * A quantity or a unit price as a person types it, as the plain decimal of the wire ("1.234,5" →
+ * "1234.5" in Italian): the separators of `parseAmount`, without its two decimals. The server reads
+ * the digits; empty is a `RangeError`, as for an amount.
+ */
+export function plainDecimalOf(input: string, format: NumberFormat): string {
+  const cleaned = input.replace(/[\s\u00a0\u202f]/g, "").replace(/\u2212/g, "-");
+  if (cleaned === "") throw new RangeError("Empty number");
+  const { decimal, group } = numberSeparators(format);
+  return cleaned.split(group).join("").replace(decimal, ".");
+}
+
+/**
  * An instant as a connection or a job shows it: the civil day in the person's zone (spec §8.5) and
  * the clock, because an hourly sync is told apart by its time of day. In 24 hours, as a schedule is
  * written.

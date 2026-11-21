@@ -11,12 +11,13 @@ import {
 } from "@ledgerly/domain/investments";
 import type { PnlPeriod } from "@ledgerly/domain/investments/client";
 import { ensureAssetSeed } from "@ledgerly/domain/investments";
-import type { ConnectableProvider, OperationSummary, ServiceContext } from "@/modules/investments/ui/dialogs";
+import type { ConnectableProvider, OperationSummary, ServiceContext } from "@/modules/investments/client";
 import type { ActivityRow } from "@ledgerly/domain/investments";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { civilDateIn, type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/domain/platform/format";
+import { centsToDecimal } from "@ledgerly/format/cents";
 
 /**
  * The book of the service, read once per request (audit INV-4): the layout, the page of a tab and
@@ -51,8 +52,6 @@ export function serviceContextOf(detail: ServiceDetail, ctx: Ctx): ServiceContex
   return {
     accountId: summary.account.id,
     name: summary.account.name,
-    category: summary.investment.category,
-    providerName: detail.sync ? (connectableProvider(detail.sync.provider)?.name ?? null) : null,
     currency: detail.currency,
     numberFormat: ctx.numberFormat,
     locale: ctx.locale,
@@ -61,17 +60,6 @@ export function serviceContextOf(detail: ServiceDetail, ctx: Ctx): ServiceContex
     synced: summary.origin === "synced",
     // A manual service writes its value only on an account typed by hand, not one Wallet reads.
     valueEditable: summary.investment.provider === "manual" && summary.account.origin === "manual",
-    valueCents: summary.valueCents,
-    assets: detail.assets.map((asset) => ({
-      id: asset.id,
-      name: asset.name,
-      class: asset.class,
-      symbol: asset.symbol,
-      isin: asset.isin,
-      currency: asset.currency,
-    })),
-    coveredProducts: detail.coveredProducts,
-    linkOptions: detail.linkOptions,
   };
 }
 
@@ -132,13 +120,6 @@ export function operationOf(row: ActivityRow): OperationSummary {
     kind: row.leg.kind,
     on: row.on,
     origin: row.origin,
-    note: row.note,
-    amountCents: row.leg.amountCents,
-    validUntil: row.leg.validUntil,
-    transactionId: row.transactionId,
-    holdingId: row.leg.holdingId,
-    holdingName: row.leg.assetName,
-    unitPriceText: row.leg.unitPrice,
-    adjustmentClass: row.adjustmentClass,
+    amount: centsToDecimal(row.leg.amountCents),
   };
 }

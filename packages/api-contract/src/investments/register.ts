@@ -36,7 +36,7 @@ export const createManualService = defineRoute({
     "Makes an investment or crypto account of Accounts a manual service: its value stays the account's " +
     "balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another " +
     "type, or already a service.",
-  actions: ["createManualServiceAction"],
+  actions: [],
   body: manualServiceBody,
   response: z.object({ accountId: id() }),
   status: 201,
@@ -54,7 +54,7 @@ export const updateServiceUrl = defineRoute({
   scope: "write",
   capability: "investments",
   summary: "Changes the web address of a service; an empty one removes it.",
-  actions: ["updateServiceUrlAction"],
+  actions: [],
   params: byService,
   body: urlBody,
   response: null,
@@ -72,7 +72,7 @@ export const updateServiceValue = defineRoute({
   summary:
     "«Update value» of a manual service: the value read at the broker on a day, written as the manual " +
     "balance of its account. `not_editable` on an account a provider reads.",
-  actions: ["updateServiceValueAction"],
+  actions: [],
   params: byService,
   body: valueBody,
   response: null,
@@ -91,7 +91,7 @@ export const recordOperation = defineRoute({
     "Writes a valuation, a sale, a close or an income on a service (not in the future). A deposit, a " +
     "withdrawal, an account valuation or a correction comes from Accounts or the provider: `409` " +
     "`not_editable`. Answers the event's id.",
-  actions: ["recordOperationAction"],
+  actions: [],
   params: byService,
   body: operationBody,
   response: created,
@@ -120,7 +120,7 @@ export const deleteOperation = defineRoute({
   scope: "write",
   capability: "investments",
   summary: "Deletes an operation written by hand; its legs are kept as revisions.",
-  actions: ["deleteOperationAction"],
+  actions: [],
   params: byEvent,
   response: null,
   status: 204,
@@ -137,7 +137,7 @@ export const reconcileHolding = defineRoute({
   summary:
     "A dated decision on a manual position the provider's reading may cover: covered by the provider, " +
     "partly (`quantity`), outside its scope (`product`), or reopened.",
-  actions: ["reconcileAction"],
+  actions: [],
   params: z.object({ accountId: id(), holdingId: id() }),
   body: reconciliationBody,
   response: null,
@@ -162,7 +162,7 @@ export const confirmZero = defineRoute({
   scope: "write",
   capability: "investments",
   summary: "Confirms that a reading of zero is real: the service was emptied.",
-  actions: ["confirmZeroAction"],
+  actions: [],
   params: z.object({ accountId: id(), readingId: id() }),
   response: null,
   status: 204,
@@ -179,7 +179,7 @@ export const linkTransfer = defineRoute({
   summary:
     "Links a withdrawal and a deposit of two services as one transfer, as the proposals pair them: the " +
     "portfolio leaves it out, each service keeps it as a flow. Answers the id of the pair.",
-  actions: ["linkTransferAction"],
+  actions: [],
   params: byService,
   body: transferBody,
   response: created,
@@ -199,7 +199,7 @@ export const unlinkTransfer = defineRoute({
   scope: "write",
   capability: "investments",
   summary: "Unlinks the transfer one of whose legs is the event: both are flows again.",
-  actions: ["unlinkTransferAction"],
+  actions: [],
   params: byEvent,
   response: null,
   status: 204,

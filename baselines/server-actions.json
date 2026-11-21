@@ -67,26 +67,6 @@
       "acceptInviteAction"
     ]
   },
-  "apps/web/src/modules/investments/actions.ts": {
-    "closedBy": "R3 of investments",
-    "actions": [
-      "confirmKeyRevokedAction",
-      "confirmZeroAction",
-      "connectProviderAction",
-      "createManualServiceAction",
-      "deleteOperationAction",
-      "disconnectProviderAction",
-      "linkTransferAction",
-      "reconcileAction",
-      "recordOperationAction",
-      "replaceKeyAction",
-      "syncNowAction",
-      "unlinkTransferAction",
-      "updateServiceUrlAction",
-      "updateServiceValueAction",
-      "verifyKeyAction"
-    ]
-  },
   "apps/web/src/modules/users/actions.ts": {
     "closedBy": "revokeOtherSessionsAction kept (web cookie)",
     "actions": [

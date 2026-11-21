@@ -3,7 +3,7 @@ import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getAccount } from "@ledgerly/domain/accounts";
-import { ServiceActions } from "@/modules/investments/ui/dialogs";
+import { ServiceActions } from "@/modules/investments/client";
 import { ServiceCrumb, type ServiceTab, ServiceTabs } from "@/modules/investments/ui/service-nav";
 import { ServicePeriodControl } from "./service-period";
 import { requireSession } from "@/platform/auth/session";

@@ -16,7 +16,7 @@ export const connectProvider = defineRoute({
   summary:
     "Connects a provider's read-only key to an investment or crypto account: checks the key, reads the " +
     "first value and queues the history. `ipRestricted` null: the provider does not say.",
-  actions: ["connectProviderAction"],
+  actions: [],
   body: connectBody,
   response: z.object({ accountId: id(), ipRestricted: z.boolean().nullable() }),
   status: 201,
@@ -40,7 +40,7 @@ export const syncNow = defineRoute({
   summary:
     "«Sync now»: queues a pass of the service's connection and answers before the provider does. " +
     "`cooldown` within a minute of the last pass.",
-  actions: ["syncNowAction"],
+  actions: [],
   params: byService,
   response: null,
   status: 202,
@@ -57,7 +57,7 @@ export const checkKey = defineRoute({
   summary:
     "Checks the key at the provider and records the result. `not_read_only` when it is not provably " +
     "read-only (it can write, or the provider cannot say).",
-  actions: ["verifyKeyAction"],
+  actions: [],
   params: byService,
   response: null,
   status: 204,
@@ -72,7 +72,7 @@ export const replaceKey = defineRoute({
   scope: "session",
   capability: "investments",
   summary: "Replaces the key of a connected service; the old one waits to be confirmed revoked.",
-  actions: ["replaceKeyAction"],
+  actions: [],
   params: byService,
   body: keyBody,
   response: null,
@@ -91,7 +91,7 @@ export const disconnectProvider = defineRoute({
   scope: "write",
   capability: "investments",
   summary: "Disconnects the provider: the service becomes manual and keeps its history.",
-  actions: ["disconnectProviderAction"],
+  actions: [],
   params: byService,
   response: null,
   status: 204,
@@ -106,7 +106,7 @@ export const confirmKeyRevoked = defineRoute({
   scope: "write",
   capability: "investments",
   summary: "Confirms that the retired keys were deleted at the provider.",
-  actions: ["confirmKeyRevokedAction"],
+  actions: [],
   params: byService,
   response: null,
   status: 204,

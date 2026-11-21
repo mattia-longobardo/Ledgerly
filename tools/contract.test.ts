@@ -487,8 +487,11 @@ describe("the Server Actions of funds", () => {
   });
 });
 
-/** The Server Actions of investments (05-refactor.md §5.5) and their routes: every one has a route, none is excluded. */
-const INVESTMENTS_ACTION_FILE = "apps/web/src/modules/investments/actions.ts";
+/**
+ * The Server Actions of investments (05-refactor.md §5.5) and their routes: every one has a route, none
+ * is excluded. R3 deleted them: the pages call the routes (`modules/investments/calls.ts`).
+ */
+const INVESTMENTS_ACTION_FILES: string[] = [];
 
 /** Every code of the domain's refusals: the compiler holds this record to the two unions, no more and no less. */
 const INVESTMENT_CODES: Record<InvestmentErrorCode | SyncErrorCode, true> = {
@@ -519,9 +522,9 @@ const INVESTMENT_CODES: Record<InvestmentErrorCode | SyncErrorCode, true> = {
 };
 
 describe("the Server Actions of investments", () => {
-  const actions = [
-    ...readFileSync(INVESTMENTS_ACTION_FILE, "utf8").matchAll(/^export async function (\w+)/gm),
-  ].map((match) => match[1]);
+  const actions = INVESTMENTS_ACTION_FILES.flatMap((file) =>
+    [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
+  );
   const routed = new Set(INVESTMENTS_ROUTES.flatMap((route) => route.actions));
 
   it("each have a route, and a route names only actions that exist", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAmount } from "./format";
+import { parseAmount, plainDecimalOf } from "./format";
 import {
   formatAmountInput,
   formatDate,
@@ -198,5 +198,17 @@ describe("fractionToPercent", () => {
     expect(fractionToPercent("0.027500")).toBe("2.75");
     expect(fractionToPercent("0.260000")).toBe("26");
     expect(fractionToPercent("0.000125")).toBe("0.0125");
+  });
+});
+
+describe("plainDecimalOf", () => {
+  it("reads a quantity or a price in the person's separators, with every decimal", () => {
+    expect(plainDecimalOf("1.234,56789", "it-IT")).toBe("1234.56789");
+    expect(plainDecimalOf("1,234.5", "en-US")).toBe("1234.5");
+    expect(plainDecimalOf(" 0,5 ", "it-IT")).toBe("0.5");
+  });
+
+  it("refuses an empty field as parseAmount does", () => {
+    expect(() => plainDecimalOf("  ", "it-IT")).toThrow(RangeError);
   });
 });

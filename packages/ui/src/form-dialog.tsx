@@ -2,7 +2,7 @@
 
 // A dialog that is a form (audit UI-DS-11): the fields, the line of the refusal and the two buttons.
 // The caller mounts it only while it is open, so its fields and its error start fresh every time.
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent, ReactNode, RefObject } from "react";
 import { Button } from "./button";
 import { Modal } from "./modal";
 
@@ -17,6 +17,7 @@ export function FormDialog({
   cancelLabel,
   submitLabel,
   className = "flex flex-col gap-3",
+  finalFocus,
   children,
 }: {
   onClose: () => void;
@@ -31,6 +32,8 @@ export function FormDialog({
   submitLabel: string;
   /** The layout of the fields; the error and the buttons span every column of a grid. */
   className?: string;
+  /** The opener, when the dialog is mounted apart from it (a header command). */
+  finalFocus?: RefObject<HTMLElement | null>;
   children: ReactNode;
 }) {
   return (
@@ -40,6 +43,7 @@ export function FormDialog({
       title={title}
       description={description}
       width={width}
+      finalFocus={finalFocus}
     >
       <form onSubmit={onSubmit} noValidate className={className}>
         {children}

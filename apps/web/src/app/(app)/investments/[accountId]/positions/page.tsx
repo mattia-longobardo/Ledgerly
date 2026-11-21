@@ -16,7 +16,7 @@ import {
 import type { HoldingRow } from "@ledgerly/domain/investments";
 import { PRICE_SCALE, QUANTITY_SCALE, unitPriceOf } from "@ledgerly/domain/investments";
 import { formatDecimal } from "@ledgerly/domain/shared/money";
-import { type HoldingSummary, HoldingMenu, ReconcileButton } from "@/modules/investments/ui/dialogs";
+import { type HoldingSummary, HoldingMenu, ReconcileButton } from "@/modules/investments/client";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { periodText } from "@/modules/investments/ui/period-control";
 import { requireSession } from "@/platform/auth/session";

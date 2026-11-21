@@ -10,7 +10,7 @@ import {
   serviceActivity,
   serviceMovements,
 } from "@ledgerly/domain/investments";
-import { LinkTransferButton, OperationMenu, UnlinkTransferButton } from "@/modules/investments/ui/dialogs";
+import { LinkTransferButton, OperationMenu, UnlinkTransferButton } from "@/modules/investments/client";
 import { requireSession } from "@/platform/auth/session";
 import { type MonthKey, today as todayOn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, monthName } from "@ledgerly/domain/platform/format";

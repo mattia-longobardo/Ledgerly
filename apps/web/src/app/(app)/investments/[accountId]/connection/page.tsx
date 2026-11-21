@@ -11,7 +11,7 @@ import {
   ServiceUrlForm,
   SyncButtons,
   DisconnectButton,
-} from "@/modules/investments/ui/dialogs";
+} from "@/modules/investments/client";
 import { KeyCheckLine } from "@/modules/investments/ui/key-check";
 import { productLabel } from "@/modules/investments/ui/labels";
 import { requireSession } from "@/platform/auth/session";

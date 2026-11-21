@@ -3,8 +3,9 @@ import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { accountTypeOf, MANUAL_PROVIDER } from "@ledgerly/domain/investments";
 import { catalogView } from "@ledgerly/domain/investments";
-import { ConnectProviderButton, CreateManualServiceButton } from "@/modules/investments/ui/dialogs";
+import { ConnectProviderButton, CreateManualServiceButton } from "@/modules/investments/client";
 import { requireSession } from "@/platform/auth/session";
+import { centsToDecimal } from "@ledgerly/format/cents";
 import { Badge } from "@ledgerly/ui/badge";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
@@ -24,6 +25,10 @@ export default async function InvestmentsCatalogPage() {
   const t = await getTranslations("investments");
   const view = await catalogView(ctx);
   const sections = ["accounts", "broker", "crypto"] as const;
+  const existing = view.existing.map(({ balanceCents, ...one }) => ({
+    ...one,
+    balance: balanceCents === null ? null : centsToDecimal(balanceCents),
+  }));
   // The providers not connectable yet, closed under one "Coming soon" with their count (C2).
   const planned = view.providers.filter(
     (provider) =>
@@ -61,7 +66,7 @@ export default async function InvestmentsCatalogPage() {
             </p>
           )}
           <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
-            {manual && <CreateManualServiceButton existing={view.existing} numberFormat={ctx.numberFormat} />}
+            {manual && <CreateManualServiceButton existing={existing} numberFormat={ctx.numberFormat} />}
             {connectable && (
               <ConnectProviderButton
                 provider={{
@@ -75,7 +80,7 @@ export default async function InvestmentsCatalogPage() {
                   url: provider.url,
                   revokeUrl: provider.revokeUrl,
                 }}
-                existing={view.existing}
+                existing={existing}
                 numberFormat={ctx.numberFormat}
               />
             )}

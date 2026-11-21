@@ -28,7 +28,50 @@ const { investmentEvents, investmentReadings, investmentReconciliations } =
 const { setSourcesForTests } = await import("@domain/modules/investments/sync");
 const { assetsService, connectTarget, engineService, manualService } =
   await import("../../../../../test/investments");
-const actions = await import("@/modules/investments/actions");
+const { numberSeparators, parseAmount } = await import("@domain/platform/format");
+
+/**
+ * What the Server Action of a sale did, line for line, before R3 deleted it: the fields typed in the
+ * person's number format, read into cents and fixed-point decimals, then the use case.
+ */
+const actions = {
+  async recordOperationAction(
+    accountId: string,
+    input: {
+      kind: "sell";
+      holdingId: string;
+      on: string;
+      quantity: string;
+      unitPrice: string;
+      fee: string;
+      amount: string;
+      note: string;
+    },
+  ) {
+    const ctx = signedIn;
+    const separators = numberSeparators(ctx.numberFormat);
+    const number = (typed: string, scale: number) =>
+      typed.trim() === "" ? null : parseDecimal(investments.plainDecimal(typed, separators), scale);
+    const quantity = number(input.quantity, investments.QUANTITY_SCALE);
+    const unitPrice = number(input.unitPrice, investments.PRICE_SCALE);
+    await investments.recordOperation(ctx, accountId, {
+      kind: input.kind,
+      holdingId: input.holdingId,
+      on: input.on,
+      quantity,
+      unitPrice: quantity === null ? null : unitPrice,
+      amountCents:
+        quantity === null || unitPrice === null
+          ? input.amount.trim() === ""
+            ? null
+            : parseAmount(input.amount, ctx.numberFormat)
+          : null,
+      feeCents: input.fee.trim() === "" ? 0n : parseAmount(input.fee, ctx.numberFormat),
+      note: input.note,
+    });
+    return { ok: true };
+  },
+};
 const { createAccount } = await import("@domain/modules/accounts/service");
 
 const qty = (value: string) => parseDecimal(value, investments.QUANTITY_SCALE);
