@@ -444,7 +444,7 @@ Il P&L del periodo si scompone in parti **additive**; la somma è uguale al P&L 
 > nella home di Funds e nel fondo. Ogni barra è il P&L dell'intervallo diviso per il capitale medio del periodo
 > (lo stesso denominatore del Modified Dietz): è la parte del rendimento del periodo fatta in quell'intervallo. La
 > linea è il cumulato e finisce sulla % in testata. Il capitale si legge da P&L ÷ rendimento del periodo
-> (`returnScale`, `src/modules/investments/ui/chart-data.ts`); senza rendimento o con P&L zero la vista dice che
+> (`returnScale` di `apps/api/src/investments/dto.ts`; il client legge `chart.returns` e `chart.services[].returns`); senza rendimento o con P&L zero la vista dice che
 > non è determinabile. Nelle pagine di dettaglio (un fondo, un servizio) le barre sono verdi per un guadagno e
 > rosse per una perdita; nelle home tengono il colore del fondo o del servizio.
 

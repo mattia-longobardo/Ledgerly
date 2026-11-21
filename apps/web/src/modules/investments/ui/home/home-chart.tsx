@@ -4,7 +4,7 @@
 // by service and bar with its running total, the same as a share of the period's return, or the value
 // by day. The bars, the running total, the returns and the value's sums are fields of the API.
 import { useTranslations } from "next-intl";
-import { asReturns, bestAndWorst, percentAxisLabels, returnScale, toCents } from "@ledgerly/ui/chart-data";
+import { bestAndWorst, percentAxisLabels, toCents } from "@ledgerly/ui/chart-data";
 import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
 import { stackLayers } from "@ledgerly/ui/charts/stack";
 import { StackedArea } from "@ledgerly/ui/charts/stacked-area";
@@ -26,16 +26,12 @@ function useBars(context: HomeContext) {
   const { home, view } = context;
   const { chart } = home;
   const byService = new Map(chart.services.map((one) => [one.accountId, one]));
-  // shortcut: the API answers the returns of the whole portfolio only (`chart.returns`); a service's
-  // layer is scaled here by the hero's P&L and return until `chart.services[].returns` exists.
-  const scale = returnScale(centsOf(home.pnl.parts?.pnl), home.pnl.modifiedDietz);
   const layerOf = (service: HomeService) => {
-    const bars = cents(byService.get(service.accountId)?.bars ?? []);
-    return view === "return" ? asReturns(bars, scale ?? 0) : asNumbers(bars);
+    const one = byService.get(service.accountId);
+    return view === "return" ? (one?.returns ?? []) : asNumbers(cents(one?.bars ?? []));
   };
-  const totals = view === "return" ? chart.returns : asNumbers(cents(chart.bars));
   const line = view === "return" ? chart.cumulativeReturns : asNumbers(cents(chart.cumulative));
-  return { byService, layerOf, totals, line, scale };
+  return { byService, layerOf, line };
 }
 
 /** The chart in words: the period's total, its best and worst bar, what each service added. */
