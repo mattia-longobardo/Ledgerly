@@ -23,11 +23,15 @@ export function serveImports(app: Hono<ApiEnv>, guard: Guard): readonly RouteCon
     try {
       result = await uploadDocuments(ctx, reader, [body.file]);
     } catch (error) {
-      if (error instanceof ImportError) throw new ApiRefusal("invalid");
+      if (error instanceof ImportError) throw new ApiRefusal("invalid", error.code);
       throw error;
     }
     const [refused] = result.refused;
-    if (refused) throw new ApiRefusal(REFUSALS[refused.error] ?? "invalid");
+    if (refused) {
+      const code = REFUSALS[refused.error];
+      // A refusal the contract has no code of its own for is `invalid`, with the use case's in `reason`.
+      throw code ? new ApiRefusal(code) : new ApiRefusal("invalid", refused.error);
+    }
     const [{ document, duplicate }] = result.uploaded;
     const answer = {
       id: document.id,

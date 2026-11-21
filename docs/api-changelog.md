@@ -31,6 +31,9 @@ written before it keeps working.
   `has_contributions`, `component_taken` with the other fund's name in `other`).
 - The export's section `funds` reads the engine of the Funds pages (decision D8): `paidIn` and `gain`
   are those of «All», `value` today's.
+- `POST /imports`: a `400` names the use case's refusal in `reason` (`empty`, `storage_failed`, …);
+  the code stays `invalid`. The contract exports `MAX_FILES` (24), the most files of one upload of a
+  screen.
 
 ## 2026-11-21 · imports (0.51.0)
 

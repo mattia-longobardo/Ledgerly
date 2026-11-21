@@ -20535,7 +20535,7 @@
     "/imports": {
       "post": {
         "operationId": "upload_document",
-        "summary": "Receives one document as `multipart/form-data` (`kind`, `file`) and starts its reading. The format is read from the content: a payslip is a PDF, of at most 10 MiB. The same file sent again is the same document (`duplicate: true`, 200). A fund's kinds are refused with 415 and nothing is kept.",
+        "summary": "Receives one document as `multipart/form-data` (`kind`, `file`) and starts its reading. The format is read from the content: a payslip is a PDF, of at most 10 MiB. The same file sent again is the same document (`duplicate: true`, 200). A fund's kinds are refused with 415 and nothing is kept. A `400` names the use case's refusal in `reason` (`empty`, `storage_failed`, …).",
         "tags": [
           "imports"
         ],

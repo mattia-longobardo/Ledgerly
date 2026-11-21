@@ -618,5 +618,10 @@
     "file": "packages/domain/src/modules/funds/period.test.ts",
     "decision": "FND-10",
     "reason": "a test added: closingDay and describedDay, the rule of the 1st of a month read both ways, undo each other; no existing assertion changed"
+  },
+  {
+    "file": "apps/web/src/platform/api/imports.itest.ts",
+    "decision": "R2 funds, client request on POST /imports",
+    "reason": "a test added: a 400 of POST /imports names the use case's refusal in reason (empty); no existing assertion changed"
   }
 ]

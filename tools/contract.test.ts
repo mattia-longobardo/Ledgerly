@@ -477,6 +477,7 @@ describe("the Server Actions of funds", () => {
 describe("the route of imports", () => {
   it("speaks the vocabulary of the domain", () => {
     expect(importsWire.DOCUMENT_KINDS).toEqual(importsRules.DOCUMENT_KINDS);
+    expect(importsWire.MAX_FILES).toBe(importsRules.MAX_FILES);
   });
 
   it("takes the file as multipart/form-data, and answers 200 for a file already received", () => {

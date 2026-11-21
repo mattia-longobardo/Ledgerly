@@ -68,6 +68,9 @@ export const IN_FLIGHT: readonly DocumentState[] = ["received", "scanning", "ext
 
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
+/** At most this many files in one upload. */
+export const MAX_FILES = 24;
+
 /** Fewer characters of text than this on every page together: the PDF needs OCR (spec D11). */
 export const MIN_TEXT_CHARS = 200;
 

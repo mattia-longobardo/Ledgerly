@@ -181,6 +181,14 @@ describe("POST /imports and the upload of the Payroll screen", () => {
     });
   });
 
+  it("name the use case's refusal of a 400 in its reason", async () => {
+    expect(await upload(alice, new File([], "empty.pdf"))).toEqual({
+      status: 400,
+      body: { error: "invalid", reason: "empty" },
+    });
+    expect(await queued()).toEqual([]);
+  });
+
   it("answer the same on the screen through the route as through the Server Action", async () => {
     const march = new Uint8Array(await twinPdf(MARCH));
     const april = new Uint8Array(await twinPdf(APRIL));

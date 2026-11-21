@@ -1,7 +1,7 @@
 import type { Ctx } from "../../../platform/context";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { enqueue } from "../../../platform/jobs";
-import { type DocumentKind, MAX_DOCUMENT_BYTES } from "../rules";
+import { type DocumentKind, MAX_DOCUMENT_BYTES, MAX_FILES } from "../rules";
 import {
   claimForExtraction,
   type Document,
@@ -113,9 +113,6 @@ export async function readDocument(
     return getDocument(ctx, documentId);
   }
 }
-
-/** At most this many files in one upload. */
-const MAX_FILES = 24;
 
 /** A file as it arrives, before its bytes are read: a `File` of a form. */
 interface IncomingFile {

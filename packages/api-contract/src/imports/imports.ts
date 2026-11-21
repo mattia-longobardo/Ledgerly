@@ -10,6 +10,9 @@ import { DOCUMENT_STATES } from "../payroll/shared";
 // The vocabulary is the domain's (`@ledgerly/domain/imports`): `tools/contract.test.ts` holds it equal.
 export const DOCUMENT_KINDS = ["payslip", "cometa_operations", "cometa_position"] as const;
 
+/** At most this many files in one upload of a screen: one call of the route carries one. */
+export const MAX_FILES = 24;
+
 const DOCUMENT_ID = "3f2a1b0c-9d8e-4f7a-8b6c-5d4e3f2a1b0c";
 
 export const uploadDocument = defineRoute({
@@ -21,7 +24,8 @@ export const uploadDocument = defineRoute({
   summary:
     "Receives one document as `multipart/form-data` (`kind`, `file`) and starts its reading. The format " +
     "is read from the content: a payslip is a PDF, of at most 10 MiB. The same file sent again is the " +
-    "same document (`duplicate: true`, 200). A fund's kinds are refused with 415 and nothing is kept.",
+    "same document (`duplicate: true`, 200). A fund's kinds are refused with 415 and nothing is kept. " +
+    "A `400` names the use case's refusal in `reason` (`empty`, `storage_failed`, …).",
   actions: [],
   bodyFormat: "multipart",
   // No size here: the use case checks it once (IMP-4), after the kind, as before the contract.
