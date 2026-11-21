@@ -89,3 +89,87 @@ export function parseYearQuery(
   const year = Number(Array.isArray(asked) ? asked[0] : asked);
   return Number.isInteger(year) && year >= 1990 && year <= last ? year : current;
 }
+
+/** The presets of Funds and Investments: the four of Expenses, and "All", the whole history. */
+export const SECTION_PRESETS = [...RANGE_PRESETS, "all"] as const;
+type SectionPreset = (typeof SECTION_PRESETS)[number];
+/** These sections open on the year running: a fund has too few values for a month to say much. */
+const DEFAULT_SECTION_PRESET: SectionPreset = "ytd";
+
+/** The period of `GET /funds` and its tabs: all, a calendar year, or custom days. */
+export type SectionApiQuery =
+  { period: "all" } | { period: string } | { period: "custom"; from: string; to: string };
+
+export interface SectionQuery {
+  preset: SectionPreset | null;
+  offset: number;
+  /** `null` under "All", which has no window to step. */
+  range: DateRange | null;
+  params: Params;
+  stepperParams: Params;
+  /** What the address asks the API for: the server measures it and answers its days. */
+  api: SectionApiQuery;
+}
+
+/** A whole calendar year, or the year running up to a day not before today. */
+function yearOfRange(range: DateRange, today: CivilDate): number | null {
+  const year = range.from.slice(0, 4);
+  if (range.from !== `${year}-01-01` || range.to.slice(0, 4) !== year) return null;
+  const whole = range.to === `${year}-12-31`;
+  const running = year === today.slice(0, 4) && range.to >= today;
+  return whole || running ? Number(year) : null;
+}
+
+/** The address's own days, when they are real days in order that start by today. */
+function pickedDays(raw: Raw, today: CivilDate): DateRange | null {
+  const from = civilDate(one(raw.from));
+  const to = civilDate(one(raw.to));
+  return from !== null && to !== null && from <= to && from <= today ? { from, to } : null;
+}
+
+/** The window of a preset or of the picked days, moved back `offset` times; "Year to date" steps by year. */
+function sectionRange(
+  preset: SectionPreset | null,
+  picked: DateRange | null,
+  offset: number,
+  today: CivilDate,
+) {
+  if (preset === "ytd" && offset > 0) {
+    const back = Number(today.slice(0, 4)) - offset;
+    return { from: `${back}-01-01`, to: `${back}-12-31` };
+  }
+  return shiftRange(
+    picked ?? presetRange(preset === null || preset === "all" ? "ytd" : preset, today),
+    -offset,
+  );
+}
+
+/**
+ * The period of Funds and Investments in the address, read as `sectionPeriod` of the server pages read
+ * it: a preset, or the days the picker wrote, moved back by `off` periods of its own length. "Year to
+ * date" steps by calendar year. What it measures is the server's: `api` only names it.
+ */
+export function parseSectionQuery(raw: Raw, today: CivilDate): SectionQuery {
+  const picked = pickedDays(raw, today);
+  const wanted = one(raw.preset);
+  const preset = picked ? null : (SECTION_PRESETS.find((key) => key === wanted) ?? DEFAULT_SECTION_PRESET);
+  const stepperParams: Params = {
+    preset: preset === null || preset === DEFAULT_SECTION_PRESET ? undefined : preset,
+    from: picked?.from,
+    to: picked?.to,
+  };
+  if (preset === "all") {
+    return { preset, offset: 0, range: null, params: stepperParams, stepperParams, api: { period: "all" } };
+  }
+  const offset = Math.max(0, Math.trunc(Number(one(raw.off))) || 0);
+  const range = sectionRange(preset, picked, offset, today);
+  const year = yearOfRange(range, today);
+  return {
+    preset,
+    offset,
+    range,
+    params: { ...stepperParams, off: offset > 0 ? String(offset) : undefined },
+    stepperParams,
+    api: year === null ? { period: "custom", from: range.from, to: range.to } : { period: String(year) },
+  };
+}

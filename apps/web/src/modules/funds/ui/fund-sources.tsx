@@ -1,18 +1,18 @@
+"use client";
+
 import type { Route } from "next";
-import Link from "next/link";
-import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import { useTranslations } from "next-intl";
+import { NULL_DISPLAY } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
-import { sourceFormOf } from "@ledgerly/domain/funds";
-import { calendarOf, type FundDetail } from "@ledgerly/domain/funds";
-import { hasDueDates, nextDueDates, type PayrollComponent } from "@ledgerly/domain/funds";
+import { Link } from "@ledgerly/ui/router";
 import { CompactEmpty } from "./compact-empty";
+import type { Settings } from "./fund-settings";
 import { RebuildCompetencesButton } from "./rebuild-button";
+import type { Say } from "./say";
 import type { SourceSetup } from "./source-dialog";
 import { AddSource, SourceActions } from "./source-list-client";
 import { customDueText, dueDatesText, sourceSummary } from "./source-text";
+import { sourceFormOfRow } from "./wire-forms";
 
 /**
  * The Payroll module is active for every user until release R5a (modules per user). From R5a this
@@ -35,40 +35,34 @@ const CODE_GROUPS = [
  * the section, without its title. One row per source — what it is, what it says, its next due dates
  * and its note — with "Edit" and its menu, then "Add source". The payslip source the fund reads
  * also shows the payslip codes, read only, and "Rebuild from payslips". An archived fund is read
- * only.
+ * only. Every date and count is the server's (`nextDue`, `dueDates`, `contributions`).
  */
-export async function FundSourcesSection({
-  ctx,
-  detail,
-  archived,
-  todayOn,
+export function FundSourcesSection({
+  settings,
+  say,
   accounts,
   movements,
-  taken,
 }: {
-  ctx: Ctx;
-  detail: FundDetail;
-  archived: boolean;
-  todayOn: CivilDate;
+  settings: Settings;
+  say: Say;
   /** The open accounts a recurring debit can be watched on. */
   accounts: readonly { id: string; name: string }[];
   /** The movements "Find from the movements" chooses from. */
   movements: readonly { id: string; label: string }[];
-  /** The payslip components another fund holds already: component → that fund's name. */
-  taken: Partial<Record<PayrollComponent, string>>;
 }) {
-  const t = await getTranslations("funds.sources");
-  const { fund, sources } = detail;
+  const t = useTranslations("funds.sources");
+  const { fund, sources } = settings;
+  const archived = fund.state === "archived";
   const setup: SourceSetup = {
     fundId: fund.id,
     accounts,
     movements,
-    taken,
+    taken: Object.fromEntries(settings.taken.map((one) => [one.component, one.fund])),
     payrollAvailable: PAYROLL_AVAILABLE,
-    todayOn,
-    format: ctx.numberFormat,
-    locale: ctx.locale,
-    currency: detail.currency,
+    todayOn: say.todayOn,
+    format: say.format,
+    locale: say.locale,
+    currency: fund.currency,
   };
   const add = archived ? null : (
     <AddSource
@@ -86,19 +80,10 @@ export async function FundSourcesSection({
     <>
       <ul className="flex flex-col">
         {sources.map((source) => {
-          const form = sourceFormOf(source, ctx.numberFormat);
-          const calendar = calendarOf(source);
-          const custom = calendar.entries.length > 0 ? customDueText(calendar.entries) : null;
-          const due =
-            source.kind === "payroll" && source.accrualPeriod !== null && hasDueDates(calendar)
-              ? nextDueDates(source.accrualPeriod, calendar, todayOn)
-              : [];
-          const accountName =
-            source.accountId === null
-              ? null
-              : (accounts.find((account) => account.id === source.accountId)?.name ??
-                detail.debits.find((debit) => debit.source.id === source.id)?.accountName ??
-                null);
+          const form = sourceFormOfRow(source, say.format);
+          const custom = source.dueDates.length > 0 ? customDueText(source.dueDates) : null;
+          const due = source.kind === "payroll" ? source.nextDue : [];
+          const { accountName } = source;
           return (
             <li
               key={source.id}
@@ -114,9 +99,9 @@ export async function FundSourcesSection({
                   </h3>
                   <p className="text-sm break-words text-muted">
                     {sourceSummary(t, form, {
-                      format: ctx.numberFormat,
-                      locale: ctx.locale,
-                      currency: detail.currency,
+                      format: say.format,
+                      locale: say.locale,
+                      currency: fund.currency,
                       accountName,
                       customDue: custom,
                     })}
@@ -127,7 +112,7 @@ export async function FundSourcesSection({
                     <SourceActions
                       {...setup}
                       source={{ ...form, id: source.id }}
-                      contributions={detail.sourceContributions.get(source.id) ?? 0}
+                      contributions={source.contributions}
                       customDue={custom}
                     />
                   </div>
@@ -135,7 +120,7 @@ export async function FundSourcesSection({
               </div>
               {due.length > 0 && (
                 <p className="text-sm text-muted">
-                  {t("due.next", { dates: dueDatesText(due, ctx.locale) })}
+                  {t("due.next", { dates: dueDatesText(due, say.locale) })}
                 </p>
               )}
               {source.kind === "payroll" && source.employer && (
@@ -147,12 +132,12 @@ export async function FundSourcesSection({
               {source.kind === "payroll" && !PAYROLL_AVAILABLE && (
                 <p className="text-sm text-muted">{t("payrollInactive")}</p>
               )}
-              {source.kind === "payroll" && PAYROLL_AVAILABLE && detail.payroll?.source.id === source.id && (
+              {source.kind === "payroll" && PAYROLL_AVAILABLE && settings.payrollSourceId === source.id && (
                 <div className="mt-1.5 flex flex-col gap-2">
                   <h4 className="text-sm font-medium">{t("codes.title")}</h4>
                   <dl className="flex flex-col gap-1 text-sm">
                     {CODE_GROUPS.map((group) => {
-                      const codes = group.roles.flatMap((role) => detail.codes[role] ?? []);
+                      const codes = group.roles.flatMap((role) => settings.codes[role] ?? []);
                       return (
                         <div
                           key={group.key}

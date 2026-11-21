@@ -42,6 +42,8 @@ test.describe("a fund's page", () => {
         const path = new URL(page.url()).pathname;
         const gain = BigInt((await page.getByTestId("funds-hero").getAttribute("data-cents")) || "0");
         await page.goto(`${path}${query}${query ? "&" : "?"}tab=valuations`);
+        // The tab draws its lines once `/api/v1` answers: the card is there with them.
+        await page.getByTestId("fund-valuations").waitFor();
         const cells = await page
           .getByTestId("line-gain")
           .evaluateAll((list) => list.map((one) => one.getAttribute("data-cents") ?? ""));

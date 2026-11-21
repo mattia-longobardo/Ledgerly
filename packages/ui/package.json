@@ -39,6 +39,7 @@
     "./modal": "./src/modal.tsx",
     "./mutation-result": "./src/mutation-result.ts",
     "./period": "./src/period.ts",
+    "./period-text": "./src/period-text.ts",
     "./period-bar": "./src/period-bar.tsx",
     "./popover": "./src/popover.tsx",
     "./preferences": "./src/preferences.ts",

@@ -328,3 +328,115 @@ describe("funds, old Server Action = new call", () => {
     expect(await heldBy(bob, fundId)).toEqual(before);
   });
 });
+
+/**
+ * The forms the screens open from a row of `/api/v1` are the ones the server pages opened from the
+ * database (`sourceFormOf`, `feeFormOf`, `contributionFormOf`): the same text in every field.
+ */
+describe("funds, the forms of a stored row = the forms of its wire row", () => {
+  it("opens every source, fee and operation with the same fields", async () => {
+    const { sourceFormOf, feeFormOf, contributionFormOf } = await import("@domain/modules/funds/forms");
+    const { fundDetail } = await import("@domain/modules/funds/queries");
+    const wire = await import("./ui/wire-forms");
+    const format = alice.numberFormat;
+    const fund = await funds.createFund(alice, {
+      fund: funds.fundInputOf(FUND),
+      currency: null,
+      value: null,
+      sources: [
+        {
+          kind: "payroll",
+          components: ["worker", "tfr"],
+          accrualPeriod: "quarter",
+          employer: "Datore",
+          due: { day: 20, offsetMonths: 1 },
+          toleranceDays: 10,
+          note: "Nota",
+          keepDueEntries: false,
+        },
+        {
+          kind: "bank_debit",
+          amountCents: 123450n,
+          frequency: { count: 3, unit: "month" },
+          debitDay: 5,
+          accountId: null,
+          payeeMatch: "Previdenza",
+          validFrom: "2024-02-01",
+          validTo: null,
+        },
+        { kind: "manual" },
+      ],
+      fees: [
+        {
+          label: "Quota",
+          basis: "periodic",
+          amountCents: 1200n,
+          rate: null,
+          period: "year",
+          sourceIndex: 0,
+          component: null,
+          validFrom: null,
+          validTo: null,
+          note: "",
+        },
+        {
+          label: "TFR",
+          basis: "per_contribution",
+          amountCents: null,
+          rate: "0.0015",
+          period: null,
+          sourceIndex: 0,
+          component: "tfr",
+          validFrom: null,
+          validTo: "2025-12-31",
+          note: "x",
+        },
+        {
+          label: "Gestione",
+          basis: "on_assets",
+          amountCents: null,
+          rate: "0.0045",
+          period: "year",
+          sourceIndex: null,
+          component: null,
+          validFrom: "2024-01-01",
+          validTo: null,
+          note: "",
+        },
+      ],
+    });
+    const voluntary = { ...newContributionForm("voluntary", "2025-03-10"), amount: "1.000,00", fee: "2,50" };
+    const withdrawal = { ...newContributionForm("other", "2025-06-01"), amount: "300,10", feeUnknown: true };
+    const payroll = {
+      ...newContributionForm("payroll", "2025-04-20"),
+      worker: "100",
+      tfr: "50,5",
+      period: "2025-1",
+    };
+    for (const form of [voluntary, withdrawal, payroll]) {
+      await funds.addContribution(alice, fund.id, funds.contributionInputOf(form, format));
+    }
+    const detail = await fundDetail(alice, fund.id);
+    session = alice;
+    const contract = (await import("@ledgerly/api-contract/funds")).funds;
+    const settings = contract.getFundSettings.response.parse(
+      await (await routes.request(`/funds/${fund.id}/settings`)).json(),
+    );
+    const register = contract.getFundContributions.response.parse(
+      await (await routes.request(`/funds/${fund.id}/contributions?period=all`)).json(),
+    );
+
+    const byId = <T extends { id: string }>(rows: readonly T[]) =>
+      [...rows].sort((a, b) => (a.id < b.id ? -1 : 1));
+    expect(byId(settings.sources).map((row) => wire.sourceFormOfRow(row, format))).toEqual(
+      byId(detail.sources).map((row) => sourceFormOf(row, format)),
+    );
+    expect(byId(settings.fees).map((row) => wire.feeFormOfRow(row, format))).toEqual(
+      byId(detail.fees).map((row) => feeFormOf(row, format)),
+    );
+    expect(byId(register.operations).map((row) => wire.contributionFormOfRow(row, format))).toEqual(
+      byId(detail.operations).map((row) => contributionFormOf(row, format)),
+    );
+    expect(register.operations).toHaveLength(3);
+  });
+});

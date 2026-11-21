@@ -1,34 +1,25 @@
-import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney, formatPercent } from "@ledgerly/domain/platform/format";
-import { assetsCost } from "@ledgerly/domain/funds";
-import { feeValidOn } from "@ledgerly/domain/shared/fees";
-import { feeFormOf } from "@ledgerly/domain/funds";
-import type { FundDetail } from "@ledgerly/domain/funds";
+"use client";
+
+import { useTranslations } from "next-intl";
+import { formatDate, formatMoney, formatPercent } from "@ledgerly/format/format";
 import type { FeeScopeOption } from "./fee-text";
+import type { Settings } from "./fund-settings";
 import { FundFeesList } from "./fund-fees-client";
+import type { Say } from "./say";
+import { cents, feeFormOfRow } from "./wire-forms";
 
 /**
  * Settings › Fees (docs/design/rewrite-plan/ux/n6-pension-fund.md §6.3, §7): the content of the
- * section, without its title. The list, "Add fee", and under them what the fees on assets cost in a
- * year, estimated on the fund's last value: shown and never subtracted, it is already in the value.
+ * section, without its title. The list in the server's order, "Add fee", and under them what the fees
+ * on assets cost in a year, estimated by the server on the fund's last value: shown and never
+ * subtracted, it is already in the value.
  */
-export async function FundFeesSection({
-  ctx,
-  detail,
-  archived,
-  todayOn,
-}: {
-  ctx: Ctx;
-  detail: FundDetail;
-  archived: boolean;
-  todayOn: CivilDate;
-}) {
-  const t = await getTranslations("funds.fees");
-  const ts = await getTranslations("funds.sources");
-  const { numberFormat: format, locale } = ctx;
-  const { currency, fees, sources } = detail;
+export function FundFeesSection({ settings, say }: { settings: Settings; say: Say }) {
+  const t = useTranslations("funds.fees");
+  const ts = useTranslations("funds.sources");
+  const { format, locale } = say;
+  const { fund, fees, sources, assetsEstimate: estimated } = settings;
+  const { currency } = fund;
 
   // "Applies to": each source, and each component of a payslip source. Two sources of one kind are
   // told apart by what only one of them has: the employer, the account, or their place.
@@ -48,32 +39,29 @@ export async function FundFeesSection({
       : []),
   ]);
 
-  const value = detail.metrics.value;
-  const onAssets = fees.some(
-    (fee) => fee.basis === "on_assets" && fee.rate !== null && feeValidOn(fee, todayOn),
-  );
-  const cost = value === null ? null : assetsCost(fees, value.cents, todayOn);
-  const estimate = !onAssets
-    ? null
-    : value === null || cost === null
-      ? t("estimateNeedsValue")
-      : t("estimate", {
-          amount: formatMoney(cost.cents, format, { currency }),
-          rate: formatPercent(cost.rate, format, { decimals: 2 }),
-          value: formatMoney(value.cents, format, { currency }),
-          date: formatDate(value.on, "long", locale),
-        });
+  const estimate =
+    estimated.state === "none"
+      ? null
+      : estimated.state === "needs_value"
+        ? t("estimateNeedsValue")
+        : t("estimate", {
+            amount: formatMoney(cents(estimated.amount), format, { currency }),
+            rate: formatPercent(estimated.rate, format, { decimals: 2 }),
+            value: formatMoney(cents(estimated.value), format, { currency }),
+            date: formatDate(estimated.on, "long", locale),
+          });
 
   return (
     <FundFeesList
-      fundId={detail.fund.id}
-      fees={fees.map((fee) => feeFormOf(fee, format))}
+      fundId={fund.id}
+      fees={fees.map((fee) => feeFormOfRow(fee, format))}
+      expired={new Set(fees.filter((fee) => fee.expired).map((fee) => fee.id))}
       scopes={scopes}
-      todayOn={todayOn}
+      todayOn={say.todayOn}
       format={format}
       locale={locale}
       currency={currency}
-      readOnly={archived}
+      readOnly={fund.state === "archived"}
     >
       {estimate && <p className="min-w-0 basis-full text-sm text-muted">{estimate}</p>}
     </FundFeesList>

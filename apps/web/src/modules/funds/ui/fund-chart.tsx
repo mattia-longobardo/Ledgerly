@@ -1,56 +1,41 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { asNumbers, axisLabels } from "@ledgerly/ui/chart-labels";
 import { GAIN_COLOR, LOSS_COLOR } from "@ledgerly/design-tokens";
-import {
-  asReturns,
-  bestAndWorst,
-  percentAxisLabels,
-  returnScale,
-  runningTotal,
-  sampled,
-  toCents,
-} from "@ledgerly/ui/chart-data";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import type { Cents } from "@ledgerly/domain/shared/money";
+import { percentAxisLabels, sampled, toCents } from "@ledgerly/ui/chart-data";
+import type { RouteOutput } from "@ledgerly/api-client";
+import type { funds } from "@ledgerly/api-contract/funds";
+import { formatDate, formatMoney, formatPercent, NULL_DISPLAY } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
 import { MultiLine, StackedBars, stackLayers } from "@ledgerly/ui/chart";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import type { Params } from "@ledgerly/ui/url";
-import { type FundLine, gainBars, type GainGrain, gainGrain, valueSeries } from "@ledgerly/domain/funds";
-import type { FundPeriod } from "@ledgerly/domain/funds";
+import type { Say } from "./say";
+import { cents } from "./wire-forms";
 
-/**
- * The Performance chart of the home and of a fund (docs/design/funds-ux.md §6): Gain, one bar per
- * month and a running total, or Value, one step per reading and the money that reading could see. So a
- * deposit made after a reading waits for the next one, and can never look like a loss.
- */
-export async function FundChart({
-  ctx,
-  lines,
-  colorOf,
-  period,
-  span,
-  when,
-  totalCents,
-  rate,
-  view,
-  path,
-  params,
-  gainNote,
-  bySign = false,
-}: {
-  ctx: Pick<Ctx, "numberFormat" | "locale">;
+type Home = RouteOutput<typeof funds.getFunds>;
+type GainChart = Home["gain"];
+type GainGrain = GainChart["grain"];
+
+/** A fund of the chart: the list's order, most gain first; `gain` is null for one not measured. */
+interface ChartFund {
+  id: string;
+  name: string;
+  color: string;
+  gain: string | null;
+}
+
+interface ChartProps {
+  say: Say;
   /** Most gain first: the list's order, the reverse of the chart's stack. */
-  lines: readonly FundLine[];
-  colorOf: (id: string) => string;
-  period: FundPeriod & { year?: number | null };
-  span: { from: CivilDate; to: CivilDate };
+  lines: readonly ChartFund[];
+  gain: GainChart;
+  values: Home["values"];
   when: string;
-  totalCents: Cents | null;
+  total: string | null;
   /** The period's return, as the header shows it: what the Return view's bars add up to. */
   rate: number | null;
   view: "gain" | "value" | "return";
@@ -60,62 +45,86 @@ export async function FundChart({
   gainNote: (grain: GainGrain) => string;
   /** A fund's own page: its bars are green for a gain and red for a loss, not the fund's colour. */
   bySign?: boolean;
-}) {
-  const th = await getTranslations("funds.home");
-  const money = (cents: Cents | null, signed = false) => formatMoney(cents, ctx.numberFormat, { signed });
-  const day = (date: string | null) => formatDate(date, "dayMonth", ctx.locale);
-  const nameOf = new Map(lines.map((line) => [line.fund.id, line.fund.name]));
+}
 
-  const grain = gainGrain(period, span);
-  const bars = gainBars(lines, span, grain);
+/**
+ * The Performance chart of the home and of a fund (docs/design/funds-ux.md §6), drawn from the `gain`
+ * and `values` of `/api/v1` (rewrite plan R3): Gain, one bar per month and a running total, or Value,
+ * one step per reading and the money that reading could see. So a deposit made after a reading waits
+ * for the next one, and can never look like a loss. Every figure is the server's; the chart draws.
+ */
+export function FundChart(props: ChartProps) {
+  const { say, lines, gain, values, when, total, rate, view, path, params, gainNote, bySign = false } = props;
+  const th = useTranslations("funds.home");
+  const money = (amount: bigint | null, signed = false) => formatMoney(amount, say.format, { signed });
+  const day = (date: string | null) => formatDate(date, "dayMonth", say.locale);
+  const nameOf = new Map(lines.map((line) => [line.id, line.name]));
+  const colorOf = new Map(lines.map((line) => [line.id, line.color]));
+
+  const { grain, bars } = gain;
   const stack = [...lines].reverse();
-  const totals = bars.map((bar) => bar.totalCents);
-  const cumulative = runningTotal(totals);
+  const totals = bars.map((bar) => cents(bar.total));
+  const cumulative = bars.map((bar) => cents(bar.cumulative));
   const barName = (index: number) => {
     const bar = bars[index];
     if (grain === "year") return bar.from.slice(0, 4);
-    if (grain === "month") return formatDate(bar.from, "monthYear", ctx.locale);
+    if (grain === "month") return formatDate(bar.from, "monthYear", say.locale);
     return th("chart.stretch", { from: day(bar.from), to: day(bar.to) });
   };
   const barLabels = sampled(bars.length).map((index) =>
     grain === "year"
       ? bars[index].from.slice(0, 4)
       : grain === "month"
-        ? formatDate(bars[index].from, "month", ctx.locale)
+        ? formatDate(bars[index].from, "month", say.locale)
         : day(bars[index].to),
   );
-  const extremes = bestAndWorst(totals);
+  const extremes = gain.best === null || gain.worst === null ? null : { best: gain.best, worst: gain.worst };
   const gainSummary = th("chart.summary", {
     when,
-    total: totalCents === null ? NULL_DISPLAY : money(totalCents, true),
+    total: total === null ? NULL_DISPLAY : money(cents(total), true),
     best: extremes ? `${barName(extremes.best)} (${money(totals[extremes.best], true)})` : NULL_DISPLAY,
     worst: extremes ? `${barName(extremes.worst)} (${money(totals[extremes.worst], true)})` : NULL_DISPLAY,
     funds: lines
-      .filter((line) => line.status === "measured")
-      .map((line) => `${line.fund.name} ${money(line.measure.gainCents, true)}`)
+      .filter((line) => line.gain !== null)
+      .map((line) => `${line.name} ${money(cents(line.gain), true)}`)
       .join(", "),
   });
-  const layerValues = stack.map((line) => asNumbers(bars.map((bar) => bar.byFund.get(line.fund.id) ?? null)));
+  const fundGain = (bar: GainChart["bars"][number], id: string) => bar.funds.find((one) => one.fundId === id);
+  const layerValues = stack.map((line) =>
+    asNumbers(bars.map((bar) => cents(fundGain(bar, line.id)?.gain ?? null))),
+  );
   const layers = stackLayers(layerValues, bars.length);
-  const series = valueSeries(lines);
-  const seriesValues = series.map((point) => point.valueCents);
-  const seriesPaid = series.map((point) => point.paidCents);
+  const series = values.map((point) => ({
+    on: point.on,
+    value: cents(point.value),
+    paid: cents(point.paid),
+  }));
+  const seriesValues = series.map((point) => point.value);
+  const seriesPaid = series.map((point) => point.paid);
   const lastPoint = series.at(-1);
 
   // ——— The bars: money for Gain, the share of the period's return for Return ————————————————————
-  const scale = view === "return" ? returnScale(totalCents, rate) : null;
-  const percent = (value: number | null) => formatPercent(value, ctx.numberFormat, { signed: true });
-  const asBars = (cents: readonly (Cents | null)[]) =>
-    view === "return" ? asReturns(cents, scale ?? 0) : asNumbers(cents);
-  const shown = (cents: Cents | null) =>
-    view === "return" ? percent(cents === null ? null : Number(cents) * (scale ?? 0)) : money(cents, true);
-  const barLayers = stack.map((line) => asBars(bars.map((bar) => bar.byFund.get(line.fund.id) ?? null)));
+  const returns = view === "return";
+  const percent = (value: number | null) => formatPercent(value, say.format, { signed: true });
+  const noShare = bars.every((bar) => bar.share === null);
+  const barLayers = stack.map((line) =>
+    bars.map((bar) => {
+      const one = fundGain(bar, line.id);
+      if (one === undefined) return null;
+      return returns ? one.share : Number(cents(one.gain));
+    }),
+  );
   const barStack = stackLayers(barLayers, bars.length);
-  const barLine = asBars(cumulative);
+  const barLine = returns ? bars.map((bar) => bar.cumulativeShare) : asNumbers(cumulative);
+  const shownBar = (index: number) => (returns ? percent(bars[index].share) : money(totals[index], true));
+  const shownCumulative = (index: number) =>
+    returns ? percent(bars[index].cumulativeShare) : money(cumulative[index], true);
+  const shownStretch = (stretch: { gain: string }, share: number | null) =>
+    returns ? percent(share) : money(cents(stretch.gain), true);
   const barsBody =
-    totals.every((cents) => cents === null) || (view === "return" && scale === null) ? (
+    totals.every((amount) => amount === null) || (returns && noShare) ? (
       <p data-testid="chart-empty" className="text-sm text-muted">
-        {view === "return" && totals.some((cents) => cents !== null)
+        {returns && totals.some((amount) => amount !== null)
           ? th("chart.returnEmpty")
           : th("chart.empty", { when })}
       </p>
@@ -125,58 +134,60 @@ export async function FundChart({
           bySign
             ? stack.flatMap((line, index) => [
                 {
-                  key: line.fund.id,
-                  label: line.fund.name,
+                  key: line.id,
+                  label: line.name,
                   color: GAIN_COLOR,
                   values: barLayers[index].map((value) => (value !== null && value >= 0 ? value : null)),
                 },
                 {
-                  key: `${line.fund.id}-loss`,
-                  label: line.fund.name,
+                  key: `${line.id}-loss`,
+                  label: line.name,
                   color: LOSS_COLOR,
                   values: barLayers[index].map((value) => (value !== null && value < 0 ? value : null)),
                 },
               ])
             : stack.map((line, index) => ({
-                key: line.fund.id,
-                label: line.fund.name,
-                color: colorOf(line.fund.id),
+                key: line.id,
+                label: line.name,
+                color: line.color,
                 values: barLayers[index],
               }))
         }
         line={barLine}
         yLabels={
-          view === "return"
-            ? percentAxisLabels([...barLine, ...barStack.top, ...barStack.bottom], ctx.numberFormat)
+          returns
+            ? percentAxisLabels([...barLine, ...barStack.top, ...barStack.bottom], say.format)
             : axisLabels(
                 [...cumulative, ...layers.top.map(toCents), ...layers.bottom.map(toCents)],
-                ctx.numberFormat,
+                say.format,
                 4,
               )
         }
         xLabels={barLabels}
         hover={bars.map((bar, index) => ({
           label: barName(index),
-          value: shown(totals[index]),
-          note: th("chart.cumulative", { amount: shown(cumulative[index]) }),
+          value: shownBar(index),
+          note: th("chart.cumulative", { amount: shownCumulative(index) }),
           rows: bar.stretches.map((stretch) => ({
             label: `${nameOf.get(stretch.fundId) ?? ""} · ${th("chart.stretch", {
               from: day(stretch.from),
               to: day(stretch.to),
             })}`,
-            value: shown(stretch.gainCents),
-            color: bySign ? (stretch.gainCents < 0n ? LOSS_COLOR : GAIN_COLOR) : colorOf(stretch.fundId),
+            value: shownStretch(stretch, fundGain(bar, stretch.fundId)?.share ?? null),
+            color: bySign
+              ? (cents(stretch.gain) ?? 0n) < 0n
+                ? LOSS_COLOR
+                : GAIN_COLOR
+              : (colorOf.get(stretch.fundId) ?? GAIN_COLOR),
           })),
         }))}
         summary={
-          view === "return"
+          returns
             ? th("chart.returnSummary", {
                 when,
                 total: percent(rate),
-                best: extremes ? `${barName(extremes.best)} (${shown(totals[extremes.best])})` : NULL_DISPLAY,
-                worst: extremes
-                  ? `${barName(extremes.worst)} (${shown(totals[extremes.worst])})`
-                  : NULL_DISPLAY,
+                best: extremes ? `${barName(extremes.best)} (${shownBar(extremes.best)})` : NULL_DISPLAY,
+                worst: extremes ? `${barName(extremes.worst)} (${shownBar(extremes.worst)})` : NULL_DISPLAY,
               })
             : gainSummary
         }
@@ -197,29 +208,29 @@ export async function FundChart({
           { values: asNumbers(seriesPaid), color: "var(--muted)", dashed: true, step: true },
         ]}
         band={{ upper: asNumbers(seriesValues), lower: asNumbers(seriesPaid) }}
-        yLabels={axisLabels([...seriesValues, ...seriesPaid], ctx.numberFormat, 4)}
+        yLabels={axisLabels([...seriesValues, ...seriesPaid], say.format, 4)}
         xLabels={sampled(series.length).map((index) =>
           series[0].on.slice(0, 4) === lastPoint?.on.slice(0, 4)
             ? day(series[index].on)
-            : formatDate(series[index].on, "long", ctx.locale),
+            : formatDate(series[index].on, "long", say.locale),
         )}
         hover={series.map((point) => ({
-          label: formatDate(point.on, "long", ctx.locale),
-          value: money(point.valueCents),
-          note: th("chart.paidRow", { amount: money(point.paidCents) }),
+          label: formatDate(point.on, "long", say.locale),
+          value: money(point.value),
+          note: th("chart.paidRow", { amount: money(point.paid) }),
           rows: [
             {
               label: th("chart.gain"),
-              value: money(point.valueCents - point.paidCents, true),
+              value: money((point.value ?? 0n) - (point.paid ?? 0n), true),
               color: "var(--pos)",
             },
           ],
         }))}
         summary={th("chart.valueSummary", {
           when,
-          value: money(lastPoint?.valueCents ?? null),
-          date: formatDate(lastPoint?.on ?? null, "long", ctx.locale),
-          paid: money(lastPoint?.paidCents ?? null),
+          value: money(lastPoint?.value ?? null),
+          date: formatDate(lastPoint?.on ?? null, "long", say.locale),
+          paid: money(lastPoint?.paid ?? null),
         })}
         height={200}
       />
@@ -271,7 +282,7 @@ export async function FundChart({
           </>
         )}
       </p>
-      {view !== "value" && totals.some((cents) => cents !== null) && (view === "gain" || scale !== null) && (
+      {view !== "value" && totals.some((amount) => amount !== null) && (view === "gain" || !noShare) && (
         <details className="text-sm">
           <summary className="focus-ring inline-flex min-h-6 cursor-pointer items-center rounded-sm text-muted hover:text-fg">
             {th("chart.data")}
@@ -287,9 +298,9 @@ export async function FundChart({
                 <Tr key={bar.from + bar.to}>
                   <Td>{barName(index)}</Td>
                   <Td align="right" className={TONE_TEXT[toneOfSign(totals[index])]}>
-                    {shown(totals[index])}
+                    {shownBar(index)}
                   </Td>
-                  <Td align="right">{shown(cumulative[index])}</Td>
+                  <Td align="right">{shownCumulative(index)}</Td>
                 </Tr>
               ))}
             </TBody>
@@ -310,9 +321,9 @@ export async function FundChart({
             <TBody>
               {series.map((point) => (
                 <Tr key={point.on}>
-                  <Td>{formatDate(point.on, "long", ctx.locale)}</Td>
-                  <Td align="right">{money(point.valueCents)}</Td>
-                  <Td align="right">{money(point.paidCents)}</Td>
+                  <Td>{formatDate(point.on, "long", say.locale)}</Td>
+                  <Td align="right">{money(point.value)}</Td>
+                  <Td align="right">{money(point.paid)}</Td>
                 </Tr>
               ))}
             </TBody>

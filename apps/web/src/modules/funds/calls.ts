@@ -4,11 +4,12 @@
 // its words: the route's reason (`duplicate_name`, `component_taken`…) or its code, and `detail` is
 // the other fund's name that `other` carries.
 import { COMPONENTS, funds, register, setup } from "@ledgerly/api-contract/funds";
+import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { profile } from "@ledgerly/api-contract/settings";
 import { ApiError, call, type RouteOutput } from "@ledgerly/api-client";
 import { centsToDecimal, parseCents } from "@ledgerly/format/cents";
 import { type NumberFormat, numberSeparators, numberStyle, parseAmount } from "@ledgerly/format/format";
-import { read } from "@ledgerly/ui/data";
+import { invalidate, read } from "@ledgerly/ui/data";
 import { feeModes, needsPeriod } from "@ledgerly/domain/shared/fees";
 import {
   type ContributionForm,
@@ -37,9 +38,28 @@ function failed(error: unknown): Failure {
   return error instanceof ApiError && error.other !== null ? { ...answer, detail: error.other } : answer;
 }
 
+/**
+ * What a write of Funds made stale, read again: every read of the section, and the accounts that hold
+ * a fund's value. It replaces the `revalidatePath` of the Server Actions.
+ */
+export function fundsChanged(): void {
+  invalidate(
+    funds.getFunds,
+    funds.getFund,
+    funds.getFundValuations,
+    funds.getFundContributions,
+    funds.getFundSettings,
+    funds.getFundMovementCandidates,
+    funds.getFundSetup,
+    accountRoutes.listAccounts,
+  );
+}
+
 async function write<T extends object>(work: () => Promise<T | void>): Promise<ActionResult> {
   try {
-    return { ok: true, ...(await work()) };
+    const answer = { ok: true as const, ...(await work()) };
+    fundsChanged();
+    return answer;
   } catch (error) {
     return failed(error);
   }
@@ -291,7 +311,9 @@ export async function removeSourceAction(
   sourceId: string,
 ): Promise<{ ok: true; removed: RemovedSource } | Failure> {
   try {
-    return { ok: true, removed: await call(setup.removeSource, { params: { id: fundId, sourceId } }) };
+    const removed = await call(setup.removeSource, { params: { id: fundId, sourceId } });
+    fundsChanged();
+    return { ok: true, removed };
   } catch (error) {
     return failed(error);
   }

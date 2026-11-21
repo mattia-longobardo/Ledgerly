@@ -16,11 +16,7 @@ interface DifferenceTarget {
   quarter: number;
   component: string;
   componentLabel: string;
-  differenceCents: string;
-  accruedCents: string | null;
-  creditedCents: string | null;
-  competenceIds: string[];
-  operationIds: string[];
+  /** The difference as the page writes it: the numbers saved are the server's. */
   difference: string;
 }
 

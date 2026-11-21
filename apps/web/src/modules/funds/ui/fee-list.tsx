@@ -15,6 +15,11 @@ interface FeeListProps {
   fees: readonly FeeForm[];
   scopes: readonly FeeScopeOption[];
   todayOn: CivilDate;
+  /**
+   * The saved fees that are no longer in force, as the server says (Settings): the list keeps the
+   * server's order. Without it, a list of drafts (the form that creates a fund) arranges itself.
+   */
+  expired?: ReadonlySet<string>;
   format: NumberFormat;
   locale: UiLocale;
   /** The currency of the fund's amounts. */
@@ -35,18 +40,10 @@ const isLink = (text: string) => /^https?:\/\/\S+$/.test(text.trim());
  * them (48rem of its own, not of the window: in the form that creates a fund it sits in a 560 px
  * column), and three lines per fee below that, with the same two buttons.
  */
-function FeeList({ fees, scopes, todayOn, format, locale, currency, onEdit, onRemove }: FeeListProps) {
+function FeeList(props: FeeListProps) {
+  const { fees, scopes, format, locale, currency, onEdit, onRemove } = props;
   const t = useTranslations("funds.fees");
-  const { current, expired } = arrangeFees(
-    fees.map((fee, index) => ({
-      fee,
-      index,
-      basis: fee.basis,
-      label: fee.label,
-      validTo: fee.validTo || null,
-    })),
-    todayOn,
-  );
+  const { current, expired } = arranged(props);
   const actions = onEdit !== undefined || onRemove !== undefined;
 
   const row = ({ fee, index }: { fee: FeeForm; index: number }) => {
@@ -148,6 +145,24 @@ function FeeList({ fees, scopes, todayOn, format, locale, currency, onEdit, onRe
       )}
     </div>
   );
+}
+
+/** In force first, by basis and by name, the expired ones last: the server's, or the drafts' own. */
+function arranged({ fees, todayOn, expired }: FeeListProps) {
+  const items = fees.map((fee, index) => ({ fee, index }));
+  if (expired === undefined) {
+    return arrangeFees(
+      items.map((item) => ({
+        ...item,
+        basis: item.fee.basis,
+        label: item.fee.label,
+        validTo: item.fee.validTo || null,
+      })),
+      todayOn,
+    );
+  }
+  const gone = (item: (typeof items)[number]) => item.fee.id !== null && expired.has(item.fee.id);
+  return { current: items.filter((item) => !gone(item)), expired: items.filter(gone) };
 }
 
 interface FeeManagerProps extends Omit<FeeListProps, "onEdit" | "onRemove"> {

@@ -1,6 +1,8 @@
-import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, type UiLocale } from "@ledgerly/format/format";
 import type { Status } from "@ledgerly/domain/funds";
-import { type AccrualPeriod, periodStart } from "@ledgerly/domain/funds";
+
+/** How a payslip source counts its periods. */
+type AccrualPeriod = "month" | "quarter";
 
 /** How each reconciliation state reads (design, GC §11): a colour never carries it alone. */
 export const STATUS_TONE: Record<Status, "pos" | "neg" | "warn" | "accent" | "neutral"> = {
@@ -34,6 +36,8 @@ export function periodLabel(
   locale: UiLocale,
   quarter?: (values: { index: number; year: number }) => string,
 ): string {
-  if (period === "month") return formatDate(periodStart(year, index, "month"), "monthYear", locale);
+  // A month of a monthly source is its index in the year: its first day names it.
+  if (period === "month")
+    return formatDate(`${year}-${String(index).padStart(2, "0")}-01`, "monthYear", locale);
   return quarter ? quarter({ index, year }) : quarterLabel(year, index);
 }

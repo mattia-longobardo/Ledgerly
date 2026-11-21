@@ -1,15 +1,23 @@
+"use client";
+
 import type { Route } from "next";
-import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { CivilDate } from "@ledgerly/domain/shared/dates";
+import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
+import { funds } from "@ledgerly/api-contract/funds";
+import type { RouteOutput } from "@ledgerly/api-client";
+import { useApi, useLatest } from "@ledgerly/ui/data";
+import { Loaded } from "@ledgerly/ui/loaded";
+import { Link } from "@ledgerly/ui/router";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import type { FundDetail } from "@ledgerly/domain/funds";
 import { FundFeesSection } from "./fund-fees";
 import { FundStateButton } from "./fund-forms";
 import { FundSettingsForm } from "./fund-settings-form";
 import { FundSourcesSection } from "./fund-sources";
+import { type Say, useSay } from "./say";
+import { movementOptions } from "./wire-forms";
+
+export type Settings = RouteOutput<typeof funds.getFundSettings>;
 
 /** A section the address can point at (`#sources`), with the name the tests find it by. */
 function Anchor({ id, testId, children }: { id: string; testId?: string; children: ReactNode }) {
@@ -21,32 +29,58 @@ function Anchor({ id, testId, children }: { id: string; testId?: string; childre
 }
 
 /**
- * The Settings tab of a fund (docs/design/rewrite-plan/ux/n6-pension-fund.md §6): General, the
- * contribution sources, the fees and the danger zone, the same four for every fund. It does not
- * follow the period. An archived fund is read only: only "Restore fund" is offered.
+ * The Settings tab of a fund (docs/design/rewrite-plan/ux/n6-pension-fund.md §6), read from
+ * `GET /funds/{id}/settings` (rewrite plan R3): General, the contribution sources, the fees and the
+ * danger zone, the same four for every fund. It does not follow the period. An archived fund is read
+ * only: only "Restore fund" is offered.
  */
-export async function FundSettings({
-  ctx,
-  detail,
-  archived,
-  todayOn,
+export function FundSettings({ fundId }: { fundId: string }) {
+  const settings = useLatest(useApi(funds.getFundSettings, { params: { id: fundId } }));
+  const say = useSay();
+  const open = useApi(accountRoutes.listAccounts, {});
+  return (
+    <Loaded state={settings}>
+      {(read) => (
+        <Loaded state={say}>
+          {(words) => (
+            <Loaded state={open}>
+              {(list) => (
+                <SettingsBody
+                  settings={read}
+                  say={words}
+                  accounts={list.accounts.map((account) => ({ id: account.id, name: account.name }))}
+                />
+              )}
+            </Loaded>
+          )}
+        </Loaded>
+      )}
+    </Loaded>
+  );
+}
+
+/** The movements "Find from the movements" chooses from: the ones that left the active debit's account. */
+function useMovements(settings: Settings, say: Say) {
+  const debit = settings.sources.find((source) => source.kind === "bank_debit" && source.state === "active");
+  const query = debit?.accountId ? { accountId: debit.accountId } : {};
+  const read = useApi(funds.getFundMovementCandidates, { params: { id: settings.fund.id }, query });
+  if (settings.fund.state === "archived") return [];
+  return movementOptions(read.data?.movements ?? [], say);
+}
+
+function SettingsBody({
+  settings,
+  say,
   accounts,
-  movements,
-  taken,
 }: {
-  ctx: Ctx;
-  detail: FundDetail;
-  archived: boolean;
-  todayOn: CivilDate;
-  /** The open accounts a recurring debit can be taken from. */
+  settings: Settings;
+  say: Say;
   accounts: readonly { id: string; name: string }[];
-  /** The movements "Find from the movements" chooses from. */
-  movements: readonly { id: string; label: string }[];
-  /** The payslip components another fund already takes, with that fund's name. */
-  taken: Record<string, string>;
 }) {
-  const t = await getTranslations("funds");
-  const { fund } = detail;
+  const t = useTranslations("funds");
+  const { fund } = settings;
+  const archived = fund.state === "archived";
+  const movements = useMovements(settings, say);
   return (
     <SettingsGrid>
       <Anchor id="general">
@@ -60,17 +94,17 @@ export async function FundSettings({
               startOn: fund.startOn,
               code: fund.code ?? "",
             }}
-            currency={detail.currency}
-            today={todayOn}
+            currency={fund.currency}
+            today={say.todayOn}
             readOnly={archived}
           />
           <p className="flex flex-wrap items-center gap-x-2 border-t border-border pt-3 text-sm">
-            <span>{t("settings.general.valueAccount", { account: detail.accountName })}</span>
+            <span>{t("settings.general.valueAccount", { account: fund.accountName })}</span>
             <Link
-              href={`/accounts/${fund.valuationAccountId}?tab=settings` as Route}
+              href={`/accounts/${fund.accountId}?tab=settings` as Route}
               className="focus-ring inline-flex min-h-6 items-center rounded-xs font-medium text-accent hover:underline"
             >
-              {t("settings.general.openAccount", { account: detail.accountName })}
+              {t("settings.general.openAccount", { account: fund.accountName })}
             </Link>
           </p>
         </SettingsSection>
@@ -78,21 +112,13 @@ export async function FundSettings({
 
       <Anchor id="sources" testId="fund-sources">
         <SettingsSection title={t("sources.title")} description={t("sources.description")}>
-          <FundSourcesSection
-            ctx={ctx}
-            detail={detail}
-            archived={archived}
-            todayOn={todayOn}
-            accounts={accounts}
-            movements={movements}
-            taken={taken}
-          />
+          <FundSourcesSection settings={settings} say={say} accounts={accounts} movements={movements} />
         </SettingsSection>
       </Anchor>
 
       <Anchor id="fees" testId="fund-fees">
         <SettingsSection title={t("fees.title")} description={t("fees.description")}>
-          <FundFeesSection ctx={ctx} detail={detail} archived={archived} todayOn={todayOn} />
+          <FundFeesSection settings={settings} say={say} />
         </SettingsSection>
       </Anchor>
 

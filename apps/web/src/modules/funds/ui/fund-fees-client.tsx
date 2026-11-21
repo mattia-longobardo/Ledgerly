@@ -20,6 +20,7 @@ import type { FeeScopeOption } from "./fee-text";
 export function FundFeesList({
   fundId,
   fees,
+  expired,
   scopes,
   todayOn,
   format,
@@ -30,6 +31,8 @@ export function FundFeesList({
 }: {
   fundId: string;
   fees: readonly FeeForm[];
+  /** The fees no longer in force, as the server says. */
+  expired: ReadonlySet<string>;
   scopes: readonly FeeScopeOption[];
   todayOn: CivilDate;
   format: NumberFormat;
@@ -85,6 +88,7 @@ export function FundFeesList({
   return (
     <FeeManager
       fees={shown}
+      expired={expired}
       scopes={scopes}
       todayOn={todayOn}
       format={format}
