@@ -231,6 +231,18 @@ describe("the board of the categories (client R3)", () => {
     ]);
   });
 
+  it("draws each category of GET /categories in the colour of the domain's rule (displayColor)", async () => {
+    const { house, rent } = await seed(alice);
+    const listed = (await send(alice, "GET", "/categories?archived=true")).body.categories;
+    const all = await domain.listCategoriesWithUsage(alice, { includeArchived: true });
+    const byId = new Map(all.map(({ category }) => [category.id, category]));
+    expect(listed.map((one: { id: string; displayColor: string }) => [one.id, one.displayColor])).toEqual(
+      all.map(({ category }) => [category.id, domain.colorOfCategory(category, byId)]),
+    );
+    const colour = (id: string) => listed.find((one: { id: string }) => one.id === id).displayColor;
+    expect(colour(rent)).toBe(colour(house));
+  });
+
   it("counts the chosen accounts only, and nothing of another person", async () => {
     const { cash, house } = await seed(alice);
     const board = (await send(alice, "GET", `/categories/board?from=${FROM}&to=${TO}&accounts=${cash}`)).body;

@@ -28,6 +28,8 @@ export class ApiRefusal extends Error {
     readonly reason?: string,
     /** The name of what the refusal is about (`iban_exists`: the account with the IBAN). */
     readonly other?: string,
+    /** `not_bookable` of time off: the dates refused and why. */
+    readonly refused?: ReadonlyArray<{ on: string; reason: "weekend" | "holiday" }>,
   ) {
     super(reason ?? code);
     this.name = "ApiRefusal";
@@ -68,8 +70,18 @@ function statusOf(status: number): ContentfulStatusCode {
   }
 }
 
-function fail(context: Context, code: ApiErrorCode, reason?: string, other?: string): Response {
-  const body = { error: code, ...(reason ? { reason } : {}), ...(other ? { other } : {}) };
+function fail(
+  context: Context,
+  code: ApiErrorCode,
+  extra: Pick<ApiRefusal, "reason" | "other" | "refused"> = {},
+): Response {
+  const { reason, other, refused } = extra;
+  const body = {
+    error: code,
+    ...(reason ? { reason } : {}),
+    ...(other ? { other } : {}),
+    ...(refused?.length ? { refused } : {}),
+  };
   return context.json(body, statusOf(API_ERRORS[code]));
 }
 
@@ -147,7 +159,7 @@ export function serve<R extends RouteContract>(
     try {
       answer = await handler(input);
     } catch (error) {
-      if (error instanceof ApiRefusal) return fail(context, error.code, error.reason, error.other);
+      if (error instanceof ApiRefusal) return fail(context, error.code, error);
       // A rule of the domain refused the input the contract let in (an unknown time zone): the
       // caller's input, not a fault of the server.
       if (error instanceof Error && error.name === "ZodError") return fail(context, "invalid");

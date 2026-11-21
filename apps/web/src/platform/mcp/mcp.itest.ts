@@ -205,6 +205,7 @@ describe("MCP tools", () => {
       "get_profile",
       "get_spending",
       "get_summary",
+      "get_time_off",
       "list_accounts",
       "list_budgets",
       "list_categories",

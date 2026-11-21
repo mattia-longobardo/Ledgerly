@@ -4,22 +4,22 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100108,
-    "duplicatedLines": 16219,
-    "percent": 16.2,
-    "blocks": 1216
+    "lines": 100293,
+    "duplicatedLines": 16270,
+    "percent": 16.22,
+    "blocks": 1221
   },
   "units": {
     "api": {
-      "lines": 3027,
-      "duplicatedLines": 531,
-      "percent": 17.54,
-      "blocks": 50
+      "lines": 3170,
+      "duplicatedLines": 582,
+      "percent": 18.36,
+      "blocks": 55
     },
     "app": {
-      "lines": 25166,
+      "lines": 25062,
       "duplicatedLines": 4047,
-      "percent": 16.08,
+      "percent": 16.15,
       "blocks": 314
     },
     "global.d": {
@@ -89,9 +89,9 @@
       "blocks": 25
     },
     "modules/timeoff": {
-      "lines": 3875,
+      "lines": 3987,
       "duplicatedLines": 287,
-      "percent": 7.41,
+      "percent": 7.2,
       "blocks": 28
     },
     "modules/transactions": {
@@ -101,9 +101,9 @@
       "blocks": 132
     },
     "modules/users": {
-      "lines": 874,
+      "lines": 862,
       "duplicatedLines": 206,
-      "percent": 23.57,
+      "percent": 23.9,
       "blocks": 18
     },
     "platform/alerts": {
@@ -173,9 +173,9 @@
       "blocks": 2
     },
     "platform/holidays": {
-      "lines": 570,
+      "lines": 602,
       "duplicatedLines": 103,
-      "percent": 18.07,
+      "percent": 17.11,
       "blocks": 9
     },
     "platform/i18n": {
@@ -215,9 +215,9 @@
       "blocks": 0
     },
     "platform/integrations/trek": {
-      "lines": 959,
+      "lines": 973,
       "duplicatedLines": 82,
-      "percent": 8.55,
+      "percent": 8.43,
       "blocks": 6
     },
     "platform/integrations/wallet": {
@@ -395,16 +395,18 @@
     "api/accounts/routes.ts": 44,
     "api/budgets/dto.ts": 10,
     "api/interests/dto.ts": 24,
-    "api/interests/routes.ts": 30,
+    "api/interests/routes.ts": 32,
     "api/pockets/dto.ts": 32,
     "api/pockets/routes.ts": 54,
     "api/settings/categories.ts": 39,
-    "api/settings/category-moves.ts": 6,
+    "api/settings/category-moves.ts": 14,
     "api/settings/connections.ts": 16,
     "api/settings/security.ts": 33,
     "api/settings/server.ts": 6,
-    "api/subscriptions/dto.ts": 34,
+    "api/subscriptions/dto.ts": 38,
     "api/subscriptions/routes.ts": 63,
+    "api/timeoff/dto.ts": 9,
+    "api/timeoff/routes.ts": 28,
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 26,
     "api/transactions/routes.ts": 12,
@@ -648,7 +650,9 @@
     "modules/subscriptions/ui/suggestions-dialog.tsx": 13,
     "modules/timeoff/rules/inputs.ts": 21,
     "modules/timeoff/schema.ts": 51,
-    "modules/timeoff/service.ts": 54,
+    "modules/timeoff/service/external.ts": 25,
+    "modules/timeoff/service/ranges.ts": 13,
+    "modules/timeoff/service/records.ts": 16,
     "modules/timeoff/ui/leave-board.tsx": 68,
     "modules/timeoff/ui/leave-panel.tsx": 48,
     "modules/timeoff/ui/settings-forms.tsx": 45,

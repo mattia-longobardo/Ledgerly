@@ -15,13 +15,13 @@ import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { today } from "@ledgerly/domain/shared/dates";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
-import { listCalendars, markCalendarFailed, refreshCalendar } from "@ledgerly/domain/platform/holidays";
+import {
+  listCalendars,
+  markCalendarFailed,
+  refreshCalendar,
+  yearsToRefresh,
+} from "@ledgerly/domain/platform/holidays";
 import type { HolidayFetchOptions } from "@ledgerly/domain/platform/holidays";
-
-/** This year and the next: leave is booked ahead of itself. */
-export function yearsToRefresh(current: number): number[] {
-  return [current, current + 1];
-}
 
 function createHolidaysRefreshJob(options: HolidayFetchOptions = {}): JobDefinition {
   return {

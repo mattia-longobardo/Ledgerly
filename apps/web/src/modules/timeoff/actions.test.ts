@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { LEAVE_DAY_KINDS, goesToTrek } from "@domain/modules/timeoff/rules";
 import { tasks } from "@/platform/jobs/queue";
 import { removeLeaveAction, saveLeaveRangeAction, undoLeaveAction } from "./actions";
@@ -26,6 +26,9 @@ vi.mock("@domain/modules/timeoff/service", async (actual) => ({
   removeLeave,
   restoreLeave,
 }));
+
+// The port of the external calendar, as every process wires it; after the mocks above apply.
+beforeAll(async () => (await import("@ledgerly/api")).wireDomain());
 
 const CTX = { userId: "alice", role: "user" as const, locale: "en" as const, timeZone: "Europe/Rome" };
 

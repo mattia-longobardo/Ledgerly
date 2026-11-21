@@ -428,6 +428,7 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
       "get_profile",
       "get_spending",
       "get_summary",
+      "get_time_off",
       "list_accounts",
       "list_budgets",
       "list_categories",

@@ -218,7 +218,8 @@ export const leaveUndo = z.object({
       z.object({
         on: civilDate(),
         kind: z.enum(LEAVE_KINDS),
-        fraction: z.union([z.literal(0.5), z.literal(1)]),
+        /** Half a day or a whole one. */
+        fraction: z.number(),
         note: z.string().max(MAX_NOTE).nullable(),
       }),
     )

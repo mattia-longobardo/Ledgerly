@@ -1,56 +1,97 @@
-// src/modules/timeoff/actions.ts — the Time off Server Actions (spec §4.2, §7.9): validate →
-// service → revalidate, and then a Trek pass in the background — waiting an hour to see a day you
-// just booked appear in the company calendar is not what anybody means by "saved" (§3.4.10).
+// src/modules/timeoff/actions.ts — the Time off Server Actions, the only file of them until R3
+// (audit TOF-5, TOF-6): the leave panel, the allowance, the working day and the holiday calendars of
+// Time off › Settings. Validate → use case → revalidate. The external calendar hears of a change by
+// `LeaveChanged`, raised by the use cases: a route raises it the same way.
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { tasks } from "@/platform/jobs/queue";
-import { trekConnection } from "@ledgerly/domain/platform/integrations/trek";
 import { z } from "zod";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { LEAVE_DAY_KINDS, type LeaveUndo } from "@ledgerly/domain/timeoff";
 import {
+  HOLIDAY_SOURCES,
+  type HolidayCountry,
+  HolidayError,
+  HolidayServiceError,
+  type HolidaySource,
+  type HolidaySubdivision,
+  keepCalendar,
+  listCountries,
+  listSubdivisions,
+  refetchCalendar,
+  removeCalendar,
+} from "@ledgerly/domain/platform/holidays";
+import {
+  LEAVE_DAY_KINDS,
+  type LeaveAnswer,
+  type LeaveUndo,
   TimeOffError,
-  removeLeave,
-  removeLeaveRange,
-  restoreLeave,
+  bookLeave,
   saveAllowance,
-  saveLeaveRange,
+  unbookLeave,
+  unbookLeaveRange,
+  undoLeave,
 } from "@ledgerly/domain/timeoff";
+import { type TimeOffPreferences, updateTimeOffPreferences } from "@ledgerly/domain/users";
 import { civilDate } from "@ledgerly/api-contract";
 
-type ActionResult = { ok: true } | { ok: false; error: string; refused?: RefusedDate[] };
 interface RefusedDate {
   on: string;
   reason: "weekend" | "holiday";
 }
+type Failure = { ok: false; error: string; refused?: RefusedDate[] };
+type ActionResult = { ok: true } | Failure;
 
-function failed(error: unknown): { ok: false; error: string; refused?: RefusedDate[] } {
+type HolidayActionError = "unreachable" | "duplicate" | "tooMany" | "notFound" | "invalid" | "failed";
+export type HolidayActionResult = { ok: true } | { ok: false; error: HolidayActionError };
+
+const HOLIDAY_CODES: Record<string, HolidayActionError> = {
+  duplicate: "duplicate",
+  too_many: "tooMany",
+  not_found: "notFound",
+};
+
+/**
+ * The one adapter of refusals: the leave's codes as they are, the holiday calendars' in the words
+ * of their card. `unknown` is what an error nobody expected becomes: the calendars' card says
+ * «failed», the leave panel lets it through to the error boundary.
+ */
+function failed(error: unknown): Failure;
+function failed(error: unknown, unknown: "failed"): { ok: false; error: HolidayActionError };
+function failed(error: unknown, unknown?: "failed"): Failure {
   if (error instanceof TimeOffError) {
     return error.refused.length > 0
       ? { ok: false, error: error.code, refused: [...error.refused] }
       : { ok: false, error: error.code };
   }
+  if (error instanceof HolidayServiceError)
+    return { ok: false, error: HOLIDAY_CODES[error.code] ?? "invalid" };
+  if (error instanceof HolidayError) return { ok: false, error: "unreachable" };
+  if (unknown) return { ok: false, error: unknown };
   if (error instanceof z.ZodError || error instanceof RangeError) return { ok: false, error: "invalid" };
   throw error;
 }
 
 function revalidate(): void {
+  // The leave screen decides what can be booked from the calendars, the allowance and the days.
   revalidatePath("/timeoff", "layout");
 }
 
-/**
- * Asks the worker for a Trek pass, so the screen never waits on a provider. A user with no Trek
- * link does nothing at all; a pass already running is not an error to show anybody, and a pass that
- * fails has already written its own `sync_runs` row — §3.4.11 says an hourly condition is not worth
- * interrupting somebody over.
- */
-async function nudgeTrek(ctx: Ctx): Promise<void> {
-  const connection = await trekConnection(ctx);
-  if (connection) await enqueue(tasks.updateConnection(ctx.userId, connection.id, null));
+/** One write: the use case, the screen drawn again, and its answer; or the refusal. */
+async function write<T extends object>(
+  work: (ctx: Ctx) => Promise<T>,
+): Promise<({ ok: true } & T) | Failure> {
+  const ctx = await requireSession();
+  try {
+    const answer = await work(ctx);
+    revalidate();
+    return { ok: true, ...answer };
+  } catch (error) {
+    return failed(error);
+  }
 }
+
+/* The allowance and the working day (Time off › Settings) */
 
 /** The allowance modal: days as typed, an empty field being nothing stated. */
 interface AllowanceFormInput {
@@ -72,22 +113,26 @@ function optionalNumber(value: string): number | null {
 }
 
 export async function saveAllowanceAction(input: AllowanceFormInput): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    const year = Number(input.year);
-
-    await saveAllowance(ctx, year, {
+  return write(async (ctx) => {
+    await saveAllowance(ctx, Number(input.year), {
       vacationDays: optionalNumber(input.vacationDays),
       rolDays: optionalNumber(input.rolDays),
       totalDays: optionalNumber(input.totalDays),
       note: input.note.trim() || null,
     });
-    revalidate();
-    return { ok: true };
-  } catch (error) {
-    return failed(error);
-  }
+    return {};
+  });
 }
+
+/** The working day and the patron saint, each form on its own (route `PATCH /preferences`). */
+export async function saveTimeOffPreferencesAction(input: TimeOffPreferences): Promise<ActionResult> {
+  return write(async (ctx) => {
+    await updateTimeOffPreferences(ctx, input);
+    return {};
+  });
+}
+
+/* The leave panel */
 
 /** The leave panel's fields, as typed: both ends, one kind, one size for every day. */
 export interface LeaveFormInput {
@@ -103,20 +148,14 @@ export interface LeaveFormInput {
   otherKind?: string | null;
 }
 
-export type LeaveActionResult =
-  | { ok: true; undo: LeaveUndo; days: number; removed: number; pending: number }
-  | { ok: false; error: string; refused?: RefusedDate[] };
+export type LeaveActionResult = ({ ok: true } & LeaveAnswer) | Failure;
 
 const KINDS = z.enum(LEAVE_DAY_KINDS);
 
-/**
- * "Confirm" in the leave panel: one call writes the whole range (rewrite plan N5). The answer
- * carries what the touched days held before, which is what the toast's "Undo" sends back.
- */
+/** "Confirm" in the leave panel: one call writes the whole range (rewrite plan N5). */
 export async function saveLeaveRangeAction(input: LeaveFormInput): Promise<LeaveActionResult> {
-  const ctx = await requireSession();
-  try {
-    const result = await saveLeaveRange(ctx, {
+  return write((ctx) =>
+    bookLeave(ctx, {
       from: input.from,
       to: input.to,
       kind: KINDS.parse(input.kind),
@@ -125,14 +164,8 @@ export async function saveLeaveRangeAction(input: LeaveFormInput): Promise<Leave
       editedKind: input.editedKind == null ? null : KINDS.parse(input.editedKind),
       // "½ + ½" only: every other call reaches the service as it did before.
       ...(input.otherKind == null ? {} : { otherKind: KINDS.parse(input.otherKind) }),
-    });
-    revalidate();
-    // The service knows whether the next pass has work: one list says what reaches Trek.
-    if (result.trek) await nudgeTrek(ctx);
-    return { ok: true, undo: result.undo, days: result.totalDays, removed: 0, pending: 0 };
-  } catch (error) {
-    return failed(error);
-  }
+    }),
+  );
 }
 
 const removalSchema = z.union([
@@ -144,61 +177,90 @@ const removalSchema = z.union([
 export async function removeLeaveAction(
   target: { id: string } | { date: string },
 ): Promise<LeaveActionResult> {
-  const ctx = await requireSession();
-  try {
-    const removed = await removeLeave(ctx, removalSchema.parse(target));
-    revalidate();
-    // Only a removal Trek has to be told about is worth a pass; a day it never had is just gone.
-    if (removed.pending > 0) await nudgeTrek(ctx);
-    return {
-      ok: true,
-      undo: removed.undo,
-      days: 0,
-      removed: removed.deleted + removed.pending,
-      pending: removed.pending,
-    };
-  } catch (error) {
-    return failed(error);
-  }
+  return write((ctx) => unbookLeave(ctx, removalSchema.parse(target)));
 }
 
-/**
- * "Remove N days": everything booked between two dates, in one transaction (N5 §7.5). Trek hears
- * of each row as it hears of one removed day: by the pass this starts.
- */
+/** "Remove N days": everything booked between two dates, in one transaction (N5 §7.5). */
 export async function removeLeaveRangeAction(range: {
   from: string;
   to: string;
 }): Promise<LeaveActionResult> {
-  const ctx = await requireSession();
-  try {
-    const removed = await removeLeaveRange(ctx, range);
-    if (removed.undo === null) {
-      return { ok: true, undo: { dates: [range.from], rows: [] }, days: 0, removed: 0, pending: 0 };
-    }
-    revalidate();
-    if (removed.pending > 0) await nudgeTrek(ctx);
-    return {
-      ok: true,
-      undo: removed.undo,
-      days: removed.days,
-      removed: removed.deleted + removed.pending,
-      pending: removed.pending,
-    };
-  } catch (error) {
-    return failed(error);
-  }
+  return write((ctx) => unbookLeaveRange(ctx, range));
 }
 
 /** "Undo" in the toast: the touched days go back to what they held, in one transaction. */
 export async function undoLeaveAction(undo: LeaveUndo): Promise<ActionResult> {
+  return write(async (ctx) => {
+    await undoLeave(ctx, undo);
+    return {};
+  });
+}
+
+/* The holiday calendars (Time off › Settings, M3) */
+
+/** Every country either service can answer for, in the user's own language. */
+export async function holidayCountriesAction(): Promise<
+  { ok: true; countries: HolidayCountry[] } | { ok: false; error: HolidayActionError }
+> {
   const ctx = await requireSession();
   try {
-    const restored = await restoreLeave(ctx, undo);
-    revalidate();
-    if (restored.trek) await nudgeTrek(ctx);
-    return { ok: true };
+    return { ok: true, countries: await listCountries(ctx.locale) };
   } catch (error) {
-    return failed(error);
+    return failed(error, "failed");
   }
+}
+
+const SOURCES = z.enum(HOLIDAY_SOURCES);
+const isSource = (source: string): source is HolidaySource => SOURCES.safeParse(source).success;
+
+/** The places inside a country, when the source can name them. */
+export async function holidaySubdivisionsAction(
+  source: string,
+  country: string,
+): Promise<{ ok: true; places: HolidaySubdivision[] } | { ok: false; error: HolidayActionError }> {
+  const ctx = await requireSession();
+  if (!isSource(source)) return { ok: false, error: "invalid" };
+  try {
+    return { ok: true, places: await listSubdivisions(source, country, ctx.locale) };
+  } catch (error) {
+    return failed(error, "failed");
+  }
+}
+
+/** A write of the holiday calendars: the use case, the screen drawn again, or the card's error. */
+async function calendarWrite(work: (ctx: Ctx) => Promise<unknown>): Promise<HolidayActionResult> {
+  const ctx = await requireSession();
+  try {
+    await work(ctx);
+  } catch (error) {
+    return failed(error, "failed");
+  }
+  revalidate();
+  return { ok: true };
+}
+
+/**
+ * Subscribes to a calendar and fetches it straight away. A fetch that fails still leaves the
+ * subscription: the daily pass will try again, and the card says what went wrong meanwhile.
+ */
+export async function addHolidayCalendarAction(input: {
+  source: string;
+  country: string;
+  subdivision: string | null;
+  label: string;
+}): Promise<HolidayActionResult> {
+  return calendarWrite(async (ctx) => {
+    const source = input.source;
+    if (!isSource(source)) throw new HolidayServiceError("invalid_input");
+    await keepCalendar(ctx, { ...input, source });
+  });
+}
+
+export async function removeHolidayCalendarAction(id: string): Promise<HolidayActionResult> {
+  return calendarWrite((ctx) => removeCalendar(ctx, id));
+}
+
+/** "Update now" for one calendar: the same two years the daily job keeps. */
+export async function refreshHolidayCalendarAction(id: string): Promise<HolidayActionResult> {
+  return calendarWrite((ctx) => refetchCalendar(ctx, id));
 }

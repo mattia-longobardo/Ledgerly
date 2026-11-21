@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { type AccountCases, serveAccounts } from "./accounts/routes";
 import { serveBudgets } from "./budgets/routes";
 import { serveInterests } from "./interests/routes";
+import { serveTimeOff } from "./timeoff/routes";
 import { servePockets } from "./pockets/routes";
 import { serveSubscriptions } from "./subscriptions/routes";
 import { metaApi } from "./meta";
@@ -60,6 +61,7 @@ export function apiRoutes({
     ...servePockets(app, guard),
     ...serveSubscriptions(app, guard),
     ...serveInterests(app, guard),
+    ...serveTimeOff(app, guard),
   ];
   app.route("/", metaApi(served));
   return app;

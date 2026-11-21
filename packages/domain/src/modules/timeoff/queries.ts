@@ -1,6 +1,5 @@
 import { leaveEventsOf, leaveSnapshotHistory } from "../payroll/service";
 import { holidaysFor } from "../../platform/holidays/service";
-import { trekStatsOf } from "../../platform/integrations/trek/sync";
 import { getPreferences } from "../users/service";
 import type { Ctx } from "../../platform/context";
 import { type CivilDate, type MonthKey, addMonths, monthKey, today } from "../../shared/dates";
@@ -15,7 +14,6 @@ import {
   overdrawn,
 } from "./accrual";
 import {
-  type CalendarMonth,
   type LeaveDayKind,
   type LeaveDayView,
   type MonthBar,
@@ -24,7 +22,6 @@ import {
   type MonthGroup,
   type UnrecordedLeave,
   type YearTotals,
-  calendar,
   dayStatus,
   daysToMinutes,
   allowanceMismatchDays,
@@ -88,16 +85,9 @@ interface TimeOffView {
   vacation: KindView;
   rol: KindView;
   bars: MonthBar[];
-  calendar: CalendarMonth[];
   rows: LeaveRow[];
   /** The years that have something in them, so the picker offers only real years. */
   years: number[];
-  /**
-   * What Trek last said about this year, when there is a Trek link and its last pass covered it.
-   * Shown **beside** our figures and never folded into them: Trek honours a leave-year window
-   * (calendar, fiscal or anniversary) this app does not model (plan F7 §3.6.4).
-   */
-  trek: { used: number; remaining: number; totalAvailable: number } | null;
   /** Months whose payslip counted more leave than the days here add up to (M2). */
   unrecorded: UnrecordedLeave[];
   /** Kinds booked past what was left, measured against whatever the residual used (N5b). */
@@ -158,13 +148,12 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
   // One read of the days: the year shown, and before it whatever a forecast still has to subtract.
   const shown = yearWindow(year);
   const from = [shown.from, openings.vacation.spentFrom, openings.rol.spentFrom].sort()[0];
-  const [preferences, allowance, allowances, everyDay, events, trek] = await Promise.all([
+  const [preferences, allowance, allowances, everyDay, events] = await Promise.all([
     getPreferences(ctx),
     allowanceOf(ctx, year),
     listAllowances(ctx),
     listLeaveDays(ctx, { from, to: shown.to }),
     leaveEventsOf(ctx, year),
-    trekStatsOf(ctx, year),
   ]);
   const days = everyDay.filter((day) => day.on >= shown.from);
 
@@ -297,13 +286,11 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
     vacation,
     rol,
     bars: monthBars(views, year, minutesPerDay, countedThrough),
-    calendar: calendar(year, views, holidays, preferences.weekStart, countedThrough, minutesPerDay),
     rows,
     years: yearsOffered(
       year,
       allowances.map((one) => one.year),
     ),
-    trek,
     unrecorded: unrecordedLeave(events, views, minutesPerDay),
     overdrawn: [
       overdrawn("vacation", {

@@ -6830,6 +6830,10 @@
                               }
                             ]
                           },
+                          "displayColor": {
+                            "type": "string",
+                            "pattern": "^#[0-9a-fA-F]{6}$"
+                          },
                           "depth": {
                             "anyOf": [
                               {
@@ -6866,6 +6870,7 @@
                           "parentId",
                           "type",
                           "color",
+                          "displayColor",
                           "depth",
                           "usage",
                           "archivedAt"
@@ -7036,6 +7041,10 @@
                         }
                       ]
                     },
+                    "displayColor": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
                     "depth": {
                       "anyOf": [
                         {
@@ -7072,6 +7081,7 @@
                     "parentId",
                     "type",
                     "color",
+                    "displayColor",
                     "depth",
                     "usage",
                     "archivedAt"
@@ -7453,6 +7463,10 @@
                         }
                       ]
                     },
+                    "displayColor": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$"
+                    },
                     "depth": {
                       "anyOf": [
                         {
@@ -7489,6 +7503,7 @@
                     "parentId",
                     "type",
                     "color",
+                    "displayColor",
                     "depth",
                     "usage",
                     "archivedAt"
@@ -28148,16 +28163,7 @@
                                 ]
                               },
                               "fraction": {
-                                "anyOf": [
-                                  {
-                                    "type": "number",
-                                    "const": 0.5
-                                  },
-                                  {
-                                    "type": "number",
-                                    "const": 1
-                                  }
-                                ]
+                                "type": "number"
                               },
                               "note": {
                                 "anyOf": [
@@ -28438,7 +28444,7 @@
                   "label": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 80
+                    "maxLength": 120
                   }
                 },
                 "required": [
@@ -29000,16 +29006,7 @@
                                 ]
                               },
                               "fraction": {
-                                "anyOf": [
-                                  {
-                                    "type": "number",
-                                    "const": 0.5
-                                  },
-                                  {
-                                    "type": "number",
-                                    "const": 1
-                                  }
-                                ]
+                                "type": "number"
                               },
                               "note": {
                                 "anyOf": [
@@ -29269,16 +29266,7 @@
                                 ]
                               },
                               "fraction": {
-                                "anyOf": [
-                                  {
-                                    "type": "number",
-                                    "const": 0.5
-                                  },
-                                  {
-                                    "type": "number",
-                                    "const": 1
-                                  }
-                                ]
+                                "type": "number"
                               },
                               "note": {
                                 "anyOf": [
@@ -29457,16 +29445,7 @@
                                 ]
                               },
                               "fraction": {
-                                "anyOf": [
-                                  {
-                                    "type": "number",
-                                    "const": 0.5
-                                  },
-                                  {
-                                    "type": "number",
-                                    "const": 1
-                                  }
-                                ]
+                                "type": "number"
                               },
                               "note": {
                                 "anyOf": [
@@ -29629,16 +29608,7 @@
                           ]
                         },
                         "fraction": {
-                          "anyOf": [
-                            {
-                              "type": "number",
-                              "const": 0.5
-                            },
-                            {
-                              "type": "number",
-                              "const": 1
-                            }
-                          ]
+                          "type": "number"
                         },
                         "note": {
                           "anyOf": [

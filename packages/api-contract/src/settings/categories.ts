@@ -16,6 +16,8 @@ const category = z.object({
   type: categoryType,
   /** The colour the person chose; null draws the one derived from the id. */
   color: hexColor().nullable(),
+  /** The colour it is drawn in: its own, its group's for a sub-category, or the one derived from the id. */
+  displayColor: hexColor(),
   /** 0 for a group, 1 for a sub-category: the lists are in tree order. */
   depth: z.union([z.literal(0), z.literal(1)]),
   /** How many movements point at it. */
@@ -30,6 +32,7 @@ const CATEGORY_EXAMPLE = {
   parentId: GROUP_ID,
   type: "expense",
   color: null,
+  displayColor: "#2563eb",
   depth: 1,
   usage: 42,
   archivedAt: null,

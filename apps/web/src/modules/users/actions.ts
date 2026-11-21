@@ -3,12 +3,9 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { z } from "zod";
 import { getAuth } from "@ledgerly/domain/platform/auth";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { requireSession } from "@/platform/auth/session";
-import type { TimeOffPreferences } from "@ledgerly/domain/users";
-import { updateTimeOffPreferences } from "@ledgerly/domain/users";
 
 /**
  * Every settings Server Action reports failure this way instead of throwing: a form calls it
@@ -16,19 +13,6 @@ import { updateTimeOffPreferences } from "@ledgerly/domain/users";
  * `error` is a catalogued message key under the calling component's own `next-intl` namespace.
  */
 type ActionResult = { ok: true } | { ok: false; error: string };
-
-/** Time off › Settings: the working day and the patron saint, each form on its own. */
-export async function saveTimeOffPreferencesAction(input: TimeOffPreferences): Promise<ActionResult> {
-  const ctx = await requireSession();
-  try {
-    await updateTimeOffPreferences(ctx, input);
-    revalidatePath("/timeoff", "layout");
-    return { ok: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) return { ok: false, error: "invalid" };
-    throw error;
-  }
-}
 
 export async function revokeOtherSessionsAction(): Promise<ActionResult> {
   await requireSession();

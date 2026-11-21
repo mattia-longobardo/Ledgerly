@@ -7,6 +7,7 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { transactionsSource } from "@ledgerly/domain/platform/integrations/source";
 import {
   archiveCategory,
+  colorOfCategory,
   createCategory,
   createLabel,
   deleteCategory,
@@ -54,18 +55,20 @@ async function guarded<T>(work: () => Promise<T>): Promise<T> {
 }
 
 async function categoryRows(ctx: Who, archived: boolean) {
-  return (await listCategoriesWithUsage(ctx, { includeArchived: archived })).map(
-    ({ category, usage, depth }) => ({
-      id: category.id,
-      name: category.name,
-      parentId: category.parentId,
-      type: category.type,
-      color: category.color,
-      depth,
-      usage,
-      archivedAt: category.archivedAt?.toISOString() ?? null,
-    }),
-  );
+  const rows = await listCategoriesWithUsage(ctx, { includeArchived: archived });
+  // A sub-category is drawn in its group's colour (`colorOfCategory`): the client applies no rule.
+  const byId = new Map(rows.map(({ category }) => [category.id, category]));
+  return rows.map(({ category, usage, depth }) => ({
+    id: category.id,
+    name: category.name,
+    parentId: category.parentId,
+    type: category.type,
+    color: category.color,
+    displayColor: colorOfCategory(category, byId),
+    depth,
+    usage,
+    archivedAt: category.archivedAt?.toISOString() ?? null,
+  }));
 }
 
 async function categoryRow(ctx: Who, id: string) {

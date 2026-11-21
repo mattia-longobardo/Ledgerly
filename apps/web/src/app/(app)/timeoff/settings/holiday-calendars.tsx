@@ -16,7 +16,7 @@ import {
   holidaySubdivisionsAction,
   refreshHolidayCalendarAction,
   removeHolidayCalendarAction,
-} from "./holiday-actions";
+} from "@/modules/timeoff/actions";
 
 /** One subscribed calendar, as the card shows it. */
 export interface CalendarRow {

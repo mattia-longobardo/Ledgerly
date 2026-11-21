@@ -13,6 +13,7 @@ import type { BookedLeave } from "@/modules/timeoff/ui/leave-panel";
 import { YearPicker } from "@/modules/timeoff/ui/year-picker";
 import { KIND_CLASS, leaveTypeOptions, weekdayInitials } from "@/modules/timeoff/ui/kinds";
 import { requireSession } from "@/platform/auth/session";
+import { trekStatsOf } from "@ledgerly/domain/platform/integrations/trek";
 import { today as todayIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, NULL_DISPLAY, type UiLocale } from "@ledgerly/domain/platform/format";
 import { Badge } from "@ledgerly/ui/badge";
@@ -50,7 +51,8 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
   const year = Number.isInteger(asked) && asked >= 1990 && asked <= 2200 ? asked : currentYear;
   const filter = asFilter(Array.isArray(query.filter) ? query.filter[0] : query.filter);
 
-  const view = await timeOffView(ctx, year);
+  // Trek's own figures are the plugin's, not the read-model's (TOF-4): read beside it until R5c.
+  const [view, trek] = await Promise.all([timeOffView(ctx, year), trekStatsOf(ctx, year)]);
   // Every total arrives in minutes; these two are the only places they become something to read.
   const days = (minutes: number) =>
     t("units.days", { amount: formatNumber(minutes / view.minutesPerDay, locale) });
@@ -311,12 +313,12 @@ export default async function TimeOffPage({ searchParams }: PageProps<"/timeoff"
 
         {/* Trek's own figures, beside ours and never folded into them: Trek honours a leave-year
           window (calendar, fiscal or anniversary) this app does not model (plan F7 §3.6.4). */}
-        {view.trek !== null && (
+        {trek !== null && (
           <p className="-mt-2 text-sm text-faint tabular-nums">
             {t("trekCheck", {
-              total: formatNumber(view.trek.totalAvailable, locale),
-              used: formatNumber(view.trek.used, locale),
-              remaining: formatNumber(view.trek.remaining, locale),
+              total: formatNumber(trek.totalAvailable, locale),
+              used: formatNumber(trek.used, locale),
+              remaining: formatNumber(trek.remaining, locale),
             })}
           </p>
         )}

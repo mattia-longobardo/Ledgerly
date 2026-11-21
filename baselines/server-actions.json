@@ -19,7 +19,7 @@
     ]
   },
   "apps/web/src/app/(app)/settings/categories/actions.ts": {
-    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
+    "closedBy": "R3 of transactions (Settings › Categories is that module's)",
     "actions": [
       "createLabelAction",
       "deleteLabelAction",
@@ -27,7 +27,7 @@
     ]
   },
   "apps/web/src/app/(app)/settings/categories/source-actions.ts": {
-    "closedBy": "R3 of transactions (Settings \u203a Categories is that module's)",
+    "closedBy": "R3 of transactions (Settings › Categories is that module's)",
     "actions": [
       "keepSourceCategoryAction",
       "setSourceCategoryAction",
@@ -64,19 +64,9 @@
     ]
   },
   "apps/web/src/app/(app)/settings/security/actions.ts": {
-    "closedBy": "POST /api-clients, with git-policy \u00a76 #4",
+    "closedBy": "POST /api-clients, with git-policy §6 #4",
     "actions": [
       "createApiClientAction"
-    ]
-  },
-  "apps/web/src/app/(app)/timeoff/settings/holiday-actions.ts": {
-    "closedBy": "R3 of timeoff",
-    "actions": [
-      "addHolidayCalendarAction",
-      "holidayCountriesAction",
-      "holidaySubdivisionsAction",
-      "refreshHolidayCalendarAction",
-      "removeHolidayCalendarAction"
     ]
   },
   "apps/web/src/app/(auth)/actions.ts": {
@@ -155,18 +145,23 @@
   "apps/web/src/modules/timeoff/actions.ts": {
     "closedBy": "R3 of timeoff",
     "actions": [
+      "addHolidayCalendarAction",
+      "holidayCountriesAction",
+      "holidaySubdivisionsAction",
+      "refreshHolidayCalendarAction",
+      "removeHolidayCalendarAction",
       "removeLeaveAction",
       "removeLeaveRangeAction",
       "saveAllowanceAction",
       "saveLeaveRangeAction",
+      "saveTimeOffPreferencesAction",
       "undoLeaveAction"
     ]
   },
   "apps/web/src/modules/users/actions.ts": {
-    "closedBy": "revokeOtherSessionsAction kept (web cookie); saveTimeOffPreferencesAction with R3 timeoff",
+    "closedBy": "revokeOtherSessionsAction kept (web cookie)",
     "actions": [
-      "revokeOtherSessionsAction",
-      "saveTimeOffPreferencesAction"
+      "revokeOtherSessionsAction"
     ]
   }
 }

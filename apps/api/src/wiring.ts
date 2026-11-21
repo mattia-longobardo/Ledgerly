@@ -6,9 +6,12 @@ import { wireAccounts } from "@ledgerly/domain/accounts";
 import { wireInterests } from "@ledgerly/domain/interests";
 import { managedAccountsOfInvestments } from "@ledgerly/domain/investments";
 import { ledgerPosting } from "@ledgerly/domain/platform/integrations/source";
+import { leaveCalendar } from "@ledgerly/domain/platform/integrations/calendar";
+import { wireTimeoff } from "@ledgerly/domain/timeoff";
 import { movementsOfAccounts } from "@ledgerly/domain/transactions";
 
 export function wireDomain(): void {
   wireAccounts({ movements: movementsOfAccounts, managed: managedAccountsOfInvestments });
   wireInterests({ posting: ledgerPosting });
+  wireTimeoff({ calendar: leaveCalendar });
 }

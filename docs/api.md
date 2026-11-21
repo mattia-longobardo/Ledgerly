@@ -78,6 +78,8 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | the writes of subscriptions: create, change, state, delete ([changelog](api-changelog.md)) | `write` |
 | `GET /interests`, `/interests/{id}` | `read` |
 | the writes of interests: create, change, state, post and mark a settlement ([changelog](api-changelog.md)) | `write` |
+| `GET /timeoff/{year}`, `/timeoff/allowances`, `/timeoff/holidays/*` | `read` |
+| the writes of time off: allowance, leave, undo, holiday calendars ([changelog](api-changelog.md)) | `write` |
 | `GET /summary`                             | `read`             |
 | `POST /accounts/{id}/balances`             | `write`            |
 | `POST /imports`                            | `imports`          |
@@ -118,6 +120,7 @@ and uses the same services as the REST API.
 | `list_subscriptions`       | `GET /api/v1/subscriptions`                 |
 | `list_interest_rules`      | `GET /api/v1/interests`                     |
 | `get_interest_rule`        | `GET /api/v1/interests/{id}`                |
+| `get_time_off`             | `GET /api/v1/timeoff/{year}`                |
 | `list_investments`         | `GET /api/v1/investments`                   |
 | `get_investment_holdings`  | `GET /api/v1/investments/{accountId}/holdings` |
 

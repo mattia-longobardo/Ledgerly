@@ -342,7 +342,7 @@ export const MODULES: Module[] = [
       "packages/domain/src/platform/holidays",
     ],
     flows: ["timeoff"],
-    usedBy: ["connections", "export", "jobs", "e2e:connections"],
+    usedBy: ["connections", "export", "jobs", "e2e:connections", "api"],
   },
   {
     id: "users",
@@ -438,6 +438,7 @@ export const MODULES: Module[] = [
       "budgets",
       "pockets",
       "subscriptions",
+      "timeoff",
       "imports",
       "admin",
       "categories",

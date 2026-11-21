@@ -40,6 +40,7 @@ describe("GET /meta", () => {
         "security",
         "server",
         "subscriptions",
+        "timeoff",
         "transactions",
       ],
       scopes: ["read", "write", "imports", "investments:read"],

@@ -3,12 +3,14 @@ export { HOLIDAY_SOURCES } from "./rules";
 export type { HolidaySource } from "./rules";
 export {
   HolidayServiceError,
-  addCalendar,
   countDaysByCalendar,
+  keepCalendar,
   listCalendars,
   markCalendarFailed,
+  refetchCalendar,
   refreshCalendar,
   removeCalendar,
+  yearsToRefresh,
 } from "./service";
 export { HolidayError, listCountries, listSubdivisions } from "./sources";
 export type { HolidayCountry, HolidayFetchOptions, HolidaySubdivision } from "./sources";

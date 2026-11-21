@@ -3,6 +3,31 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## 2026-11-21 · time off and the colour of a category (0.49.0)
+
+- `GET /timeoff/{year}` (new, `read`): the Time off page of one year — `allowance` in days, `vacation`
+  and `rol` (`residual` with `basis` `payslip`, `allowance` or `unknown`, `allowanceMinutes`,
+  `carriedMinutes`), `bars`, `rows` (a day: `origin` `manual` or `external`, `sync` `none`, `upsert` or
+  `delete`; a payslip's month: `usagePeriod`, `hours`, `payrollPeriod`), `years`, `unrecorded`,
+  `overdrawn`, `totals`, `countedThrough`, `months`, `totalAllowanceMinutes`, `allowanceMismatch`,
+  `holidays`, `accrual`, and `residualInputs` and `forecastInputs` for a preview before a write. Every
+  length is in minutes; `minutesPerDay` is a day.
+- MCP tool `get_time_off` (`year`) (new, read only): the answer of `GET /timeoff/{year}`.
+- `GET /timeoff/allowances` (new, `read`) and `PUT /timeoff/allowances/{year}` (new, `write`): the
+  allowance of each year, in days; null for a part nobody states.
+- `POST /timeoff/leave`, `DELETE /timeoff/leave/{id}`, `DELETE /timeoff/days/{date}`,
+  `DELETE /timeoff/leave?from&to` (new, `write`): book a range, remove a row, a date or a range; each
+  answers `{undo, days, removed, pending}`. `POST /timeoff/leave/undo` (new, `write`, 204) puts the
+  days back. Errors: `invalid` (`reason` `invalid_input`, `range_too_long`), `conflict` (`reason`
+  `not_bookable`, with `refused` `[{on, reason}]`), `not_found`.
+- `GET /timeoff/holidays/countries`, `/timeoff/holidays/subdivisions?source&country`,
+  `/timeoff/holidays/calendars` (new, `read`); `POST /timeoff/holidays/calendars` (201 `{id}`),
+  `DELETE /timeoff/holidays/calendars/{id}`, `POST /timeoff/holidays/calendars/{id}/refresh` (new,
+  `write`). Errors: `invalid`, `not_found`, `conflict` (`duplicate`, `too_many`), `unavailable`.
+- The error body gains `refused` (optional), only on `not_bookable`.
+- `GET /categories` (and the answers of the writes of a category): `displayColor` (new), the colour a
+  category is drawn in — its own, its group's for a sub-category, or the one derived from the id.
+
 ## 2026-11-21 · interests and the projections of subscriptions (0.48.0)
 
 - `GET /interests` (new, `read`): the Interests page — the `rules`, oldest first (`id`, `accountId`,

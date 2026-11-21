@@ -10,10 +10,10 @@ const savePreferences = vi.fn();
 const saveAllowance = vi.fn();
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("@/modules/users/actions", () => ({
+vi.mock("../actions", () => ({
+  saveAllowanceAction: (...args: unknown[]) => saveAllowance(...args),
   saveTimeOffPreferencesAction: (...args: unknown[]) => savePreferences(...args),
 }));
-vi.mock("../actions", () => ({ saveAllowanceAction: (...args: unknown[]) => saveAllowance(...args) }));
 
 function inIntl(children: React.ReactNode) {
   render(

@@ -184,6 +184,7 @@ describe("the reference user", () => {
       "/investments",
       "/investments?period=all",
       `/investments/${user.brokerId}/holdings`,
+      "/timeoff/2031",
       "/nothing-here",
     ]) {
       answers[`GET ${path}`] = await call("GET", path);
@@ -237,6 +238,7 @@ describe("the reference user", () => {
     answers.list_interest_rules = await tool("list_interest_rules");
     const listed = answers.list_interest_rules as { answer: { rules: { id: string }[] } };
     answers.get_interest_rule = await tool("get_interest_rule", { rule_id: listed.answer.rules[0].id });
+    answers.get_time_off = await tool("get_time_off", { year: "2031" });
     answers.list_investments = await tool("list_investments", { period: "all" });
     answers.get_investment_holdings = await tool("get_investment_holdings", { account_id: user.brokerId });
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/mcp.json"));

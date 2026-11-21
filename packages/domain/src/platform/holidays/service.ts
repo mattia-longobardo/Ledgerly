@@ -1,6 +1,6 @@
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import type { Ctx } from "../context";
-import type { CivilDate } from "../../shared/dates";
+import { type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../db/client";
 import { userScoped } from "../db/scope";
 import { type HolidaySource, type PatronSaint, italianHolidays } from "./rules";
@@ -201,4 +201,47 @@ export async function holidaysFor(
     return new Set();
   }
   return new Set(years.flatMap((year) => italianHolidays(year, patron).map((holiday) => holiday.date)));
+}
+
+/** This year and the next: leave is booked ahead of itself. */
+export function yearsToRefresh(current: number): number[] {
+  return [current, current + 1];
+}
+
+/**
+ * Fetches a calendar's two years now, as «add» and «update now» of Time off › Settings do, so its
+ * days show up at once rather than at tomorrow's job. A failure is written on the row and thrown.
+ */
+async function fetchAhead(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "locale">,
+  calendar: HolidayCalendar,
+): Promise<void> {
+  for (const year of yearsToRefresh(Number(today(ctx.timeZone).slice(0, 4)))) {
+    try {
+      await refreshCalendar(ctx, calendar, year, ctx.locale);
+    } catch (error) {
+      await markCalendarFailed(calendar.id, error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+}
+
+/** «Add» of Time off › Settings: keeps a calendar and fetches its two years at once. */
+export async function keepCalendar(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "locale">,
+  input: CalendarInput,
+): Promise<HolidayCalendar> {
+  const calendar = await addCalendar(ctx, input);
+  await fetchAhead(ctx, calendar);
+  return calendar;
+}
+
+/** «Update now» of one calendar: the same two years the daily job keeps. */
+export async function refetchCalendar(
+  ctx: Pick<Ctx, "userId" | "timeZone" | "locale">,
+  id: string,
+): Promise<void> {
+  const calendar = (await listCalendars(ctx)).find((one) => one.id === id);
+  if (!calendar) throw new HolidayServiceError("not_found");
+  await fetchAhead(ctx, calendar);
 }

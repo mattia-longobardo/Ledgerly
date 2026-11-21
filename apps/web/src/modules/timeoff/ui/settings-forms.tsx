@@ -3,14 +3,13 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, type ReactNode, useId, useRef, useState, useTransition } from "react";
-import { saveTimeOffPreferencesAction } from "@/modules/users/actions";
 import { Button } from "@ledgerly/ui/button";
 import { CardFooter } from "@ledgerly/ui/card";
 import { Field } from "@ledgerly/ui/field";
 import { Input, Select } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
-import { saveAllowanceAction } from "../actions";
+import { saveAllowanceAction, saveTimeOffPreferencesAction } from "../actions";
 import type { AllowanceSummary } from "./leave-actions";
 import { FIELD_GRID } from "@ledgerly/ui/section";
 import { intlLocale } from "@ledgerly/domain/platform/format";

@@ -10,6 +10,7 @@ import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
 import { timeOffView } from "./queries";
+import { calendar } from "./rules";
 import {
   MAX_RANGE_DAYS,
   TimeOffError,
@@ -329,7 +330,21 @@ describe("a row Trek still has to let go of (pending = 'delete')", () => {
 
     await removeLeave(ctx, { id: vacation.id });
     const view = await timeOffView(ctx, 2026);
-    const cell = view.calendar[5].weeks.flat().find((one) => one.date === TUE);
+    // The calendar is drawn by the client from the rows still booked (`timeoff/client`).
+    const booked = view.rows.flatMap((row) =>
+      row.source === "day" && row.pending !== "delete"
+        ? [{ on: row.on, kind: row.kind, fraction: row.fraction }]
+        : [],
+    );
+    const months = calendar(
+      2026,
+      booked,
+      new Set(view.holidays),
+      view.weekStart,
+      view.countedThrough,
+      view.minutesPerDay,
+    );
+    const cell = months[5].weeks.flat().find((one) => one.date === TUE);
     expect(cell?.kinds).toEqual([]);
     expect(view.vacation.residual.plannedMinutes).toBe(0);
     expect(view.rows).toContainEqual(expect.objectContaining({ on: TUE, pending: "delete" }));

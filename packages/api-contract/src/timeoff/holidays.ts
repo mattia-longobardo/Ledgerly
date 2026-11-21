@@ -108,7 +108,7 @@ export const addHolidayCalendar = defineRoute({
       source: z.enum(HOLIDAY_SOURCES),
       country: z.string().min(2).max(3),
       subdivision: z.string().nullable(),
-      label: z.string().min(1).max(80),
+      label: z.string().min(1).max(120),
     })
     .strict(),
   response: z.object({ id: id() }),

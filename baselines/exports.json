@@ -634,6 +634,8 @@
     "Allowance",
     "KindView",
     "LEAVE_DAY_KINDS",
+    "LeaveAnswer",
+    "LeaveCalendarSync",
     "LeaveRow",
     "LeaveUndo",
     "MonthBar",
@@ -642,6 +644,8 @@
     "ResidualView",
     "TimeOffError",
     "allowanceOf",
+    "bookLeave",
+    "calendarSync",
     "closePendingDeletes",
     "forgetPendingDays",
     "listAllowances",
@@ -652,7 +656,11 @@
     "restoreLeave",
     "saveAllowance",
     "saveLeaveRange",
-    "timeOffView"
+    "timeOffView",
+    "unbookLeave",
+    "unbookLeaveRange",
+    "undoLeave",
+    "wireTimeoff"
   ],
   "packages/domain/src/modules/transactions/client.ts": [
     "AMOUNT_OPS",
@@ -968,14 +976,16 @@
     "HolidayServiceError",
     "HolidaySource",
     "HolidaySubdivision",
-    "addCalendar",
     "countDaysByCalendar",
+    "keepCalendar",
     "listCalendars",
     "listCountries",
     "listSubdivisions",
     "markCalendarFailed",
+    "refetchCalendar",
     "refreshCalendar",
-    "removeCalendar"
+    "removeCalendar",
+    "yearsToRefresh"
   ],
   "packages/domain/src/platform/integrations/index.ts": [
     "BINANCE_PROVIDER",
@@ -1049,8 +1059,9 @@
     "createTrekClient",
     "isTokenRejected",
     "isTrekBusy",
+    "leaveCalendar",
     "syncTrekNow",
-    "trekConnection"
+    "trekStatsOf"
   ],
   "packages/domain/src/platform/integrations/wallet/index.ts": [
     "BACKFILL_CHOICES",
