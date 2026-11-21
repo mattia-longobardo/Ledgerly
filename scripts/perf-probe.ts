@@ -433,6 +433,7 @@ const routes: [string, () => Promise<void>][] = [
   ["GET /interests/:id", () => call("GET", `/interests/${rule.id}`)],
   ["GET /timeoff/:year", () => call("GET", `/timeoff/${thisYear}`)],
   ["GET /payroll/payslips", () => call("GET", "/payroll/payslips")],
+  ["GET /funds", () => call("GET", "/funds")],
 ];
 for (const [name, run] of routes) {
   resetRateLimits();
