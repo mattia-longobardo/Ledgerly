@@ -2,7 +2,7 @@
 // Dietz and the money-weighted rate (XIRR) of an account, a fund or a portfolio. Pure, and the one place of the module that works in
 // floating point: a rate of return is a ratio, never an amount, and nothing here is written back.
 import { addDays, type CivilDate, dayNumber, daysBetween } from "./dates";
-import type { Cents } from "./money";
+import { abs, type Cents } from "./money";
 
 /** A dated amount seen from the person: money put in is negative, money taken out positive. */
 interface DatedFlow {
@@ -22,7 +22,8 @@ const STEPS = 4000;
 const TOLERANCE = 1e-10;
 
 /**
- * XIRR (§2.4): the annual rate r for which Σ cᵢ / (1 + r)^(tᵢ / 365) = 0, with tᵢ the days from
+ * XIRR (§2.4), the money-weighted rate: shown as the XIRR of a service and of the Investments totals
+ * (`/api/v1/investments`, the MCP, the export), of a fund and of a span of a year or more. The annual rate r for which Σ cᵢ / (1 + r)^(tᵢ / 365) = 0, with tᵢ the days from
  * the first flow. The net present value is scanned over [{@link XIRR_MIN}, {@link XIRR_MAX}] for
  * changes of sign: none means no solution, more than one means several (both "not computable");
  * exactly one is narrowed by bisection.
@@ -82,7 +83,8 @@ export const MIN_CAPITAL_CENTS = 100n;
 export const MIN_CAPITAL_SHARE = 0.01;
 
 /**
- * Modified Dietz (§4.3) over `[from, to]`: flows at the end of their day, weighted by the days left.
+ * Modified Dietz (§4.3), the return of a period: under {@link periodReturn} on the Investments pages
+ * and under {@link moneyWeighted} on the Funds pages. Over `[from, to]`: flows at the end of their day, weighted by the days left.
  * `null` when the average capital is ≤ 0 or below the threshold of {@link MIN_CAPITAL_CENTS} and
  * {@link MIN_CAPITAL_SHARE} of the gross capital (the start plus the money put in).
  */
@@ -135,7 +137,7 @@ export function moneyWeighted(input: {
  * The money-weighted rate between two values, `from` the day of the first: only over 365 days or
  * more, since a shorter span would be annualised from too little (§2.4).
  */
-export function spanXirr(input: {
+function spanXirr(input: {
   from: CivilDate;
   to: CivilDate;
   startCents: Cents;
@@ -158,4 +160,68 @@ export function spanXirr(input: {
  */
 export function simpleReturn(gainCents: Cents, capitalCents: Cents): number {
   return Number((gainCents * 1_000_000_000n) / capitalCents) / 1_000_000_000;
+}
+
+/**
+ * The return on the money paid in: a gain over the opening and the deposits, the withdrawals left out
+ * of the base. Not annualised, in floating point. The `simpleReturn` of a service and of the
+ * Investments totals, which `/api/v1/investments`, the MCP and the export publish (D9). `null` when
+ * nothing was paid in.
+ */
+export function returnOnPaidIn(gainCents: Cents, paidInCents: Cents): number | null {
+  return paidInCents <= 0n ? null : Number(gainCents) / Number(paidInCents);
+}
+
+/**
+ * The return on the net capital: a P&L over the opening and the deposits less the withdrawals. The
+ * rate of a manual service since it started (PERS-335, `manualPnl.rate`). `null` when the net capital
+ * is not above zero.
+ */
+export function returnOnNetCapital(pnlCents: Cents, netCents: Cents): number | null {
+  return netCents <= 0n ? null : Number(pnlCents) / Number(netCents);
+}
+
+/** The return of a period on the Investments pages, the hero, a service's row and its Overview. */
+export interface PeriodReturn {
+  /**
+   * The period's return (§4.3): Modified Dietz; when it has no average capital to divide by — the
+   * money went in and out inside the period, profit included (a broker in 2026) — the P&L on the money
+   * put in (PERS-145, `method: "invested"`). `null` when there is no capital at all.
+   */
+  dietz: number | null;
+  method: "dietz" | "invested";
+  averageCapitalCents: number;
+  /** XIRR over the period, only when it covers at least a year (§4.3). */
+  xirr: Xirr | null;
+  /** Σ |flows| is more than the capital at the start: Dietz is further from a time-weighted return. */
+  largeFlows: boolean;
+}
+
+/**
+ * The return of a period of a service on the Investments pages (§4.3): {@link modifiedDietz} over
+ * `[from, to]`, or the P&L on the gross money put in when Dietz has no capital, and the XIRR of a
+ * span of a year or more. A flow is money put in (positive) or taken out (negative).
+ */
+export function periodReturn(input: {
+  from: CivilDate;
+  to: CivilDate;
+  startCents: Cents;
+  endCents: Cents;
+  pnlCents: Cents;
+  flows: readonly { on: CivilDate; cents: Cents }[];
+}): PeriodReturn {
+  const { from, to, startCents, endCents, pnlCents, flows } = input;
+  const dietz = modifiedDietz({ from, to, startCents, pnlCents, flows });
+  const base = addDays(from, -1);
+  const moved = flows.reduce((sum, flow) => sum + abs(flow.cents), 0n);
+  // Money put in before the last day (an opening on the last day is no capital yet, §4.3).
+  const putIn = startCents > 0n || flows.some((flow) => flow.cents > 0n && flow.on < to);
+  const invested = dietz.rate === null && putIn && dietz.gross >= Number(MIN_CAPITAL_CENTS);
+  return {
+    dietz: invested ? Number(pnlCents) / dietz.gross : dietz.rate,
+    method: invested ? "invested" : "dietz",
+    averageCapitalCents: dietz.averageCapital,
+    xirr: spanXirr({ from: base, to, startCents, endCents, flows }),
+    largeFlows: moved > abs(startCents),
+  };
 }

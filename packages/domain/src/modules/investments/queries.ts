@@ -311,14 +311,11 @@ async function portfolioState(
       return [{ ...entry, cents }];
     }),
   );
-  const portfolio = sumFlows(flows);
-  const investedCents = unconverted
-    ? null
-    : portfolio.openingCents + portfolio.depositedCents - portfolio.withdrawnCents;
   const shown =
-    value.total !== null && investedCents !== null && !value.partial && services.every((one) => one.reliable);
-  const gainCents = shown ? (value.total as Cents) - (investedCents as Cents) : null;
-  const base = portfolio.openingCents + portfolio.depositedCents;
+    value.total !== null && !unconverted && !value.partial && services.every((one) => one.reliable);
+  const measured = performance(sumFlows(flows), shown ? value.total : null);
+  const investedCents = unconverted ? null : measured.investedCents;
+  const { gainCents } = measured;
 
   return {
     currency,
@@ -329,8 +326,8 @@ async function portfolioState(
       partial: value.partial,
       investedCents,
       gainCents,
-      simpleReturn: gainCents === null || base <= 0n ? null : Number(gainCents) / Number(base),
-      xirr: gainCents === null ? null : xirr(investorFlows(flows, todayOn, value.total as Cents)),
+      simpleReturn: measured.simpleReturn,
+      xirr: gainCents === null ? null : xirr(investorFlows(flows, todayOn, value.total!)),
       fxEffect,
     },
     live,

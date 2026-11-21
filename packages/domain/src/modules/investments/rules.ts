@@ -15,6 +15,7 @@ import type { Cents } from "../../shared/money";
 import { divRound } from "../../shared/money";
 import { abs } from "../../shared/money";
 import { daysBetween } from "../../shared/dates";
+import { returnOnNetCapital, returnOnPaidIn } from "../../shared/returns";
 
 // ——— Vocabulary ——————————————————————————————————————————————————————————————————————————————
 
@@ -966,14 +967,18 @@ export interface Performance {
   simpleReturn: number | null;
 }
 
+/**
+ * The gain since the start against the money in and out: of a service, and of the portfolio with its
+ * flows in the display currency. Its return is {@link returnOnPaidIn}.
+ */
 export function performance(flows: Flows, valueCents: Cents | null): Performance {
   const investedCents = flows.openingCents + flows.depositedCents - flows.withdrawnCents;
   const gainCents = valueCents === null ? null : valueCents - investedCents;
-  const base = flows.openingCents + flows.depositedCents;
   return {
     investedCents,
     gainCents,
-    simpleReturn: gainCents === null || base <= 0n ? null : Number(gainCents) / Number(base),
+    simpleReturn:
+      gainCents === null ? null : returnOnPaidIn(gainCents, flows.openingCents + flows.depositedCents),
   };
 }
 
@@ -996,8 +1001,7 @@ export interface AccountPnl {
 }
 
 export function accountPnl(book: Book, on: CivilDate, valueCents: Cents | null): AccountPnl {
-  const flows = flowsOn(book, on);
-  const investedCents = flows.openingCents + flows.depositedCents - flows.withdrawnCents;
+  const { investedCents } = performance(flowsOn(book, on), null);
   let valuedOn: CivilDate | null = null;
   if (book.accountBalances !== undefined) {
     // A view on its account (PERS-342): the value is as old as the last balance read for it.
@@ -1014,7 +1018,7 @@ export function accountPnl(book: Book, on: CivilDate, valueCents: Cents | null):
     valueCents,
     investedCents,
     pnlCents,
-    rate: pnlCents === null || investedCents <= 0n ? null : Number(pnlCents) / Number(investedCents),
+    rate: pnlCents === null ? null : returnOnNetCapital(pnlCents, investedCents),
     valuedOn,
     stale: valuedOn === null || valuedOn < addDays(on, -STALE_VALUE_DAYS),
   };

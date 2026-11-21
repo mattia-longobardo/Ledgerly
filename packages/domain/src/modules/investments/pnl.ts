@@ -22,13 +22,7 @@ import {
   valueOn,
 } from "./rules";
 import { divRound } from "../../shared/money";
-import {
-  MIN_CAPITAL_CENTS,
-  MIN_CAPITAL_SHARE,
-  modifiedDietz,
-  spanXirr,
-  type Xirr,
-} from "../../shared/returns";
+import { MIN_CAPITAL_CENTS, MIN_CAPITAL_SHARE, type PeriodReturn, periodReturn } from "../../shared/returns";
 import { abs } from "../../shared/money";
 
 // ——— The period (§1.2, §2.1) ————————————————————————————————————————————————————————————————
@@ -423,21 +417,6 @@ type PnlReason =
   /** A rate to the display currency is missing. */
   | "no_rate";
 
-interface PeriodReturn {
-  /**
-   * The period's return (§4.3): Modified Dietz; when it has no average capital to divide by — the
-   * money went in and out inside the period, profit included (eToro 2026) — the P&L on the money
-   * put in (PERS-145, `method: "invested"`). `null` when there is no capital at all.
-   */
-  dietz: number | null;
-  method: "dietz" | "invested";
-  averageCapitalCents: number;
-  /** XIRR over the period, only when it covers at least a year (§4.3). */
-  xirr: Xirr | null;
-  /** Σ |flows| is more than the capital at the start: Dietz is further from a time-weighted return. */
-  largeFlows: boolean;
-}
-
 /** A flow of the period, signed (in positive), in the account's currency and the display one. */
 interface PeriodFlow {
   on: CivilDate;
@@ -779,29 +758,6 @@ function periodIndexAt(book: Book, on: CivilDate): number {
   let index = -1;
   for (let at = 0; at < periods.length; at++) if (periods[at].fromOn <= on) index = at;
   return index;
-}
-
-function returnOf(
-  from: CivilDate,
-  to: CivilDate,
-  startCents: Cents,
-  endCents: Cents,
-  pnlCents: Cents,
-  flows: readonly { on: CivilDate; cents: Cents }[],
-): PeriodReturn {
-  const dietz = modifiedDietz({ from, to, startCents, pnlCents, flows });
-  const base = addDays(from, -1);
-  const moved = flows.reduce((sum, flow) => sum + abs(flow.cents), 0n);
-  // Money put in before the last day (an opening on the last day is no capital yet, §4.3).
-  const putIn = startCents > 0n || flows.some((flow) => flow.cents > 0n && flow.on < to);
-  const invested = dietz.rate === null && putIn && dietz.gross >= Number(MIN_CAPITAL_CENTS);
-  return {
-    dietz: invested ? Number(pnlCents) / dietz.gross : dietz.rate,
-    method: invested ? "invested" : "dietz",
-    averageCapitalCents: dietz.averageCapital,
-    xirr: spanXirr({ from: base, to, startCents, endCents, flows }),
-    largeFlows: moved > abs(startCents),
-  };
 }
 
 const signed = (entry: FlowEntry): Cents => (entry.kind === "withdrawal" ? -entry.cents : entry.cents);
@@ -1259,7 +1215,14 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
       parts.unattributedCents;
     displayParts = { pnlCents: pnlD, ...parts, fxCents: pnlD - converted };
     const displayFlows = flows.map((flow) => ({ on: flow.on, cents: flow.displayCents as Cents }));
-    displayReturn = returnOf(from, e, startD, endD, pnlD, displayFlows);
+    displayReturn = periodReturn({
+      from,
+      to: e,
+      startCents: startD,
+      endCents: endD,
+      pnlCents: pnlD,
+      flows: displayFlows,
+    });
     displayCapitalCents = displayReturn.averageCapitalCents;
   }
 
@@ -1278,7 +1241,7 @@ export function pnlOf(service: PnlService, s: CivilDate | null, e: CivilDate, di
     openPositions,
     local,
     display: displayParts,
-    localReturn: returnOf(from, e, startCents, endCents, pnlCents, entries),
+    localReturn: periodReturn({ from, to: e, startCents, endCents, pnlCents, flows: entries }),
     displayReturn,
     displayStartCents: startD,
     displayCapitalCents,
