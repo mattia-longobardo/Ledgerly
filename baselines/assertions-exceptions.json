@@ -703,5 +703,30 @@
     "file": "packages/domain/src/platform/auth/scopes.test.ts",
     "decision": "R2 investments, session scope",
     "reason": "the name of the test names investments:read too; the expected scopes of a token are the same four"
+  },
+  {
+    "file": "apps/web/src/modules/funds/ui/contribution-dialog.test.tsx",
+    "decision": "R3 funds",
+    "reason": "the dialog writes through /api/v1: the mock moves from ../actions to ../calls and next/navigation is mocked; no expected value changed"
+  },
+  {
+    "file": "apps/web/src/modules/funds/ui/fund-forms.test.tsx",
+    "decision": "R3 funds",
+    "reason": "the forms write through /api/v1: the mock moves from ../actions to ../calls and next/navigation is mocked; no expected value changed"
+  },
+  {
+    "file": "apps/web/src/platform/api/funds.itest.ts",
+    "decision": "R3 funds",
+    "reason": "the Server Action decideDifferenceAction is deleted: the test keeps it line for line as a local helper calling the same use case; the parity assertions are the same"
+  },
+  {
+    "file": "packages/domain/src/modules/investments/service.itest.ts",
+    "decision": "R2 investments, D11",
+    "reason": "a test added: a new operation is converted with fx's one rounding; no existing assertion changed"
+  },
+  {
+    "file": "tests/e2e/_shared/origin.ts",
+    "decision": "@site on origin (Mattia, 2026-11-21)",
+    "reason": "the comment names the @site tests too; no assertion in the file"
   }
 ]
