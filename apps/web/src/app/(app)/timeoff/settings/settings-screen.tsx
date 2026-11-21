@@ -18,16 +18,11 @@ import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { Page } from "@ledgerly/ui/shell/page";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
-import {
-  type AllowanceSummary,
-  AllowanceForm,
-  PatronSaintForm,
-  WorkingHoursForm,
-  yearOf,
-  YearPicker,
-} from "@/modules/timeoff/client";
+import { parseYearQuery } from "@ledgerly/ui/period";
+import { YearPicker } from "@ledgerly/ui/year-picker";
 import TimeOffLoading from "../loading";
 import { type CalendarRow, HolidayCalendars } from "./holiday-calendars";
+import { type AllowanceSummary, AllowanceForm, PatronSaintForm, WorkingHoursForm } from "./settings-forms";
 
 type Allowance = RouteOutput<typeof timeoff.listTimeOffAllowances>["allowances"][number];
 type Preferences = RouteOutput<typeof profile.getPreferences>;
@@ -80,7 +75,7 @@ export function TimeOffSettingsScreen({ calendarLink }: { calendarLink: Calendar
     <Loaded state={prefs}>
       {(preferences) => {
         const currentYear = Number(today(preferences.timeZone).slice(0, 4));
-        const place = { year: yearOf(asked, currentYear, currentYear + 1), currentYear };
+        const place = { year: parseYearQuery(asked, currentYear, currentYear + 1), currentYear };
         return <SettingsPage place={place} preferences={preferences} calendarLink={calendarLink} />;
       }}
     </Loaded>

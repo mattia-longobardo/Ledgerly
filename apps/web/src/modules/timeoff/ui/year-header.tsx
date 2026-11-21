@@ -7,7 +7,7 @@ import { TabLinks } from "@ledgerly/ui/tab-links";
 import { AddLeave } from "./leave-actions";
 import { daysOf, formatNumber, headline, type Say, type View } from "./words";
 import { type Filter, yearHref } from "./year";
-import { YearPicker } from "./year-picker";
+import { YearPicker } from "@ledgerly/ui/year-picker";
 
 /** The external calendar's own figures for the year: the plugin's, read beside the page until R5c (TOF-4). */
 export interface ExternalStats {

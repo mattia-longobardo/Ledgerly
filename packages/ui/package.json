@@ -81,7 +81,8 @@
     "./url": "./src/url.ts",
     "./use-selection": "./src/use-selection.ts",
     "./value-entry": "./src/value-entry.tsx",
-    "./week-start": "./src/week-start.tsx"
+    "./week-start": "./src/week-start.tsx",
+    "./year-picker": "./src/year-picker.tsx"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

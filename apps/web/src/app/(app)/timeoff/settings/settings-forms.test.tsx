@@ -2,17 +2,17 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import messages from "../../../../../../messages/en.json";
+import messages from "../../../../../../../messages/en.json";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
 import { AllowanceForm, PatronSaintForm, WorkingHoursForm } from "./settings-forms";
 
 const savePreferences = vi.fn();
 const saveAllowance = vi.fn();
 
-vi.mock("../calls", () => ({
+vi.mock("./calls", () => ({
   saveAllowanceAction: (...args: unknown[]) => saveAllowance(...args),
   saveTimeOffPreferencesAction: (...args: unknown[]) => savePreferences(...args),
-  timeOffChanged: vi.fn(),
+  settingsChanged: vi.fn(),
 }));
 
 function inIntl(children: React.ReactNode) {

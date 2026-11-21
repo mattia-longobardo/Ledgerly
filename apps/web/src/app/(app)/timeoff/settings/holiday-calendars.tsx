@@ -14,8 +14,8 @@ import {
   holidaySubdivisionsAction,
   refreshHolidayCalendarAction,
   removeHolidayCalendarAction,
-  timeOffChanged,
-} from "@/modules/timeoff/client";
+  settingsChanged,
+} from "./calls";
 import type { HolidayCountry, HolidaySubdivision } from "@ledgerly/domain/platform/holidays/client";
 
 /** One subscribed calendar, as the card shows it. */
@@ -50,7 +50,7 @@ export function HolidayCalendars({ calendars, year }: { calendars: CalendarRow[]
     if (result.ok) {
       setError(null);
       notify(success);
-      timeOffChanged();
+      settingsChanged();
       return;
     }
     setError(t(`errors.${result.error}` as "errors.failed"));

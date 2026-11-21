@@ -31,8 +31,8 @@ import {
   YearAlerts,
   YearCards,
   YearHeader,
-  yearOf,
 } from "@/modules/timeoff/client";
+import { parseYearQuery } from "@ledgerly/ui/period";
 import TimeOffLoading from "./loading";
 
 /** Nothing to draw yet: the skeleton the route shows while it loads. A refusal is `Loaded`'s. */
@@ -54,7 +54,7 @@ export function TimeOffScreen({ external }: { external: ExternalStats | null }) 
       {(preferences) => {
         const currentYear = Number(today(preferences.timeZone).slice(0, 4));
         const place = {
-          year: yearOf(query.get("year"), currentYear, 2200),
+          year: parseYearQuery(query.get("year"), currentYear, 2200),
           currentYear,
           filter: filterOf(query.get("filter")),
         };

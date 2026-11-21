@@ -6,16 +6,6 @@ import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { useLeaveBoard } from "./leave-board";
 
-/** The year's allowance as the dialog shows it, in the units a contract states. */
-export interface AllowanceSummary {
-  year: number;
-  vacationDays: string;
-  rolDays: string;
-  /** Vacation and ROL together, in days, as the contract states it (N7). */
-  totalDays: string;
-  note: string;
-}
-
 /* The buttons the page places */
 
 /** "Add leave" — in the header in every state of the page, and in the empty state. */

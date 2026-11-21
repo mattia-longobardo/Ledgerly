@@ -8,12 +8,22 @@ import { Field } from "@ledgerly/ui/field";
 import { Input, Select } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
-import { saveAllowanceAction, saveTimeOffPreferencesAction, timeOffChanged } from "../calls";
-import type { AllowanceSummary } from "./leave-actions";
+import { saveAllowanceAction, saveTimeOffPreferencesAction, settingsChanged } from "./calls";
+
 import { FIELD_GRID } from "@ledgerly/ui/section";
 import { intlLocale } from "@ledgerly/format/format";
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+/** The year's allowance as the dialog shows it, in the units a contract states. */
+export interface AllowanceSummary {
+  year: number;
+  vacationDays: string;
+  rolDays: string;
+  /** Vacation and ROL together, in days, as the contract states it (N7). */
+  totalDays: string;
+  note: string;
+}
+
+const MONTHS = Array.from({ length: 12 }, (_unused, index) => index + 1);
 // A non-leap-year probe (matches the server's own patron-saint validation): Feb has 28 days here.
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
 
@@ -26,7 +36,7 @@ function daysInMonth(month: number | undefined): number {
  * the page submits the forms with a change (`useUnsavedForm`).
  */
 function useSave(success: string) {
-  const t = useTranslations("timeoff");
+  const text = useTranslations("timeoff");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -36,15 +46,15 @@ function useSave(success: string) {
       try {
         const result = await work();
         if (!result.ok) {
-          setError(t("errors.invalid"));
+          setError(text("errors.invalid"));
           return;
         }
         setError(null);
         unsaved.saved();
         notify(success);
-        timeOffChanged();
+        settingsChanged();
       } catch {
-        setError(t("errors.failed"));
+        setError(text("errors.failed"));
       }
     });
   return { pending, error, save, formRef };
@@ -73,55 +83,39 @@ export function AllowanceForm({
   previous: AllowanceSummary | null;
   stepper: ReactNode;
 }) {
-  const t = useTranslations("timeoff");
+  const text = useTranslations("timeoff");
   const id = useId();
-  const [vacationDays, setVacationDays] = useState(allowance.vacationDays);
-  const [rolDays, setRolDays] = useState(allowance.rolDays);
-  const [totalDays, setTotalDays] = useState(allowance.totalDays);
-  const [note, setNote] = useState(allowance.note);
-  const { pending, error, save, formRef } = useSave(t("toasts.allowanceSaved"));
+  // The year stays the form's own: «Copy from» brings last year's figures, never its year.
+  const [fields, setFields] = useState(allowance);
+  const set = (key: "vacationDays" | "rolDays" | "totalDays" | "note") => (value: string) =>
+    setFields((was) => ({ ...was, [key]: value }));
+  const { pending, error, save, formRef } = useSave(text("toasts.allowanceSaved"));
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    save(() => saveAllowanceAction({ year: String(allowance.year), vacationDays, rolDays, totalDays, note }));
+    save(() => saveAllowanceAction({ ...fields, year: String(allowance.year) }));
   }
-
-  const number = (fieldId: string, value: string, onChange: (value: string) => void) => (
-    <Input
-      id={fieldId}
-      type="number"
-      min="0"
-      max="400"
-      step="0.5"
-      className="tabular-nums"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  );
 
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm font-medium">{t("header.yearLabel")}</span>
-        {stepper}
-      </div>
+      <YearRow label={text("header.yearLabel")}>{stepper}</YearRow>
       <div className={FIELD_GRID}>
-        <Field label={t("allowance.vacationDays")} htmlFor={`${id}-vac`}>
-          {number(`${id}-vac`, vacationDays, setVacationDays)}
+        <Field label={text("allowance.vacationDays")} htmlFor={`${id}-vac`}>
+          <DaysInput id={`${id}-vac`} value={fields.vacationDays} onChange={set("vacationDays")} />
         </Field>
         {/* Days, like vacation (N9): one unit on the whole screen, whatever the contract states. */}
-        <Field label={t("allowance.rolDays")} htmlFor={`${id}-rol`}>
-          {number(`${id}-rol`, rolDays, setRolDays)}
+        <Field label={text("allowance.rolDays")} htmlFor={`${id}-rol`}>
+          <DaysInput id={`${id}-rol`} value={fields.rolDays} onChange={set("rolDays")} />
         </Field>
-        <Field label={t("allowance.totalDays")} htmlFor={`${id}-total`}>
-          {number(`${id}-total`, totalDays, setTotalDays)}
+        <Field label={text("allowance.totalDays")} htmlFor={`${id}-total`}>
+          <DaysInput id={`${id}-total`} value={fields.totalDays} onChange={set("totalDays")} />
         </Field>
-        <Field label={t("dialog.note")} htmlFor={`${id}-note`}>
+        <Field label={text("dialog.note")} htmlFor={`${id}-note`}>
           <Input
             id={`${id}-note`}
             maxLength={200}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
+            value={fields.note}
+            onChange={(event) => set("note")(event.target.value)}
           />
         </Field>
       </div>
@@ -132,14 +126,9 @@ export function AllowanceForm({
             size="sm"
             variant="ghost"
             disabled={pending}
-            onClick={() => {
-              setVacationDays(previous.vacationDays);
-              setRolDays(previous.rolDays);
-              setTotalDays(previous.totalDays);
-              setNote(previous.note);
-            }}
+            onClick={() => setFields({ ...previous, year: allowance.year })}
           >
-            {t("settings.copyFrom", { year: previous.year })}
+            {text("settings.copyFrom", { year: previous.year })}
           </Button>
         </CardFooter>
       )}
@@ -147,11 +136,45 @@ export function AllowanceForm({
   );
 }
 
+/** The year the form is about, and the stepper that changes it. */
+function YearRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <span className="text-sm font-medium">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/** A number of days, in half days, as the allowance states it. */
+function DaysInput({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Input
+      id={id}
+      type="number"
+      min="0"
+      max="400"
+      step="0.5"
+      className="tabular-nums"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
+}
+
 export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
-  const t = useTranslations("timeoff");
+  const text = useTranslations("timeoff");
   const id = useId();
   const [minutes, setMinutes] = useState(minutesPerDay);
-  const { error, save, formRef } = useSave(t("settings.hours.saved"));
+  const { error, save, formRef } = useSave(text("settings.hours.saved"));
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -161,9 +184,9 @@ export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3">
       <Field
-        label={t("settings.hours.label")}
+        label={text("settings.hours.label")}
         htmlFor={`${id}-hours`}
-        hint={t("settings.hours.hint")}
+        hint={text("settings.hours.hint")}
         hintBeside
       >
         <Input
@@ -185,18 +208,18 @@ export function WorkingHoursForm({ minutesPerDay }: { minutesPerDay: number }) {
 }
 
 export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number; day: number } | null }) {
-  const t = useTranslations("timeoff");
+  const text = useTranslations("timeoff");
   const locale = useLocale();
   const id = useId();
   const [patron, setPatron] = useState(patronSaint);
-  const { error, save, formRef } = useSave(t("settings.patron.saved"));
+  const { error, save, formRef } = useSave(text("settings.patron.saved"));
 
   const monthFormatter = new Intl.DateTimeFormat(intlLocale(locale), {
     month: "long",
     timeZone: "UTC",
   });
   const monthLabel = (month: number) => monthFormatter.format(new Date(Date.UTC(2023, month - 1, 1)));
-  const days = Array.from({ length: daysInMonth(patron?.month) }, (_, i) => i + 1);
+  const days = Array.from({ length: daysInMonth(patron?.month) }, (_unused, index) => index + 1);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -206,9 +229,9 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-3 border-t border-border pt-3">
       <Field
-        label={t("settings.patron.label")}
+        label={text("settings.patron.label")}
         htmlFor={`${id}-month`}
-        hint={t("settings.patron.hint")}
+        hint={text("settings.patron.hint")}
         hintBeside
       >
         <div className="flex gap-2">
@@ -220,24 +243,24 @@ export function PatronSaintForm({ patronSaint }: { patronSaint: { month: number;
               setPatron(month ? { month, day: Math.min(patron?.day ?? 1, daysInMonth(month)) } : null);
             }}
           >
-            <option value="">{t("settings.patron.none")}</option>
-            {MONTHS.map((m) => (
-              <option key={m} value={m}>
-                {monthLabel(m)}
+            <option value="">{text("settings.patron.none")}</option>
+            {MONTHS.map((month) => (
+              <option key={month} value={month}>
+                {monthLabel(month)}
               </option>
             ))}
           </Select>
           <Select
-            aria-label={t("settings.patron.day")}
+            aria-label={text("settings.patron.day")}
             disabled={!patron}
             value={patron?.day ?? ""}
             onChange={(event) =>
               patron && setPatron({ month: patron.month, day: Number(event.target.value) })
             }
           >
-            {days.map((d) => (
-              <option key={d} value={d}>
-                {d}
+            {days.map((day) => (
+              <option key={day} value={day}>
+                {day}
               </option>
             ))}
           </Select>

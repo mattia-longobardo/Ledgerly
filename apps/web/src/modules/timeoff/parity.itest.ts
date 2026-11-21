@@ -29,6 +29,7 @@ const { apiRoutes, wireDomain } = await import("@ledgerly/api");
 const timeoff = await import("@ledgerly/domain/timeoff");
 const client = await import("@ledgerly/domain/timeoff/client");
 const calls = await import("./calls");
+const settings = await import("@/app/(app)/timeoff/settings/calls");
 const { bookedOf, liveDays } = await import("./ui/booked");
 
 /** Whose session the routes see: the person of the call in progress. */
@@ -255,7 +256,7 @@ describe("parity of the leave panel's writes: Server Action = call of the route"
 
   it("states an allowance from the typed days, either separator, and refuses what nobody can read", async () => {
     const typed = { year: "2026", vacationDays: "22,5", rolDays: " 4 ", totalDays: "", note: " contract " };
-    expect(await asPerson(bob, () => calls.saveAllowanceAction(typed))).toEqual(
+    expect(await asPerson(bob, () => settings.saveAllowanceAction(typed))).toEqual(
       await actions.saveAllowance(alice, typed),
     );
     const stated = async (ctx: Ctx) => {
@@ -264,25 +265,25 @@ describe("parity of the leave panel's writes: Server Action = call of the route"
     };
     expect(await stated(bob)).toEqual(await stated(alice));
     const unreadable = { ...typed, rolDays: "four" };
-    expect(await asPerson(bob, () => calls.saveAllowanceAction(unreadable))).toEqual(
+    expect(await asPerson(bob, () => settings.saveAllowanceAction(unreadable))).toEqual(
       await actions.saveAllowance(alice, unreadable),
     );
   });
 
   it("lists the countries the sources name, and says when neither answers", async () => {
     sources = "nager";
-    expect(await asPerson(bob, () => calls.holidayCountriesAction())).toEqual(
+    expect(await asPerson(bob, () => settings.holidayCountriesAction())).toEqual(
       await actions.holidayCountries(alice),
     );
     sources = "down";
-    expect(await asPerson(bob, () => calls.holidayCountriesAction())).toEqual(
+    expect(await asPerson(bob, () => settings.holidayCountriesAction())).toEqual(
       await actions.holidayCountries(alice),
     );
     expect(await actions.holidayCountries(alice)).toEqual({ ok: false, error: "unreachable" });
   });
 
   it("refuses a holiday source nobody defined, before any source is asked", async () => {
-    expect(await calls.holidaySubdivisionsAction("calendarific", "IT")).toEqual(
+    expect(await settings.holidaySubdivisionsAction("calendarific", "IT")).toEqual(
       actions.holidaySubdivisions("calendarific"),
     );
   });
@@ -291,7 +292,13 @@ describe("parity of the leave panel's writes: Server Action = call of the route"
 describe("parity of the leave panel's preview: before «Confirm» = the route after the save", () => {
   it("shows the residual and the forecast the route answers once the range is saved", async () => {
     await asPerson(alice, () =>
-      calls.saveAllowanceAction({ year: "2026", vacationDays: "20", rolDays: "4", totalDays: "", note: "" }),
+      settings.saveAllowanceAction({
+        year: "2026",
+        vacationDays: "20",
+        rolDays: "4",
+        totalDays: "",
+        note: "",
+      }),
     );
     await asPerson(alice, () => calls.saveLeaveRangeAction(fields({ from: FRI, to: FRI })));
     const before = await yearOf(alice);

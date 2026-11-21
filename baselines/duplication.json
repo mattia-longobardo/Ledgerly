@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 101164,
-    "duplicatedLines": 16335,
-    "percent": 16.15,
-    "blocks": 1222
+    "lines": 101133,
+    "duplicatedLines": 16362,
+    "percent": 16.18,
+    "blocks": 1225
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 58
     },
     "app": {
-      "lines": 24834,
-      "duplicatedLines": 3967,
-      "percent": 15.97,
-      "blocks": 308
+      "lines": 25188,
+      "duplicatedLines": 4026,
+      "percent": 15.98,
+      "blocks": 313
     },
     "global.d": {
       "lines": 12,
@@ -66,8 +66,8 @@
     },
     "modules/investments": {
       "lines": 10301,
-      "duplicatedLines": 1861,
-      "percent": 18.07,
+      "duplicatedLines": 1853,
+      "percent": 17.99,
       "blocks": 129
     },
     "modules/payroll": {
@@ -84,15 +84,15 @@
     },
     "modules/subscriptions": {
       "lines": 2065,
-      "duplicatedLines": 401,
-      "percent": 19.42,
-      "blocks": 26
+      "duplicatedLines": 409,
+      "percent": 19.81,
+      "blocks": 27
     },
     "modules/timeoff": {
-      "lines": 4631,
-      "duplicatedLines": 346,
-      "percent": 7.47,
-      "blocks": 32
+      "lines": 4246,
+      "duplicatedLines": 314,
+      "percent": 7.4,
+      "blocks": 29
     },
     "modules/transactions": {
       "lines": 13024,
@@ -520,6 +520,7 @@
     "app/(app)/settings/users/users-screen.tsx": 8,
     "app/(app)/timeoff/settings/holiday-calendars.tsx": 34,
     "app/(app)/timeoff/settings/page.tsx": 7,
+    "app/(app)/timeoff/settings/settings-forms.tsx": 59,
     "app/(app)/timeoff/settings/settings-screen.tsx": 18,
     "app/(app)/timeoff/timeoff-screen.tsx": 16,
     "app/(auth)/forgot-password/forgot-form.tsx": 8,
@@ -620,7 +621,7 @@
     "modules/investments/sync/settle.ts": 51,
     "modules/investments/sync/sources.ts": 18,
     "modules/investments/sync/status.ts": 30,
-    "modules/investments/ui/dialogs.tsx": 338,
+    "modules/investments/ui/dialogs.tsx": 330,
     "modules/payroll/actions.ts": 70,
     "modules/payroll/applied.ts": 28,
     "modules/payroll/fields.ts": 56,
@@ -652,7 +653,7 @@
     "modules/subscriptions/schema.ts": 78,
     "modules/subscriptions/service.ts": 122,
     "modules/subscriptions/ui/inactive-subscriptions.tsx": 16,
-    "modules/subscriptions/ui/subscription-dialog.tsx": 105,
+    "modules/subscriptions/ui/subscription-dialog.tsx": 113,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
     "modules/subscriptions/ui/suggestions-dialog.tsx": 13,
     "modules/timeoff/ports.ts": 19,
@@ -663,9 +664,8 @@
     "modules/timeoff/service/records.ts": 16,
     "modules/timeoff/ui/booked.ts": 8,
     "modules/timeoff/ui/leave-board.tsx": 68,
-    "modules/timeoff/ui/leave-panel.tsx": 42,
+    "modules/timeoff/ui/leave-panel.tsx": 56,
     "modules/timeoff/ui/leave-table.tsx": 17,
-    "modules/timeoff/ui/settings-forms.tsx": 46,
     "modules/timeoff/ui/year-alerts.tsx": 20,
     "modules/transactions/categorize/review/changes.ts": 72,
     "modules/transactions/categorize/review/merges.ts": 58,

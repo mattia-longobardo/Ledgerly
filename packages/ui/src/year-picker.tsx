@@ -1,4 +1,4 @@
-import { Link } from "@ledgerly/ui/router";
+import { Link } from "./router";
 
 /**
  * The design's year stepper: previous, the year itself, next, and a way back to this one. Links

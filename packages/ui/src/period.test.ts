@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parsePeriodQuery, periodEnd, periodMonths } from "./period";
+import { parsePeriodQuery, parseYearQuery, periodEnd, periodMonths } from "./period";
 
 const TODAY = "2026-11-13";
 
@@ -52,5 +52,14 @@ describe("the window of a period", () => {
       months: 3,
       through: "2026-08-01",
     });
+  });
+});
+
+describe("parseYearQuery", () => {
+  it("reads a whole year up to the last one, and falls back to the current year", () => {
+    expect(parseYearQuery("2025", 2026, 2027)).toBe(2025);
+    expect(parseYearQuery(["2027", "2020"], 2026, 2027)).toBe(2027);
+    for (const asked of [null, undefined, "", "2028", "1989", "2025.5", "next"])
+      expect(parseYearQuery(asked, 2026, 2027)).toBe(2026);
   });
 });

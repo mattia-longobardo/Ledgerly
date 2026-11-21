@@ -79,3 +79,13 @@ export function parsePeriodQuery(raw: Raw, today: CivilDate, grainParam = "grain
     stepperParams,
   };
 }
+
+/** The year an address asks for (`?year=`): a whole year from 1990 up to `last`; anything else is `current`. */
+export function parseYearQuery(
+  asked: string | string[] | null | undefined,
+  current: number,
+  last: number,
+): number {
+  const year = Number(Array.isArray(asked) ? asked[0] : asked);
+  return Number.isInteger(year) && year >= 1990 && year <= last ? year : current;
+}
