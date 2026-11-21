@@ -6,7 +6,6 @@ import { Button } from "@ledgerly/ui/button";
 import { ConfirmDialog } from "@ledgerly/ui/form-dialog";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
-import { useRouter } from "@ledgerly/ui/router";
 import { deleteSubscription } from "../calls";
 import { type DialogOptions, SubscriptionDialog, type SubscriptionDraft } from "./subscription-dialog";
 import type { SubscriptionView } from "./subscriptions-table";
@@ -76,13 +75,11 @@ export function InactiveSubscriptions({
 /** Deletes a cancelled subscription and says how it went. */
 function useDelete() {
   const text = useTranslations("subscriptions");
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const remove = (row: SubscriptionView) =>
     startTransition(async () => {
       const result = await deleteSubscription(row.draft.id);
       if (result.ok) {
-        router.refresh();
         notify(text("inactive.deletedToast", { name: row.name }));
         return;
       }

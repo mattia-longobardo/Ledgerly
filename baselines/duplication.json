@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100046,
-    "duplicatedLines": 16247,
-    "percent": 16.24,
-    "blocks": 1220
+    "lines": 100108,
+    "duplicatedLines": 16219,
+    "percent": 16.2,
+    "blocks": 1216
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 50
     },
     "app": {
-      "lines": 25096,
-      "duplicatedLines": 4072,
-      "percent": 16.23,
-      "blocks": 317
+      "lines": 25166,
+      "duplicatedLines": 4047,
+      "percent": 16.08,
+      "blocks": 314
     },
     "global.d": {
       "lines": 12,
@@ -36,8 +36,8 @@
     },
     "modules/accounts": {
       "lines": 5130,
-      "duplicatedLines": 978,
-      "percent": 19.06,
+      "duplicatedLines": 984,
+      "percent": 19.18,
       "blocks": 70
     },
     "modules/budgets": {
@@ -48,8 +48,8 @@
     },
     "modules/funds": {
       "lines": 10576,
-      "duplicatedLines": 2009,
-      "percent": 19,
+      "duplicatedLines": 2013,
+      "percent": 19.03,
       "blocks": 150
     },
     "modules/imports": {
@@ -60,8 +60,8 @@
     },
     "modules/interests": {
       "lines": 2372,
-      "duplicatedLines": 469,
-      "percent": 19.77,
+      "duplicatedLines": 465,
+      "percent": 19.6,
       "blocks": 34
     },
     "modules/investments": {
@@ -83,10 +83,10 @@
       "blocks": 37
     },
     "modules/subscriptions": {
-      "lines": 2075,
-      "duplicatedLines": 399,
-      "percent": 19.23,
-      "blocks": 26
+      "lines": 2067,
+      "duplicatedLines": 390,
+      "percent": 18.87,
+      "blocks": 25
     },
     "modules/timeoff": {
       "lines": 3875,
@@ -455,7 +455,7 @@
     "app/(app)/investments/[accountId]/positions/page.tsx": 103,
     "app/(app)/investments/[accountId]/service-data.ts": 28,
     "app/(app)/investments/catalog/page.tsx": 32,
-    "app/(app)/investments/page.tsx": 283,
+    "app/(app)/investments/page.tsx": 274,
     "app/(app)/navigation.ts": 108,
     "app/(app)/overview-screen.tsx": 20,
     "app/(app)/payroll/[id]/page.tsx": 26,
@@ -507,8 +507,7 @@
     "app/(app)/settings/server/oidc-card.tsx": 74,
     "app/(app)/settings/server/server-screen.tsx": 32,
     "app/(app)/settings/server/smtp-card.tsx": 118,
-    "app/(app)/settings/users/users-screen.tsx": 16,
-    "app/(app)/subscriptions/page.tsx": 8,
+    "app/(app)/settings/users/users-screen.tsx": 8,
     "app/(app)/timeoff/page.tsx": 66,
     "app/(app)/timeoff/settings/holiday-calendars.tsx": 41,
     "app/(app)/timeoff/settings/page.tsx": 26,
@@ -532,7 +531,7 @@
     "modules/accounts/service/snapshot.ts": 9,
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 39,
-    "modules/accounts/ui/balance-entries.tsx": 133,
+    "modules/accounts/ui/balance-entries.tsx": 139,
     "modules/accounts/ui/connections.tsx": 38,
     "modules/accounts/ui/settings-form.tsx": 67,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
@@ -565,7 +564,7 @@
     "modules/funds/ui/fund-contributions.tsx": 95,
     "modules/funds/ui/fund-fees-client.tsx": 8,
     "modules/funds/ui/fund-forms.tsx": 66,
-    "modules/funds/ui/fund-settings-form.tsx": 46,
+    "modules/funds/ui/fund-settings-form.tsx": 50,
     "modules/funds/ui/fund-settings.tsx": 37,
     "modules/funds/ui/fund-sources.tsx": 21,
     "modules/funds/ui/fund-valuations.tsx": 113,
@@ -593,7 +592,7 @@
     "modules/interests/service/records.ts": 30,
     "modules/interests/service/switching.ts": 13,
     "modules/interests/ui/present.ts": 6,
-    "modules/interests/ui/rule-dialog.tsx": 131,
+    "modules/interests/ui/rule-dialog.tsx": 127,
     "modules/investments/actions.ts": 101,
     "modules/investments/activity.ts": 15,
     "modules/investments/api.ts": 15,
@@ -644,8 +643,7 @@
     "modules/subscriptions/schema.ts": 78,
     "modules/subscriptions/service.ts": 113,
     "modules/subscriptions/ui/inactive-subscriptions.tsx": 15,
-    "modules/subscriptions/ui/present.ts": 8,
-    "modules/subscriptions/ui/subscription-dialog.tsx": 105,
+    "modules/subscriptions/ui/subscription-dialog.tsx": 104,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
     "modules/subscriptions/ui/suggestions-dialog.tsx": 13,
     "modules/timeoff/rules/inputs.ts": 21,

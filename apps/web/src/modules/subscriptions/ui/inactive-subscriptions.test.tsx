@@ -16,7 +16,6 @@ vi.mock("../calls", () => ({
   updateSubscription: vi.fn(),
   createSubscription: vi.fn(),
 }));
-vi.mock("@ledgerly/ui/router", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 function view(name: string, state: "paused" | "cancelled"): SubscriptionView {
   return {

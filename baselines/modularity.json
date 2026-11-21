@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 17,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 147,
+    "deepImports": 143,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -414,10 +414,6 @@
     "app/(app)/settings/security/two-factor-card.tsx → modules/users/ui/two-factor-setup",
     "app/(app)/settings/users/users-screen.tsx → modules/users/ui/invite-person",
     "app/(app)/settings/users/users-screen.tsx → modules/users/ui/people-table",
-    "app/(app)/subscriptions/page.tsx → modules/subscriptions/ui/present",
-    "app/(app)/subscriptions/page.tsx → modules/subscriptions/ui/subscription-dialog",
-    "app/(app)/subscriptions/page.tsx → modules/subscriptions/ui/subscriptions-table",
-    "app/(app)/subscriptions/page.tsx → modules/subscriptions/ui/suggestions-dialog",
     "app/(app)/timeoff/page.tsx → modules/timeoff/ui/kind-card",
     "app/(app)/timeoff/page.tsx → modules/timeoff/ui/kinds",
     "app/(app)/timeoff/page.tsx → modules/timeoff/ui/leave-actions",

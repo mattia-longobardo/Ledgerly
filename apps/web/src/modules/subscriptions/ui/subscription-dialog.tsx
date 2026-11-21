@@ -10,7 +10,6 @@ import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Input, InputGroup, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import { useRouter } from "@ledgerly/ui/router";
 import { type ActionResult, createSubscription, setSubscriptionState, updateSubscription } from "../calls";
 import { CYCLES, type Cycle, type SubscriptionState } from "@ledgerly/domain/subscriptions/client";
 
@@ -55,7 +54,6 @@ export function SubscriptionDialog({
   onClose: () => void;
 }) {
   const t = useTranslations("subscriptions");
-  const router = useRouter();
   const id = useId();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +70,6 @@ export function SubscriptionDialog({
       return;
     }
     notify(toast);
-    router.refresh();
     onClose();
   }
 
