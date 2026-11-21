@@ -1,9 +1,8 @@
-import type { Route } from "next";
-import Link from "next/link";
+import { Link } from "@ledgerly/ui/router";
 
 /**
  * The design's year stepper: previous, the year itself, next, and a way back to this one. Links
- * rather than buttons, so the year is in the URL and the whole page stays a server render.
+ * rather than buttons, so the year is in the URL and a year worth looking at can be linked to.
  */
 export function YearPicker({
   year,
@@ -18,7 +17,7 @@ export function YearPicker({
   currentYear: number;
   /** The latest year it walks to: Settings can state next year's allowance ahead of time. */
   lastYear?: number;
-  hrefFor: (year: number) => Route;
+  hrefFor: (year: number) => string;
   labels: { label: string; previous: string; next: string; today: string };
 }) {
   const first = Math.min(...years, year);
@@ -46,7 +45,7 @@ function YearStep({
   disabled,
   glyph,
 }: {
-  href: Route;
+  href: string;
   label: string;
   disabled: boolean;
   glyph: string;

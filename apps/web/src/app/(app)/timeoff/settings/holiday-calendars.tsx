@@ -1,14 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import type { HolidayCountry, HolidaySubdivision } from "@ledgerly/domain/platform/holidays/client";
 import {
   type HolidayActionResult,
   addHolidayCalendarAction,
@@ -16,7 +14,9 @@ import {
   holidaySubdivisionsAction,
   refreshHolidayCalendarAction,
   removeHolidayCalendarAction,
-} from "@/modules/timeoff/actions";
+  timeOffChanged,
+} from "@/modules/timeoff/client";
+import type { HolidayCountry, HolidaySubdivision } from "@ledgerly/domain/platform/holidays/client";
 
 /** One subscribed calendar, as the card shows it. */
 export interface CalendarRow {
@@ -42,7 +42,6 @@ export interface CalendarRow {
  */
 export function HolidayCalendars({ calendars, year }: { calendars: CalendarRow[]; year: number }) {
   const t = useTranslations("settings.holidays");
-  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -51,7 +50,7 @@ export function HolidayCalendars({ calendars, year }: { calendars: CalendarRow[]
     if (result.ok) {
       setError(null);
       notify(success);
-      router.refresh();
+      timeOffChanged();
       return;
     }
     setError(t(`errors.${result.error}` as "errors.failed"));

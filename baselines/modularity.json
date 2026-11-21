@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 91,
+    "crossModuleImports": 90,
     "moduleIndexFiles": 12,
     "reciprocalModulePairs": 1,
     "reciprocalUnitPairs": 44,
@@ -9,10 +9,10 @@
     "platformFilesImportingModules": 24,
     "uiToPlatformImports": 1,
     "forbiddenNameFiles": 89,
-    "forbiddenNameKeys": 17,
+    "forbiddenNameKeys": 15,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 132,
+    "deepImports": 122,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -100,7 +100,6 @@
     "modules/subscriptions/service.ts → modules/accounts/index",
     "modules/subscriptions/service.ts → modules/transactions/queries",
     "modules/subscriptions/service.ts → modules/transactions/taxonomy",
-    "modules/timeoff/actions.ts → modules/users/index",
     "modules/timeoff/queries.ts → modules/users/service",
     "modules/timeoff/service.ts → modules/users/service",
     "modules/transactions/jobs.ts → modules/users/index",
@@ -294,9 +293,7 @@
     "settings.integrations.providers.trek",
     "settings.integrations.providers.wallet",
     "settings.integrations.trek",
-    "timeoff.settings.trek",
-    "timeoff.table.fromTrek",
-    "timeoff.trekCheck"
+    "timeoff.settings.trek"
   ],
   "packageDependencies": [
     "@ledgerly/domain → @aws-sdk/client-s3",
@@ -393,16 +390,6 @@
     "app/(app)/settings/security/two-factor-card.tsx → modules/users/ui/two-factor-setup",
     "app/(app)/settings/users/users-screen.tsx → modules/users/ui/invite-person",
     "app/(app)/settings/users/users-screen.tsx → modules/users/ui/people-table",
-    "app/(app)/timeoff/page.tsx → modules/timeoff/ui/kind-card",
-    "app/(app)/timeoff/page.tsx → modules/timeoff/ui/kinds",
-    "app/(app)/timeoff/page.tsx → modules/timeoff/ui/leave-actions",
-    "app/(app)/timeoff/page.tsx → modules/timeoff/ui/leave-board",
-    "app/(app)/timeoff/page.tsx → modules/timeoff/ui/leave-panel",
-    "app/(app)/timeoff/page.tsx → modules/timeoff/ui/year-picker",
-    "app/(app)/timeoff/settings/holiday-calendars.tsx → modules/timeoff/actions",
-    "app/(app)/timeoff/settings/page.tsx → modules/timeoff/ui/leave-actions",
-    "app/(app)/timeoff/settings/page.tsx → modules/timeoff/ui/settings-forms",
-    "app/(app)/timeoff/settings/page.tsx → modules/timeoff/ui/year-picker",
     "app/(auth)/sign-in/two-factor/setup/setup-flow.tsx → modules/users/ui/two-factor-setup",
     "modules/funds/forms.ts → modules/interests/rules",
     "modules/funds/home.ts → modules/investments/pnl",

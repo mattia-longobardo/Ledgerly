@@ -7,7 +7,7 @@
  * needs these two for its legend and its weekday row. A value that both sides use belongs in a
  * module that is neither.
  */
-import { type UiLocale, monthName } from "@ledgerly/domain/platform/format";
+import { type UiLocale, monthName } from "@ledgerly/format/format";
 import { LEAVE_TYPES, type LeaveDayKind, type LeaveType } from "@ledgerly/domain/timeoff/client";
 
 /**

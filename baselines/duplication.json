@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 100852,
-    "duplicatedLines": 16362,
-    "percent": 16.22,
-    "blocks": 1224
+    "lines": 101164,
+    "duplicatedLines": 16335,
+    "percent": 16.15,
+    "blocks": 1222
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 58
     },
     "app": {
-      "lines": 25132,
-      "duplicatedLines": 4026,
-      "percent": 16.02,
-      "blocks": 312
+      "lines": 24834,
+      "duplicatedLines": 3967,
+      "percent": 15.97,
+      "blocks": 308
     },
     "global.d": {
       "lines": 12,
@@ -84,15 +84,15 @@
     },
     "modules/subscriptions": {
       "lines": 2065,
-      "duplicatedLines": 402,
-      "percent": 19.47,
+      "duplicatedLines": 401,
+      "percent": 19.42,
       "blocks": 26
     },
     "modules/timeoff": {
-      "lines": 4021,
-      "duplicatedLines": 306,
-      "percent": 7.61,
-      "blocks": 29
+      "lines": 4631,
+      "duplicatedLines": 346,
+      "percent": 7.47,
+      "blocks": 32
     },
     "modules/transactions": {
       "lines": 13024,
@@ -102,9 +102,9 @@
     },
     "modules/users": {
       "lines": 862,
-      "duplicatedLines": 206,
-      "percent": 23.9,
-      "blocks": 18
+      "duplicatedLines": 199,
+      "percent": 23.09,
+      "blocks": 17
     },
     "platform/alerts": {
       "lines": 34,
@@ -476,14 +476,14 @@
     "app/(app)/pockets/[id]/pocket-lists.tsx": 33,
     "app/(app)/pockets/[id]/pocket-screen.tsx": 15,
     "app/(app)/pockets/pockets-screen.tsx": 14,
-    "app/(app)/settings/categories/labels-card.tsx": 101,
+    "app/(app)/settings/categories/labels-card.tsx": 96,
     "app/(app)/settings/categories/merge-proposals.tsx": 8,
     "app/(app)/settings/categories/page.tsx": 16,
     "app/(app)/settings/categories/source-actions.ts": 13,
     "app/(app)/settings/categories/source-categories.tsx": 22,
     "app/(app)/settings/data/page.tsx": 26,
     "app/(app)/settings/integrations/actions.ts": 136,
-    "app/(app)/settings/integrations/advanced/page.tsx": 45,
+    "app/(app)/settings/integrations/advanced/page.tsx": 37,
     "app/(app)/settings/integrations/banks-card.tsx": 72,
     "app/(app)/settings/integrations/connection-codes.ts": 17,
     "app/(app)/settings/integrations/connection-list.ts": 13,
@@ -493,7 +493,7 @@
     "app/(app)/settings/integrations/plugin-row.tsx": 9,
     "app/(app)/settings/integrations/trek-card.tsx": 115,
     "app/(app)/settings/integrations/wallet-card.tsx": 160,
-    "app/(app)/settings/profile/name-form.tsx": 15,
+    "app/(app)/settings/profile/name-form.tsx": 21,
     "app/(app)/settings/profile/page.tsx": 8,
     "app/(app)/settings/profile/preferences-form.tsx": 101,
     "app/(app)/settings/profile/profile-screen.tsx": 14,
@@ -515,12 +515,13 @@
     "app/(app)/settings/server/jobs-card.tsx": 20,
     "app/(app)/settings/server/llm-card.tsx": 74,
     "app/(app)/settings/server/oidc-card.tsx": 74,
-    "app/(app)/settings/server/server-screen.tsx": 32,
+    "app/(app)/settings/server/server-screen.tsx": 38,
     "app/(app)/settings/server/smtp-card.tsx": 118,
     "app/(app)/settings/users/users-screen.tsx": 8,
-    "app/(app)/timeoff/page.tsx": 66,
-    "app/(app)/timeoff/settings/holiday-calendars.tsx": 41,
-    "app/(app)/timeoff/settings/page.tsx": 26,
+    "app/(app)/timeoff/settings/holiday-calendars.tsx": 34,
+    "app/(app)/timeoff/settings/page.tsx": 7,
+    "app/(app)/timeoff/settings/settings-screen.tsx": 18,
+    "app/(app)/timeoff/timeoff-screen.tsx": 16,
     "app/(auth)/forgot-password/forgot-form.tsx": 8,
     "app/(auth)/invite/[token]/invite-form.tsx": 10,
     "app/(auth)/reset-password/reset-form.tsx": 18,
@@ -649,7 +650,7 @@
     "modules/subscriptions/jobs.ts": 9,
     "modules/subscriptions/queries.ts": 24,
     "modules/subscriptions/schema.ts": 78,
-    "modules/subscriptions/service.ts": 123,
+    "modules/subscriptions/service.ts": 122,
     "modules/subscriptions/ui/inactive-subscriptions.tsx": 16,
     "modules/subscriptions/ui/subscription-dialog.tsx": 105,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
@@ -660,9 +661,12 @@
     "modules/timeoff/service/external.ts": 25,
     "modules/timeoff/service/ranges.ts": 13,
     "modules/timeoff/service/records.ts": 16,
+    "modules/timeoff/ui/booked.ts": 8,
     "modules/timeoff/ui/leave-board.tsx": 68,
-    "modules/timeoff/ui/leave-panel.tsx": 48,
-    "modules/timeoff/ui/settings-forms.tsx": 45,
+    "modules/timeoff/ui/leave-panel.tsx": 42,
+    "modules/timeoff/ui/leave-table.tsx": 17,
+    "modules/timeoff/ui/settings-forms.tsx": 46,
+    "modules/timeoff/ui/year-alerts.tsx": 20,
     "modules/transactions/categorize/review/changes.ts": 72,
     "modules/transactions/categorize/review/merges.ts": 58,
     "modules/transactions/categorize/service.ts": 50,
@@ -714,7 +718,7 @@
     "modules/users/calls.ts": 25,
     "modules/users/schema.ts": 26,
     "modules/users/service.ts": 31,
-    "modules/users/ui/invite-person.tsx": 31,
+    "modules/users/ui/invite-person.tsx": 24,
     "modules/users/ui/people-table.tsx": 72,
     "modules/users/ui/two-factor-setup.tsx": 21,
     "platform/api/errors.ts": 15,

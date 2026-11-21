@@ -397,7 +397,7 @@ describe("a booked day", () => {
   });
 
   it("says where the row came from and what Trek is still owed", () => {
-    const fromTrek = row("2026-06-17", "vacation", 1, { origin: "trek", pending: "delete" });
+    const fromTrek = row("2026-06-17", "vacation", 1, { origin: "external", pending: "delete" });
     const panel = renderPanel({ mode: "edit", date: "2026-06-17", rows: [fromTrek] }, [fromTrek]);
     expect(panel.getByText("From Trek")).toBeInTheDocument();
     expect(panel.getByText(messages.timeoff.table.pending.delete)).toBeInTheDocument();

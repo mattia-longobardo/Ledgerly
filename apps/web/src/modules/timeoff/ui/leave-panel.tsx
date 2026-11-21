@@ -1,21 +1,20 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, type RefObject, useId, useMemo, useState } from "react";
-import { daysBetween, isCivilDate } from "@ledgerly/domain/shared/dates";
-import { type UiLocale, formatDate } from "@ledgerly/domain/platform/format";
+import { daysBetween, isCivilDate } from "@ledgerly/format/dates";
+import { type UiLocale, formatDate } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button, LinkButton } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { Field } from "@ledgerly/ui/field";
 import { Input, Select, Textarea } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
+import { Link } from "@ledgerly/ui/router";
 import { Segmented } from "@ledgerly/ui/segmented";
 import { type ForecastInput, forecastChange } from "@ledgerly/domain/timeoff/client";
-import type { LeaveFormInput } from "../actions";
+import type { LeaveFormInput } from "../calls";
 import {
   type LeaveDayKind,
   type LeaveDayView,
@@ -34,7 +33,8 @@ export interface BookedLeave {
   /** Half a day or a whole one, every kind alike (N0). */
   fraction: number;
   note: string | null;
-  origin: "manual" | "trek";
+  /** Typed here, or read off the external calendar. */
+  origin: "manual" | "external";
   /** What the next Trek pass still owes this row. */
   pending: "none" | "upsert" | "delete";
 }
@@ -351,9 +351,9 @@ export function LeavePanel({
         </div>
       ) : (
         <form id={`${id}-form`} onSubmit={submit} className="flex flex-col gap-4" data-testid="leave-panel">
-          {row !== undefined && (row.origin === "trek" || row.pending !== "none") && (
+          {row !== undefined && (row.origin === "external" || row.pending !== "none") && (
             <div className="flex flex-wrap gap-1.5">
-              {row.origin === "trek" && <Badge tone="neutral">{t("table.fromTrek")}</Badge>}
+              {row.origin === "external" && <Badge tone="neutral">{t("table.fromExternal")}</Badge>}
               {row.pending !== "none" && (
                 <Badge tone="warn">{t(`table.pending.${row.pending}` as "table.pending.upsert")}</Badge>
               )}
@@ -554,7 +554,7 @@ export function LeavePanel({
                       <>
                         {t("panel.balanceUnknown")}{" "}
                         <Link
-                          href={`/timeoff/settings?year=${data.year}` as Route}
+                          href={`/timeoff/settings?year=${data.year}`}
                           className="focus-ring rounded-xs font-medium text-accent underline underline-offset-2"
                         >
                           {t("actions.setAllowance")}

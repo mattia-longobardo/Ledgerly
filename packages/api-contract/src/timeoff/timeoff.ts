@@ -73,7 +73,7 @@ export const saveTimeOffAllowance = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary: "States the allowance of a year, in days; null for a part nobody states.",
-  actions: ["saveAllowanceAction"],
+  actions: [],
   params: byYear,
   body: z
     .object({
@@ -111,7 +111,7 @@ export const saveLeave = defineRoute({
   summary:
     "Books a range of days, one kind and one size for every day; weekends and holidays are left out. " +
     "`editedKind` edits the row of one day; `otherKind` books «½ + ½». Answers what «Undo» sends back.",
-  actions: ["saveLeaveRangeAction"],
+  actions: [],
   body: z
     .object({
       from: civilDate(),
@@ -146,7 +146,7 @@ export const removeLeaveDay = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary: "Removes one row of leave. Answers what «Undo» sends back.",
-  actions: ["removeLeaveAction:id"],
+  actions: [],
   params: byDay,
   response: undoAnswer,
   errors: TIMEOFF_ERRORS,
@@ -163,7 +163,7 @@ export const removeLeaveOnDate = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary: "Removes all the leave of one date. Answers what «Undo» sends back.",
-  actions: ["removeLeaveAction:date"],
+  actions: [],
   params: byDate,
   response: undoAnswer,
   errors: TIMEOFF_ERRORS,
@@ -180,7 +180,7 @@ export const removeLeaveRange = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary: "Removes all the leave between two dates, ends included. Answers what «Undo» sends back.",
-  actions: ["removeLeaveRangeAction"],
+  actions: [],
   query: z.object({ from: civilDate(), to: civilDate() }),
   response: undoAnswer,
   errors: TIMEOFF_ERRORS,
@@ -197,7 +197,7 @@ export const undoLeave = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary: "Puts the touched days back as they were before a write, in one transaction.",
-  actions: ["undoLeaveAction"],
+  actions: [],
   body: leaveUndo,
   response: null,
   status: 204,

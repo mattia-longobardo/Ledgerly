@@ -9,10 +9,10 @@ import { AllowanceForm, PatronSaintForm, WorkingHoursForm } from "./settings-for
 const savePreferences = vi.fn();
 const saveAllowance = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-vi.mock("../actions", () => ({
+vi.mock("../calls", () => ({
   saveAllowanceAction: (...args: unknown[]) => saveAllowance(...args),
   saveTimeOffPreferencesAction: (...args: unknown[]) => savePreferences(...args),
+  timeOffChanged: vi.fn(),
 }));
 
 function inIntl(children: React.ReactNode) {

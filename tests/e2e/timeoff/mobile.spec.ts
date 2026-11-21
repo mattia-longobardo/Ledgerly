@@ -80,7 +80,8 @@ test.describe("time off on a phone", () => {
     await page.goto("/timeoff");
     let writes = 0;
     page.on("request", (request) => {
-      if (request.method() === "POST" && request.headers()["next-action"] !== undefined) writes += 1;
+      // A write is a call to `/api/v1` that is not a read (rewrite plan R3).
+      if (request.method() !== "GET" && new URL(request.url()).pathname.startsWith("/api/v1/")) writes += 1;
     });
 
     // Every day of the year is at least 40 × 40 px: a button or not, it is drawn the same size.
@@ -91,6 +92,8 @@ test.describe("time off on a phone", () => {
         .evaluateAll((cells) =>
           cells.map((cell) => cell.getBoundingClientRect()).map((box) => [box.width, box.height]),
         );
+    // The year is drawn from `/api/v1` once the page is there: measure the grid once it is.
+    await expect(page.locator("[data-date]").first()).toBeVisible();
     await expect
       .poll(async () => Math.min(...(await sizes()).flat().map(Math.round)))
       .toBeGreaterThanOrEqual(40);

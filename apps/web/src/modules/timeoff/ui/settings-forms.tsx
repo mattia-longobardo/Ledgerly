@@ -1,7 +1,6 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { type FormEvent, type ReactNode, useId, useRef, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { CardFooter } from "@ledgerly/ui/card";
@@ -9,10 +8,10 @@ import { Field } from "@ledgerly/ui/field";
 import { Input, Select } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
-import { saveAllowanceAction, saveTimeOffPreferencesAction } from "../actions";
+import { saveAllowanceAction, saveTimeOffPreferencesAction, timeOffChanged } from "../calls";
 import type { AllowanceSummary } from "./leave-actions";
 import { FIELD_GRID } from "@ledgerly/ui/section";
-import { intlLocale } from "@ledgerly/domain/platform/format";
+import { intlLocale } from "@ledgerly/format/format";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 // A non-leap-year probe (matches the server's own patron-saint validation): Feb has 28 days here.
@@ -28,7 +27,6 @@ function daysInMonth(month: number | undefined): number {
  */
 function useSave(success: string) {
   const t = useTranslations("timeoff");
-  const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -44,7 +42,7 @@ function useSave(success: string) {
         setError(null);
         unsaved.saved();
         notify(success);
-        router.refresh();
+        timeOffChanged();
       } catch {
         setError(t("errors.failed"));
       }

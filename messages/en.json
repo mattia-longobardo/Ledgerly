@@ -5491,7 +5491,7 @@
       "empty": "Nothing to show for this filter.",
       "fromPayslip": "From the {month} payslip",
       "payroll": "Payslip",
-      "fromTrek": "From Trek",
+      "fromExternal": "From Trek",
       "filters": {
         "all": "All",
         "taken": "Taken",
@@ -5568,7 +5568,7 @@
       "holiday": "{date} is a public holiday.",
       "failed": "It did not work. Try again."
     },
-    "trekCheck": "Trek says: {total} days, {used} used, {remaining} left",
+    "externalCheck": "Trek says: {total} days, {used} used, {remaining} left",
     "unrecorded": {
       "title": "{count, plural, one {One month has leave that is not recorded here} other {# months have leave that is not recorded here}}",
       "row": "{month}: the payslip counts {payroll} of {kind}, this calendar holds {recorded} — {missing} missing",

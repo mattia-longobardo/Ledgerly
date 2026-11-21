@@ -46,13 +46,13 @@ const rowsOf = (page: Page, date: string) =>
   page.getByRole("row").filter({ hasText: `${Number(date.slice(8))} Mar ${YEAR}` });
 
 /**
- * Every write this page can make is a Server Action — a POST carrying `next-action` — so counting
- * those is counting the writes (rewrite plan N5, criterion 3).
+ * Every write this page can make is a call to `/api/v1` that is not a read (rewrite plan R3), so
+ * counting those is counting the writes (rewrite plan N5, criterion 3).
  */
 function countWrites(page: Page): () => number {
   let writes = 0;
   page.on("request", (request) => {
-    if (request.method() === "POST" && request.headers()["next-action"] !== undefined) writes += 1;
+    if (request.method() !== "GET" && new URL(request.url()).pathname.startsWith("/api/v1/")) writes += 1;
   });
   return () => writes;
 }

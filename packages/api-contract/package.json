@@ -13,6 +13,7 @@
     "./pockets": "./src/pockets/index.ts",
     "./settings": "./src/settings/index.ts",
     "./subscriptions": "./src/subscriptions/index.ts",
+    "./timeoff": "./src/timeoff/index.ts",
     "./transactions": "./src/transactions/index.ts"
   },
   "dependencies": {

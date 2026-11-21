@@ -13,7 +13,7 @@ export const listHolidayCountries = defineRoute({
   scope: "read",
   capability: "timeoff",
   summary: "Every country either source can answer for, named in the person's language.",
-  actions: ["holidayCountriesAction"],
+  actions: [],
   response: z.object({
     countries: z.array(
       z.object({
@@ -38,7 +38,7 @@ export const listHolidaySubdivisions = defineRoute({
   scope: "read",
   capability: "timeoff",
   summary: "The places inside a country, when the source can name them; none otherwise.",
-  actions: ["holidaySubdivisionsAction"],
+  actions: [],
   query: z.object({ source: z.enum(HOLIDAY_SOURCES), country: z.string().min(2).max(3) }),
   response: z.object({
     places: z.array(z.object({ code: z.string(), name: z.string(), path: z.string() })),
@@ -102,7 +102,7 @@ export const addHolidayCalendar = defineRoute({
   summary:
     "Keeps a calendar and fetches this year and the next. A fetch that fails keeps the calendar, with " +
     "its error, and answers `unavailable`: the daily pass tries again.",
-  actions: ["addHolidayCalendarAction"],
+  actions: [],
   body: z
     .object({
       source: z.enum(HOLIDAY_SOURCES),
@@ -127,7 +127,7 @@ export const removeHolidayCalendar = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary: "Stops keeping a calendar; its days are no longer holidays.",
-  actions: ["removeHolidayCalendarAction"],
+  actions: [],
   params: byCalendar,
   response: null,
   status: 204,
@@ -142,7 +142,7 @@ export const refreshHolidayCalendar = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary: "Fetches a calendar again, this year and the next, as the daily pass does.",
-  actions: ["refreshHolidayCalendarAction"],
+  actions: [],
   params: byCalendar,
   response: null,
   status: 204,

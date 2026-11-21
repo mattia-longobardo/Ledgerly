@@ -179,13 +179,7 @@ describe("the Server Actions of users and settings", () => {
   const actions = SETTINGS_ACTION_FILES.flatMap((file) =>
     [...readFileSync(file, "utf8").matchAll(/^export async function (\w+)/gm)].map((match) => match[1]),
   );
-  // `PATCH /preferences` also names the working day of Time off, whose action is in its module (TOF-6).
-  const timeoff = readFileSync("apps/web/src/modules/timeoff/actions.ts", "utf8");
-  const routed = new Set(
-    SETTINGS_ROUTES.flatMap((route) => route.actions.map((name) => name.split(":")[0])).filter(
-      (name) => !timeoff.includes(`export async function ${name}(`),
-    ),
-  );
+  const routed = new Set(SETTINGS_ROUTES.flatMap((route) => route.actions.map((name) => name.split(":")[0])));
 
   it("each have a route or a written exclusion", () => {
     expect(actions.filter((name) => !routed.has(name) && !(name in EXCLUDED))).toEqual([]);
@@ -372,9 +366,10 @@ describe("the Server Actions of interests", () => {
  * The Server Actions of time off (05-refactor.md §5.5), one file of them (TOF-5), and their routes;
  * no exclusion. The page and Time off › Settings read routes of their own, with no action. The
  * working day is `PATCH /preferences` of users. Trek's figures beside the cards and
- * its connection stay on the web until R5c (they are not actions of this module).
+ * its connection stay on the web until R5c (they are not actions of this module). The panel and
+ * the forms call `/api/v1`: no action left.
  */
-const TIMEOFF_ACTION_FILES = ["apps/web/src/modules/timeoff/actions.ts"];
+const TIMEOFF_ACTION_FILES: string[] = [];
 
 describe("the Server Actions of time off", () => {
   const actions = TIMEOFF_ACTION_FILES.flatMap((file) =>

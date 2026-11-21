@@ -5491,7 +5491,7 @@
       "empty": "Niente da mostrare con questo filtro.",
       "fromPayslip": "Dal cedolino di {month}",
       "payroll": "Cedolino",
-      "fromTrek": "Da Trek",
+      "fromExternal": "Da Trek",
       "filters": {
         "all": "Tutte",
         "taken": "Godute",
@@ -5568,7 +5568,7 @@
       "holiday": "Il {date} è un giorno festivo.",
       "failed": "Non ha funzionato. Riprova."
     },
-    "trekCheck": "Trek dice: {total} giorni, {used} usati, {remaining} residui",
+    "externalCheck": "Trek dice: {total} giorni, {used} usati, {remaining} residui",
     "unrecorded": {
       "title": "{count, plural, one {Un mese ha giornate godute che qui non risultano} other {# mesi hanno giornate godute che qui non risultano}}",
       "row": "{month}: il cedolino conta {payroll} di {kind}, qui ne risultano {recorded} — ne mancano {missing}",

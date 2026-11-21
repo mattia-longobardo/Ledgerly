@@ -1,7 +1,6 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import {
   type ReactNode,
   createContext,
@@ -13,8 +12,8 @@ import {
   useState,
   useTransition,
 } from "react";
-import type { MonthKey } from "@ledgerly/domain/shared/dates";
-import { type UiLocale, formatDate } from "@ledgerly/domain/platform/format";
+import type { MonthKey } from "@ledgerly/format/dates";
+import { type UiLocale, formatDate } from "@ledgerly/format/format";
 import { notify } from "@ledgerly/ui/toast";
 import type { ForecastInput } from "@ledgerly/domain/timeoff/client";
 import {
@@ -23,8 +22,9 @@ import {
   removeLeaveAction,
   removeLeaveRangeAction,
   saveLeaveRangeAction,
+  timeOffChanged,
   undoLeaveAction,
-} from "../actions";
+} from "../calls";
 import {
   type CalendarMonth,
   type LeaveDayKind,
@@ -35,6 +35,7 @@ import {
   previewLeaveRange,
   stillBooked,
 } from "@ledgerly/domain/timeoff/client";
+import { liveDays } from "./booked";
 import type { LeaveTypeOption } from "./kinds";
 import { type BookedLeave, type LeavePanelEntry, LeavePanel } from "./leave-panel";
 import { type DayRange, YearCalendar } from "./year-calendar";
@@ -120,7 +121,6 @@ export function LeaveBoard({
 }: LeaveBoardProps) {
   const t = useTranslations("timeoff");
   const locale = useLocale() as UiLocale;
-  const router = useRouter();
   const [busy, startTransition] = useTransition();
 
   const [entry, setEntry] = useState<LeavePanelEntry | null>(null);
@@ -133,12 +133,7 @@ export function LeaveBoard({
   const opener = useRef<HTMLElement | null>(null);
 
   const holidaySet = useMemo(() => new Set(holidays), [holidays]);
-  /** The rows still booked: one Trek has not let go of yet is removed for its owner already. */
-  const live = useMemo(() => days.filter(stillBooked), [days]);
-  const views = useMemo<LeaveDayView[]>(
-    () => live.map((day) => ({ on: day.on, kind: day.kind, fraction: day.fraction })),
-    [live],
-  );
+  const views = useMemo(() => liveDays(days), [days]);
 
   /**
    * What a write left on screen until the page is read again: the optimistic state ends with the
@@ -248,10 +243,10 @@ export function LeaveBoard({
         }
         keep({ type: "undo", undo: state });
         notify(t("toasts.undone"));
-        router.refresh();
+        timeOffChanged();
       });
     },
-    [keep, router, show, t],
+    [keep, show, t],
   );
 
   const undoAction = useCallback(
@@ -286,7 +281,7 @@ export function LeaveBoard({
         if (!result.ok) {
           notify(messageFor(result), "error");
           // The day is not there any more for somebody: show what is.
-          router.refresh();
+          timeOffChanged();
           return;
         }
         if (result.removed === 0) return;
@@ -298,10 +293,10 @@ export function LeaveBoard({
           "success",
           undoAction(result.undo),
         );
-        router.refresh();
+        timeOffChanged();
       });
     },
-    [close, keep, messageFor, router, show, t, undoAction],
+    [close, keep, messageFor, show, t, undoAction],
   );
 
   /** "Remove N days": one call, one transaction, one toast whose "Undo" brings every day back. */
@@ -317,7 +312,7 @@ export function LeaveBoard({
         }
         if (!result.ok) {
           notify(messageFor(result), "error");
-          router.refresh();
+          timeOffChanged();
           return;
         }
         if (result.removed === 0) return;
@@ -329,10 +324,10 @@ export function LeaveBoard({
           "success",
           undoAction(result.undo),
         );
-        router.refresh();
+        timeOffChanged();
       });
     },
-    [close, keep, messageFor, router, show, t, undoAction],
+    [close, keep, messageFor, show, t, undoAction],
   );
 
   /** The edited day becomes the first day of a range: the calendar takes it from here. */
@@ -355,13 +350,13 @@ export function LeaveBoard({
       }
       if (!result.ok) {
         setError(messageFor(result));
-        if (result.error === "not_found") router.refresh();
+        if (result.error === "not_found") timeOffChanged();
         return;
       }
       keep({ type: "save", fields });
       close();
       notify(t("toasts.saved", { days: daysText(result.days) }), "success", undoAction(result.undo));
-      router.refresh();
+      timeOffChanged();
     });
   }
 

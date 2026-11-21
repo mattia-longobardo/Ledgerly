@@ -19,14 +19,14 @@ const { refresh, save, remove, removeRange, undo } = vi.hoisted(() => ({
   undo: vi.fn(),
 }));
 
-// The board writes through three Server Actions and nothing else: counting their calls is counting
-// the writes.
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-vi.mock("../actions", () => ({
+// The board writes through four calls and nothing else: counting their calls is counting the writes.
+// `refresh` is the read of the year again after a write.
+vi.mock("../calls", () => ({
   saveLeaveRangeAction: (...args: unknown[]) => save(...args),
   removeLeaveAction: (...args: unknown[]) => remove(...args),
   removeLeaveRangeAction: (...args: unknown[]) => removeRange(...args),
   undoLeaveAction: (...args: unknown[]) => undo(...args),
+  timeOffChanged: () => refresh(),
 }));
 
 const TODAY = "2026-06-15";
@@ -263,7 +263,7 @@ describe("a booked day", () => {
 describe("a row Trek still has to let go of (pending = 'delete')", () => {
   const trekDay = (on: string, kind: LeaveDayKind, fraction: number, pending: BookedLeave["pending"]) => ({
     ...booked(on, kind, fraction),
-    origin: "trek" as const,
+    origin: "external" as const,
     pending,
   });
 
@@ -274,7 +274,7 @@ describe("a row Trek still has to let go of (pending = 'delete')", () => {
     await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }));
     expect(await screen.findByText("Removed here; Trek will be told at the next pass")).toBeInTheDocument();
 
-    // What router.refresh() hands back: the row is still stored, waiting for the Trek pass.
+    // What the year read again hands back: the row is still stored, waiting for the Trek pass.
     rerender(board([trekDay("2026-06-16", "vacation", 1, "delete")]));
     expect(cell("2026-06-16")).toHaveAttribute("data-testid", "free-cell");
   });

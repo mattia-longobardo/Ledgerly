@@ -1,6 +1,10 @@
+import type { ReactNode } from "react";
 import { Card } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
-import type { MonthBar } from "@ledgerly/domain/timeoff";
+import type { timeoff } from "@ledgerly/api-contract/timeoff";
+import type { RouteOutput } from "@ledgerly/api-client";
+
+type MonthBar = RouteOutput<typeof timeoff.getTimeOff>["bars"][number];
 
 /**
  * One of the two headline cards of the design: how much is left, a bar split between taken and
@@ -45,15 +49,7 @@ export function KindCard({
   const taken = clamp(takenShare);
   const planned = clamp(Math.min(plannedShare, 1 - taken));
   return (
-    <Card className="flex min-w-0 flex-col gap-2.5" data-testid={testId}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-sm font-medium text-muted">{label}</span>
-        {allowanceNote && <span className="text-sm text-muted tabular-nums">{allowanceNote}</span>}
-      </div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-kpi font-semibold tracking-title tabular-nums">{value}</span>
-        <span className="text-muted">{valueUnit}</span>
-      </div>
+    <YearCard label={label} aside={allowanceNote || null} value={value} unit={valueUnit} testId={testId}>
       <div className="flex h-1.5 overflow-hidden rounded-full bg-track">
         <div
           className={cn("h-full", tone === "warn" ? "bg-warn" : "bg-primary")}
@@ -76,6 +72,41 @@ export function KindCard({
         </ul>
       )}
       <p className="text-xs text-faint">{basisNote}</p>
+    </YearCard>
+  );
+}
+
+/**
+ * What every card of the year's figures shares (audit UI-TOF-3): a label with a note beside it, the
+ * figure in large type with its unit, and below them whatever the card has to say — the slot.
+ */
+export function YearCard({
+  label,
+  aside,
+  value,
+  unit,
+  testId,
+  children,
+}: {
+  label: string;
+  /** Beside the label, on the right: "26 days / year", or nothing. */
+  aside: string | null;
+  value: string;
+  unit: string;
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <Card className="flex min-w-0 flex-col gap-2.5" data-testid={testId}>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-sm font-medium text-muted">{label}</span>
+        {aside !== null && <span className="text-sm text-muted tabular-nums">{aside}</span>}
+      </div>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-kpi font-semibold tracking-title tabular-nums">{value}</span>
+        <span className="text-muted">{unit}</span>
+      </div>
+      {children}
     </Card>
   );
 }

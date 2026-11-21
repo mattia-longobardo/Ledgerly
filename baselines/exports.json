@@ -116,6 +116,10 @@
   "packages/api-contract/src/subscriptions/index.ts": [
     "subscriptions"
   ],
+  "packages/api-contract/src/timeoff/index.ts": [
+    "holidays",
+    "timeoff"
+  ],
   "packages/api-contract/src/transactions/index.ts": [
     "manual",
     "movements",
