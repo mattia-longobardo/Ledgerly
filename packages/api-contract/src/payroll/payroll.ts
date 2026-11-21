@@ -69,7 +69,7 @@ export const decidePayslipField = defineRoute({
   summary:
     "Confirms a value as read (`value` null) or corrects it, in canonical form: amounts and hours " +
     "\"1234.56\", dates YYYY-MM-DD. A verified payslip that changes goes back to review. Answers the review.",
-  actions: ["decideFieldAction"],
+  actions: [],
   params: z.object({ id: z.uuid(), field: z.string().min(1).max(40) }),
   body: z.object({ value: z.string().max(100).nullable() }).strict(),
   response: payslipReview,
@@ -90,7 +90,7 @@ export const verifyPayslip = defineRoute({
   summary:
     "A person vouches for the payslip: every inferred value decided first; failed checks only with " +
     "`acknowledgeFailures`.",
-  actions: ["verifyPayslipAction"],
+  actions: [],
   params: byPayslip,
   body: z.object({ acknowledgeFailures: z.boolean() }).strict(),
   response: null,
@@ -108,7 +108,7 @@ export const applyPayslip = defineRoute({
   summary:
     "Applies a verified payslip: it enters the register, the payslip with its key is superseded, its leave " +
     "reaches time off and its contributions the pension fund that takes them.",
-  actions: ["applyPayslipAction"],
+  actions: [],
   params: byPayslip,
   response: null,
   status: 204,
@@ -124,7 +124,7 @@ export const reopenPayslip = defineRoute({
   capability: "payroll",
   summary:
     "Takes an applied payslip back to review; `restored`: the payslip it had replaced is applied again.",
-  actions: ["reopenPayslipAction"],
+  actions: [],
   params: byPayslip,
   response: z.object({ restored: z.boolean() }),
   errors: PAYROLL_ERRORS,
@@ -138,7 +138,7 @@ export const rejectPayslip = defineRoute({
   scope: "write",
   capability: "payroll",
   summary: "Sets a payslip aside; nothing was applied from it.",
-  actions: ["rejectPayslipAction"],
+  actions: [],
   params: byPayslip,
   response: null,
   status: 204,
@@ -153,7 +153,7 @@ export const retryPayslip = defineRoute({
   scope: "write",
   capability: "payroll",
   summary: "Reads the original again, keeping what a person decided on values that did not change.",
-  actions: ["retryPayslipAction"],
+  actions: [],
   params: byPayslip,
   response: null,
   status: 204,
@@ -168,7 +168,7 @@ export const renamePayslip = defineRoute({
   scope: "write",
   capability: "payroll",
   summary: "Renames a payslip's document, whatever its state.",
-  actions: ["renamePayslipAction"],
+  actions: [],
   params: byPayslip,
   body: z.object({ name: z.string().min(1).max(200) }).strict(),
   response: null,
@@ -186,7 +186,7 @@ export const deletePayslip = defineRoute({
   summary:
     "Deletes a payslip with its original; an applied one leaves the register first. `unapplied`: it was " +
     "applied; `restored`: the payslip it had replaced is applied again.",
-  actions: ["deletePayslipDocumentAction"],
+  actions: [],
   params: byPayslip,
   response: z.object({ unapplied: z.boolean(), restored: z.boolean() }),
   errors: PAYROLL_ERRORS,
@@ -205,7 +205,7 @@ export const fillPayslipWithLlm = defineRoute({
     "Asks the LLM fallback for the blank fields it may fill; what it fills is inferred and waits for a " +
     "decision. `unavailable` (`reason` `llm_not_configured`, `llm_failed`) when it cannot answer. Only the " +
     "web's own session calls it: a token gets 403.",
-  actions: ["fillWithLlmAction"],
+  actions: [],
   params: byPayslip,
   response: z.object({ asked: z.number().int(), filled: z.number().int() }),
   errors: [...PAYROLL_ERRORS, "unavailable"],

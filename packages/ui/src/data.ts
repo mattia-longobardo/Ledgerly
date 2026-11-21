@@ -6,7 +6,7 @@
 // it had meanwhile.
 import { type RouteContract } from "@ledgerly/api-contract/core";
 import { call, type RouteInput, type RouteOutput } from "@ledgerly/api-client";
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 interface Snapshot {
   data: unknown;
@@ -120,6 +120,17 @@ export async function read<R extends RouteContract>(route: R, input: RouteInput<
   return data;
 }
 
+/** A write that answers what a read would: the screens that show the read show it, with no new call. */
+export function remember<R extends RouteContract>(
+  route: R,
+  input: RouteInput<R>,
+  data: RouteOutput<R>,
+): void {
+  const entry = entryOf(route, input);
+  entry.loaded = true;
+  publish(entry, { data, error: null, loading: false });
+}
+
 /** Reads again every cached read of these routes; a read nobody shows any more is dropped. */
 export function invalidate(...routes: RouteContract[]): void {
   const ids = new Set(routes.map((route) => route.id));
@@ -128,4 +139,26 @@ export function invalidate(...routes: RouteContract[]): void {
     if (entry.listeners.size === 0) cache.delete(key);
     else load(entry);
   }
+}
+
+/**
+ * Reads these routes again every `every` ms while `active`, for `limit` ms at most: a document being
+ * read is followed by its own answer (audit UI-PAY-1), not by drawing the page again on the server.
+ * `routes` is a constant of the module, so that it stays the same between renders.
+ */
+export function usePolling(
+  active: boolean,
+  routes: readonly RouteContract[],
+  every = 1500,
+  limit = 120_000,
+): void {
+  useEffect(() => {
+    if (!active) return;
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      if (Date.now() - started > limit) window.clearInterval(timer);
+      else invalidate(...routes);
+    }, every);
+    return () => window.clearInterval(timer);
+  }, [active, routes, every, limit]);
 }

@@ -18,6 +18,8 @@ export interface DataColumn<T> {
   sort?: { direction: "asc" | "desc" | null; onSort: () => void };
   /** The header is for screen readers only (a column of commands). */
   hiddenHeader?: boolean;
+  /** The cell names its row (`<th scope="row">`): the month of a register, say. */
+  rowHeader?: boolean;
   /**
    * How the card shows the cell: the row's name (`title`), a line of its own (`line`), a line after
    * the column's name (`labelled`), or a command (`action`).
@@ -32,10 +34,17 @@ interface DataGroup<T> {
   label: string | null;
   summary?: ReactNode;
   rows: readonly T[];
+  /** Rows of the table after the group's own (its totals); the cards have `cardFooter`. */
+  footer?: ReactNode;
+  /** A line of the cards after the group's own. */
+  cardFooter?: ReactNode;
 }
 
 const classOf = <T,>(column: DataColumn<T>, row: T) =>
   typeof column.className === "function" ? column.className(row) : column.className;
+
+/** A header that stays on top of its rows, with the line under it that the rows' borders draw. */
+const STICKY_HEAD = "sticky top-0 z-10 bg-card shadow-[0_1px_0_var(--color-border)]";
 
 const CARD = "flex flex-col gap-2 border-b border-border px-4 py-3 last:border-0";
 
@@ -58,6 +67,23 @@ function CardCell<T>({ column, row }: { column: DataColumn<T>; row: T }) {
   }
 }
 
+function TableCell<T>({ column, row }: { column: DataColumn<T>; row: T }) {
+  if (column.rowHeader)
+    return (
+      <th
+        scope="row"
+        className={cn("px-2 text-left font-medium whitespace-nowrap first:pl-4", classOf(column, row))}
+      >
+        {column.cell(row)}
+      </th>
+    );
+  return (
+    <Td align={column.align} muted={column.muted} className={classOf(column, row)}>
+      {column.cell(row)}
+    </Td>
+  );
+}
+
 type RowProps = HTMLAttributes<HTMLTableRowElement> & { selected?: boolean; "data-testid"?: string };
 
 type DataTableProps<T> = {
@@ -76,6 +102,8 @@ type DataTableProps<T> = {
   testIds?: { table: string; list: string };
   /** The table's `<tfoot>` (a totals row); the cards have none. */
   footer?: ReactNode;
+  /** The header stays at the top of the frame while its rows scroll (the frame sets the height). */
+  stickyHeader?: boolean;
 } & ({ rows: readonly T[]; groups?: never } | { groups: readonly DataGroup<T>[]; rows?: never });
 
 function TableView<T>({
@@ -88,6 +116,7 @@ function TableView<T>({
   frameClassName = "overflow-x-auto",
   testIds,
   footer,
+  stickyHeader,
 }: DataTableProps<T>) {
   const widths = columns.some((column) => column.width !== undefined);
   const tableRow = (row: T) => {
@@ -95,9 +124,7 @@ function TableView<T>({
     return (
       <Tr key={rowKey(row)} className={cn(rowClassName, className)} {...props}>
         {columns.map((column) => (
-          <Td key={column.key} align={column.align} muted={column.muted} className={classOf(column, row)}>
-            {column.cell(row)}
-          </Td>
+          <TableCell key={column.key} column={column} row={row} />
         ))}
       </Tr>
     );
@@ -112,7 +139,7 @@ function TableView<T>({
             ))}
           </colgroup>
         )}
-        <THead>
+        <THead className={stickyHeader ? STICKY_HEAD : undefined}>
           {columns.map((column) => (
             <Th key={column.key} align={column.align} sort={column.sort}>
               {column.hiddenHeader ? <span className="sr-only">{column.header}</span> : column.header}
@@ -127,6 +154,7 @@ function TableView<T>({
                     <GroupRow colSpan={columns.length} label={group.label} summary={group.summary} />
                   )}
                   {group.rows.map(tableRow)}
+                  {group.footer}
                 </Fragment>
               ))
             : rows.map(tableRow)}
@@ -158,6 +186,7 @@ function CardList<T>({ columns, rows, groups, rowKey, card, cardProps, testIds }
                 </div>
               )}
               <ul className="flex flex-col">{group.rows.map(cardRow)}</ul>
+              {group.cardFooter}
             </li>
           ))
         : rows.map(cardRow)}

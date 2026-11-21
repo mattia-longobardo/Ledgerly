@@ -1,10 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, type ReactNode, useRef, useState, useTransition } from "react";
-import { resetCodeAction, setCodeRoleAction } from "@/modules/payroll/actions";
-import { CODE_ROLES } from "@ledgerly/domain/payroll/client";
+import { CODE_ROLES } from "@ledgerly/api-contract/payroll";
+import { resetCodeAction, setCodeRoleAction } from "./calls";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
 import { Input, Select } from "@ledgerly/ui/input";
@@ -26,7 +25,6 @@ export function CodeMapCard({ entries }: { entries: Entry[] }) {
   const t = useTranslations("settings.codeMap");
   const roles = useTranslations("payroll.roles");
   const errors = useTranslations("payroll.errors");
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +38,6 @@ export function CodeMapCard({ entries }: { entries: Entry[] }) {
       setError(null);
       then?.();
       notify(t("saved"));
-      router.refresh();
     });
   }
 

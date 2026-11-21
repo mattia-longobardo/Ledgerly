@@ -7,9 +7,9 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
   return <table className={cn("w-full border-collapse text-base", className)} {...props} />;
 }
 
-export function THead({ children }: { children: ReactNode }) {
+export function THead({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <thead>
+    <thead className={className}>
       <tr className="border-b border-border">{children}</tr>
     </thead>
   );

@@ -1,16 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import type { DocumentState } from "@ledgerly/domain/imports/client";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
+import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
 import {
-  type ActionResult,
   applyPayslipAction,
   deletePayslipDocumentAction,
   fillWithLlmAction,
@@ -19,7 +17,8 @@ import {
   reopenPayslipAction,
   retryPayslipAction,
   verifyPayslipAction,
-} from "../actions";
+} from "../calls";
+import type { DocumentState } from "./present";
 
 type Failed = { ok: false; error: string };
 
@@ -63,15 +62,15 @@ export function ReviewActions({
       }
       setError(null);
       notify(typeof toast === "string" ? toast : toast(result));
-      if (then) then();
-      else router.refresh();
+      // The calls read the payslip again; deleting it leaves its page.
+      then?.();
     });
   }
 
   function rename(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const name = String(new FormData(event.currentTarget).get("name") ?? "");
-    run((): Promise<ActionResult> => renamePayslipAction(documentId, name), t("review.toasts.renamed"));
+    run(() => renamePayslipAction(documentId, name), t("review.toasts.renamed"));
   }
 
   const verify = (acknowledge: boolean) =>
@@ -103,7 +102,6 @@ export function ReviewActions({
                 }
                 setError(null);
                 notify(t("review.toasts.llm", { filled: result.filled }));
-                router.refresh();
               })
             }
             disabled={pending}

@@ -67,6 +67,7 @@
     "./source-link-row": "./src/source-link-row.tsx",
     "./stat": "./src/stat.tsx",
     "./states": "./src/states.tsx",
+    "./status-badge": "./src/status-badge.tsx",
     "./step-indicator": "./src/step-indicator.tsx",
     "./switch": "./src/switch.tsx",
     "./sync-status": "./src/sync-status.tsx",

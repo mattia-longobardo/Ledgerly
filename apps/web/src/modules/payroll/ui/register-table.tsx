@@ -1,15 +1,15 @@
 "use client";
 
-import type { Route } from "next";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
+import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
+import { Link } from "@ledgerly/ui/router";
+import { StatusBadge } from "@ledgerly/ui/status-badge";
 import { Td } from "@ledgerly/ui/table";
-import type { SummedField } from "@ledgerly/domain/payroll/client";
-import { type RegisterGroup, STATE_TONE } from "./present";
+import { type RegisterCells, type RegisterGroup, STATE_TONE, type SummedField } from "./present";
 
 const MAIN: readonly SummedField[] = ["gross", "taxesTotal", "employeeSocial", "netPay"];
 const DETAILS: readonly SummedField[] = [
@@ -39,7 +39,127 @@ const LABEL: Record<SummedField, string> = {
   tfrSelected: "tfr",
 };
 
-const HEAD = "h-8 px-2 text-sm font-medium whitespace-nowrap text-muted first:pl-4 last:pr-4";
+type Text = ReturnType<typeof useTranslations<"payroll">>;
+
+function Month({ row, text }: { row: RegisterCells; text: Text }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      {row.month}
+      {row.badge && <Badge tone="accent">{text(`register.${row.badge}`)}</Badge>}
+    </span>
+  );
+}
+
+function columnsOf(fields: readonly SummedField[], details: boolean, text: Text): DataColumn<RegisterCells>[] {
+  const amount = (field: SummedField): DataColumn<RegisterCells> => ({
+    key: field,
+    header: text(`register.${LABEL[field]}` as never),
+    align: "right",
+    className: (row) => cn(field === "netPay" && row.applied && "font-medium text-pos"),
+    cell: (row) => row.values[field],
+  });
+  const leave: DataColumn<RegisterCells>[] = [
+    { key: "vacationLeft", header: text("register.vacationLeft"), align: "right", cell: (row) => row.vacationLeft },
+    { key: "rolLeft", header: text("register.rolLeft"), align: "right", cell: (row) => row.rolLeft },
+  ];
+  return [
+    { key: "month", header: text("register.month"), rowHeader: true, cell: (row) => <Month row={row} text={text} /> },
+    ...fields.map(amount),
+    ...(details ? leave : []),
+    {
+      key: "document",
+      header: text("register.document"),
+      className: "max-w-56 truncate",
+      cell: (row) =>
+        row.originalHref ? (
+          <a
+            href={row.originalHref}
+            target="_blank"
+            rel="noopener"
+            className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent hover:underline"
+          >
+            {row.fileName}
+          </a>
+        ) : (
+          <span className="text-sm">{row.fileName}</span>
+        ),
+    },
+    {
+      key: "status",
+      header: text("register.status"),
+      cell: (row) => (
+        <span className="inline-flex items-center gap-1.5">
+          <StatusBadge status={row.state} tones={STATE_TONE}>
+            {text(`states.${row.state}`)}
+          </StatusBadge>
+          {row.warnings > 0 && (
+            <span title={text("register.warningsHint")}>
+              <Badge tone="warn">{text("register.warningsBadge", { count: row.warnings })}</Badge>
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: text("register.actions"),
+      hiddenHeader: true,
+      align: "right",
+      cell: (row) => (
+        <Link
+          href={row.href}
+          className="focus-ring inline-flex h-6 items-center rounded-tag border border-border bg-card px-2 text-sm font-medium text-fg hover:bg-hover"
+        >
+          {row.applied ? text("register.open") : text("register.review")}
+        </Link>
+      ),
+    },
+  ];
+}
+
+/** A year's totals and monthly means: rows of the table under its payslips. */
+function GroupTotals({ group, fields, span, text }: { group: RegisterGroup; fields: readonly SummedField[]; span: number; text: Text }) {
+  const line = (label: string, values: RegisterGroup["totals"], className: string) => (
+    <tr className={cn("h-8 border-b border-border bg-bg", className)}>
+      <th scope="row" className="px-2 pl-4 text-left whitespace-nowrap">
+        {label}
+      </th>
+      {fields.map((field) => (
+        <Td key={field} align="right">
+          {values[field]}
+        </Td>
+      ))}
+      <td colSpan={span - 1 - fields.length} />
+    </tr>
+  );
+  return (
+    <>
+      {line(text("register.total", { year: group.year }), group.totals, "font-semibold")}
+      {line(text("register.average"), group.averages, "font-medium text-muted")}
+    </>
+  );
+}
+
+function PhoneCard({ row, text }: { row: RegisterCells; text: Text }) {
+  return (
+    <Link href={row.href} className="flex items-center justify-between gap-3 px-3 py-2.5">
+      <span className="flex min-w-0 flex-col">
+        <span className="flex items-center gap-2 font-medium">
+          <Month row={row} text={text} />
+        </span>
+        <span className="text-sm text-muted">
+          {text("register.gross")} {row.values.gross}
+        </span>
+      </span>
+      <span className="flex flex-col items-end gap-1">
+        <span className="font-medium tabular-nums">{row.values.netPay}</span>
+        <StatusBadge status={row.state} tones={STATE_TONE}>
+          {text(`states.${row.state}`)}
+        </StatusBadge>
+      </span>
+    </Link>
+  );
+}
 
 /**
  * The register of spec §7.8 (D13): one card as tall as the window below the KPIs, whatever the
@@ -47,176 +167,39 @@ const HEAD = "h-8 px-2 text-sm font-medium whitespace-nowrap text-muted first:pl
  * the applied payslips; detail columns on demand. Below 768 px it is a list (spec §8.2).
  */
 export function RegisterTable({ groups }: { groups: RegisterGroup[] }) {
-  const t = useTranslations("payroll");
+  const text = useTranslations("payroll");
   const [details, setDetails] = useState(false);
-  const columns = details ? [...MAIN, ...DETAILS] : MAIN;
-  const span = 1 + columns.length + (details ? 2 : 0) + 3;
+  const fields = details ? [...MAIN, ...DETAILS] : MAIN;
+  const columns = columnsOf(fields, details, text);
 
   return (
-    <section aria-label={t("register.label")} className="flex min-h-0 flex-col gap-2">
+    <section aria-label={text("register.label")} className="flex min-h-0 flex-col gap-2">
       <div className="flex justify-end max-md:hidden">
         <Button size="xs" variant="ghost" onClick={() => setDetails((value) => !value)} aria-pressed={details}>
-          {details ? t("register.hideDetails") : t("register.details")}
+          {details ? text("register.hideDetails") : text("register.details")}
         </Button>
       </div>
-      <div className="h-[calc(100dvh-280px)] min-h-64 overflow-auto rounded-card border border-border bg-card max-md:hidden">
-        <table className="w-full border-collapse text-base">
-          <thead className="sticky top-0 z-10 bg-card shadow-[0_1px_0_var(--color-border)]">
-            <tr>
-              <th scope="col" className={cn(HEAD, "text-left")}>
-                {t("register.month")}
-              </th>
-              {columns.map((field) => (
-                <th key={field} scope="col" className={cn(HEAD, "text-right")}>
-                  {t(`register.${LABEL[field]}` as never)}
-                </th>
-              ))}
-              {details && (
-                <>
-                  <th scope="col" className={cn(HEAD, "text-right")}>
-                    {t("register.vacationLeft")}
-                  </th>
-                  <th scope="col" className={cn(HEAD, "text-right")}>
-                    {t("register.rolLeft")}
-                  </th>
-                </>
-              )}
-              <th scope="col" className={cn(HEAD, "text-left")}>
-                {t("register.document")}
-              </th>
-              <th scope="col" className={cn(HEAD, "text-left")}>
-                {t("register.status")}
-              </th>
-              <th scope="col" className={cn(HEAD, "text-right")}>
-                <span className="sr-only">{t("register.actions")}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((group) => (
-              <Fragment key={group.year}>
-                <tr className="h-7 border-y border-border bg-bg">
-                  <th scope="rowgroup" colSpan={span} className="px-4 text-left font-semibold">
-                    {group.year}
-                  </th>
-                </tr>
-                {group.rows.map((row) => (
-                  <tr key={row.id} className={cn("h-8 border-b border-border hover:bg-hover", !row.applied && "text-muted")}>
-                    <th scope="row" className="px-2 pl-4 text-left font-medium whitespace-nowrap">
-                      <span className="inline-flex items-center gap-2">
-                        {row.month}
-                        {row.badge && <Badge tone="accent">{t(`register.${row.badge}` as never)}</Badge>}
-                      </span>
-                    </th>
-                    {columns.map((field) => (
-                      <Td key={field} align="right" className={cn(field === "netPay" && row.applied && "font-medium text-pos")}>
-                        {row.values[field]}
-                      </Td>
-                    ))}
-                    {details && (
-                      <>
-                        <Td align="right">{row.vacationLeft}</Td>
-                        <Td align="right">{row.rolLeft}</Td>
-                      </>
-                    )}
-                    <Td className="max-w-56 truncate">
-                      {row.originalHref ? (
-                        <a href={row.originalHref} target="_blank" rel="noopener" className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent hover:underline">
-                          {row.fileName}
-                        </a>
-                      ) : (
-                        <span className="text-sm">{row.fileName}</span>
-                      )}
-                    </Td>
-                    <Td>
-                      <span className="inline-flex items-center gap-1.5">
-  <span className="inline-flex items-center gap-1.5">
-                        <Badge tone={STATE_TONE[row.state]}>{t(`states.${row.state}`)}</Badge>
-                        {row.warnings > 0 && <Badge tone="warn">{t("register.warningsBadge", { count: row.warnings })}</Badge>}
-                      </span>
-                        {row.warnings > 0 && (
-                          <span title={t("register.warningsHint")}>
-                            <Badge tone="warn">{t("register.warningsBadge", { count: row.warnings })}</Badge>
-                          </span>
-                        )}
-                      </span>
-                    </Td>
-                    <Td align="right">
-                      <Link
-                        href={row.href as Route}
-                        className="focus-ring inline-flex h-6 items-center rounded-tag border border-border bg-card px-2 text-sm font-medium text-fg hover:bg-hover"
-                      >
-                        {row.applied ? t("register.open") : t("register.review")}
-                      </Link>
-                    </Td>
-                  </tr>
-                ))}
-                {group.hasApplied && (
-                  <>
-                    <tr className="h-8 border-b border-border bg-bg font-semibold">
-                      <th scope="row" className="px-2 pl-4 text-left whitespace-nowrap">
-                        {t("register.total", { year: group.year })}
-                      </th>
-                      {columns.map((field) => (
-                        <Td key={field} align="right">
-                          {group.totals[field]}
-                        </Td>
-                      ))}
-                      <td colSpan={span - 1 - columns.length} />
-                    </tr>
-                    <tr className="h-8 border-b border-border bg-bg text-muted">
-                      <th scope="row" className="px-2 pl-4 text-left font-medium whitespace-nowrap">
-                        {t("register.average")}
-                      </th>
-                      {columns.map((field) => (
-                        <Td key={field} align="right">
-                          {group.averages[field]}
-                        </Td>
-                      ))}
-                      <td colSpan={span - 1 - columns.length} />
-                    </tr>
-                  </>
-                )}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <ul className="flex flex-col gap-4 md:hidden" aria-label={t("register.label")}>
-        {groups.map((group) => (
-          <li key={group.year} className="flex flex-col gap-1">
-            <h2 className="text-sm font-semibold text-muted">{group.year}</h2>
-            <ul className="divide-y divide-border rounded-card border border-border bg-card">
-              {group.rows.map((row) => (
-                <li key={row.id}>
-                  <Link href={row.href as Route} className="flex items-center justify-between gap-3 px-3 py-2.5">
-                    <span className="flex min-w-0 flex-col">
-                      <span className="flex items-center gap-2 font-medium">
-                        {row.month}
-                        {row.badge && <Badge tone="accent">{t(`register.${row.badge}` as never)}</Badge>}
-                      </span>
-                      <span className="text-sm text-muted">
-                        {t("register.gross")} {row.values.gross}
-                      </span>
-                    </span>
-                    <span className="flex flex-col items-end gap-1">
-                      <span className="font-medium tabular-nums">{row.values.netPay}</span>
-                      <Badge tone={STATE_TONE[row.state]}>{t(`states.${row.state}`)}</Badge>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            {group.hasApplied && (
-              <p className="flex justify-between px-1 text-sm text-muted">
-                <span>{t("register.total", { year: group.year })}</span>
-                <span className="font-medium text-fg tabular-nums">{group.totals.netPay}</span>
-              </p>
-            )}
-          </li>
-        ))}
-      </ul>
+      <DataTable
+        columns={columns}
+        rowKey={(row) => row.id}
+        rowProps={(row) => ({ className: cn(!row.applied && "text-muted") })}
+        stickyHeader
+        frameClassName="h-[calc(100dvh-280px)] min-h-64 overflow-auto rounded-card border border-border bg-card"
+        groups={groups.map((group) => ({
+          key: String(group.year),
+          label: String(group.year),
+          rows: group.rows,
+          footer: group.hasApplied && <GroupTotals group={group} fields={fields} span={columns.length} text={text} />,
+          cardFooter: group.hasApplied && (
+            <p className="flex justify-between px-4 py-2 text-sm text-muted">
+              <span>{text("register.total", { year: group.year })}</span>
+              <span className="font-medium text-fg tabular-nums">{group.totals.netPay}</span>
+            </p>
+          ),
+        }))}
+        card={(row) => <PhoneCard row={row} text={text} />}
+        cardProps={() => ({ className: "border-b border-border last:border-0" })}
+      />
     </section>
   );
 }

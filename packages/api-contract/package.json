@@ -10,6 +10,7 @@
     "./budgets": "./src/budgets/index.ts",
     "./core": "./src/core/index.ts",
     "./interests": "./src/interests/index.ts",
+    "./payroll": "./src/payroll/index.ts",
     "./pockets": "./src/pockets/index.ts",
     "./settings": "./src/settings/index.ts",
     "./subscriptions": "./src/subscriptions/index.ts",

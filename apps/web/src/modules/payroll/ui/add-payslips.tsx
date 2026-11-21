@@ -1,14 +1,15 @@
 "use client";
 
 import { FileUp } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type DragEvent, useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { Modal } from "@ledgerly/ui/modal";
+import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
 import { uploadPayslipsAction } from "../actions";
+import { payrollChanged } from "../calls";
 
 /**
  * "Add payslip" (spec §7.8 D13: one, in the topbar): PDFs chosen or dropped, uploaded together.
@@ -54,8 +55,8 @@ export function AddPayslips({ label, size = "sm" }: { label: string; size?: "sm"
         notify(t("upload.refused", { name: refused.name, error: t(`errors.${refused.error}` as never) }), "error");
       }
       reset(false);
+      payrollChanged();
       if (result.uploaded.length === 1) router.push(`/payroll/${result.uploaded[0].id}`);
-      else router.refresh();
     });
   }
 

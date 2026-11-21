@@ -116,20 +116,9 @@
     ]
   },
   "apps/web/src/modules/payroll/actions.ts": {
-    "closedBy": "R3 of payroll",
+    "closedBy": "uploadPayslipsAction kept until the web session has the scope imports (R2 imports)",
     "actions": [
-      "applyPayslipAction",
-      "decideFieldAction",
-      "deletePayslipDocumentAction",
-      "fillWithLlmAction",
-      "rejectPayslipAction",
-      "renamePayslipAction",
-      "reopenPayslipAction",
-      "resetCodeAction",
-      "retryPayslipAction",
-      "setCodeRoleAction",
-      "uploadPayslipsAction",
-      "verifyPayslipAction"
+      "uploadPayslipsAction"
     ]
   },
   "apps/web/src/modules/users/actions.ts": {

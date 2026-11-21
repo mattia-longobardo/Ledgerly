@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 90,
+    "crossModuleImports": 88,
     "moduleIndexFiles": 12,
     "reciprocalModulePairs": 1,
     "reciprocalUnitPairs": 44,
@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 15,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 122,
+    "deepImports": 113,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -80,8 +80,6 @@
     "modules/payroll/service.ts → modules/imports/pdf/text",
     "modules/payroll/service.ts → modules/imports/rules",
     "modules/payroll/service.ts → modules/imports/service",
-    "modules/payroll/ui/present.ts → modules/imports/client",
-    "modules/payroll/ui/review-actions.tsx → modules/imports/client",
     "modules/pockets/jobs.ts → modules/users/index",
     "modules/pockets/queries.ts → modules/accounts/index",
     "modules/pockets/queries.ts → modules/interests/index",
@@ -373,15 +371,6 @@
     "app/(app)/investments/page.tsx → modules/accounts/ui/display",
     "app/(app)/investments/page.tsx → modules/investments/ui/chart-data",
     "app/(app)/investments/page.tsx → modules/investments/ui/period-control",
-    "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/auto-refresh",
-    "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/present",
-    "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/review-actions",
-    "app/(app)/payroll/[id]/page.tsx → modules/payroll/ui/review-workspace",
-    "app/(app)/payroll/page.tsx → modules/payroll/ui/add-payslips",
-    "app/(app)/payroll/page.tsx → modules/payroll/ui/auto-refresh",
-    "app/(app)/payroll/page.tsx → modules/payroll/ui/present",
-    "app/(app)/payroll/page.tsx → modules/payroll/ui/register-table",
-    "app/(app)/payroll/settings/code-map-card.tsx → modules/payroll/actions",
     "app/(app)/settings/categories/default-groups.tsx → modules/transactions/ui/default-groups-form",
     "app/(app)/settings/categories/page.tsx → modules/transactions/ui/display",
     "app/(app)/settings/data/page.tsx → modules/accounts/ui/snapshot-button",

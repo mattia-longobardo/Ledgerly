@@ -92,6 +92,13 @@
     "SETTLEMENTS",
     "interests"
   ],
+  "packages/api-contract/src/payroll/index.ts": [
+    "CODE_ROLES",
+    "FIELD_GROUPS",
+    "SUMMED_FIELDS",
+    "codes",
+    "payroll"
+  ],
   "packages/api-contract/src/pockets/index.ts": [
     "MAX_DESCRIPTION",
     "MAX_NAME",

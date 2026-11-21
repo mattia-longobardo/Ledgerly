@@ -399,8 +399,8 @@ describe("the Server Actions of time off", () => {
 
 /**
  * The Server Actions of payroll (05-refactor.md §5.5) and their routes. The register, the review and
- * the code map read routes of their own, with no action. The upload is `POST /imports`, the route of
- * the imports step (PAY-2, IMP-4): no exclusion is left.
+ * the code map read routes of their own and write through `/api/v1` (R3): the one action left is the
+ * upload, whose route is `POST /imports` of the imports step (PAY-2, IMP-4): no exclusion is left.
  */
 const PAYROLL_ACTION_FILES = ["apps/web/src/modules/payroll/actions.ts"];
 

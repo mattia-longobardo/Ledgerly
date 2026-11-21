@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Pencil } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useMessages, useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button, IconButton } from "@ledgerly/ui/button";
@@ -9,9 +9,14 @@ import { cn } from "@ledgerly/ui/cn";
 import { Input } from "@ledgerly/ui/input";
 import { type Highlight, PdfViewer } from "@/ui/pdf-viewer";
 import { notify } from "@ledgerly/ui/toast";
-import type { FieldGroup, FieldName } from "@ledgerly/domain/payroll/client";
-import { decideFieldAction } from "../actions";
-import type { FieldView } from "./present";
+import { decideFieldAction } from "../calls";
+import type { FieldGroup, FieldView } from "./present";
+
+/** A value's name: the field of the wire is a name of the catalogue, whose words are in `payroll.fields`. */
+function useFieldLabel(): (name: string) => string {
+  const labels = Object.entries(useMessages().payroll.fields);
+  return (name) => labels.find(([key]) => key === name)?.[1] ?? name;
+}
 
 /** Below this confidence a value is amber: check it against the document (design). */
 const LOW_CONFIDENCE = 0.75;
@@ -38,7 +43,8 @@ export function ReviewWorkspace({
   editable: boolean;
 }) {
   const t = useTranslations("payroll");
-  const [selected, setSelected] = useState<FieldName | null>(null);
+  const label = useFieldLabel();
+  const [selected, setSelected] = useState<string | null>(null);
   const byField = new Map(groups.flatMap((group) => group.fields.map((field) => [field.field, field] as const)));
   const current = selected ? byField.get(selected) : undefined;
   const sources = current ? (current.bbox ? [current] : current.derivedFrom.flatMap((name) => byField.get(name) ?? [])) : [];
@@ -63,7 +69,7 @@ export function ReviewWorkspace({
                   editable={editable}
                   selected={selected === field.field}
                   onSelect={() => setSelected(field.field)}
-                  sourceNames={field.derivedFrom.map((name) => t(`fields.${name}`)).join(", ")}
+                  sourceNames={field.derivedFrom.map(label).join(", ")}
                 />
               ))}
             </ul>
@@ -111,6 +117,7 @@ function FieldRow({
   sourceNames: string;
 }) {
   const t = useTranslations("payroll");
+  const label = useFieldLabel();
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -119,7 +126,7 @@ function FieldRow({
 
   function decide(typed: string | null) {
     startTransition(async () => {
-      const result = await decideFieldAction(documentId, field.field, typed);
+      const result = await decideFieldAction(documentId, field, typed);
       if (!result.ok) {
         setError(t(`errors.${result.error}` as never));
         return;
@@ -148,7 +155,7 @@ function FieldRow({
           title={field.bbox || field.derivedFrom.length > 0 ? t("review.show") : t("review.noBox")}
           className="focus-ring inline-flex min-h-6 min-w-0 flex-1 items-center truncate rounded-xs-plus text-left font-medium"
         >
-          {t(`fields.${field.field}`)}
+          {label(field.field)}
         </button>
         {!editing && (
           <span className={cn("shrink-0 text-right tabular-nums", low && "font-medium text-warn")}>{field.value}</span>
@@ -170,7 +177,7 @@ function FieldRow({
         <form onSubmit={onSubmit} className="flex items-center gap-2">
           <Input
             name="value"
-            aria-label={t(`fields.${field.field}`)}
+            aria-label={label(field.field)}
             defaultValue={field.input}
             type={field.unit === "date" ? "date" : "text"}
             inputMode={field.unit === "eur" || field.unit === "hours" ? "decimal" : undefined}
