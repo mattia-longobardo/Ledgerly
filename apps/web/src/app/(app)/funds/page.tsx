@@ -7,7 +7,7 @@ import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { type Params, withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { FundsScreen } from "./funds-screen";
+import { FundsScreen } from "@/modules/funds/client";
 
 const PATH = "/funds";
 

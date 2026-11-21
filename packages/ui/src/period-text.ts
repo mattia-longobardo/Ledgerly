@@ -10,6 +10,8 @@ export interface AnsweredPeriod {
   from: CivilDate | null;
   to: CivilDate;
   firstOn: CivilDate | null;
+  /** The days the control shows: the period's, from the first day with data (the server's `span`). */
+  span: { from: CivilDate; to: CivilDate };
 }
 
 type PeriodWords = (
@@ -17,25 +19,13 @@ type PeriodWords = (
   values: Record<string, string | number>,
 ) => string;
 
-/**
- * The days the control shows: the period's, starting no earlier than the first day with data (a custom
- * period keeps its own start). shortcut: a clamp of the server's two dates; a `span` field in the
- * answer would replace it.
- */
-export function answeredSpan(period: AnsweredPeriod): { from: CivilDate; to: CivilDate } {
-  const { firstOn, to } = period;
-  const start = period.from ?? firstOn ?? to;
-  const from = period.kind === "custom" || firstOn === null || start >= firstOn ? start : firstOn;
-  return { from: from > to ? to : from, to };
-}
-
 export function answeredPeriodText(
   period: AnsweredPeriod,
   todayOn: CivilDate,
   locale: UiLocale,
   words: PeriodWords,
 ): string {
-  const span = answeredSpan(period);
+  const { span } = period;
   if (period.kind === "year" && period.year !== null) {
     return period.year === Number(todayOn.slice(0, 4))
       ? words("yearToDate", { year: period.year })

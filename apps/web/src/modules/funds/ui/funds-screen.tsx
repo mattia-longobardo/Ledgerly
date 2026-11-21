@@ -17,24 +17,23 @@ import { HighlightScope } from "@ledgerly/ui/highlight";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { parseSectionQuery, SECTION_PRESETS, type SectionQuery } from "@ledgerly/ui/period";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
-import { answeredPeriodText, answeredSpan } from "@ledgerly/ui/period-text";
+import { answeredPeriodText } from "@ledgerly/ui/period-text";
 import { Link } from "@ledgerly/ui/router";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { type Params, withParams } from "@ledgerly/ui/url";
+import { FundChart } from "./fund-chart";
+import { FundStateButton } from "./fund-forms";
 import {
-  FundChart,
   FundsCard,
-  FundStateButton,
   type Home,
   type HomeFund,
   HomeKpis,
   type HomeWords,
-  type Say,
-  useSay,
   WhoPaidCard,
   YearsCard,
-} from "@/modules/funds/client";
+} from "./home-cards";
+import { type Say, useSay } from "./say";
 import { Hero, toCents } from "./home-hero";
 import { FundsHomeSkeleton } from "./home-skeleton";
 
@@ -100,7 +99,7 @@ function useHomeView(place: Place, home: Home) {
   const { say, section, kept } = place;
   const { period } = home;
   const name = answeredPeriodText(period, say.todayOn, say.locale, periodText);
-  const span = answeredSpan(period);
+  const span = period.span;
   const when =
     period.kind === "year"
       ? homeText("when.year", { year: period.year ?? 0 })

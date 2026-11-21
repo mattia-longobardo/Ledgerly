@@ -9,7 +9,9 @@ import { cn } from "@ledgerly/ui/cn";
 import { Popover } from "@ledgerly/ui/popover";
 import { Link } from "@ledgerly/ui/router";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { type Home, type HomeFund, type HomeWords, type Say, ValuationButton } from "@/modules/funds/client";
+import { ValuationButton } from "./fund-forms";
+import { type Home, type HomeFund, type HomeWords } from "./home-cards";
+import { type Say } from "./say";
 
 type Summary = Home["summary"];
 
@@ -130,6 +132,9 @@ function useHeroNotes(home: Home, words: HomeWords): string[] {
     state === "paid_no_value" ? homeText("paidNote", { when }) : null,
     state === "quiet" ? homeText("quietNote", { when }) : null,
     state === "paid_no_value" || state === "running_no_value" ? homeText("recordToMeasure", { when }) : null,
+    summary.gain === null && summary.valueTo !== null && summary.valueToClosesPrevious
+      ? homeText("closingNote", { date: longOf(words.say)(summary.valueTo) })
+      : null,
     notInValue > 0n ? homeText("notInValue", { amount: moneyOf(words.say)(summary.notInValue) }) : null,
   ].filter((note) => note !== null);
 }

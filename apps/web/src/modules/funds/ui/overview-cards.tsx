@@ -27,7 +27,9 @@ function useOriginText(say: Say) {
   const home = useTranslations("funds.home");
   return (parts: readonly Pick<Share, "key" | "amount">[]) =>
     parts
-      .map((part) => home(`kpis.originParts.${part.key}`, { amount: formatMoney(cents(part.amount), say.format) }))
+      .map((part) =>
+        home(`kpis.originParts.${part.key}`, { amount: formatMoney(cents(part.amount), say.format) }),
+      )
       .join(" · ");
 }
 

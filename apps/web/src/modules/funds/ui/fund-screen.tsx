@@ -17,24 +17,19 @@ import { DetailHeader } from "@ledgerly/ui/detail-header";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { parseSectionQuery, SECTION_PRESETS, type SectionQuery } from "@ledgerly/ui/period";
 import { PeriodBar } from "@ledgerly/ui/period-bar";
-import { type AnsweredPeriod, answeredPeriodText, answeredSpan } from "@ledgerly/ui/period-text";
+import { type AnsweredPeriod, answeredPeriodText } from "@ledgerly/ui/period-text";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { type Params, withParams } from "@ledgerly/ui/url";
-import {
-  ContributionButton,
-  contributionSetupOf,
-  FundContributions,
-  FundOverview,
-  FundSettings,
-  FundValuations,
-  type Say,
-  useMovements,
-  usePeriodLabel,
-  useSay,
-  ValuationButton,
-} from "@/modules/funds/client";
+import { ContributionButton } from "./contribution-dialog";
+import { contributionSetupOf, useMovements, usePeriodLabel } from "./contribution-setup";
+import { FundContributions } from "./fund-contributions";
+import { ValuationButton } from "./fund-forms";
+import { FundOverview } from "./fund-overview";
+import { FundSettings } from "./fund-settings";
+import { FundValuations } from "./fund-valuations";
+import { type Say, useSay } from "./say";
 import { FundDetailSkeleton } from "./fund-skeleton";
 
 const HOME = "/funds";
@@ -106,8 +101,8 @@ function usePeriodWhen(period: AnsweredPeriod | undefined, say: Say) {
   if (period.kind === "year") return home("when.year", { year: period.year ?? 0 });
   if (period.kind === "all") return home("when.all");
   return home("when.custom", {
-    from: formatDate(answeredSpan(period).from, "long", say.locale),
-    to: formatDate(answeredSpan(period).to, "long", say.locale),
+    from: formatDate(period.span.from, "long", say.locale),
+    to: formatDate(period.span.to, "long", say.locale),
   });
 }
 
@@ -241,7 +236,7 @@ function FundNav({
           locale={say.locale}
           presets={SECTION_PRESETS}
           name={period.kind === "year" ? name : undefined}
-          whole={{ range: answeredSpan(period), text: name }}
+          whole={{ range: period.span, text: name }}
         />
       )}
     </div>
@@ -252,18 +247,18 @@ type FundRead = NonNullable<ReturnType<typeof useApi<typeof fundRoutes.getFund>>
 
 /** A year before anything there is (§6): no number to show, a link to the first year. */
 function BeforeFirst({
-  overview,
+  period,
   place,
   when,
   yearHref,
 }: {
-  overview: FundRead;
+  period: AnsweredPeriod;
   place: Place;
   when: string;
   yearHref: (year: number) => string;
 }) {
   const home = useTranslations("funds.home");
-  const firstOn = overview.period.firstOn;
+  const { firstOn } = period;
   const firstYear = firstOn === null ? Number(place.say.todayOn.slice(0, 4)) : Number(firstOn.slice(0, 4));
   return (
     <EmptyState
@@ -292,11 +287,11 @@ function TabBody(props: {
   const { place, archived, when, tabHref } = props;
   const fundText = useTranslations("funds.fund");
   const input = { params: { id: place.id }, query: place.section.api };
-  // `beforeFirst` is the Overview's: every tab that follows the period asks it (request on the issue).
-  const overview = useLatest(useApi(fundRoutes.getFund, input));
+  // The tab's own read, the one the tab draws from: it says whether the period is before any data.
+  const read = useLatest(useApi(routeOf(place.tab), input));
   // A year before anything there is (§6): no number to show.
-  if (overview.data?.beforeFirst)
-    return <BeforeFirst overview={overview.data} place={place} when={when} yearHref={props.yearHref} />;
+  if (read.data?.beforeFirst)
+    return <BeforeFirst period={read.data.period} place={place} when={when} yearHref={props.yearHref} />;
   if (place.tab === "contributions")
     return (
       <FundContributions
@@ -317,10 +312,10 @@ function TabBody(props: {
       />
     );
   return (
-    <Loaded state={overview}>
-      {(read) => (
+    <OverviewTab input={input}>
+      {(overview) => (
         <FundOverview
-          overview={read}
+          overview={overview}
           say={place.say}
           name={props.name}
           when={when}
@@ -334,8 +329,20 @@ function TabBody(props: {
           valuationButton={props.valuationButton}
         />
       )}
-    </Loaded>
+    </OverviewTab>
   );
+}
+
+/** The Overview's read, the same the frame asked for its period. */
+function OverviewTab({
+  input,
+  children,
+}: {
+  input: { params: { id: string }; query: Place["section"]["api"] };
+  children: (overview: FundRead) => React.ReactNode;
+}) {
+  const overview = useLatest(useApi(fundRoutes.getFund, input));
+  return <Loaded state={overview}>{children}</Loaded>;
 }
 
 /** "Record contribution": what the dialog opens with is the Contributions tab's own read. */

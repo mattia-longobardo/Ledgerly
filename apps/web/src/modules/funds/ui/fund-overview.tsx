@@ -293,6 +293,9 @@ function useAmountNotes(overview: Overview, say: Say, noValueYet: boolean) {
     cents(overview.payslipsAccrued) !== 0n
       ? fundText("hero.accrued", { amount: money(overview.payslipsAccrued) })
       : null,
+    line.status !== "measured" && line.end !== null && line.endClosesPrevious
+      ? home("closingNote", { date: formatDate(line.end.on, "long", say.locale) })
+      : null,
     line.end !== null && (cents(line.notInValue) ?? 0n) > 0n
       ? home("notInValue", { amount: money(line.notInValue) })
       : null,

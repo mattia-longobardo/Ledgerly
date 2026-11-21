@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Page } from "@ledgerly/ui/shell/page";
-import { NewFundScreen } from "./new-fund-screen";
+import { NewFundScreen } from "@/modules/funds/client";
 
 export async function generateMetadata(): Promise<Metadata> {
   const text = await getTranslations("funds.wizard");

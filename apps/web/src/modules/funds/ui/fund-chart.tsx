@@ -119,8 +119,8 @@ export function FundChart(props: ChartProps) {
   const shownBar = (index: number) => (returns ? percent(bars[index].share) : money(totals[index], true));
   const shownCumulative = (index: number) =>
     returns ? percent(bars[index].cumulativeShare) : money(cumulative[index], true);
-  const shownStretch = (stretch: { gain: string }, share: number | null) =>
-    returns ? percent(share) : money(cents(stretch.gain), true);
+  const shownStretch = (stretch: { gain: string; share: number | null }) =>
+    returns ? percent(stretch.share) : money(cents(stretch.gain), true);
   const barsBody =
     totals.every((amount) => amount === null) || (returns && noShare) ? (
       <p data-testid="chart-empty" className="text-sm text-muted">
@@ -173,7 +173,7 @@ export function FundChart(props: ChartProps) {
               from: day(stretch.from),
               to: day(stretch.to),
             })}`,
-            value: shownStretch(stretch, fundGain(bar, stretch.fundId)?.share ?? null),
+            value: shownStretch(stretch),
             color: bySign
               ? (cents(stretch.gain) ?? 0n) < 0n
                 ? LOSS_COLOR

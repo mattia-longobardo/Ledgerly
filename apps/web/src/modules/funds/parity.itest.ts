@@ -438,5 +438,17 @@ describe("funds, the forms of a stored row = the forms of its wire row", () => {
       byId(detail.operations).map((row) => contributionFormOf(row, format)),
     );
     expect(register.operations).toHaveLength(3);
+
+    // The live preview of the source dialog (an exception of the orchestrator: `nextDueDates` of
+    // `funds/client`) says the due dates the server answers for the stored source.
+    const { nextDueDates } = await import("@ledgerly/domain/funds/client");
+    const { calendarOfForm } = await import("./ui/source-text");
+    const { today } = await import("@domain/shared/dates");
+    const payslip = settings.sources.find((one) => one.kind === "payroll")!;
+    const form = wire.sourceFormOfRow(payslip, format);
+    expect(payslip.nextDue.length).toBeGreaterThan(0);
+    expect(nextDueDates(form.accrualPeriod, calendarOfForm(form), today(alice.timeZone))).toEqual(
+      payslip.nextDue,
+    );
   });
 });

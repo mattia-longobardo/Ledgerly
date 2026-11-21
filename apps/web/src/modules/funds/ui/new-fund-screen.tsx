@@ -5,11 +5,11 @@
 // before "Create fund".
 import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { funds as fundRoutes } from "@ledgerly/api-contract/funds";
-import { Card } from "@ledgerly/ui/card";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
-import { Skeleton } from "@ledgerly/ui/skeleton";
-import { FundWizard, useSay } from "@/modules/funds/client";
+import { FundWizard } from "./fund-wizard";
+import { useSay } from "./say";
+import { WizardSkeleton } from "./wizard-skeleton";
 
 export function NewFundScreen() {
   const setup = useApi(fundRoutes.getFundSetup, {});
@@ -36,20 +36,5 @@ export function NewFundScreen() {
       format={words.format}
       locale={words.locale}
     />
-  );
-}
-
-/** The shape of the procedure while it reads (§3.6): the steps and a card with four rows. */
-function WizardSkeleton() {
-  return (
-    <div data-testid="fund-wizard-loading" className="flex w-full flex-col gap-4">
-      <Skeleton className="h-6 w-72 max-w-full" />
-      <Card className="flex flex-col gap-4">
-        <Skeleton className="h-6 w-32" />
-        {[0, 1, 2, 3].map((index) => (
-          <Skeleton key={index} className="h-8 w-full" />
-        ))}
-      </Card>
-    </div>
   );
 }

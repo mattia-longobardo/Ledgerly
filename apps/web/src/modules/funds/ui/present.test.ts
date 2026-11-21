@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { operationGross, operationOrigin, originParts, voluntaryCents } from "@domain/modules/funds/queries/figures";
+import {
+  operationGross,
+  operationOrigin,
+  originParts,
+  voluntaryCents,
+} from "@domain/modules/funds/queries/figures";
 import { monthPill } from "./present";
 
 const SOURCES = [

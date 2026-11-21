@@ -6,7 +6,7 @@ import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
-import { FundScreen } from "./fund-screen";
+import { FundScreen } from "@/modules/funds/client";
 
 const HOME = "/funds";
 /** The tabs of a fund: the same four for every fund. */

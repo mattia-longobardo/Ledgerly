@@ -8,7 +8,7 @@ import { funds } from "@ledgerly/api-contract/funds";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { formatAmountInput } from "@ledgerly/format/format";
 import { useApi } from "@ledgerly/ui/data";
-import type { ContributionForm } from "@ledgerly/domain/funds/client";
+import { newContributionForm } from "@ledgerly/domain/funds/client";
 import type { ContributionSetup } from "./contribution-dialog";
 import { periodLabel } from "./pension-present";
 import type { Say } from "./say";
@@ -32,32 +32,6 @@ export function usePeriodLabel(accrual: "month" | "quarter" | undefined, say: Sa
     periodLabel(accrual ?? "quarter", year, index, say.locale, (values) => register("quarter", values));
 }
 
-/**
- * A new operation of a kind, as the dialog opens it: the domain's `newContributionForm`, which the
- * browser entry of funds does not export.
- */
-function newContribution(
-  kind: ContributionForm["kind"],
-  date: string,
-  defaults: { fee?: string; period?: string } = {},
-): ContributionForm {
-  return {
-    id: null,
-    kind,
-    classification: "withdrawal",
-    on: date,
-    amount: "",
-    worker: "",
-    employer: "",
-    tfr: "",
-    period: defaults.period ?? "",
-    fee: defaults.fee ?? "",
-    feeUnknown: false,
-    transactionId: "",
-    note: "",
-  };
-}
-
 /** The dialog's setup; `null` for an archived fund, which is read only. */
 export function contributionSetupOf(
   contributions: Contributions,
@@ -78,12 +52,12 @@ export function contributionSetupOf(
     today: say.todayOn,
     format: say.format,
     defaults: {
-      voluntary: newContribution("voluntary", say.todayOn, { fee: text(setup.defaultFees.voluntary) }),
-      payroll: newContribution("payroll", say.todayOn, {
+      voluntary: newContributionForm("voluntary", say.todayOn, { fee: text(setup.defaultFees.voluntary) }),
+      payroll: newContributionForm("payroll", say.todayOn, {
         fee: text(setup.defaultFees.payroll),
         period: pending ? `${pending.year}-${pending.index}` : "",
       }),
-      other: newContribution("other", say.todayOn),
+      other: newContributionForm("other", say.todayOn),
     },
     kind: setup.defaultKind,
     hasPayroll: payroll !== null,
