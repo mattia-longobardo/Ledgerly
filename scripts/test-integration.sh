@@ -63,7 +63,7 @@ shard() {
   i=$1
   shift
   TEST_DATABASE_URL="${database_url%/*}/${database:-ledgerly_${i}_test}" TEST_S3_KEY_PREFIX="tests/${database:-$i}/" \
-    docker run --rm --network db_internal \
+    docker run --rm --network db_internal --memory 1g --cpus 1.0 \
     --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$PWD":/app -w /app \
     -e TEST_DATABASE_URL -e TEST_S3_KEY_PREFIX -e TEST_S3_ENDPOINT -e TEST_S3_REGION \
