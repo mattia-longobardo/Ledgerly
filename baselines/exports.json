@@ -43,6 +43,9 @@
     "SESSION_CSRF_HEADER",
     "searchRecords"
   ],
+  "packages/api-contract/src/imports/index.ts": [
+    "imports"
+  ],
   "packages/api-contract/src/index.ts": [
     "ACCOUNTS",
     "ACCOUNTS_ROUTES",

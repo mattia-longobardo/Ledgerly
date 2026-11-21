@@ -1,3 +1,4 @@
+import { imports } from "@ledgerly/api-contract/imports";
 import { profile, security } from "@ledgerly/api-contract/settings";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, call } from "./index";
@@ -80,5 +81,28 @@ describe("call", () => {
   it("refuses an answer that is not the declared shape", async () => {
     answer(200, { name: 1 });
     await expect(call(profile.getProfile, {})).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
+describe("call with a multipart body", () => {
+  it("sends a form, with the file as it is and no JSON content type", async () => {
+    const fetcher = answer(201, {
+      id: "3f2a1b0c-9d8e-4f7a-8b6c-5d4e3f2a1b0c",
+      kind: "payslip",
+      fileName: "payslip.pdf",
+      state: "received",
+      duplicate: false,
+    });
+    const file = new File([new Uint8Array([37, 80, 68, 70])], "payslip.pdf");
+    await call(imports.uploadDocument, { body: { kind: "payslip", file } });
+    const [url, init] = fetcher.mock.calls[0] ?? [];
+    expect(url).toBe("/api/v1/imports");
+    expect(init?.headers).toMatchObject({ "x-ledgerly-csrf": "1" });
+    expect(init?.headers).not.toHaveProperty("content-type");
+    const form = init?.body;
+    expect(form).toBeInstanceOf(FormData);
+    if (!(form instanceof FormData)) return;
+    expect(form.get("kind")).toBe("payslip");
+    expect(form.get("file")).toMatchObject({ name: "payslip.pdf", size: 4 });
   });
 });

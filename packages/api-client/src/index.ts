@@ -79,6 +79,16 @@ function wireOf(input: unknown): Wire {
   return { params: strings(input.params), query, body: input.body };
 }
 
+/** A `multipart` body: a file as it is, any other field as its text. */
+function formOf(body: unknown): FormData {
+  const form = new FormData();
+  if (!isRecord(body)) return form;
+  for (const [key, part] of Object.entries(body)) {
+    if (part !== undefined) form.set(key, part instanceof Blob ? part : String(part));
+  }
+  return form;
+}
+
 /** The refusal an answer that is not a 2xx carries, read without trusting its shape. */
 async function refusalOf(response: Response): Promise<ApiError> {
   const body: unknown = await response.json().catch(() => null);
@@ -107,12 +117,14 @@ export async function call(route: RouteContract, input: unknown): Promise<unknow
   const write = route.method !== "GET";
   const headers: Record<string, string> = { accept: "application/json" };
   if (write) headers[SESSION_CSRF_HEADER] = "1";
-  if (wire.body !== undefined) headers["content-type"] = "application/json";
+  const multipart = route.bodyFormat === "multipart" && isRecord(wire.body);
+  // A form sets its own content type, with the boundary of its parts.
+  if (wire.body !== undefined && !multipart) headers["content-type"] = "application/json";
   const response = await fetch(urlOf(route, wire), {
     method: route.method,
     headers,
     credentials: "same-origin",
-    body: wire.body === undefined ? undefined : JSON.stringify(wire.body),
+    body: wire.body === undefined ? undefined : multipart ? formOf(wire.body) : JSON.stringify(wire.body),
   });
   if (!response.ok) throw await refusalOf(response);
   if (route.response === null) return null;
