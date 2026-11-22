@@ -290,18 +290,16 @@ function AccountsCard({ view, format }: { view: NetWorth; format: CardFormat }) 
   );
 }
 
-/** From `md`: one table, a header row per group with its subtotal, then its accounts. */
-function DesktopTable({
-  view,
-  format,
-  groups,
-  hrefOf,
-}: {
+/** What the table and the phone list draw: the same groups, the same links. */
+interface ListProps {
   view: NetWorth;
   format: CardFormat;
   groups: Group[];
   hrefOf: (row: ViewRow) => string;
-}) {
+}
+
+/** From `md`: one table, a header row per group with its subtotal, then its accounts. */
+function DesktopTable({ view, format, groups, hrefOf }: ListProps) {
   const accountsText = useTranslations("accounts");
   return (
     <div className="overflow-x-auto max-md:hidden">
@@ -347,17 +345,7 @@ function DesktopTable({
   );
 }
 
-function PhoneList({
-  view,
-  format,
-  groups,
-  hrefOf,
-}: {
-  view: NetWorth;
-  format: CardFormat;
-  groups: Group[];
-  hrefOf: (row: ViewRow) => string;
-}) {
+function PhoneList({ view, format, groups, hrefOf }: ListProps) {
   const accountsText = useTranslations("accounts");
   return (
     <ul className="flex flex-col md:hidden">
