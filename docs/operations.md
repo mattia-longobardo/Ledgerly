@@ -52,6 +52,14 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
   works. A person connects as many banks as they want: one connection per bank (from N2). A movement is recognised by the bank's reference, or by a hash when it gives none, so a
   second reading writes nothing twice. "Disconnect" closes the access of that bank and leaves its
   accounts, with their balances and movements, as accounts kept by hand.
+- **The prices plugin (R5d).** `ledgerly-plugin-prices` declares `prices.daily` and asks no
+  credential: it serves the instance, not a person, and Settings does not list it. The app calls
+  its `POST /prices` from the daily prices job, for the markets of the assets whose price is
+  automatic. It reaches only `query1.finance.yahoo.com` and `query2.finance.yahoo.com`; Yahoo's
+  endpoint is no official API and has no licence for automated use (risk accepted by Mattia on
+  22/11/2026). The registry of instruments is the app's own: it calls `api.openfigi.com` and
+  `registers.esma.europa.eu` itself. Its secret is the pair `prices=` of `PLUGIN_URLS` and
+  `PLUGIN_SECRETS`, and `.env.plugin-prices` with the same value.
 - **The state of a connection (from N2).** One pure rule for every provider
   (`src/platform/integrations/status.ts`): five values, a closed list of error codes
   (`auth`, `consent_expired`, `rate_limited`, `provider_down`, `invalid_data`) and the streak of

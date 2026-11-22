@@ -12,6 +12,7 @@ COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
 COPY packages/plugin-host/package.json ./packages/plugin-host/
 COPY plugins/enablebanking/package.json ./plugins/enablebanking/
+COPY plugins/prices/package.json ./plugins/prices/
 # No install scripts (PERS-87 SEC-04): a dependency's `postinstall` (ccxt's, today a banner) never
 # runs at build time. Nothing needs one: esbuild, @swc/core and the other native packages find
 # their platform binary in the optional dependency npm already installed, and `npm run build`

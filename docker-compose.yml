@@ -170,6 +170,42 @@ services:
     networks:
       - ledgerly_plugins
 
+# Ledgerly Plugin Prices # --------------------------------------------------------------------------------------------------------------
+
+  # The prices plugin (R5d; docs/operations.md, "Plugins"): the daily closes from Yahoo Finance, for
+  # the instance. Like every plugin: stateless, called only by `ledgerly` on `ledgerly_plugins`, its
+  # one variable the secret it shares with the core.
+  ledgerly-plugin-prices:
+    build:
+      context: .
+      dockerfile: plugins/prices/Dockerfile
+    image: ledgerly-plugin-prices:latest
+    container_name: ledgerly-plugin-prices
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Not required: without the file the plugin refuses to start, and the rest of the stack — the
+    # app first — still does. A missing file must never stop `docker compose` for `ledgerly`.
+    env_file:
+      - path: .env.plugin-prices
+        required: false
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://127.0.0.1:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "autoheal=true"
+    networks:
+      - ledgerly_plugins
+
 networks:
   # The interface and the server, and nothing else (rewrite plan R4): the interface asks the server
   # for the session. `internal`: no way out of the host from here.
