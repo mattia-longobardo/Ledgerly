@@ -8,7 +8,7 @@
     "platformToModuleImports": 64,
     "platformFilesImportingModules": 22,
     "uiToPlatformImports": 1,
-    "forbiddenNameFiles": 82,
+    "forbiddenNameFiles": 81,
     "forbiddenNameKeys": 11,
     "packageDependencies": 16,
     "packageEscapes": 14,
@@ -141,8 +141,6 @@
   ],
   "moduleCycles": [],
   "forbiddenNames": [
-    "app/(app)/investments/catalog/page.tsx: binance",
-    "app/(app)/investments/catalog/page.tsx: etoro",
     "app/(app)/settings/categories/delete-dialog.tsx: wallet",
     "app/(app)/settings/integrations/actions.ts: trek",
     "app/(app)/settings/integrations/actions.ts: wallet",
