@@ -105,7 +105,7 @@ async function connectionOf(ctx: Ctx, id: string): Promise<Connection> {
 }
 
 /** A bank's connection: what only a plugin's connection does. */
-async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
+export async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   const connection = await connectionOf(ctx, id);
   if (!isPluginProvider(connection.provider)) {
     throw new ApiRefusal("conflict", isCore(connection.provider) ? "core_provider" : "not_a_bank");
@@ -114,7 +114,7 @@ async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
 }
 
 /** A refusal of a use case of the web as the contract names it. */
-function settled<T extends { ok: true }>(answer: T | Refused): T {
+export function settled<T extends { ok: true }>(answer: T | Refused): T {
   if (answer.ok) return answer;
   if (answer.error === "not_found") throw new ApiRefusal("not_found");
   throw new ApiRefusal("conflict", answer.error ?? "failed");

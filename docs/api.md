@@ -64,7 +64,7 @@ token alone decides, and a bad token is `401` even next to a valid cookie.
 | `PATCH /preferences`, `PATCH /profile`     | `write`            |
 | `GET /categories`, `/labels`, `/source-categories`, `/categories/{id}/macro-move` | `read` |
 | the writes of categories, labels and source categories ([changelog](api-changelog.md)) | `write` |
-| `GET /connections`, `/banks`, `/sources/{slug}/deactivation` | `read` |
+| `GET /connections`, `/connections/runs`, `/connections/{id}/choice`, `/connections/{id}/outcome`, `/banks`, `/plugins`, `/sources/{slug}`, `/sources/{slug}/deactivation` | `read` |
 | the actions of connections, banks, sources and plugins ([changelog](api-changelog.md)) | `write` |
 | `GET /accounts`                            | `read`             |
 | `GET /accounts/{id}/balances`              | `read`             |

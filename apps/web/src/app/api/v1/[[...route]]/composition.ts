@@ -7,7 +7,9 @@ import { apiRoutes, readTools } from "@ledgerly/api";
 import { accountCases } from "@/app/(app)/accounts/api-cases";
 import { transactionCases } from "@/app/(app)/expenses/api-cases";
 import { investmentCases } from "@/app/(app)/investments/api-cases";
+import { bankChoice, bankOutcome } from "@/app/(app)/banks/connect/steps";
 import { connectionCases } from "@/app/(app)/settings/integrations/api-cases";
+import { sourceRead } from "@/app/(app)/settings/integrations/source-read";
 import { serverCases } from "@/app/(app)/settings/server/api-cases";
 import { api } from "@/platform/api/app";
 import { withToken } from "@/platform/api/auth";
@@ -23,6 +25,7 @@ export const adapters = {
   accounts: accountCases,
   transactions: transactionCases,
   investments: investmentCases,
+  sources: { choice: bankChoice, outcome: bankOutcome, source: sourceRead },
 };
 
 api.route("/", apiRoutes(adapters));

@@ -361,14 +361,15 @@ export const getInvestmentsCatalog = defineRoute({
   scope: "investments:read",
   capability: "investments",
   summary:
-    "The providers a service can be added from today, with the accounts each is connected to, and the " +
-    "investment and crypto accounts a service can use, with why one cannot.",
+    "The providers a service can be added from, with the accounts each is connected to (`status` " +
+    "`planned`: one to come, which cannot be connected yet), and the investment and crypto accounts a " +
+    "service can use, with why one cannot.",
   actions: [],
   response: investmentsCatalog,
   errors: [],
   example: {
     response: {
-      providers: [{ ...PROVIDER_EXAMPLE, connect: "apikey", connected: [] }],
+      providers: [{ ...PROVIDER_EXAMPLE, connect: "apikey", status: "available", connected: [] }],
       existing: [
         {
           id: ACCOUNT_ID,

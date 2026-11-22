@@ -19,6 +19,7 @@ import {
   TransactionError,
 } from "@ledgerly/domain/transactions";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
+import { sourceSlugOf } from "./sources";
 import {
   macroMoveView,
   mergeTwoCategories,
@@ -50,10 +51,26 @@ async function guarded<T>(work: () => Promise<T>): Promise<T> {
   }
 }
 
-function serveSourceCategories(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, labels.listSourceCategories, async ({ ctx }) => ({
-    sourceCategories: await listSourceCategories(ctx),
-  }));
+function serveSourceCategories(app: Hono<ApiEnv>, guard: Guard, sourceName: SourceName): void {
+  serve(app, guard, labels.listSourceCategories, async ({ ctx }) => {
+    const rows = await listSourceCategories(ctx);
+    // One name per source, not per row.
+    const names = new Map<string, Promise<string>>();
+    const nameOf = (provider: string) => {
+      const name = names.get(provider) ?? sourceName(provider, ctx.locale);
+      names.set(provider, name);
+      return name;
+    };
+    return {
+      sourceCategories: await Promise.all(
+        rows.map(async (row) => ({
+          ...row,
+          sourceName: await nameOf(row.provider),
+          source: sourceSlugOf(row.provider),
+        })),
+      ),
+    };
+  });
   serve(app, guard, labels.setSourceCategory, ({ ctx, params, body }) =>
     guarded(async () => {
       const change = await setSourceCategory(ctx, { id: params.id, categoryId: body.categoryId });
@@ -150,7 +167,7 @@ export function serveCategoryMoves(
   guard: Guard,
   sourceName: SourceName,
 ): readonly RouteContract[] {
-  serveSourceCategories(app, guard);
+  serveSourceCategories(app, guard, sourceName);
   serveMoves(app, guard, sourceName);
   serveSummary(app, guard, sourceName);
   return [

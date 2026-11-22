@@ -11,9 +11,8 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { addDays, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/format/format";
 import type { ConnectionLabel } from "@/platform/integrations/registry";
-import { isPluginProvider, PROVIDERS } from "@ledgerly/domain/platform/integrations";
+import { sourceSlugOf } from "@ledgerly/api";
 import type { Connection, RecentRun } from "@ledgerly/domain/platform/integrations";
-import { providerOf } from "@ledgerly/domain/investments";
 import {
   clock,
   codeKey,
@@ -84,16 +83,8 @@ export function advancedHref(connectionId: string): string {
   return `${ADVANCED}?c=${connectionId}`;
 }
 
-/**
- * The page of a source (rewrite plan N7.2, plugin-settings.md §2.1): a plugin's id, or the id of a
- * provider of the core. The investment services have none: their settings are on the service's
- * page (§1.1, row 17).
- */
-export function sourceSlugOf(provider: string): string | null {
-  if (isPluginProvider(provider)) return provider.slice("plugin:".length);
-  if (providerOf(provider) !== null) return null;
-  return (PROVIDERS as readonly string[]).includes(provider) ? provider : null;
-}
+/** The page of a source: `/api/v1` answers it too (`source` of `GET /source-categories`). */
+export { sourceSlugOf };
 
 /** Where the settings of a source are; `null` for a provider without a page of its own. */
 export function sourceHref(provider: string): string | null {

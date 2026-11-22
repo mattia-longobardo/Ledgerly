@@ -63,6 +63,11 @@ export function bankKindLabel(
   return (type) => CATALOGUES[locale].accounts.types[type];
 }
 
+/** What «Choose the accounts» calls a bank's account without a name, in `locale`. */
+export function unnamedBankAccount(locale: UiLocale): string {
+  return CATALOGUES[locale].banks.connect.accounts.unnamed;
+}
+
 /** A provider with one connection: the connection has the provider's name. */
 const named = (name: string): ConnectionLabel => ({ name, provider: name });
 

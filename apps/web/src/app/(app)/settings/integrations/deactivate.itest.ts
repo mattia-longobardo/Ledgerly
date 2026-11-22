@@ -3,7 +3,6 @@
 // double, an account deleted here does not come back, and a failure in the conversion changes
 // nothing. Wallet is a stubbed `fetch` on `test/fixtures/wallet/`, the bank a fake plugin: no call
 // leaves the test.
-import { generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,22 +35,15 @@ import {
 } from "@domain/platform/integrations/service";
 import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
 import { chooseWalletAccounts, syncWalletNow } from "@domain/platform/integrations/wallet/sync";
-import type { Fetch } from "@plugin-host/client";
-import { PLUGIN_PATHS, type PluginAccount, type SyncResponse } from "@plugin-contract/calls";
-import type { PluginManifest } from "@plugin-contract/manifest";
+import { PLUGIN_PATHS } from "@plugin-contract/calls";
 import { credentialsStatus, isPluginActive } from "@domain/platform/plugins/queries";
-import {
-  completeAccess,
-  refreshManifests,
-  saveUserCredentials,
-  setPluginActive,
-  startAccess,
-} from "@plugin-host/service";
+import { refreshManifests } from "@plugin-host/service";
 import { chooseAccounts, readBank, tieBack } from "@plugin-host/sync";
 import "@/app/plugin-wiring";
 import { numbersSnapshot } from "../../../../../../../scripts/numbers-snapshot";
 import { differences } from "../../../../../../../scripts/snapshot-format";
 import { closeDatabase, resetDatabase } from "../../../../../../../test/db";
+import { bankAccess, BANK_NOW, fakePlugin, PLUGIN, PROVIDER } from "../../../../../../../test/bank-plugin";
 import { createTestUser } from "../../../../../../../test/users";
 import { deleteAccount } from "../../accounts/[id]/delete";
 import { bankSink } from "../../banks/sink";
@@ -359,119 +351,11 @@ describe("Turn off Trek", () => {
 
 // ——— A plugin: a bank ————————————————————————————————————————————————————————————————————————
 
-const PLUGIN = "enablebanking";
-const PROVIDER = "plugin:enablebanking";
-const KEY = generateKeyPairSync("rsa", { modulusLength: 2048 })
-  .privateKey.export({ type: "pkcs8", format: "pem" })
-  .toString();
-const BANK = { name: "Zeta Bank", country: "IT" };
-const BANK_NOW = new Date("2026-11-15T10:00:00Z");
-
-const MANIFEST: PluginManifest = {
-  id: PLUGIN,
-  version: "0.1.0",
-  contract: "1",
-  labels: {
-    name: { en: "Enable Banking", it: "Enable Banking" },
-    description: { en: "Accounts from European banks", it: "Conti dalle banche europee" },
-    steps: {},
-    products: {},
-  },
-  capabilities: ["windowedHistory"],
-  userSettings: [],
-  connectionFields: [],
-  egress: ["api.enablebanking.com"],
-  schedule: { recommendedPerDay: 3, minIntervalMinutes: 360 },
-  providesCategories: false,
-};
-
-const ACCOUNT: PluginAccount = {
-  externalId: "u-1",
-  stableId: "hash-1",
-  name: "Conto",
-  identifier: "IT60X0542811101000000123456",
-  currency: "EUR",
-  kind: "CACC",
-};
-
-const ANSWER: SyncResponse = {
-  accounts: [
-    {
-      externalId: "u-1",
-      balances: [{ type: "ITAV", amount: "100.00", currency: "EUR", date: "2026-11-14" }],
-      error: null,
-    },
-  ],
-  transactions: [
-    {
-      accountExternalId: "u-1",
-      externalId: "ref-1",
-      status: "booked",
-      bookingDate: "2026-11-10",
-      valueDate: "2026-11-10",
-      amount: "12.30",
-      direction: "debit",
-      currency: "EUR",
-      text: ["PAGAMENTO POS"],
-      counterparty: "Negozio",
-      merchantCategoryCode: null,
-      bankTransactionCode: null,
-    },
-  ],
-  cursor: null,
-  coverage: { from: null, to: null },
-};
-
-function fakePlugin() {
-  const calls: { path: string; body: Record<string, unknown> }[] = [];
-  const fetchFn: Fetch = async (input, init) => {
-    const path = new URL(String(input)).pathname;
-    const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
-    calls.push({ path, body });
-    const reply = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
-    if (path === PLUGIN_PATHS.manifest) return reply(MANIFEST);
-    if (path === PLUGIN_PATHS.verify) return reply({ access: "read-only" });
-    if (path === PLUGIN_PATHS.authStart) return reply({ url: "https://bank.example/login" });
-    if (path === PLUGIN_PATHS.authRevoke) return reply({ revoked: true });
-    if (path === PLUGIN_PATHS.authComplete) {
-      return reply({
-        session: { id: "session-1", expiresAt: "2027-05-14T09:59:00.000Z" },
-        institution: BANK,
-        accounts: [ACCOUNT],
-      });
-    }
-    if (path === PLUGIN_PATHS.sync) return reply(ANSWER);
-    return reply({ error: { code: "invalid_request" } }, 400);
-  };
-  return { calls, deps: { fetchFn } };
-}
-
-async function bankAccess(plugin: ReturnType<typeof fakePlugin>): Promise<string> {
-  await setPluginActive(ctx, { pluginId: PLUGIN, active: true }, BANK_NOW);
-  await saveUserCredentials(
-    ctx,
-    { pluginId: PLUGIN, applicationId: "app-1", privateKey: KEY },
-    BANK_NOW,
-    plugin.deps,
-  );
-  await startAccess(ctx, { pluginId: PLUGIN, sessionId: "s", institution: BANK }, BANK_NOW, plugin.deps);
-  const state = plugin.calls.filter((call) => call.path === PLUGIN_PATHS.authStart).at(-1)?.body
-    .state as string;
-  const outcome = await completeAccess(
-    ctx,
-    { pluginId: PLUGIN, sessionId: "s", query: { state, code: "code-1", error: null }, presence: null },
-    BANK_NOW,
-    plugin.deps,
-  );
-  if (!outcome.ok) throw new Error(`access refused: ${outcome.error}`);
-  return outcome.connectionId;
-}
-
 describe("Turn off a bank's plugin", () => {
   it("closes the accesses, forgets the key, keeps the numbers, and ties the account back when turned on again", async () => {
     const plugin = fakePlugin();
     await refreshManifests(BANK_NOW, plugin.deps);
-    const connectionId = await bankAccess(plugin);
+    const connectionId = await bankAccess(ctx, plugin);
     const target = { pluginId: PLUGIN, connectionId };
     await chooseAccounts(
       ctx,
@@ -513,7 +397,7 @@ describe("Turn off a bank's plugin", () => {
     expect(await sourceOf(ctx, PLUGIN)).toBeNull();
 
     // Turned on again: the key again, the bank again, and the same account comes back (§3.4).
-    const again = await bankAccess(plugin);
+    const again = await bankAccess(ctx, plugin);
     // Only the accounts the new access exposes come back: another bank's stay kept by hand.
     expect(await restoreSourceAccounts(ctx, PROVIDER, new Set(["another-bank"]))).toBe(0);
     expect(await restoreSourceAccounts(ctx, PROVIDER, new Set(["hash-1"]))).toBe(1);
@@ -535,7 +419,7 @@ describe("Turn off a bank's plugin", () => {
   it("an account of the bank deleted here is listed for Bring back and does not come back by itself", async () => {
     const plugin = fakePlugin();
     await refreshManifests(BANK_NOW, plugin.deps);
-    const connectionId = await bankAccess(plugin);
+    const connectionId = await bankAccess(ctx, plugin);
     await chooseAccounts(
       ctx,
       {
@@ -557,7 +441,7 @@ describe("Turn off a bank's plugin", () => {
     // Deleted while kept by hand: the source's id it kept is remembered all the same (§4.3).
     await deleteAccount(ctx, account.id);
     expect(await deletedSourceAccounts(ctx, PROVIDER)).toEqual([{ externalId: "hash-1", name: "Zeta" }]);
-    await bankAccess(plugin);
+    await bankAccess(ctx, plugin);
     expect(await restoreSourceAccounts(ctx, PROVIDER)).toBe(0);
     expect(await listAccounts(ctx, { includeArchived: true })).toEqual([]);
   });

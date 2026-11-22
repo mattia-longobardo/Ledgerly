@@ -15,6 +15,7 @@ const { apiRoutes } = await import("@ledgerly/api");
 const domain = await import("@ledgerly/domain/transactions");
 const { budgetsView, setLimit } = await import("@ledgerly/domain/budgets");
 const { centsToDecimal } = await import("@ledgerly/domain/shared/money");
+const { sourceNameOf } = await import("@/platform/integrations/registry");
 
 function contextFor(userId: string): Ctx {
   return {
@@ -93,6 +94,8 @@ async function sourceWithNote(ctx: Ctx): Promise<string> {
   const tobacco = (await send(ctx, "GET", "/source-categories")).body.sourceCategories.find(
     (one: { name: string }) => one.name === "Tobacco",
   );
+  // «Categories of {source}»: the source's name and its page come with each row.
+  expect(tobacco).toMatchObject({ sourceName: await sourceNameOf("wallet", "en"), source: "wallet" });
   expect(
     (await send(ctx, "PUT", `/source-categories/${tobacco.id}`, { categoryId: alcohol.id })).status,
   ).toBe(200);

@@ -3,6 +3,28 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · R3-coda: the reads of the sources, the catalog and the categories of a source
+
+- `GET /connections/{id}/choice`: the step «Accounts» of a bank's connection: `bank`, `chosen`, the
+  `accounts` still to choose (`providerAccountId`, `legend` with the number masked, `currency`,
+  `defaultName`, `defaultType`, `ibanOwner`), the `linked` ones, the accounts here they can go to
+  (`existing`) and the ones of another source that can move to the bank (`sameAs`). `?all=1` offers the
+  accounts left out before too. `409 complete`: nothing is left to choose.
+- `GET /connections/{id}/outcome`: the step «Done»: each account with its `movements`, `firstOn`,
+  `balance` and `shared`, the `switches` of `?same=<bank account>.<account>,…`, the last `reading`
+  (`failed`, `neverRead`, `retryAfter`, `accountErrors`), the `categories` of its movements (`read`,
+  `categorised`, `suggested`, `open`, `waiting`, `any`), `reviewAccountIds` and `expiresAt`, counted by the
+  server. `409 not_chosen`: the accounts are still to choose.
+- `GET /plugins`: the plugins of the instance as the person has them: `state` (`active`, `paused`,
+  `available`), `pausedSince`, `connections`, `credentials` (`saved`, `savedAt`, `invalid`, never the key)
+  and `returnAddress`.
+- `GET /sources/{slug}`: the page of a source: `deletedAccounts`, `unsent` (`count`, `accountIds`),
+  `pendingDays`, and each connection's `shared` accounts and what «Disconnect» `leave`s.
+- `GET /connections/runs`: the log of the readings of the last 30 days, newest first, of one connection
+  (`?connectionId=`) or of all, `?limit=` up to 200, with `more`.
+- `GET /investments/catalog`: `providers[].status`; the providers to come (`planned`) are listed too.
+- `GET /source-categories`: `sourceName` and `source` (the slug of the source's page, or null) on each row.
+
 ## Unreleased · R3-coda: merge proposals
 
 - `GET /categories/merge-proposals`: the pairs of categories that look like the same one, each side with

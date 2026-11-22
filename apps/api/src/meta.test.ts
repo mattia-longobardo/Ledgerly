@@ -5,6 +5,7 @@ import type { AccountCases } from "./accounts/routes";
 import type { TransactionCases } from "./transactions/cases";
 import { apiRoutes } from "./index";
 import type { ConnectionCases } from "./settings/connections";
+import type { SourceReads } from "./settings/sources";
 import type { ServerCases } from "./settings/server";
 import type { InvestmentCases } from "./investments/routes";
 
@@ -19,6 +20,7 @@ describe("GET /meta", () => {
       accounts: {} as AccountCases,
       transactions: {} as TransactionCases,
       investments: {} as InvestmentCases,
+      sources: {} as SourceReads,
     }).request("/meta");
     expect(response.status).toBe(200);
     const body = metaRoute.response.parse(await response.json());

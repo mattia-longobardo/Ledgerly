@@ -264,7 +264,13 @@ describe("the reads of investments", () => {
     expect(activity.body).toMatchObject({ source: "events", total: events.total, allTime: events.allTime });
     expect(activity.body.rows.map((row: { id: string }) => row.id)).toEqual(events.rows.map((row) => row.id));
 
-    expect((await send(alice, "GET", "/investments/catalog")).status).toBe(200);
+    // The catalog lists the providers to come too, each with its status, as the page shows them.
+    const catalog = await send(alice, "GET", "/investments/catalog");
+    expect(catalog.status).toBe(200);
+    expect(catalog.body.providers.map((one: { id: string; status: string }) => [one.id, one.status])).toEqual(
+      (await investments.catalogView(alice)).providers.map((one) => [one.id, one.status]),
+    );
+    expect(catalog.body.providers.some((one: { status: string }) => one.status === "planned")).toBe(true);
     expect((await send(alice, "GET", `/investments/${accountId}/connection`)).status).toBe(200);
     // Another person's service does not exist; a year to come and a malformed id are refused.
     expect((await send(bob, "GET", `/investments/${accountId}?period=all`)).status).toBe(404);

@@ -11,6 +11,7 @@
     "MonthlyFigures",
     "ReadTool",
     "ServerCases",
+    "SourceReads",
     "TransactionCases",
     "apiRoutes",
     "deleteCategoryEverywhere",
@@ -24,6 +25,7 @@
     "savePreferences",
     "setSourceCategory",
     "sourceNotes",
+    "sourceSlugOf",
     "undoMergeOfTwo",
     "undoMoveToMacro",
     "undoSourceCategoryChange",
@@ -140,6 +142,7 @@
     "profile",
     "security",
     "server",
+    "sources",
     "syncRuleSchema",
     "syncScheduleSchema"
   ],

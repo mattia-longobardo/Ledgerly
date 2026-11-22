@@ -367,11 +367,13 @@ export const investmentActivity = z.discriminatedUnion("source", [
   }),
 ]);
 
-/** The catalog (§4.2): the providers that can be added today, and the accounts a service can use. */
+/** The catalog (§4.2): the providers, the ones to come too, and the accounts a service can use. */
 export const investmentsCatalog = z.object({
   providers: z.array(
     connectable.extend({
       connect: z.enum(["apikey", "manual"]),
+      /** `planned`: listed under «Coming soon», it cannot be connected yet. */
+      status: z.enum(["available", "planned"]),
       connected: z.array(z.object({ accountId: id(), name: z.string() })),
     }),
   ),

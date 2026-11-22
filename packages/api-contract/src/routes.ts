@@ -31,6 +31,7 @@ import * as people from "./settings/people";
 import * as profile from "./settings/profile";
 import * as security from "./settings/security";
 import * as server from "./settings/server";
+import * as sources from "./settings/sources";
 import * as manual from "./transactions/manual";
 import * as movements from "./transactions/movements";
 import * as review from "./transactions/review";
@@ -51,6 +52,7 @@ export const SETTINGS = {
   labels,
   connections,
   banks,
+  sources,
 } as const;
 
 /** Users and settings, the first module of R2 (05-refactor.md §5.2). */
@@ -64,6 +66,7 @@ export const SETTINGS_ROUTES: readonly RouteContract[] = [
   ...Object.values(labels),
   ...Object.values(connections),
   ...Object.values(banks),
+  ...Object.values(sources),
 ];
 
 /** Accounts by area, for `apps/api` to serve each one by name. */

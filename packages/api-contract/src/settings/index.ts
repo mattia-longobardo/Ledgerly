@@ -9,8 +9,9 @@ import * as people from "./people";
 import * as profile from "./profile";
 import * as security from "./security";
 import * as server from "./server";
+import * as sources from "./sources";
 
-export { banks, categories, categoryBoard, connections, labels, people, profile, security, server };
+export { banks, categories, categoryBoard, connections, labels, people, profile, security, server, sources };
 export {
   LAST_DAY,
   MAX_RULES,

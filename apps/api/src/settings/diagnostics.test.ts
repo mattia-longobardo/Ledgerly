@@ -6,6 +6,7 @@ import type { AccountCases } from "../accounts/routes";
 import type { TransactionCases } from "../transactions/cases";
 import { apiRoutes } from "../index";
 import type { ConnectionCases } from "./connections";
+import type { SourceReads } from "./sources";
 import type { ServerCases } from "./server";
 import type { InvestmentCases } from "../investments/routes";
 
@@ -31,6 +32,7 @@ const app = () =>
     accounts: {} as AccountCases,
     transactions: {} as TransactionCases,
     investments: {} as InvestmentCases,
+    sources: {} as SourceReads,
   });
 
 describe("GET /server/diagnostics", () => {

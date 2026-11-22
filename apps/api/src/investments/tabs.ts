@@ -286,25 +286,24 @@ export function connectionOut(
   };
 }
 
-/** The catalog (§4.2): the providers a service can be added from today, and the accounts it can use. */
+/** The catalog (§4.2): the providers, the ones to come too, and the accounts a service can use. */
 export function catalogOut(view: Awaited<ReturnType<typeof catalogView>>): Catalog {
   return {
-    providers: view.providers
-      .filter((provider) => provider.status === "available")
-      .map((provider) => ({
-        id: provider.id,
-        name: provider.name,
-        category: provider.category,
-        accountType: accountTypeOf(provider.category),
-        credentialFields: [...provider.credentialFields],
-        currencies: provider.currencies === null ? null : [...provider.currencies],
-        defaultCurrency: provider.defaultCurrency,
-        ipWhitelist: provider.ipWhitelist,
-        url: provider.url,
-        revokeUrl: provider.revokeUrl,
-        connect: provider.connect,
-        connected: provider.connected,
-      })),
+    providers: view.providers.map((provider) => ({
+      id: provider.id,
+      name: provider.name,
+      category: provider.category,
+      accountType: accountTypeOf(provider.category),
+      credentialFields: [...provider.credentialFields],
+      currencies: provider.currencies === null ? null : [...provider.currencies],
+      defaultCurrency: provider.defaultCurrency,
+      ipWhitelist: provider.ipWhitelist,
+      url: provider.url,
+      revokeUrl: provider.revokeUrl,
+      connect: provider.connect,
+      status: provider.status,
+      connected: provider.connected,
+    })),
     existing: view.existing.map((one) => ({
       id: one.id,
       name: one.name,

@@ -20,6 +20,7 @@ import { type ConnectionCases, serveConnections } from "./settings/connections";
 import { serveProfile } from "./settings/profile";
 import { serveSecurityAndPeople } from "./settings/security";
 import { type ServerCases, serveServer } from "./settings/server";
+import { type SourceReads, serveSources } from "./settings/sources";
 import type { SourceName } from "./settings/taxonomy";
 import type { TransactionCases } from "./transactions/cases";
 import { serveTransactions } from "./transactions/routes";
@@ -41,6 +42,8 @@ export interface Adapters {
   transactions: TransactionCases;
   /** The queue of the worker, for «Sync now» and a new connection, until R4. */
   investments: InvestmentCases;
+  /** The reads of the steps of a bank and of the page of a source, until E5 and R4. */
+  sources: SourceReads;
 }
 
 /** Every module's routes, served behind the guard; `/meta` lists their capabilities. */
@@ -52,6 +55,7 @@ export function apiRoutes({
   accounts,
   transactions,
   investments,
+  sources,
 }: Adapters): Hono<ApiEnv> {
   const app = new Hono<ApiEnv>();
   const served = [
@@ -60,6 +64,7 @@ export function apiRoutes({
     ...serveCategoryMoves(app, guard, sourceName),
     ...serveCategoryBoard(app, guard, sourceName),
     ...serveConnections(app, guard, connections),
+    ...serveSources(app, guard, sources),
     ...serveSecurityAndPeople(app, guard),
     ...serveServer(app, guard, server),
     ...serveAccounts(app, guard, accounts),

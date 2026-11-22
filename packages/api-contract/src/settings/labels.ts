@@ -84,6 +84,10 @@ const sourceCategory = z.object({
   id: id(),
   /** The source: a provider of the core or `plugin:<id>`. */
   provider: z.string(),
+  /** What a person calls the source («Categories of {sourceName}»). */
+  sourceName: z.string(),
+  /** The page of the source (`/settings/integrations/{source}`); null for one without a page. */
+  source: z.string().nullable(),
   name: z.string(),
   groupName: z.string().nullable(),
   choice: z.enum(["added", "matched"]),
@@ -110,6 +114,8 @@ export const listSourceCategories = defineRoute({
         {
           id: SOURCE_CATEGORY_ID,
           provider: "plugin:enablebanking",
+          sourceName: "Enable Banking",
+          source: "enablebanking",
           name: "Supermarket",
           groupName: null,
           choice: "matched",

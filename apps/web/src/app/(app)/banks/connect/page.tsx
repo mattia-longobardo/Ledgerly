@@ -1,12 +1,7 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
-import { readingsAt, listAccounts } from "@ledgerly/domain/accounts";
-import { openSwitchOf } from "@ledgerly/domain/accounts";
-import { labelOf } from "@/platform/integrations/registry";
-import { switchable } from "../../accounts/[id]/switch/switch";
-
-type Ctx = Awaited<ReturnType<typeof requireSession>>;
+import { readingsAt } from "@ledgerly/domain/accounts";
 import { categoryCounts } from "@ledgerly/domain/transactions";
 import { listCategories } from "@ledgerly/domain/transactions";
 import { accountsOfProvider } from "@ledgerly/domain/accounts";
@@ -40,6 +35,7 @@ import { bankSink } from "../sink";
 import { AccountsStep } from "./accounts-step";
 import { BankStep } from "./bank-step";
 import { RenewAccess, RetryReading } from "./outcome-actions";
+import { sameAsChoices, toSwitchFrom } from "./steps";
 
 const SETTINGS: Route = "/settings/integrations";
 const HERE: Route = "/banks/connect";
@@ -344,45 +340,4 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
       returned={isReturnError(error) ? { error, bank: one(params.bank)?.slice(0, 200) ?? null } : null}
     />,
   );
-}
-
-/** The person's accounts that come from another source and may be moved to the bank (ux/n4-account-switch.md §2.1). */
-async function sameAsChoices(ctx: Ctx) {
-  const all = await listAccounts(ctx);
-  const choices = [];
-  for (const account of all.filter(switchable)) {
-    if ((await openSwitchOf(ctx, account.id)) !== null) continue;
-    const source = (await labelOf({ provider: account.provider as string, instanceKey: "" }, ctx.locale))
-      .name;
-    choices.push({ id: account.id, name: account.name, currency: account.currency, source });
-  }
-  return choices;
-}
-
-/** The accounts chosen as "the same account as…", from the address of the outcome: nothing was saved. */
-async function toSwitchFrom(
-  ctx: Ctx,
-  list: string | null,
-  exposed: readonly {
-    providerAccountId: string;
-    identifier: string | null;
-    currency: string;
-    linked: unknown;
-  }[],
-  names: ReadonlyMap<string, string>,
-) {
-  if (list === null) return [];
-  const mine = new Map((await listAccounts(ctx)).filter(switchable).map((account) => [account.id, account]));
-  return list.split(",").flatMap((pair) => {
-    const at = pair.lastIndexOf(".");
-    const bankAccountId = pair.slice(0, at);
-    const accountId = pair.slice(at + 1);
-    const bankAccount = exposed.find((one) => one.providerAccountId === bankAccountId && one.linked === null);
-    const account = mine.get(accountId);
-    if (!bankAccount || !account) return [];
-    const legend = [names.get(bankAccountId) ?? null, maskIdentifier(bankAccount.identifier)]
-      .filter((part) => part !== null)
-      .join(" · ");
-    return [{ bankAccountId, accountId, account: account.name, legend }];
-  });
 }
