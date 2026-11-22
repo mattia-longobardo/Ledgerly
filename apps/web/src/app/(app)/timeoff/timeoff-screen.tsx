@@ -19,7 +19,6 @@ import {
   AddLeave,
   bookedOf,
   CalendarCard,
-  type ExternalStats,
   type Filter,
   filterOf,
   LeaveBoard,
@@ -45,7 +44,7 @@ interface Place {
 }
 
 /** The year in the URL, once the person's day is known. */
-export function TimeOffScreen({ external }: { external: ExternalStats | null }) {
+export function TimeOffScreen() {
   const query = useSearchParams();
   const prefs = useApi(profile.getPreferences, {});
   if (waiting(prefs)) return <TimeOffLoading />;
@@ -58,21 +57,13 @@ export function TimeOffScreen({ external }: { external: ExternalStats | null }) 
           currentYear,
           filter: filterOf(query.get("filter")),
         };
-        return <TimeOffYear place={place} locale={preferences.locale} external={external} />;
+        return <TimeOffYear place={place} locale={preferences.locale} />;
       }}
     </Loaded>
   );
 }
 
-function TimeOffYear({
-  place,
-  locale,
-  external,
-}: {
-  place: Place;
-  locale: Say["locale"];
-  external: ExternalStats | null;
-}) {
+function TimeOffYear({ place, locale }: { place: Place; locale: Say["locale"] }) {
   const text = useTranslations("timeoff");
   const read = useLatest(useApi(timeoff.getTimeOff, { params: { year: String(place.year) } }));
   const rows = read.data?.rows;
@@ -94,33 +85,19 @@ function TimeOffYear({
           forecasts={view.forecastInputs}
           types={leaveTypeOptions((kind) => text(`kinds.${kind}`))}
         >
-          <YearPage
-            view={view}
-            place={place}
-            external={external}
-            say={{ text, locale, minutesPerDay: view.minutesPerDay }}
-          />
+          <YearPage view={view} place={place} say={{ text, locale, minutesPerDay: view.minutesPerDay }} />
         </LeaveBoard>
       )}
     </Loaded>
   );
 }
 
-function YearPage({
-  view,
-  place,
-  external,
-  say,
-}: {
-  view: View;
-  place: Place;
-  external: ExternalStats | null;
-  say: Say;
-}) {
+function YearPage({ view, place, say }: { view: View; place: Place; say: Say }) {
   const { text } = say;
   return (
     <Page title={text("title")} actions={<YearActions view={view} place={place} say={say} />}>
-      <YearHeader view={view} place={place} external={external} say={say} />
+      {/* The external calendar's own figures of the year: null without one, or without its pass. */}
+      <YearHeader view={view} place={place} external={view.external} say={say} />
       <YearAlerts view={view} say={say} />
       <YearCards view={view} year={place.year} say={say} />
       <CalendarCard view={view} year={place.year} currentYear={place.currentYear} say={say} />

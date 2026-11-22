@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105975,
-    "duplicatedLines": 16293,
-    "percent": 15.37,
-    "blocks": 1247
+    "lines": 105951,
+    "duplicatedLines": 16279,
+    "percent": 15.36,
+    "blocks": 1245
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 103
     },
     "app": {
-      "lines": 20199,
-      "duplicatedLines": 2824,
-      "percent": 13.98,
-      "blocks": 217
+      "lines": 20175,
+      "duplicatedLines": 2810,
+      "percent": 13.93,
+      "blocks": 215
     },
     "global.d": {
       "lines": 12,
@@ -491,7 +491,6 @@
     "app/(app)/investments/[accountId]/page.tsx": 12,
     "app/(app)/investments/[accountId]/positions/page.tsx": 12,
     "app/(app)/investments/catalog/catalog-screen.tsx": 18,
-    "app/(app)/investments/page.tsx": 7,
     "app/(app)/navigation.ts": 108,
     "app/(app)/overview-screen.tsx": 27,
     "app/(app)/payroll/register-screen.tsx": 9,
@@ -543,7 +542,6 @@
     "app/(app)/settings/server/server-screen.tsx": 41,
     "app/(app)/settings/server/smtp-card.tsx": 118,
     "app/(app)/settings/users/users-screen.tsx": 8,
-    "app/(app)/timeoff/page.tsx": 7,
     "app/(app)/timeoff/settings/holiday-calendars.tsx": 34,
     "app/(app)/timeoff/settings/page.tsx": 7,
     "app/(app)/timeoff/settings/settings-forms.tsx": 59,

@@ -1,8 +1,8 @@
 import { getTranslations } from "next-intl/server";
-import { isPluginProvider } from "@ledgerly/domain/platform/integrations/client";
+import { PROVIDER_SCHEDULE } from "@ledgerly/domain/investments/client";
+import { DEFAULT_SYNC_SCHEDULE, isPluginProvider } from "@ledgerly/domain/platform/integrations/client";
 import { formatInstant, type UiLocale } from "@ledgerly/format/format";
 import type { WireConnection } from "./connection-view";
-import { recommendedSchedule } from "./recommended-schedule";
 import { ConnectionSchedule } from "@/ui/connection-schedule";
 
 /**
@@ -17,7 +17,7 @@ export async function ScheduleCell({
   active,
   ctx,
 }: {
-  connection: Pick<WireConnection, "id" | "provider" | "schedule" | "nextSyncAt">;
+  connection: Pick<WireConnection, "id" | "provider" | "schedule" | "nextSyncAt" | "service">;
   /** The connection's name and its provider's, as the person reads them. */
   name: string;
   provider: string;
@@ -48,7 +48,8 @@ export async function ScheduleCell({
       connectionId={connection.id}
       name={name}
       schedule={connection.schedule}
-      recommended={recommendedSchedule(connection.provider)}
+      // What "Use recommended" fills in: a service with a key reads at the provider's own times.
+      recommended={connection.service === null ? DEFAULT_SYNC_SCHEDULE : PROVIDER_SCHEDULE}
       next={next}
       timeZone={ctx.timeZone}
     />

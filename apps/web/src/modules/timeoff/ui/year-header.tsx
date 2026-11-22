@@ -10,7 +10,7 @@ import { type Filter, yearHref } from "./year";
 import { YearPicker } from "@ledgerly/ui/year-picker";
 
 /** The external calendar's own figures for the year: the plugin's, read beside the page until R5c (TOF-4). */
-export interface ExternalStats {
+interface ExternalStats {
   totalAvailable: number;
   used: number;
   remaining: number;

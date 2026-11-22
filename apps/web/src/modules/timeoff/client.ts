@@ -11,4 +11,4 @@ export type { Say, View } from "./ui/words";
 export { type Filter, filterOf } from "./ui/year";
 export { YearAlerts } from "./ui/year-alerts";
 export { YearCards } from "./ui/year-cards";
-export { type ExternalStats, YearActions, YearHeader } from "./ui/year-header";
+export { YearActions, YearHeader } from "./ui/year-header";
