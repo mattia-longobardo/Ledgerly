@@ -6,7 +6,13 @@ import { listAccounts } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { TRANSFER_WINDOW_DAYS, type TransferLeg, PRICE_SCALE, QUANTITY_SCALE } from "../rules";
+import {
+  TRANSFER_WINDOW_DAYS,
+  type TransferLeg,
+  PRICE_SCALE,
+  QUANTITY_SCALE,
+  transferProposals,
+} from "../rules";
 import { parseDecimal } from "../../../shared/money";
 import { investmentAccounts, investmentEvents, investmentHoldings, investmentOperations } from "../schema";
 import { abs } from "../../../shared/money";
@@ -143,4 +149,9 @@ export async function unlinkTransfer(ctx: WriteCtx, eventId: string, ofAccount?:
     if (!event.transferGroupId) throw new InvestmentError("not_a_transfer");
     await clearTransferGroup(ctx, tx, event.transferGroupId);
   });
+}
+
+/** How many transfers between the person's services wait to be confirmed (rewrite plan R5e, «Da fare»). */
+export async function transfersToConfirm(ctx: Pick<Ctx, "userId">): Promise<number> {
+  return transferProposals(await transferLegs(ctx)).length;
 }

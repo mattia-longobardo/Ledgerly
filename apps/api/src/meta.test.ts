@@ -39,6 +39,7 @@ describe("GET /meta", () => {
         "interests",
         "investments",
         "meta",
+        "notifications",
         "payroll",
         "people",
         "pockets",

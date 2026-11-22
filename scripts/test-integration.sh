@@ -18,6 +18,7 @@
 # LEDGERLY_INTEGRATION_DATABASE=ledgerly_test_2 runs one shard on that database instead, under the
 # prefix `tests/ledgerly_test_2/` and with its own lock: the database of the client stream
 # (docs/design/rewrite-plan/08-agents.md §8.6), so that its runs never wait for or reset the others.
+# `ledgerly_test_3` is the same for the second server stream of R5.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -29,8 +30,8 @@ esac
 database="${LEDGERLY_INTEGRATION_DATABASE:-}"
 case "$database" in
   "") ;;
-  ledgerly_test_2) SHARDS=1 ;;
-  *) echo "LEDGERLY_INTEGRATION_DATABASE must be ledgerly_test_2 or unset" >&2; exit 1 ;;
+  ledgerly_test_2 | ledgerly_test_3) SHARDS=1 ;;
+  *) echo "LEDGERLY_INTEGRATION_DATABASE must be ledgerly_test_2, ledgerly_test_3 or unset" >&2; exit 1 ;;
 esac
 
 # LEDGERLY_ENV_FILE names the environment file of a checkout with no `.env.homelab` of its own.

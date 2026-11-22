@@ -10,6 +10,18 @@ export { openApiDocument } from "./openapi";
 export { ADDON_GROUPS, ADDON_STOPS, ADDONS, getAddons, setAddon } from "./addons";
 export type { AddonId } from "./addons";
 export {
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_EVENT_NAMES,
+  NOTIFICATION_EVENTS,
+  NOTIFICATION_PAGES,
+  getNotificationPreferences,
+  listNotifications,
+  listTodo,
+  markNotificationRead,
+  setNotificationPreference,
+} from "./notifications";
+export type { NotificationCategory, NotificationEvent, NotificationParams } from "./notifications";
+export {
   ACCOUNTS,
   ACCOUNTS_ROUTES,
   ADDONS_ROUTES,
@@ -25,6 +37,7 @@ export {
   INTERESTS_ROUTES,
   INVESTMENTS,
   INVESTMENTS_ROUTES,
+  NOTIFICATIONS_ROUTES,
   PAYROLL,
   PAYROLL_ROUTES,
   POCKETS,

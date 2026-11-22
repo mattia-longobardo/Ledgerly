@@ -19,6 +19,7 @@ import * as investmentsConnection from "./investments/connection";
 import * as investments from "./investments/investments";
 import * as investmentsRegister from "./investments/register";
 import { metaRoute } from "./meta";
+import * as notifications from "./notifications";
 import * as payrollCodes from "./payroll/codes";
 import * as payroll from "./payroll/payroll";
 import * as pockets from "./pockets/pockets";
@@ -175,10 +176,20 @@ export const INVESTMENTS_ROUTES: readonly RouteContract[] = [
 /** The Addons of a person (R5a, H52): which modules are on. */
 export const ADDONS_ROUTES: readonly RouteContract[] = [addons.getAddons, addons.setAddon];
 
+/** The alerts of a person (R5e): «Da fare», the apps' periodic check, the channels of each event. */
+export const NOTIFICATIONS_ROUTES: readonly RouteContract[] = [
+  notifications.listTodo,
+  notifications.listNotifications,
+  notifications.markNotificationRead,
+  notifications.getNotificationPreferences,
+  notifications.setNotificationPreference,
+];
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
   ...ADDONS_ROUTES,
+  ...NOTIFICATIONS_ROUTES,
   ...ACCOUNTS_ROUTES,
   ...TRANSACTIONS_ROUTES,
   ...BUDGETS_ROUTES,

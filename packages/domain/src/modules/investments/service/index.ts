@@ -40,6 +40,12 @@ export { deleteOperation, operationInputSchema, recordOperation, updateOperation
 export type { OperationInput } from "./operations";
 export { confirmZeroReading, reconcileHolding, reconciliationInputSchema, saveReading } from "./readings";
 export type { ReadingInput, ReconciliationInput } from "./readings";
-export { linkTransfer, transferInputSchema, transferLegs, unlinkTransfer } from "./transfers";
+export {
+  linkTransfer,
+  transferInputSchema,
+  transferLegs,
+  transfersToConfirm,
+  unlinkTransfer,
+} from "./transfers";
 export type { TransferInput } from "./transfers";
 export { listAssets, listInvestmentAccounts } from "./reads";

@@ -103,3 +103,15 @@ async function rowsOf(
     };
   });
 }
+
+/** The funds with a quarter to verify after its deadline (rewrite plan R5e, «Da fare»). */
+export async function fundsToVerify(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  now: Date = new Date(),
+): Promise<string[]> {
+  const all = await getDb().select().from(funds).where(userScoped(ctx).owns(funds)).orderBy(asc(funds.id));
+  const details = await fundDetails(ctx, all, now, { history: false });
+  return details
+    .filter((detail) => detail.quarters.some((quarter) => quarter.status === "to_verify"))
+    .map((detail) => detail.fund.id);
+}

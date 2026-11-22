@@ -58,6 +58,7 @@ export {
   transactionsByIds,
   transactionsInWindow,
   transactionsSummary,
+  waitingForCategory,
 } from "./queries";
 export type { CategoryMacroTotal, SpendingGroup, Transaction, TransactionRow } from "./queries";
 export { MACROS, categorySummary, macroViews } from "./queries";

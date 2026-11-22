@@ -3,6 +3,7 @@
 import { Hono } from "hono";
 import { type AccountCases, serveAccounts } from "./accounts/routes";
 import { serveAddons } from "./addons/routes";
+import { serveNotifications } from "./notifications/routes";
 import { serveBudgets } from "./budgets/routes";
 import { serveFunds } from "./funds/routes";
 import { serveImports } from "./imports/routes";
@@ -62,6 +63,7 @@ export function apiRoutes({
   const served = [
     ...serveProfile(app, guard),
     ...serveAddons(app, guard),
+    ...serveNotifications(app, guard),
     ...serveTaxonomy(app, guard),
     ...serveCategoryMoves(app, guard, sourceName),
     ...serveCategoryBoard(app, guard, sourceName),

@@ -34,6 +34,8 @@ export const userPreferences = pgTable(
     theme: text("theme", { enum: THEMES }).notNull(),
     defaultRange: text("default_range", { enum: DEFAULT_RANGES }).notNull(),
     monthlySummary: boolean("monthly_summary").notNull(),
+    // «Nascondi importi» (R5e, G5): the person's own, so every client of theirs hides amounts alike.
+    hideAmounts: boolean("hide_amounts").notNull().default(false),
     minutesPerDay: integer("minutes_per_day").notNull(),
     patronMonth: smallint("patron_month"),
     patronDay: smallint("patron_day"),

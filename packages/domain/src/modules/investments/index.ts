@@ -59,6 +59,7 @@ export {
   listInvestmentAccounts,
   reconcileHolding,
   recordOperation,
+  transfersToConfirm,
   unlinkTransfer,
   updateServiceUrl,
   updateServiceValue,

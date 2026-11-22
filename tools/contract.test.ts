@@ -1,9 +1,11 @@
 // The automatic checks of the contract (rewrite plan R2, 08-agents.md §8.2: «OpenAPI solo additivo,
 // primitive comuni, nomi del glossario»). They run with `npm test`, before any route exists.
 import { readFileSync } from "node:fs";
+import type { z } from "zod";
 import { describe, expect, it } from "vitest";
 import {
   ACCOUNTS_ROUTES,
+  ADDONS,
   BUDGETS_ROUTES,
   CONTRACT_ROUTES,
   CONTRACT_SCOPES,
@@ -11,6 +13,9 @@ import {
   IMPORTS_ROUTES,
   INTERESTS_ROUTES,
   INVESTMENTS_ROUTES,
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_EVENTS,
+  NOTIFICATIONS_ROUTES,
   PAYROLL_ROUTES,
   POCKETS_ROUTES,
   SETTINGS_ROUTES,
@@ -19,6 +24,7 @@ import {
   TRANSACTIONS_ROUTES,
   type RouteContract,
 } from "@ledgerly/api-contract";
+import * as notifications from "../packages/api-contract/src/notifications";
 import * as wire from "../packages/api-contract/src/accounts/shared";
 import * as transactionsWire from "../packages/api-contract/src/transactions/shared";
 import * as rulesWire from "../packages/api-contract/src/transactions/rules";
@@ -577,5 +583,27 @@ describe("breakingChanges", () => {
       "POST /x 200.a: no longer always there",
     ]);
     expect(breakingChanges(doc(body, answer), { paths: {} })).toEqual(["POST /x: gone"]);
+  });
+});
+
+describe("the notifications of R5e", () => {
+  it("carry no amount, bank, account or name in their parameters (G4)", () => {
+    const shape = (notifications.listTodo.response.shape.items.element.shape.params as z.ZodObject).shape;
+    expect(Object.keys(shape).sort()).toEqual(["count", "date", "days", "percent"]);
+    const keys = NOTIFICATIONS_ROUTES.flatMap((route) => keysOf(route.example.response));
+    expect(keys.filter((key) => /amount|bank|account|name/i.test(key))).toEqual([]);
+  });
+
+  it("give every event a category and an addon of the contract, or none for a base module", () => {
+    for (const [event, { category, addon }] of Object.entries(NOTIFICATION_EVENTS)) {
+      expect(event).toMatch(SNAKE);
+      expect(NOTIFICATION_CATEGORIES).toContain(category);
+      if (addon !== null) expect(ADDONS).toContain(addon);
+    }
+  });
+
+  it("are routes of the contract, and only «Da fare» is an MCP tool", () => {
+    for (const route of NOTIFICATIONS_ROUTES) expect(CONTRACT_ROUTES).toContain(route);
+    expect(NOTIFICATIONS_ROUTES.filter((route) => route.mcp).map((route) => route.id)).toEqual(["list_todo"]);
   });
 });
