@@ -59,9 +59,13 @@ import { readEnv } from "@domain/platform/env";
 import { addDeposit, debitFund } from "../test/funds";
 import { accountMovement, manualService } from "../test/investments";
 import { wireDomain } from "../apps/api/src/wiring";
+import { wireAuth } from "@domain/platform/auth/auth";
 
 // The ports of the domain, as every process wires them (10-modularity.md §10.3).
 wireDomain();
+// The user of the probe has the first start behind them and every addon on, as a person made
+// before R5a: no row of preferences (R5a).
+wireAuth({ userCreated: async () => {} });
 
 // The application's own `getDb()`, with a logger that counts: set before the first call, which is
 // what `getDb()` then hands to every module. No product code knows it is being counted.

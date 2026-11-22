@@ -1,6 +1,7 @@
 // scripts/create-admin.ts — bootstrap a password admin when Authentik is not available.
 // Usage: ADMIN_PASSWORD=… npm run user:create-admin -- admin@example.com "Full Name"  (on the homelab)
 import { createAuth } from "@domain/platform/auth/auth";
+import { startOnboarding } from "@domain/modules/users/service";
 import { MAX_NAME_LENGTH, nameSchema } from "@domain/platform/auth/name-policy";
 import {
   isPasswordLengthValid,
@@ -19,8 +20,11 @@ if (!isPasswordLengthValid(password)) {
   throw new Error(`ADMIN_PASSWORD must be ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters`);
 }
 
-await createAuth({ withNextCookies: false }).api.createUser({
+const { user } = await createAuth({ withNextCookies: false }).api.createUser({
   body: { email, password, name: name.data, role: "admin" },
 });
+// The first admin of an instance meets the first start too (R5a): their choice becomes the
+// instance's defaults.
+await startOnboarding(user.id);
 console.log(`[create-admin] ${email} created`);
 process.exit(0);

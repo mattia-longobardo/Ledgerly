@@ -5,5 +5,9 @@ import { beforeAll } from "vitest";
 
 beforeAll(async () => {
   const { wireDomain } = await import("@ledgerly/api");
+  const { wireAuth } = await import("@ledgerly/domain/platform/auth");
   wireDomain();
+  // A person a test signs up has the first start behind them and every addon on, as a person made
+  // before R5a: no row of preferences. The test of the first start wires `startOnboarding` itself.
+  wireAuth({ userCreated: async () => {} });
 });

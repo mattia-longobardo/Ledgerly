@@ -12,6 +12,7 @@ import { createAuth } from "@domain/platform/auth/auth";
 import { oauthClients } from "@domain/platform/auth/oauth/schema";
 import { rateLimits, users } from "@domain/platform/auth/schema";
 import { userPreferences } from "@domain/modules/users/schema";
+import { ADDONS } from "@ledgerly/api-contract";
 import { getDb } from "@domain/platform/db/client";
 import { deleteFolder } from "@domain/platform/storage";
 import {
@@ -106,11 +107,11 @@ await getDb()
 
 await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.admin.email));
 
-// A sign-up since R5a has the first start ahead of it: the journeys of the test users are those of a
-// person who already finished it.
+// A sign-up since R5a has the first start ahead of it, with every addon off: the journeys of the test
+// users are those of a person who already finished it with every addon on.
 await getDb()
   .update(userPreferences)
-  .set({ onboardedAt: new Date() })
+  .set({ onboardedAt: new Date(), modules: [...ADDONS] })
   .where(
     inArray(
       userPreferences.userId,

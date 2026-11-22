@@ -43,6 +43,8 @@ describe("the first start", () => {
     await startOnboarding(user.id);
     expect((await onboardingOf({ userId: user.id })).pending).toBe(true);
     expect(await getPreferences({ userId: user.id })).toEqual(DEFAULT_PREFERENCES);
+    // No addon is on before the person chooses it (PA13).
+    expect((await getSavedPreferences({ userId: user.id })).addons).toEqual([]);
     // A second sign-up event changes nothing.
     await startOnboarding(user.id);
     expect((await onboardingOf({ userId: user.id })).pending).toBe(true);

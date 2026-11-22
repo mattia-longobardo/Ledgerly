@@ -1,7 +1,7 @@
 // The first start on /api/v1 (rewrite plan R5a, E4, E8): a sign-up through Better Auth has it ahead,
 // the routes end it and change the country, and only an admin reads or sets the instance's defaults.
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contextFor } from "@domain/modules/users/jobs";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
@@ -11,7 +11,11 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 const { adapters } = await import("@/app/api/v1/[[...route]]/composition");
 const { apiRoutes } = await import("@ledgerly/api");
-const { getAuth } = await import("@domain/platform/auth/auth");
+const { getAuth, wireAuth } = await import("@domain/platform/auth/auth");
+const { startOnboarding } = await import("@ledgerly/domain/users");
+
+// The sign-up of this file starts the first start, as in the application (`test/wiring.ts` turns it off).
+beforeAll(() => wireAuth({ userCreated: startOnboarding }));
 
 async function send(userId: string, method: string, path: string, body?: unknown, role?: "admin") {
   const routes = apiRoutes({
@@ -54,6 +58,9 @@ describe("the first start", () => {
       country: null,
       proposal: null,
     });
+    // No addon is on before the person chooses it (PA13).
+    const before = (await send(userId, "GET", "/addons")).body.addons;
+    expect(before.every((one: { active: boolean }) => !one.active)).toBe(true);
 
     const done = await send(userId, "POST", "/onboarding", { ...FRANCE, addons: ["budgets", "pockets"] });
     expect(done).toEqual({ status: 200, body: { pending: false, country: "FR", proposal: null } });

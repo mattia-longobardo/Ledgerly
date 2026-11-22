@@ -64,14 +64,15 @@ function proposalFrom(instance: Region | null) {
 
 /**
  * A person just signed up (the hook of Better Auth): a row of preferences with the instance's
- * defaults and the first start ahead of them. A person who already has a row keeps it.
+ * defaults, every addon off and the first start ahead of them: no addon is on before they choose it
+ * (PA13). A person who already has a row keeps it.
  */
 export async function startOnboarding(userId: string): Promise<void> {
   const proposal = proposalFrom(await instanceDefaults());
   const values = rowValues({ ...DEFAULT_PREFERENCES, ...(proposal ?? {}) });
   await getDb()
     .insert(userPreferences)
-    .values({ ...values, userId, country: proposal?.country ?? null, onboardedAt: null })
+    .values({ ...values, userId, country: proposal?.country ?? null, modules: [], onboardedAt: null })
     .onConflictDoNothing({ target: userPreferences.userId });
 }
 
