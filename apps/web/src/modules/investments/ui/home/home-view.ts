@@ -7,10 +7,13 @@ import { type Params, withParams } from "@ledgerly/ui/url";
 import type { Say } from "@/platform/say";
 import { colorOf, type Money, moneyIn, type Percent, percentIn } from "../present";
 
-export type Home = RouteOutput<typeof investments.getInvestmentsHome>;
+type Home = RouteOutput<typeof investments.getInvestmentsHome>;
 export type HomeService = Home["services"][number];
 export type ChartView = "pnl" | "return" | "value";
 export type GroupBy = "service" | "class" | "ccy";
+/** The chips of the one list (R5b): every group, or one of the two. */
+export const CHIPS = ["all", "stocks_crypto", "pension_funds"] as const;
+type Chip = (typeof CHIPS)[number];
 
 export interface HomeContext {
   home: Home;
@@ -18,6 +21,7 @@ export interface HomeContext {
   section: SectionQuery;
   view: ChartView;
   by: GroupBy;
+  chip: Chip;
   /** The period in words: «2026 · year to date», «since…». */
   name: string;
   money: Money;
@@ -27,7 +31,7 @@ export interface HomeContext {
   serviceHref: (accountId: string) => string;
   /** An alert opens the Connection tab of its service, where the thing to check is (§3.1, U3). */
   alertHref: (accountId: string) => string;
-  /** The chart's view and the composition's grouping, as the period's links carry them. */
+  /** The chart's view, the composition's grouping and the chip, as the period's links carry them. */
   kept: Params;
 }
 
@@ -35,11 +39,12 @@ export function homeContext(
   home: Home,
   say: Say,
   section: SectionQuery,
-  choices: { view: ChartView; by: GroupBy; name: string },
+  choices: { view: ChartView; by: GroupBy; chip: Chip; name: string },
 ): HomeContext {
   const kept: Params = {
     view: choices.view === "pnl" ? undefined : choices.view,
     by: choices.by === "service" ? undefined : choices.by,
+    group: choices.chip === "all" ? undefined : choices.chip,
   };
   return {
     home,

@@ -8,7 +8,6 @@ import { formatDate } from "@ledgerly/format/format";
 import { AlertsSummary } from "@ledgerly/ui/alerts-summary";
 import { Badge } from "@ledgerly/ui/badge";
 import { cn } from "@ledgerly/ui/cn";
-import { Link } from "@ledgerly/ui/router";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { centsOf } from "../present";
 import type { HomeContext } from "./home-view";
@@ -40,27 +39,7 @@ function useCoverage(context: HomeContext): string[] {
   ];
 }
 
-/** «Pension funds 12.345 €», a link to Funds. */
-export function FundsLine({ amount }: { amount: string }) {
-  const text = useTranslations("investments");
-  return (
-    <>
-      {text.rich("home.funds", {
-        amount,
-        link: (chunks) => (
-          <Link
-            href="/funds"
-            className="focus-ring inline-flex min-h-6 items-center rounded-xs text-accent hover:underline"
-          >
-            {chunks}
-          </Link>
-        ),
-      })}
-    </>
-  );
-}
-
-/** Today's value, the value at the end of a past period, and the pension funds beside them. */
+/** The services' value today, and their value at the end of a past period. */
 function ValueLine({ context }: { context: HomeContext }) {
   const text = useTranslations("investments");
   const { home, money, say } = context;
@@ -79,12 +58,6 @@ function ValueLine({ context }: { context: HomeContext }) {
             date: formatDate(home.period.to, "long", say.locale),
             value: money(home.valueAtEnd),
           })}
-        </>
-      )}
-      {home.funds.rows.length > 0 && (
-        <>
-          {" · "}
-          <FundsLine amount={money(home.funds.total)} />
         </>
       )}
     </p>

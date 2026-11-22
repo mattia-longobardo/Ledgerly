@@ -42,9 +42,13 @@ async function addManual(page: Page, account: string) {
 }
 
 test("a manual service shows an account of Accounts, and Accounts shows the same value", async ({ page }) => {
-  await test.step("an empty section offers the three choices of «Add investment»", async () => {
+  await test.step("the accounts without a service are listed, and «Add investment» offers three choices", async () => {
     await page.goto("/investments");
-    await expect(page.getByRole("heading", { name: "No services yet" })).toBeVisible();
+    // B2: an investment account with no service yet is a row «Value only» of «Stocks and crypto».
+    const group = page.getByTestId("portfolio-group-stocks_crypto");
+    await expect(group.getByTestId("portfolio-row").filter({ hasText: "Directa" })).toContainText(
+      "Value only",
+    );
     await page.getByRole("button", { name: "Add investment" }).first().click();
     const choices = page.getByRole("dialog", { name: "Add investment" });
     await expect(choices.getByRole("button", { name: /^Connect a service/ })).toBeVisible();

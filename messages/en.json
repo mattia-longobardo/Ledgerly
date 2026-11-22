@@ -4211,7 +4211,7 @@
     "title": "Investments",
     "subtitle": "Your brokers, exchanges and investment accounts: what they are worth, what went in and what they gained.",
     "empty": {
-      "title": "No services yet",
+      "title": "No investments yet",
       "description": "Add a service, an account with value only or a pension fund."
     },
     "actions": {
@@ -4734,7 +4734,6 @@
     },
     "home": {
       "empty": "Connect a service, or add an account with value only or a pension fund.",
-      "funds": "funds ({amount}) are in <link>Funds</link>",
       "hero": {
         "title": "Profit and loss · {period}",
         "available": "P&L available · {period}",
@@ -5150,6 +5149,31 @@
       "fund": "Pension fund",
       "fundDescription": "The fund, how you pay in and its fees, in four steps.",
       "back": "Back"
+    },
+    "portfolio": {
+      "chips": "Groups",
+      "groups": {
+        "all": "All",
+        "stocks_crypto": "Stocks and crypto",
+        "pension_funds": "Pension funds"
+      },
+      "kpis": {
+        "value": "Value today",
+        "partial": "some values are missing",
+        "paidIn": "Paid in, net",
+        "gain": "Gain",
+        "rate": "Return"
+      },
+      "rate": {
+        "mixed_ranges": "the groups end on days too far apart",
+        "not_computable": "not computable for this period"
+      },
+      "kinds": {
+        "service": "Connected service",
+        "manual_portfolio": "Value only",
+        "pension_fund": "Pension fund"
+      },
+      "notInTotal": "not in the total"
     }
   },
   "payroll": {

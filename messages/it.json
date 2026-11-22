@@ -4211,7 +4211,7 @@
     "title": "Investimenti",
     "subtitle": "I tuoi broker, exchange e conti di investimento: quanto valgono, quanto hai versato e quanto hanno reso.",
     "empty": {
-      "title": "Nessun servizio",
+      "title": "Nessun investimento",
       "description": "Aggiungi un servizio, un conto con solo valore o un fondo pensione."
     },
     "actions": {
@@ -4734,7 +4734,6 @@
     },
     "home": {
       "empty": "Collega un servizio, o aggiungi un conto con solo valore o un fondo pensione.",
-      "funds": "i fondi ({amount}) sono in <link>Funds</link>",
       "hero": {
         "title": "Profitto e perdita · {period}",
         "available": "P&L disponibile · {period}",
@@ -5150,6 +5149,31 @@
       "fund": "Fondo pensione",
       "fundDescription": "Il fondo, come versi e le commissioni, in quattro passi.",
       "back": "Indietro"
+    },
+    "portfolio": {
+      "chips": "Gruppi",
+      "groups": {
+        "all": "Tutti",
+        "stocks_crypto": "Azioni e crypto",
+        "pension_funds": "Fondi pensione"
+      },
+      "kpis": {
+        "value": "Valore oggi",
+        "partial": "mancano alcuni valori",
+        "paidIn": "Versato netto",
+        "gain": "Guadagno",
+        "rate": "Rendimento"
+      },
+      "rate": {
+        "mixed_ranges": "i gruppi finiscono in giorni troppo lontani",
+        "not_computable": "non calcolabile per questo periodo"
+      },
+      "kinds": {
+        "service": "Servizio collegato",
+        "manual_portfolio": "Solo valore",
+        "pension_fund": "Fondo pensione"
+      },
+      "notInTotal": "fuori dal totale"
     }
   },
   "payroll": {
