@@ -23,7 +23,7 @@
 --     a fund that had a debit plan, is dropped: the image before has no place for it in such a fund;
 --   * an operation or a decision counted by month (a source that accrues by month did not exist
 --     before) loses its period, which the old check refuses.
--- The dump `n6` in `Ledgerly-dumps/` is the copy of everything as it was before the release.
+-- The dump `n6` in `ledgerly-dumps/` is the copy of everything as it was before the release.
 --
 -- Step A4 (the documents of the fund deleted from the archive) is not undone here: its way back is
 -- the copy of the files and the dump taken before that step.

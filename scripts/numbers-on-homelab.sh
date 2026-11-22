@@ -4,7 +4,7 @@
 # Usage: sh scripts/numbers-on-homelab.sh <release folder> <label> [--as-of <ISO instant>]
 #        sh scripts/numbers-on-homelab.sh --diff <a.json> <b.json>
 #
-# `<release folder>` is the one `scripts/release-dump.sh` printed, in `../Ledgerly-dumps/`. The script
+# `<release folder>` is the one `scripts/release-dump.sh` printed, in `../ledgerly-dumps/`. The script
 # (`scripts/numbers-snapshot.ts`) reads every real user in one transaction that it rolls back and writes
 # `numbers-<label>.json` and its `sha256` there, mode 600. Take "before" just before the deploy and
 # "after" just after it, with the `--as-of` the first run printed, so that both read the same day.

@@ -200,7 +200,7 @@ Cometa: l'immagine `pre-n6` li legge e li carica come prima.
 copia. Per questo è un passo separato di N6: commit, deploy e OK di Mattia propri (`git-policy` §6 #1 e #2).
 
 1. Condizione: A1 e A2 sono in produzione e stabili. La prova SN7 è uguale prima e dopo N6.
-2. Dump del database e copia dei file dei documenti di Cometa in `projects/Ledgerly-dumps/`
+2. Dump del database e copia dei file dei documenti di Cometa in `projects/ledgerly-dumps/`
    ([`06-data.md`](06-data.md) §6.3), con le impronte dei file.
 3. Prova di ripristino: dump in un database temporaneo; numero delle righe `documents` dei tipi `cometa_*` uguale
    alla produzione; numero e impronte dei file copiati uguali a quelli dell'archivio.

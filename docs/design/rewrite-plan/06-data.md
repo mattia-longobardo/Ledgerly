@@ -136,7 +136,7 @@ Percorso confermato da Mattia con l'OK al piano del 14/11/2026 (decisione I1).
 
 | Punto | Proposta |
 |---|---|
-| Percorso | `/home/mattia/docker/projects/Ledgerly-dumps/` |
+| Percorso | `/home/mattia/docker/projects/ledgerly-dumps/` |
 | Perché lì | Sotto `projects/`, fuori dal repo Ledgerly e fuori dal repo Homelab (`projects/` è escluso). Non ha un file compose: `projects/stack.sh` la salta |
 | Struttura | Una cartella per rilascio: `<id>-<sha7>/` con `ledgerly.dump` (`pg_dump -Fc`), `ledgerly.dump.sha256`, `MANIFEST.txt` (rilascio, SHA, tag precedente, data, numero dell'ultima migrazione, nomi delle immagini `pre-*`) |
 | Permessi | Cartella `700`, file `600`, proprietario `1000:1000` |
@@ -186,7 +186,7 @@ flowchart LR
 - Uso: prima e dopo ogni passo di refactor e ogni deploy. Un numero diverso ferma il rilascio.
 - Eccezione dichiarata: dopo «Applica» di un passaggio reale di N4 la fotografia è diversa da prima, per le sole coppie di giroconti elencate nel rapporto (decisione H40; [`03-releases.md`](03-releases.md) «N4», X1). Dopo «Annulla passaggio» torna uguale.
 - Sugli utenti di prova il file sta nel repo come riferimento dei test.
-- In produzione gira in una transazione di sola lettura. Il file resta nella cartella del rilascio in `Ledgerly-dumps/` con permessi `600`. Nei commenti va solo l'esito: «uguale» oppure il numero di differenze e i loro nomi, mai i valori.
+- In produzione gira in una transazione di sola lettura. Il file resta nella cartella del rilascio in `ledgerly-dumps/` con permessi `600`. Nei commenti va solo l'esito: «uguale» oppure il numero di differenze e i loro nomi, mai i valori.
 
 **3. Calcoli approvati** (unit):
 

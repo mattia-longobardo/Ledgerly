@@ -95,7 +95,7 @@ npm run numbers -- "$folder" before                   # prints the instant: keep
 
 - **The image** `pre-<id>` is the rollback of the code (step 8). The last five are kept.
 - **The dump** is `pg_dump -Fc` of `ledgerly`, taken and verified (`pg_restore --list`) by the
-  script, in `../Ledgerly-dumps/<id>-<sha7>/` with its `sha256` and a `MANIFEST.txt`. It is
+  script, in `../ledgerly-dumps/<id>-<sha7>/` with its `sha256` and a `MANIFEST.txt`. It is
   mandatory when the release has a migration or changes data; `--no-dump` makes the folder only.
   Where the folder is, who may read it and how long a dump is kept:
   [`operations.md`](operations.md#release-dumps).

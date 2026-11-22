@@ -21,7 +21,7 @@ New environment variable: `PAPERLESS_ALLOWED_ORIGINS` (optional, `.env.homelab`)
 
 ## Deploy
 
-1. `git -C projects/Ledgerly log origin/main..main` is empty, or the extra commits are in the branch.
+1. `git -C projects/ledgerly log origin/main..main` is empty, or the extra commits are in the branch.
 2. Dump: `docker exec postgres pg_dump -U postgres -Fc ledgerly > backups/ledgerly/pre-sec-fixes.dump`.
 3. Rollback images: `docker tag ledgerly:latest ledgerly:pre-sec-fixes` and
    `docker tag ledgerly-cron:latest ledgerly-cron:pre-sec-fixes`.

@@ -18,7 +18,7 @@
 //
 // On the deployed database (`scripts/numbers-on-homelab.sh`) it reads every real user inside one
 // transaction that is rolled back and writes `numbers-<label>.json` (mode 600) in the release's folder of
-// `Ledgerly-dumps/`. `--diff` prints "uguale", or how many numbers differ and their names — never a
+// `ledgerly-dumps/`. `--diff` prints "uguale", or how many numbers differ and their names — never a
 // value: the names may go in a comment, the file never leaves the server.
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

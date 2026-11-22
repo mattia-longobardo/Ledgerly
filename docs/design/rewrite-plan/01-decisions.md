@@ -73,7 +73,7 @@ ST-25, ST-26, ST-27 (stessa sezione), ora decisioni H22-H24. Cosa si toglie nel 
 
 | ID | Decisione | Sostituisce | Rilascio |
 |---|---|---|---|
-| H24 | **ST-25: cancellazione in N6.** I file dei documenti di Cometa già salvati e le loro righe `documents` si cancellano nel rilascio N6. Le operazioni e i valori già letti restano dati del fondo. Prima: dump del database e copia dei file in `projects/Ledgerly-dumps/`, con una prova di ripristino. La cancellazione è un passo separato di N6, dopo la prova SN7, con l'OK di Mattia sul SHA (`git-policy` §6 #1 e #2). Rollback: ripristino dalla copia | L'ipotesi ST-25 e il suo default (archiviati fino a R5f); l'alternativa «nessuna cancellazione» | N6 |
+| H24 | **ST-25: cancellazione in N6.** I file dei documenti di Cometa già salvati e le loro righe `documents` si cancellano nel rilascio N6. Le operazioni e i valori già letti restano dati del fondo. Prima: dump del database e copia dei file in `projects/ledgerly-dumps/`, con una prova di ripristino. La cancellazione è un passo separato di N6, dopo la prova SN7, con l'OK di Mattia sul SHA (`git-policy` §6 #1 e #2). Rollback: ripristino dalla copia | L'ipotesi ST-25 e il suo default (archiviati fino a R5f); l'alternativa «nessuna cancellazione» | N6 |
 
 Dettaglio del passo: [`11-standardization.md`](11-standardization.md) §11.2.4, passo A4.
 

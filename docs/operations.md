@@ -126,7 +126,7 @@ The worker runs the image `ledgerly`: it has no build of its own, and it is rest
 
 ### Release dumps
 
-Every release has a folder in `/home/mattia/docker/projects/Ledgerly-dumps/` — beside this
+Every release has a folder in `/home/mattia/docker/projects/ledgerly-dumps/` — beside this
 checkout, outside this repository and outside the Homelab one. It has no compose file, so
 `projects/stack.sh` skips it.
 

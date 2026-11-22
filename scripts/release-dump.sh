@@ -1,5 +1,5 @@
 #!/bin/sh
-# scripts/release-dump.sh — the folder of one release in `../Ledgerly-dumps/`, with its dump.
+# scripts/release-dump.sh — the folder of one release in `../ledgerly-dumps/`, with its dump.
 #
 # Usage: sh scripts/release-dump.sh <release-id> [--no-dump]        e.g. `n1`, `r5f`
 #
@@ -22,7 +22,7 @@ release=${1:?usage: release-dump.sh <release-id> [--no-dump]}
 mode=${2:-}
 case "$release" in *[!a-z0-9-]* | "") echo "release id: lowercase letters, digits and hyphens only" >&2; exit 1 ;; esac
 
-root=${LEDGERLY_DUMPS_DIR:-"$(dirname "$PWD")/Ledgerly-dumps"}
+root=${LEDGERLY_DUMPS_DIR:-"$(dirname "$PWD")/ledgerly-dumps"}
 sha=$(git rev-parse HEAD)
 folder="$root/$release-$(git rev-parse --short=7 HEAD)"
 
