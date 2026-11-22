@@ -9,6 +9,8 @@ import { saveHideAmounts } from "./calls";
 /**
  * The switch of «Hide amounts» (R5e, D3): saved for the person, so it is on in every app. The shell
  * draws the pages again once the preferences are read again (`useRedrawOnChange`).
+ * It turns only once the server saved the choice: a switch that read «on» before the save let a
+ * person open a page, cancel the save on the way and see every amount (PERS-585).
  */
 export function HideAmountsSwitch({ initial }: { initial: boolean }) {
   const text = useTranslations("settings.privacy");
@@ -16,12 +18,11 @@ export function HideAmountsSwitch({ initial }: { initial: boolean }) {
   const [pending, startTransition] = useTransition();
 
   function change(next: boolean) {
-    setHidden(next);
     startTransition(async () => {
       try {
         await saveHideAmounts(next);
+        setHidden(next);
       } catch {
-        setHidden(!next);
         notify(text("failed"), "error");
       }
     });
