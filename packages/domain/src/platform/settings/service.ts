@@ -69,7 +69,8 @@ function keepOrSeal(typed: string, current: SettingRow, field: string, hintKey: 
 }
 
 /** Writes one key of the settings, with its sealed part. */
-async function writeSetting(
+/** Writes one server setting in clear: what a module of the core keeps for the instance. */
+export async function writeSetting(
   key: string,
   value: Record<string, unknown>,
   sealed: Buffer | null,

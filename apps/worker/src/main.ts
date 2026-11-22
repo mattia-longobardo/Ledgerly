@@ -28,6 +28,7 @@ import {
 } from "@ledgerly/domain/platform/jobs";
 import { runTask, SCHEDULE, SCHEDULE_TIME_ZONE, SCHEDULED_TIERS, tasks } from "@ledgerly/web/jobs";
 import { dueTiers, minuteOf } from "./scheduler";
+import { instanceDefaults } from "@ledgerly/domain/users";
 
 /** Tasks run side by side: a long sync or the backup never holds the minute tick. */
 const SLOTS = 3;
@@ -75,6 +76,8 @@ async function main(): Promise<void> {
 
   await recover(workerId, bootAt);
   await beat(workerId, bootAt);
+  // The zone of the schedule is the instance's (R5a, E8); before an admin chose one, Rome's as before.
+  const scheduleZone = (await instanceDefaults())?.timeZone ?? SCHEDULE_TIME_ZONE;
 
   const beating = setInterval(() => {
     beat(workerId, bootAt).catch((error: unknown) => log("heartbeat failed", error));
@@ -85,7 +88,7 @@ async function main(): Promise<void> {
     const minute = minuteOf(new Date());
     if (scheduling && minute.getTime() !== lastMinute) {
       lastMinute = minute.getTime();
-      for (const tier of dueTiers(minute, SCHEDULED_TIERS, SCHEDULE, SCHEDULE_TIME_ZONE)) {
+      for (const tier of dueTiers(minute, SCHEDULED_TIERS, SCHEDULE, scheduleZone)) {
         await enqueue(tasks.tier(tier)).catch((error: unknown) => log(`tier ${tier} not queued`, error));
       }
     }

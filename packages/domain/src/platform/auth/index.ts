@@ -1,6 +1,6 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
 export { hasPasswordAccount, hasSsoAccount, isActiveUser } from "./accounts";
-export { TRUST_DEVICE_DAYS, getAuth } from "./auth";
+export { TRUST_DEVICE_DAYS, getAuth, wireAuth } from "./auth";
 export type { Auth } from "./auth";
 export { redactForLog } from "./logger";
 export { nameSchema } from "./name-policy";

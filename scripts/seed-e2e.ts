@@ -7,10 +7,11 @@
 // Both touch only users whose address ends in `@example.test`: the site's real users and their
 // data are never read or written here.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { and, eq, isNull, like } from "drizzle-orm";
+import { and, eq, inArray, isNull, like } from "drizzle-orm";
 import { createAuth } from "@domain/platform/auth/auth";
 import { oauthClients } from "@domain/platform/auth/oauth/schema";
 import { rateLimits, users } from "@domain/platform/auth/schema";
+import { userPreferences } from "@domain/modules/users/schema";
 import { getDb } from "@domain/platform/db/client";
 import { deleteFolder } from "@domain/platform/storage";
 import {
@@ -104,6 +105,21 @@ await getDb()
   .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`));
 
 await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.admin.email));
+
+// A sign-up since R5a has the first start ahead of it: the journeys of the test users are those of a
+// person who already finished it.
+await getDb()
+  .update(userPreferences)
+  .set({ onboardedAt: new Date() })
+  .where(
+    inArray(
+      userPreferences.userId,
+      getDb()
+        .select({ id: users.id })
+        .from(users)
+        .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`)),
+    ),
+  );
 
 mkdirSync(STATE_DIR, { recursive: true });
 

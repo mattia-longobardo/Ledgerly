@@ -40,6 +40,7 @@ describe("GET /meta", () => {
         "investments",
         "meta",
         "notifications",
+        "onboarding",
         "payroll",
         "people",
         "pockets",

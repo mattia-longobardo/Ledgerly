@@ -218,6 +218,10 @@ export function createAuth({
       user: {
         create: {
           before: async (user) => ((await noUsersYet()) ? { data: { ...user, role: "admin" } } : undefined),
+          // A person signed up since R5a has the first start ahead of them (`wireAuth`).
+          after: async (user) => {
+            await globalThis.ledgerlyUserCreated?.(user.id);
+          },
         },
       },
       account: {
@@ -317,4 +321,16 @@ export function createAuth({
       ...(withNextCookies ? [nextCookies()] : []),
     ],
   });
+}
+
+declare global {
+  var ledgerlyUserCreated: ((userId: string) => Promise<void>) | undefined;
+}
+
+/**
+ * Wires what a sign-up starts (R5a: the row of the first start, in the users module). The
+ * application calls it once per process; a process that does not wire it creates the person only.
+ */
+export function wireAuth(ports: { userCreated: (userId: string) => Promise<void> }): void {
+  globalThis.ledgerlyUserCreated = ports.userCreated;
 }

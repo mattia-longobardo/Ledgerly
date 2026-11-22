@@ -31,8 +31,11 @@ export async function signedInFrom(requestHeaders: Headers) {
       twoFactorEnabled,
       hasPassword: await hasPasswordAccount(session.user.id),
     });
-  const { addons, ...preferences } = await getSavedPreferences({ userId: session.user.id });
-  return { user: session.user, preferences, addons, setupPending };
+  const { addons, country, onboarding, ...preferences } = await getSavedPreferences({
+    userId: session.user.id,
+  });
+  void country;
+  return { user: session.user, preferences, addons, onboarding, setupPending };
 }
 
 /**
@@ -55,6 +58,8 @@ export function remoteSignedIn(signedIn: Awaited<ReturnType<typeof signedInFrom>
       ctx: buildCtx(signedIn.user, { ...signedIn.preferences, addons: signedIn.addons }),
       // The addons the person has on (R5a, H52): the menu, the mobile tabs and the palette show these.
       addons: signedIn.addons,
+      // The first start is ahead of the person (R5a): the web opens it before any other page.
+      onboarding: signedIn.onboarding,
       setupPending: signedIn.setupPending,
     }
   );
