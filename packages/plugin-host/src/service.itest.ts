@@ -262,6 +262,7 @@ describe("a plugin, for one person", () => {
         pausedSince: null,
         hasCredentials: false,
         connections: 0,
+        countries: [],
       },
     ]);
     expect(await isPluginActive(ctx, PLUGIN)).toBe(false);

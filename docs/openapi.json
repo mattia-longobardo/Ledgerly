@@ -39950,6 +39950,12 @@
                           },
                           "returnAddress": {
                             "type": "string"
+                          },
+                          "countries": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
                           }
                         },
                         "required": [
@@ -39960,7 +39966,8 @@
                           "pausedSince",
                           "connections",
                           "credentials",
-                          "returnAddress"
+                          "returnAddress",
+                          "countries"
                         ]
                       }
                     }

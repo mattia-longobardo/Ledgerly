@@ -138,6 +138,8 @@ interface UserPlugin {
   pausedSince: Date | null;
   hasCredentials: boolean;
   connections: number;
+  /** The ISO codes of the manifest's `country` connection field, in its order; empty without it. */
+  countries: string[];
 }
 
 /**
@@ -177,6 +179,10 @@ export async function listUserPlugins(ctx: Pick<Ctx, "userId" | "locale">): Prom
       pausedSince: activation?.deactivatedAt ?? null,
       hasCredentials,
       connections: count,
+      countries:
+        manifest.connectionFields
+          .find((field) => field.name === "country")
+          ?.options?.map((option) => option.value) ?? [],
     };
   });
 }

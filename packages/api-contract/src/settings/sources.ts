@@ -178,6 +178,8 @@ export const listPlugins = defineRoute({
         credentials: z.object({ saved: z.boolean(), savedAt: instant().nullable(), invalid: z.boolean() }),
         /** Where the provider sends the person back: what its application has to allow. */
         returnAddress: z.string(),
+        /** The ISO codes a connection can be for (the manifest's `country` field); empty without one. */
+        countries: z.array(z.string()),
       }),
     ),
   }),
@@ -194,6 +196,7 @@ export const listPlugins = defineRoute({
           connections: 1,
           credentials: { saved: true, savedAt: "2026-11-15T10:00:00.000Z", invalid: false },
           returnAddress: "https://ledgerly.example/api/v1/plugins/examplebank/callback",
+          countries: ["DE", "IT"],
         },
       ],
     },

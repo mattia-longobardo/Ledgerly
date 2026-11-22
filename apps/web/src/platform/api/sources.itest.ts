@@ -8,7 +8,15 @@ import type { Ctx } from "@domain/platform/context";
 import { listAccounts } from "@domain/modules/accounts/queries";
 import { refreshManifests } from "@plugin-host/service";
 import { chooseAccounts, readBank } from "@plugin-host/sync";
-import { bankAccess, BANK_NOW, fakePlugin, PLUGIN, PROVIDER } from "../../../../../test/bank-plugin";
+import { PLUGIN_PATHS } from "@plugin-contract/calls";
+import {
+  bankAccess,
+  BANK_NOW,
+  fakePlugin,
+  MANIFEST,
+  PLUGIN,
+  PROVIDER,
+} from "../../../../../test/bank-plugin";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { contextFor } from "../../../../../test/fixtures";
 import { createTestUser } from "../../../../../test/users";
@@ -145,7 +153,13 @@ describe("the plugins, a source's page and the log", () => {
     const fake = fakePlugin();
     await refreshManifests(BANK_NOW, fake.deps);
     expect(sources.listPlugins.response.parse((await send(alice, "/plugins")).body).plugins).toEqual([
-      expect.objectContaining({ id: PLUGIN, state: "available", connections: 0, pausedSince: null }),
+      expect.objectContaining({
+        id: PLUGIN,
+        state: "available",
+        connections: 0,
+        pausedSince: null,
+        countries: [],
+      }),
     ]);
     await bankAccess(alice, fake);
     const [plugin] = sources.listPlugins.response.parse((await send(alice, "/plugins")).body).plugins;
@@ -161,6 +175,26 @@ describe("the plugins, a source's page and the log", () => {
       state: "available",
       connections: 0,
     });
+  });
+
+  it("answers the countries of the manifest's `country` field, in its order", async () => {
+    const fake = fakePlugin();
+    const country = {
+      name: "country",
+      type: "choice" as const,
+      required: true,
+      writeOnly: false,
+      label: { en: "Country", it: "Paese" },
+      options: ["IT", "DE"].map((value) => ({ value, label: { en: value, it: value } })),
+    };
+    const manifest = { ...MANIFEST, connectionFields: [country] };
+    const fetchFn: typeof fake.deps.fetchFn = async (input, init) =>
+      new URL(String(input)).pathname === PLUGIN_PATHS.manifest
+        ? new Response(JSON.stringify(manifest))
+        : fake.deps.fetchFn(input, init);
+    await refreshManifests(BANK_NOW, { fetchFn });
+    const [plugin] = sources.listPlugins.response.parse((await send(alice, "/plugins")).body).plugins;
+    expect(plugin.countries).toEqual(["IT", "DE"]);
   });
 
   it("answers a source's page: deleted accounts, what waits, what «Disconnect» leaves", async () => {
