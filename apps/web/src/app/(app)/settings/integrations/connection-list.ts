@@ -19,7 +19,7 @@ import {
 import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
 import { connectionSummary } from "@ledgerly/plugin-host";
 import { labelOf, passFor } from "@/platform/integrations/registry";
-import { sourceSlugOf, statusOf } from "./connection-view";
+import { sourceSlugOf, statusOf } from "./connection-state";
 
 const DAY_MS = 86_400_000;
 /** The runs of a connection the list gives, newest first, when not asked for more: the ten a row shows. */
@@ -54,7 +54,7 @@ const NONE: Capabilities = {
 };
 
 /** The end of a wait a bank asked for after "no more calls for now", while it lasts: the next attempt. */
-export async function bankWait(ctx: Ctx, connectionId: string, now: Date): Promise<Date | null> {
+async function bankWait(ctx: Ctx, connectionId: string, now: Date): Promise<Date | null> {
   const until = (await readSyncJob(ctx, connectionId, "transactions"))?.cursor?.retryAfter;
   return until && new Date(until).getTime() > now.getTime() ? new Date(until) : null;
 }
@@ -63,7 +63,7 @@ export async function bankWait(ctx: Ctx, connectionId: string, now: Date): Promi
  * The names of the accounts here whose IBAN a new account of a source carries (rewrite plan N4,
  * case 5), by connection. The accounts are read only when a connection has one: no query more otherwise (G9).
  */
-export async function ibanConflictNames(ctx: Ctx, connections: readonly Connection[]) {
+async function ibanConflictNames(ctx: Ctx, connections: readonly Connection[]) {
   const names = new Map(
     connections.some((connection) => (connection.ibanConflicts ?? []).length > 0)
       ? (await listAccounts(ctx, { includeArchived: true })).map((account) => [account.id, account.name])

@@ -3,51 +3,44 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
-import { requireSession } from "@/platform/auth/session";
+import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
+import { interests } from "@ledgerly/api-contract/interests";
+import {
+  categories as categoryRoutes,
+  connections as connectionRoutes,
+  labels as labelRoutes,
+  sources,
+} from "@ledgerly/api-contract/settings";
 import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/format/format";
-import { labelOf, passFor } from "@/platform/integrations/registry";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
-import {
-  type Connection,
-  listConnections,
-  readSyncJob,
-  recentRuns,
-  deletedSourceAccounts,
-  sourceSkippedIds,
-  SYNC_RUN_RETENTION_DAYS,
-} from "@ledgerly/domain/platform/integrations";
-import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
-import { connectionSummary, keepManifestsFresh, returnAddress } from "@ledgerly/plugin-host";
-import { pluginProvider } from "@ledgerly/domain/platform/integrations";
-import { listAccounts } from "@ledgerly/domain/accounts";
-import { providerOf } from "@ledgerly/domain/investments";
-import { listInvestmentAccounts } from "@ledgerly/domain/investments";
-import { pendingCount } from "@ledgerly/domain/timeoff";
-import { pendingSends } from "@ledgerly/domain/transactions";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import { sourceCategoryRows } from "../categories/source";
-import { bankWait, ibanConflictNames } from "./connection-list";
+import { apiRead } from "@/platform/api-read";
+import { requireSession } from "@/platform/auth/session";
 import { SourceCategories } from "../categories/source-categories";
 import { HistoryDepth } from "./advanced/history-depth";
 import { BanksCard } from "./banks-card";
 import { ConnectionRow, type ConnectionRowProps, type RowStatusValue, SourceLinkRow } from "./connection-row";
 import {
-  accountsLeft,
   advancedHref,
   type Capabilities,
   connectionRows,
   OWN_DIALOGS,
   RUNS_PER_CONNECTION,
+  type WireConnection,
 } from "./connection-view";
 import { DeactivateZone } from "./deactivate-zone";
 import { DeletedAccounts } from "./deleted-accounts";
 import { PluginRow } from "./plugin-row";
 import { ScheduleCell } from "./schedule-cell";
+import { sourceCategoryRowsOf } from "./source-category-rows";
 import { SourceWrites } from "./source-writes";
 import { TrekCard } from "./trek-card";
 import { WalletAccounts, WalletCard } from "./wallet-card";
+
+/** The providers of the core with a page of their own (plugin-settings.md §2.1). */
+const WALLET_PROVIDER = "wallet";
+const TREK_PROVIDER = "trek";
 
 /** Both routes: the list (`/settings/integrations`) and a source's page (`…/[source]`). */
 interface IntegrationsProps {
@@ -60,13 +53,18 @@ export async function generateMetadata({ params }: IntegrationsProps): Promise<M
   const { source } = await params;
   const base = `${t("tabs.integrations")} · ${t("title")}`;
   if (source === undefined) return { title: base };
-  const ctx = await requireSession();
-  const plugin = (await listUserPlugins(ctx)).find((one) => one.id === source);
-  const name = plugin?.name ?? (await labelOf({ provider: source, instanceKey: "" }, ctx.locale)).provider;
+  const plugin = (await apiRead(sources.listPlugins, {}))?.plugins.find((one) => one.id === source);
+  const providers = await getTranslations("settings.integrations.providers");
+  const name =
+    plugin?.name ??
+    (source === WALLET_PROVIDER
+      ? providers("wallet.name")
+      : source === TREK_PROVIDER
+        ? providers("trek.name")
+        : source);
   return { title: `${name} · ${base}` };
 }
 
-const DAY_MS = 86_400_000;
 const INTEGRATIONS = "/settings/integrations";
 /** The sources of the core with a page of their own (plugin-settings.md §2.1). */
 const CORE_SOURCES = [WALLET_PROVIDER, TREK_PROVIDER] as const;
@@ -82,9 +80,9 @@ const WORST: readonly RowStatusValue[] = ["action", "late", "running", "paused",
  * The same component draws both routes: the source's page is `[source]/page.tsx`, which re-exports
  * this one, so the providers of the core are named in this file only (rule M12).
  *
- * A connection is read through `listConnections`, which cannot carry credentials — the sealed
- * column is only ever opened by `readCredentials`, and only on the server. Nothing on this page
- * knows a token, so nothing on this page can send one to the browser.
+ * Everything is read from `/api/v1` (`apiRead`): the plugins, the connections with their state and
+ * their last runs, the page of a source. None of them carries a credential, so nothing on this page
+ * can send one to the browser.
  */
 export default async function SettingsIntegrationsPage({ params, searchParams }: IntegrationsProps) {
   const ctx = await requireSession();
@@ -92,18 +90,18 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   const t = await getTranslations("settings.integrations");
   const text = await getTranslations("settings.connections");
   const plugin = await getTranslations("settings.plugin");
-  const day = (instant: Date) => formatDate(civilDateIn(instant, ctx.timeZone), "long", ctx.locale);
+  const day = (instant: string) =>
+    formatDate(civilDateIn(new Date(instant), ctx.timeZone), "long", ctx.locale);
   const now = new Date();
 
   // The plugins of the instance (rewrite plan N1, decision H25): each person sees them, and turns
-  // on their own. The manifests are read in the background: the page never waits for a plugin.
-  keepManifestsFresh();
-  const [userPlugins, connections, runs, services] = await Promise.all([
-    listUserPlugins(ctx),
-    listConnections(ctx),
-    recentRuns(ctx, RUNS_PER_CONNECTION, new Date(now.getTime() - SYNC_RUN_RETENTION_DAYS * DAY_MS)),
-    listInvestmentAccounts(ctx),
+  // on their own. `GET /plugins` reads the manifests in the background: the page never waits.
+  const [pluginsRead, connectionsRead] = await Promise.all([
+    apiRead(sources.listPlugins, {}),
+    apiRead(connectionRoutes.listConnections, { query: { runs: RUNS_PER_CONNECTION } }),
   ]);
+  const userPlugins = pluginsRead?.plugins ?? [];
+  const connections = connectionsRead?.connections ?? [];
 
   // A source's page: a source of the core, or a plugin the person has on. A plugin that is not on
   // has no page: the list, with its row in sight (§2.1).
@@ -115,80 +113,49 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   }
 
   const rows = await connectionRows(ctx, now);
-  const accounts = await listAccounts(ctx);
-  // The names of the accounts a source could not add an account beside (rewrite plan N4, case 5).
-  // Read only when a connection has one: no query more for the page otherwise (G9).
-  const ibanConflicts = await ibanConflictNames(ctx, connections);
-  const runsOf = (connection: Connection) => runs.filter((run) => run.connectionId === connection.id);
   const hrefOf = (slug: string) => `${INTEGRATIONS}/${slug}`;
 
   /** The row of a provider with one connection, or "Not connected" while it has none. */
-  async function single(provider: string, name: string, role: string, capabilities = OWN_DIALOGS) {
+  function single(provider: string, name: string, role: string, capabilities = OWN_DIALOGS) {
     const connection = connections.find((one) => one.provider === provider) ?? null;
     if (connection === null) return { connection, row: rows.absent(provider, name, role) };
-    return {
-      connection,
-      row: rows.row({
-        connection,
-        label: await labelOf(connection, ctx.locale),
-        detail: role,
-        runs: runsOf(connection),
-        capabilities,
-        ibanConflicts: ibanConflicts(connection),
-      }),
-    };
+    return { connection, row: rows.row({ connection, detail: role, capabilities }) };
   }
-  const wallet = await single(WALLET_PROVIDER, t("providers.wallet.name"), t("providers.wallet.role"));
-  const trek = await single(TREK_PROVIDER, t("providers.trek.name"), t("providers.trek.role"));
-
-  /** What "Disconnect" of a bank leaves, by connection: filled by `pluginRows`. */
-  const leave: Record<string, { accounts: number; excluded: number }> = {};
+  const wallet = single(WALLET_PROVIDER, t("providers.wallet.name"), t("providers.wallet.role"));
+  const trek = single(TREK_PROVIDER, t("providers.trek.name"), t("providers.trek.role"));
 
   /** The rows of the connections of one plugin: one per bank, by name. */
-  async function pluginRows(pluginId: string, active: boolean, keyRefused: boolean) {
-    const provider = pluginProvider(pluginId);
-    const built = await Promise.all(
-      connections
-        .filter((connection) => connection.provider === provider)
-        .map(async (connection) => {
-          const summary = await connectionSummary(ctx, connection.id);
-          // The wait a bank asked for after "no more calls for now": the next attempt is its end.
-          const wait = await bankWait(ctx, connection.id, now);
-          const detail = text("detail.accounts", { count: summary.accounts });
-          const capabilities: Capabilities = active
-            ? {
-                update: true,
-                renewHref: `/banks/connect?renew=${connection.id}`,
-                replaceKey: "own",
-                // `all`: the accounts left out are offered again too, so one can be chosen later.
-                chooseAccountsHref: `/banks/connect?step=accounts&c=${connection.id}&all=1`,
-                disconnect: true,
-              }
-            : { update: false };
-          // The accounts here that the access reads: an account deleted here is not one (N7.1 review).
-          leave[connection.id] = {
-            accounts: summary.chosen ? accountsLeft(accounts, provider, new Set(summary.accountIds)) : 0,
-            excluded: summary.skipped,
-          };
-          return {
+  function pluginRows(pluginId: string, active: boolean) {
+    const provider = `plugin:${pluginId}`;
+    const built = connections
+      .filter((connection) => connection.provider === provider)
+      .map((one) => {
+        const detail = text("detail.accounts", { count: one.shared ?? 0 });
+        const capabilities: Capabilities = active
+          ? {
+              update: true,
+              renewHref: `/banks/connect?renew=${one.id}`,
+              replaceKey: "own",
+              // `all`: the accounts left out are offered again too, so one can be chosen later.
+              chooseAccountsHref: `/banks/connect?step=accounts&c=${one.id}&all=1`,
+              disconnect: true,
+            }
+          : { update: false };
+        const ends = one.expiresAt !== null && new Date(one.expiresAt).getTime() > now.getTime();
+        // A bank's row says nothing of the IBANs of a reading: its accounts are chosen by hand.
+        const connection: WireConnection = { ...one, ibanConflicts: [] };
+        return {
+          connection,
+          row: rows.row({
             connection,
-            row: rows.row({
-              connection,
-              label: await labelOf(connection, ctx.locale),
-              detail:
-                connection.expiresAt === null || connection.expiresAt.getTime() <= now.getTime()
-                  ? detail
-                  : `${detail} · ${text("detail.validUntil", { date: day(connection.expiresAt) })}`,
-              runs: runsOf(connection),
-              capabilities,
-              providerActive: active,
-              accountsChosen: summary.chosen,
-              keyRefused,
-              nextAttempt: wait,
-            }),
-          };
-        }),
-    );
+            detail:
+              ends && one.expiresAt !== null
+                ? `${detail} · ${text("detail.validUntil", { date: day(one.expiresAt) })}`
+                : detail,
+            capabilities,
+          }),
+        };
+      });
     // By name, whatever the state: a row does not move when its state changes (§7).
     return built.sort((a, b) => a.row.name.localeCompare(b.row.name, ctx.locale, { sensitivity: "base" }));
   }
@@ -196,23 +163,22 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   if (source !== undefined) {
     // ---- The page of one source (plugin-settings.md §2.2): its sections, in a fixed order. ----
     const name = sourcePlugin?.name ?? (source === WALLET_PROVIDER ? wallet.row.name : trek.row.name);
-    const provider = sourcePlugin ? pluginProvider(sourcePlugin.id) : source;
+    const provider = sourcePlugin ? `plugin:${sourcePlugin.id}` : source;
     const deactivateHref = `${hrefOf(source)}#deactivate`;
+    // What waits to be written to the source, what «Disconnect» leaves, the accounts deleted here.
+    const page = await apiRead(sources.getSource, { params: { slug: source } });
+    const leaveOf = (id: string) =>
+      page?.connections.find((one) => one.id === id)?.leave ?? { accounts: 0, excluded: 0 };
 
     let connection: ReactNode = null;
-    let own: { connection: Connection; row: ConnectionRowProps }[] = [];
+    let own: { connection: WireConnection; row: ConnectionRowProps }[] = [];
     let accountsSection: ReactNode = null;
     let writes: ReactNode = null;
     let status: RowStatusValue = "absent";
 
     if (source === WALLET_PROVIDER) {
       // What "Disconnect" of Wallet leaves: its accounts here and the ones left out (H55, point 4).
-      const walletLeave = wallet.connection
-        ? {
-            accounts: accounts.filter((account) => account.provider === WALLET_PROVIDER).length,
-            excluded: (await sourceSkippedIds(ctx, WALLET_PROVIDER)).size,
-          }
-        : { accounts: 0, excluded: 0 };
+      const walletLeave = wallet.connection ? leaveOf(wallet.connection.id) : { accounts: 0, excluded: 0 };
       connection = (
         <WalletCard
           row={wallet.row}
@@ -228,24 +194,24 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
         accountsSection = (
           <>
             <WalletAccounts connectionId={wallet.connection.id} />
-            <DeletedAccounts slug={source} rows={await deletedSourceAccounts(ctx, WALLET_PROVIDER)} />
+            <DeletedAccounts slug={source} rows={page?.deletedAccounts ?? []} />
           </>
         );
         // What Ledgerly writes to Wallet: the interest rules that publish (from `/api/v1`), the
         // movements waiting.
-        const ids = accounts
-          .filter((account) => account.provider === WALLET_PROVIDER)
-          .map((account) => account.id);
-        const waiting = await pendingSends(ctx, ids, 1000);
-        writes = (
-          <SourceWrites
-            accountIds={ids}
-            waiting={{ count: waiting.length, accountIds: [...new Set(waiting.map((one) => one.accountId))] }}
-          />
+        // The accounts of the rules that publish, kept when they are Wallet's: the list of
+        // accounts does not say their source, an account's own read does.
+        const published = ((await apiRead(interests.listInterestRules, {}))?.rules ?? [])
+          .filter((rule) => rule.mode === "post_to_provider")
+          .map((rule) => rule.accountId);
+        const owners = await Promise.all(
+          [...new Set(published)].map((id) => apiRead(accountRoutes.getAccount, { params: { id } })),
         );
+        const ids = owners.flatMap((account) => (account?.provider === WALLET_PROVIDER ? [account.id] : []));
+        writes = <SourceWrites accountIds={ids} waiting={page?.unsent ?? { count: 0, accountIds: [] }} />;
       }
     } else if (source === TREK_PROVIDER) {
-      const pending = trek.connection ? await pendingCount(ctx) : 0;
+      const pending = trek.connection ? (page?.pendingDays ?? 0) : 0;
       connection = (
         <TrekCard
           row={trek.row}
@@ -265,8 +231,8 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
         );
       }
     } else if (sourcePlugin) {
-      const credentials = await credentialsStatus(ctx, sourcePlugin.id);
-      const banks = await pluginRows(sourcePlugin.id, true, credentials.invalid);
+      const { credentials } = sourcePlugin;
+      const banks = pluginRows(sourcePlugin.id, true);
       own = banks;
       status = worst(banks.map((bank) => bank.row.status.value));
       connection = (
@@ -279,10 +245,12 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                 savedAt: credentials.savedAt ? day(credentials.savedAt) : null,
                 invalid: credentials.invalid,
               }}
-              returnAddress={returnAddress(sourcePlugin.id)}
+              returnAddress={sourcePlugin.returnAddress}
               banks={banks.map((bank) => bank.row)}
               openReplace={(await searchParams).replace === "1"}
-              leave={leave}
+              leave={Object.fromEntries(
+                banks.map((bank) => [bank.connection.id, leaveOf(bank.connection.id)]),
+              )}
               provider={{ name: sourcePlugin.name, href: deactivateHref }}
             />
           </div>
@@ -308,26 +276,29 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                 </li>
               ))}
             </ul>
-            <DeletedAccounts slug={source} rows={await deletedSourceAccounts(ctx, provider)} />
+            <DeletedAccounts slug={source} rows={page?.deletedAccounts ?? []} />
           </>
         );
       }
     }
 
-    const categories = await sourceCategoryRows(ctx, provider);
-    const histories = await Promise.all(
-      own.map(async ({ connection: one }) => {
-        const history = passFor(one.provider)?.history;
-        if (!history) return null;
-        const job = await readSyncJob(ctx, one.id, "transactions");
-        return { id: one.id, months: history.depthOf(job?.cursor), choices: history.choices };
-      }),
+    const [sourceRows, allCategories] = await Promise.all([
+      apiRead(labelRoutes.listSourceCategories, {}),
+      apiRead(categoryRoutes.listCategories, { query: { archived: "true" } }),
+    ]);
+    const categories = sourceCategoryRowsOf(
+      provider,
+      sourceRows?.sourceCategories ?? [],
+      allCategories?.categories ?? [],
     );
-    const depths = histories.filter((one) => one !== null);
+    // "Download the history again": the depth read today, for a provider that reads a chosen depth.
+    const depths = own.flatMap(({ connection: one }) =>
+      one.historyDepth === null
+        ? []
+        : [{ id: one.id, months: one.historyDepth, choices: one.capabilities.historyMonths }],
+    );
     const labels = new Map(
-      await Promise.all(
-        own.map(async ({ connection: one }) => [one.id, await labelOf(one, ctx.locale)] as const),
-      ),
+      own.map(({ connection: one }) => [one.id, { name: one.name, provider: one.providerName }]),
     );
 
     return (
@@ -465,46 +436,29 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
 
   // ---- The list (plugin-settings.md §2.1): one row per source, the services, "Advanced". ----
   const pausedRows = new Map(
-    await Promise.all(
-      userPlugins
-        .filter((one) => one.state === "paused")
-        .map(
-          async (one) => [one.id, (await pluginRows(one.id, false, false)).map((bank) => bank.row)] as const,
-        ),
-    ),
+    userPlugins
+      .filter((one) => one.state === "paused")
+      .map((one) => [one.id, pluginRows(one.id, false).map((bank) => bank.row)] as const),
   );
   const activeStatus = new Map(
-    await Promise.all(
-      userPlugins
-        .filter((one) => one.state === "active")
-        .map(async (one) => {
-          const banks = await pluginRows(one.id, true, false);
-          return [one.id, worst(banks.map((bank) => bank.row.status.value))] as const;
-        }),
-    ),
+    userPlugins
+      .filter((one) => one.state === "active")
+      .map((one) => [one.id, worst(pluginRows(one.id, true).map((bank) => bank.row.status.value))] as const),
   );
 
   // Investments (docs/design/investments.md §4.2): the key, its checks and the disconnection
   // live on the service's page.
-  const invested = await Promise.all(
-    connections.flatMap((connection) => {
-      const provider = providerOf(connection.provider);
-      const service = services.find((one) => one.provider === connection.provider);
-      if (!provider || provider.connect !== "apikey" || !service) return [];
-      const href = `/investments/${service.accountId}/connection`;
-      return [
-        labelOf(connection, ctx.locale).then((label) =>
-          rows.row({
-            connection,
-            label,
-            detail: text("detail.readOnlyKey"),
-            runs: runsOf(connection),
-            capabilities: { update: true, replaceKey: href, settingsHref: href },
-          }),
-        ),
-      ];
-    }),
-  );
+  const invested = connections.flatMap((connection) => {
+    if (connection.service === null) return [];
+    const href = `/investments/${connection.service.accountId}/connection`;
+    return [
+      rows.row({
+        connection: { ...connection, ibanConflicts: [] },
+        detail: text("detail.readOnlyKey"),
+        capabilities: { update: true, replaceKey: href, settingsHref: href },
+      }),
+    ];
+  });
 
   return (
     <SettingsGrid>
@@ -546,7 +500,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                     description={one.description}
                     state={one.state}
                     pausedSince={one.pausedSince ? day(one.pausedSince) : null}
-                    hasCredentials={one.hasCredentials}
+                    hasCredentials={one.credentials.saved}
                     connections={one.connections}
                   />
                   {(pausedRows.get(one.id) ?? []).length > 0 && (

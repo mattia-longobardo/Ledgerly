@@ -1,34 +1,29 @@
-// The row of a connection, built on the server (ux/n2-connection-status.md §2, §3, §4): the facts
-// of the connection become the state, its sentence, the one action and the menu. The row itself
-// is a client component that draws what this file gives it.
-//
-// Nothing here names a provider. What a provider can do comes in as `Capabilities`, and its
-// names come from the registry of passes (`labelOf`).
+// The row of a connection on the pages of the integrations (ux/n2-connection-status.md §2, §3, §4),
+// built on the web's server from the connection `GET /connections` answers: the state the server
+// decided, its sentence, the one action and the menu, and the history of the readings. The row
+// itself is a client component that draws what this file gives it. Nothing here names a provider.
 import "server-only";
-import "@/app/plugin-wiring";
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import { addDays, civilDateIn } from "@ledgerly/domain/shared/dates";
-import { formatDate } from "@ledgerly/format/format";
-import type { ConnectionLabel } from "@/platform/integrations/registry";
-import { sourceSlugOf } from "@ledgerly/api";
-import type { Connection, RecentRun } from "@ledgerly/domain/platform/integrations";
+import type { connections } from "@ledgerly/api-contract/settings";
+import type { RouteOutput } from "@ledgerly/api-client";
 import {
   clock,
   codeKey,
   daysToExpiry,
   historyOf,
-  isRunningNow,
   relativeNext,
   relativePast,
-  type StatusAction,
-  type SyncStatus,
-  syncStatus,
-} from "@ledgerly/domain/platform/integrations";
+} from "@ledgerly/domain/platform/integrations/client";
+import { addDays, civilDateIn } from "@ledgerly/domain/shared/dates";
+import { formatDate, formatInstant, type UiLocale } from "@ledgerly/format/format";
 import type { ActionKind, ConnectionRowProps, HistoryItem, RowAction } from "./connection-row";
-import { formatInstant } from "@ledgerly/format/format";
 
-type Who = Pick<Ctx, "locale" | "timeZone">;
+/** A connection as `GET /connections` answers it. */
+export type WireConnection = RouteOutput<typeof connections.listConnections>["connections"][number];
+type Status = WireConnection["status"];
+type StatusAction = NonNullable<Status["action"]>;
+
+type Who = { locale: UiLocale; timeZone: string };
 
 /** What a provider lets a person do with one of its connections, and where each thing is done. */
 export interface Capabilities {
@@ -51,87 +46,22 @@ export interface Capabilities {
 /** A provider whose row sits in a card with its own dialogs: key, test, disconnect. */
 export const OWN_DIALOGS: Capabilities = { update: true, replaceKey: "own", test: true, disconnect: true };
 
-interface ConnectionFacts {
-  connection: Connection;
-  label: ConnectionLabel;
+interface RowFacts {
+  connection: WireConnection;
   detail: string | null;
-  /** The last runs of this connection, newest first. */
-  runs: readonly RecentRun[];
   capabilities: Capabilities;
-  /** False for a connection of a plugin the person turned off. */
-  providerActive?: boolean;
-  /** False while the accounts of the connection are not chosen. */
-  accountsChosen?: boolean;
-  /** The provider refuses the person's key: every connection it opens asks for a new one. */
-  keyRefused?: boolean;
-  /** The end of a wait the provider asked for, when it is later than the schedule's next time. */
-  nextAttempt?: Date | null;
-  /**
-   * The names of the accounts here whose IBAN a new account of the source carries, at the last
-   * reading (rewrite plan N4, case 5): that account was not added. Never an IBAN.
-   */
-  ibanConflicts?: readonly string[];
 }
 
-/** The readings a row shows, and how many runs are read to make them. */
-const HISTORY_ITEMS = 10;
+/** The runs a row groups into its history: `GET /connections?runs=…`. */
 export const RUNS_PER_CONNECTION = 40;
-
-const ADVANCED = "/settings/integrations/advanced";
+/** The readings a row shows. */
+const HISTORY_ITEMS = 10;
 
 export function advancedHref(connectionId: string): string {
-  return `${ADVANCED}?c=${connectionId}`;
+  return `/settings/integrations/advanced?c=${connectionId}`;
 }
 
-/** The page of a source: `/api/v1` answers it too (`source` of `GET /source-categories`). */
-export { sourceSlugOf };
-
-/** Where the settings of a source are; `null` for a provider without a page of its own. */
-export function sourceHref(provider: string): string | null {
-  const slug = sourceSlugOf(provider);
-  return slug === null ? null : `/settings/integrations/${slug}`;
-}
-
-/**
- * The accounts here that a bank's access reads, and that stay "Disconnected" after "Disconnect":
- * the accounts of `provider` whose id is one of the access's. An account deleted here is not one of
- * them, even when the bank still has it (plugin-settings.md §4.2).
- */
-export function accountsLeft(
-  accounts: readonly { provider: string | null; providerAccountId: string | null }[],
-  provider: string,
-  ids: ReadonlySet<string>,
-): number {
-  return accounts.filter(
-    (account) =>
-      account.provider === provider &&
-      account.providerAccountId !== null &&
-      ids.has(account.providerAccountId),
-  ).length;
-}
-
-/** The state of a connection from what the page read about it. */
-export function statusOf(
-  facts: Pick<ConnectionFacts, "connection" | "runs" | "providerActive" | "accountsChosen" | "keyRefused">,
-  now: Date,
-): SyncStatus {
-  const { connection } = facts;
-  return syncStatus(
-    {
-      state: connection.state,
-      errorCode: facts.keyRefused ? "auth" : connection.errorCode,
-      consecutiveFailures: connection.consecutiveFailures,
-      lastOkAt: connection.lastOkAt,
-      nextSyncAt: connection.nextSyncAt,
-      expiresAt: connection.expiresAt,
-      running: facts.runs.some((run) => isRunningNow(run, now)),
-      providerActive: facts.providerActive ?? true,
-      scheduled: connection.schedule.rules.length > 0,
-      accountsChosen: facts.accountsChosen ?? true,
-    },
-    now,
-  );
-}
+const instantOf = (iso: string | null): Date | null => (iso === null ? null : new Date(iso));
 
 /**
  * Builds the rows of a page. One translator and one "now" for all of them: two rows of the same
@@ -181,7 +111,7 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
   });
 
   /** The action of a state, when the provider can do it; `null` when it cannot. */
-  function actionOf(kind: StatusAction | null, facts: ConnectionFacts): RowAction | null {
+  function actionOf(kind: StatusAction | null, facts: RowFacts): RowAction | null {
     const can = facts.capabilities;
     if (kind === "update") return can.update ? action("update") : null;
     if (kind === "renew") return can.renewHref ? action("renew", can.renewHref) : null;
@@ -199,18 +129,16 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
     return null;
   }
 
-  function sentence(status: SyncStatus, facts: ConnectionFacts): { text: string; at: Date | null } {
-    const { connection, label } = facts;
-    const names = { name: label.name, provider: label.provider };
-    const attempt = next(facts.nextAttempt ?? connection.nextSyncAt);
-    if (status.text === "ok" && connection.lastOkAt !== null) {
-      return { text: t("text.ok", { when: past(connection.lastOkAt) }), at: connection.lastOkAt };
+  function sentence(status: Status, facts: RowFacts): { text: string; at: Date | null } {
+    const { connection } = facts;
+    const names = { name: connection.name, provider: connection.providerName };
+    const attempt = next(instantOf(connection.nextAttempt ?? connection.nextSyncAt));
+    const lastOk = instantOf(connection.lastOkAt);
+    if (status.text === "ok" && lastOk !== null) {
+      return { text: t("text.ok", { when: past(lastOk) }), at: lastOk };
     }
-    if (status.text === "late" && connection.lastOkAt !== null) {
-      return {
-        text: t("text.late", { when: past(connection.lastOkAt), next: attempt }),
-        at: connection.lastOkAt,
-      };
+    if (status.text === "late" && lastOk !== null) {
+      return { text: t("text.late", { when: past(lastOk), next: attempt }), at: lastOk };
     }
     if (status.text === "running") return { text: t("text.running"), at: null };
     if (status.text === "lateLimit")
@@ -223,10 +151,12 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
     return { text: t("text.lateNever", { next: attempt }), at: null };
   }
 
-  function historyItems(facts: ConnectionFacts): { items: HistoryItem[]; more: boolean } {
-    const names = { name: facts.label.name, provider: facts.label.provider };
+  function historyItems(facts: RowFacts): { items: HistoryItem[]; more: boolean } {
+    const names = { name: facts.connection.name, provider: facts.connection.providerName };
     const today = civilDateIn(now, ctx.timeZone);
-    const entries = historyOf(facts.runs);
+    const entries = historyOf(
+      facts.connection.runs.map((run) => ({ ...run, startedAt: new Date(run.startedAt) })),
+    );
     const items = entries.slice(0, HISTORY_ITEMS).map((entry): HistoryItem => {
       const on = civilDateIn(entry.at, ctx.timeZone);
       const time = clock(entry.at, ctx.timeZone);
@@ -265,9 +195,10 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
   }
 
   /** The row of a connection that exists. */
-  function row(facts: ConnectionFacts): ConnectionRowProps {
-    const { connection, label, capabilities: can } = facts;
-    const status = statusOf(facts, now);
+  function row(facts: RowFacts): ConnectionRowProps {
+    const { connection, capabilities: can } = facts;
+    const label = { name: connection.name };
+    const status = connection.status;
     const { text, at } = sentence(status, facts);
     const primary = actionOf(status.action, facts);
     const off = status.text === "pausedProvider";
@@ -291,8 +222,8 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
     if (!off && can.disconnect) add(action("disconnect", undefined, true));
 
     // The end of the access, from 14 days before it; after it the state says so itself.
-    const days = daysToExpiry(connection.expiresAt, now, ctx.timeZone);
-    const conflict = facts.ibanConflicts?.[0];
+    const days = daysToExpiry(instantOf(connection.expiresAt), now, ctx.timeZone);
+    const conflict = connection.ibanConflicts[0];
     const notice =
       days !== null && days <= 14 && !off && status.value !== "action"
         ? { text: t("expiry.days", { days, name: label.name }), action: actionOf("renew", facts) }

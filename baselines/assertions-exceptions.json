@@ -768,5 +768,10 @@
     "file": "apps/web/src/app/(app)/settings/integrations/wallet-card.test.tsx",
     "decision": "R5 (PERS-551)",
     "reason": "The card calls `core-calls.ts` instead of the Server Actions: the mocks map the new calls onto the same spies (the token, the accounts chosen), and the card gets the provider's id and the connection's id as props. No expected value changed"
+  },
+  {
+    "file": "apps/web/src/app/(app)/accounts/[id]/connection-status.test.ts",
+    "decision": "R3 (PERS-545, R13/R14)",
+    "reason": "The server's row of an integration page is built from the connection of `GET /connections` (`connection-view.ts`) and no longer from the domain's: the test builds that answer first and hands it to the row, and takes `statusOf` from `connection-state.ts`. The expected value is the same: the account's row equals the server's row, word for word"
   }
 ]

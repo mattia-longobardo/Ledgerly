@@ -1,41 +1,35 @@
 import type { Metadata, Route } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import "@/app/plugin-wiring";
-import { requireSession } from "@/platform/auth/session";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import { NULL_DISPLAY } from "@ledgerly/format/format";
-import { labelOf } from "@/platform/integrations/registry";
-import { connectionReport, scheduleSummary } from "@/platform/integrations/report";
-import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
-import {
-  type Connection,
-  listConnections,
-  listRuns,
-  recentRuns,
-  SYNC_RUN_RETENTION_DAYS,
-  type SyncRun,
-} from "@ledgerly/domain/platform/integrations";
-import { isSyncErrorCode } from "@ledgerly/domain/platform/integrations";
-import { listUserPlugins } from "@ledgerly/domain/platform/plugins";
-import { APP_VERSION } from "@ledgerly/domain/platform/version";
+import { metaRoute } from "@ledgerly/api-contract";
+import { connections as connectionRoutes, sources } from "@ledgerly/api-contract/settings";
+import type { RouteOutput } from "@ledgerly/api-client";
+import { isSyncErrorCode } from "@ledgerly/domain/platform/integrations/client";
+import { formatInstant, NULL_DISPLAY, type UiLocale } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button, ButtonLink } from "@ledgerly/ui/button";
 import { Select } from "@ledgerly/ui/input";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { EmptyState } from "@ledgerly/ui/states";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
-import { RUNS_PER_CONNECTION, sourceSlugOf, statusOf } from "../connection-view";
-import { formatInstant } from "@ledgerly/format/format";
+import { apiRead } from "@/platform/api-read";
+import { requireSession } from "@/platform/auth/session";
+import { connectionReport, scheduleSummary } from "@/platform/integrations/report";
 import { ScheduleCell } from "../schedule-cell";
 import { ReportButton } from "./report-button";
+
+/** A reading of the log, as `GET /connections/runs` answers it. */
+type SyncRun = RouteOutput<typeof sources.listConnectionRuns>["runs"][number];
+
+/** The kinds of data a reading reads (`SYNC_KINDS`): each has its words; another says its code. */
+const KINDS = ["accounts", "transactions", "leave", "documents", "holdings", "flows"] as const;
+const isKind = (kind: string): kind is (typeof KINDS)[number] => KINDS.some((one) => one === kind);
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
   return { title: `${t("connections.advanced.title")} · ${t("tabs.integrations")} · ${t("title")}` };
 }
 
-const DAY_MS = 86_400_000;
 const PAGE = 50;
 const MAX_ROWS = 200;
 const INTEGRATIONS: Route = "/settings/integrations";
@@ -61,11 +55,12 @@ const RUN_TONE = { running: "accent", success: "pos", failed: "neg", skipped: "n
 /** How long a finished run took, to the second; `null` while it is still running. */
 function durationSeconds(run: SyncRun): number | null {
   if (run.finishedAt === null) return null;
-  return Math.max(0, Math.round((run.finishedAt.getTime() - run.startedAt.getTime()) / 1000));
+  return Math.max(0, Math.round((Date.parse(run.finishedAt) - Date.parse(run.startedAt)) / 1000));
 }
 
 /** An instant with its seconds, in the person's zone: two runs of one pass start seconds apart. */
-function withSeconds(instant: Date, ctx: Pick<Ctx, "locale" | "timeZone">): string {
+function withSeconds(iso: string, ctx: { locale: UiLocale; timeZone: string }): string {
+  const instant = new Date(iso);
   const seconds = String(instant.getUTCSeconds()).padStart(2, "0");
   return `${formatInstant(instant, ctx)}:${seconds}`;
 }
@@ -86,13 +81,12 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
   const old = await getTranslations("settings.integrations");
   const query = await searchParams;
   const now = new Date();
-  const since = new Date(now.getTime() - SYNC_RUN_RETENTION_DAYS * DAY_MS);
 
   const wanted = Array.isArray(query.c) ? query.c[0] : query.c;
   const asked = Number(Array.isArray(query.n) ? query.n[0] : query.n);
   const limit = Number.isInteger(asked) && asked > PAGE ? Math.min(asked, MAX_ROWS) : PAGE;
 
-  const [connections, plugins] = await Promise.all([listConnections(ctx), listUserPlugins(ctx)]);
+  const connections = (await apiRead(connectionRoutes.listConnections, {}))?.connections ?? [];
   const selected =
     wanted === undefined || wanted === "" ? null : connections.find((one) => one.id === wanted);
   if (selected === undefined) notFound();
@@ -107,54 +101,39 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
     );
   }
 
-  const labels = new Map(
-    await Promise.all(connections.map(async (one) => [one.id, await labelOf(one, ctx.locale)] as const)),
-  );
-  const nameOf = (id: string) => labels.get(id)?.name ?? NULL_DISPLAY;
+  const names = new Map(connections.map((one) => [one.id, one.name]));
+  const nameOf = (id: string) => names.get(id) ?? NULL_DISPLAY;
   const byName = [...connections].sort((a, b) =>
     nameOf(a.id).localeCompare(nameOf(b.id), ctx.locale, { sensitivity: "base" }),
   );
-  /** Whether the person has the connection's provider on; a provider of the core always is. */
-  const active = (connection: Connection) =>
-    !isPluginProvider(connection.provider) ||
-    plugins.some((plugin) => `plugin:${plugin.id}` === connection.provider && plugin.state === "active");
 
-  const [runs, recent] = await Promise.all([
-    // One more than the page: whether there are more to show.
-    listRuns(ctx, { connectionId: selected?.id, since, limit: limit + 1 }),
-    recentRuns(ctx, RUNS_PER_CONNECTION, since),
+  const [log, meta] = await Promise.all([
+    apiRead(sources.listConnectionRuns, { query: { connectionId: selected?.id, limit: String(limit) } }),
+    apiRead(metaRoute, {}),
   ]);
-  const shown = runs.slice(0, limit);
+  const shown = log?.runs ?? [];
 
   // The investment services have no page of their own: their schedule stays here.
-  const services = byName.filter((connection) => sourceSlugOf(connection.provider) === null);
+  const services = byName.filter((connection) => connection.source === null);
 
   // The report of the current filter: a closed list of fields (`report.ts`).
   const report = connectionReport({
-    appVersion: APP_VERSION,
+    appVersion: meta?.version ?? NULL_DISPLAY,
     at: now,
     connections: (selected ? [selected] : byName).map((connection) => {
-      const status = statusOf(
-        {
-          connection,
-          runs: recent.filter((run) => run.connectionId === connection.id),
-          providerActive: active(connection),
-        },
-        now,
-      );
       return {
         name: nameOf(connection.id),
         provider: connection.provider,
-        status: status.value,
+        status: connection.status.value,
         code: isSyncErrorCode(connection.errorCode) ? connection.errorCode : null,
         failures: connection.consecutiveFailures,
-        lastOkAt: connection.lastOkAt,
-        nextSyncAt: connection.nextSyncAt,
+        lastOkAt: connection.lastOkAt === null ? null : new Date(connection.lastOkAt),
+        nextSyncAt: connection.nextSyncAt === null ? null : new Date(connection.nextSyncAt),
         schedule: scheduleSummary(connection.schedule),
       };
     }),
     runs: shown.map((run) => ({
-      startedAt: run.startedAt,
+      startedAt: new Date(run.startedAt),
       connection: nameOf(run.connectionId),
       kind: run.kind,
       origin: run.origin,
@@ -218,7 +197,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
         >
           <ul className="flex flex-col">
             {services.map((connection) => {
-              const label = labels.get(connection.id);
+              const label = { name: connection.name, provider: connection.providerName };
               return (
                 <li
                   key={connection.id}
@@ -232,7 +211,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
                         connection={connection}
                         name={label?.name ?? ""}
                         provider={label?.provider ?? ""}
-                        active={active(connection)}
+                        active={connection.providerActive}
                         ctx={ctx}
                       />
                     </div>
@@ -304,7 +283,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
                       <Tr key={run.id}>
                         <Td className="whitespace-nowrap">{withSeconds(run.startedAt, ctx)}</Td>
                         <Td>{nameOf(run.connectionId)}</Td>
-                        <Td>{old(`kinds.${run.kind}`)}</Td>
+                        <Td>{isKind(run.kind) ? old(`kinds.${run.kind}`) : run.kind}</Td>
                         <Td muted>{origin(run)}</Td>
                         <Td>{result(run)}</Td>
                         <Td className="font-mono text-sm">{code(run)}</Td>
@@ -332,7 +311,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
                       <dt>{t("advanced.log.columns.connection")}:</dt>
                       <dd className="break-words text-fg">{nameOf(run.connectionId)}</dd>
                       <dt>{t("advanced.log.columns.data")}:</dt>
-                      <dd className="text-fg">{old(`kinds.${run.kind}`)}</dd>
+                      <dd className="text-fg">{isKind(run.kind) ? old(`kinds.${run.kind}`) : run.kind}</dd>
                       <dt>{t("advanced.log.columns.origin")}:</dt>
                       <dd>{origin(run)}</dd>
                       <dt>{t("advanced.log.columns.code")}:</dt>
@@ -347,7 +326,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
                   </li>
                 ))}
               </ul>
-              {runs.length > limit && limit < MAX_ROWS && (
+              {log?.more === true && limit < MAX_ROWS && (
                 <div className="flex justify-center border-t border-border px-4 py-3">
                   <ButtonLink href={`/settings/integrations/advanced?${more.toString()}` as Route} size="sm">
                     {t("advanced.log.more")}

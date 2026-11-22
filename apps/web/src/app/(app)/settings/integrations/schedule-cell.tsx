@@ -1,8 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
-import type { Connection } from "@ledgerly/domain/platform/integrations";
-import { formatInstant } from "@ledgerly/format/format";
+import { isPluginProvider } from "@ledgerly/domain/platform/integrations/client";
+import { formatInstant, type UiLocale } from "@ledgerly/format/format";
+import type { WireConnection } from "./connection-view";
 import { recommendedSchedule } from "./recommended-schedule";
 import { ConnectionSchedule } from "@/ui/connection-schedule";
 
@@ -18,19 +17,19 @@ export async function ScheduleCell({
   active,
   ctx,
 }: {
-  connection: Connection;
+  connection: Pick<WireConnection, "id" | "provider" | "schedule" | "nextSyncAt">;
   /** The connection's name and its provider's, as the person reads them. */
   name: string;
   provider: string;
   active: boolean;
-  ctx: Pick<Ctx, "locale" | "timeZone">;
+  ctx: { locale: UiLocale; timeZone: string };
 }) {
   const t = await getTranslations("settings.connections");
   const times = connection.schedule.rules.reduce(
     (sum, rule) => sum + (rule.kind === "times" ? rule.times.length : 0),
     0,
   );
-  const next = connection.nextSyncAt ? formatInstant(connection.nextSyncAt, ctx) : null;
+  const next = connection.nextSyncAt ? formatInstant(new Date(connection.nextSyncAt), ctx) : null;
   if (!active) return <span className="text-muted">{t("text.pausedProvider", { provider })}</span>;
   if (isPluginProvider(connection.provider)) {
     // The schedule of a plugin's connection is the provider's own: no control.

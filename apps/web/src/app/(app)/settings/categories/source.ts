@@ -11,6 +11,7 @@ import { colorOfCategory, listCategoriesWithUsage } from "@ledgerly/domain/trans
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { sourceNameOf } from "@/platform/integrations/registry";
 
+import { sourceCategoryRowsOf } from "../integrations/source-category-rows";
 import type { SourceCategoryRow } from "./source-categories";
 
 /** The categories of one source, under the name a person reads for it. */
@@ -50,38 +51,17 @@ export async function sourceCategoryRows(
   if (!section) return null;
   const categories = await listCategoriesWithUsage(ctx, { includeArchived: true });
   const byId = new Map(categories.map(({ category }) => [category.id, category]));
-  // What a source's category may be matched to: the categories in use, in tree order, by kind.
-  const matchable = categories
-    .filter(({ category }) => category.archivedAt === null)
-    .map(({ category }) => ({
-      id: category.id,
-      name: category.name,
-      color: colorOfCategory(category, byId),
-      depth: (category.parentId === null ? 0 : 1) as 0 | 1,
-      type: category.type,
-    }));
-  return {
-    name: section.name,
-    rows: section.rows.map((row) => {
-      const counted = row.categoryId === null ? undefined : byId.get(row.categoryId);
-      // The kind of a source's category is the kind of the category it counts under.
-      const type = counted?.type ?? "expense";
-      return {
-        id: row.id,
-        name: row.name,
-        nested: row.groupName !== null && row.groupName !== row.name,
-        count: row.count,
-        isNew: row.isNew,
-        choice: row.choice,
-        category:
-          row.choice === "matched" && counted
-            ? { id: counted.id, name: counted.name, color: colorOfCategory(counted, byId) }
-            : null,
-        // Its own macro, or Transfers: a source's category may count as transfers (§2.4).
-        options: matchable.filter((option) => option.type === type || option.type === "transfer"),
-      };
-    }),
-  };
+  // The same rows the source's page draws from `/api/v1` (`source-category-rows.ts`).
+  return sourceCategoryRowsOf(
+    provider,
+    section.rows.map((row) => ({ ...row, sourceName: section.name })),
+    categories.map(({ category }) => ({
+      ...category,
+      displayColor: colorOfCategory(category, byId),
+      depth: category.parentId === null ? (0 as const) : (1 as const),
+      archivedAt: category.archivedAt?.toISOString() ?? null,
+    })),
+  );
 }
 
 /** For each category: "From {source}: {names}", where the names say more than the category's own. */

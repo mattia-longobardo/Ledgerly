@@ -21,7 +21,7 @@ import { bankAccess, BANK_NOW, fakePlugin, PLUGIN } from "../../../../../../../t
 import { keyServiceAccount } from "../../../../../../../test/investments";
 import { createTestUser } from "../../../../../../../test/users";
 import { connectionList } from "./connection-list";
-import { statusOf } from "./connection-view";
+import { statusOf } from "./connection-state";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));

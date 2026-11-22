@@ -6,7 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Connection, RecentRun } from "@ledgerly/domain/platform/integrations";
 import en from "../../../../../../../messages/en.json";
 import it_ from "../../../../../../../messages/it.json";
-import { type Capabilities, connectionRows, statusOf } from "../../settings/integrations/connection-view";
+import { type Capabilities, connectionRows } from "../../settings/integrations/connection-view";
+import { statusOf } from "../../settings/integrations/connection-state";
 import { type ApiConnection, connectionStatus } from "./connection-status";
 
 const CATALOGUES = { en, it: it_ };
@@ -131,13 +132,6 @@ describe("the state of an account's connection", () => {
           nextAttempt: one.nextAttempt ?? null,
         };
         const label = { name: "North Bank", provider: "Enable Banking" };
-        const server = (await connectionRows({ locale: language, timeZone: ZONE }, NOW)).row({
-          ...facts,
-          label,
-          detail: null,
-          capabilities: capabilitiesOf(one, connection),
-        });
-
         // The connection as `GET /connections` answers it (`connection-list.ts`).
         const answer = {
           id: connection.id,
@@ -150,6 +144,17 @@ describe("the state of an account's connection", () => {
           providerActive: facts.providerActive,
           status: statusOf(facts, NOW),
         } as ApiConnection;
+        // The server's row, built from the same answer since R3-coda (`connection-view.ts`).
+        const server = (await connectionRows({ locale: language, timeZone: ZONE }, NOW)).row({
+          connection: {
+            ...answer,
+            expiresAt: connection.expiresAt?.toISOString() ?? null,
+            ibanConflicts: [],
+            runs: runs.map((run) => ({ ...run, startedAt: run.startedAt.toISOString() })),
+          },
+          detail: null,
+          capabilities: capabilitiesOf(one, connection),
+        });
         const text = createTranslator({
           locale: language,
           messages: CATALOGUES[language],

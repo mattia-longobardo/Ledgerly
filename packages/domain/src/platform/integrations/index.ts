@@ -48,7 +48,7 @@ export {
   skipSourceAccount,
   sourceSkippedIds,
 } from "./service";
-export type { Connection, DueConnection, RecentRun, SyncRun } from "./service";
+export type { Connection, DueConnection, RecentRun } from "./service";
 export {
   clock,
   codeKey,
@@ -62,5 +62,5 @@ export {
   syncStatus,
   warningFor,
 } from "./status";
-export type { StatusAction, StatusFacts, SyncStatus } from "./status";
+export type { StatusFacts, SyncStatus } from "./status";
 export type { CardAccount, CardError, CardResult, CoreCard } from "./card";

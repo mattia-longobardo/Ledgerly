@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountsLeft, sourceHref, sourceSlugOf } from "./connection-view";
+import { accountsLeft, sourceHref, sourceSlugOf } from "./connection-state";
 
 describe("the page of a source", () => {
   it("is the plugin's id, or the provider of the core; the investment services have none", () => {

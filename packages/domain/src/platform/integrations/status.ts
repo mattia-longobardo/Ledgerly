@@ -151,7 +151,7 @@ export type StatusText =
   | "pausedProvider";
 
 /** The one thing a person can do about a state. */
-export type StatusAction = "update" | "renew" | "replaceKey" | "chooseAccounts" | "resume" | "enable";
+type StatusAction = "update" | "renew" | "replaceKey" | "chooseAccounts" | "resume" | "enable";
 
 export interface StatusFacts {
   state: "active" | "error" | "revoked";

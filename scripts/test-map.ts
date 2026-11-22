@@ -194,7 +194,7 @@ export const MODULES: Module[] = [
     flows: ["categories"],
     // A source's categories are drawn on the source's page (rewrite plan N7.2); the page of the
     // categories in Expenses calls its Server Actions (N3.2, N3.3). The API's tests read its notes of a source.
-    usedBy: ["api", "e2e:connections", "e2e:transactions"],
+    usedBy: ["api", "connections", "e2e:connections", "e2e:transactions"],
   },
   {
     id: "budgets",

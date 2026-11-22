@@ -13,7 +13,7 @@ import {
 import { pendingCount } from "@ledgerly/domain/timeoff";
 import { pendingSends } from "@ledgerly/domain/transactions";
 import { connectionSummary } from "@ledgerly/plugin-host";
-import { accountsLeft } from "./connection-view";
+import { accountsLeft } from "./connection-state";
 import { sourceOf } from "./deactivate";
 
 export const sourceRead: SourceReads["source"] = async (ctx, slug) => {
