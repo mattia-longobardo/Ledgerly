@@ -9,7 +9,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { restoreSourceAccounts } from "@ledgerly/domain/accounts";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
-import { getOptionalSession } from "@/platform/auth/session";
+import { getOptionalSession } from "@/platform/auth/signed-in";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { PLUGIN_ID } from "@ledgerly/plugin-contract";
@@ -56,7 +56,7 @@ export async function GET(
   context: RouteContext<"/api/v1/plugins/[plugin]/callback">,
 ): Promise<NextResponse> {
   const { plugin } = await context.params;
-  const session = await getOptionalSession();
+  const session = await getOptionalSession(request.headers);
   // No session: the page behind this redirect sends to sign-in, and nothing was exchanged.
   if (!session || !PLUGIN_ID.test(plugin)) return back({ ok: false, error: "session", bank: null });
   const url = new URL(request.url);

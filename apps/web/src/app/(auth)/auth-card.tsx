@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import packageJson from "../../../../../package.json";
-import { identityProviderUrl } from "@ledgerly/domain/platform/auth";
+import { identityProviderUrl } from "@ledgerly/domain/platform/auth/client";
 import { BrandLockup } from "@ledgerly/ui/shell/brand";
 
 export async function AuthCard({

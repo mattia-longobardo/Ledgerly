@@ -4,13 +4,9 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { getAuth } from "@ledgerly/domain/platform/auth";
 import { TWO_FACTOR_SETUP_PATH } from "@ledgerly/domain/platform/auth/client";
-import { buildCtx, type Preferences } from "./signed-in";
 import { fetchSignedIn } from "./remote";
-
-/** The session's context: the one mapping of the domain (audit USR-3). */
-export { buildCtx as ctxFrom };
+import type { Preferences } from "./signed-in";
 
 /**
  * The signed-in user of this render, cached per request: the server's process reads it
@@ -28,23 +24,8 @@ const getSignedIn = cache(async () =>
  */
 export const getOptionalCtx = cache(async (): Promise<Ctx | null> => {
   const signedIn = await getSignedIn();
-  return signedIn && !signedIn.setupPending ? buildCtx(signedIn.user, signedIn.preferences) : null;
+  return signedIn && !signedIn.setupPending ? signedIn.ctx : null;
 });
-
-/**
- * The signed-in user's context with the id of the session they hold, or null. For the one flow
- * that leaves the app and comes back (an access to a bank): what comes back must have left from
- * this very session, so the id is what the flow is tied to. The id never goes to a browser.
- *
- * shortcut: reads the database itself; its last caller (`banks/connect/actions.ts`) moves to
- * `/api/v1` before the web runs without a database (R3-coda), and this goes with it.
- */
-export async function getOptionalSession(): Promise<{ ctx: Ctx; sessionId: string } | null> {
-  const ctx = await getOptionalCtx();
-  if (!ctx) return null;
-  const session = await (await getAuth()).api.getSession({ headers: await headers() });
-  return session ? { ctx, sessionId: session.session.id } : null;
-}
 
 /** The person on the TOTP setup page: signed in, with the setup still to do. */
 export async function requireTwoFactorSetup(): Promise<{ email: string; preferences: Preferences }> {
