@@ -41,7 +41,8 @@
   "nav": {
     "primary": "Primary",
     "groups": {
-      "finance": "Finance",
+      "everyday": "Everyday",
+      "savings": "Savings and investments",
       "work": "Work",
       "system": "System"
     },

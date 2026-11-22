@@ -23,7 +23,8 @@ export function useShellLabels() {
       product: text("common.product"),
       primary: text("nav.primary"),
       groups: {
-        finance: text("nav.groups.finance"),
+        everyday: text("nav.groups.everyday"),
+        savings: text("nav.groups.savings"),
         work: text("nav.groups.work"),
         system: text("nav.groups.system"),
       },

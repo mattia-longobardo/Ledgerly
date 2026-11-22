@@ -19,7 +19,7 @@ vi.mock("../router", async (original) => ({
 // "/components" and "/settings/profile" are not yet real routes (Tasks 18-19 add their pages), so
 // typed routes only accept them through the cast — same pattern as `sidebar.tsx`'s `/sign-in` push.
 const LINKS: NavLink[] = [
-  { id: "overview", href: "/", label: "Overview", icon: "overview", group: "finance", mobile: true },
+  { id: "overview", href: "/", label: "Overview", icon: "overview", group: "everyday", mobile: true },
   {
     id: "components",
     href: "/components",
@@ -41,7 +41,7 @@ const LINKS: NavLink[] = [
 const LABELS = {
   product: "Ledgerly",
   primary: "Primary",
-  groups: { finance: "Finance", work: "Work", system: "System" },
+  groups: { everyday: "Everyday", savings: "Savings and investments", work: "Work", system: "System" },
   toggleSidebar: "Toggle sidebar",
   search: "Search or jump to…",
   toggleTheme: "Toggle theme",

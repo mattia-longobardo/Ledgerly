@@ -41,7 +41,8 @@
   "nav": {
     "primary": "Principale",
     "groups": {
-      "finance": "Finanza",
+      "everyday": "Ogni giorno",
+      "savings": "Risparmi e investimenti",
       "work": "Lavoro",
       "system": "Sistema"
     },

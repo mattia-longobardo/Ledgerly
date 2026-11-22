@@ -11,7 +11,7 @@ import { ThemeToggle } from "./theme-toggle";
 const LABELS = {
   product: "Ledgerly",
   primary: "Primary",
-  groups: { finance: "Finance", work: "Work", system: "System" },
+  groups: { everyday: "Everyday", savings: "Savings and investments", work: "Work", system: "System" },
   toggleSidebar: "Toggle sidebar",
   search: "Search or jump to…",
   toggleTheme: "Toggle theme",

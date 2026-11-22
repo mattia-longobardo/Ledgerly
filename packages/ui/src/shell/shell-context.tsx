@@ -11,7 +11,7 @@ const WIDE_QUERY = "(min-width: 1280px)";
 interface ShellLabels {
   product: string;
   primary: string;
-  groups: { finance: string; work: string; system: string };
+  groups: { everyday: string; savings: string; work: string; system: string };
   toggleSidebar: string;
   search: string;
   toggleTheme: string;

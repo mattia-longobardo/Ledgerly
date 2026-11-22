@@ -17,9 +17,12 @@ export interface NavLink {
   href: string;
   label: string;
   icon: IconName;
-  group: "finance" | "work" | "system" | "footer";
+  group: "everyday" | "savings" | "work" | "system" | "footer";
   mobile: boolean;
 }
 
-/** The groups of the menu, in order (audit UI-NAV-4); the footer's items are drawn apart, under them. */
-export const NAV_GROUPS = ["finance", "work", "system"] as const;
+/**
+ * The groups of the menu, in order (audit UI-NAV-4; decision D2: «Ogni giorno», «Risparmi e investimenti»,
+ * «Lavoro»); the footer's items are drawn apart, under them.
+ */
+export const NAV_GROUPS = ["everyday", "savings", "work", "system"] as const;

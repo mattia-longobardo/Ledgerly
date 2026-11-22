@@ -2,6 +2,13 @@ import type { Route } from "next";
 import type { Role } from "@ledgerly/domain/platform/context";
 import type { NavLink } from "@ledgerly/ui/shell/nav-types";
 
+/**
+ * The addons of the plan (13-plugins-addons.md §13.3): the parts of the product a person can turn off.
+ * shortcut: a copy of the list until step a of R5a puts `AddonId` in `packages/domain`; then import it.
+ */
+export type Addon =
+  "investments" | "funds" | "payroll" | "timeoff" | "budgets" | "subscriptions" | "pockets" | "interests";
+
 interface NavItem extends Omit<NavLink, "label"> {
   labelKey:
     | "overview"
@@ -17,123 +24,55 @@ interface NavItem extends Omit<NavLink, "label"> {
     | "timeoff"
     | "settings";
   adminOnly: boolean;
+  /** The addon the item belongs to; `null` for a base module, which is never off (PA9). */
+  addon: Addon | null;
 }
 
-/** The single navigation list: sidebar, mobile tabs and command palette all derive from it. */
+/** The tabs of the phone (decision D2d); the bar's fifth cell is More. */
+const MOBILE_TABS: readonly string[] = ["overview", "accounts", "expenses", "investments"];
+
+const item = (
+  id: NavItem["labelKey"],
+  href: string,
+  group: NavItem["group"],
+  addon: Addon | null,
+): NavItem => ({
+  id,
+  href: href as Route,
+  labelKey: id,
+  icon: id,
+  group,
+  mobile: MOBILE_TABS.includes(id),
+  adminOnly: false,
+  addon,
+});
+
+/** The single navigation list: sidebar, mobile tabs and command palette all derive from it (groups: D2). */
 const NAV_ITEMS: readonly NavItem[] = [
-  {
-    id: "overview",
-    href: "/" as Route,
-    labelKey: "overview",
-    icon: "overview",
-    group: "finance",
-    mobile: true,
-    adminOnly: false,
-  },
-  {
-    id: "accounts",
-    href: "/accounts" as Route,
-    labelKey: "accounts",
-    icon: "accounts",
-    group: "finance",
-    mobile: true,
-    adminOnly: false,
-  },
-  {
-    id: "expenses",
-    href: "/expenses" as Route,
-    labelKey: "expenses",
-    icon: "expenses",
-    group: "finance",
-    mobile: true,
-    adminOnly: false,
-  },
-  {
-    id: "budgets",
-    href: "/budgets" as Route,
-    labelKey: "budgets",
-    icon: "budgets",
-    group: "finance",
-    mobile: false,
-    adminOnly: false,
-  },
-  {
-    id: "funds",
-    href: "/funds" as Route,
-    labelKey: "funds",
-    icon: "funds",
-    group: "finance",
-    mobile: false,
-    adminOnly: false,
-  },
-  {
-    id: "investments",
-    href: "/investments" as Route,
-    labelKey: "investments",
-    icon: "investments",
-    group: "finance",
-    mobile: false,
-    adminOnly: false,
-  },
-  {
-    id: "interests",
-    href: "/interests" as Route,
-    labelKey: "interests",
-    icon: "interests",
-    group: "finance",
-    mobile: false,
-    adminOnly: false,
-  },
-  {
-    id: "pockets",
-    href: "/pockets" as Route,
-    labelKey: "pockets",
-    icon: "pockets",
-    group: "finance",
-    mobile: false,
-    adminOnly: false,
-  },
-  {
-    id: "subscriptions",
-    href: "/subscriptions" as Route,
-    labelKey: "subscriptions",
-    icon: "subscriptions",
-    group: "finance",
-    mobile: false,
-    adminOnly: false,
-  },
-  {
-    id: "payroll",
-    href: "/payroll" as Route,
-    labelKey: "payroll",
-    icon: "payroll",
-    group: "work",
-    mobile: true,
-    adminOnly: false,
-  },
-  {
-    id: "timeoff",
-    href: "/timeoff" as Route,
-    labelKey: "timeoff",
-    icon: "timeoff",
-    group: "work",
-    // Not a tab: the bar's fifth cell is More, and a fifth tab pushed it into a clipped row.
-    mobile: false,
-    adminOnly: false,
-  },
-  {
-    id: "settings",
-    href: "/settings/profile" as Route,
-    labelKey: "settings",
-    icon: "settings",
-    group: "footer",
-    mobile: false,
-    adminOnly: false,
-  },
+  item("overview", "/", "everyday", null),
+  item("accounts", "/accounts", "everyday", null),
+  item("expenses", "/expenses", "everyday", null),
+  item("budgets", "/budgets", "everyday", "budgets"),
+  item("subscriptions", "/subscriptions", "everyday", "subscriptions"),
+  item("investments", "/investments", "savings", "investments"),
+  item("funds", "/funds", "savings", "funds"),
+  item("pockets", "/pockets", "savings", "pockets"),
+  item("interests", "/interests", "savings", "interests"),
+  item("payroll", "/payroll", "work", "payroll"),
+  item("timeoff", "/timeoff", "work", "timeoff"),
+  item("settings", "/settings/profile", "footer", null),
 ];
 
-export function navFor(role: Role): NavItem[] {
-  return NAV_ITEMS.filter((item) => !item.adminOnly || role === "admin");
+/**
+ * The one place where the menu leaves out what the person has turned off (PA10). `addons` is the
+ * session's list once step a of R5a gives it; until then every addon is on, as for every person today.
+ */
+export function isOn(addon: Addon | null, addons?: readonly Addon[]): boolean {
+  return addon === null || addons === undefined || addons.includes(addon);
+}
+
+export function navFor(role: Role, addons?: readonly Addon[]): NavItem[] {
+  return NAV_ITEMS.filter((entry) => (!entry.adminOnly || role === "admin") && isOn(entry.addon, addons));
 }
 
 type SettingsTabId =
