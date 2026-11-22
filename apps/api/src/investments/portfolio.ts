@@ -35,6 +35,7 @@ function heldAccounts(rows: ViewRows): HeldAccount[] {
     accountId: row.account.id,
     name: row.account.name,
     currency: row.account.currency,
+    type: row.account.type,
     valueCents: row.balance,
     displayCents: row.display.balance,
     counted:
@@ -50,13 +51,13 @@ const totalOut = (total: { total: Cents | null; partial: boolean; count: number 
 
 /**
  * Overview's two groups of «Investments» (`GET /net-worth`): its accounts split as the home of
- * Investments splits them, and the group of each account it counts.
+ * Investments splits them, by type, and the group of each account it counts. No read of its own: the
+ * route keeps its queries (gate G9).
  */
-export async function overviewGroups(ctx: Pick<Ctx, "userId">, rows: ViewRows) {
-  const counted = portfolioRows(heldAccounts(rows), {
-    services: new Map(),
-    funds: await fundsByAccount(ctx),
-  }).filter((row) => row.counted);
+export function overviewGroups(rows: ViewRows) {
+  const counted = portfolioRows(heldAccounts(rows), { services: new Map(), funds: new Map() }).filter(
+    (row) => row.counted,
+  );
   return {
     groups: groupTotals(counted).map((one) => ({ id: one.group, ...totalOut(one) })),
     groupOf: new Map<string, PortfolioGroup>(counted.map((row) => [row.accountId, row.group])),

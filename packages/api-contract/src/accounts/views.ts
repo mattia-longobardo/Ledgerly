@@ -56,8 +56,9 @@ const viewRow = z.object({
   /** The service of Investments a provider feeds, and its last reading: what «Last synced» shows first. */
   service: z.object({ provider: z.string(), lastSyncedAt: instant().nullable() }).nullable(),
   /**
-   * The group of Investments the account is in (R5b, decision O1): `pension_funds` for a fund's
-   * account, `stocks_crypto` for the other accounts of the «investments» bucket; null outside it.
+   * The group of Investments the account is in (R5b, decision O1), by its type: `pension_funds` for a
+   * `pension` account (a fund's account is one), `stocks_crypto` for the other accounts of the
+   * «investments» bucket; null outside it.
    */
   investmentGroup: z.enum(PORTFOLIO_GROUPS).nullable(),
 });

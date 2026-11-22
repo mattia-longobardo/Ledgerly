@@ -12,6 +12,7 @@ const held = (accountId: string, displayCents: bigint | null, counted = true): H
   accountId,
   name: `Account ${accountId}`,
   currency: "EUR",
+  type: accountId.startsWith("fund") ? "pension" : "investment",
   valueCents: displayCents,
   displayCents,
   counted,
@@ -69,6 +70,11 @@ describe("the rows of the portfolio", () => {
     const view = portfolioView(rows, { stocks_crypto: null, pension_funds: null });
     expect(view.total.valueCents).toBe(1550_00n);
     expect(view.groups.map((group) => group.kpis.valueCents)).toEqual([1250_00n, 300_00n]);
+  });
+
+  it("group an account by its type, as Overview does, whatever holds it", () => {
+    const rows = portfolioRows([{ ...held("kept", 20_00n), type: "pension" }], holders);
+    expect(rows.map((row) => [row.kind, row.group])).toEqual([["manual_portfolio", "pension_funds"]]);
   });
 
   it("leave out a group with no row", () => {

@@ -26,6 +26,8 @@ export interface HeldAccount {
   accountId: string;
   name: string;
   currency: string;
+  /** The account's type (`investment`, `crypto`, `pension`…): it alone gives the group. */
+  type: string;
   valueCents: Cents | null;
   displayCents: Cents | null;
   /** In Overview's «Investments» bucket today: what the totals add up. */
@@ -57,8 +59,13 @@ export interface PortfolioRow extends HeldAccount {
   fundId: string | null;
 }
 
-const groupOf = (kind: PortfolioKind): PortfolioGroup =>
-  kind === "pension_fund" ? "pension_funds" : "stocks_crypto";
+/**
+ * The group of an account, by its type as Overview's buckets are: a `pension` account — every fund's
+ * account is one — is in «Fondi pensione», the others in «Azioni e crypto». Overview reads no fund, so
+ * its two groups cost no query, and the home's subtotals are its own on the same rule.
+ */
+const groupOf = (account: { type: string }): PortfolioGroup =>
+  account.type === "pension" ? "pension_funds" : "stocks_crypto";
 
 /**
  * The rows: every account of Overview's bucket, and every service and open fund off it (shown, not
@@ -73,7 +80,7 @@ export function portfolioRows(accounts: readonly HeldAccount[], holders: Holders
       const service = holders.services.get(one.accountId);
       const kind: PortfolioKind =
         fund !== null ? "pension_fund" : service ? serviceKind(service) : "manual_portfolio";
-      return { ...one, name: fund?.name ?? one.name, kind, group: groupOf(kind), fundId: fund?.id ?? null };
+      return { ...one, name: fund?.name ?? one.name, kind, group: groupOf(one), fundId: fund?.id ?? null };
     });
 }
 

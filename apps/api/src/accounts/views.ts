@@ -33,13 +33,11 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
       through: query.through,
       includeArchived: query.includeArchived === "true",
     });
-    const [services, investments] = await Promise.all([
-      syncedServicesOf(
-        ctx,
-        view.rows.map((row) => row.account.id),
-      ),
-      overviewGroups(ctx, view.rows),
-    ]);
+    const services = await syncedServicesOf(
+      ctx,
+      view.rows.map((row) => row.account.id),
+    );
+    const investments = overviewGroups(view.rows);
     // Overview's «Year to date»: from the end of December before the year of the window's last month.
     const january = view.months.indexOf(`${(view.months.at(-1) ?? "").slice(0, 4)}-01-01`);
     return {
