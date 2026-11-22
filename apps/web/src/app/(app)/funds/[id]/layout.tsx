@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { isFundId } from "@ledgerly/domain/funds";
-import { FundError, requireFund } from "@ledgerly/domain/funds";
-import { requireSession } from "@/platform/auth/session";
+import { isFundId } from "@ledgerly/domain/funds/client";
+import { fundNameOf } from "./name";
 
 /** Above the page's skeleton, so another person's fund answers a real 404. */
 export default async function FundDetailLayout({
@@ -12,14 +11,8 @@ export default async function FundDetailLayout({
   children: ReactNode;
   params: Promise<{ id: string }>;
 }) {
-  const ctx = await requireSession();
   const { id } = await params;
   if (!isFundId(id)) notFound();
-  try {
-    await requireFund(ctx, id);
-  } catch (error) {
-    if (error instanceof FundError) notFound();
-    throw error;
-  }
+  await fundNameOf(id);
   return children;
 }

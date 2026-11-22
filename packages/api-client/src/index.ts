@@ -47,6 +47,15 @@ interface Wire {
   body?: unknown;
 }
 
+/**
+ * Where a call goes from a server, which has no page's origin and no cookie jar: the API's origin and
+ * the headers of the person it reads for (their session cookie).
+ */
+interface Transport {
+  origin: string;
+  headers?: Record<string, string>;
+}
+
 function urlOf(route: RouteContract, input: Wire): string {
   const path = route.path.replace(/\{(\w+)\}/g, (_match, name: string) => {
     const value = input.params?.[name];
@@ -111,16 +120,24 @@ async function refusalOf(response: Response): Promise<ApiError> {
 }
 
 /** Calls one route; throws `ApiError` on a refusal and when the answer is not the declared shape. */
-export function call<R extends RouteContract>(route: R, input: RouteInput<R>): Promise<RouteOutput<R>>;
-export async function call(route: RouteContract, input: unknown): Promise<unknown> {
+export function call<R extends RouteContract>(
+  route: R,
+  input: RouteInput<R>,
+  transport?: Transport,
+): Promise<RouteOutput<R>>;
+export async function call(
+  route: RouteContract,
+  input: unknown,
+  transport: Transport = { origin: "" },
+): Promise<unknown> {
   const wire = wireOf(input);
   const write = route.method !== "GET";
-  const headers: Record<string, string> = { accept: "application/json" };
+  const headers: Record<string, string> = { ...transport.headers, accept: "application/json" };
   if (write) headers[SESSION_CSRF_HEADER] = "1";
   const multipart = route.bodyFormat === "multipart" && isRecord(wire.body);
   // A form sets its own content type, with the boundary of its parts.
   if (wire.body !== undefined && !multipart) headers["content-type"] = "application/json";
-  const response = await fetch(urlOf(route, wire), {
+  const response = await fetch(`${transport.origin}${urlOf(route, wire)}`, {
     method: route.method,
     headers,
     credentials: "same-origin",

@@ -33,6 +33,15 @@ describe("call", () => {
     expect(init?.headers).not.toHaveProperty("x-ledgerly-csrf");
   });
 
+  it("reads from a server: the API's origin and the person's cookie", async () => {
+    const fetcher = answer(200, PROFILE);
+    const transport = { origin: "http://api.internal:3000", headers: { cookie: "session=abc" } };
+    await call(profile.getProfile, {}, transport);
+    const [url, init] = fetcher.mock.calls[0] ?? [];
+    expect(url).toBe("http://api.internal:3000/api/v1/profile");
+    expect(init?.headers).toMatchObject({ cookie: "session=abc", accept: "application/json" });
+  });
+
   it("writes with the header that proves the app sent it, and a JSON body", async () => {
     const fetcher = answer(200, { ...PROFILE, name: "Alex Sample" });
     await call(profile.updateProfile, { body: { name: "Alex Sample" } });

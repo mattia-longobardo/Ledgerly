@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
-import { FundError, requireFund } from "@ledgerly/domain/funds";
 import { isFundId, isFutureYear, legacyFundQuery } from "@ledgerly/domain/funds/client";
 import type { Query } from "@ledgerly/domain/investments";
 import { sectionPeriod } from "@ledgerly/domain/investments/client";
@@ -9,6 +8,7 @@ import { today } from "@ledgerly/domain/shared/dates";
 import { withParams } from "@ledgerly/ui/url";
 import { appRoute } from "@/platform/route";
 import { FundScreen } from "@/modules/funds/client";
+import { fundNameOf } from "./name";
 
 const HOME = "/funds";
 /** The tabs of a fund: the same four for every fund. */
@@ -16,17 +16,11 @@ const TABS = ["overview", "contributions", "valuations", "settings"] as const;
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 
-/** The fund's name as the title: a necessary read of the server, with the 404 of the layout. */
+/** The fund's name as the title, with the 404 of the layout. */
 export async function generateMetadata({ params }: PageProps<"/funds/[id]">): Promise<Metadata> {
-  const ctx = await requireSession();
   const { id } = await params;
   if (!isFundId(id)) notFound();
-  try {
-    return { title: (await requireFund(ctx, id)).name };
-  } catch (error) {
-    if (error instanceof FundError) notFound();
-    throw error;
-  }
+  return { title: await fundNameOf(id) };
 }
 
 /**
@@ -43,7 +37,7 @@ export async function generateMetadata({ params }: PageProps<"/funds/[id]">): Pr
 export default async function FundDetailPage({ params, searchParams }: PageProps<"/funds/[id]">) {
   const ctx = await requireSession();
   const { id } = await params;
-  // The layout answers 404 too, but this page starts beside it: the database never sees such an id.
+  // The layout answers 404 too, but this page starts beside it: the API never sees such an id.
   if (!isFundId(id)) notFound();
   const query = (await searchParams) as Query;
   const todayOn = today(ctx.timeZone);

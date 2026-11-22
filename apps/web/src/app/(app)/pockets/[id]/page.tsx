@@ -1,21 +1,19 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { pocketBalances } from "@ledgerly/domain/pockets";
-import { requireSession } from "@/platform/auth/session";
+import { pockets as pocketRoutes } from "@ledgerly/api-contract/pockets";
+import { apiRead } from "@/platform/api-read";
 import { PocketScreen } from "./pocket-screen";
 
 /**
- * The name of an open pocket, or 404: the title and the status of the answer, which only a server read
- * can give before the page is drawn. M10: a necessary server read, as on an account's and a budget's
- * page (decision A); everything the page shows comes from `/api/v1`. `pocketBalances` reads the
- * ledger only, not the page's view; `cache` shares it between the title and the page.
+ * The name of an open pocket, or 404: the title and the status of the answer, which only the server
+ * can give before the page is drawn. It asks `/api/v1` (`apiRead`); `cache` shares the read between
+ * the title and the page. Everything the page shows comes from the screen.
  */
 const nameOf = cache(async (id: string): Promise<string> => {
-  const ctx = await requireSession();
-  const open = (await pocketBalances(ctx)).find((row) => row.pocket.id === id);
-  if (!open) notFound();
-  return open.pocket.name;
+  const page = await apiRead(pocketRoutes.getPocket, { params: { id } });
+  if (!page) notFound();
+  return page.pocket.name;
 });
 
 export async function generateMetadata({ params }: PageProps<"/pockets/[id]">): Promise<Metadata> {
