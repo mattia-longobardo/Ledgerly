@@ -1,9 +1,10 @@
 "use client";
 
-// Settings › Profile, read from `/api/v1` (rewrite plan R3): the person's name and their preferences.
+// Settings › Profile, read from `/api/v1` (rewrite plan R3): the person's name, preferences and country.
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
+import { ONBOARDING } from "@ledgerly/api-contract";
 import { profile } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { DISPLAY_CURRENCIES } from "@ledgerly/domain/platform/fx/client";
@@ -11,6 +12,7 @@ import type { Preferences } from "@ledgerly/domain/users/client";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
+import { CountryForm } from "./country-form";
 import { HideAmountsSwitch } from "./hide-amounts";
 import { NameForm } from "./name-form";
 import { PreferencesForm } from "./preferences-form";
@@ -42,6 +44,7 @@ export function ProfileScreen() {
   const person = useApi(profile.getProfile, {});
   const preferences = useApi(profile.getPreferences, {});
   const options = useApi(profile.getProfileOptions, {});
+  const onboarding = useApi(ONBOARDING.getOnboarding, {});
   useRedrawOnChange(preferences.data);
   useRedrawOnChange(person.data);
 
@@ -78,6 +81,11 @@ export function ProfileScreen() {
               </p>
             );
           }}
+        </Loaded>
+      </SettingsSection>
+      <SettingsSection title={text("country.title")} description={text("country.description")}>
+        <Loaded state={onboarding}>
+          {({ country }) => <CountryForm key={country ?? ""} initial={country} />}
         </Loaded>
       </SettingsSection>
       <SettingsSection title={text("privacy.title")} description={text("privacy.description")}>

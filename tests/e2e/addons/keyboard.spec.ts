@@ -3,6 +3,7 @@
 import { expect, test } from "@playwright/test";
 import { dialogHasFocus, focusIsVisible, focusOn } from "../_shared/keyboard";
 import { sessionState } from "../_shared/env";
+import { hydrated } from "../_shared/helpers";
 
 test.use({ storageState: sessionState("layout") });
 
@@ -40,5 +41,37 @@ test.describe("«To do»", () => {
     const href = await first.getAttribute("href");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(href ?? "/");
+  });
+});
+
+test.describe("the first start", () => {
+  // `welcome` keeps the first start ahead of it: the check never ends it.
+  test.use({ storageState: sessionState("welcome") });
+
+  test("its fields and its addons are reached with Tab, and each step puts the focus on its title", async ({
+    page,
+  }) => {
+    await page.route("**/api/v1/onboarding", (route) =>
+      route.request().method() === "POST"
+        ? route.fulfill({ json: { pending: false, country: null, proposal: null } })
+        : route.fallback(),
+    );
+    await page.goto("/welcome");
+    const country = page.getByLabel("Country", { exact: true });
+    await hydrated(country);
+    await focusOn(country);
+    expect(await focusIsVisible(page)).toBe(true);
+    await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Display currency")).toBeFocused();
+    await focusOn(page.getByRole("button", { name: "Continue" }));
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("heading", { level: 1, name: "Addons" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("checkbox", { name: "Investments" })).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(page.getByRole("checkbox", { name: "Investments" })).toBeChecked();
+    await focusOn(page.getByRole("button", { name: "Continue" }));
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("heading", { level: 1, name: "Your first account" })).toBeFocused();
   });
 });

@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, type ReactNode, useState, useTransition } from "react";
 import { Button, ButtonLink } from "@ledgerly/ui/button";
 import { CardFooter } from "@ledgerly/ui/card";
 import { Field } from "@ledgerly/ui/field";
@@ -30,21 +30,39 @@ import { Loaded } from "@ledgerly/ui/loaded";
  * account takes — last among the open ones, the list the Accounts page colours by — so its colour
  * preview is the one it will really have.
  */
-export function NewAccountForm() {
+export function NewAccountForm({ onCreated, cancel }: Outlet = {}) {
   const preferences = useApi(profile.getPreferences, {});
   const open = useApi(accountRoutes.listAccounts, {});
   return (
     <Loaded state={preferences}>
       {(prefs) => (
         <Loaded state={open}>
-          {({ accounts }) => <AccountForm today={today(prefs.timeZone)} index={accounts.length} />}
+          {({ accounts }) => (
+            <AccountForm
+              today={today(prefs.timeZone)}
+              index={accounts.length}
+              onCreated={onCreated}
+              cancel={cancel}
+            />
+          )}
         </Loaded>
       )}
     </Loaded>
   );
 }
 
-function AccountForm({ today: todayOn, index }: { today: string; index: number }) {
+/** Where the form leads: the new account's page and back to Accounts, unless a caller says otherwise (the first start). */
+interface Outlet {
+  onCreated?: (id: string) => void;
+  cancel?: ReactNode;
+}
+
+function AccountForm({
+  today: todayOn,
+  index,
+  onCreated,
+  cancel,
+}: { today: string; index: number } & Outlet) {
   const t = useTranslations("accounts.new");
   const types = useTranslations("accounts.types");
   const settings = useTranslations("accounts.settings");
@@ -87,7 +105,8 @@ function AccountForm({ today: todayOn, index }: { today: string; index: number }
           );
           return;
         }
-        router.push(`/accounts/${result.id}` as Route);
+        if (onCreated) onCreated(result.id);
+        else router.push(`/accounts/${result.id}` as Route);
       } catch {
         setError(t("errors.failed"));
       }
@@ -162,9 +181,11 @@ function AccountForm({ today: todayOn, index }: { today: string; index: number }
         <Input id="balanceOn" name="balanceOn" type="date" max={todayOn} defaultValue={todayOn} />
       </Field>
       <CardFooter>
-        <ButtonLink href="/accounts" size="sm">
-          {common("cancel")}
-        </ButtonLink>
+        {cancel ?? (
+          <ButtonLink href="/accounts" size="sm">
+            {common("cancel")}
+          </ButtonLink>
+        )}
         <Button type="submit" variant="primary" size="sm" disabled={pending}>
           {t("submit")}
         </Button>

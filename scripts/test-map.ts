@@ -85,7 +85,7 @@ export const FLOWS: Flow[] = [
   { id: "admin", specs: ["admin"], screens: ["a11y"] },
   { id: "api", specs: ["security", "mcp"] },
   { id: "shell", specs: ["install", "legal"], screens: CROSS_CUTTING },
-  { id: "addons", specs: ["addons", "hide-amounts"], screens: ["a11y", "keyboard"] },
+  { id: "addons", specs: ["addons", "hide-amounts", "welcome"], screens: ["a11y", "keyboard"] },
   // Every screen of every flow: the common interface, or an engine of the checks, changed.
   { id: "screens", specs: [] },
 ];
@@ -124,6 +124,7 @@ export const MODULES: Module[] = [
     ],
     flows: ["accounts"],
     usedBy: [
+      "e2e:addons",
       "transactions",
       "budgets",
       "funds",
@@ -561,6 +562,7 @@ export const MODULES: Module[] = [
       "e2e:funds",
       "e2e:admin",
       "e2e:auth",
+      "e2e:addons",
     ],
   },
   {
@@ -643,7 +645,8 @@ export const MODULES: Module[] = [
     flows: ["shell"],
     usedBy: ["e2e:addons"],
   },
-  // R5a and R5e: the Addons, what turns an addon's pages off, «To do», Alerts and «Hide amounts».
+  // R5a and R5e: the Addons, what turns an addon's pages off, «To do», Alerts, «Hide amounts», the
+  // first start and the person's country.
   {
     id: "addons",
     files: [
@@ -654,9 +657,12 @@ export const MODULES: Module[] = [
       "apps/web/src/app/(app)/todo-card*",
       "apps/web/src/app/(app)/settings/profile/hide-amounts*",
       "packages/ui/src/hidden-amounts*",
+      "apps/web/src/app/(start)/**",
+      "apps/web/src/app/(app)/settings/profile/country-form*",
+      "apps/web/src/platform/country*",
     ],
     flows: ["addons"],
-    usedBy: ["e2e:screens"],
+    usedBy: ["e2e:screens", "e2e:interests"],
   },
   { id: "perf", files: ["scripts/perf-*", "baselines/performance.json"], usedBy: ["perf"] },
   // The seed gives every flow its users and its data. Each release adds a user for its own flow:
@@ -849,6 +855,7 @@ export const MESSAGES: Record<string, string> = {
   auth: "users",
   legal: "shell",
   notifications: "addons",
+  welcome: "addons",
   // What every screen shows is the common interface.
   common: "interface",
   unsaved: "interface",
@@ -890,6 +897,7 @@ export const MESSAGES: Record<string, string> = {
   "settings.addons": "addons",
   "settings.notifications": "addons",
   "settings.privacy": "addons",
+  "settings.country": "addons",
   "emails.invitation": "users",
   "emails.passwordReset": "users",
   "emails.test": "admin",

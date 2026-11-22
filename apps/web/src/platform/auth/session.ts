@@ -42,6 +42,11 @@ export async function signedInDestination(): Promise<Route | null> {
   return (signedIn.setupPending ? TWO_FACTOR_SETUP_PATH : "/") as Route;
 }
 
+/** Whether the first start is still ahead of the signed-in person (R5a): every page opens it first. */
+export async function onboardingPending(): Promise<boolean> {
+  return (await getSignedIn())?.onboarding === true;
+}
+
 /** The signed-in user's saved preferences (the root layout renders their theme), or null. */
 export async function getOptionalPreferences(): Promise<Preferences | null> {
   return (await getSignedIn())?.preferences ?? null;

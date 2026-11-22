@@ -1662,6 +1662,16 @@
         "reminder": "Promemoria",
         "report": "Riepilogo"
       }
+    },
+    "country": {
+      "title": "Paese",
+      "description": "Cosa ti propone Ledgerly, per esempio l'imposta sugli interessi. Il formato resta quello che hai scelto.",
+      "label": "Paese",
+      "hint": "Un paese senza regole proprie non propone nulla.",
+      "none": "Un altro paese",
+      "save": "Salva il paese",
+      "saved": "Paese salvato",
+      "failed": "Il paese non è stato salvato. Riprova."
     }
   },
   "errors": {
@@ -5966,5 +5976,32 @@
       "budget_threshold": "Un budget ha raggiunto il {percent}%",
       "monthly_summary": "Il riepilogo mensile è pronto"
     }
+  },
+  "welcome": {
+    "title": "Benvenuto in Ledgerly",
+    "step": "Passo {step} di {steps}",
+    "steps": {
+      "1": {
+        "title": "Paese e formato",
+        "description": "Il browser propone questi valori. Un paese con regole proprie propone il resto; puoi cambiare ogni campo."
+      },
+      "2": {
+        "title": "Addons",
+        "description": "Scegli le parti di Ledgerly che vuoi. Nessuna è attiva finché non la selezioni; puoi cambiarle poi in Impostazioni › Addons."
+      },
+      "3": {
+        "title": "Il primo conto",
+        "description": "Aggiungi il conto che usi di più. Puoi saltare questo passo e aggiungere i conti dopo."
+      }
+    },
+    "country": "Paese",
+    "countryHint": "Decide cosa propone Ledgerly, per esempio l'imposta sugli interessi.",
+    "noCountry": "Un altro paese",
+    "instanceDefaults": "Sei il primo admin: queste scelte diventano anche i default di questo server, da cui parte chi si registra dopo.",
+    "addons": "Addons",
+    "next": "Continua",
+    "back": "Indietro",
+    "skip": "Salta",
+    "failed": "Le scelte non sono state salvate. Riprova."
   }
 }

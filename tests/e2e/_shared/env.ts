@@ -112,6 +112,14 @@ export const USERS = {
   // a change every page of the user shows, so never on the user the screens are measured on.
   addons: { email: "addons@example.test", password: "addons-password-123", name: "Addons" },
   hidden: { email: "hidden@example.test", password: "hidden-password-123", name: "Hidden" },
+  // R5a: two people with the first start still ahead of them, as a sign-up leaves them: `welcome` for
+  // the screen checks, which never end it, and `welcomeJourney` for the journey that does.
+  welcome: { email: "welcome@example.test", password: "welcome-password-123", name: "Welcome" },
+  welcomeJourney: {
+    email: "welcome-journey@example.test",
+    password: "welcome-journey-password-123",
+    name: "Welcome Journey",
+  },
   // Release N2: one connection in each of the five states (ux/n2-connection-status.md §2), the
   // history, "Advanced" and more than one bank. Its own user: the `layout` user keeps the section
   // "Banks" on its guide, with nothing saved.
@@ -242,6 +250,9 @@ export const SESSIONS = {
   // R5a and R5e: Settings › Addons and «Hide amounts» (tests/e2e/addons/).
   addons: { user: "addons", file: "addons-session.json" },
   hidden: { user: "hidden", file: "hidden-session.json" },
+  // R5a: the first start (tests/e2e/welcome/).
+  welcome: { user: "welcome", file: "welcome-session.json" },
+  welcomeJourney: { user: "welcomeJourney", file: "welcome-journey-session.json" },
   // Release N2: the rows of the connections, in every state (tests/e2e/connections/connections.spec.ts).
   connections: { user: "connections", file: "connections-session.json" },
   // Release N3: the manual movement (tests/e2e/transactions/manual-movement.spec.ts).

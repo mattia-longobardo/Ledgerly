@@ -1662,6 +1662,16 @@
         "reminder": "Reminder",
         "report": "Report"
       }
+    },
+    "country": {
+      "title": "Country",
+      "description": "What Ledgerly proposes for you, such as the tax on interest. Your format stays as you chose it.",
+      "label": "Country",
+      "hint": "A country without its own rules proposes nothing.",
+      "none": "Another country",
+      "save": "Save country",
+      "saved": "Country saved",
+      "failed": "The country was not saved. Try again."
     }
   },
   "errors": {
@@ -5966,5 +5976,32 @@
       "budget_threshold": "A budget reached {percent}%",
       "monthly_summary": "The monthly summary is ready"
     }
+  },
+  "welcome": {
+    "title": "Welcome to Ledgerly",
+    "step": "Step {step} of {steps}",
+    "steps": {
+      "1": {
+        "title": "Country and format",
+        "description": "Your browser proposes these. A country with its own rules fills in the rest; you can change each field."
+      },
+      "2": {
+        "title": "Addons",
+        "description": "Choose the parts of Ledgerly you want. None is on until you tick it; you can change them later in Settings › Addons."
+      },
+      "3": {
+        "title": "Your first account",
+        "description": "Add the account you use most. You can skip this and add accounts later."
+      }
+    },
+    "country": "Country",
+    "countryHint": "It decides what Ledgerly proposes, such as the tax on interest.",
+    "noCountry": "Another country",
+    "instanceDefaults": "You are the first admin: these choices also become the defaults of this server, which people who sign up later start from.",
+    "addons": "Addons",
+    "next": "Continue",
+    "back": "Back",
+    "skip": "Skip",
+    "failed": "Your choices were not saved. Try again."
   }
 }

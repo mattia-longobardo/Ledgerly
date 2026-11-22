@@ -7,7 +7,7 @@
 // Both touch only users whose address ends in `@example.test`: the site's real users and their
 // data are never read or written here.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { and, eq, inArray, isNull, like } from "drizzle-orm";
+import { and, eq, inArray, isNull, like, notInArray } from "drizzle-orm";
 import { createAuth } from "@domain/platform/auth/auth";
 import { oauthClients } from "@domain/platform/auth/oauth/schema";
 import { rateLimits, users } from "@domain/platform/auth/schema";
@@ -108,7 +108,8 @@ await getDb()
 await getDb().update(users).set({ role: "admin" }).where(eq(users.email, USERS.admin.email));
 
 // A sign-up since R5a has the first start ahead of it, with every addon off: the journeys of the test
-// users are those of a person who already finished it with every addon on.
+// users are those of a person who already finished it with every addon on. The two users of the first
+// start keep it ahead of them, as the sign-up left them (tests/e2e/welcome/).
 await getDb()
   .update(userPreferences)
   .set({ onboardedAt: new Date(), modules: [...ADDONS] })
@@ -118,7 +119,12 @@ await getDb()
       getDb()
         .select({ id: users.id })
         .from(users)
-        .where(like(users.email, `%${TEST_EMAIL_DOMAIN}`)),
+        .where(
+          and(
+            like(users.email, `%${TEST_EMAIL_DOMAIN}`),
+            notInArray(users.email, [USERS.welcome.email, USERS.welcomeJourney.email]),
+          ),
+        ),
     ),
   );
 

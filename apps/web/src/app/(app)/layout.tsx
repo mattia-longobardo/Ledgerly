@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { requirePreferences, requireSession } from "@/platform/auth/session";
+import { onboardingPending, requirePreferences, requireSession } from "@/platform/auth/session";
 import type { NavLink } from "@ledgerly/ui/shell/nav-types";
 import { parseSidebar, SIDEBAR_COOKIE } from "@ledgerly/ui/shell/sidebar-state";
 import { AppShell } from "./app-shell";
@@ -11,10 +12,11 @@ import { paletteCommands } from "./palette-commands";
  * Every signed-in page. The layout keeps what only the server knows yet: the session's role (the
  * menu and the commands of the palette are a role's), the first day of the week (a context of the
  * server-drawn pages) and the sidebar's cookie; the shell reads the person and the palette's two
- * searches from `/api/v1`.
+ * searches from `/api/v1`. A person with the first start ahead of them (R5a) opens it before any page.
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
+  if (await onboardingPending()) redirect("/welcome");
   const [text, { weekStart, hideAmounts }] = await Promise.all([getTranslations(), requirePreferences()]);
   const links: NavLink[] = navFor(ctx.role, ctx.addons).map(
     ({ id, href, icon, group, mobile, labelKey }) => ({
