@@ -8,10 +8,16 @@ import { join } from "node:path";
 
 /** Every file "use server" outside the tests, with the names of the actions it exports. */
 export function serverActions(repo: string): Record<string, string[]> {
-  const listed = execFileSync("git", ["grep", "-l", '^"use server"', "--", "apps", "packages"], {
-    cwd: repo,
-    encoding: "utf8",
-  });
+  let listed = "";
+  try {
+    listed = execFileSync("git", ["grep", "-l", '^"use server"', "--", "apps", "packages"], {
+      cwd: repo,
+      encoding: "utf8",
+    });
+  } catch (error) {
+    // `git grep` exits with 1 when nothing matches: no file "use server" is left.
+    if ((error as { status?: number }).status !== 1) throw error;
+  }
   const found: Record<string, string[]> = {};
   for (const file of listed
     .split("\n")

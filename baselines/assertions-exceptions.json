@@ -758,5 +758,15 @@
     "file": "apps/web/src/app/(auth)/actions.test.ts",
     "decision": "R3",
     "reason": "The Server Action `acceptInviteAction` is deleted with its test: the form calls `POST /api/invite/{token}/accept`, whose test (`app/api/invite/[token]/accept/route.test.ts`) holds the same cases of the same use case"
+  },
+  {
+    "file": "apps/web/src/app/(app)/settings/integrations/core-parity.itest.ts",
+    "decision": "R5 (PERS-551)",
+    "reason": "The Server Actions of the Wallet and Trek cards are deleted: the cards call the generic routes of a connection. This test held each old action equal to its route before the deletion (green at ebfc2562); the routes keep their own tests in platform/api"
+  },
+  {
+    "file": "apps/web/src/app/(app)/settings/integrations/wallet-card.test.tsx",
+    "decision": "R5 (PERS-551)",
+    "reason": "The card calls `core-calls.ts` instead of the Server Actions: the mocks map the new calls onto the same spies (the token, the accounts chosen), and the card gets the provider's id and the connection's id as props. No expected value changed"
   }
 ]

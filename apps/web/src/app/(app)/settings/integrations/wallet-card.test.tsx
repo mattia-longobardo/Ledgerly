@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../../messages/en.json";
-import type { IntegrationActionResult } from "./actions";
+import type { IntegrationActionResult } from "./core-calls";
 import type { ConnectionRowProps } from "./connection-row";
 import { WalletAccounts, WalletCard, type WalletCardProps } from "./wallet-card";
 
@@ -13,11 +13,12 @@ const listChoice = vi.fn();
 const saveChoice = vi.fn();
 const rowAction = vi.fn();
 
-vi.mock("./actions", () => ({
-  connectWalletAction: (...args: unknown[]) => connect(...args),
-  disconnectWalletAction: (...args: unknown[]) => disconnect(...args),
-  walletAccountsAction: (...args: unknown[]) => listChoice(...args),
-  chooseWalletAccountsAction: (...args: unknown[]) => saveChoice(...args),
+// The card's calls, as the old actions were called: the token, the accounts chosen.
+vi.mock("./core-calls", () => ({
+  connectCore: (_provider: string, credentials: { token: string }) => connect(credentials.token),
+  disconnectCore: () => disconnect(),
+  coreAccounts: () => listChoice(),
+  chooseCoreAccounts: (_id: string, _all: string[], chosen: Set<string>) => saveChoice([...chosen]),
 }));
 vi.mock("./connection-calls", async (original) => ({
   ...(await original<object>()),
@@ -90,6 +91,7 @@ function renderCard(connected = true) {
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
       <WalletCard
         row={connected ? LIVE : ABSENT}
+        provider="wallet"
         connected={connected}
         leave={{ accounts: 2, excluded: 1 }}
         deactivateHref="/settings/integrations/wallet#deactivate"
@@ -231,7 +233,7 @@ describe("WalletAccounts", () => {
     saveChoice.mockResolvedValueOnce({ ok: true });
     render(
       <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-        <WalletAccounts />
+        <WalletAccounts connectionId="c1" />
       </NextIntlClientProvider>,
     );
     // The list is read only when asked for: the page never calls the source by itself.

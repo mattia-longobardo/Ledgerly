@@ -4,8 +4,6 @@
 import { connections } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate, read } from "@ledgerly/ui/data";
-import { coreConnectionAction } from "./actions";
-import { answered } from "./connection-codes";
 
 const KINDS = ["update", "resume", "enable", "test", "history"] as const;
 type ConnectionKind = (typeof KINDS)[number];
@@ -26,20 +24,6 @@ function send(connectionId: string, kind: ConnectionKind, months: number | undef
   return call(connections.testConnection, { params });
 }
 
-/** The refusal of a route, or of the card of a provider of the core ("test" and "history" until R5c). */
-async function refusalOf(
-  error: unknown,
-  provider: string,
-  kind: ConnectionKind,
-  months: number | undefined,
-): Promise<string | null> {
-  if (!(error instanceof ApiError)) throw error;
-  if (error.reason !== "core_provider" || (kind !== "test" && kind !== "history"))
-    return error.reason ?? "failed";
-  const code = answered(await coreConnectionAction(provider, kind, months));
-  return code === "notActive" ? "not_active" : code;
-}
-
 /** Does one thing to one of the person's connections; another person's id is not found. */
 export async function runConnectionCall(
   connectionId: string,
@@ -56,7 +40,8 @@ export async function runConnectionCall(
   try {
     await send(connectionId, kind, months);
   } catch (error) {
-    refusal = await refusalOf(error, connection.provider, kind, months);
+    if (!(error instanceof ApiError)) throw error;
+    refusal = error.reason ?? "failed";
   }
   if (kind !== "update") invalidate(connections.listConnections);
   return refusal === null ? { ok: true, names } : { ok: false, refusal, names };

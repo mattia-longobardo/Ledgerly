@@ -8,7 +8,7 @@ import { Button } from "@ledgerly/ui/button";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import type { DeactivationCounts } from "./deactivate";
-import { deactivateSourceAction, deactivationCountsAction } from "./deactivate-actions";
+import { deactivateSourceAction, deactivationCountsAction } from "./deactivate-calls";
 
 /**
  * The end of a source's page (plugin-settings.md §2.2, §3.3): what "Turn off" does, and the button.

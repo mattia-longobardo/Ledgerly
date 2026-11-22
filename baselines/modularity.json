@@ -8,7 +8,7 @@
     "platformToModuleImports": 64,
     "platformFilesImportingModules": 22,
     "uiToPlatformImports": 1,
-    "forbiddenNameFiles": 81,
+    "forbiddenNameFiles": 80,
     "forbiddenNameKeys": 11,
     "packageDependencies": 16,
     "packageEscapes": 14,
@@ -142,8 +142,6 @@
   "moduleCycles": [],
   "forbiddenNames": [
     "app/(app)/settings/categories/delete-dialog.tsx: wallet",
-    "app/(app)/settings/integrations/actions.ts: trek",
-    "app/(app)/settings/integrations/actions.ts: wallet",
     "app/(app)/settings/integrations/page.tsx: trek",
     "app/(app)/settings/integrations/page.tsx: wallet",
     "app/(app)/settings/integrations/trek-card.tsx: trek",

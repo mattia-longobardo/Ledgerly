@@ -216,6 +216,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       connection = (
         <WalletCard
           row={wallet.row}
+          provider={WALLET_PROVIDER}
           connected={wallet.connection !== null}
           leave={walletLeave}
           deactivateHref={deactivateHref}
@@ -226,7 +227,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       if (wallet.connection) {
         accountsSection = (
           <>
-            <WalletAccounts />
+            <WalletAccounts connectionId={wallet.connection.id} />
             <DeletedAccounts slug={source} rows={await deletedSourceAccounts(ctx, WALLET_PROVIDER)} />
           </>
         );
@@ -248,6 +249,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       connection = (
         <TrekCard
           row={trek.row}
+          provider={TREK_PROVIDER}
           connected={trek.connection !== null}
           pending={pending}
           deactivateHref={deactivateHref}

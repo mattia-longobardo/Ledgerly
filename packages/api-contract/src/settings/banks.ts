@@ -90,7 +90,7 @@ export const getSourceDeactivation = defineRoute({
   scope: "read",
   capability: "connections",
   summary: "What turning a source off changes, before it is turned off.",
-  actions: ["deactivationCountsAction"],
+  actions: [],
   params: bySource,
   response: z.object({
     accounts: z.number().int(),
@@ -113,7 +113,7 @@ export const deactivateSource = defineRoute({
   scope: "write",
   capability: "connections",
   summary: "Turns a source off after a last reading: its accounts are kept by hand from now.",
-  actions: ["deactivateSourceAction"],
+  actions: [],
   params: bySource,
   response: z.object({ accounts: z.number().int() }),
   errors: ["not_found", "conflict"],
@@ -128,7 +128,7 @@ export const resumeSourceAccount = defineRoute({
   capability: "connections",
   summary:
     "Brings back an account deleted here: the source may bring it again. A bank's account is chosen again on `reconnect`.",
-  actions: ["resumeSourceAccountAction"],
+  actions: [],
   params: z.object({ slug: bySource.shape.slug, externalId: z.string().min(1).max(200) }),
   response: z.object({
     /** The connection whose accounts are chosen again; null when the source reads it by itself. */

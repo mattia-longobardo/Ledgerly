@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { notify } from "@ledgerly/ui/toast";
-import { resumeSourceAccountAction } from "./deactivate-actions";
+import { resumeSourceAccountAction } from "./deactivate-calls";
 
 /**
  * The end of a source's "Accounts" section (plugin-settings.md §2.2, §3.4): the accounts deleted
@@ -30,12 +30,12 @@ export function DeletedAccounts({
     startTransition(async () => {
       try {
         const result = await resumeSourceAccountAction(slug, externalId);
-        if (!result.ok) {
-          setFailed(true);
-          return;
-        }
+        if (!result.ok) return setFailed(true);
         if (result.href !== null) router.push(result.href as Route);
-        else notify(t("accounts.resumed", { name }));
+        else {
+          notify(t("accounts.resumed", { name }));
+          router.refresh();
+        }
       } catch {
         setFailed(true);
       }

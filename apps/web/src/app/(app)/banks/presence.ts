@@ -2,7 +2,6 @@
 // (rewrite plan, 04-now.md §4.2: "Sync now" sends the `Psu-*` headers). The address is the one
 // the reverse proxy reports; the interface shows nothing of this.
 import "server-only";
-import { headers } from "next/headers";
 import { z } from "zod";
 import type { Presence } from "@ledgerly/plugin-host";
 
@@ -14,8 +13,4 @@ export function presenceOf(source: Pick<Headers, "get">): Presence {
     ip: address.safeParse(first).success ? first : null,
     userAgent: source.get("user-agent")?.slice(0, 400) ?? null,
   };
-}
-
-export async function requestPresence(): Promise<Presence> {
-  return presenceOf(await headers());
 }

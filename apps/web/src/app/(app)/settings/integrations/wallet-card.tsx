@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
@@ -8,12 +9,12 @@ import { Checkbox, Input } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import {
-  chooseWalletAccountsAction,
-  connectWalletAction,
-  disconnectWalletAction,
-  type WalletAccountRow,
-  walletAccountsAction,
-} from "./actions";
+  chooseCoreAccounts,
+  connectCore,
+  type CoreAccountRow,
+  coreAccounts,
+  disconnectCore,
+} from "./core-calls";
 import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink } from "./connection-row";
 
 /**
@@ -23,6 +24,8 @@ import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink
  */
 export interface WalletCardProps {
   row: ConnectionRowProps;
+  /** The provider's id, for its first credential: the row's id is the connection's once it exists. */
+  provider: string;
   connected: boolean;
   /** What "Disconnect" leaves: the accounts of Wallet here, and the ones left out. */
   leave: { accounts: number; excluded: number };
@@ -45,13 +48,15 @@ const FORM_ID = "wallet-token-form";
  * unmounts on close — so the secret is never in React state, never in a prop and never in the DOM
  * a moment longer than the dialog is open.
  */
-export function WalletCard({ row, connected, leave, deactivateHref }: WalletCardProps) {
+export function WalletCard({ row, provider, connected, leave, deactivateHref }: WalletCardProps) {
   const t = useTranslations("settings.integrations");
   const plugin = useTranslations("settings.plugin");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // The page draws the connection from its server render until it reads `/api/v1` itself.
+  const router = useRouter();
 
   /** An action's refusal code, spelled out one branch at a time so the catalogue keys stay literal. */
   function messageFor(code: string): string {
@@ -79,6 +84,7 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
         setError(null);
         setConnecting(false);
         setDisconnecting(false);
+        router.refresh();
         notify(
           result.back
             ? plugin("reactivate.back", { count: result.back, provider: t("providers.wallet.name") })
@@ -95,7 +101,7 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
     // Read, trimmed by the action, and dropped when this handler returns: the token is not kept
     // anywhere this component can render it.
     const token = String(new FormData(event.currentTarget).get("token") ?? "");
-    run(() => connectWalletAction(token), connected ? t("toasts.replaced") : t("toasts.connected"));
+    run(() => connectCore(provider, { token }), connected ? t("toasts.replaced") : t("toasts.connected"));
   }
 
   return (
@@ -177,7 +183,7 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
               disabled={pending}
               onClick={() =>
                 run(
-                  disconnectWalletAction,
+                  () => disconnectCore(row.id),
                   t("toasts.disconnected", { provider: t("providers.wallet.name") }),
                 )
               }
@@ -205,14 +211,16 @@ export function WalletCard({ row, connected, leave, deactivateHref }: WalletCard
  * Ledgerly. The list is Wallet's own, read when the person asks for it: the page never calls the
  * source by itself.
  */
-export function WalletAccounts() {
+export function WalletAccounts({ connectionId }: { connectionId: string }) {
   const t = useTranslations("settings.integrations");
   const plugin = useTranslations("settings.plugin");
   const [choosing, setChoosing] = useState(false);
-  const [choices, setChoices] = useState<WalletAccountRow[] | null>(null);
+  const [choices, setChoices] = useState<CoreAccountRow[] | null>(null);
   const [picked, setPicked] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // The page draws the connection from its server render until it reads `/api/v1` itself.
+  const router = useRouter();
 
   function messageFor(code: string): string {
     if (code === "rejected") return t("errors.rejected");
@@ -234,6 +242,7 @@ export function WalletAccounts() {
         setError(null);
         setChoosing(false);
         notify(success);
+        router.refresh();
       } catch {
         setError(t("errors.failed"));
       }
@@ -245,7 +254,7 @@ export function WalletAccounts() {
     setChoices(null);
     startTransition(async () => {
       try {
-        const result = await walletAccountsAction();
+        const result = await coreAccounts(connectionId);
         if (!result.ok) {
           setError(messageFor(result.error));
           return;
@@ -288,7 +297,17 @@ export function WalletAccounts() {
               variant="primary"
               size="sm"
               disabled={pending || choices === null}
-              onClick={() => run(() => chooseWalletAccountsAction([...picked]), t("toasts.chosen"))}
+              onClick={() =>
+                run(
+                  () =>
+                    chooseCoreAccounts(
+                      connectionId,
+                      (choices ?? []).map((one) => one.externalId),
+                      picked,
+                    ),
+                  t("toasts.chosen"),
+                )
+              }
             >
               {t("choose.save")}
             </Button>

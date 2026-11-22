@@ -1,13 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import { connectTrekAction, disconnectTrekAction } from "./actions";
+import { connectCore, disconnectCore } from "./core-calls";
 import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink } from "./connection-row";
 
 /**
@@ -18,6 +19,8 @@ import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink
  */
 interface TrekCardProps {
   row: ConnectionRowProps;
+  /** The provider's id, for its first credential: the row's id is the connection's once it exists. */
+  provider: string;
   connected: boolean;
   /** Days still waiting to reach Trek: the one number that says the two calendars disagree. */
   pending: number;
@@ -41,12 +44,14 @@ const FORM_ID = "trek-token-form";
  * unmounts on close: it is never in React state, never in a prop, and never in the DOM a moment
  * longer than the dialog is open.
  */
-export function TrekCard({ row, connected, pending: waiting, deactivateHref }: TrekCardProps) {
+export function TrekCard({ row, provider, connected, pending: waiting, deactivateHref }: TrekCardProps) {
   const t = useTranslations("settings.integrations");
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // The page draws the connection from its server render until it reads `/api/v1` itself.
+  const router = useRouter();
 
   function messageFor(code: string): string {
     if (code === "rejected") return t("errors.rejected");
@@ -70,6 +75,7 @@ export function TrekCard({ row, connected, pending: waiting, deactivateHref }: T
         setConnecting(false);
         setDisconnecting(false);
         notify(success);
+        router.refresh();
       } catch {
         setError(t("errors.failed"));
       }
@@ -84,7 +90,7 @@ export function TrekCard({ row, connected, pending: waiting, deactivateHref }: T
     const clientId = String(form.get("clientId") ?? "");
     const clientSecret = String(form.get("clientSecret") ?? "");
     run(
-      () => connectTrekAction(url, clientId, clientSecret),
+      () => connectCore(provider, { baseUrl: url, clientId, clientSecret }),
       connected ? t("toasts.replaced") : t("toasts.connected"),
     );
   }
@@ -203,7 +209,10 @@ export function TrekCard({ row, connected, pending: waiting, deactivateHref }: T
               size="sm"
               disabled={pending}
               onClick={() =>
-                run(disconnectTrekAction, t("toasts.disconnected", { provider: t("providers.trek.name") }))
+                run(
+                  () => disconnectCore(row.id),
+                  t("toasts.disconnected", { provider: t("providers.trek.name") }),
+                )
               }
             >
               {t("disconnect.confirm")}
