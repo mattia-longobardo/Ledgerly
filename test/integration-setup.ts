@@ -20,7 +20,22 @@ async function resetTestDatabase(pool: Pool): Promise<void> {
   await pool.query("CREATE SCHEMA public");
 }
 
-export default async function setup(): Promise<void> {
+/**
+ * The signing keys the run leaves behind are encrypted with the test secret of vitest.config.ts. The
+ * full suite then starts its preview and `npm run perf` on `ledgerly_1_test` with the secret of the
+ * environment file, and Better Auth fails on the keys it cannot decrypt ("Failed to decrypt private
+ * key"): no access token, so the MCP and Client API flows and G9 go red. The keys go with the run.
+ */
+async function removeSigningKeys(connectionString: string): Promise<void> {
+  const pool = new Pool({ connectionString, max: 1 });
+  try {
+    await pool.query("DELETE FROM jwks");
+  } finally {
+    await pool.end();
+  }
+}
+
+export default async function setup(): Promise<() => Promise<void>> {
   // Set by scripts/test-integration.sh: the shard's own `ledgerly_<n>_test` database of the homelab.
   const connectionString = process.env.TEST_DATABASE_URL;
   if (!connectionString) throw new Error("TEST_DATABASE_URL is not set: run `npm run test:integration`");
@@ -31,4 +46,5 @@ export default async function setup(): Promise<void> {
   } finally {
     await pool.end();
   }
+  return () => removeSigningKeys(connectionString);
 }
