@@ -26,7 +26,7 @@ import { bankSink } from "../sink";
 type Exposed = Awaited<ReturnType<typeof exposedAccounts>>["accounts"][number];
 
 /** The person's accounts that come from another source and may be moved to the bank (ux/n4-account-switch.md §2.1). */
-export async function sameAsChoices(ctx: Ctx) {
+async function sameAsChoices(ctx: Ctx) {
   const all = await listAccounts(ctx);
   const choices = [];
   for (const account of all.filter(switchable)) {
@@ -38,7 +38,7 @@ export async function sameAsChoices(ctx: Ctx) {
 }
 
 /** The accounts chosen as "the same account as…", from the address of the outcome: nothing was saved. */
-export async function toSwitchFrom(
+async function toSwitchFrom(
   ctx: Ctx,
   list: string | null,
   exposed: readonly {

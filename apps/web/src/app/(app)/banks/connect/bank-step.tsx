@@ -11,10 +11,9 @@ import { Input, Select } from "@ledgerly/ui/input";
 import { Skeleton } from "@ledgerly/ui/skeleton";
 import { EmptyState } from "@ledgerly/ui/states";
 import { type BankChoice, listBanksAction, startBankAccessAction } from "./calls";
+import type { BankStepError } from "./return-errors";
 
 /** Why the person is back on this step, from the return route (ux/n1-plugin-bank.md §6.3). */
-type BankStepError =
-  "denied" | "expired" | "session" | "no_accounts" | "unreachable" | "unreadable" | "bank_unavailable";
 
 interface BankStepProps {
   countries: { code: string; name: string }[];
