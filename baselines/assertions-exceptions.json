@@ -778,5 +778,20 @@
     "file": "apps/web/src/app/api/web/session/route.test.ts",
     "decision": "R4",
     "reason": "the server now sends the session's context too, so the web builds none: the answer gains `ctx`"
+  },
+  {
+    "file": "apps/web/src/modules/investments/exposure.itest.ts",
+    "decision": "R5e (PERS-571)",
+    "reason": "R5e: strumento MCP list_todo, contratto confermato su PERS-571, decisione dell'orchestratore del 22/11"
+  },
+  {
+    "file": "tools/baselines.itest.ts",
+    "decision": "R5e (PERS-571)",
+    "reason": "R5e: strumento MCP list_todo, contratto confermato su PERS-571, decisione dell'orchestratore del 22/11"
+  },
+  {
+    "file": "tests/e2e/api/mcp.spec.ts",
+    "decision": "R5e (PERS-571)",
+    "reason": "R5e: strumento MCP list_todo, contratto confermato su PERS-571, decisione dell'orchestratore del 22/11"
   }
 ]

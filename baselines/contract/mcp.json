@@ -212,6 +212,25 @@
     }
    },
    {
+    "name": "list_todo",
+    "title": "To do",
+    "description": "What the user has to do in Ledgerly, as GET /api/v1/todo: a connection to repair or renew, movements to categorise, payslips to review, transfers to confirm. Each item has an event code, counts or dates, and the page that resolves it; no amounts and no names.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {}
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
+   },
+   {
     "name": "list_accounts",
     "title": "Accounts",
     "description": "Every account with its type, currency, state and today's balance, as GET /api/v1/accounts.",
