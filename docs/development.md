@@ -72,18 +72,27 @@ the sequences: each test starts from an empty schema, whatever the file before i
 Create the test databases once, as the Postgres superuser:
 
 ```sql
+-- PUBLIC gets CONNECT and TEMP on every new database: other roles of the shared Postgres must not use it.
 CREATE DATABASE ledgerly_test OWNER ledgerly;
+REVOKE CONNECT, TEMP ON DATABASE ledgerly_test FROM PUBLIC;
+GRANT CONNECT ON DATABASE ledgerly_test TO ledgerly;
 CREATE DATABASE ledgerly_1_test OWNER ledgerly;
+REVOKE CONNECT, TEMP ON DATABASE ledgerly_1_test FROM PUBLIC;
+GRANT CONNECT ON DATABASE ledgerly_1_test TO ledgerly;
 CREATE DATABASE ledgerly_2_test OWNER ledgerly;
+REVOKE CONNECT, TEMP ON DATABASE ledgerly_2_test FROM PUBLIC;
+GRANT CONNECT ON DATABASE ledgerly_2_test TO ledgerly;
 CREATE DATABASE ledgerly_3_test OWNER ledgerly;
+REVOKE CONNECT, TEMP ON DATABASE ledgerly_3_test FROM PUBLIC;
+GRANT CONNECT ON DATABASE ledgerly_3_test TO ledgerly;
 CREATE DATABASE ledgerly_4_test OWNER ledgerly;
--- PUBLIC gets CONNECT by default: other roles of the shared Postgres must not connect.
-REVOKE ALL ON DATABASE ledgerly_test, ledgerly_1_test, ledgerly_2_test, ledgerly_3_test,
-  ledgerly_4_test FROM PUBLIC;
+REVOKE CONNECT, TEMP ON DATABASE ledgerly_4_test FROM PUBLIC;
+GRANT CONNECT ON DATABASE ledgerly_4_test TO ledgerly;
 ```
 
 The databases of the parallel streams (`ledgerly_test_2`, `ledgerly_test_3`) are created the same
-way: `CREATE DATABASE ... OWNER ledgerly;` and then `REVOKE ALL ON DATABASE ... FROM PUBLIC;`.
+way: `CREATE DATABASE <db> OWNER ledgerly;`, then `REVOKE CONNECT, TEMP ON DATABASE <db> FROM PUBLIC;`
+and `GRANT CONNECT ON DATABASE <db> TO ledgerly;`.
 
 ### End-to-end tests
 

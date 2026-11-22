@@ -264,6 +264,9 @@ Create the database once:
 ```sql
 CREATE ROLE ledgerly LOGIN PASSWORD '<the DATABASE_URL password>';
 CREATE DATABASE ledgerly OWNER ledgerly;
+-- PUBLIC gets CONNECT and TEMP on every new database: other roles must not use it.
+REVOKE CONNECT, TEMP ON DATABASE ledgerly FROM PUBLIC;
+GRANT CONNECT ON DATABASE ledgerly TO ledgerly;
 ```
 
 **Authentik redirect URI:** `<BETTER_AUTH_URL>/api/auth/callback/authentik`. Use this path, not
