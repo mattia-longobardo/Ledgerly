@@ -11,6 +11,7 @@ import { deleteFolder, listFolder } from "@domain/platform/storage";
 import { saveConnection } from "@domain/platform/integrations/service/connections";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { BACKFILL_CHOICES } from "@domain/platform/integrations/wallet/depth";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
 // about — the upload's ownership is — so it is a no-op here, deterministically.
@@ -466,7 +467,7 @@ describe("users and settings: connections", () => {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-  it("lists a connection of the core, refuses what only its card does, and keeps it to its person", async () => {
+  it("lists a connection of the core with what its card does, and keeps it to its person", async () => {
     expect(await (await call("/connections", aliceToken)).json()).toEqual({ connections: [] });
     const { id } = await saveConnection(alice, { provider: "wallet", credentials: { token: "test-token" } });
     const [row] = (await (await call("/connections", aliceToken)).json()).connections;
@@ -480,22 +481,28 @@ describe("users and settings: connections", () => {
     });
     expect(row.capabilities).toEqual({
       sync: true,
-      test: false,
-      disconnect: false,
-      chooseAccounts: false,
+      test: true,
+      disconnect: true,
+      chooseAccounts: true,
       renew: false,
-      historyMonths: [],
+      historyMonths: [...BACKFILL_CHOICES],
     });
-    for (const [path, init] of [
-      ["/connections", send("POST", { provider: "wallet", credentials: { token: "x" } })],
-      [`/connections/${id}`, send("DELETE")],
-      [`/connections/${id}/test`, send("POST")],
-      [`/connections/${id}/accounts`, undefined],
-    ] as const) {
-      const response = await call(path, aliceToken, init);
-      expect(response.status, path).toBe(409);
-      expect(await response.json(), path).toEqual({ error: "conflict", reason: "core_provider" });
-    }
+    const empty = await call(
+      "/connections",
+      aliceToken,
+      send("POST", { provider: "wallet", credentials: {} }),
+    );
+    expect(empty.status).toBe(400);
+    expect(await empty.json()).toEqual({ error: "invalid", reason: "empty" });
+    const nobody = await call(
+      "/connections",
+      aliceToken,
+      send("POST", { provider: "example", credentials: {} }),
+    );
+    expect(nobody.status).toBe(409);
+    expect(await nobody.json()).toEqual({ error: "conflict", reason: "not_by_credentials" });
+    expect((await call(`/connections/${id}`, bobToken, send("DELETE"))).status).toBe(404);
+    expect((await call(`/connections/${id}/test`, bobToken, send("POST"))).status).toBe(404);
     const schedule = { rules: [{ kind: "times", times: ["07:30"], days: { kind: "every" } }] };
     expect((await call(`/connections/${id}/schedule`, aliceToken, send("PUT", schedule))).status).toBe(204);
     expect((await call(`/connections/${id}/schedule`, bobToken, send("PUT", schedule))).status).toBe(404);
@@ -509,6 +516,8 @@ describe("users and settings: connections", () => {
       404,
     );
     expect((await call(`/connections/${id}/sync`, aliceToken, send("POST"))).status).toBe(202);
+    expect((await call(`/connections/${id}`, aliceToken, send("DELETE"))).status).toBe(204);
+    expect(await (await call("/connections", aliceToken)).json()).toEqual({ connections: [] });
   });
 
   it("answers not found for a source or a plugin the person does not have", async () => {

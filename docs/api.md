@@ -24,7 +24,7 @@ Ledgerly is its own authorization server. The issuer is `https://dash.longobardo
 - **Refresh tokens** rotate and are valid for 30 days.
 - **Scopes:** `read`, `write`, `imports`, `investments:read`. `read` does not include
   `investments:read`.
-- **Rate limit:** 120 calls per minute per client (token). The web's own session cookie has 1200 per minute per person (decision H57). `X-RateLimit-Limit` says the caller's allowance.
+- **Rate limit:** 120 calls per minute per client (token). The web's own session cookie has 1200 per minute per person (decision H57), counted twice: the browser's calls (they send `Sec-Fetch-Site`) and the reads of the web's server (`apiRead`, without it), each in its own window. `X-RateLimit-Limit` says the caller's allowance.
 - **Errors:** without a valid token, `401` with a `WWW-Authenticate` header that points to the
   resource metadata. With a token that lacks the scope, `403 insufficient_scope`.
 

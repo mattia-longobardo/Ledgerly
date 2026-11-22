@@ -180,16 +180,17 @@ const SETTINGS_ACTION_FILES = [
 ];
 
 const EXCLUDED: Record<string, string> = {
-  acceptInviteAction: "web cookie: it creates the account and signs it in, before any token exists",
-  coreConnectionAction: "Wallet and Trek «test» and «history» until R5c: the routes answer `core_provider`",
-  // The providers of the core keep their cards on the web until they are plugins (R5c): moving
-  // their use cases out of the web would name them in a new file (rule M12).
-  connectWalletAction: "Wallet until R5c",
-  walletAccountsAction: "Wallet until R5c",
-  chooseWalletAccountsAction: "Wallet until R5c",
-  disconnectWalletAction: "Wallet until R5c",
-  connectTrekAction: "Trek until R5c",
-  disconnectTrekAction: "Trek until R5c",
+  acceptInviteAction:
+    "public `POST /api/invite/{token}/accept`, outside /api/v1: it creates the account and signs it in, before any token exists",
+  // The cards of the core are served by the generic routes of a connection, by the provider's id
+  // (`core-cases.ts`, R5c anticipated): the contract names no provider (rule M12), so it names them here.
+  coreConnectionAction: "Wallet and Trek: `POST /connections/{id}/sync`, `/test`, `/history`",
+  connectWalletAction: "Wallet: `POST /connections`",
+  walletAccountsAction: "Wallet: `GET /connections/{id}/accounts`",
+  chooseWalletAccountsAction: "Wallet: `PUT /connections/{id}/accounts`",
+  disconnectWalletAction: "Wallet: `DELETE /connections/{id}`",
+  connectTrekAction: "Trek: `POST /connections`",
+  disconnectTrekAction: "Trek: `DELETE /connections/{id}`",
 };
 
 describe("the Server Actions of users and settings", () => {

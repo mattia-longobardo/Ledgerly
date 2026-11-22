@@ -42,7 +42,6 @@ export {
   recordRun,
   rescheduleConnections,
   runningReadings,
-  saveConnection,
   savePluginConnection,
   saveSchedule,
   saveSyncJob,
@@ -64,3 +63,4 @@ export {
   warningFor,
 } from "./status";
 export type { StatusAction, StatusFacts, SyncStatus } from "./status";
+export type { CardAccount, CardError, CardResult, CoreCard } from "./card";

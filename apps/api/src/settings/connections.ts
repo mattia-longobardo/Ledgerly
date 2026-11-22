@@ -1,8 +1,8 @@
 // Users and settings · connections, banks, sources and plugins (rewrite plan R2). The steps that
 // still need the web's registry of providers and its bank sink are lent by the web process
 // (`ConnectionCases`, like the guard) until E5 and R4; what is the domain's or the plugin host's
-// is called here. The providers of the core keep their cards on the web until R5c: what only they
-// do answers `409`, reason `core_provider`.
+// is called here. The providers of the core are reached by their cards, by the provider's id
+// (R5c anticipated): their refusal is the card's code in `reason`.
 import type { Hono } from "hono";
 import type { z } from "zod";
 import {
@@ -21,6 +21,7 @@ import {
   previewSchedule,
   saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
+import { getAuth } from "@ledgerly/domain/platform/auth";
 import {
   PluginActionError,
   removeUserCredentials,
@@ -32,6 +33,7 @@ import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 const { connections, banks } = SETTINGS;
 
 type Refused = { ok: false; error?: string };
+type CoreAccount = { externalId: string; name: string; here: string | null; chosen: boolean };
 type Kind = "update" | "resume" | "enable" | "test" | "history";
 
 interface ExposedAccount {
@@ -92,6 +94,30 @@ export interface ConnectionCases {
     externalId: string,
     headers: Headers,
   ): Promise<{ ok: true; reconnect: string | null } | { ok: false }>;
+  /** Starts an access to a bank, bound to the browser's session that asks. */
+  startBankAccess(
+    ctx: Ctx,
+    sessionId: string,
+    institution: { country: string; name: string },
+  ): Promise<{ ok: true; url: string } | Refused>;
+  renewBankAccess(
+    ctx: Ctx,
+    sessionId: string,
+    connectionId: string,
+  ): Promise<{ ok: true; url: string } | Refused>;
+  /** The card of a provider of the core (R5c anticipated): `input` says the refusal is of the credential. */
+  connectCore(
+    ctx: Ctx,
+    provider: string,
+    credentials: Record<string, string>,
+  ): Promise<{ ok: true; id: string; back: number } | { ok: false; error: string; input: boolean }>;
+  coreAccounts(ctx: Ctx, connection: Connection): Promise<{ ok: true; accounts: CoreAccount[] } | Refused>;
+  chooseCoreAccounts(
+    ctx: Ctx,
+    connection: Connection,
+    chosen: string[],
+  ): Promise<{ ok: true; added: number } | Refused>;
+  disconnectCore(ctx: Ctx, connection: Connection): Promise<{ ok: true } | Refused>;
 }
 
 /** A provider of the core: neither a plugin nor a service of Investments. */
@@ -108,16 +134,23 @@ async function connectionOf(ctx: Ctx, id: string): Promise<Connection> {
 async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   const connection = await connectionOf(ctx, id);
   if (!isPluginProvider(connection.provider)) {
-    throw new ApiRefusal("conflict", isCore(connection.provider) ? "core_provider" : "not_a_bank");
+    throw new ApiRefusal("conflict", "not_a_bank");
   }
   return connection;
 }
 
-/** A refusal of a use case of the web as the contract names it. */
+/** A refusal of a use case of the web as the contract names it; a card's connection gone is not found. */
 function settled<T extends { ok: true }>(answer: T | Refused): T {
   if (answer.ok) return answer;
-  if (answer.error === "not_found") throw new ApiRefusal("not_found");
+  if (answer.error === "not_found" || answer.error === "notConnected") throw new ApiRefusal("not_found");
   throw new ApiRefusal("conflict", answer.error ?? "failed");
+}
+
+/** The browser's session that asks: an access to a bank is bound to it (its return checks it). */
+async function sessionIdOf(headers: Headers): Promise<string> {
+  const session = headers.has("authorization") ? null : await (await getAuth()).api.getSession({ headers });
+  if (!session) throw new ApiRefusal("conflict", "no_session");
+  return session.session.id;
 }
 
 /** A refusal of a run in the contract's closed list: an unknown code is `failed`, as its toast is. */
@@ -128,10 +161,6 @@ function refusalOf(refusal: string): (typeof CONNECTION_REFUSALS)[number] {
 
 function serveRuns(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): void {
   const run = async (ctx: Ctx, id: string, kind: Kind, options: { months?: number; headers: Headers }) => {
-    if (kind === "test" || kind === "history") {
-      const connection = await connectionOf(ctx, id);
-      if (isCore(connection.provider)) throw new ApiRefusal("conflict", "core_provider");
-    }
     const outcome = await cases.run(ctx, id, kind, options);
     if (outcome.ok) return;
     if (!outcome.found) throw new ApiRefusal("not_found");
@@ -154,13 +183,50 @@ function serveRuns(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): voi
   );
 }
 
+/** «Choose the accounts» of a bank or of a provider of the core. */
+function serveConnectionAccounts(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): void {
+  serve(app, guard, connections.listConnectionAccounts, async ({ ctx, params }) => {
+    const connection = await connectionOf(ctx, params.id);
+    if (!isCore(connection.provider))
+      return settled(await cases.exposedAccounts(ctx, await bankOf(ctx, params.id)));
+    const { accounts } = settled(await cases.coreAccounts(ctx, connection));
+    return {
+      accounts: accounts.map((one) => ({
+        providerAccountId: one.externalId,
+        name: one.name,
+        currency: null,
+        here: one.here,
+        chosen: one.chosen,
+      })),
+    };
+  });
+  serve(app, guard, connections.chooseConnectionAccounts, async ({ ctx, params, body, headers }) => {
+    const connection = await connectionOf(ctx, params.id);
+    const kept = body.decisions.filter((one) => one.target.kind !== "skip");
+    if (isCore(connection.provider)) {
+      const chosen = kept.map((one) => one.providerAccountId);
+      return { added: settled(await cases.chooseCoreAccounts(ctx, connection, chosen)).added };
+    }
+    settled(await cases.importAccounts(ctx, await bankOf(ctx, params.id), body.decisions, headers));
+    return { added: kept.length };
+  });
+}
+
 function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): void {
   serve(app, guard, connections.listConnections, async ({ ctx }) => ({ connections: await cases.list(ctx) }));
-  serve(app, guard, connections.connect, ({ body }) => {
-    throw new ApiRefusal("conflict", isCore(body.provider) ? "core_provider" : "not_by_credentials");
+  serve(app, guard, connections.connect, async ({ ctx, body }) => {
+    if (!isCore(body.provider)) throw new ApiRefusal("conflict", "not_by_credentials");
+    const outcome = await cases.connectCore(ctx, body.provider, body.credentials);
+    // No card for the provider: a plugin or a service of Investments connects another way.
+    if (!outcome.ok && outcome.error === "notConnected")
+      throw new ApiRefusal("conflict", "not_by_credentials");
+    if (!outcome.ok) throw new ApiRefusal(outcome.input ? "invalid" : "conflict", outcome.error);
+    return { id: outcome.id, restoredAccounts: outcome.back };
   });
   serve(app, guard, connections.disconnect, async ({ ctx, params }) => {
-    settled(await cases.cancelBank(ctx, (await bankOf(ctx, params.id)).id));
+    const connection = await connectionOf(ctx, params.id);
+    if (isCore(connection.provider)) settled(await cases.disconnectCore(ctx, connection));
+    else settled(await cases.cancelBank(ctx, (await bankOf(ctx, params.id)).id));
   });
   serve(app, guard, connections.setSchedule, async ({ ctx, params, body }) => {
     const connection = await connectionOf(ctx, params.id);
@@ -176,19 +242,19 @@ function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: Connectio
     const preview = previewSchedule(body.rules, ctx.timeZone, new Date(), SCHEDULE_PREVIEW_COUNT);
     return { next: preview.next.map((instant) => instant.toISOString()), problems: preview.problems };
   });
-  serve(app, guard, connections.listConnectionAccounts, async ({ ctx, params }) =>
-    settled(await cases.exposedAccounts(ctx, await bankOf(ctx, params.id))),
-  );
-  serve(app, guard, connections.chooseConnectionAccounts, async ({ ctx, params, body, headers }) => {
-    settled(await cases.importAccounts(ctx, await bankOf(ctx, params.id), body.decisions, headers));
-    return { added: body.decisions.filter((one) => one.target.kind !== "skip").length };
-  });
+  serveConnectionAccounts(app, guard, cases);
   serveRuns(app, guard, cases);
 }
 
 function serveBanksAndSources(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): void {
   serve(app, guard, banks.listBanks, async ({ ctx, query }) => ({
     banks: settled(await cases.listBanks(ctx, query.country)).banks,
+  }));
+  serve(app, guard, banks.startBankAccess, async ({ ctx, body, headers }) => ({
+    url: settled(await cases.startBankAccess(ctx, await sessionIdOf(headers), body)).url,
+  }));
+  serve(app, guard, banks.renewBankAccess, async ({ ctx, params, headers }) => ({
+    url: settled(await cases.renewBankAccess(ctx, await sessionIdOf(headers), params.id)).url,
   }));
   serve(app, guard, banks.readBankNow, async ({ ctx, params, headers }) => {
     settled(await cases.readBankNow(ctx, (await bankOf(ctx, params.id)).id, headers));
@@ -235,7 +301,7 @@ function servePlugins(app: Hono<ApiEnv>, guard: Guard): void {
   );
 }
 
-/** The routes of the connections; the start and the renewal of a bank's access come with §6 #4. */
+/** The routes of the connections, the banks, the sources and the plugins. */
 export function serveConnections(
   app: Hono<ApiEnv>,
   guard: Guard,
@@ -244,6 +310,5 @@ export function serveConnections(
   serveConnectionRoutes(app, guard, cases);
   serveBanksAndSources(app, guard, cases);
   servePlugins(app, guard);
-  const later: readonly RouteContract[] = [banks.startBankAccess, banks.renewBankAccess];
-  return [...Object.values(connections), ...Object.values(banks)].filter((route) => !later.includes(route));
+  return [...Object.values(connections), ...Object.values(banks)];
 }

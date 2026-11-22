@@ -1,13 +1,6 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
-export { WalletError, createWalletClient, isTokenRejected, isUsableToken } from "./client";
 export { BACKFILL_CHOICES, backfillDepth } from "./depth";
-export {
-  chooseWalletAccounts,
-  isSyncBusy,
-  requestWalletBackfill,
-  syncWalletNow,
-  walletAccountChoices,
-} from "./sync";
+export { isSyncBusy, syncWalletNow } from "./sync";
 // The source of a movement (rewrite plan R2, port of transactions until R5c), by names that are no
 // provider's: `/api/v1` imports them from `@ledgerly/domain/platform/integrations/source` (rule M12).
 export { walletTransactions as transactionsSource } from "./categories";
@@ -18,3 +11,5 @@ export {
 } from "./records";
 // The ledger interests publishes on (port `LedgerPosting`, audit INT-1), by a name that is no provider's.
 export { walletPosting as ledgerPosting } from "./posting";
+// The card of the source (rewrite plan R5c anticipated), by a name that is no provider's.
+export { walletCard as sourceCard } from "./card";

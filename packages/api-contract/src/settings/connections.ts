@@ -169,8 +169,9 @@ export const connect = defineRoute({
   scope: "write",
   capability: "connections",
   summary:
-    "Connects a provider that takes credentials. The fields of `credentials` are the ones the provider's descriptor names.",
-  // The providers of the core connect on their cards of the web until R5c: `409`, reason `core_provider`.
+    "Connects a provider of the core that takes credentials, or replaces them. A refusal of the credentials " +
+    "is `invalid` with the card's code in `reason` (`empty`, `rejected`, `provider`).",
+  // The Server Actions of the cards of the core are named in `tools/contract.test.ts`: this file names no provider (M12).
   actions: [],
   body: z.object({ provider: z.string().min(1), credentials: z.record(z.string(), z.string()) }).strict(),
   response: z.object({

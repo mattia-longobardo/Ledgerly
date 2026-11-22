@@ -1,9 +1,10 @@
 // src/app/(app)/settings/integrations/api-cases.ts — the use cases of the connections and the
 // banks that the web process lends `/api/v1` (rewrite plan R2), as it lends its guard: they need
 // the web's registry of providers and its bank sink until E5 and R4. The Server Actions of these
-// pages call the same functions.
+// pages call the same functions; the providers of the core by their cards (`core-cases.ts`).
 import "server-only";
 import type { ConnectionCases } from "@ledgerly/api";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 import { exposedAccounts } from "@ledgerly/plugin-host";
 import { presenceOf } from "../../banks/presence";
 import { bankSink } from "../../banks/sink";
@@ -11,16 +12,20 @@ import {
   cancelBankConnection,
   importBankAccounts,
   listBanks,
+  renewBankAccess,
   retryBankReading,
+  startBankAccess,
 } from "../../banks/connect/cases";
 import { connectionList } from "./connection-list";
 import { runConnection } from "./connection-cases";
+import { chooseCoreAccounts, connectCore, coreAccounts, disconnectCore, runCore } from "./core-cases";
 import { bringBackAccount, deactivationCountsOf, turnOffSource } from "./deactivate-cases";
 
 const pluginIdOf = (provider: string) => provider.slice("plugin:".length);
 
-/** "Test" and "history" of a provider of the core are its card's, on the web: the API refuses first. */
-const noCore = async () => ({ ok: false as const, error: "core_provider" });
+/** "Test" and "history" of a provider of the core: its card, for the person of the call. */
+const coreOf = (ctx: Ctx) => (provider: string, kind: "update" | "test" | "history", months?: number) =>
+  runCore(ctx, provider, kind, months);
 
 export const connectionCases: ConnectionCases = {
   list: connectionList,
@@ -28,7 +33,7 @@ export const connectionCases: ConnectionCases = {
     const outcome = await runConnection(ctx, connectionId, kind, {
       months,
       presence: presenceOf(headers),
-      core: noCore,
+      core: coreOf(ctx),
     });
     return outcome.ok
       ? { ok: true }
@@ -73,7 +78,14 @@ export const connectionCases: ConnectionCases = {
   readBankNow: (ctx, connectionId, headers) => retryBankReading(ctx, connectionId, presenceOf(headers)),
   cancelBank: cancelBankConnection,
   deactivation: deactivationCountsOf,
-  turnOff: (ctx, slug, headers) => turnOffSource(ctx, slug, { presence: presenceOf(headers), core: noCore }),
+  turnOff: (ctx, slug, headers) =>
+    turnOffSource(ctx, slug, { presence: presenceOf(headers), core: coreOf(ctx) }),
   bringBack: (ctx, slug, externalId, headers) =>
-    bringBackAccount(ctx, slug, externalId, { presence: presenceOf(headers), core: noCore }),
+    bringBackAccount(ctx, slug, externalId, { presence: presenceOf(headers), core: coreOf(ctx) }),
+  startBankAccess,
+  renewBankAccess,
+  connectCore,
+  coreAccounts: (ctx, connection) => coreAccounts(ctx, connection.provider),
+  chooseCoreAccounts: (ctx, connection, chosen) => chooseCoreAccounts(ctx, connection.provider, chosen),
+  disconnectCore: (ctx, connection) => disconnectCore(ctx, connection.provider),
 };

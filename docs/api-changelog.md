@@ -3,8 +3,19 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
-## Unreleased · R3-coda: merge proposals
+## Unreleased · R3-coda: merge proposals, the web's server reads, the last writes of the web
 
+- `POST /api-clients` (scope `security`, the web's session only): makes a Client API and answers its
+  secret once; `400 invalid` for a name or a scope the rule refuses.
+- `POST /banks/access` and `POST /connections/{id}/renew`: the bank's page to open, bound to the session
+  of the call; a call with a token answers `409 no_session`.
+- The connections of the core are served by the generic routes, by the provider's id: `POST /connections`
+  (`invalid` with `reason` `empty`, `rejected` or `provider`), `DELETE /connections/{id}` (a source of days
+  drops its removals still waiting), `POST /connections/{id}/test` and `/history`, `GET` and `PUT
+  /connections/{id}/accounts` (`reason` is the card's code). `capabilities` says so. The reason
+  `core_provider` is gone.
+- The web's session counts its calls in two windows of 1200 a minute: the browser's (`Sec-Fetch-Site`
+  sent) and the web's server's (not sent). A client in a loop is still answered `429` in either.
 - `GET /categories/merge-proposals`: the pairs of categories that look like the same one, each side with
   `id`, `name`, `color`, `usage`, `hasChildren`, `canKeepOther`, and `sumsBudgets`.
 
