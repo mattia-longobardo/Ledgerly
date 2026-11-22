@@ -69,7 +69,7 @@ test("archiving an account that doubles another asks first, and its Danger zone 
   await dialog.getByRole("button", { name: "Archive account" }).click();
   await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Conto doppio archived");
   await expect(
-    page.getByText("Archived as a double of “Conto gemello”: its movements count in no month."),
+    page.getByText("Archived as a double of “Conto gemello”: its transactions count in no month."),
   ).toBeVisible();
 
   // Restored, it is an open account again: the next run finds it as the seed left it.

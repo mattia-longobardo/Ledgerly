@@ -115,7 +115,7 @@ describe("TransactionsTable", () => {
     const table = renderTable([{ ...GROUPS[0], excludedCount: 2 }]);
     expect(
       table.getByText(
-        "2 transactions · −16,99 € · Partial total: 2 foreign-currency movements without an exchange rate left out",
+        "2 transactions · −16,99 € · Partial total: 2 foreign-currency transactions without an exchange rate left out",
       ),
     ).toBeInTheDocument();
   });
@@ -135,7 +135,7 @@ describe("TransactionsTable", () => {
     const table = renderTable();
     expect(table.getByText("Edited here")).toBeInTheDocument();
     expect(table.getByText("Hidden")).toBeInTheDocument();
-    expect(table.getByText("Gone from provider")).toBeInTheDocument();
+    expect(table.getByText("Gone from source")).toBeInTheDocument();
   });
 
   it("shows no action bar until something is selected", () => {
@@ -360,7 +360,7 @@ describe("TransactionsTable", () => {
     await userEvent.type(within(panel).getByLabelText("Note"), " more");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Payee, amount and date belong to the provider and cannot be edited here.",
+      "Payee, amount and date belong to the source and cannot be edited here.",
     );
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });

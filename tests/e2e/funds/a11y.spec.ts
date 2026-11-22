@@ -166,7 +166,7 @@ const OVERLAYS: Screen[] = [
         .getByRole("button", { name: "Record contribution" })
         .click();
       await settledDialog(page);
-      await expect(page.getByRole("dialog").getByLabel("Linked movement")).toBeVisible();
+      await expect(page.getByRole("dialog").getByLabel("Linked transaction")).toBeVisible();
     },
   },
   {

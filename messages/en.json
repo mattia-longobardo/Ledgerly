@@ -102,7 +102,7 @@
     },
     "monthlySummary": {
       "subject": "Ledgerly · {month}",
-      "body": "{month} in numbers.\n\nNet worth at the end of the month: {netWorth}\nIncome: {income}\nSpending: {expense}\nNet: {net}\nMovements: {transactions}\n\nOpen Ledgerly to look closer. You can switch this email off in Settings › Profile.\n"
+      "body": "{month} in numbers.\n\nNet worth at the end of the month: {netWorth}\nIncome: {income}\nSpending: {expense}\nNet: {net}\nTransactions: {transactions}\n\nOpen Ledgerly to look closer. You can switch this email off in Settings › Profile.\n"
     },
     "budgetNear": {
       "subject": "{budget}: {percent} of the budget spent",
@@ -287,7 +287,7 @@
         "leave": "Leave days",
         "documents": "Documents",
         "holdings": "Holdings and value",
-        "flows": "Trades and movements"
+        "flows": "Trades and transactions"
       },
       "counts": {
         "created": "{count} new",
@@ -1060,7 +1060,7 @@
     },
     "apiClients": {
       "title": "Client API",
-      "description": "OAuth2 clients (client credentials) for scripts and integrations that call /api/v1. A client acts as you, with the scopes you choose; its access tokens last one hour.",
+      "description": "OAuth2 clients (client credentials) for scripts and apps that call /api/v1. A client acts as you, with the scopes you choose; its access tokens last one hour.",
       "new": "New client",
       "create": "Create client",
       "nameHint": "What it is for, so you know which one to delete later.",
@@ -1692,7 +1692,7 @@
     "badges": {
       "manual": "Manual",
       "hidden": "Hidden",
-      "removedUpstream": "Gone from provider",
+      "removedUpstream": "Gone from source",
       "edited": "Edited here",
       "transfer": "Transfer",
       "pending": "Pending",
@@ -1731,7 +1731,7 @@
     },
     "errors": {
       "notFound": "That transaction no longer exists.",
-      "providerOwned": "Payee, amount and date belong to the provider and cannot be edited here.",
+      "providerOwned": "Payee, amount and date belong to the source and cannot be edited here.",
       "failed": "Couldn't save. Try again."
     },
     "palette": {
@@ -1744,7 +1744,7 @@
       "net": "Net",
       "transfers": "{count, plural, one {# transfer} other {# transfers}} left out of income and spending, counted in the net",
       "unpaired": "{count, plural, one {# has no other leg here} other {# have no other leg here}}",
-      "partial": "Partial total: {count, plural, one {# foreign-currency movement without an exchange rate left out} other {# foreign-currency movements without an exchange rate left out}}"
+      "partial": "Partial total: {count, plural, one {# foreign-currency transaction without an exchange rate left out} other {# foreign-currency transactions without an exchange rate left out}}"
     },
     "spending": {
       "title": "Spending over time",
@@ -1778,7 +1778,7 @@
       "errors": {
         "invalid": "Check the fields: something is not valid.",
         "amount": "Enter an amount other than zero.",
-        "notLinked": "This movement is not linked to Wallet, or Wallet is no longer connected.",
+        "notLinked": "This transaction is not linked to Wallet, or Wallet is no longer connected.",
         "noTransferCategory": "Wallet did not return its Transfer category, so the transfer cannot be set from here.",
         "refused": "Wallet refused the change: nothing changed here.",
         "failed": "Wallet did not answer: nothing changed here. Try again in a minute."
@@ -2158,7 +2158,7 @@
     "partial": "Some accounts have no balance yet, so these totals are incomplete.",
     "empty": {
       "title": "No accounts yet",
-      "description": "Add an account by hand, or connect a provider once integrations arrive.",
+      "description": "Add an account by hand, or connect a bank in Settings › Plugins.",
       "archived": "Nothing open right now. {count, plural, one {# archived account} other {# archived accounts}} still here, with all their history."
     },
     "columns": {
@@ -2332,7 +2332,7 @@
       },
       "sources": {
         "manual": "Manual",
-        "provider": "Provider",
+        "provider": "Source",
         "system": "Snapshot",
         "import": "Import",
         "derived": "Rebuilt",
@@ -2367,10 +2367,10 @@
         "title": "General",
         "description": "How this account is named and identified.",
         "name": "Name",
-        "provider": "Provider",
-        "manualProvider": "Manual accounts have no provider.",
+        "provider": "Source",
+        "manualProvider": "Manual accounts have no source.",
         "type": "Type",
-        "locked": "Set by the provider.",
+        "locked": "Set by the source.",
         "typeSynced": "Comes from Wallet and follows it until you change it here. Wallet's API does not accept changes to an account's type, so a change made here stays here.",
         "purpose": "Purpose",
         "reference": "Reference",
@@ -2415,21 +2415,21 @@
       "danger": {
         "title": "Danger zone",
         "description": "Archiving hides the account and keeps its history in past snapshots.",
-        "explain": "Archive it to take it off the list and keep everything, or delete it with its movements and balances.",
+        "explain": "Archive it to take it off the list and keep everything, or delete it with its transactions and balances.",
         "archived": "This account is archived. Its balances are still counted in past months.",
-        "archivedDouble": "Archived as a double of “{twin}”: its movements count in no month.",
+        "archivedDouble": "Archived as a double of “{twin}”: its transactions count in no month.",
         "archive": "Archive account",
         "restore": "Restore account",
         "doubleTitle": "Archive {name}?",
-        "doubleBody": "{name} is a double of “{twin}”: every movement of it is also there. Once archived, it leaves the net worth and its movements no longer count in the months. It keeps its balances and movements, without updates; “Restore account” brings it back.",
+        "doubleBody": "{name} is a double of “{twin}”: every transaction of it is also there. Once archived, it leaves the net worth and its transactions no longer count in the months. It keeps its balances and transactions, without updates; “Restore account” brings it back.",
         "confirmTitle": "Delete {name}?",
-        "confirmBody": "{name} is deleted for good, with every movement and balance entry it holds.",
+        "confirmBody": "{name} is deleted for good, with every transaction and balance entry it holds.",
         "confirm": "Delete for good",
         "cancel": "Keep it",
-        "deletedToast": "{name} deleted, with its movements and balances.",
+        "deletedToast": "{name} deleted, with its transactions and balances.",
         "archivedToast": "{name} archived. Its history stays in past months.",
         "remove": "Delete account",
-        "sourceNote": "It comes from {source}: it leaves the accounts {source} brings here, so the next reading does not add it again. To have it back, choose it again on the integration's page: the history {source} still gives comes back with it.",
+        "sourceNote": "It comes from {source}: it leaves the accounts {source} brings here, so the next reading does not add it again. To have it back, choose it again on the source's page: the history {source} still gives comes back with it.",
         "loading": "Checking what uses this account…",
         "movedToast": "Moved: {what}.",
         "dependents": {
@@ -2457,7 +2457,7 @@
     },
     "estimated": {
       "short": "estimated",
-      "note": "Dashed months are rebuilt from the synced movements, before the first balance Wallet reported."
+      "note": "Dashed months are rebuilt from the synced transactions, before the first balance Wallet reported."
     },
     "connections": {
       "title": "Connections",
@@ -2520,7 +2520,7 @@
         "waitingNote": "It can take up to a minute. Nothing is changed.",
         "title": "Check of the switch of “{account}”",
         "route": "{source} → {bank}",
-        "period": "Movements compared from {from} to {to}.",
+        "period": "Transactions compared from {from} to {to}.",
         "nothingChanged": "Nothing was changed.",
         "leaveNote": "If you leave, the account stays on {source}. Nothing changed."
       },
@@ -2532,11 +2532,11 @@
         "local": "In Ledgerly (from {source}), {date}",
         "bank": "In {bank}, {kind}, {date}",
         "difference": "Difference",
-        "blocked": "With two different balances Ledgerly cannot say the accounts are the same account with the same movements. What you can do:",
+        "blocked": "With two different balances Ledgerly cannot say the accounts are the same account with the same transactions. What you can do:",
         "steps": {
           "look": "Look at “To check”, “Only on…” and “Only in the bank” below: the difference is usually there.",
-          "fix": "Correct on {source} the movement that is missing or doubled.",
-          "wait": "If a movement is from today, wait for the bank to book it.",
+          "fix": "Correct on {source} the transaction that is missing or doubled.",
+          "wait": "If a transaction is from today, wait for the bank to book it.",
           "again": "Run the check again."
         },
         "kinds": {
@@ -2547,17 +2547,17 @@
         }
       },
       "movements": {
-        "title": "Movements",
+        "title": "Transactions",
         "matched": "Found in both",
         "matchedNote": "Ledgerly sees them as the same. They stay one row, with the category they have now.",
         "toCheck": "To check",
-        "toCheckNote": "For these amounts the number of movements differs between {source} and the bank. Ledgerly does not know which are the same: it links none of them.",
+        "toCheckNote": "For these amounts the number of transactions differs between {source} and the bank. Ledgerly does not know which are the same: it links none of them.",
         "onlyLocal": "Only on {source}",
-        "onlyLocalNote": "{source} has these movements, the bank does not. They stay in Ledgerly as they are.",
+        "onlyLocalNote": "{source} has these transactions, the bank does not. They stay in Ledgerly as they are.",
         "onlyBank": "Only in the bank",
-        "onlyBankNote": "The bank has these movements in the period of the comparison, {source} does not. They do not come into Ledgerly: the history up to {date} stays the one of {source}.",
+        "onlyBankNote": "The bank has these transactions in the period of the comparison, {source} does not. They do not come into Ledgerly: the history up to {date} stays the one of {source}.",
         "fresh": "New from the bank",
-        "freshNote": "Movements after {date}, the last day {source} read. They come into Ledgerly with “Apply”.",
+        "freshNote": "Transactions after {date}, the last day {source} read. They come into Ledgerly with “Apply”.",
         "onSource": "On {source}",
         "inBank": "In the bank",
         "amounts": "{count, plural, one {# amount} other {# amounts}}",
@@ -2567,12 +2567,12 @@
       "join": {
         "title": "“{account}” is already in Ledgerly: the switch joins the two accounts",
         "blocked": "“{account}” is already in Ledgerly: the join cannot be applied",
-        "lead": "The bank already brought this account as “{account}”, with {count, plural, one {# movement} other {# movements}}. The switch joins the two accounts: every movement of “{account}” has to be here too.",
-        "matched": "{count, plural, one {# movement found} other {# movements found}} here too, of {total}.",
-        "manual": "“{account}” has {count, plural, one {# movement written} other {# movements written}} by hand: the join does not take them. Move them to this account or remove them, then check again.",
+        "lead": "The bank already brought this account as “{account}”, with {count, plural, one {# transaction} other {# transactions}}. The switch joins the two accounts: every transaction of “{account}” has to be here too.",
+        "matched": "{count, plural, one {# transaction found} other {# transactions found}} here too, of {total}.",
+        "manual": "“{account}” has {count, plural, one {# transaction written} other {# transactions written}} by hand: the join does not take them. Move them to this account or remove them, then check again.",
         "unmatched": "Only in “{account}”",
-        "unmatchedNote": "These movements are not on {source} for this account: with them the join cannot be applied. Add them on {source} or check that they are doubles, then check again.",
-        "carry": "{categories, plural, one {# category} other {# categories}} and {notes, plural, one {# note} other {# notes}} you chose on “{account}” go to the movements here that have none of yours."
+        "unmatchedNote": "These transactions are not on {source} for this account: with them the join cannot be applied. Add them on {source} or check that they are doubles, then check again.",
+        "carry": "{categories, plural, one {# category} other {# categories}} and {notes, plural, one {# note} other {# notes}} you chose on “{account}” go to the transactions here that have none of yours."
       },
       "more": "Show {count} more",
       "shown": "{shown} of {total}",
@@ -2589,15 +2589,15 @@
       },
       "changes": {
         "title": "What changes with “Apply”",
-        "fromBank": "Balance and movements of “{account}” come from {bank}.",
-        "history": "The history stays the one of {source}. No movement is removed.",
-        "fresh": "{count, plural, one {# new movement comes} other {# new movements come}} from the bank.",
-        "transfers": "{count, plural, one {# movement becomes a transfer} other {# movements become transfers}}.",
+        "fromBank": "Balance and transactions of “{account}” come from {bank}.",
+        "history": "The history stays the one of {source}. No transaction is removed.",
+        "fresh": "{count, plural, one {# new transaction comes} other {# new transactions come}} from the bank.",
+        "transfers": "{count, plural, one {# transaction becomes a transfer} other {# transactions become transfers}}.",
         "sourceStops": "{source} no longer updates this account. The other accounts stay.",
-        "manual": "Write manual movements with the notice of the accounts of a bank.",
+        "manual": "Write manual transactions with the notice of the accounts of a bank.",
         "interests": "The interest settlements are no longer published on {source}.",
         "undo": "You can go back with “Undo switch”.",
-        "joined": "“{account}” becomes an account kept by hand and archived: it leaves the net worth and its {count, plural, one {# movement no longer counts} other {# movements no longer count}}, because they are the same as here. No row is deleted."
+        "joined": "“{account}” becomes an account kept by hand and archived: it leaves the net worth and its {count, plural, one {# transaction no longer counts} other {# transactions no longer count}}, because they are the same as here. No row is deleted."
       },
       "actions": {
         "cancel": "Cancel",
@@ -2607,7 +2607,7 @@
       },
       "confirm": {
         "title": "Move “{account}” to {bank}?",
-        "body": "From now on balance and movements come from the bank. The history stays the one of {source}. You can go back with “Undo switch” in the settings of the account.",
+        "body": "From now on balance and transactions come from the bank. The history stays the one of {source}. You can go back with “Undo switch” in the settings of the account.",
         "interests": "The interest settlements of this account are no longer published on {source}.",
         "transfers": "Income and spending of the past months go down by {amount} in total.",
         "back": "Back to the report",
@@ -2629,14 +2629,14 @@
       },
       "done": {
         "title": "“{account}” now comes from the bank",
-        "matched": "{count, plural, one {# movement linked} other {# movements linked}} to the bank.",
-        "fresh": "{count, plural, one {# new movement} other {# new movements}} from the bank.",
+        "matched": "{count, plural, one {# transaction linked} other {# transactions linked}} to the bank.",
+        "fresh": "{count, plural, one {# new transaction} other {# new transactions}} from the bank.",
         "transfers": "{count, plural, one {# transfer recognised} other {# transfers recognised}}.",
         "sourceStops": "{source} no longer updates this account. Ledgerly reads the bank 3 times a day.",
         "howToUndo": "To go back: account settings › “Undo switch”.",
         "theBank": "the bank",
         "goToAccount": "Go to the account",
-        "joined": "{count, plural, one {# movement} other {# movements}} of the account already in Ledgerly joined to this one. That account is now archived."
+        "joined": "{count, plural, one {# transaction} other {# transactions}} of the account already in Ledgerly joined to this one. That account is now archived."
       },
       "undo": {
         "action": "Undo switch",
@@ -2644,15 +2644,15 @@
         "body": "The account comes from {source} again, as before {date}.",
         "backTitle": "Back as it was",
         "back": {
-          "source": "Balance and movements come from {source} again.",
-          "rows": "The movements linked to the bank become movements of {source} again. None is removed.",
+          "source": "Balance and transactions come from {source} again.",
+          "rows": "The transactions linked to the bank become transactions of {source} again. None is removed.",
           "transfers": "{count, plural, one {# transfer goes} other {# transfers go}} back to an income and a spending.",
           "interests": "The interest settlements are published on {source} again. Those closed in between are not published by themselves.",
-          "joined": "“{account}” becomes an account of the bank again, with its movements."
+          "joined": "“{account}” becomes an account of the bank again, with its transactions."
         },
         "knowTitle": "Good to know",
         "know": {
-          "bankRows": "The movements that came from the bank after {date} no longer count. {source} brings them again, if it has them.",
+          "bankRows": "The transactions that came from the bank after {date} no longer count. {source} brings them again, if it has them.",
           "bankStays": "{bank} stays connected. The other accounts do not change."
         },
         "keep": "Keep the account on {bank}",
@@ -2669,12 +2669,12 @@
         "switched": "Moved from {source} to the bank on {date}. The history up to {cut} is the one of {source}."
       },
       "unsent": {
-        "title": "Before the switch: {count, plural, one {# manual movement is not} other {# manual movements are not}} on {source}",
+        "title": "Before the switch: {count, plural, one {# manual transaction is not} other {# manual transactions are not}} on {source}",
         "explain": "Ledgerly tried to send them now. Until they are on {source}, the switch does not start: the history and the balance would not be complete.",
         "noPayee": "No payee",
         "notSent": "Not sent to {source}",
         "toSend": "To send",
-        "then": "Send each movement again from Expenses, or delete it. Then run the check again."
+        "then": "Send each transaction again from Expenses, or delete it. Then run the check again."
       }
     }
   },
@@ -2940,7 +2940,7 @@
       "emptyStandalone": "No expense linked yet. Use “Link an expense” to file one here.",
       "unlink": "Unlink",
       "confirmTitle": "Unlink this expense?",
-      "confirmDescription": "{label} will no longer count against this pocket. The movement itself stays."
+      "confirmDescription": "{label} will no longer count against this pocket. The transaction itself stays."
     },
     "planned": {
       "title": "Planned expenses",
@@ -3426,9 +3426,9 @@
       "invalid_account": "Pick an open account; the value needs a manual account no other fund uses.",
       "duplicate_name": "There is already a fund with that name.",
       "archived": "An archived fund can't change. Restore it first.",
-      "linked": "This contribution comes from a movement: hide the movement in Expenses to remove it.",
+      "linked": "This contribution comes from a transaction: hide the transaction in Expenses to remove it.",
       "future_date": "The date can't be in the future.",
-      "movement_taken": "That movement is already tied to another contribution.",
+      "movement_taken": "That transaction is already tied to another contribution.",
       "failed": "Couldn't save. Try again.",
       "load": "Funds not loaded. Try again.",
       "undo": "Not restored. Reload the page."
@@ -3827,7 +3827,7 @@
         "payrollHelp": "Contributions withheld from your payslip reach the fund automatically.",
         "payrollOff": "Without the Payroll module you also record payslip contributions by hand.",
         "debitQuestion": "Do you have a recurring debit on an account?",
-        "debitHelp": "Ledgerly finds the debit among the account's movements and creates the contribution.",
+        "debitHelp": "Ledgerly finds the debit among the account's transactions and creates the contribution.",
         "manualQuestion": "Do you make one-off payments?",
         "manualHelp": "Adds the “Record contribution” button at the top of the fund's page."
       },
@@ -3942,7 +3942,7 @@
         "anyAccount": "Any account",
         "otherAccount": "Account no longer open",
         "match": "Payee contains",
-        "matchHint": "A part of the name shown on the movement.",
+        "matchHint": "A part of the name shown on the transaction.",
         "kpi": "Recurring debit",
         "kpiNote": "{frequency}, on day {day} · {status}",
         "listLine": "Debit {amount} {frequency} · {status}"
@@ -3978,7 +3978,7 @@
       "undo": "Undo",
       "undoFailed": "Not restored. Reload the page.",
       "detect": {
-        "button": "Find from the movements",
+        "button": "Find from the transactions",
         "movement": "A debit of this fund",
         "pick": "Choose a debit…",
         "looking": "Looking…",
@@ -4112,9 +4112,9 @@
       "fee": "Fee",
       "feeUnknown": "I do not know the fee",
       "invested": "Invested: {amount}",
-      "movement": "Linked movement",
-      "noMovement": "No movement",
-      "currentMovement": "The movement already linked",
+      "movement": "Linked transaction",
+      "noMovement": "No transaction",
+      "currentMovement": "The transaction already linked",
       "note": "Note",
       "cancel": "Cancel",
       "save": "Save contribution",
@@ -4270,7 +4270,7 @@
     },
     "manualForm": {
       "title": "Add an account from Accounts",
-      "description": "Investments shows an account that already exists in Accounts. Its value is the account balance; deposits and withdrawals are its movements. A new account is created in Accounts.",
+      "description": "Investments shows an account that already exists in Accounts. Its value is the account balance; deposits and withdrawals are its transactions. A new account is created in Accounts.",
       "category": "Category",
       "url": "Link",
       "urlHint": "Optional: the address of the service's site.",
@@ -4290,7 +4290,7 @@
       "noUrl": "No link to the service",
       "negativeCash": "Cash is negative: the data may be incomplete.",
       "noValue": "No value yet: record a valuation.",
-      "conflictNote": "The provider now reads a product you also keep by hand. Until you reconcile, the manual value counts and the total does not jump.",
+      "conflictNote": "The source now reads a product you also keep by hand. Until you reconcile, the manual value counts and the total does not jump.",
       "totalModeNote": "Total mode: you record the account's value, not its positions.",
       "kpis": {
         "value": "Value",
@@ -4322,7 +4322,7 @@
       "actions": "Actions",
       "origins": {
         "manual": "Manual",
-        "provider": "Provider"
+        "provider": "Source"
       }
     },
     "products": {
@@ -4344,7 +4344,7 @@
       "kind": "Type",
       "detail": "Detail",
       "amount": "Amount",
-      "linked": "Bank movement",
+      "linked": "Bank transaction",
       "notLinked": "not linked",
       "revisions": "{count, plural, one {# revision} other {# revisions}}",
       "conversion": "conversion",
@@ -4387,7 +4387,7 @@
         "pending_zero": "Empty?",
         "reconstructed": "Reconstructed"
       },
-      "pendingZero": "The provider reports the account as empty. Was it emptied? Until you confirm, the value holds."
+      "pendingZero": "The source reports the account as empty. Was it emptied? Until you confirm, the value holds."
     },
     "adjustments": {
       "title": "Open adjustments",
@@ -4442,7 +4442,7 @@
       "fxRate": "Exchange rate",
       "fxHint": "{account} per 1 {asset}. Empty: the ECB rate of the day.",
       "submit": "Add",
-      "theProvider": "The provider",
+      "theProvider": "The source",
       "choose": "Choose an asset",
       "chooseProduct": "Choose a product",
       "currencyFilter": "Currency",
@@ -4462,7 +4462,7 @@
         "deposit": "Money that went into the account.",
         "withdrawal": "Money that came out of the account.",
         "account_valuation": "What the account is worth at the end of that day.",
-        "adjustment": "Use it when the value is wrong for some days and no movement explains it. Example: eToro did not read 120 USD of cash from 3 to 10 March: Amount 120, From 3 March, To 10 March.",
+        "adjustment": "Use it when the value is wrong for some days and no transaction explains it. Example: eToro did not read 120 USD of cash from 3 to 10 March: Amount 120, From 3 March, To 10 March.",
         "valuation": "The new price or value of the position.",
         "income": "A dividend, an interest or a reward paid in cash."
       },
@@ -4474,7 +4474,7 @@
       "reason": "Reason",
       "linkOut": "Linked account expense",
       "linkIn": "Linked account income",
-      "linkHint": "Optional: the matching bank movement. It documents where the money came from and moves no balance.",
+      "linkHint": "Optional: the matching bank transaction. It documents where the money came from and moves no balance.",
       "noLink": "Not linked",
       "class": "What it corrects",
       "classes": {
@@ -4488,8 +4488,8 @@
         "capital": "The value changes by {amount} from {date}; the P&L does not: it is a flow."
       },
       "from": "From",
-      "linkSearch": "Search a bank movement",
-      "noCandidates": "No movement of the same amount within 3 days"
+      "linkSearch": "Search a bank transaction",
+      "noCandidates": "No transaction of the same amount within 3 days"
     },
     "holdingForm": {
       "valuation": "Value · {name}",
@@ -4509,8 +4509,8 @@
     },
     "reconcileForm": {
       "title": "Reconcile · {name}",
-      "description": "The provider's reading now covers this asset and product. Decide from which day and how much of it the provider covers.",
-      "choice": "The provider",
+      "description": "The source's reading now covers this asset and product. Decide from which day and how much of it the source covers.",
+      "choice": "The source",
       "covered": "Covers it all",
       "partial": "Covers part of it",
       "outside": "It is outside the scope",
@@ -4525,7 +4525,7 @@
       "zeroTitle": "Was the account emptied?",
       "zeroDescription": "The reading of {date} counts as zero from that day.",
       "disconnectTitle": "Disconnect {name}?",
-      "disconnectDescription": "The account becomes manual today with the positions of the last reading, and the key is deleted from Ledgerly. Revoke it on the provider too."
+      "disconnectDescription": "The account becomes manual today with the positions of the last reading, and the key is deleted from Ledgerly. Revoke it on the source too."
     },
     "toasts": {
       "serviceCreated": "{name} created",
@@ -4556,22 +4556,22 @@
       "no_value": "The account has no value today.",
       "duplicate_asset": "An asset with that ISIN or symbol already exists.",
       "duplicate_holding": "The account already has that asset in that product.",
-      "invalid_transaction": "That bank movement goes the other way.",
-      "already_linked": "That bank movement is already linked.",
+      "invalid_transaction": "That bank transaction goes the other way.",
+      "already_linked": "That bank transaction is already linked.",
       "not_editable": "Only your own operations can be changed.",
       "before_period": "That date is before the service started.",
       "managed_locked": "This account is managed in Investments.",
-      "unknown_provider": "That provider cannot be connected.",
+      "unknown_provider": "That source cannot be connected.",
       "invalid_credentials": "Check the key: paste both fields, one line each.",
       "not_read_only": "The key can do more than read. Create a key with Read only and try again.",
-      "provider_auth": "The provider refused the key. Check that it is a Real key and that it was not revoked.",
-      "provider_unavailable": "The provider did not answer. Nothing was saved: try again later.",
-      "rate_limited": "The provider asked to wait. Try again in a few minutes.",
-      "unsupported_currency": "The provider cannot report in that currency.",
-      "already_connected": "This provider is already connected.",
+      "provider_auth": "The source refused the key. Check that it is a Real key and that it was not revoked.",
+      "provider_unavailable": "The source did not answer. Nothing was saved: try again later.",
+      "rate_limited": "The source asked to wait. Try again in a few minutes.",
+      "unsupported_currency": "The source cannot report in that currency.",
+      "already_connected": "This source is already connected.",
       "not_connected": "This service is not connected.",
       "cooldown": "Wait a few minutes before trying again.",
-      "different_account": "That key belongs to another account on the provider. Use a key of the account already connected.",
+      "different_account": "That key belongs to another account on the source. Use a key of the account already connected.",
       "sync_failed": "The sync failed: see the connection's last error.",
       "sync_refused": "The sync was refused: see the connection's state.",
       "not_a_transfer": "Those two operations cannot be linked as a transfer."
@@ -4614,7 +4614,7 @@
         "write": "can write",
         "unknown-flag": "unknown permissions",
         "unverifiable": "not verifiable",
-        "error": "not checked (provider did not answer)"
+        "error": "not checked (source did not answer)"
       },
       "lastError": "Last error: {error}",
       "rotate": "The key is more than 90 days old: replace it with a new one and revoke the old one.",
@@ -4625,8 +4625,8 @@
       "replaceDescription": "The new key goes through the same checks; if they fail, the old key stays.",
       "disconnect": "Disconnect",
       "disconnected": "Disconnected: the account is manual.",
-      "revokeTitle": "Revoke the old key on the provider",
-      "revokeSteps": "Ledgerly no longer uses it, but it still works until you delete it: open the provider's API key page, delete it, then confirm here.",
+      "revokeTitle": "Revoke the old key on the source",
+      "revokeSteps": "Ledgerly no longer uses it, but it still works until you delete it: open the source's API key page, delete it, then confirm here.",
       "revokeOpen": "Open the API keys page",
       "revokedConfirm": "I revoked it",
       "coverage": "What the history covers",
@@ -4651,12 +4651,12 @@
       },
       "reasons": {
         "api_limit_12m": "the API keeps 12 months",
-        "before_first_movement": "before the first eToro Money movement",
+        "before_first_movement": "before the first eToro Money transaction",
         "api_limit_24m": "the API keeps 24 months",
         "api_limit_18m": "the API keeps 18 months",
         "opening_12m": "older than 12 months: part of the opening",
         "negative_opening": "the history explains more than the balance",
-        "quantity_mismatch": "the movements do not add up to the balance: a market may be missing",
+        "quantity_mismatch": "the transactions do not add up to the balance: a market may be missing",
         "reconstructed": "rebuilt from the complete activity of the 12 months and the daily closes"
       },
       "reliableFrom": "reliable from {date}",
@@ -4866,7 +4866,7 @@
         "valuedOn": "updated on {date}",
         "noValueNote": "no account balance",
         "invested": "Net invested",
-        "investedNote": "movements of the account in Accounts: in − out",
+        "investedNote": "transactions of the account in Accounts: in − out",
         "pnl": "Profit / loss",
         "pnlNote": "since the start",
         "noValue": "The account has no balance yet: use Update value, or wait for the Wallet sync, to see the profit or loss.",
@@ -4912,8 +4912,8 @@
       "next": "Next page",
       "empty": "No activity in this period.",
       "emptyFiltered": "Nothing matches the search.",
-      "accountMovements": "Account movements",
-      "accountMovementsNote": "Deposits and withdrawals are the movements of the account in Accounts.",
+      "accountMovements": "Account transactions",
+      "accountMovementsNote": "Deposits and withdrawals are the transactions of the account in Accounts.",
       "openAccount": "Open in Accounts"
     },
     "connection": {
@@ -4936,7 +4936,7 @@
         "costMismatch": "The quantities do not add up with the activity: each difference is an entry in Activity.",
         "details": "Technical detail by stream ({count})",
         "products": "Products read: {products}",
-        "costPeriod": "Each period values the positions at its start, and those bought in it at what they cost: no cost from the provider is needed."
+        "costPeriod": "Each period values the positions at its start, and those bought in it at what they cost: no cost from the source is needed."
       },
       "status": {
         "complete": "Complete",
@@ -5008,7 +5008,7 @@
       "cashNote": "{currency} available",
       "total": "Total",
       "mobileLine": "{quantity} × {price} · average {average}",
-      "noCostNote": "{count, plural, one {# position has} other {# positions have}} no cost from the provider: the period values {count, plural, one {it} other {them}} at its start.",
+      "noCostNote": "{count, plural, one {# position has} other {# positions have}} no cost from the source: the period values {count, plural, one {it} other {them}} at its start.",
       "costLink": "Cost basis →",
       "empty": "No open positions.",
       "emptyWithClosed": "No open positions · {count, plural, one {# closed} other {# closed}}.",

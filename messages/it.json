@@ -447,7 +447,7 @@
     },
     "categories": {
       "title": "Categorie",
-      "description": "Le categorie delle transazioni, raccolte in gruppi. Un gruppo ha un colore e ogni sottocategoria viene disegnata con quello. Una categoria sincronizzata viene riconosciuta dal nome prima di crearne una nuova, e il suo gruppo di Wallet diventa il suo gruppo.",
+      "description": "Le categorie dei movimenti, raccolte in gruppi. Un gruppo ha un colore e ogni sottocategoria viene disegnata con quello. Una categoria sincronizzata viene riconosciuta dal nome prima di crearne una nuova, e il suo gruppo di Wallet diventa il suo gruppo.",
       "add": "Aggiungi categoria",
       "name": "Nome",
       "group": "Gruppo",
@@ -490,11 +490,11 @@
       "autoColor": "Automatico",
       "deleteTitle": "Eliminare questa categoria?",
       "deleteWarning": "{name} viene rimossa per sempre. Non si può tornare indietro.",
-      "deleteMovements": "{count, plural, =0 {Nessuna transazione la usa.} one {# transazione resta senza categoria.} other {# transazioni restano senza categoria.}}",
+      "deleteMovements": "{count, plural, =0 {Nessun movimento la usa.} one {# movimento resta senza categoria.} other {# movimenti restano senza categoria.}}",
       "deleteBudgets": "I budget impostati su di lei vengono cancellati; abbonamenti e regole di interesse la perdono.",
       "deleteChildren": "Le sue sottocategorie vengono eliminate con lei.",
       "deleteWallet": "Viene eliminata anche su Wallet, se viene da lì.",
-      "deletedToast": "{name} eliminata · {count, plural, =0 {nessuna transazione toccata} one {# transazione senza categoria} other {# transazioni senza categoria}}",
+      "deletedToast": "{name} eliminata · {count, plural, =0 {nessun movimento toccato} one {# movimento senza categoria} other {# movimenti senza categoria}}",
       "wallet": {
         "deleted": "{count, plural, one {# categoria eliminata anche su Wallet} other {# categorie eliminate anche su Wallet}}",
         "refused": "Wallet non l'ha eliminata: {reason}",
@@ -561,7 +561,7 @@
           "fromWord": {
             "income": "entrate",
             "expense": "uscite",
-            "transfer": "trasferimenti"
+            "transfer": "giroconti"
           }
         },
         "failed": "Non è stato possibile salvare. Riprova."
@@ -715,7 +715,7 @@
         "investments:read": "investments:read"
       },
       "scopeHints": {
-        "read": "conti, saldi, transazioni e riepilogo",
+        "read": "conti, saldi, movimenti e riepilogo",
         "write": "registrare la lettura di un saldo",
         "imports": "caricare buste paga",
         "investments:read": "servizi di investimento, rendimenti e posizioni"
@@ -831,7 +831,7 @@
       "remove": "Rimuovi",
       "removeTitle": "Rimuovere questo utente?",
       "removeWarning": "{email} e tutto quello che possiede verranno cancellati.",
-      "removeDetail": "Se ne vanno conti, transazioni, documenti e gli originali. Non si può tornare indietro.",
+      "removeDetail": "Se ne vanno conti, movimenti, documenti e gli originali. Non si può tornare indietro.",
       "removed": "{email} rimosso",
       "cancel": "Annulla",
       "errors": {
@@ -918,7 +918,7 @@
       "schedule": "Pianificazione dei backup",
       "scheduleDetail": "Ogni giorno alle 12:00 · se ne tengono {kept}",
       "retention": "Conservazione",
-      "retentionDetail": "Documenti 10 anni · registri dei job e delle sincronizzazioni 90 giorni · transazioni illimitate",
+      "retentionDetail": "Documenti 10 anni · registri dei job e delle sincronizzazioni 90 giorni · movimenti illimitati",
       "version": "Versione",
       "backupNow": "Fai un backup adesso",
       "backupRunning": "Backup in corso…",
@@ -1060,7 +1060,7 @@
     },
     "apiClients": {
       "title": "Client API",
-      "description": "Client OAuth2 (client credentials) per gli script e le integrazioni che chiamano /api/v1. Un client agisce come te, con gli scopi che scegli; i suoi token di accesso durano un'ora.",
+      "description": "Client OAuth2 (client credentials) per gli script e le app che chiamano /api/v1. Un client agisce come te, con gli scopi che scegli; i suoi token di accesso durano un'ora.",
       "new": "Nuovo client",
       "create": "Crea il client",
       "nameHint": "A che cosa serve, così saprai quale eliminare.",
@@ -1570,7 +1570,7 @@
       "limit": "Hai raggiunto 200 regole. Elimina una regola per aggiungerne un'altra.",
       "empty": {
         "title": "Ancora nessuna regola",
-        "body": "Una regola dà da sola categoria e macro ai movimenti nuovi. Esempio: ogni movimento con «ricarica» va in Trasferimenti."
+        "body": "Una regola dà da sola categoria e macro ai movimenti nuovi. Esempio: ogni movimento con «ricarica» va in Giroconti."
       },
       "fromTransaction": "Crea una regola…",
       "reason": "Regola «{name}»",
@@ -1593,8 +1593,8 @@
         "openPlugins": "Apri Plugin"
       },
       "investments": {
-        "title": "Connessioni di investimento",
-        "description": "Stessa riga e stesso orario delle altre. Configura apre il tab Connessione del servizio: lì ci sono la chiave e i controlli.",
+        "title": "Collegamenti di investimento",
+        "description": "Stessa riga e stesso orario delle altre. Configura apre il tab Collegamento del servizio: lì ci sono la chiave e i controlli.",
         "role": "Chiave API in sola lettura"
       },
       "rules": {
@@ -1692,7 +1692,7 @@
     "badges": {
       "manual": "A mano",
       "hidden": "Nascosto",
-      "removedUpstream": "Sparito dal provider",
+      "removedUpstream": "Sparito dalla sorgente",
       "edited": "Modificato qui",
       "transfer": "Giroconto",
       "pending": "In attesa",
@@ -1731,7 +1731,7 @@
     },
     "errors": {
       "notFound": "Questo movimento non esiste più.",
-      "providerOwned": "Beneficiario, importo e data appartengono al provider e non si modificano qui.",
+      "providerOwned": "Beneficiario, importo e data appartengono alla sorgente e non si modificano qui.",
       "failed": "Non è stato possibile salvare. Riprova."
     },
     "palette": {
@@ -1988,7 +1988,7 @@
       "macro": {
         "income": "Entrate",
         "expense": "Uscite",
-        "transfer": "Trasferimenti"
+        "transfer": "Giroconti"
       },
       "count": "{count, plural, one {# movimento} other {# movimenti}}",
       "transferSplit": "Entrati {in} · Usciti {out}",
@@ -2011,7 +2011,7 @@
       "open": "Apri",
       "newGroup": "Nuovo gruppo",
       "addCategory": "Aggiungi una categoria",
-      "addTransferCategory": "Aggiungi una categoria di Trasferimenti",
+      "addTransferCategory": "Aggiungi una categoria di Giroconti",
       "addIn": "In {macro} › {group}",
       "actions": "Azioni per {name}",
       "rename": "Rinomina",
@@ -2110,7 +2110,7 @@
       "fromWord": {
         "income": "entrate",
         "expense": "uscite",
-        "transfer": "trasferimenti"
+        "transfer": "giroconti"
       }
     },
     "tabs": {
@@ -2158,7 +2158,7 @@
     "partial": "Alcuni conti non hanno ancora un saldo: questi totali sono incompleti.",
     "empty": {
       "title": "Ancora nessun conto",
-      "description": "Aggiungi un conto a mano, o collega un provider quando arriveranno le integrazioni.",
+      "description": "Aggiungi un conto a mano, o collega una banca in Impostazioni › Plugin.",
       "archived": "Nessun conto aperto in questo momento. {count, plural, one {# conto archiviato} other {# conti archiviati}} sono ancora qui, con tutta la loro storia."
     },
     "columns": {
@@ -2332,7 +2332,7 @@
       },
       "sources": {
         "manual": "Manuale",
-        "provider": "Provider",
+        "provider": "Sorgente",
         "system": "Snapshot",
         "import": "Importazione",
         "derived": "Ricostruito",
@@ -2367,10 +2367,10 @@
         "title": "Generale",
         "description": "Come si chiama e come si riconosce questo conto.",
         "name": "Nome",
-        "provider": "Provider",
-        "manualProvider": "I conti manuali non hanno un provider.",
+        "provider": "Sorgente",
+        "manualProvider": "I conti manuali non hanno una sorgente.",
         "type": "Tipo",
-        "locked": "Deciso dal provider.",
+        "locked": "Deciso dalla sorgente.",
         "typeSynced": "Arriva da Wallet e lo segue finché non lo cambi qui. Wallet non accetta modifiche al tipo di conto dalla sua API: una modifica fatta qui resta qui.",
         "purpose": "Scopo",
         "reference": "Riferimento",
@@ -2429,7 +2429,7 @@
         "deletedToast": "{name} eliminato, con i suoi movimenti e i suoi saldi.",
         "archivedToast": "{name} archiviato. La sua storia resta nei mesi passati.",
         "remove": "Elimina il conto",
-        "sourceNote": "Arriva da {source}: esce dai conti che {source} porta qui, così la lettura dopo non lo aggiunge di nuovo. Per riaverlo, sceglilo di nuovo nella pagina dell'integrazione: torna con lo storico che {source} dà ancora.",
+        "sourceNote": "Arriva da {source}: esce dai conti che {source} porta qui, così la lettura dopo non lo aggiunge di nuovo. Per riaverlo, sceglilo di nuovo nella pagina della sorgente: torna con lo storico che {source} dà ancora.",
         "loading": "Controllo cosa usa questo conto…",
         "movedToast": "Spostato: {what}.",
         "dependents": {
@@ -3036,7 +3036,7 @@
       "delete": "Elimina",
       "deleteTitle": "Eliminare questo abbonamento?",
       "deleteWarning": "{name} e i pagamenti che aveva verificato spariscono per sempre. Non si può tornare indietro.",
-      "deleteDetail": "Le transazioni non si toccano: un abbonamento è un piano steso sopra di loro, mai il loro proprietario.",
+      "deleteDetail": "I movimenti non si toccano: un abbonamento è un piano steso sopra di loro, mai il loro proprietario.",
       "deletedToast": "{name} eliminato",
       "cancelDelete": "Tienilo"
     },
@@ -4160,8 +4160,8 @@
       "open": "Apri",
       "createManual": "Aggiungi conto manuale",
       "more": "Altre azioni",
-      "linkTransfer": "Collega come trasferimento",
-      "unlinkTransfer": "Scollega trasferimento"
+      "linkTransfer": "Collega come giroconto",
+      "unlinkTransfer": "Scollega giroconto"
     },
     "kpis": {
       "value": "Valore totale",
@@ -4290,7 +4290,7 @@
       "noUrl": "Nessun link al servizio",
       "negativeCash": "La liquidità è negativa: i dati potrebbero essere incompleti.",
       "noValue": "Ancora nessun valore: registra una valutazione.",
-      "conflictNote": "Il provider ora legge un prodotto che tieni anche a mano. Finché non riconcili conta il valore manuale e il totale non salta.",
+      "conflictNote": "La sorgente ora legge un prodotto che tieni anche a mano. Finché non riconcili conta il valore manuale e il totale non salta.",
       "totalModeNote": "Modo totale: registri il valore del conto, non le sue posizioni.",
       "kpis": {
         "value": "Valore",
@@ -4322,7 +4322,7 @@
       "actions": "Azioni",
       "origins": {
         "manual": "Manuale",
-        "provider": "Provider"
+        "provider": "Sorgente"
       }
     },
     "products": {
@@ -4355,7 +4355,7 @@
         "fee": "commissione"
       },
       "until": "fino al {date}",
-      "transferWith": "Trasferimento · {name}"
+      "transferWith": "Giroconto · {name}"
     },
     "kinds": {
       "opening_cash": "Liquidità iniziale",
@@ -4387,7 +4387,7 @@
         "pending_zero": "Vuota?",
         "reconstructed": "Ricostruita"
       },
-      "pendingZero": "Il provider riporta il conto vuoto. È stato svuotato? Finché non confermi, il valore resta."
+      "pendingZero": "La sorgente riporta il conto vuoto. È stato svuotato? Finché non confermi, il valore resta."
     },
     "adjustments": {
       "title": "Rettifiche aperte",
@@ -4442,7 +4442,7 @@
       "fxRate": "Cambio",
       "fxHint": "{account} per 1 {asset}. Vuoto: cambio BCE del giorno.",
       "submit": "Aggiungi",
-      "theProvider": "Il provider",
+      "theProvider": "La sorgente",
       "choose": "Scegli un asset",
       "chooseProduct": "Scegli un prodotto",
       "currencyFilter": "Valuta",
@@ -4509,8 +4509,8 @@
     },
     "reconcileForm": {
       "title": "Riconcilia · {name}",
-      "description": "La lettura del provider ora copre questo asset e prodotto. Decidi da quale giorno e quanto ne copre il provider.",
-      "choice": "Il provider",
+      "description": "La lettura della sorgente ora copre questo asset e prodotto. Decidi da quale giorno e quanto ne copre la sorgente.",
+      "choice": "La sorgente",
       "covered": "La copre tutta",
       "partial": "Ne copre una parte",
       "outside": "È fuori dal perimetro",
@@ -4525,7 +4525,7 @@
       "zeroTitle": "Il conto è stato svuotato?",
       "zeroDescription": "La lettura del {date} conta come zero da quel giorno.",
       "disconnectTitle": "Scollegare {name}?",
-      "disconnectDescription": "Da oggi il conto diventa manuale con le posizioni dell'ultima lettura, e la chiave viene cancellata da Ledgerly. Revocala anche sul provider."
+      "disconnectDescription": "Da oggi il conto diventa manuale con le posizioni dell'ultima lettura, e la chiave viene cancellata da Ledgerly. Revocala anche sulla sorgente."
     },
     "toasts": {
       "serviceCreated": "{name} creato",
@@ -4541,8 +4541,8 @@
       "keyReplaced": "Chiave sostituita",
       "disconnected": "{name} scollegato: ora il conto è manuale",
       "revoked": "Revoca registrata",
-      "transferLinked": "Trasferimento collegato",
-      "transferUnlinked": "Trasferimento scollegato",
+      "transferLinked": "Giroconto collegato",
+      "transferUnlinked": "Giroconto scollegato",
       "valueUpdated": "Valore di {name} aggiornato"
     },
     "errors": {
@@ -4561,20 +4561,20 @@
       "not_editable": "Solo le tue operazioni si possono modificare.",
       "before_period": "Quella data è prima dell'inizio del servizio.",
       "managed_locked": "Questo conto è gestito in Investimenti.",
-      "unknown_provider": "Questo provider non si può collegare.",
+      "unknown_provider": "Questa sorgente non si può collegare.",
       "invalid_credentials": "Controlla la chiave: incolla entrambi i campi, una riga ciascuno.",
       "not_read_only": "La chiave può fare più che leggere. Crea una chiave con il solo permesso Read e riprova.",
-      "provider_auth": "Il provider ha rifiutato la chiave. Controlla che sia una chiave Real e che non sia stata revocata.",
-      "provider_unavailable": "Il provider non ha risposto. Non è stato salvato niente: riprova più tardi.",
-      "rate_limited": "Il provider ha chiesto di aspettare. Riprova tra qualche minuto.",
-      "unsupported_currency": "Il provider non può riportare il conto in questa valuta.",
-      "already_connected": "Questo provider è già collegato.",
+      "provider_auth": "La sorgente ha rifiutato la chiave. Controlla che sia una chiave Real e che non sia stata revocata.",
+      "provider_unavailable": "La sorgente non ha risposto. Non è stato salvato niente: riprova più tardi.",
+      "rate_limited": "La sorgente ha chiesto di aspettare. Riprova tra qualche minuto.",
+      "unsupported_currency": "La sorgente non può riportare il conto in questa valuta.",
+      "already_connected": "Questa sorgente è già collegata.",
       "not_connected": "Questo servizio non è collegato.",
       "cooldown": "Aspetta qualche minuto prima di riprovare.",
-      "different_account": "Questa chiave è di un altro conto del provider. Usa una chiave del conto già collegato.",
-      "sync_failed": "La sincronizzazione non è riuscita: guarda l'ultimo errore della connessione.",
-      "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato della connessione.",
-      "not_a_transfer": "Queste due operazioni non si possono collegare come trasferimento."
+      "different_account": "Questa chiave è di un altro conto della sorgente. Usa una chiave del conto già collegato.",
+      "sync_failed": "La sincronizzazione non è riuscita: guarda l'ultimo errore del collegamento.",
+      "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato del collegamento.",
+      "not_a_transfer": "Queste due operazioni non si possono collegare come giroconto."
     },
     "connect": {
       "open": "Collega",
@@ -4598,7 +4598,7 @@
       "checking": "Verifica della chiave…"
     },
     "sync": {
-      "title": "Connessione",
+      "title": "Collegamento",
       "states": {
         "active": "Attiva",
         "error": "Errore",
@@ -4614,7 +4614,7 @@
         "write": "può scrivere",
         "unknown-flag": "permessi sconosciuti",
         "unverifiable": "non verificabile",
-        "error": "non verificata (il provider non ha risposto)"
+        "error": "non verificata (la sorgente non ha risposto)"
       },
       "lastError": "Ultimo errore: {error}",
       "rotate": "La chiave ha più di 90 giorni: sostituiscila con una nuova e revoca quella vecchia.",
@@ -4625,8 +4625,8 @@
       "replaceDescription": "La nuova chiave passa dagli stessi controlli; se non li supera resta quella vecchia.",
       "disconnect": "Scollega",
       "disconnected": "Scollegato: il conto è manuale.",
-      "revokeTitle": "Revoca la vecchia chiave sul provider",
-      "revokeSteps": "Ledgerly non la usa più, ma funziona finché non la cancelli: apri la pagina delle chiavi API del provider, cancellala, poi conferma qui.",
+      "revokeTitle": "Revoca la vecchia chiave sulla sorgente",
+      "revokeSteps": "Ledgerly non la usa più, ma funziona finché non la cancelli: apri la pagina delle chiavi API della sorgente, cancellala, poi conferma qui.",
       "revokeOpen": "Apri la pagina delle chiavi API",
       "revokedConfirm": "L'ho revocata",
       "coverage": "Cosa copre lo storico",
@@ -4664,7 +4664,7 @@
       "readingsNote": "Si conserva una lettura al giorno."
     },
     "transfers": {
-      "title": "Trasferimenti da confermare",
+      "title": "Giroconti da confermare",
       "description": "Un prelievo e un versamento dello stesso importo tra due tuoi servizi entro 3 giorni. Collegati, contano per ogni servizio ma non per il portafoglio. Il collegamento non cambia nessun P&L: ogni servizio li tiene come flussi e il portafoglio li esclude.",
       "out": "Uscita il {date} → {name}, entrata il {other}",
       "in": "Entrata il {date} ← {name}, uscita il {other}"
@@ -4708,7 +4708,7 @@
         "feesFxNote": "commissioni {fees} · cambio {fx}",
         "corrections": "Correzioni",
         "unattributed": "Non spiegato dai dati",
-        "transfers": "Trasferimenti tra servizi"
+        "transfers": "Giroconti tra servizi"
       },
       "chart": {
         "title": "Andamento",
@@ -4744,7 +4744,7 @@
         "return": "Rendimento",
         "contribution": "Contributo",
         "total": "Totale",
-        "transfers": "Trasferimenti tra servizi",
+        "transfers": "Giroconti tra servizi",
         "unavailable": "non disponibile",
         "highlight": "Evidenzia {name} nel grafico",
         "notComputable": "Rendimento non calcolabile: capitale troppo piccolo nel periodo",
@@ -4936,7 +4936,7 @@
         "costMismatch": "Le quantità non tornano con i movimenti: ogni differenza è una voce in Attività.",
         "details": "Dettaglio tecnico per flusso ({count})",
         "products": "Prodotti letti: {products}",
-        "costPeriod": "Ogni periodo valuta le posizioni al suo inizio, e quelle comprate nel periodo al loro costo: non serve il costo del provider."
+        "costPeriod": "Ogni periodo valuta le posizioni al suo inizio, e quelle comprate nel periodo al loro costo: non serve il costo della sorgente."
       },
       "status": {
         "complete": "Completo",
@@ -5008,7 +5008,7 @@
       "cashNote": "{currency} disponibili",
       "total": "Totale",
       "mobileLine": "{quantity} × {price} · medio {average}",
-      "noCostNote": "{count, plural, one {# posizione non ha} other {# posizioni non hanno}} un costo dal provider: il periodo {count, plural, one {la} other {le}} valuta al suo inizio.",
+      "noCostNote": "{count, plural, one {# posizione non ha} other {# posizioni non hanno}} un costo dalla sorgente: il periodo {count, plural, one {la} other {le}} valuta al suo inizio.",
       "costLink": "Costo di carico →",
       "empty": "Nessuna posizione aperta.",
       "emptyWithClosed": "Nessuna posizione aperta · {count, plural, one {# chiusa} other {# chiuse}}.",
