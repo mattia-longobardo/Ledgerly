@@ -33,8 +33,9 @@ import { contextOf, lastMonthOf, syncedAccount, thisMonthOf, walletMovement, wor
 import { seedBinance, seedEtoro } from "./investments";
 import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 
-export async function seedLayout(): Promise<void> {
-  const ctx = await contextOf(USERS.layout.email);
+/** `email`: the `layout` user, or a copy of it for a journey that changes what every page shows. */
+export async function seedLayout(email: string = USERS.layout.email): Promise<void> {
+  const ctx = await contextOf(email);
   // The bank plugin, turned on with nothing saved: the section "Banks" opens on its guide and the
   // procedure on its guard, both on screen for the check. Only where the instance has the plugin —
   // the seed cannot reach a plugin itself, so it relies on the manifest the app has already read.

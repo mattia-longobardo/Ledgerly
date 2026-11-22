@@ -223,6 +223,10 @@ await seedTimeOff(USERS.timeoffHolidays.email);
 
 await seedLayout();
 
+await seedLayout(USERS.addons.email);
+
+await seedLayout(USERS.hidden.email);
+
 await seedConnections();
 
 await seedManual();

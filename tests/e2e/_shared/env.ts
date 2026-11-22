@@ -108,6 +108,10 @@ export const USERS = {
   // empty state measures an empty state. The module journeys keep their own users, which start
   // empty on purpose, so filling this one breaks none of them.
   layout: { email: "layout@example.test", password: "layout-password-123", name: "Layout" },
+  // R5a and R5e: copies of `layout`, for the journeys that turn addons off and hide the amounts —
+  // a change every page of the user shows, so never on the user the screens are measured on.
+  addons: { email: "addons@example.test", password: "addons-password-123", name: "Addons" },
+  hidden: { email: "hidden@example.test", password: "hidden-password-123", name: "Hidden" },
   // Release N2: one connection in each of the five states (ux/n2-connection-status.md §2), the
   // history, "Advanced" and more than one bank. Its own user: the `layout` user keeps the section
   // "Banks" on its guide, with nothing saved.
@@ -235,6 +239,9 @@ export const SESSIONS = {
   security: { user: "security", file: "security-session.json" },
   // F9: the layout and accessibility check (tests/e2e/<flow>/a11y.spec.ts).
   layout: { user: "layout", file: "layout-session.json" },
+  // R5a and R5e: Settings › Addons and «Hide amounts» (tests/e2e/addons/).
+  addons: { user: "addons", file: "addons-session.json" },
+  hidden: { user: "hidden", file: "hidden-session.json" },
   // Release N2: the rows of the connections, in every state (tests/e2e/connections/connections.spec.ts).
   connections: { user: "connections", file: "connections-session.json" },
   // Release N3: the manual movement (tests/e2e/transactions/manual-movement.spec.ts).
