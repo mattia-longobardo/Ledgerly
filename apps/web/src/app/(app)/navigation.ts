@@ -1,13 +1,7 @@
 import type { Route } from "next";
-import type { Role } from "@ledgerly/domain/platform/context";
+import type { AddonId } from "@ledgerly/api-contract";
+import { addonOn, type Role } from "@ledgerly/domain/platform/context";
 import type { NavLink } from "@ledgerly/ui/shell/nav-types";
-
-/**
- * The addons of the plan (13-plugins-addons.md §13.3): the parts of the product a person can turn off.
- * shortcut: a copy of the list until step a of R5a puts `AddonId` in `packages/domain`; then import it.
- */
-export type Addon =
-  "investments" | "funds" | "payroll" | "timeoff" | "budgets" | "subscriptions" | "pockets" | "interests";
 
 interface NavItem extends Omit<NavLink, "label"> {
   labelKey:
@@ -25,7 +19,7 @@ interface NavItem extends Omit<NavLink, "label"> {
     | "settings";
   adminOnly: boolean;
   /** The addon the item belongs to; `null` for a base module, which is never off (PA9). */
-  addon: Addon | null;
+  addon: AddonId | null;
 }
 
 /** The tabs of the phone (decision D2d); the bar's fifth cell is More. */
@@ -35,7 +29,7 @@ const item = (
   id: NavItem["labelKey"],
   href: string,
   group: NavItem["group"],
-  addon: Addon | null,
+  addon: AddonId | null,
 ): NavItem => ({
   id,
   href: href as Route,
@@ -64,14 +58,14 @@ const NAV_ITEMS: readonly NavItem[] = [
 ];
 
 /**
- * The one place where the menu leaves out what the person has turned off (PA10). `addons` is the
- * session's list once step a of R5a gives it; until then every addon is on, as for every person today.
+ * The one place where the menu and the palette leave out what the person has turned off (PA10):
+ * `addons` is the session's list; absent, every addon is on.
  */
-export function isOn(addon: Addon | null, addons?: readonly Addon[]): boolean {
-  return addon === null || addons === undefined || addons.includes(addon);
+export function isOn(addon: AddonId | null, addons?: readonly AddonId[]): boolean {
+  return addon === null || addonOn({ addons }, addon);
 }
 
-export function navFor(role: Role, addons?: readonly Addon[]): NavItem[] {
+export function navFor(role: Role, addons?: readonly AddonId[]): NavItem[] {
   return NAV_ITEMS.filter((entry) => (!entry.adminOnly || role === "admin") && isOn(entry.addon, addons));
 }
 

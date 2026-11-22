@@ -45,3 +45,11 @@ describe("paletteCommands", () => {
     });
   });
 });
+
+describe("paletteCommands and the addons", () => {
+  it("leaves out the commands of an addon that is off", () => {
+    const ids = paletteCommands("user", t, ["payroll"]).map((one) => one.id);
+    expect(ids).toContain("payroll-settings");
+    expect(ids).not.toContain("timeoff-settings");
+  });
+});

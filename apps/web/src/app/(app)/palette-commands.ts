@@ -7,7 +7,8 @@ import type { Route } from "next";
 import type { getTranslations } from "next-intl/server";
 import type { Role } from "@ledgerly/domain/platform/context";
 import type { NavLink } from "@ledgerly/ui/shell/nav-types";
-import { type Addon, isOn, settingsTabsFor } from "./navigation";
+import type { AddonId } from "@ledgerly/api-contract";
+import { isOn, settingsTabsFor } from "./navigation";
 
 /** The translator of the whole catalogue, as the layout has it: `getTranslations()` with no namespace. */
 type Translator = Awaited<ReturnType<typeof getTranslations<never>>>;
@@ -22,8 +23,8 @@ const command = (id: string, href: string, label: string, icon: NavLink["icon"] 
 });
 
 /** The palette's own entries for a role, in the order the palette lists them. */
-export function paletteCommands(role: Role, t: Translator, addons?: readonly Addon[]): NavLink[] {
-  const ofAddon = (addon: Addon, entry: NavLink) => (isOn(addon, addons) ? [entry] : []);
+export function paletteCommands(role: Role, t: Translator, addons?: readonly AddonId[]): NavLink[] {
+  const ofAddon = (addon: AddonId, entry: NavLink) => (isOn(addon, addons) ? [entry] : []);
   return [
     ...settingsTabsFor(role).map((tab) =>
       command(`settings-${tab.id}`, tab.href, `${t("settings.title")} › ${t(`settings.tabs.${tab.id}`)}`),

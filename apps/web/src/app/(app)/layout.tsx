@@ -16,20 +16,22 @@ import { paletteCommands } from "./palette-commands";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
   const [text, { weekStart }] = await Promise.all([getTranslations(), requirePreferences()]);
-  const links: NavLink[] = navFor(ctx.role).map(({ id, href, icon, group, mobile, labelKey }) => ({
-    id,
-    href,
-    icon,
-    group,
-    mobile,
-    label: text(`nav.${labelKey}`),
-  }));
+  const links: NavLink[] = navFor(ctx.role, ctx.addons).map(
+    ({ id, href, icon, group, mobile, labelKey }) => ({
+      id,
+      href,
+      icon,
+      group,
+      mobile,
+      label: text(`nav.${labelKey}`),
+    }),
+  );
   return (
     <AppShell
       initialSidebar={parseSidebar((await cookies()).get(SIDEBAR_COOKIE)?.value)}
       weekStart={weekStart}
       links={links}
-      searchLinks={paletteCommands(ctx.role, text)}
+      searchLinks={paletteCommands(ctx.role, text, ctx.addons)}
     >
       {/* Here and not in the root layout: the manifest is behind the session, so only a signed-in
         page may name it, and the browser has to send the cookie with the request (the comment of
