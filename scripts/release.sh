@@ -48,7 +48,8 @@ cd "$(dirname "$0")/.."
 release=${1:?usage: release.sh <release-id> [--no-dump] [--cron] [--plugin <id>] [--before-from <checkout>]}
 shift
 dump_mode=""
-services="ledgerly"
+# The server and the interface, two images of one Dockerfile (rewrite plan R4).
+services="ledgerly ledgerly-web"
 kept=""
 before_from="$PWD"
 while [ $# -gt 0 ]; do
@@ -127,7 +128,7 @@ echo "before: numbers-before.json, as of $instant"
 # ——— 5. Build and start ———————————————————————————————————————————————————————————————————————
 failed() {
   echo "release $release FAILED after the build started: $1" >&2
-  echo "Rollback: docker tag ledgerly:pre-$release ledgerly:latest && docker compose up -d --no-build ledgerly ledgerly-worker" >&2
+  echo "Rollback: docker tag ledgerly:pre-$release ledgerly:latest && docker tag ledgerly-web:pre-$release ledgerly-web:latest && docker compose up -d --no-build ledgerly ledgerly-web ledgerly-worker" >&2
   exit 1
 }
 # The image of the preview, when it was built from this commit and from a clean tree
@@ -140,7 +141,7 @@ revision=$(docker image inspect --format '{{ index .Config.Labels "org.openconta
 to_build=$services
 if [ "$revision" = "$sha" ]; then
   docker tag "$preview" ledgerly:latest || failed "the image of the preview could not be tagged"
-  echo "image: ledgerly is the image of the preview, built from $sha: not built again"
+  echo "image: ledgerly is the image of the preview, built from $sha: not built again (the interface is)"
   to_build=${services#ledgerly}
 else
   echo "image: no preview image of $sha: ledgerly is built here"

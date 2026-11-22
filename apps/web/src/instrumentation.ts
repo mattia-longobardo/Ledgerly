@@ -26,6 +26,9 @@ export function describeEnvFailure(error: unknown): string {
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === BUILD_PHASE) return;
+  // The interface's own container (rewrite plan R4): no database and no secret to check, and no
+  // domain to wire — its pages ask the server's process.
+  if (process.env.LEDGERLY_ROLE === "web") return;
   try {
     readEnv();
   } catch (error) {
