@@ -3,6 +3,11 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · R3-coda: merge proposals
+
+- `GET /categories/merge-proposals`: the pairs of categories that look like the same one, each side with
+  `id`, `name`, `color`, `usage`, `hasChildren`, `canKeepOther`, and `sumsBudgets`.
+
 ## Unreleased · R3-coda: the reads of the sources, the catalog and the categories of a source
 
 - `GET /connections/{id}/choice`: the step «Accounts» of a bank's connection: `bank`, `chosen`, the
@@ -24,11 +29,6 @@ written before it keeps working.
   (`?connectionId=`) or of all, `?limit=` up to 200, with `more`.
 - `GET /investments/catalog`: `providers[].status`; the providers to come (`planned`) are listed too.
 - `GET /source-categories`: `sourceName` and `source` (the slug of the source's page, or null) on each row.
-
-## Unreleased · R3-coda: merge proposals
-
-- `GET /categories/merge-proposals`: the pairs of categories that look like the same one, each side with
-  `id`, `name`, `color`, `usage`, `hasChildren`, `canKeepOther`, and `sumsBudgets`.
 
 ## 2026-11-21 · investments: the Return view of each service (0.57.0)
 

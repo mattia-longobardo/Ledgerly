@@ -19,7 +19,6 @@ import {
 import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
 import { keepManifestsFresh, returnAddress } from "@ledgerly/plugin-host";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
-import { bankOf, settled } from "./connections";
 
 const { sources } = SETTINGS;
 
@@ -56,7 +55,18 @@ const RUN_PAGE = 50;
 const MAX_RUNS = 200;
 
 /** The answer of a read of the web, or its refusal as the contract names it. */
-const body = <T>(read: { ok: true; answer: T } | Refused): T => settled(read).answer;
+function body<T>(read: { ok: true; answer: T } | Refused): T {
+  if (read.ok) return read.answer;
+  if (read.error === "not_found") throw new ApiRefusal("not_found");
+  throw new ApiRefusal("conflict", read.error ?? "failed");
+}
+
+/** A connection of a plugin of the person: another person's, or not a bank's, is not found. */
+async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
+  const connection = await findConnection(ctx, id);
+  if (!connection || !isPluginProvider(connection.provider)) throw new ApiRefusal("not_found");
+  return connection;
+}
 
 function servePlugins(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, sources.listPlugins, async ({ ctx }) => {
