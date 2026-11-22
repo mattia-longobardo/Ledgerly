@@ -2221,6 +2221,12 @@
       "title": "Da fare",
       "empty": "Niente da fare.",
       "open": "Apri"
+    },
+    "groups": {
+      "cash": "Liquidità",
+      "savings": "Risparmi",
+      "investments": "Investimenti",
+      "other": "Altro"
     }
   },
   "accounts": {

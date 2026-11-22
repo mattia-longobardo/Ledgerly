@@ -2,8 +2,10 @@
 
 // Overview, read from `/api/v1` (rewrite plan R3): the net worth, its buckets, its chart and the
 // accounts are fields of `GET /net-worth`, the budgets card reads `GET /budgets/overview`, the pockets
-// tile `GET /pockets/overview`.
+// tile `GET /pockets/overview`. The accounts are listed by bucket, each with the tile's figure as its
+// subtotal, and the investments in the two groups of Investments (rewrite plan R5b, decision O1).
 import Link from "next/link";
+import { Fragment } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { views } from "@ledgerly/api-contract/accounts";
@@ -20,11 +22,12 @@ import { Loaded } from "@ledgerly/ui/loaded";
 import { parsePeriodQuery } from "@ledgerly/ui/period";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
-import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type CardFormat, centsOf, counterValue, NetWorthCard } from "@/modules/accounts/client";
 import { BudgetsOverviewCard } from "@/modules/budgets";
 import { PocketsOverviewTile } from "@/modules/pockets";
+import { appRoute } from "@/platform/route";
 import { useAddonOn } from "./addons-context";
 import { TodoCard } from "./todo-card";
 
@@ -203,9 +206,70 @@ function figuresOf(row: ViewRow, view: NetWorth, format: CardFormat) {
   };
 }
 
+const BUCKET_KEYS = ["cash", "savings", "investments", "other"] as const;
+
+/** A group of the list: a bucket, or a group of Investments inside «Investments». */
+interface Group {
+  key: string;
+  label: string;
+  /** The tile's figure, or the group's of `investmentGroups`: never added up here. */
+  total: string | null;
+  rows: ViewRow[];
+  nested: boolean;
+}
+
+/** The groups in the tiles' order; a bucket with no account is left out. */
+function useGroups(view: NetWorth): Group[] {
+  const text = useTranslations("overview");
+  const portfolio = useTranslations("investments.portfolio");
+  return BUCKET_KEYS.flatMap((key): Group[] => {
+    const rows = view.accounts.filter((row) => row.bucket === key);
+    if (rows.length === 0) return [];
+    const bucket = { key, label: text(`groups.${key}`), total: view.buckets[key].total, nested: false };
+    if (key !== "investments") return [{ ...bucket, rows }];
+    return [
+      { ...bucket, rows: [] },
+      ...view.investmentGroups.map((group) => ({
+        key: group.id,
+        label: portfolio(`groups.${group.id}`),
+        total: group.total,
+        rows: rows.filter((row) => row.investmentGroup === group.id),
+        nested: true,
+      })),
+    ];
+  });
+}
+
+/** An investment leads to Investments, to its group; with Investments off, to the account (PA11). */
+function useRowHref(): (row: ViewRow) => string {
+  const investments = useAddonOn("investments");
+  return (row) =>
+    investments && row.investmentGroup !== null
+      ? `/investments?group=${row.investmentGroup}`
+      : `/accounts/${row.id}`;
+}
+
+/** The group's name and its subtotal, the figure of its tile. */
+function GroupLabel({ group, view, format }: { group: Group; view: NetWorth; format: CardFormat }) {
+  return (
+    <span className={cn("flex w-full items-center justify-between gap-2", group.nested && "pl-3")}>
+      <span className={group.nested ? "font-medium" : "font-semibold"}>{group.label}</span>
+      <span
+        data-testid={`overview-group-${group.key}`}
+        data-cents={String(centsOf(group.total) ?? "")}
+        className="font-semibold tabular-nums"
+      >
+        {displayMoney(group.total, view, format)}
+      </span>
+    </span>
+  );
+}
+
 function AccountsCard({ view, format }: { view: NetWorth; format: CardFormat }) {
   const text = useTranslations("overview");
   const accountsText = useTranslations("accounts");
+  const groups = useGroups(view);
+  const hrefOf = useRowHref();
   return (
     <Card padded={false}>
       <CardHeader
@@ -219,73 +283,114 @@ function AccountsCard({ view, format }: { view: NetWorth; format: CardFormat }) 
           </Link>
         }
       />
-      <div className="overflow-x-auto max-md:hidden">
-        <Table>
-          <THead>
-            <Th>{accountsText("columns.name")}</Th>
-            <Th>{accountsText("columns.type")}</Th>
-            <Th align="right">{accountsText("columns.balance")}</Th>
-            <Th align="right">{accountsText("columns.monthlyChange")}</Th>
-          </THead>
-          <TBody>
-            {view.accounts.map((row) => {
-              const figures = figuresOf(row, view, format);
-              return (
-                <Tr key={row.id}>
-                  <Td>
-                    <Link
-                      href={`/accounts/${row.id}`}
-                      className="focus-ring inline-flex h-6 items-center rounded-xs font-medium hover:underline"
-                    >
-                      {row.name}
-                    </Link>
-                  </Td>
-                  <Td muted>{accountsText(`types.${row.type}`)}</Td>
-                  <Td align="right">
-                    {figures.balance}
-                    {figures.counter && <span className="block text-sm text-muted">{figures.counter}</span>}
-                  </Td>
-                  <Td align="right" className={figures.tone}>
-                    {figures.change}
-                  </Td>
-                </Tr>
-              );
-            })}
-          </TBody>
-        </Table>
-      </div>
+      <DesktopTable view={view} format={format} groups={groups} hrefOf={hrefOf} />
       {/* A phone gets the same rows as a list: a four-column table cannot fit 400 px. */}
-      <PhoneList view={view} format={format} />
+      <PhoneList view={view} format={format} groups={groups} hrefOf={hrefOf} />
     </Card>
   );
 }
 
-function PhoneList({ view, format }: { view: NetWorth; format: CardFormat }) {
+/** From `md`: one table, a header row per group with its subtotal, then its accounts. */
+function DesktopTable({
+  view,
+  format,
+  groups,
+  hrefOf,
+}: {
+  view: NetWorth;
+  format: CardFormat;
+  groups: Group[];
+  hrefOf: (row: ViewRow) => string;
+}) {
+  const accountsText = useTranslations("accounts");
+  return (
+    <div className="overflow-x-auto max-md:hidden">
+      <Table>
+        <THead>
+          <Th>{accountsText("columns.name")}</Th>
+          <Th>{accountsText("columns.type")}</Th>
+          <Th align="right">{accountsText("columns.balance")}</Th>
+          <Th align="right">{accountsText("columns.monthlyChange")}</Th>
+        </THead>
+        <TBody>
+          {groups.map((group) => (
+            <Fragment key={group.key}>
+              <GroupRow colSpan={4} label={<GroupLabel group={group} view={view} format={format} />} />
+              {group.rows.map((row) => {
+                const figures = figuresOf(row, view, format);
+                return (
+                  <Tr key={row.id}>
+                    <Td>
+                      <Link
+                        href={appRoute(hrefOf(row))}
+                        className="focus-ring inline-flex h-6 items-center rounded-xs font-medium hover:underline"
+                      >
+                        {row.name}
+                      </Link>
+                    </Td>
+                    <Td muted>{accountsText(`types.${row.type}`)}</Td>
+                    <Td align="right">
+                      {figures.balance}
+                      {figures.counter && <span className="block text-sm text-muted">{figures.counter}</span>}
+                    </Td>
+                    <Td align="right" className={figures.tone}>
+                      {figures.change}
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </Fragment>
+          ))}
+        </TBody>
+      </Table>
+    </div>
+  );
+}
+
+function PhoneList({
+  view,
+  format,
+  groups,
+  hrefOf,
+}: {
+  view: NetWorth;
+  format: CardFormat;
+  groups: Group[];
+  hrefOf: (row: ViewRow) => string;
+}) {
   const accountsText = useTranslations("accounts");
   return (
     <ul className="flex flex-col md:hidden">
-      {view.accounts.map((row) => {
-        const figures = figuresOf(row, view, format);
-        return (
-          <li
-            key={row.id}
-            data-testid="overview-account-item"
-            className="border-b border-border last:border-0"
-          >
-            <Link href={`/accounts/${row.id}`} className="flex items-center justify-between gap-2 px-4 py-3">
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate font-medium">{row.name}</span>
-                <span className="text-sm text-muted">{accountsText(`types.${row.type}`)}</span>
-              </span>
-              <span className="flex flex-col items-end tabular-nums">
-                <span className="font-semibold">{figures.balance}</span>
-                {figures.counter && <span className="text-sm text-muted">{figures.counter}</span>}
-                <span className={cn("text-sm", figures.tone)}>{figures.change}</span>
-              </span>
-            </Link>
-          </li>
-        );
-      })}
+      {groups.map((group) => (
+        <li key={group.key} className="border-b border-border last:border-0">
+          <div className="bg-bg px-4 py-2 text-sm">
+            <GroupLabel group={group} view={view} format={format} />
+          </div>
+          <ul>
+            {group.rows.map((row) => {
+              const figures = figuresOf(row, view, format);
+              return (
+                <li key={row.id} data-testid="overview-account-item" className="border-t border-border">
+                  <Link
+                    href={appRoute(hrefOf(row))}
+                    className="flex items-center justify-between gap-2 px-4 py-3"
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate font-medium">{row.name}</span>
+                      <span className="text-sm text-muted">{accountsText(`types.${row.type}`)}</span>
+                    </span>
+                    <span className="flex flex-col items-end tabular-nums">
+                      <span className="font-semibold">{figures.balance}</span>
+                      {figures.counter && <span className="text-sm text-muted">{figures.counter}</span>}
+                      <span className={cn("text-sm", figures.tone)}>{figures.change}</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </li>
+      ))}
     </ul>
   );
 }

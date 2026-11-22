@@ -2221,6 +2221,12 @@
       "title": "To do",
       "empty": "Nothing to do.",
       "open": "Open"
+    },
+    "groups": {
+      "cash": "Cash",
+      "savings": "Savings",
+      "investments": "Investments",
+      "other": "Other"
     }
   },
   "accounts": {
