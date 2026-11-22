@@ -77,7 +77,7 @@ export async function reportConnection(
   const t = createTranslator({ locale: ctx.locale, messages: CATALOGUES[ctx.locale] });
   const label = await labelOf(connection, ctx.locale);
   const names = { name: label.name, provider: label.provider };
-  const url = `${readEnv().BETTER_AUTH_URL.replace(/\/+$/, "")}/settings/integrations`;
+  const url = `${readEnv().BETTER_AUTH_URL.replace(/\/+$/, "")}/settings/plugins`;
   const facts = factsOf(connection);
   const status = syncStatus(facts, now);
   const warning = warningFor(status, facts, now);

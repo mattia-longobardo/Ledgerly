@@ -249,7 +249,7 @@ describe("the proposals to merge, page = new call", () => {
       });
     }
 
-    // What `settings/categories/page.tsx` drew from `mergeProposalsView` and the categories.
+    // What `settings/finance/page.tsx` drew from `mergeProposalsView` and the categories.
     const categories = await transactions.listCategoriesWithUsage(now, { includeArchived: true });
     const byId = new Map(categories.map(({ category }) => [category.id, category]));
     const hasChildren = (id: string) => categories.some((row) => row.category.parentId === id);

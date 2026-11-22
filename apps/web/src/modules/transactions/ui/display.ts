@@ -75,5 +75,5 @@ export function withMacroTitles<T extends { type: "income" | "expense" | "transf
  * plugin, a core bank source); upgrade when the API answers the source's page itself.
  */
 export function sourcePageOf(provider: string): string {
-  return `/settings/integrations/${provider.replace(/^plugin:/, "")}`;
+  return `/settings/plugins/${provider.replace(/^plugin:/, "")}`;
 }

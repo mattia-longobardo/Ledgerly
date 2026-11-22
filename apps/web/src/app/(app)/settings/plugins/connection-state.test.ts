@@ -4,7 +4,7 @@ import { accountsLeft, sourceHref, sourceSlugOf } from "./connection-state";
 describe("the page of a source", () => {
   it("is the plugin's id, or the provider of the core; the investment services have none", () => {
     expect(sourceSlugOf("plugin:enablebanking")).toBe("enablebanking");
-    expect(sourceHref("plugin:enablebanking")).toBe("/settings/integrations/enablebanking");
+    expect(sourceHref("plugin:enablebanking")).toBe("/settings/plugins/enablebanking");
     expect(sourceSlugOf("ccxt:binance")).toBeNull();
     expect(sourceHref("unknown")).toBeNull();
   });

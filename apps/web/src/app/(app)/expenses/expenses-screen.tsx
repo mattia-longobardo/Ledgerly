@@ -186,7 +186,7 @@ function NoMovements() {
         actions={
           <>
             <AddMovementButton />
-            <ButtonLink href="/settings/integrations">{text("unsynced.action")}</ButtonLink>
+            <ButtonLink href="/settings/plugins">{text("unsynced.action")}</ButtonLink>
           </>
         }
       />

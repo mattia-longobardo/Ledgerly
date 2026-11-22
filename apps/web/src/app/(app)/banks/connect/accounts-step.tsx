@@ -46,7 +46,7 @@ export interface AccountsStepProps {
   cancellable: boolean;
 }
 
-const SETTINGS: Route = "/settings/integrations";
+const SETTINGS: Route = "/settings/plugins";
 const NEW = "new";
 const SKIP = "skip";
 const SAME = "same:";

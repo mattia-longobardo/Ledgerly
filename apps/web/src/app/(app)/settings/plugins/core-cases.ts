@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/core-cases.ts — what the card of a provider of the core does, for
+// src/app/(app)/settings/plugins/core-cases.ts — what the card of a provider of the core does, for
 // the person of `ctx` and by the provider's id (rewrite plan R5c anticipated): the Server Actions of
 // the cards and `/api/v1/connections` call the same steps. Each provider's part is its card, in its own
 // folder of the domain (`CoreCard`); what joins modules — the accounts kept by hand that come back, the

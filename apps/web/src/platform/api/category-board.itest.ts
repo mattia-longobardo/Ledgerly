@@ -139,7 +139,7 @@ async function seed(ctx: Ctx) {
 
 /** The board as the page built it on the server, from the same functions, on the wire. */
 async function pageBoard(ctx: Ctx, accountIds?: string[]) {
-  const { sourceNotes } = await import("@/app/(app)/settings/categories/source");
+  const { sourceNotes } = await import("@/app/(app)/settings/finance/source");
   const all = await domain.listCategoriesWithUsage(ctx, { includeArchived: true });
   const totals = await domain.categoryMacroTotals(ctx, { from: FROM, to: TO, accountIds });
   const budgets = await budgetsView(ctx, "2026-02-01");

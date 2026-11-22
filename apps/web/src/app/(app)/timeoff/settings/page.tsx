@@ -16,7 +16,7 @@ export default async function TimeOffSettingsPage() {
   const link = {
     name: integrations("providers.trek.name"),
     // The page of the leave calendar's source (`source` of `GET /connections`).
-    href: "/settings/integrations/trek",
+    href: "/settings/plugins/trek",
   };
   return <TimeOffSettingsScreen calendarLink={link} />;
 }

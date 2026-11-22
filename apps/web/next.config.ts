@@ -40,6 +40,15 @@ const nextConfig: NextConfig = {
   ],
   // A document is at most 10 MB (spec §9.3); the multipart envelope needs a little more.
   experimental: { proxyClientMaxBodySize: "11mb", serverActions: { bodySizeLimit: "11mb" } },
+  // The pages of Settings that R5a moved (decision D3): an old link, a bookmark or a mail still lands.
+  // Not permanent: a browser keeps a 308 for good, and these paths may still change.
+  async redirects() {
+    return [
+      { source: "/settings/integrations/:path*", destination: "/settings/plugins/:path*", permanent: false },
+      { source: "/settings/categories", destination: "/settings/finance", permanent: false },
+      { source: "/settings/rules", destination: "/settings/finance/rules", permanent: false },
+    ];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

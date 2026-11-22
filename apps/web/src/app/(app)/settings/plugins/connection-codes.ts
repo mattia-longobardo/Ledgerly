@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/connection-codes.ts — what the provider of the core or of
+// src/app/(app)/settings/plugins/connection-codes.ts — what the provider of the core or of
 // Investments answered, as a code of the closed list of `/api/v1/connections` (CONNECTION_REFUSALS).
 // Pure: the use cases of a connection read it on the server, the row on the client for a provider
 // of the core, whose card answers "test" and "history" until R5c.

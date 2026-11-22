@@ -4,17 +4,17 @@ import { test } from "@playwright/test";
 import { audit, go, type Screen, settled, settledDialog } from "../_shared/a11y";
 
 const PAGES: Screen[] = [
-  { name: "/settings/categories", session: "layout", open: go("/settings/categories") },
+  { name: "/settings/finance", session: "layout", open: go("/settings/finance") },
   {
-    name: "/settings/categories (categories of a source)",
+    name: "/settings/finance (categories of a source)",
     session: "sources",
-    open: go("/settings/categories"),
+    open: go("/settings/finance"),
   },
   // Release N7.2: the section of a source's categories is on the source's page.
   {
-    name: "/settings/integrations/[source] (categories of a source)",
+    name: "/settings/plugins/[source] (categories of a source)",
     session: "sources",
-    open: go("/settings/integrations/wallet"),
+    open: go("/settings/plugins/wallet"),
   },
 
   // Release N3, second part (ux/n3-categories-manual.md §12, §13): the `review` user has movements
@@ -43,7 +43,7 @@ const PAGES: Screen[] = [
     session: "reviewNew",
     open: go("/expenses/review?guide=1&bank=Zeta%20Bank"),
   },
-  { name: "/settings/categories (a merge proposal)", session: "review", open: go("/settings/categories") },
+  { name: "/settings/finance (a merge proposal)", session: "review", open: go("/settings/finance") },
 
   // Release N3.2 (categories-and-rules.md §5): the `review` user has the default groups and movements.
   { name: "/expenses/categories", session: "review", open: go("/expenses/categories?preset=last3Months") },
@@ -80,8 +80,8 @@ const PAGES: Screen[] = [
 
   // Release N3.4 (categories-and-rules.md §4): the `rules` user has two rules, one off; the
   // `layout` user has none.
-  { name: "/settings/rules", session: "rules", open: go("/settings/rules") },
-  { name: "/settings/rules (no rule)", session: "layout", open: go("/settings/rules") },
+  { name: "/settings/finance/rules", session: "rules", open: go("/settings/finance/rules") },
+  { name: "/settings/finance/rules (no rule)", session: "layout", open: go("/settings/finance/rules") },
 ];
 
 const OVERLAYS: Screen[] = [
@@ -90,7 +90,7 @@ const OVERLAYS: Screen[] = [
     session: "rules",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/rules");
+      await page.goto("/settings/finance/rules");
       await settled(page);
       await page.getByRole("button", { name: "Actions for Newsstand" }).click();
       await page.getByRole("menuitem", { name: "Edit" }).click();
@@ -103,7 +103,7 @@ const OVERLAYS: Screen[] = [
     session: "rules",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/rules");
+      await page.goto("/settings/finance/rules");
       await settled(page);
       await page.getByRole("button", { name: "Actions for Newsstand" }).click();
       await page.getByRole("menuitem", { name: "Apply to existing transactions…" }).click();
@@ -117,7 +117,7 @@ const OVERLAYS: Screen[] = [
     session: "sources",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/integrations/wallet");
+      await page.goto("/settings/plugins/wallet");
       await settled(page);
       await page
         .getByTestId("source-category-row")
@@ -204,7 +204,7 @@ const OVERLAYS: Screen[] = [
     session: "review",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/settings/categories");
+      await page.goto("/settings/finance");
       await settled(page);
       await page.getByTestId("merge-proposal").getByRole("button").last().click();
       await settledDialog(page);

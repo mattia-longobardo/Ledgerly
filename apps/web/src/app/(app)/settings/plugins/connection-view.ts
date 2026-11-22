@@ -58,7 +58,7 @@ export const RUNS_PER_CONNECTION = 40;
 const HISTORY_ITEMS = 10;
 
 export function advancedHref(connectionId: string): string {
-  return `/settings/integrations/advanced?c=${connectionId}`;
+  return `/settings/plugins/advanced?c=${connectionId}`;
 }
 
 const instantOf = (iso: string | null): Date | null => (iso === null ? null : new Date(iso));

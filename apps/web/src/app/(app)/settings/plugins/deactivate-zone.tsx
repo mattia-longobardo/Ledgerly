@@ -56,7 +56,7 @@ export function DeactivateZone({ slug, provider }: { slug: string; provider: str
       }
       setCounts(null);
       notify(t("deactivate.done", { provider, count: accounts }));
-      router.push("/settings/integrations" as Route);
+      router.push("/settings/plugins" as Route);
     });
   }
 

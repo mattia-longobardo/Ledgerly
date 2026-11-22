@@ -154,7 +154,7 @@ describe("the choice of the accounts of a bank", () => {
     expect(dialog.textContent).toContain("Access to Zeta Bank is closed and no account is created.");
     await userEvent.click(screen.getByRole("button", { name: "Cancel connection" }));
     expect(cancelConnection).toHaveBeenCalledWith("c-1");
-    expect(push).toHaveBeenCalledWith("/settings/integrations");
+    expect(push).toHaveBeenCalledWith("/settings/plugins");
   });
 
   it("shows the accounts already tied to the bank and does not ask about them", async () => {
@@ -166,7 +166,7 @@ describe("the choice of the accounts of a bank", () => {
     expect(screen.getByText('Already linked to "Zeta Conto"')).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(cancelConnection).not.toHaveBeenCalled();
-    expect(push).toHaveBeenCalledWith("/settings/integrations");
+    expect(push).toHaveBeenCalledWith("/settings/plugins");
   });
 });
 

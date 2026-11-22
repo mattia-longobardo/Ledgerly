@@ -21,7 +21,7 @@ async function menuItem(page: Page, rule: string, item: string) {
 }
 
 test("a rule made, ordered, applied and undone with the keyboard", async ({ page }) => {
-  await page.goto("/settings/rules");
+  await page.goto("/settings/finance/rules");
   await expect(rows(page)).toHaveCount(2);
 
   await test.step("New rule: name, condition, category, preview, Save", async () => {

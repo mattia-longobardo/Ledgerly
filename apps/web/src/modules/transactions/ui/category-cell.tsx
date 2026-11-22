@@ -122,7 +122,7 @@ export function CategoryCell({
             </p>
             {row.categoryReason?.code === "rule" && row.categoryReason.params.ruleId && (
               <Link
-                href={`/settings/rules#rule-${row.categoryReason.params.ruleId}` as Route}
+                href={`/settings/finance/rules#rule-${row.categoryReason.params.ruleId}` as Route}
                 className="focus-ring inline-flex min-h-6 items-center self-start rounded-xs text-sm text-accent hover:underline"
               >
                 {t("auto.openRule")}

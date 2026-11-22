@@ -243,7 +243,7 @@ function MergeAside({ count }: { count: number }) {
     <p className="flex flex-wrap items-center gap-x-2 border-t border-border pt-2 text-sm">
       {text("review.aside.merge", { count })}
       <a
-        href="/settings/categories"
+        href="/settings/finance"
         className="focus-ring inline-flex min-h-6 items-center text-accent underline"
       >
         {text("review.aside.mergeLink")}

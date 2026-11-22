@@ -12,12 +12,12 @@ import { hydrated } from "../_shared/helpers";
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
 test.describe.configure({ mode: "default" });
 
-const INTEGRATIONS = "/settings/integrations";
-const ADVANCED = "/settings/integrations/advanced";
+const INTEGRATIONS = "/settings/plugins";
+const ADVANCED = "/settings/plugins/advanced";
 // The pages of the sources (rewrite plan N7.2): every connection of a source is on its page.
-const BANKS = "/settings/integrations/enablebanking";
-const TREK = "/settings/integrations/trek";
-const WALLET = "/settings/integrations/wallet";
+const BANKS = "/settings/plugins/enablebanking";
+const TREK = "/settings/plugins/trek";
+const WALLET = "/settings/plugins/wallet";
 
 /** The words the normal view never shows (criterion 1 of N2; ux §1.2). */
 const TECHNICAL = /\b(plugin|sync|synchroni[sz]ation|token|session|job|run|API|HTTP|429|cron|log)\b/i;
@@ -157,7 +157,7 @@ test.describe("the rows of the connections", () => {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`${TREK}$`));
     await expect(page.getByRole("heading", { level: 2, name: "Trek", exact: true })).toBeVisible();
-    const back = page.getByRole("link", { name: "← Integrations", exact: true });
+    const back = page.getByRole("link", { name: "← Plugins", exact: true });
     await hydrated(back);
     await back.focus();
     await page.keyboard.press("Enter");
@@ -218,7 +218,7 @@ test.describe("the rows of the connections", () => {
     await expect(list.getByRole("listitem").nth(1)).toContainText("Nothing new · started by you");
     await expect(alfa.getByRole("link", { name: "All readings in Advanced" })).toHaveAttribute(
       "href",
-      /\/settings\/integrations\/advanced\?c=/,
+      /\/settings\/plugins\/advanced\?c=/,
     );
     await page.keyboard.press("Space");
     await expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -250,7 +250,7 @@ test.describe("the rows of the connections", () => {
 
     await page.keyboard.press("Enter");
     await page.getByRole("menuitem", { name: "Advanced" }).click();
-    await expect(page).toHaveURL(/\/settings\/integrations\/advanced\?c=[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/settings\/plugins\/advanced\?c=[0-9a-f-]{36}$/);
     await expect(page.getByLabel("Connection")).toHaveValue(/[0-9a-f-]{36}/);
   });
 
@@ -280,7 +280,7 @@ test.describe("the rows of the connections", () => {
       page
         .getByRole("region", { name: "Advanced" })
         .getByRole("link", { name: "Log of the readings of Alfa Bank" }),
-    ).toHaveAttribute("href", /\/settings\/integrations\/advanced\?c=[0-9a-f-]{36}#log$/);
+    ).toHaveAttribute("href", /\/settings\/plugins\/advanced\?c=[0-9a-f-]{36}#log$/);
 
     await page.goto(TREK);
     const trek = page.getByRole("region", { name: "Schedule" }).getByTestId("schedule-row");

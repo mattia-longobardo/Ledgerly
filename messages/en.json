@@ -114,8 +114,8 @@
     },
     "connection": {
       "subject": "{name} not synced",
-      "failedBody": "The last update of {name} failed. {reason} {todo} Open Settings › Integrations: {url}",
-      "staleBody": "{name} has not updated since {since}. Open Settings › Integrations: {url}",
+      "failedBody": "The last update of {name} failed. {reason} {todo} Open Settings › Plugins: {url}",
+      "staleBody": "{name} has not updated since {since}. Open Settings › Plugins: {url}",
       "todo": {
         "renew": "Renew the access.",
         "replaceKey": "Replace the key."
@@ -243,8 +243,8 @@
       "label": "Settings sections",
       "profile": "Profile",
       "security": "Security",
-      "integrations": "Integrations",
-      "categories": "Categories",
+      "finance": "Finance",
+      "plugins": "Plugins",
       "rules": "Rules",
       "data": "Data",
       "users": "Users",
@@ -430,11 +430,6 @@
         "useRecommended": "Use recommended ({schedule})",
         "removeTimeSimple": "Remove {time}",
         "newTimeSimple": "New time"
-      },
-      "investments": {
-        "title": "Investment connections",
-        "description": "Same row and same schedule as the others. Configure opens the service's Connection tab: the key and its checks are there.",
-        "role": "Read-only API key"
       },
       "fields": {
         "schedule": "Schedule"
@@ -1146,7 +1141,7 @@
     },
     "plugin": {
       "page": {
-        "back": "Integrations"
+        "back": "Plugins"
       },
       "sections": {
         "connection": "Connection",
@@ -1397,8 +1392,8 @@
         "title": "Advanced",
         "intro": "This page shows technical data of your connections. Use it to understand a problem or to ask for help.",
         "empty": "No connections",
-        "emptyHint": "Connect a data source in Integrations.",
-        "back": "Back to Integrations",
+        "emptyHint": "Connect a data source in Plugins.",
+        "back": "Back to Plugins",
         "schedule": {
           "title": "Schedule",
           "description": "When Ledgerly updates each connection by itself.",
@@ -1589,6 +1584,24 @@
         "to": "→ {category}"
       },
       "noteHint": "Written only when the transaction has no note."
+    },
+    "finance": {
+      "banks": {
+        "title": "Banks",
+        "description": "The banks Ledgerly reads balances and transactions from. The settings of each bank are on the page of its plugin.",
+        "empty": "No bank plugin is on.",
+        "openPlugins": "Open Plugins"
+      },
+      "investments": {
+        "title": "Investment connections",
+        "description": "Same row and same schedule as the others. Configure opens the service's Connection tab: the key and its checks are there.",
+        "role": "Read-only API key"
+      },
+      "rules": {
+        "title": "Rules",
+        "description": "A rule gives a category to new transactions by itself.",
+        "open": "Open the rules"
+      }
     }
   },
   "errors": {
@@ -1706,7 +1719,7 @@
     "unsynced": {
       "title": "No transactions yet",
       "description": "Connect a source or add your first transaction by hand.",
-      "action": "Open Integrations"
+      "action": "Open Plugins"
     },
     "toasts": {
       "categorySet": "{count, plural, one {# transaction updated} other {# transactions updated}}",
@@ -2372,7 +2385,7 @@
       "source": {
         "title": "Data source",
         "description": "Where the balance comes from and how it behaves between readings.",
-        "syncedNote": "Connected through {provider}. Credentials live in Settings › Integrations.",
+        "syncedNote": "Connected through {provider}. Credentials live in Settings › Plugins.",
         "manualNote": "You keep this account up to date from the Balance entries tab.",
         "reminder": "Reminder to update",
         "reminders": {
@@ -2492,14 +2505,14 @@
         "unnamed": "Unnamed account",
         "sameIban": "Same IBAN",
         "otherIban": "Different IBAN.",
-        "expired": "The access to {bank} has expired: renew it in Settings › Integrations.",
+        "expired": "The access to {bank} has expired: renew it in Settings › Plugins.",
         "start": "Start the check",
         "noBank": "No bank connected",
         "noBankText": "To move this account, connect the bank first.",
         "connect": "Connect a bank",
         "noFree": "No account to choose",
         "noFreeText": "Your banks share no account in {currency} that is not already in Ledgerly. If the account is missing, renew the access to the bank and share it.",
-        "integrations": "Go to integrations",
+        "integrations": "Go to Plugins",
         "alreadyHere": "Already in Ledgerly: “{account}”"
       },
       "check": {
@@ -2607,7 +2620,7 @@
       "errors": {
         "source_unavailable": "{source} could not be updated. The switch starts only with {source} up to date.",
         "bank_unavailable": "The bank does not answer now. Try again shortly.",
-        "consent_expired": "The access to the bank has expired. Renew it in Settings › Integrations.",
+        "consent_expired": "The access to the bank has expired. Renew it in Settings › Plugins.",
         "rate_limited": "The bank reached its limit of readings. Try again later.",
         "account_gone": "The bank no longer shares this account. Choose another account.",
         "stale": "The data changed after the check. Run the check again.",
@@ -2646,7 +2659,7 @@
         "working": "Undoing…",
         "failed": "The undo did not succeed. The account stayed on {bank}: nothing changed.",
         "done": "Switch undone",
-        "unavailable": "{source} is no longer connected. Connect it again in Settings › Integrations to undo the switch."
+        "unavailable": "{source} is no longer connected. Connect it again in Settings › Plugins to undo the switch."
       },
       "settings": {
         "offer": "Is this account in one of your banks too? You can make it come from the bank. First you see a check: nothing changes until you choose “Apply”.",
@@ -5622,8 +5635,8 @@
       },
       "trek": {
         "description": "Where leave days also live.",
-        "manage": "Manage in Integrations",
-        "connect": "Connect in Integrations"
+        "manage": "Manage in Plugins",
+        "connect": "Connect in Plugins"
       }
     },
     "selection": {
@@ -5740,7 +5753,7 @@
   "banks": {
     "connect": {
       "title": "Connect a bank",
-      "parent": "Integrations",
+      "parent": "Plugins",
       "steps": {
         "label": "Steps",
         "bank": "Bank",

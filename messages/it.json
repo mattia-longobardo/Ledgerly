@@ -114,8 +114,8 @@
     },
     "connection": {
       "subject": "{name} non sincronizzato",
-      "failedBody": "L'ultimo aggiornamento di {name} non è riuscito. {reason} {todo} Apri Impostazioni › Integrazioni: {url}",
-      "staleBody": "{name} non si aggiorna dal {since}. Apri Impostazioni › Integrazioni: {url}",
+      "failedBody": "L'ultimo aggiornamento di {name} non è riuscito. {reason} {todo} Apri Impostazioni › Plugin: {url}",
+      "staleBody": "{name} non si aggiorna dal {since}. Apri Impostazioni › Plugin: {url}",
       "todo": {
         "renew": "Rinnova l'accesso.",
         "replaceKey": "Sostituisci la chiave."
@@ -243,8 +243,8 @@
       "label": "Sezioni delle impostazioni",
       "profile": "Profilo",
       "security": "Sicurezza",
-      "integrations": "Integrazioni",
-      "categories": "Categorie",
+      "finance": "Finanza",
+      "plugins": "Plugin",
       "rules": "Regole",
       "data": "Dati",
       "users": "Utenti",
@@ -430,11 +430,6 @@
         "useRecommended": "Usa il consigliato ({schedule})",
         "removeTimeSimple": "Rimuovi {time}",
         "newTimeSimple": "Nuovo orario"
-      },
-      "investments": {
-        "title": "Connessioni di investimento",
-        "description": "Stessa riga e stesso orario delle altre. Configura apre il tab Connessione del servizio: lì ci sono la chiave e i controlli.",
-        "role": "Chiave API in sola lettura"
       },
       "fields": {
         "schedule": "Pianificazione"
@@ -1146,7 +1141,7 @@
     },
     "plugin": {
       "page": {
-        "back": "Integrazioni"
+        "back": "Plugin"
       },
       "sections": {
         "connection": "Collegamento",
@@ -1397,8 +1392,8 @@
         "title": "Avanzate",
         "intro": "Questa pagina mostra dati tecnici dei tuoi collegamenti. Servono per capire un problema o per chiedere aiuto.",
         "empty": "Nessun collegamento",
-        "emptyHint": "Collega una sorgente dei dati in Integrazioni.",
-        "back": "Torna a Integrazioni",
+        "emptyHint": "Collega una sorgente dei dati in Plugin.",
+        "back": "Torna a Plugin",
         "schedule": {
           "title": "Pianificazione",
           "description": "Quando Ledgerly aggiorna ogni collegamento da solo.",
@@ -1589,6 +1584,24 @@
         "to": "→ {category}"
       },
       "noteHint": "Scritta solo se il movimento non ha una nota."
+    },
+    "finance": {
+      "banks": {
+        "title": "Banche",
+        "description": "Le banche da cui Ledgerly legge saldi e movimenti. Le impostazioni di ogni banca stanno nella pagina del suo plugin.",
+        "empty": "Nessun plugin di banche è attivo.",
+        "openPlugins": "Apri Plugin"
+      },
+      "investments": {
+        "title": "Connessioni di investimento",
+        "description": "Stessa riga e stesso orario delle altre. Configura apre il tab Connessione del servizio: lì ci sono la chiave e i controlli.",
+        "role": "Chiave API in sola lettura"
+      },
+      "rules": {
+        "title": "Regole",
+        "description": "Una regola dà da sola la categoria ai movimenti nuovi.",
+        "open": "Apri le regole"
+      }
     }
   },
   "errors": {
@@ -1706,7 +1719,7 @@
     "unsynced": {
       "title": "Ancora nessun movimento",
       "description": "Collega una sorgente oppure scrivi il primo movimento a mano.",
-      "action": "Apri le integrazioni"
+      "action": "Apri Plugin"
     },
     "toasts": {
       "categorySet": "{count, plural, one {# movimento aggiornato} other {# movimenti aggiornati}}",
@@ -2372,7 +2385,7 @@
       "source": {
         "title": "Origine dei dati",
         "description": "Da dove arriva il saldo e come si comporta tra una lettura e l'altra.",
-        "syncedNote": "Collegato tramite {provider}. Le credenziali stanno in Impostazioni › Integrazioni.",
+        "syncedNote": "Collegato tramite {provider}. Le credenziali stanno in Impostazioni › Plugin.",
         "manualNote": "Questo conto lo aggiorni tu dalla scheda Saldi.",
         "reminder": "Promemoria di aggiornamento",
         "reminders": {
@@ -2492,14 +2505,14 @@
         "unnamed": "Conto senza nome",
         "sameIban": "Stesso IBAN",
         "otherIban": "IBAN diverso.",
-        "expired": "L'accesso a {bank} è scaduto: rinnovalo in Impostazioni › Integrazioni.",
+        "expired": "L'accesso a {bank} è scaduto: rinnovalo in Impostazioni › Plugin.",
         "start": "Avvia la prova",
         "noBank": "Nessuna banca collegata",
         "noBankText": "Per passare questo conto, collega prima la banca.",
         "connect": "Collega una banca",
         "noFree": "Nessun conto da scegliere",
         "noFreeText": "Le tue banche non condividono un conto in {currency} che non sia già in Ledgerly. Se il conto manca, rinnova l'accesso alla banca e condividilo.",
-        "integrations": "Vai alle integrazioni",
+        "integrations": "Vai a Plugin",
         "alreadyHere": "Già in Ledgerly: «{account}»"
       },
       "check": {
@@ -2607,7 +2620,7 @@
       "errors": {
         "source_unavailable": "Non è stato possibile aggiornare {source}. Il passaggio parte solo con {source} aggiornata.",
         "bank_unavailable": "La banca non risponde ora. Riprova tra poco.",
-        "consent_expired": "L'accesso alla banca è scaduto. Rinnovalo in Impostazioni › Integrazioni.",
+        "consent_expired": "L'accesso alla banca è scaduto. Rinnovalo in Impostazioni › Plugin.",
         "rate_limited": "La banca ha raggiunto il limite di letture. Riprova più tardi.",
         "account_gone": "La banca non condivide più questo conto. Scegli un altro conto.",
         "stale": "I dati sono cambiati dopo la prova. Rifai la prova.",
@@ -2646,7 +2659,7 @@
         "working": "Annullamento…",
         "failed": "L'annullamento non è riuscito. Il conto è rimasto su {bank}: niente è cambiato.",
         "done": "Passaggio annullato",
-        "unavailable": "{source} non è più collegata. Collegala di nuovo in Impostazioni › Integrazioni per annullare il passaggio."
+        "unavailable": "{source} non è più collegata. Collegala di nuovo in Impostazioni › Plugin per annullare il passaggio."
       },
       "settings": {
         "offer": "Questo conto è anche in una tua banca? Puoi farlo arrivare dalla banca. Prima vedi una prova: niente cambia finché non scegli «Applica».",
@@ -5622,8 +5635,8 @@
       },
       "trek": {
         "description": "Dove vivono anche i giorni di ferie.",
-        "manage": "Gestisci in Integrazioni",
-        "connect": "Collega in Integrazioni"
+        "manage": "Gestisci in Plugin",
+        "connect": "Collega in Plugin"
       }
     },
     "selection": {
@@ -5740,7 +5753,7 @@
   "banks": {
     "connect": {
       "title": "Collega una banca",
-      "parent": "Integrazioni",
+      "parent": "Plugin",
       "steps": {
         "label": "Passi",
         "bank": "Banca",

@@ -25,11 +25,9 @@ const command = (id: string, href: string, label: string, icon: NavLink["icon"] 
 export function paletteCommands(role: Role, t: Translator, addons?: readonly Addon[]): NavLink[] {
   const ofAddon = (addon: Addon, entry: NavLink) => (isOn(addon, addons) ? [entry] : []);
   return [
-    ...settingsTabsFor(role)
-      .filter((tab) => tab.inPalette)
-      .map((tab) =>
-        command(`settings-${tab.id}`, tab.href, `${t("settings.title")} › ${t(`settings.tabs.${tab.id}`)}`),
-      ),
+    ...settingsTabsFor(role).map((tab) =>
+      command(`settings-${tab.id}`, tab.href, `${t("settings.title")} › ${t(`settings.tabs.${tab.id}`)}`),
+    ),
     // "To review", which has no place in the menu until the menu changes (R5a).
     command("to-review", "/expenses/review", t("expenses.review.palette"), "expenses"),
     // Expenses › Categories (categories-and-rules.md §5.1), the same until the menu changes.

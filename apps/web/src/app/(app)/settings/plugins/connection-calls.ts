@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/connection-calls.ts — what the row of a connection does, through
+// src/app/(app)/settings/plugins/connection-calls.ts — what the row of a connection does, through
 // `/api/v1/connections` (rewrite plan R3). It answers codes of the contract's closed list
 // (CONNECTION_REFUSALS) and the words of the connection: the row turns them into its sentences.
 import { connections } from "@ledgerly/api-contract/settings";

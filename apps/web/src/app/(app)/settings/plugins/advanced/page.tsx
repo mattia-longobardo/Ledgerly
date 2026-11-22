@@ -27,12 +27,12 @@ const isKind = (kind: string): kind is (typeof KINDS)[number] => KINDS.some((one
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("settings");
-  return { title: `${t("connections.advanced.title")} · ${t("tabs.integrations")} · ${t("title")}` };
+  return { title: `${t("connections.advanced.title")} · ${t("tabs.plugins")} · ${t("title")}` };
 }
 
 const PAGE = 50;
 const MAX_ROWS = 200;
-const INTEGRATIONS: Route = "/settings/integrations";
+const INTEGRATIONS: Route = "/settings/plugins";
 
 /** The counts a run may report, in the order they read best. Absent keys are simply not shown. */
 const COUNT_KEYS = [
@@ -75,7 +75,7 @@ function withSeconds(iso: string, ctx: { locale: UiLocale; timeZone: string }): 
  * shows a credential, a key, an access or what a provider said: the old `error` column is not
  * read here at all.
  */
-export default async function AdvancedPage({ searchParams }: PageProps<"/settings/integrations/advanced">) {
+export default async function AdvancedPage({ searchParams }: PageProps<"/settings/plugins/advanced">) {
   const ctx = await requireSession();
   const t = await getTranslations("settings.connections");
   const old = await getTranslations("settings.integrations");
@@ -328,7 +328,7 @@ export default async function AdvancedPage({ searchParams }: PageProps<"/setting
               </ul>
               {log?.more === true && limit < MAX_ROWS && (
                 <div className="flex justify-center border-t border-border px-4 py-3">
-                  <ButtonLink href={`/settings/integrations/advanced?${more.toString()}` as Route} size="sm">
+                  <ButtonLink href={`/settings/plugins/advanced?${more.toString()}` as Route} size="sm">
                     {t("advanced.log.more")}
                   </ButtonLink>
                 </div>

@@ -122,7 +122,7 @@ export function CategoryActions({
           category={categories.find((category) => category.id === similar.categoryId) ?? null}
           rows={similar.rows}
           categories={categories}
-          createRuleHref={`/settings/rules?from=${similar.id}&category=${similar.categoryId}`}
+          createRuleHref={`/settings/finance/rules?from=${similar.id}&category=${similar.categoryId}`}
           rule={similar.rule}
           onClose={() => setSimilar(null)}
           onApply={async () => {

@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105951,
-    "duplicatedLines": 16279,
-    "percent": 15.36,
-    "blocks": 1245
+    "lines": 106035,
+    "duplicatedLines": 16162,
+    "percent": 15.24,
+    "blocks": 1243
   },
   "units": {
     "api": {
-      "lines": 5583,
-      "duplicatedLines": 1153,
-      "percent": 20.65,
-      "blocks": 103
+      "lines": 5589,
+      "duplicatedLines": 1164,
+      "percent": 20.83,
+      "blocks": 105
     },
     "app": {
-      "lines": 20175,
-      "duplicatedLines": 2810,
-      "percent": 13.93,
-      "blocks": 215
+      "lines": 20145,
+      "duplicatedLines": 2688,
+      "percent": 13.34,
+      "blocks": 212
     },
     "global.d": {
       "lines": 12,
@@ -29,7 +29,7 @@
       "blocks": 0
     },
     "instrumentation": {
-      "lines": 21,
+      "lines": 22,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -53,9 +53,9 @@
       "blocks": 167
     },
     "modules/imports": {
-      "lines": 888,
+      "lines": 951,
       "duplicatedLines": 250,
-      "percent": 28.15,
+      "percent": 26.29,
       "blocks": 16
     },
     "modules/interests": {
@@ -71,9 +71,9 @@
       "blocks": 178
     },
     "modules/payroll": {
-      "lines": 3776,
+      "lines": 3794,
       "duplicatedLines": 764,
-      "percent": 20.23,
+      "percent": 20.14,
       "blocks": 43
     },
     "modules/pockets": {
@@ -96,9 +96,9 @@
     },
     "modules/transactions": {
       "lines": 13048,
-      "duplicatedLines": 1668,
-      "percent": 12.78,
-      "blocks": 134
+      "duplicatedLines": 1662,
+      "percent": 12.74,
+      "blocks": 133
     },
     "modules/users": {
       "lines": 845,
@@ -125,9 +125,9 @@
       "blocks": 0
     },
     "platform/auth": {
-      "lines": 1822,
+      "lines": 1843,
       "duplicatedLines": 314,
-      "percent": 17.23,
+      "percent": 17.04,
       "blocks": 19
     },
     "platform/backup": {
@@ -413,7 +413,7 @@
       "blocks": 0
     },
     "ui": {
-      "lines": 246,
+      "lines": 251,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -434,7 +434,7 @@
     "api/investments/routes.ts": 74,
     "api/investments/tabs.ts": 55,
     "api/payroll/dto.ts": 23,
-    "api/payroll/routes.ts": 36,
+    "api/payroll/routes.ts": 47,
     "api/pockets/dto.ts": 33,
     "api/pockets/routes.ts": 63,
     "api/settings/categories.ts": 39,
@@ -483,7 +483,6 @@
     "app/(app)/expenses/manual.ts": 9,
     "app/(app)/expenses/review/review-blocks.tsx": 9,
     "app/(app)/expenses/review/review-screen.tsx": 28,
-    "app/(app)/expenses/row-view.ts": 6,
     "app/(app)/interests/[id]/page.tsx": 8,
     "app/(app)/interests/[id]/rule-screen.tsx": 47,
     "app/(app)/interests/interests-screen.tsx": 24,
@@ -491,7 +490,6 @@
     "app/(app)/investments/[accountId]/page.tsx": 12,
     "app/(app)/investments/[accountId]/positions/page.tsx": 12,
     "app/(app)/investments/catalog/catalog-screen.tsx": 18,
-    "app/(app)/navigation.ts": 108,
     "app/(app)/overview-screen.tsx": 27,
     "app/(app)/payroll/register-screen.tsx": 9,
     "app/(app)/payroll/settings/code-map-card.tsx": 8,
@@ -501,32 +499,31 @@
     "app/(app)/pockets/[id]/pocket-lists.tsx": 26,
     "app/(app)/pockets/[id]/pocket-screen.tsx": 15,
     "app/(app)/pockets/pockets-screen.tsx": 26,
-    "app/(app)/settings/categories/categories-screen.tsx": 8,
-    "app/(app)/settings/categories/labels-card.tsx": 92,
-    "app/(app)/settings/categories/merge-proposals.tsx": 8,
-    "app/(app)/settings/categories/page.tsx": 8,
-    "app/(app)/settings/categories/source-calls.ts": 19,
-    "app/(app)/settings/categories/source-categories.tsx": 8,
     "app/(app)/settings/data/data-screen.tsx": 29,
-    "app/(app)/settings/integrations/advanced/page.tsx": 25,
-    "app/(app)/settings/integrations/banks-card.tsx": 72,
-    "app/(app)/settings/integrations/connection-codes.ts": 17,
-    "app/(app)/settings/integrations/connection-list.ts": 13,
-    "app/(app)/settings/integrations/connection-view.ts": 28,
-    "app/(app)/settings/integrations/deactivate.ts": 10,
-    "app/(app)/settings/integrations/page.tsx": 54,
-    "app/(app)/settings/integrations/plugin-row.tsx": 15,
-    "app/(app)/settings/integrations/trek-card.tsx": 119,
-    "app/(app)/settings/integrations/wallet-card.tsx": 166,
+    "app/(app)/settings/finance/categories-screen.tsx": 8,
+    "app/(app)/settings/finance/labels-card.tsx": 92,
+    "app/(app)/settings/finance/merge-proposals.tsx": 8,
+    "app/(app)/settings/finance/rules/apply-dialog.tsx": 28,
+    "app/(app)/settings/finance/rules/page.tsx": 8,
+    "app/(app)/settings/finance/rules/rule-editor.tsx": 57,
+    "app/(app)/settings/finance/rules/rules-screen.tsx": 18,
+    "app/(app)/settings/finance/rules/value-cell.tsx": 25,
+    "app/(app)/settings/finance/source-calls.ts": 19,
+    "app/(app)/settings/finance/source-categories.tsx": 8,
+    "app/(app)/settings/plugins/advanced/page.tsx": 25,
+    "app/(app)/settings/plugins/banks-card.tsx": 72,
+    "app/(app)/settings/plugins/connection-codes.ts": 17,
+    "app/(app)/settings/plugins/connection-list.ts": 13,
+    "app/(app)/settings/plugins/connection-view.ts": 28,
+    "app/(app)/settings/plugins/deactivate.ts": 10,
+    "app/(app)/settings/plugins/page.tsx": 54,
+    "app/(app)/settings/plugins/plugin-row.tsx": 15,
+    "app/(app)/settings/plugins/trek-card.tsx": 119,
+    "app/(app)/settings/plugins/wallet-card.tsx": 166,
     "app/(app)/settings/profile/name-form.tsx": 21,
     "app/(app)/settings/profile/page.tsx": 8,
     "app/(app)/settings/profile/preferences-form.tsx": 101,
     "app/(app)/settings/profile/profile-screen.tsx": 14,
-    "app/(app)/settings/rules/apply-dialog.tsx": 28,
-    "app/(app)/settings/rules/page.tsx": 8,
-    "app/(app)/settings/rules/rule-editor.tsx": 57,
-    "app/(app)/settings/rules/rules-screen.tsx": 18,
-    "app/(app)/settings/rules/value-cell.tsx": 25,
     "app/(app)/settings/security/api-clients-table.tsx": 72,
     "app/(app)/settings/security/calls.ts": 27,
     "app/(app)/settings/security/connected-apps-table.tsx": 59,
@@ -808,7 +805,6 @@
     "modules/transactions/ui/similar-dialog.tsx": 9,
     "modules/transactions/ui/spending-card.tsx": 20,
     "modules/transactions/ui/transaction-row-menu.tsx": 21,
-    "modules/transactions/ui/view.ts": 6,
     "modules/users/calls.ts": 25,
     "modules/users/schema.ts": 26,
     "modules/users/service.ts": 31,

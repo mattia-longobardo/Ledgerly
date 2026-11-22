@@ -272,7 +272,7 @@ export function Rules({ rules, page }: { rules: ApiState<RuleList>; page: Catego
               {data.rules.map((rule) => (
                 <li key={rule.id} className="flex items-center gap-2">
                   <Link
-                    href={`/settings/rules#rule-${rule.id}`}
+                    href={`/settings/finance/rules#rule-${rule.id}`}
                     className="focus-ring inline-flex min-h-6 min-w-0 items-center truncate rounded-xs hover:underline"
                   >
                     «{rule.name}» → {category.name}
@@ -284,7 +284,7 @@ export function Rules({ rules, page }: { rules: ApiState<RuleList>; page: Catego
         }
       </Loaded>
       {category.archivedAt === null && (
-        <ButtonLink size="sm" className="self-start" href={`/settings/rules?category=${category.id}`}>
+        <ButtonLink size="sm" className="self-start" href={`/settings/finance/rules?category=${category.id}`}>
           ＋ {text("categories.detail.newRule")}
         </ButtonLink>
       )}

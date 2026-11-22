@@ -144,7 +144,7 @@ test.describe("the automatic categories", () => {
   });
 
   test("two categories that look the same are merged, with every effect said first", async ({ page }) => {
-    await page.goto("/settings/categories");
+    await page.goto("/settings/finance");
     const proposal = page.getByTestId("merge-proposal");
     await expect(proposal).toHaveCount(1);
     await expect(proposal).toContainText("Bars");

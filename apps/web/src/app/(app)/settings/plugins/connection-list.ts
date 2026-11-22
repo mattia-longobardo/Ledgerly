@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/connection-list.ts — the person's connections as data, for
+// src/app/(app)/settings/plugins/connection-list.ts — the person's connections as data, for
 // `GET /api/v1/connections` (rewrite plan R2): what the rows of the page show, without sentences.
 // The capabilities are what a client of the API can ask for: a provider of the core offers what its
 // card does (`core-cases.ts`), a bank what its plugin does, an investment service "Update now".

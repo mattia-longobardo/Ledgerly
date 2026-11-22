@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/connection-cases.ts — what can be done to one of the person's
+// src/app/(app)/settings/plugins/connection-cases.ts — what can be done to one of the person's
 // connections, by id: "Update now", "Turn on again", "Turn on", "Test the connection", "Download
 // the history again" (ux/n2-connection-status.md §2.4). The answer is a code: `/api/v1/connections`
 // turns it into a code of the contract, which the row translates.

@@ -43,7 +43,7 @@ import { timeOffView } from "@domain/modules/timeoff/queries";
 import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
 import { categoryMacroTotals, expensesView, facetCounts } from "@domain/modules/transactions/queries";
 import { categoryOptions, listCategoriesWithUsage } from "@domain/modules/transactions/taxonomy";
-import { sourceNotes } from "../apps/web/src/app/(app)/settings/categories/source";
+import { sourceNotes } from "../apps/web/src/app/(app)/settings/finance/source";
 import { categories, transactions } from "@domain/modules/transactions/schema";
 // `/api/v1` as the web serves it, `apps/api` included (R2).
 import { api } from "../apps/web/src/app/api/v1/[[...route]]/composition";

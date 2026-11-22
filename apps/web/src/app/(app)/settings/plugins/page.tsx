@@ -17,13 +17,12 @@ import { ButtonLink } from "@ledgerly/ui/button";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { apiRead } from "@/platform/api-read";
 import { requireSession } from "@/platform/auth/session";
-import { SourceCategories } from "../categories/source-categories";
+import { SourceCategories } from "../finance/source-categories";
 import { HistoryDepth } from "./advanced/history-depth";
 import { BanksCard } from "./banks-card";
 import { ConnectionRow, type ConnectionRowProps, type RowStatusValue, SourceLinkRow } from "./connection-row";
 import {
   advancedHref,
-  type Capabilities,
   connectionRows,
   OWN_DIALOGS,
   RUNS_PER_CONNECTION,
@@ -33,6 +32,7 @@ import { DeactivateZone } from "./deactivate-zone";
 import { DeletedAccounts } from "./deleted-accounts";
 import { PluginRow } from "./plugin-row";
 import { ScheduleCell } from "./schedule-cell";
+import { bankRows, worst } from "./source-rows";
 import { sourceCategoryRowsOf } from "./source-category-rows";
 import { SourceWrites } from "./source-writes";
 import { TrekCard } from "./trek-card";
@@ -42,7 +42,7 @@ import { WalletAccounts, WalletCard } from "./wallet-card";
 const WALLET_PROVIDER = "wallet";
 const TREK_PROVIDER = "trek";
 
-/** Both routes: the list (`/settings/integrations`) and a source's page (`…/[source]`). */
+/** Both routes: the list (`/settings/plugins`) and a source's page (`…/[source]`). */
 interface IntegrationsProps {
   params: Promise<{ source?: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -54,7 +54,7 @@ const pluginsOf = cache(() => apiRead(sources.listPlugins, {}));
 export async function generateMetadata({ params }: IntegrationsProps): Promise<Metadata> {
   const t = await getTranslations("settings");
   const { source } = await params;
-  const base = `${t("tabs.integrations")} · ${t("title")}`;
+  const base = `${t("tabs.plugins")} · ${t("title")}`;
   if (source === undefined) return { title: base };
   const plugin = (await pluginsOf())?.plugins.find((one) => one.id === source);
   const providers = await getTranslations("settings.integrations.providers");
@@ -68,11 +68,9 @@ export async function generateMetadata({ params }: IntegrationsProps): Promise<M
   return { title: `${name} · ${base}` };
 }
 
-const INTEGRATIONS = "/settings/integrations";
+const INTEGRATIONS = "/settings/plugins";
 /** The sources of the core with a page of their own (plugin-settings.md §2.1). */
 const CORE_SOURCES = [WALLET_PROVIDER, TREK_PROVIDER] as const;
-/** The state a list row shows for a source with several connections: the one that needs most. */
-const WORST: readonly RowStatusValue[] = ["action", "late", "running", "paused", "ok", "absent"];
 
 /**
  * Settings › Integrations (ux/n2-connection-status.md, plugin-settings.md §2): the list has one
@@ -127,41 +125,8 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   const wallet = single(WALLET_PROVIDER, t("providers.wallet.name"), t("providers.wallet.role"));
   const trek = single(TREK_PROVIDER, t("providers.trek.name"), t("providers.trek.role"));
 
-  /** The rows of the connections of one plugin: one per bank, by name. */
-  function pluginRows(pluginId: string, active: boolean) {
-    const provider = `plugin:${pluginId}`;
-    const built = connections
-      .filter((connection) => connection.provider === provider)
-      .map((one) => {
-        const detail = text("detail.accounts", { count: one.shared ?? 0 });
-        const capabilities: Capabilities = active
-          ? {
-              update: true,
-              renewHref: `/banks/connect?renew=${one.id}`,
-              replaceKey: "own",
-              // `all`: the accounts left out are offered again too, so one can be chosen later.
-              chooseAccountsHref: `/banks/connect?step=accounts&c=${one.id}&all=1`,
-              disconnect: true,
-            }
-          : { update: false };
-        const ends = one.expiresAt !== null && new Date(one.expiresAt).getTime() > now.getTime();
-        // A bank's row says nothing of the IBANs of a reading: its accounts are chosen by hand.
-        const connection: WireConnection = { ...one, ibanConflicts: [] };
-        return {
-          connection,
-          row: rows.row({
-            connection,
-            detail:
-              ends && one.expiresAt !== null
-                ? `${detail} · ${text("detail.validUntil", { date: day(one.expiresAt) })}`
-                : detail,
-            capabilities,
-          }),
-        };
-      });
-    // By name, whatever the state: a row does not move when its state changes (§7).
-    return built.sort((a, b) => a.row.name.localeCompare(b.row.name, ctx.locale, { sensitivity: "base" }));
-  }
+  const bankInput = { connections, rows, text, day, locale: ctx.locale, now };
+  const pluginRows = (pluginId: string, active: boolean) => bankRows(bankInput, pluginId, active);
 
   if (source !== undefined) {
     // ---- The page of one source (plugin-settings.md §2.2): its sections, in a fixed order. ----
@@ -449,20 +414,6 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       .map((one) => [one.id, worst(pluginRows(one.id, true).map((bank) => bank.row.status.value))] as const),
   );
 
-  // Investments (docs/design/investments.md §4.2): the key, its checks and the disconnection
-  // live on the service's page.
-  const invested = connections.flatMap((connection) => {
-    if (connection.service === null) return [];
-    const href = `/investments/${connection.service.accountId}/connection`;
-    return [
-      rows.row({
-        connection: { ...connection, ibanConflicts: [] },
-        detail: text("detail.readOnlyKey"),
-        capabilities: { update: true, replaceKey: href, settingsHref: href },
-      }),
-    ];
-  });
-
   return (
     <SettingsGrid>
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
@@ -522,29 +473,9 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
         </ul>
       </SettingsSection>
 
-      {invested.length > 0 && (
-        <SettingsSection
-          title={t("investments.title")}
-          description={t("investments.description")}
-          padded={false}
-        >
-          <ul className="flex flex-col">
-            {invested.map((row) => (
-              <li
-                key={row.id}
-                className="border-t border-border first:border-t-0"
-                data-testid="investment-connection"
-              >
-                <ConnectionRow {...row} />
-              </li>
-            ))}
-          </ul>
-        </SettingsSection>
-      )}
-
       <p className="flex justify-end">
         <Link
-          href={"/settings/integrations/advanced" as Route}
+          href={"/settings/plugins/advanced" as Route}
           className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm font-medium text-accent hover:underline"
         >
           {text("actions.advanced")} →
@@ -552,10 +483,4 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       </p>
     </SettingsGrid>
   );
-}
-
-/** The state that needs the person most, of a source with several connections. */
-function worst(values: readonly RowStatusValue[]): RowStatusValue {
-  if (values.length === 0) return "absent";
-  return WORST.find((value) => values.includes(value)) ?? "ok";
 }

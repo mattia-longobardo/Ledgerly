@@ -1,5 +1,5 @@
 // R3 parity of the board of the categories (03-releases.md §R3, criterion 11): what the Server Actions
-// of `settings/categories/actions.ts` did — the use cases, with `""` for «no group» — is what the routes
+// of `settings/finance/actions.ts` did — the use cases, with `""` for «no group» — is what the routes
 // do with the bodies the board now sends (`modules/transactions/taxonomy-calls.ts`). Two people alike:
 // the old path changes the categories of one, the new path those of the other.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";

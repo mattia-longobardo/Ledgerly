@@ -40,7 +40,7 @@ function row(patch: Partial<ConnectionRowProps> = {}): ConnectionRowProps {
     notice: null,
     history: [],
     historyMore: null,
-    menu: [{ kind: "advanced", label: C.actions.advanced, href: "/settings/integrations/advanced?c=c1" }],
+    menu: [{ kind: "advanced", label: C.actions.advanced, href: "/settings/plugins/advanced?c=c1" }],
     ...patch,
   };
 }
@@ -155,7 +155,7 @@ describe("ConnectionRow", () => {
     renderRow(row());
     await userEvent.click(screen.getByRole("button", { name: "North Bank" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: C.actions.advanced }));
-    expect(push).toHaveBeenCalledWith("/settings/integrations/advanced?c=c1");
+    expect(push).toHaveBeenCalledWith("/settings/plugins/advanced?c=c1");
   });
 
   it("keeps the history closed, and opens it with a button that says so", async () => {
@@ -177,7 +177,7 @@ describe("ConnectionRow", () => {
             byYou: false,
           },
         ],
-        historyMore: "/settings/integrations/advanced?c=c1",
+        historyMore: "/settings/plugins/advanced?c=c1",
       }),
     );
     const toggle = screen.getByRole("button", { name: C.history.toggle });
@@ -192,7 +192,7 @@ describe("ConnectionRow", () => {
     expect(items[1]).not.toHaveTextContent(C.history.byYou);
     expect(screen.getByRole("link", { name: C.history.all })).toHaveAttribute(
       "href",
-      "/settings/integrations/advanced?c=c1",
+      "/settings/plugins/advanced?c=c1",
     );
   });
 

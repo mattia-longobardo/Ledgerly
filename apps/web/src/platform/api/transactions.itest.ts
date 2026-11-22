@@ -600,7 +600,7 @@ describe("the figures of a category's page (client R3)", () => {
     const { applyProviderAccounts } = await import("@domain/modules/accounts/service");
     const { listAccounts } = await import("@domain/modules/accounts/queries");
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
-    const { sourceNotes } = await import("@/app/(app)/settings/categories/source");
+    const { sourceNotes } = await import("@/app/(app)/settings/finance/source");
     const domain = await import("@ledgerly/domain/transactions");
     await applyProviderAccounts(alice, "wallet", [
       { provider: "wallet", providerAccountId: "acc-1", name: "Current", type: "checking", currency: "EUR" },

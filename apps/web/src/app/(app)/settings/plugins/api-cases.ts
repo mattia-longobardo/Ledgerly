@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/api-cases.ts — the use cases of the connections and the
+// src/app/(app)/settings/plugins/api-cases.ts — the use cases of the connections and the
 // banks that the web process lends `/api/v1` (rewrite plan R2), as it lends its guard: they need
 // the web's registry of providers and its bank sink until E5 and R4. The Server Actions of these
 // pages call the same functions; the providers of the core by their cards (`core-cases.ts`).

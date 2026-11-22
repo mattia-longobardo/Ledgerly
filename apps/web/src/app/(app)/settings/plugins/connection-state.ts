@@ -28,7 +28,7 @@ export { sourceSlugOf };
 /** Where the settings of a source are; `null` for a provider without a page of its own. */
 export function sourceHref(provider: string): string | null {
   const slug = sourceSlugOf(provider);
-  return slug === null ? null : `/settings/integrations/${slug}`;
+  return slug === null ? null : `/settings/plugins/${slug}`;
 }
 
 /**

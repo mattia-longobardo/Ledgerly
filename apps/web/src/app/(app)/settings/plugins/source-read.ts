@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/source-read.ts — what the page of one source reads besides its
+// src/app/(app)/settings/plugins/source-read.ts — what the page of one source reads besides its
 // connections (plugin-settings.md §2.2, §3.4), as the web process lends it to `/api/v1` (rewrite
 // plan R3): the accounts deleted here, what waits to be written to the source, and what
 // «Disconnect» of each connection leaves. Nothing here names a provider (rule M12).

@@ -10,8 +10,8 @@ describe("paletteCommands", () => {
     expect(paletteCommands("user", t).map((one) => [one.id, one.href])).toEqual([
       ["settings-profile", "/settings/profile"],
       ["settings-security", "/settings/security"],
-      ["settings-integrations", "/settings/integrations"],
-      ["settings-categories", "/settings/categories"],
+      ["settings-finance", "/settings/finance"],
+      ["settings-plugins", "/settings/plugins"],
       ["settings-data", "/settings/data"],
       ["to-review", "/expenses/review"],
       ["categories", "/expenses/categories"],

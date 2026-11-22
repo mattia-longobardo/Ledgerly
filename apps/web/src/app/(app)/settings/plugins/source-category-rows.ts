@@ -3,7 +3,7 @@
 // may be matched to, in the colour the server gives each one. `null` while the source gave none.
 import type { categories as categoryRoutes, labels as labelRoutes } from "@ledgerly/api-contract/settings";
 import type { RouteOutput } from "@ledgerly/api-client";
-import type { SourceCategoryRow } from "../categories/source-categories";
+import type { SourceCategoryRow } from "../finance/source-categories";
 
 type SourceCategory = RouteOutput<typeof labelRoutes.listSourceCategories>["sourceCategories"][number];
 type Category = RouteOutput<typeof categoryRoutes.listCategories>["categories"][number];

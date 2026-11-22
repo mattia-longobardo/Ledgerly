@@ -1,4 +1,4 @@
-// src/app/(app)/settings/categories/source.ts — the categories of a source that gives its own, as
+// src/app/(app)/settings/finance/source.ts — the categories of a source that gives its own, as
 // the screen reads and changes them (rewrite plan N3.1; ux/n3-categories-manual.md §6.4). The
 // categories and their movements are the transactions module's, the limits of the budgets are the
 // budgets module's, and the name of a source is the integrations': only the application joins
@@ -11,7 +11,7 @@ import { colorOfCategory, listCategoriesWithUsage } from "@ledgerly/domain/trans
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { sourceNameOf } from "@/platform/integrations/registry";
 
-import { sourceCategoryRowsOf } from "../integrations/source-category-rows";
+import { sourceCategoryRowsOf } from "../plugins/source-category-rows";
 import type { SourceCategoryRow } from "./source-categories";
 
 /** The categories of one source, under the name a person reads for it. */

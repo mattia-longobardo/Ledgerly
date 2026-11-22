@@ -19,7 +19,7 @@ import { BankStep } from "./bank-step";
 import { RenewAccess, RetryReading } from "./outcome-actions";
 import { isBankStepError } from "./return-errors";
 
-const SETTINGS: Route = "/settings/integrations";
+const SETTINGS: Route = "/settings/plugins";
 const HERE: Route = "/banks/connect";
 
 export async function generateMetadata(): Promise<Metadata> {

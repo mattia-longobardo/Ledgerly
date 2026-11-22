@@ -507,7 +507,7 @@ export function ManualTransactionDialog({
           </CategoryPicker>
           {suggested && <p className="text-sm text-muted">{t("manual.categoryHint")}</p>}
           {offered.length === 0 && (
-            <Link href="/settings/categories" className="focus-ring self-start text-sm text-accent underline">
+            <Link href="/settings/finance" className="focus-ring self-start text-sm text-accent underline">
               {t("manual.noCategories")}
             </Link>
           )}

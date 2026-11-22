@@ -189,8 +189,8 @@ export const MODULES: Module[] = [
   },
   {
     id: "categories",
-    files: [page("settings/categories"), page("settings/rules")],
-    integration: ["apps/web/src/app/(app)/settings/categories"],
+    files: [page("settings/finance"), page("settings/finance/rules")],
+    integration: ["apps/web/src/app/(app)/settings/finance"],
     flows: ["categories"],
     // A source's categories are drawn on the source's page (rewrite plan N7.2); the page of the
     // categories in Expenses calls its Server Actions (N3.2, N3.3). The API's tests read its notes of a source.
@@ -384,7 +384,7 @@ export const MODULES: Module[] = [
       "packages/domain/src/platform/plugin-config*",
       "plugins/**",
       page("banks"),
-      page("settings/integrations"),
+      page("settings/plugins"),
       "apps/web/src/app/plugin-wiring.ts",
       "apps/web/src/app/api/v1/plugins/**",
       "test/fixtures/plugins/**",
@@ -396,7 +396,7 @@ export const MODULES: Module[] = [
       "packages/plugin-host/src",
       "packages/domain/src/platform/plugins",
       "apps/web/src/app/(app)/banks",
-      "apps/web/src/app/(app)/settings/integrations",
+      "apps/web/src/app/(app)/settings/plugins",
     ],
     flows: ["connections"],
     usedBy: [

@@ -30,7 +30,7 @@ const chooser = (page: Page, name: string): Locator =>
   rowOf(page, name).getByRole("button", { name: chooserName(name), exact: true });
 
 /** The page of the source the `sources` user's categories come from. */
-const SOURCE_PAGE = "/settings/integrations/wallet";
+const SOURCE_PAGE = "/settings/plugins/wallet";
 
 async function open(page: Page) {
   await page.goto(SOURCE_PAGE);
@@ -59,7 +59,7 @@ test("the section lists the source's categories with what each counts under", as
   // Settings › Categories has no section of the source any more: one line leads to the source's
   // page, where the match is changed, and so does the note of the category on Expenses › Categories
   // (where the tree went in N3.2).
-  await page.goto("/settings/categories");
+  await page.goto("/settings/finance");
   await expect(section(page)).toHaveCount(0);
   await expect(page.getByRole("link", { name: /^.+ settings$/ })).toHaveAttribute("href", SOURCE_PAGE);
   await page.goto("/expenses/categories");

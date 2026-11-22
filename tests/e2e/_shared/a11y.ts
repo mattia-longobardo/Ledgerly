@@ -11,7 +11,7 @@
 // Every screen of the application is in the list of its flow, and almost all of them are opened as
 // the seeded `layout` user, who has something on every page (scripts/seed-e2e.ts): a layout check run
 // against an empty state measures an empty state, which is how F8's regression on
-// /settings/integrations went unseen until F9 looked at that page as an admin.
+// /settings/plugins went unseen until F9 looked at that page as an admin.
 import { createRequire } from "node:module";
 import { expect, type Page, test } from "@playwright/test";
 import { type SESSIONS, sessionState } from "./env";

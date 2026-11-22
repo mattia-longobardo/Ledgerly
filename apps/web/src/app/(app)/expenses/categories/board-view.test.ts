@@ -54,7 +54,7 @@ describe("the board from the API", () => {
     expect(group.shareText).toMatch(/^62,5\s%$/);
     expect(group.zero).toBe(false);
     expect(group.budget?.limit).toMatch(/^300,00\s€$/);
-    expect(group.source).toEqual({ text: "From Wallet: Food", href: "/settings/integrations/wallet" });
+    expect(group.source).toEqual({ text: "From Wallet: Food", href: "/settings/plugins/wallet" });
     expect(group.only?.href).toBe(`/expenses?preset=month&acc=a1&cat=${ID}`);
     expect(expense.rest?.href).toBe("/expenses/review?from=2026-10-01&to=2026-10-31&acc=a1");
   });

@@ -65,7 +65,7 @@ const LIVE: ConnectionRowProps = {
     { kind: "update", label: C.actions.update },
     { kind: "replaceKey", label: C.actions.replaceKey },
     { kind: "test", label: C.actions.test },
-    { kind: "advanced", label: C.actions.advanced, href: "/settings/integrations/advanced?c=c1" },
+    { kind: "advanced", label: C.actions.advanced, href: "/settings/plugins/advanced?c=c1" },
     { kind: "disconnect", label: C.actions.disconnect, danger: true },
   ],
 };
@@ -94,7 +94,7 @@ function renderCard(connected = true) {
         provider="wallet"
         connected={connected}
         leave={{ accounts: 2, excluded: 1 }}
-        deactivateHref="/settings/integrations/wallet#deactivate"
+        deactivateHref="/settings/plugins/wallet#deactivate"
       />
     </NextIntlClientProvider>,
   );
@@ -182,7 +182,7 @@ describe("WalletCard", () => {
     // The way to stop for good is on the source's page (plugin-settings.md §4.2).
     expect(screen.getByRole("link", { name: `Want to stop using ${NAME}? Turn it off` })).toHaveAttribute(
       "href",
-      "/settings/integrations/wallet#deactivate",
+      "/settings/plugins/wallet#deactivate",
     );
     await userEvent.click(screen.getByRole("button", { name: T.disconnect.cancel }));
     expect(disconnect).not.toHaveBeenCalled();

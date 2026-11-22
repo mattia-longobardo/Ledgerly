@@ -62,7 +62,7 @@ function CategoriesSection() {
           const moved = new Map<string, { name: string; href: string }>();
           for (const row of sourceCategories) {
             if (row.source !== null && !moved.has(row.provider))
-              moved.set(row.provider, { name: row.sourceName, href: `/settings/integrations/${row.source}` });
+              moved.set(row.provider, { name: row.sourceName, href: `/settings/plugins/${row.source}` });
           }
           return [...moved].map(([provider, source]) => (
             <p key={provider} className="border-t border-border px-4 py-3 text-sm text-muted">

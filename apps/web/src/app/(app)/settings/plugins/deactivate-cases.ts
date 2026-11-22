@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/deactivate-cases.ts — "Turn off" a source and "Bring back"
+// src/app/(app)/settings/plugins/deactivate-cases.ts — "Turn off" a source and "Bring back"
 // an account deleted here (plugin-settings.md §3.3, §3.4), as use cases: the Server Actions and
 // `/api/v1/sources` call these. The source comes from a slug, read among the person's own sources.
 import "server-only";
@@ -23,7 +23,7 @@ import {
 } from "./deactivate";
 
 function revalidate(): void {
-  revalidatePath("/settings/integrations", "layout");
+  revalidatePath("/settings/plugins", "layout");
   revalidatePath("/accounts", "layout");
   revalidatePath("/timeoff", "layout");
   revalidatePath("/expenses", "layout");

@@ -35,7 +35,12 @@ export function TransactionRowMenu({
   const head = [
     { label: text("row.editCategory"), onSelect: onEditCategory },
     ...(automatic
-      ? [{ label: text("row.createRule"), onSelect: () => router.push(`/settings/rules?from=${row.id}`) }]
+      ? [
+          {
+            label: text("row.createRule"),
+            onSelect: () => router.push(`/settings/finance/rules?from=${row.id}`),
+          },
+        ]
       : []),
   ];
   const visibility = {

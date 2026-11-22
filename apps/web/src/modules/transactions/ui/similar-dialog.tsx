@@ -104,7 +104,7 @@ export function SimilarDialog({
           <p className="text-sm break-words text-muted">
             {t("similar.ruleStays", { name: rule.name })}{" "}
             <Link
-              href={`/settings/rules#rule-${rule.id}` as Route}
+              href={`/settings/finance/rules#rule-${rule.id}` as Route}
               className="focus-ring rounded-xs text-accent hover:underline"
             >
               {t("similar.editRule")}

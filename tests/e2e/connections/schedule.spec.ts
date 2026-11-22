@@ -14,7 +14,7 @@ test.describe.configure({ mode: "default" });
 test.use({ storageState: sessionState("schedule") });
 
 test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async ({ page }) => {
-  await page.goto("/settings/integrations/trek");
+  await page.goto("/settings/plugins/trek");
   const trek = page.getByTestId("schedule-row").filter({ hasText: "Trek" });
   await trek.getByRole("button", { name: "Change the sync schedule" }).click();
   const dialog = page.getByRole("dialog", { name: "Sync schedule" });
@@ -68,7 +68,8 @@ test("a sync at 06:43 on weekdays plus a cron rule: preview, save, card", async 
 });
 
 test("a service's Connection tab shows its real schedule, with the same control", async ({ page }) => {
-  await page.goto("/settings/integrations");
+  // The investment services moved to Settings › Finance in R5a (decision D3).
+  await page.goto("/settings/finance");
   const row = page.getByTestId("investment-connection").filter({ hasText: "eToro" });
   // Seeded on manual only: the row says the automatic update is off, and the tab used to say
   // 07:30 and 22:30 whatever the schedule was.

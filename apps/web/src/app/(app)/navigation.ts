@@ -75,28 +75,27 @@ export function navFor(role: Role, addons?: readonly Addon[]): NavItem[] {
   return NAV_ITEMS.filter((entry) => (!entry.adminOnly || role === "admin") && isOn(entry.addon, addons));
 }
 
-type SettingsTabId =
-  "profile" | "security" | "integrations" | "categories" | "rules" | "data" | "users" | "server";
+type SettingsTabId = "profile" | "security" | "finance" | "plugins" | "data" | "users" | "server";
 
 interface SettingsTab {
   id: SettingsTabId;
   href: Route;
   /** Admin › Users and Admin › Server (spec §7.10): their pages answer 404 to anyone else. */
   adminOnly: boolean;
-  /** Found by ⌘K. Rules never was: a product choice this list keeps, not one it makes. */
-  inPalette: boolean;
 }
 
-/** The single list of the pages of Settings (audit UI-NAV-2): the tabs and the palette derive from it. */
+/**
+ * The single list of the pages of Settings (audit UI-NAV-2): the tabs and the palette derive from it.
+ * Finance and Plugins are decision D3's; Rules is a page of Finance.
+ */
 const SETTINGS_TABS: readonly SettingsTab[] = [
-  { id: "profile", href: "/settings/profile", adminOnly: false, inPalette: true },
-  { id: "security", href: "/settings/security", adminOnly: false, inPalette: true },
-  { id: "integrations", href: "/settings/integrations", adminOnly: false, inPalette: true },
-  { id: "categories", href: "/settings/categories", adminOnly: false, inPalette: true },
-  { id: "rules", href: "/settings/rules", adminOnly: false, inPalette: false },
-  { id: "data", href: "/settings/data", adminOnly: false, inPalette: true },
-  { id: "users", href: "/settings/users", adminOnly: true, inPalette: true },
-  { id: "server", href: "/settings/server", adminOnly: true, inPalette: true },
+  { id: "profile", href: "/settings/profile", adminOnly: false },
+  { id: "security", href: "/settings/security", adminOnly: false },
+  { id: "finance", href: "/settings/finance", adminOnly: false },
+  { id: "plugins", href: "/settings/plugins", adminOnly: false },
+  { id: "data", href: "/settings/data", adminOnly: false },
+  { id: "users", href: "/settings/users", adminOnly: true },
+  { id: "server", href: "/settings/server", adminOnly: true },
 ];
 
 export function settingsTabsFor(role: Role): SettingsTab[] {

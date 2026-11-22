@@ -22,7 +22,7 @@ interface BankStepProps {
   returned: { error: BankStepError; bank: string | null } | null;
 }
 
-const SETTINGS: Route = "/settings/integrations";
+const SETTINGS: Route = "/settings/plugins";
 
 /** A name for comparing: no case, no accents. */
 function fold(text: string): string {

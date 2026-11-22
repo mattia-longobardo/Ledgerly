@@ -10,10 +10,10 @@ import { sessionState } from "../_shared/env";
 const ROW = '[data-testid="plugin-row"][data-plugin="enablebanking"]';
 const RETURN_PATH = "/api/v1/plugins/enablebanking/callback";
 // The plugin's page (rewrite plan N7.2): only while it is on; otherwise its address leads to the list.
-const PAGE = "/settings/integrations/enablebanking";
+const PAGE = "/settings/plugins/enablebanking";
 
 async function integrations(page: Page) {
-  await page.goto("/settings/integrations");
+  await page.goto("/settings/plugins");
   await expect(page.locator(ROW)).toBeVisible();
 }
 
@@ -35,7 +35,7 @@ test.describe("a person who is not an admin", () => {
       await expect(row).toContainText("Not active");
       await expect(page.getByTestId("banks-card")).toHaveCount(0);
       await page.goto(PAGE);
-      await expect(page).toHaveURL(/\/settings\/integrations#source-enablebanking$/);
+      await expect(page).toHaveURL(/\/settings\/plugins#source-enablebanking$/);
       expect((await page.goto("/banks/connect"))?.status()).toBe(404);
     });
 
@@ -91,7 +91,7 @@ test.describe("a person who is not an admin", () => {
       const dialog = page.getByRole("dialog", { name: "Turn off Enable Banking?" });
       await dialog.getByRole("button", { name: "Turn off Enable Banking" }).click();
       await expect(page.getByText("Enable Banking turned off: 0 accounts are now “manual”")).toBeVisible();
-      await expect(page).toHaveURL(/\/settings\/integrations$/);
+      await expect(page).toHaveURL(/\/settings\/plugins$/);
       await integrations(page);
       await expect(row).toHaveAttribute("data-state", "available");
       await expect(page.getByTestId("banks-card")).toHaveCount(0);

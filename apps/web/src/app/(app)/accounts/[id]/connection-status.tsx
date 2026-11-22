@@ -12,13 +12,13 @@ import { relativeNext, relativePast } from "@ledgerly/format/dates";
 import { formatDate, formatInstant, type UiLocale } from "@ledgerly/format/format";
 import { ConnectionRow, type ConnectionRowProps, type RowAction } from "@ledgerly/ui/connection-row";
 import { invalidate, useApi } from "@ledgerly/ui/data";
-import { useRunConnection } from "../../settings/integrations/connection-row";
+import { useRunConnection } from "../../settings/plugins/connection-row";
 
 export type ApiConnection = RouteOutput<typeof connections.listConnections>["connections"][number];
 type StatusKind = NonNullable<ApiConnection["status"]["action"]>;
 type Text = ReturnType<typeof useTranslations<"settings.connections">>;
 
-const SETTINGS = "/settings/integrations";
+const SETTINGS = "/settings/plugins";
 /** While a reading runs the row reads again: every 5 seconds, for 2 minutes at most. */
 const REFRESH_MS = 5_000;
 const REFRESH_FOR_MS = 120_000;

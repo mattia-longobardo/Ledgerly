@@ -20,7 +20,7 @@ import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { categoryColor } from "@/modules/transactions";
 import { AccountsMenu, type ExpensesQuery, parseExpensesQuery } from "@/modules/transactions/client";
-import { DefaultGroupsButton } from "../../settings/categories/default-groups";
+import { DefaultGroupsButton } from "../../settings/finance/default-groups";
 import { ExpensesTabs } from "../tabs";
 import { CategoriesBoard } from "./board";
 import { type Macro, MACROS } from "./board-model";

@@ -262,7 +262,7 @@ export function RulesBoard({
           numberFormat={numberFormat}
           onClose={() => {
             setEditing(null);
-            if (draft !== null) router.replace("/settings/rules" as Route);
+            if (draft !== null) router.replace("/settings/finance/rules" as Route);
           }}
           onSaved={(id, changes, name) => {
             setEditing(null);
@@ -276,7 +276,7 @@ export function RulesBoard({
                   }
                 : undefined,
             );
-            if (draft !== null) router.replace("/settings/rules" as Route);
+            if (draft !== null) router.replace("/settings/finance/rules" as Route);
           }}
         />
       )}

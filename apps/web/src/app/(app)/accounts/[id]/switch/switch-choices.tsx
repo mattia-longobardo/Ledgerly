@@ -119,7 +119,7 @@ function NoChoice({ banks, currency }: { banks: number; currency: string }) {
     <EmptyState
       title={text("account.noFree")}
       description={text("account.noFreeText", { currency })}
-      actions={<ButtonLink href="/settings/integrations">{text("account.integrations")}</ButtonLink>}
+      actions={<ButtonLink href="/settings/plugins">{text("account.integrations")}</ButtonLink>}
     />
   );
 }

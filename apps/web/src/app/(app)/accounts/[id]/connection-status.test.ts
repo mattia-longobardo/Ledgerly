@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Connection, RecentRun } from "@ledgerly/domain/platform/integrations";
 import en from "../../../../../../../messages/en.json";
 import it_ from "../../../../../../../messages/it.json";
-import { type Capabilities, connectionRows } from "../../settings/integrations/connection-view";
-import { statusOf } from "../../settings/integrations/connection-state";
+import { type Capabilities, connectionRows } from "../../settings/plugins/connection-view";
+import { statusOf } from "../../settings/plugins/connection-state";
 import { type ApiConnection, connectionStatus } from "./connection-status";
 
 const CATALOGUES = { en, it: it_ };
@@ -88,14 +88,14 @@ function connectionOf(one: Case): Connection {
 /** The capabilities the account's page gave the server's row (`connection-status.ts` until R3). */
 function capabilitiesOf(one: Case, connection: Connection): Capabilities {
   if (!connection.provider.startsWith("plugin:")) {
-    return { update: true, replaceKey: one.keyHref ?? "/settings/integrations" };
+    return { update: true, replaceKey: one.keyHref ?? "/settings/plugins" };
   }
   return one.providerActive === false
     ? { update: false }
     : {
         update: true,
         renewHref: `/banks/connect?renew=${connection.id}`,
-        replaceKey: "/settings/integrations?replace=1",
+        replaceKey: "/settings/plugins?replace=1",
         chooseAccountsHref: `/banks/connect?step=accounts&c=${connection.id}`,
       };
 }

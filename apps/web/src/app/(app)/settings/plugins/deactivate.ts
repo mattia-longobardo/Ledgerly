@@ -1,4 +1,4 @@
-// src/app/(app)/settings/integrations/deactivate.ts — "Turn off" a source (plugin-settings.md §3,
+// src/app/(app)/settings/plugins/deactivate.ts — "Turn off" a source (plugin-settings.md §3,
 // decision H55): every connection closes, the source's settings go, and its data become data of the
 // core, with no number changed. Here and not in a module because it joins six: each owner converts
 // its own rows, all of them in one transaction. No provider is named here (rule M12): a source is a
