@@ -9,6 +9,7 @@ import { type DataColumn, DataTable } from "@ledgerly/ui/data-table";
 import { Link } from "@ledgerly/ui/router";
 import { StatusBadge } from "@ledgerly/ui/status-badge";
 import { Td } from "@ledgerly/ui/table";
+import { openOriginal, originalLink } from "./original";
 import { type RegisterCells, type RegisterGroup, STATE_TONE, type SummedField } from "./present";
 
 const MAIN: readonly SummedField[] = ["gross", "taxesTotal", "employeeSocial", "netPay"];
@@ -71,15 +72,14 @@ function columnsOf(fields: readonly SummedField[], details: boolean, text: Text)
       header: text("register.document"),
       className: "max-w-56 truncate",
       cell: (row) =>
-        row.originalHref ? (
-          <a
-            href={row.originalHref}
-            target="_blank"
-            rel="noopener"
+        row.hasOriginal ? (
+          <button
+            type="button"
+            onClick={() => openOriginal(() => originalLink(row.id))}
             className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent hover:underline"
           >
             {row.fileName}
-          </a>
+          </button>
         ) : (
           <span className="text-sm">{row.fileName}</span>
         ),

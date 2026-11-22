@@ -8,6 +8,7 @@ import { Button, IconButton } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { Input } from "@ledgerly/ui/input";
 import { type Highlight, PdfViewer } from "@/ui/pdf-viewer";
+import { openOriginal } from "./original";
 import { notify } from "@ledgerly/ui/toast";
 import { decideFieldAction } from "../calls";
 import type { FieldGroup, FieldView } from "./present";
@@ -32,13 +33,14 @@ const VERIFICATION_TONE = { unverified: "neutral", confirmed: "pos", corrected: 
 export function ReviewWorkspace({
   documentId,
   fileName,
-  originalUrl,
+  original,
   groups,
   editable,
 }: {
   documentId: string;
   fileName: string;
-  originalUrl: string | null;
+  /** Asks a signed address of the original (`original.ts`); null when the original is gone. */
+  original: (() => Promise<string>) | null;
   groups: { group: FieldGroup; fields: FieldView[] }[];
   editable: boolean;
 }) {
@@ -77,9 +79,10 @@ export function ReviewWorkspace({
         ))}
       </div>
       <div className="min-w-0 @5xl:sticky @5xl:top-4">
-        {originalUrl ? (
+        {original ? (
           <PdfViewer
-            url={originalUrl}
+            source={original}
+            onOpen={() => openOriginal(original)}
             fileName={fileName}
             highlights={highlights}
             labels={{

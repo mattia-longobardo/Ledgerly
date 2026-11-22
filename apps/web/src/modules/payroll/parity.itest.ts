@@ -195,7 +195,7 @@ const old = (() => {
       state,
       applied: payslip.active,
       fileName: document.fileName,
-      originalHref: document.storageKey ? `/payroll/${document.id}/original` : null,
+      hasOriginal: document.storageKey !== null,
       values: moneyCells(values, format),
       vacationLeft: hours(leaveLeft.vacation, format),
       rolLeft: hours(leaveLeft.rol, format),

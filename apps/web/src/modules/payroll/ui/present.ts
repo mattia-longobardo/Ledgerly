@@ -120,7 +120,8 @@ export interface RegisterCells {
   state: DocumentState;
   applied: boolean;
   fileName: string;
-  originalHref: string | null;
+  /** The original is kept: the file name opens it (`original.ts`). */
+  hasOriginal: boolean;
   values: Amounts;
   vacationLeft: string;
   rolLeft: string;
@@ -154,7 +155,7 @@ function rowCells(row: RegisterRow, format: Format): RegisterCells {
     state: row.state,
     applied: row.applied,
     fileName: row.fileName,
-    originalHref: row.hasOriginal ? `/payroll/${row.id}/original` : null,
+    hasOriginal: row.hasOriginal,
     values: moneyCells(row.amounts, format),
     vacationLeft: hoursCell(row.leaveLeft.vacation, format),
     rolLeft: hoursCell(row.leaveLeft.rol, format),

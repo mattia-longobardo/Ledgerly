@@ -32,12 +32,16 @@ type PdfDocument = {
  * highlight when the highlights change.
  */
 export function PdfViewer({
-  url,
+  source,
+  onOpen,
   fileName,
   highlights,
   labels,
 }: {
-  url: string;
+  /** The document's address, asked when it is loaded: a signed one expires (UI-PAY-2). */
+  source: () => Promise<string>;
+  /** Opens the document in a new tab, with an address of its own. */
+  onOpen: () => void;
   fileName: string;
   highlights: readonly Highlight[];
   labels: {
@@ -69,6 +73,8 @@ export function PdfViewer({
       try {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = PDF_ASSETS.worker;
+        const url = await source();
+        if (cancelled) return;
         const loading = pdfjs.getDocument({
           url,
           withCredentials: true,
@@ -90,7 +96,7 @@ export function PdfViewer({
       cancelled = true;
       void task?.destroy().catch(() => undefined);
     };
-  }, [url]);
+  }, [source]);
 
   useEffect(() => {
     const element = frame.current;
@@ -169,14 +175,13 @@ export function PdfViewer({
           >
             <Plus size={14} />
           </IconButton>
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener"
+          <button
+            type="button"
+            onClick={onOpen}
             className="focus-ring ml-2 inline-flex h-6 items-center rounded-tag border border-border bg-card px-2 text-sm font-medium text-fg hover:bg-hover"
           >
             {labels.open}
-          </a>
+          </button>
         </div>
       </div>
       <div ref={frame} className="overflow-auto bg-bg p-4 max-md:p-2">
