@@ -12,6 +12,7 @@ export { managedSinceOf, serviceAccountIds, syncedServicesOf } from "./managed";
 export { SECTION_PRESETS, legacyPeriodQuery, periodSpan, sectionPeriod, yearQuery } from "./period";
 export type { Query } from "./period";
 export type { HoldingPnl, PeriodParams, PnlParts, PositionAt, ServicePnl } from "./pnl";
+export { portfolioMeasure } from "./pnl";
 export { closedGroups, contributionsOf, onCostOf, periodReturnOf } from "./positions";
 export type { ClosedGroup } from "./positions";
 export {
@@ -53,6 +54,7 @@ export {
   InvestmentError,
   confirmZeroReading,
   createManualService,
+  createManualServiceWithAccount,
   deleteOperation,
   ensureAssetSeed,
   linkTransfer,
@@ -79,4 +81,4 @@ export {
 } from "./sync";
 export type { ConnectTarget } from "./sync";
 export type { Xirr } from "../../shared/returns";
-export { managedAccountsOfInvestments } from "./ports";
+export { managedAccountsOfInvestments, wireInvestments } from "./ports";

@@ -24,15 +24,21 @@ import {
 import { ACCOUNT_ID, ACTIVITY_FAMILIES, byService, holdingsList, investmentsList } from "./shared";
 import { investmentActivity, investmentOverview, investmentsCatalog, investmentsHome } from "./views";
 import { investmentConnection, investmentPositions } from "./tabs";
+import { FUND_ID, PORTFOLIO_EXAMPLE, portfolioParts } from "./portfolio";
 
 const civilDateArgument = civilDate("A date as YYYY-MM-DD");
 const accountArgument = z.uuid().describe("The service's accountId, from list_investments.");
 
-/** The legacy route's query: a value it cannot read is the year running, never a 400 (F8). */
+/**
+ * The legacy route's query: a value it cannot read is the year running, never a 400 (F8). `include`
+ * = `funds` adds the pension funds' rows, the two groups and the one total (R5b); any other value,
+ * or none, keeps the answer of before.
+ */
 const legacyQuery = z.object({
   period: z.string().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
+  include: z.string().optional(),
 });
 
 export const listInvestments = defineRoute({
@@ -47,7 +53,12 @@ export const listInvestments = defineRoute({
     "Modified Dietz return.",
   actions: [],
   query: legacyQuery,
-  response: investmentsList,
+  response: investmentsList.extend({
+    /** With `include=funds` only: the total Overview's «Investments» shows. */
+    total: portfolioParts.total.optional(),
+    /** With `include=funds` only: «Azioni e crypto» and «Fondi pensione», each with its rows. */
+    groups: portfolioParts.groups.optional(),
+  }),
   errors: [],
   mcp: {
     title: "Investments",
@@ -60,7 +71,11 @@ export const listInvestments = defineRoute({
       "The portfolio leaves out transfers between its own services and includes the exchange effect. " +
       "`pnl` is the profit and loss of the period (the year running by default), the number the " +
       "screen shows: realized, unrealized (open positions only), income, fees, corrections and " +
-      "exchange effect add up to it, and the services add up to the portfolio with `transfers`.",
+      "exchange effect add up to it, and the services add up to the portfolio with `transfers`. Each " +
+      "service has a `kind`: `service` (a provider or a bank reads it) or `manual_portfolio`. With " +
+      "`include` = `funds` the answer adds `total` and `groups`: the pension funds too, the two groups " +
+      "«stocks_crypto» and «pension_funds» with their rows, and for each the value today, the money " +
+      "put in, the gain and the return of the period; `total.value` is the net worth's investments.",
     arguments: {
       period: z
         .string()
@@ -69,6 +84,10 @@ export const listInvestments = defineRoute({
         .describe("A year (YYYY) or `all`; default the year running."),
       from: civilDateArgument.optional().describe("First day, YYYY-MM-DD; with `to`, wins over `period`."),
       to: civilDateArgument.optional().describe("Last day, YYYY-MM-DD."),
+      include: z
+        .enum(["funds"])
+        .optional()
+        .describe("`funds`: add the pension funds, the two groups and the one total."),
     },
   },
   example: {
@@ -172,7 +191,8 @@ export const getInvestmentsHome = defineRoute({
       byClass: [{ key: "unclassified", value: "12650.00", share: 1 }],
       byService: [{ key: ACCOUNT_ID, value: "12650.00", share: 1 }],
       byCurrency: [{ key: "EUR", value: "12650.00", share: 1 }],
-      funds: { total: null, rows: [] },
+      funds: { total: "12450.00", rows: [{ id: FUND_ID, name: "Fondo Pensione", value: "12450.00" }] },
+      ...PORTFOLIO_EXAMPLE,
     },
   },
 });

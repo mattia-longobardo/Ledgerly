@@ -25,6 +25,7 @@ export {
 export type { LoadedBook } from "./book";
 export {
   createManualService,
+  createManualServiceWithAccount,
   eligibleAccounts,
   manualServiceSchema,
   serviceValueSchema,

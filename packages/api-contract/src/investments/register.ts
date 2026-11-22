@@ -6,6 +6,7 @@ import { id } from "../primitives";
 import { defineRoute } from "../route";
 import {
   manualServiceBody,
+  newManualServiceBody,
   operationBody,
   reconciliationBody,
   transferBody,
@@ -35,9 +36,10 @@ export const createManualService = defineRoute({
   summary:
     "Makes an investment or crypto account of Accounts a manual service: its value stays the account's " +
     "balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another " +
-    "type, or already a service.",
+    "type, or already a service. Without `accountId`, makes the account too, from four fields: `name`, " +
+    "`category`, `currency` and today's `value` (R5b).",
   actions: [],
-  body: manualServiceBody,
+  body: z.union([manualServiceBody, newManualServiceBody]),
   response: z.object({ accountId: id() }),
   status: 201,
   errors: INVESTMENT_ERRORS,

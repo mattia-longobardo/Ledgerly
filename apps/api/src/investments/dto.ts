@@ -18,6 +18,7 @@ import {
   servicePnlView,
   type Xirr,
 } from "@ledgerly/domain/investments";
+import { serviceKind } from "@ledgerly/domain/portfolio";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { type Cents, centsToDecimal, sumCents } from "@ledgerly/domain/shared/money";
 
@@ -55,6 +56,7 @@ function civil(moment: Date | null): CivilDate | null {
 
 function serviceJson(one: ServiceSummary) {
   return {
+    kind: serviceKind({ provider: one.investment.provider, accountOrigin: one.account.origin }),
     accountId: one.account.id,
     name: one.account.name,
     category: one.investment.category,

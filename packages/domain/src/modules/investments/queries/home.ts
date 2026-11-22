@@ -1,6 +1,5 @@
 // The home of the section and the portfolio of /api/v1/investments (§1.8, §2.4, §4.1).
 import { and, asc, eq } from "drizzle-orm";
-import { fundValues } from "../../funds/overview";
 import type { Ctx } from "../../../platform/context";
 import { addDays, type CivilDate, type MonthKey } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
@@ -45,7 +44,6 @@ export interface InvestmentsHome {
   /** `unclassified`: a manual account kept as a total. */
   byClass: AllocationSlice<AssetClass | "unclassified">[];
   byService: AllocationSlice[];
-  funds: { id: string; name: string; valueCents: Cents | null; kind: string }[];
 }
 
 function slices<K extends string>(parts: Map<K, Cents>): AllocationSlice<K>[] {
@@ -176,13 +174,14 @@ export async function investmentsPortfolio(
 /**
  * The home of the section (§4.1): every service with its value in its currency and in the display
  * currency, the totals in the display currency (§1.8), the value-vs-invested chart from the
- * `portfolio` balances, the allocation by asset class and by service, and the funds read only.
+ * `portfolio` balances, the allocation by asset class and by service. The funds are not read here:
+ * the application adds them (R5b, end of the cycle with funds, INV-9).
  */
 export async function investmentsHome(
   ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">,
   source: Date | InvestmentsSnapshot = new Date(),
 ): Promise<InvestmentsHome> {
-  const { currency, now, todayOn, services, totals, live, displayRates } = await portfolioState(ctx, source);
+  const { currency, todayOn, services, totals, live, displayRates } = await portfolioState(ctx, source);
 
   // Allocation: positions by class; cash, and accounts kept as a total, by their own key.
   const byClass = new Map<AssetClass | "unclassified", Cents>();
@@ -226,21 +225,7 @@ export async function investmentsHome(
     if (total - placed > 0n) add(byClass, "cash", total - placed);
   }
 
-  const funds = await fundValues(ctx, now);
-  return {
-    currency,
-    services,
-    totals,
-    byClass: slices(byClass),
-    byService: slices(byService),
-    funds: funds.map((row) => ({
-      id: row.fund.id,
-      name: row.fund.name,
-      valueCents: row.valueCents,
-      // Every fund is a pension fund (rewrite plan, decision H12): the field stays for its readers.
-      kind: "pension",
-    })),
-  };
+  return { currency, services, totals, byClass: slices(byClass), byService: slices(byService) };
 }
 
 export async function readingPositionsOf(ctx: Pick<Ctx, "userId">, readingId: string) {

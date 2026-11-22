@@ -311,6 +311,12 @@ export const MODULES: Module[] = [
     ],
   },
   {
+    // The read model of Investments (R5b): pure, no module imports it; `apps/api` composes it.
+    id: "portfolio",
+    files: ["packages/domain/src/modules/portfolio/**"],
+    usedBy: ["api", "e2e:investments", "e2e:accounts"],
+  },
+  {
     id: "payroll",
     files: [
       "apps/web/src/modules/payroll/**",

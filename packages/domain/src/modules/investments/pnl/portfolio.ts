@@ -44,7 +44,7 @@ export interface PortfolioPnl {
  * when every service covers the same days, and each service's contribution in money.
  */
 export function portfolioPnl(services: readonly ServicePnl[], currency: string): PortfolioPnl {
-  const included = services.filter((one) => one.status !== "undetermined" && one.display !== null);
+  const included = includedOf(services);
   const excluded = services
     .filter((one) => !included.includes(one))
     .map((one) => ({ accountId: one.accountId, reasons: one.reasons }));
@@ -53,26 +53,7 @@ export function portfolioPnl(services: readonly ServicePnl[], currency: string):
     .map((one) => ({ accountId: one.accountId, from: one.from! }));
   const stale = included.filter((one) => one.status === "stale").map((one) => one.accountId);
 
-  // A transfer is internal when both legs are in included services, each inside its own period.
-  const legs = new Map<string, { accountId: string; flow: PeriodFlow }[]>();
-  for (const one of included) {
-    for (const flow of one.flows) {
-      if (flow.transferGroupId === null) continue;
-      legs.set(flow.transferGroupId, [
-        ...(legs.get(flow.transferGroupId) ?? []),
-        { accountId: one.accountId, flow },
-      ]);
-    }
-  }
-  let transfersCents = 0n;
-  const internal: PeriodFlow[] = [];
-  for (const group of legs.values()) {
-    if (new Set(group.map((leg) => leg.accountId)).size < 2) continue;
-    for (const leg of group) {
-      transfersCents += leg.flow.displayCents ?? 0n;
-      internal.push(leg.flow);
-    }
-  }
+  const { internal, transfersCents } = transfersOf(included);
 
   let parts: PnlParts | null = null;
   if (included.length > 0) {
@@ -100,23 +81,7 @@ export function portfolioPnl(services: readonly ServicePnl[], currency: string):
     const ranges = new Set(included.map((one) => one.from));
     if (ranges.size > 1) rateReason = "mixed_ranges";
     else {
-      const from = included[0].from!;
-      const to = included[0].to;
-      const days = daysBetween(addDays(from, -1), to);
-      let capital = included.reduce((total, one) => total + (one.displayCapitalCents ?? 0), 0);
-      for (const flow of internal)
-        capital -= (Number(flow.displayCents ?? 0n) * daysBetween(flow.on, to)) / days;
-      const moved = new Set(internal);
-      const gross = included.reduce(
-        (total, one) =>
-          total +
-          Math.max(0, Number(one.displayStartCents ?? 0n)) +
-          one.flows
-            .filter((flow) => !moved.has(flow))
-            .reduce((sum, flow) => sum + Math.max(0, Number(flow.displayCents ?? 0n)), 0),
-        0,
-      );
-      const floor = Math.max(Number(MIN_CAPITAL_CENTS), MIN_CAPITAL_SHARE * gross);
+      const { capital, floor } = averageCapitalOf(included, internal);
       if (capital <= 0 || capital < floor) rateReason = "not_computable";
       else {
         rate = Number(parts.pnlCents) / capital;
@@ -158,5 +123,85 @@ export function portfolioPnl(services: readonly ServicePnl[], currency: string):
     rate,
     rateReason,
     contributions,
+  };
+}
+
+/** The services a P&L of the portfolio sums: not `undetermined`, with a display amount. */
+const includedOf = (services: readonly ServicePnl[]) =>
+  services.filter((one) => one.status !== "undetermined" && one.display !== null);
+
+/** A transfer is internal when both legs are in included services, each inside its own period. */
+function transfersOf(included: readonly ServicePnl[]): { internal: PeriodFlow[]; transfersCents: Cents } {
+  const legs = new Map<string, { accountId: string; flow: PeriodFlow }[]>();
+  for (const one of included) {
+    for (const flow of one.flows) {
+      if (flow.transferGroupId === null) continue;
+      legs.set(flow.transferGroupId, [
+        ...(legs.get(flow.transferGroupId) ?? []),
+        { accountId: one.accountId, flow },
+      ]);
+    }
+  }
+  let transfersCents = 0n;
+  const internal: PeriodFlow[] = [];
+  for (const group of legs.values()) {
+    if (new Set(group.map((leg) => leg.accountId)).size < 2) continue;
+    for (const leg of group) {
+      transfersCents += leg.flow.displayCents ?? 0n;
+      internal.push(leg.flow);
+    }
+  }
+  return { internal, transfersCents };
+}
+
+/** Σ of the services' average capitals over one range, the internal transfers taken out (§4.8). */
+function averageCapitalOf(
+  included: readonly ServicePnl[],
+  internal: readonly PeriodFlow[],
+): { capital: number; floor: number } {
+  const from = included[0].from!;
+  const to = included[0].to;
+  const days = daysBetween(addDays(from, -1), to);
+  let capital = included.reduce((total, one) => total + (one.displayCapitalCents ?? 0), 0);
+  for (const flow of internal) capital -= (Number(flow.displayCents ?? 0n) * daysBetween(flow.on, to)) / days;
+  const moved = new Set(internal);
+  const gross = included.reduce(
+    (total, one) =>
+      total +
+      Math.max(0, Number(one.displayStartCents ?? 0n)) +
+      one.flows
+        .filter((flow) => !moved.has(flow))
+        .reduce((sum, flow) => sum + Math.max(0, Number(flow.displayCents ?? 0n)), 0),
+    0,
+  );
+  const floor = Math.max(Number(MIN_CAPITAL_CENTS), MIN_CAPITAL_SHARE * gross);
+  return { capital, floor };
+}
+
+/**
+ * What Investments sums beside the funds (R5b): the money the services received less what left them in
+ * the period, the transfers between them out, and the average capital the portfolio's rate divides by
+ * (`null` without that rate). Read apart, so that the P&L of the portfolio keeps its fields.
+ */
+export function portfolioMeasure(services: readonly ServicePnl[]): {
+  netFlowsCents: Cents | null;
+  capital: number | null;
+} {
+  const included = includedOf(services);
+  const { internal } = transfersOf(included);
+  const moved = new Set(internal);
+  let netFlowsCents: Cents | null = 0n;
+  for (const flow of included.flatMap((one) => one.flows)) {
+    if (moved.has(flow)) continue;
+    if (flow.displayCents === null) {
+      netFlowsCents = null;
+      break;
+    }
+    netFlowsCents += flow.displayCents;
+  }
+  const pnl = portfolioPnl(services, "");
+  return {
+    netFlowsCents,
+    capital: pnl.rateReason === "ok" ? averageCapitalOf(included, internal).capital : null,
   };
 }

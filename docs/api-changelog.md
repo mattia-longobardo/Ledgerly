@@ -3,6 +3,25 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Investments: one list with the pension funds (R5b)
+
+- `GET /investments/home`: `total` and `groups`. One total of the services, the manual portfolios and
+  the pension funds, equal to `buckets.investments` of `GET /net-worth`; `groups` are `stocks_crypto`
+  and `pension_funds` (a group with no row is not listed), each with its `kpis` and its `rows`. The
+  four KPIs, for the total and for each group: `value` today, `paidIn` and `gain` of the period, `rate`
+  (Modified Dietz; for both groups Σ gain over Σ average capital, with `rateReason`). A row has `kind`
+  (`service`, `manual_portfolio`, `pension_fund`), `accountId`, `fundId`, `name`, `currency`, `value`,
+  `displayValue` and `inTotal`. `funds` stays until R5f.
+- `GET /investments` and MCP `list_investments`: `kind` on each service (`service` or
+  `manual_portfolio`). With `include=funds` (MCP argument `include`) the answer adds `total` and
+  `groups` as the home has them; without it the answer is the one of before.
+- `GET /investments/funds` (scope `read`, MCP tool `list_funds`, read only): every pension fund, open
+  and archived, with its account, its value today in its currency and in the display currency, its
+  last valuation, the money paid in and the gain since it started, and its state. No type.
+- `GET /net-worth`: `investmentGroups`, `buckets.investments` split into the two groups of Investments,
+  and `investmentGroup` on each account (null outside the bucket).
+- No value `pac` in any answer.
+
 ## Unreleased · Alerts: «Da fare», the apps' check, the channels of each event (R5e)
 
 - `GET /todo` (scope `read`, MCP tool `list_todo`): the open facts that ask for an action, oldest first,

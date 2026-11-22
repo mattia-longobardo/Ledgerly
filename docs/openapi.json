@@ -26156,6 +26156,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -26252,6 +26260,13 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "service",
+                              "manual_portfolio"
+                            ]
+                          },
                           "accountId": {
                             "type": "string",
                             "format": "uuid",
@@ -26401,6 +26416,7 @@
                           }
                         },
                         "required": [
+                          "kind",
                           "accountId",
                           "name",
                           "category",
@@ -26671,6 +26687,228 @@
                         "services",
                         "modifiedDietz"
                       ]
+                    },
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "valuePartial": {
+                          "type": "boolean"
+                        },
+                        "paidIn": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "gain": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "rate": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "rateReason": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "mixed_ranges",
+                            "not_computable",
+                            "none"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "valuePartial",
+                        "paidIn",
+                        "gain",
+                        "rate",
+                        "rateReason"
+                      ]
+                    },
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "stocks_crypto",
+                              "pension_funds"
+                            ]
+                          },
+                          "kpis": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "valuePartial": {
+                                "type": "boolean"
+                              },
+                              "paidIn": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "gain": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "rate": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "rateReason": {
+                                "type": "string",
+                                "enum": [
+                                  "ok",
+                                  "mixed_ranges",
+                                  "not_computable",
+                                  "none"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "valuePartial",
+                              "paidIn",
+                              "gain",
+                              "rate",
+                              "rateReason"
+                            ]
+                          },
+                          "rows": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service",
+                                    "manual_portfolio",
+                                    "pension_fund"
+                                  ]
+                                },
+                                "accountId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "fundId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "displayValue": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "inTotal": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "accountId",
+                                "fundId",
+                                "name",
+                                "currency",
+                                "value",
+                                "displayValue",
+                                "inTotal"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kpis",
+                          "rows"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -26735,7 +26973,7 @@
       },
       "post": {
         "operationId": "create_investment_service",
-        "summary": "Makes an investment or crypto account of Accounts a manual service: its value stays the account's balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another type, or already a service.",
+        "summary": "Makes an investment or crypto account of Accounts a manual service: its value stays the account's balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another type, or already a service. Without `accountId`, makes the account too, from four fields: `name`, `category`, `currency` and today's `value` (R5b).",
         "tags": [
           "investments"
         ],
@@ -26744,39 +26982,88 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "accountId": {
-                    "type": "string",
-                    "format": "uuid",
-                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                  },
-                  "category": {
-                    "type": "string",
-                    "enum": [
-                      "accounts",
-                      "broker",
-                      "crypto"
-                    ]
-                  },
-                  "url": {
-                    "default": null,
-                    "anyOf": [
-                      {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "accountId": {
                         "type": "string",
-                        "maxLength": 500
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                       },
-                      {
-                        "type": "null"
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "accounts",
+                          "broker",
+                          "crypto"
+                        ]
+                      },
+                      "url": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
-                    ]
+                    },
+                    "required": [
+                      "accountId",
+                      "category"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "category": {
+                        "type": "string",
+                        "enum": [
+                          "accounts",
+                          "broker",
+                          "crypto"
+                        ]
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      },
+                      "value": {
+                        "type": "string",
+                        "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                      },
+                      "url": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "category",
+                      "currency",
+                      "value"
+                    ],
+                    "additionalProperties": false
                   }
-                },
-                "required": [
-                  "accountId",
-                  "category"
-                ],
-                "additionalProperties": false
+                ]
               }
             }
           }
@@ -26996,6 +27283,13 @@
                     "service": {
                       "type": "object",
                       "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "service",
+                            "manual_portfolio"
+                          ]
+                        },
                         "accountId": {
                           "type": "string",
                           "format": "uuid",
@@ -27573,6 +27867,7 @@
                         }
                       },
                       "required": [
+                        "kind",
                         "accountId",
                         "name",
                         "category",
@@ -33501,6 +33796,187 @@
         "x-addon": "investments"
       }
     },
+    "/investments/funds": {
+      "get": {
+        "operationId": "list_funds",
+        "summary": "Every pension fund, open and archived, with its account, its value today in its currency and in the display currency, its last valuation, and the money paid in and the gain since it started.",
+        "tags": [
+          "investments"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "on": {
+                      "type": "string"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "funds": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "accountId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "provider": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "displayValue": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "lastValuation": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "paidIn": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "gain": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "archived"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "accountId",
+                          "name",
+                          "provider",
+                          "currency",
+                          "value",
+                          "displayValue",
+                          "lastValuation",
+                          "paidIn",
+                          "gain",
+                          "state"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "on",
+                    "currency",
+                    "funds"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read",
+        "x-addon": "investments"
+      }
+    },
     "/investments/home": {
       "get": {
         "operationId": "get_investments_home",
@@ -33703,6 +34179,13 @@
                       "items": {
                         "type": "object",
                         "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "service",
+                              "manual_portfolio"
+                            ]
+                          },
                           "accountId": {
                             "type": "string",
                             "format": "uuid",
@@ -34274,6 +34757,7 @@
                           }
                         },
                         "required": [
+                          "kind",
                           "accountId",
                           "name",
                           "category",
@@ -34787,6 +35271,228 @@
                         "total",
                         "rows"
                       ]
+                    },
+                    "total": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "valuePartial": {
+                          "type": "boolean"
+                        },
+                        "paidIn": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "gain": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^-?\\d+\\.\\d{2}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "rate": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "rateReason": {
+                          "type": "string",
+                          "enum": [
+                            "ok",
+                            "mixed_ranges",
+                            "not_computable",
+                            "none"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "valuePartial",
+                        "paidIn",
+                        "gain",
+                        "rate",
+                        "rateReason"
+                      ]
+                    },
+                    "groups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "stocks_crypto",
+                              "pension_funds"
+                            ]
+                          },
+                          "kpis": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "valuePartial": {
+                                "type": "boolean"
+                              },
+                              "paidIn": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "gain": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "rate": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "rateReason": {
+                                "type": "string",
+                                "enum": [
+                                  "ok",
+                                  "mixed_ranges",
+                                  "not_computable",
+                                  "none"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "value",
+                              "valuePartial",
+                              "paidIn",
+                              "gain",
+                              "rate",
+                              "rateReason"
+                            ]
+                          },
+                          "rows": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "service",
+                                    "manual_portfolio",
+                                    "pension_fund"
+                                  ]
+                                },
+                                "accountId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "fundId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "displayValue": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "pattern": "^-?\\d+\\.\\d{2}$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "inTotal": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "accountId",
+                                "fundId",
+                                "name",
+                                "currency",
+                                "value",
+                                "displayValue",
+                                "inTotal"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kpis",
+                          "rows"
+                        ]
+                      }
                     }
                   },
                   "required": [
@@ -34801,7 +35507,9 @@
                     "byClass",
                     "byService",
                     "byCurrency",
-                    "funds"
+                    "funds",
+                    "total",
+                    "groups"
                   ]
                 }
               }
@@ -35754,6 +36462,46 @@
                         "other"
                       ]
                     },
+                    "investmentGroups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "total": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "partial": {
+                            "type": "boolean"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "stocks_crypto",
+                              "pension_funds"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "total",
+                          "partial",
+                          "count",
+                          "id"
+                        ]
+                      }
+                    },
                     "alerts": {
                       "type": "array",
                       "items": {
@@ -36097,6 +36845,20 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "investmentGroup": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "stocks_crypto",
+                                  "pension_funds"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -36123,7 +36885,8 @@
                           "yoy",
                           "share",
                           "lastSyncedAt",
-                          "service"
+                          "service",
+                          "investmentGroup"
                         ]
                       }
                     }
@@ -36139,6 +36902,7 @@
                     "yearToDate",
                     "windowChange",
                     "buckets",
+                    "investmentGroups",
                     "alerts",
                     "missingRates",
                     "lastSnapshotMonth",

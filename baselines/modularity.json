@@ -1,7 +1,7 @@
 {
   "counts": {
-    "crossModuleImports": 79,
-    "moduleIndexFiles": 12,
+    "crossModuleImports": 77,
+    "moduleIndexFiles": 13,
     "reciprocalModulePairs": 0,
     "reciprocalUnitPairs": 41,
     "moduleCycleGroups": 0,
@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 11,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 59,
+    "deepImports": 57,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -48,12 +48,10 @@
     "modules/interests/service.ts → modules/accounts/index",
     "modules/interests/service.ts → modules/transactions/taxonomy",
     "modules/investments/queries.ts → modules/accounts/index",
-    "modules/investments/queries.ts → modules/funds/overview",
     "modules/investments/queries.ts → modules/transactions/queries",
     "modules/investments/schema.ts → modules/accounts/schema",
     "modules/investments/schema.ts → modules/transactions/schema",
     "modules/investments/service.ts → modules/accounts/index",
-    "modules/investments/service.ts → modules/funds/queries",
     "modules/investments/service.ts → modules/transactions/queries",
     "modules/investments/sync.ts → modules/accounts/index",
     "modules/investments/sync.ts → modules/users/jobs",
@@ -306,9 +304,7 @@
     "modules/interests/queries.ts → modules/transactions/taxonomy",
     "modules/interests/rules.ts → modules/transactions/rules",
     "modules/interests/service.ts → modules/transactions/taxonomy",
-    "modules/investments/queries.ts → modules/funds/overview",
     "modules/investments/queries.ts → modules/transactions/queries",
-    "modules/investments/service.ts → modules/funds/queries",
     "modules/investments/service.ts → modules/transactions/queries",
     "modules/investments/sync.ts → modules/users/jobs",
     "modules/payroll/fields.ts → modules/imports/rules",

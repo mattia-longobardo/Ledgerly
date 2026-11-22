@@ -339,14 +339,16 @@ export function measurePeriod(input: {
     feesPartial: counted.some((flow) => flow.feeCents === null),
     gainCents,
     marketCents: gainCents + feesCents,
-    ...moneyWeighted({
-      from: start.on,
-      to: end.on,
-      startCents: start.cents,
-      endCents: end.cents,
-      pnlCents: gainCents,
-      flows: dated,
-    }),
+    ...rateOf(
+      moneyWeighted({
+        from: start.on,
+        to: end.on,
+        startCents: start.cents,
+        endCents: end.cents,
+        pnlCents: gainCents,
+        flows: dated,
+      }),
+    ),
     ...common,
   };
 }
@@ -371,4 +373,9 @@ export function projectionMonthly(input: {
 export function onTheWay(quarters: readonly QuarterStatus[]) {
   const pending = pendingQuarters(quarters);
   return { cents: pending.reduce<Cents>((sum, quarter) => sum + quarter.cents, 0n), quarters: pending };
+}
+
+/** The rate and the XIRR of a span, as a fund's measure keeps them (its average capital stays out). */
+function rateOf(measured: ReturnType<typeof moneyWeighted>): { rate: number | null; xirr: Xirr | null } {
+  return { rate: measured.rate, xirr: measured.xirr };
 }
