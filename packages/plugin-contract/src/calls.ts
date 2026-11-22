@@ -18,6 +18,7 @@ export const PLUGIN_PATHS = {
   authComplete: "/auth/complete",
   authRevoke: "/auth/revoke",
   sync: "/sync",
+  prices: "/prices",
 } as const;
 
 /** The header that carries the secret the core and one plugin share. */
@@ -171,3 +172,49 @@ export const syncResponseSchema = z.object({
   coverage: z.object({ from: isoDate.nullable(), to: isoDate.nullable() }),
 });
 export type SyncResponse = z.infer<typeof syncResponseSchema>;
+
+/* prices (R5d): the daily closes of a source of market prices, for the instance */
+
+/** A market of an instrument as the core knows it: the source's own symbol is the plugin's business (M14). */
+const listingSchema = z.object({
+  /** The core's id of the market, sent back with each bar. */
+  key: z.string().min(1).max(80),
+  ticker: z.string().min(1).max(20),
+  mic: z.string().regex(/^[A-Z0-9]{4}$/),
+  /** The currency the core expects; a source quoting in a minor unit (GBp) converts. */
+  currency,
+});
+
+export const pricesRequestSchema = z.object({
+  listings: z.array(listingSchema).min(1).max(200),
+  /** The days to read, both included: the core asks again for the last ones, the plugin keeps nothing. */
+  from: isoDate,
+  to: isoDate,
+});
+
+export const pricesResponseSchema = z.object({
+  /** One close a day and market, only of a session that is over: never today's bar while it trades. */
+  bars: z
+    .array(
+      z.object({
+        key: z.string().min(1).max(80),
+        on: isoDate,
+        close: z
+          .string()
+          .regex(/^\d{1,15}(\.\d{1,12})?$/)
+          .refine((value) => /[1-9]/.test(value), "A close is above zero"),
+        currency,
+      }),
+    )
+    .max(20_000),
+  /** The markets with no bar, and why. */
+  errors: z
+    .array(
+      z.object({
+        key: z.string().min(1).max(80),
+        code: z.enum(["unknown_symbol", "no_data", "rate_limited", "provider_down"]),
+      }),
+    )
+    .max(200),
+});
+export type PricesResponse = z.infer<typeof pricesResponseSchema>;

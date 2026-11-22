@@ -35,6 +35,30 @@ export const newManualServiceBody = z
   })
   .strict();
 
+/**
+ * A manual portfolio (R5d): a service that keeps positions and writes its account's value, on an
+ * existing investment account no source reads, or on a new one from its name and currency.
+ */
+export const portfolioBody = z
+  .object({
+    kind: z.literal("portfolio"),
+    accountId: id(),
+    url: z.string().max(500).nullable().default(null),
+  })
+  .strict();
+
+export const newPortfolioBody = z
+  .object({
+    kind: z.literal("portfolio"),
+    name: z.string().trim().min(1).max(80),
+    currency: z.string().regex(/^[A-Z]{3}$/),
+    url: z.string().max(500).nullable().default(null),
+  })
+  .strict();
+
+/** Where an asset's price comes from: the daily close of its market, or the person (R5d). */
+export const priceModeBody = z.object({ mode: z.enum(["auto", "manual"]) }).strict();
+
 export const urlBody = z.object({ url: z.string().max(500) }).strict();
 
 export const valueBody = z.object({ on: civilDate(), amount: amountInput() }).strict();
@@ -44,6 +68,29 @@ export const valueBody = z.object({ on: civilDate(), amount: amountInput() }).st
  * without `unitPrice` (or, for a sale, without `quantity` and `unitPrice`).
  */
 export const operationBody = z.discriminatedUnion("kind", [
+  /**
+   * «Record operation» of a manual portfolio (R5d): an instrument of `GET /instruments/search` on
+   * the market of the order (`mic`; null for one with no market, priced by hand). The price is in
+   * the instrument's currency; `fxRate` (account currency per unit of it) wins over the ECB rate.
+   */
+  z
+    .object({
+      kind: z.literal("buy"),
+      instrumentId: id(),
+      mic: z
+        .string()
+        .regex(/^[A-Z0-9]{4}$/)
+        .nullable()
+        .default(null),
+      on: civilDate(),
+      quantity: decimalInput().nullable().default(null),
+      unitPrice: decimalInput().nullable().default(null),
+      amount: amountInput().nullable().default(null),
+      fee: amountInput().nullable().default(null),
+      fxRate: decimalInput().nullable().default(null),
+      note,
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("valuation"),

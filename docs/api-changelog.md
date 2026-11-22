@@ -3,6 +3,20 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Investments: the manual portfolio (R5d, step 1)
+
+- `GET /instruments/search?q=` (scope `investments:read`, no MCP tool): instruments by ISIN, name or
+  ticker, at most 20, each with its markets (`mic`, `ticker`, `currency`, `priced`); `complete` is
+  false when OpenFIGI or ESMA FIRDS do not answer.
+- `POST /investments` takes `kind: "portfolio"`, on an existing account (`accountId`) or a new one
+  (`name`, `currency`). `not_eligible` has the reason `synced` for an account a source reads; the
+  catalog's `existing` rows may say it too.
+- `POST /investments/{accountId}/operations` takes `kind: "buy"` on a manual portfolio:
+  `instrumentId`, `mic`, `on`, `quantity`, `unitPrice` or `amount`, `fee`, `fxRate`, `note`. A sale
+  of more than the quantity held: `409` with the reason `quantity_exceeded`.
+- `PUT /investments/{accountId}/holdings/{holdingId}/price-mode` `{ mode: "auto" | "manual" }`.
+- Every asset (`GET /investments/{accountId}/holdings`, MCP `get_investment_holdings`, the assets of
+  the pages) has `instrumentId`, `mic` and `price` (`mode`, `on`, `source`, `stale`).
 ## Unreleased · Funds: one read for a fund's page, the gain of an archived fund (R5b)
 
 - `GET /accounts/{id}` (and the answers of `POST /accounts` and `PATCH /accounts/{id}`): `fundId`, the

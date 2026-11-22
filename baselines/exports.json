@@ -135,6 +135,7 @@
   ],
   "packages/api-contract/src/investments/index.ts": [
     "connection",
+    "instruments",
     "investments",
     "register"
   ],
@@ -1365,6 +1366,7 @@
     "PluginErrorCode",
     "PluginManifest",
     "PluginTransaction",
+    "PricesResponse",
     "SECRET_HEADER",
     "SyncResponse",
     "VerifyResponse",
@@ -1381,6 +1383,8 @@
     "institutionsRequestSchema",
     "institutionsResponseSchema",
     "manifestSchema",
+    "pricesRequestSchema",
+    "pricesResponseSchema",
     "syncRequestSchema",
     "syncResponseSchema",
     "verifyRequestSchema",

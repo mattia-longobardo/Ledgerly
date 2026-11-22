@@ -7,7 +7,10 @@ import { defineRoute } from "../route";
 import {
   manualServiceBody,
   newManualServiceBody,
+  newPortfolioBody,
   operationBody,
+  portfolioBody,
+  priceModeBody,
   reconciliationBody,
   transferBody,
   urlBody,
@@ -37,9 +40,12 @@ export const createManualService = defineRoute({
     "Makes an investment or crypto account of Accounts a manual service: its value stays the account's " +
     "balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another " +
     "type, or already a service. Without `accountId`, makes the account too, from four fields: `name`, " +
-    "`category`, `currency` and today's `value` (R5b).",
+    "`category`, `currency` and today's `value` (R5b). With `kind: portfolio`, a manual portfolio " +
+    "(R5d): it keeps positions and writes the account's value; `not_eligible` also on an account a " +
+    "source reads (reason `synced`), and without `accountId` it makes the account from `name` and " +
+    "`currency`.",
   actions: [],
-  body: z.union([manualServiceBody, newManualServiceBody]),
+  body: z.union([manualServiceBody, newManualServiceBody, portfolioBody, newPortfolioBody]),
   response: z.object({ accountId: id() }),
   status: 201,
   errors: INVESTMENT_ERRORS,
@@ -90,7 +96,9 @@ export const recordOperation = defineRoute({
   scope: "write",
   capability: "investments",
   summary:
-    "Writes a valuation, a sale, a close or an income on a service (not in the future). A deposit, a " +
+    "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual " +
+    "portfolio also a purchase of an instrument (R5d). A sale of more than the quantity held that " +
+    "day, or a change that leaves a later sale short: `409` `quantity_exceeded`. A deposit, a " +
     "withdrawal, an account valuation or a correction comes from Accounts or the provider: `409` " +
     "`not_editable`. Answers the event's id.",
   actions: [],
@@ -113,6 +121,25 @@ export const recordOperation = defineRoute({
     },
     response: { id: EVENT_ID },
   },
+});
+
+export const setPriceMode = defineRoute({
+  id: "set_investment_price_mode",
+  method: "PUT",
+  path: "/investments/{accountId}/holdings/{holdingId}/price-mode",
+  scope: "write",
+  capability: "investments",
+  summary:
+    "Where the price of a manual portfolio's asset comes from (R5d): `auto`, the daily close of the " +
+    "market of the order; `manual`, the valuations typed by hand. `auto` on an asset with no priced " +
+    "market: `409` `not_editable`.",
+  actions: [],
+  params: z.object({ accountId: id(), holdingId: id() }),
+  body: priceModeBody,
+  response: null,
+  status: 204,
+  errors: INVESTMENT_ERRORS,
+  example: { params: { accountId: ACCOUNT_ID, holdingId: HOLDING_ID }, body: { mode: "manual" } },
 });
 
 export const deleteOperation = defineRoute({

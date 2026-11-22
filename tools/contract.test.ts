@@ -499,6 +499,7 @@ const INVESTMENT_CODES: Record<InvestmentErrorCode | SyncErrorCode, true> = {
   not_editable: true,
   before_period: true,
   not_a_transfer: true,
+  quantity_exceeded: true,
   unknown_provider: true,
   invalid_credentials: true,
   not_read_only: true,
