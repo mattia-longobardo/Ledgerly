@@ -54,7 +54,6 @@
     "budgets": "Budgets",
     "pockets": "Pockets",
     "subscriptions": "Subscriptions",
-    "funds": "Funds",
     "investments": "Investments",
     "interests": "Interests",
     "payroll": "Payroll",
@@ -274,7 +273,6 @@
         "replace": "Replace token",
         "cancel": "Cancel"
       },
-      "actions": {},
       "disconnect": {
         "title": "Disconnect {name}?",
         "description": "Access to {name} is closed. {count, plural, =0 {} one {The account stays in Ledgerly as “Disconnected”, with its balance and transactions, and stops updating. } other {The # accounts stay in Ledgerly as “Disconnected”, with their balances and transactions, and stop updating. }}The account choice and the schedule stay: if you connect again, each account goes back to its place.",
@@ -3389,7 +3387,6 @@
   },
   "funds": {
     "title": "Funds",
-    "add": "Add fund",
     "kpis": {
       "paidIn": "Paid in"
     },
@@ -3402,15 +3399,6 @@
     "alert": {
       "missing": "no debit found by {date} ({amount} expected).",
       "cta": "Check expenses"
-    },
-    "archived": {
-      "count": "{count, plural, one {# archived fund} other {# archived funds}}",
-      "restore": "Restore"
-    },
-    "empty": {
-      "title": "No pension funds",
-      "description": "Add a pension fund to track contributions, value and return.",
-      "cta": "Add fund"
     },
     "detail": {
       "since": "since {date}",
@@ -3507,7 +3495,6 @@
       "future_date": "The date can't be in the future.",
       "movement_taken": "That transaction is already tied to another contribution.",
       "failed": "Couldn't save. Try again.",
-      "load": "Funds not loaded. Try again.",
       "undo": "Not restored. Reload the page."
     },
     "account": {
@@ -3578,17 +3565,12 @@
     },
     "home": {
       "gainTitle": "Gain · {period}",
-      "gainAvailable": "Gain available · {period}",
       "gainUndetermined": "Not determinable",
       "noValueIn": "No value {when}",
       "noValueYet": "No value yet {when}",
-      "valueLine": "Value <strong>{value}</strong> · {count, plural, one {# fund} other {# funds}} · {dates}",
-      "valueAtEnd": "Value on {date} <strong>{value}</strong> · {dates} · today {today}",
       "valuesOn": "value of {date}",
-      "valuesBetween": "values updated between {from} and {to}",
       "lastValue": "Last value <strong>{value}</strong> · {dates}",
       "notInValue": "{amount} paid in after the last value: the next value will measure it.",
-      "partialNote": "{count, plural, one {# fund has} other {# funds have}} no value in this period and {count, plural, one {stays} other {stay}} out of the sum.",
       "payslipsNote": "No fund has a value {when}. The first value is of {date}.",
       "payslipsNoValue": "No fund has a value {when}.",
       "paidNote": "Money went in {when}, and no value measures it.",
@@ -3599,11 +3581,6 @@
       "recordToMeasure": "Record a value to measure the gain {when}.",
       "goToYear": "Go to {year}",
       "openContributions": "Open the contributions of {year}",
-      "stale": {
-        "one": "to update: {name}, last value of {date}",
-        "many": "{count} funds to update",
-        "label": "{count, plural, one {# fund} other {# funds}} to update"
-      },
       "kpis": {
         "paidIn": "Paid in",
         "paidInYear": "Paid in during {year}",
@@ -3616,10 +3593,7 @@
         "fees": "Fees",
         "feesNote": "on contributions, already in the gain",
         "feesUnknown": "a fee is unknown",
-        "onTheWay": "On the way",
-        "onTheWayNote": "accrued in payslips, not yet in the fund",
         "accrued": "Accrued in payslips",
-        "accruedNote": "{name}, reaches the fund in {date}",
         "originParts": {
           "you": "you {amount}",
           "employer": "employer {amount}",
@@ -3659,49 +3633,16 @@
         "valueHeader": "Value",
         "dateHeader": "Date"
       },
-      "years": {
-        "title": "Year by year",
-        "note": "The rows add up to the total",
-        "year": "Year",
-        "paidIn": "Paid in",
-        "market": "Market",
-        "fees": "Fees",
-        "gain": "Gain",
-        "rate": "Return",
-        "value": "Value at year end",
-        "total": "Total",
-        "ytd": "year to date",
-        "open": "Open {year}",
-        "undetermined": "Not determinable"
-      },
       "list": {
-        "title": "Funds",
-        "note": "Same period and same colours as the chart",
-        "fund": "Fund",
-        "paidIn": "Paid in",
-        "paidInYear": "Paid in {year}",
-        "gain": "Gain",
-        "rate": "Return",
-        "value": "Value",
-        "updated": "Updated",
-        "onTheWay": "On the way {amount} · {count, plural, one {# period} other {# periods}}",
         "archived": "Archived",
-        "highlight": "Highlight {name} on the chart",
-        "undetermined": "not determinable",
         "first": "Record the first value",
-        "total": "Total",
-        "xirr": "Annualised (XIRR) {rate}",
-        "updatedShort": "updated {date}",
-        "debit": "Debit {amount} {frequency}",
-        "debitStatus": "Debit {amount} {frequency} · {status}"
+        "xirr": "Annualised (XIRR) {rate}"
       },
       "who": {
-        "title": "Who paid {when}",
         "you": "My contribution",
         "employer": "Employer",
         "tfr": "TFR",
         "other": "Other",
-        "empty": "No contribution in this period.",
         "voluntary": "Voluntary"
       },
       "when": {

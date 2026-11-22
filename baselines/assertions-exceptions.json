@@ -838,5 +838,10 @@
     "file": "apps/web/src/modules/funds/ui/fund-wizard.test.tsx",
     "decision": "R5b client (PERS-586)",
     "reason": "R5b, decisione B1b: la procedura «Fondo pensione» è in /investments/new-fund e apre il fondo in /investments/{accountId}"
+  },
+  {
+    "file": "apps/web/src/app/(app)/navigation.test.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: la voce di menu «Funds» sparisce, i fondi pensione sono un gruppo di Investments"
   }
 ]

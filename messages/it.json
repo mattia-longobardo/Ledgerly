@@ -54,7 +54,6 @@
     "budgets": "Budget",
     "pockets": "Pocket",
     "subscriptions": "Abbonamenti",
-    "funds": "Fondi",
     "investments": "Investimenti",
     "interests": "Interessi",
     "payroll": "Buste paga",
@@ -274,7 +273,6 @@
         "replace": "Sostituisci il token",
         "cancel": "Annulla"
       },
-      "actions": {},
       "disconnect": {
         "title": "Scollegare {name}?",
         "description": "L'accesso a {name} si chiude. {count, plural, =0 {} one {Il conto resta in Ledgerly come “Scollegato”, con saldi e movimenti, e non si aggiorna più. } other {I # conti restano in Ledgerly come “Scollegati”, con saldi e movimenti, e non si aggiornano più. }}La scelta dei conti e la pianificazione restano: se ricolleghi, ogni conto torna al suo posto.",
@@ -3389,7 +3387,6 @@
   },
   "funds": {
     "title": "Fondi",
-    "add": "Aggiungi fondo",
     "kpis": {
       "paidIn": "Versato"
     },
@@ -3402,15 +3399,6 @@
     "alert": {
       "missing": "nessun addebito trovato entro il {date} ({amount} attesi).",
       "cta": "Controlla le spese"
-    },
-    "archived": {
-      "count": "{count, plural, one {# fondo archiviato} other {# fondi archiviati}}",
-      "restore": "Ripristina"
-    },
-    "empty": {
-      "title": "Nessun fondo pensione",
-      "description": "Aggiungi un fondo pensione per seguire contributi, valore e rendimento.",
-      "cta": "Aggiungi fondo"
     },
     "detail": {
       "since": "dal {date}",
@@ -3507,7 +3495,6 @@
       "future_date": "La data non può essere nel futuro.",
       "movement_taken": "Quel movimento è già collegato a un altro contributo.",
       "failed": "Salvataggio non riuscito. Riprova.",
-      "load": "Fondi non caricati. Riprova.",
       "undo": "Non ripristinato. Ricarica la pagina."
     },
     "account": {
@@ -3578,17 +3565,12 @@
     },
     "home": {
       "gainTitle": "Guadagno · {period}",
-      "gainAvailable": "Guadagno disponibile · {period}",
       "gainUndetermined": "Non determinabile",
       "noValueIn": "Nessun valore {when}",
       "noValueYet": "Nessun valore ancora {when}",
-      "valueLine": "Valore <strong>{value}</strong> · {count, plural, one {# fondo} other {# fondi}} · {dates}",
-      "valueAtEnd": "Valore al {date} <strong>{value}</strong> · {dates} · oggi {today}",
       "valuesOn": "valore del {date}",
-      "valuesBetween": "valori aggiornati tra il {from} e il {to}",
       "lastValue": "Ultimo valore <strong>{value}</strong> · {dates}",
       "notInValue": "{amount} versati dopo l'ultimo valore: li misura il prossimo valore.",
-      "partialNote": "{count, plural, one {# fondo non ha} other {# fondi non hanno}} un valore in questo periodo e {count, plural, one {resta} other {restano}} fuori dalla somma.",
       "payslipsNote": "Nessun fondo ha un valore {when}. Il primo valore è del {date}.",
       "payslipsNoValue": "Nessun fondo ha un valore {when}.",
       "paidNote": "È entrato denaro {when}, ma nessun valore lo misura.",
@@ -3599,11 +3581,6 @@
       "recordToMeasure": "Registra un valore per misurare il guadagno {when}.",
       "goToYear": "Vai al {year}",
       "openContributions": "Apri i contributi del {year}",
-      "stale": {
-        "one": "da aggiornare: {name}, ultimo valore del {date}",
-        "many": "{count} fondi da aggiornare",
-        "label": "{count, plural, one {# fondo} other {# fondi}} da aggiornare"
-      },
       "kpis": {
         "paidIn": "Versato",
         "paidInYear": "Versato nel {year}",
@@ -3616,10 +3593,7 @@
         "fees": "Commissioni",
         "feesNote": "sui contributi, già nel guadagno",
         "feesUnknown": "una commissione è sconosciuta",
-        "onTheWay": "In arrivo",
-        "onTheWayNote": "maturati in busta, non ancora nel fondo",
         "accrued": "Maturato in busta",
-        "accruedNote": "{name}, arriva a {date}",
         "originParts": {
           "you": "tu {amount}",
           "employer": "datore {amount}",
@@ -3659,49 +3633,16 @@
         "valueHeader": "Valore",
         "dateHeader": "Data"
       },
-      "years": {
-        "title": "Anno per anno",
-        "note": "La somma delle righe è il totale",
-        "year": "Anno",
-        "paidIn": "Versato",
-        "market": "Mercato",
-        "fees": "Commissioni",
-        "gain": "Guadagno",
-        "rate": "Rend.",
-        "value": "Valore a fine anno",
-        "total": "Totale",
-        "ytd": "da inizio anno",
-        "open": "Apri il {year}",
-        "undetermined": "Non determinabile"
-      },
       "list": {
-        "title": "Fondi",
-        "note": "Stesso periodo e stessi colori del grafico",
-        "fund": "Fondo",
-        "paidIn": "Versato",
-        "paidInYear": "Versato {year}",
-        "gain": "Guadagno",
-        "rate": "Rend.",
-        "value": "Valore",
-        "updated": "Aggiornato",
-        "onTheWay": "In arrivo {amount} · {count, plural, one {# periodo} other {# periodi}}",
         "archived": "Archiviato",
-        "highlight": "Evidenzia {name} nel grafico",
-        "undetermined": "non determinabile",
         "first": "Registra il primo valore",
-        "total": "Totale",
-        "xirr": "Annualizzato (XIRR) {rate}",
-        "updatedShort": "aggiornato il {date}",
-        "debit": "Addebito {amount} {frequency}",
-        "debitStatus": "Addebito {amount} {frequency} · {status}"
+        "xirr": "Annualizzato (XIRR) {rate}"
       },
       "who": {
-        "title": "Chi ha versato {when}",
         "you": "Il mio contributo",
         "employer": "Datore di lavoro",
         "tfr": "TFR",
         "other": "Altro",
-        "empty": "Nessun contributo in questo periodo.",
         "voluntary": "Volontario"
       },
       "when": {

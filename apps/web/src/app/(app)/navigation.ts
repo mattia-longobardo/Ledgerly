@@ -9,7 +9,6 @@ interface NavItem extends Omit<NavLink, "label"> {
     | "accounts"
     | "expenses"
     | "budgets"
-    | "funds"
     | "investments"
     | "interests"
     | "pockets"
@@ -41,7 +40,10 @@ const item = (
   addon,
 });
 
-/** The single navigation list: sidebar, mobile tabs and command palette all derive from it (groups: D2). */
+/**
+ * The single navigation list: sidebar, mobile tabs and command palette all derive from it (groups: D2).
+ * The pension funds are a group of Investments: no item of their own (rewrite plan R5b, B1b).
+ */
 const NAV_ITEMS: readonly NavItem[] = [
   item("overview", "/", "everyday", null),
   item("accounts", "/accounts", "everyday", null),
@@ -49,7 +51,6 @@ const NAV_ITEMS: readonly NavItem[] = [
   item("budgets", "/budgets", "everyday", "budgets"),
   item("subscriptions", "/subscriptions", "everyday", "subscriptions"),
   item("investments", "/investments", "savings", "investments"),
-  item("funds", "/funds", "savings", "investments"),
   item("pockets", "/pockets", "savings", "pockets"),
   item("interests", "/interests", "savings", "interests"),
   item("payroll", "/payroll", "work", "payroll"),

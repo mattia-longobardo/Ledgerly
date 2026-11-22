@@ -33,7 +33,8 @@ import { FundValuations } from "./fund-valuations";
 import { type Say, useSay } from "@/platform/say";
 import { FundDetailSkeleton } from "./fund-skeleton";
 
-const HOME = "/funds";
+/** The fund's page is its account's in Investments (rewrite plan R5b, B1b). */
+const HOME = "/investments";
 /** The tabs of a fund: the same four for every fund. */
 const TABS = ["overview", "contributions", "valuations", "settings"] as const;
 type Tab = (typeof TABS)[number];
@@ -48,7 +49,7 @@ interface Place {
   say: Say;
 }
 
-export function FundScreen({ id }: { id: string }) {
+export function FundScreen({ id, accountId }: { id: string; accountId: string }) {
   const query = useSearchParams();
   const say = useSay();
   if (say.data === undefined)
@@ -59,7 +60,7 @@ export function FundScreen({ id }: { id: string }) {
     tab: TABS.find((name) => name === raw.tab) ?? "overview",
     view: VIEWS.find((key) => key === raw.view) ?? "gain",
     section: parseSectionQuery(raw, say.data.todayOn),
-    base: `${HOME}/${id}`,
+    base: `${HOME}/${accountId}`,
     say: say.data,
   };
   return <FundFrame place={place} />;
@@ -125,7 +126,7 @@ function linksOf({ base, section, say }: Place, kept: Params) {
 }
 
 function FundPage({ place, settings }: { place: Place; settings: Settings }) {
-  const fundsText = useTranslations("funds");
+  const investmentsText = useTranslations("investments");
   const fundText = useTranslations("funds.fund");
   const periodText = useTranslations("common.period");
   const { fund, sources } = settings;
@@ -152,7 +153,7 @@ function FundPage({ place, settings }: { place: Place; settings: Settings }) {
   return (
     <Page
       title={fund.name}
-      parent={{ href: withParams(HOME, {}, section.params), label: fundsText("title") }}
+      parent={{ href: withParams(HOME, {}, section.params), label: investmentsText("title") }}
       actions={
         !archived && (
           <span className="flex gap-2">
