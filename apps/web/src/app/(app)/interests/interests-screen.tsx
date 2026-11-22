@@ -28,6 +28,7 @@ import {
   useTierChips,
 } from "@/modules/interests/client";
 import { useCategoryOptions } from "@/platform/category-options";
+import { useCountryPack } from "@/platform/country";
 
 type View = RouteOutput<typeof interests.listInterestRules>;
 
@@ -152,13 +153,15 @@ export function InterestsScreen() {
   const format = useFormat();
   // An interest payout is income: those are the categories a published settlement is filed under.
   const categories = useCategoryOptions("income");
+  const pack = useCountryPack();
   const view = read.data;
   const add = (label: string) =>
     view &&
     format &&
-    categories && (
+    categories &&
+    pack !== undefined && (
       <RuleButton
-        draft={newDraft(view.accounts, format.today)}
+        draft={newDraft(view.accounts, format.today, pack?.interestTaxPercent ?? "")}
         accounts={view.accounts}
         categories={categories}
         label={label}

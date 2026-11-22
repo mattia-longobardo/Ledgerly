@@ -4,7 +4,6 @@ import type { interests } from "@ledgerly/api-contract/interests";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
 import { formatAmountInput, formatMoney, type NumberFormat, numberSeparators } from "@ledgerly/format/format";
-import { countryRule } from "@ledgerly/domain/shared/country";
 import type { RuleDraft } from "./rule-dialog";
 
 export type Rule = RouteOutput<typeof interests.listInterestRules>["rules"][number];
@@ -74,8 +73,15 @@ export function draftOf(rule: Rule, format: NumberFormat): RuleDraft {
   };
 }
 
-/** A new rule: the first open account, today, the default hour, one tier, the country's tax, monthly, active. */
-export function newDraft(accounts: readonly { id: string; name: string }[], today: string): RuleDraft {
+/**
+ * A new rule: the first open account, today, the default hour, one tier, monthly, active, and the tax
+ * of the person's country pack (`GET /countries`), empty for a country without one (D3).
+ */
+export function newDraft(
+  accounts: readonly { id: string; name: string }[],
+  today: string,
+  tax: string,
+): RuleDraft {
   return {
     id: null,
     accountId: accounts[0]?.id ?? "",
@@ -84,7 +90,7 @@ export function newDraft(accounts: readonly { id: string; name: string }[], toda
     validTo: "",
     runHour: "",
     tiers: [{ upTo: "", rate: "" }],
-    tax: countryRule("IT", "interestTaxPercent"),
+    tax,
     dayBasis: "365",
     settlement: "monthly",
     payeeMatch: "",

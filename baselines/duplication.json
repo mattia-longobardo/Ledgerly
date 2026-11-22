@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 108161,
+    "lines": 108171,
     "duplicatedLines": 16470,
     "percent": 15.23,
     "blocks": 1268
@@ -17,9 +17,9 @@
       "blocks": 110
     },
     "app": {
-      "lines": 21059,
+      "lines": 21061,
       "duplicatedLines": 2802,
-      "percent": 13.31,
+      "percent": 13.3,
       "blocks": 219
     },
     "global.d": {
@@ -59,9 +59,9 @@
       "blocks": 16
     },
     "modules/interests": {
-      "lines": 2464,
+      "lines": 2468,
       "duplicatedLines": 454,
-      "percent": 18.43,
+      "percent": 18.4,
       "blocks": 33
     },
     "modules/investments": {
@@ -155,7 +155,7 @@
       "blocks": 0
     },
     "platform/country": {
-      "lines": 21,
+      "lines": 29,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -383,7 +383,7 @@
       "blocks": 0
     },
     "shared/country": {
-      "lines": 35,
+      "lines": 31,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0

@@ -21,7 +21,7 @@ const ACCOUNTS = [
 ];
 
 function renderDialog(accountId: string, publish: boolean) {
-  const draft = { ...newDraft(ACCOUNTS, "2026-11-18"), id: "r1", accountId, publish };
+  const draft = { ...newDraft(ACCOUNTS, "2026-11-18", "26"), id: "r1", accountId, publish };
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
       <RuleDialog draft={draft} accounts={ACCOUNTS} categories={[]} onClose={() => {}} />

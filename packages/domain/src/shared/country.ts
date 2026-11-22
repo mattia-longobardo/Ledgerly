@@ -34,11 +34,6 @@ export function hasPack(country: string | null): country is Country {
   return COUNTRIES.some((one) => one === country);
 }
 
-/** One rule of a country. */
-export function countryRule<K extends keyof CountryRules>(country: Country, key: K): CountryRules[K] {
-  return RULES[country][key];
-}
-
 /** Every rule of a country with a pack. */
 export function countryRules(country: Country): Readonly<CountryRules> {
   return RULES[country];
