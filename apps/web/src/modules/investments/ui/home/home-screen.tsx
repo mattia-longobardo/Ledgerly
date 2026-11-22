@@ -7,7 +7,6 @@
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { investments } from "@ledgerly/api-contract/investments";
-import { ButtonLink } from "@ledgerly/ui/button";
 import { useApi, useLatest } from "@ledgerly/ui/data";
 import { HighlightScope } from "@ledgerly/ui/highlight";
 import { parseSectionQuery, SECTION_PRESETS, type SectionQuery } from "@ledgerly/ui/period";
@@ -16,6 +15,7 @@ import { answeredPeriodText } from "@ledgerly/ui/period-text";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import { type Say, useSay } from "@/platform/say";
+import { AddInvestmentButton } from "../add-investment";
 import { PartsKpis } from "../parts-kpis";
 import { Ready } from "../ready";
 import { HomeSkeleton } from "../skeletons";
@@ -28,15 +28,6 @@ import { type ChartView, type GroupBy, type Home, homeContext, type HomeContext 
 const VIEWS = ["return", "value"] as const;
 const GROUPS = ["class", "ccy"] as const;
 
-function AddService({ size }: { size?: "sm" }) {
-  const text = useTranslations("investments");
-  return (
-    <ButtonLink href="/investments/catalog" variant="primary" size={size}>
-      {text("actions.addService")}
-    </ButtonLink>
-  );
-}
-
 function Empty({ home, say }: { home: Home; say: Say }) {
   const text = useTranslations("investments");
   const context = homeContext(home, say, parseSectionQuery({}, say.todayOn), {
@@ -47,7 +38,11 @@ function Empty({ home, say }: { home: Home; say: Say }) {
   return (
     <>
       <h1 className="text-title font-semibold tracking-title max-md:sr-only">{text("title")}</h1>
-      <EmptyState title={text("empty.title")} description={text("home.empty")} actions={<AddService />} />
+      <EmptyState
+        title={text("empty.title")}
+        description={text("home.empty")}
+        actions={<AddInvestmentButton />}
+      />
       {home.funds.total !== null && home.funds.rows.length > 0 && (
         <p className="text-sm text-muted">
           <FundsLine amount={context.money(home.funds.total)} />
@@ -105,7 +100,7 @@ function HomeRead({ say, section }: { say: Say; section: SectionQuery }) {
   return (
     <Ready state={read} skeleton={<HomeSkeleton />}>
       {(home) => (
-        <Page title={text("title")} actions={<AddService size="sm" />}>
+        <Page title={text("title")} actions={<AddInvestmentButton size="sm" />}>
           {home.services.length === 0 ? (
             <Empty home={home} say={say} />
           ) : (

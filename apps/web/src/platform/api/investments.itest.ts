@@ -270,7 +270,8 @@ describe("the reads of investments", () => {
     expect(catalog.body.providers.map((one: { id: string; status: string }) => [one.id, one.status])).toEqual(
       (await investments.catalogView(alice)).providers.map((one) => [one.id, one.status]),
     );
-    expect(catalog.body.providers.some((one: { status: string }) => one.status === "planned")).toBe(true);
+    // R5b (decision B1c): no entry to come, only what can be connected.
+    expect(catalog.body.providers.some((one: { status: string }) => one.status === "planned")).toBe(false);
     expect((await send(alice, "GET", `/investments/${accountId}/connection`)).status).toBe(200);
     // Another person's service does not exist; a year to come and a malformed id are refused.
     expect((await send(bob, "GET", `/investments/${accountId}?period=all`)).status).toBe(404);

@@ -1,24 +1,11 @@
-import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { Page } from "@ledgerly/ui/shell/page";
-import { NewFundScreen } from "@/modules/funds/client";
+import { permanentRedirect } from "next/navigation";
+import { withParams } from "@ledgerly/ui/url";
+import { appRoute } from "@/platform/route";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const text = await getTranslations("funds.wizard");
-  return { title: text("title") };
-}
-
-/**
- * "Add pension fund" (docs/design/rewrite-plan/ux/n6-pension-fund.md §3): a page of its own, four
- * steps of one form. The step is in the address and read by the form itself, so that the browser's
- * Back goes to the step before without a round trip that would lose what was typed. The page reads
- * no data (rewrite plan R3): the screen reads `/api/v1`.
- */
-export default async function NewFundPage() {
-  const text = await getTranslations("funds");
-  return (
-    <Page title={text("wizard.title")} parent={{ href: "/funds", label: text("title") }}>
-      <NewFundScreen />
-    </Page>
+/** The old address of "Add pension fund" (rewrite plan R5b, B1b): the steps are in Investments now. */
+export default async function NewFundPage({ searchParams }: PageProps<"/funds/new">) {
+  const { step } = await searchParams;
+  permanentRedirect(
+    appRoute(withParams("/investments/new-fund", {}, { step: typeof step === "string" ? step : undefined })),
   );
 }

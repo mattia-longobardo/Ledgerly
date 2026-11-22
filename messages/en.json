@@ -4212,10 +4212,9 @@
     "subtitle": "Your brokers, exchanges and investment accounts: what they are worth, what went in and what they gained.",
     "empty": {
       "title": "No services yet",
-      "description": "Add a manual account from the catalog, then record its deposits, assets and valuations."
+      "description": "Add a service, an account with value only or a pension fund."
     },
     "actions": {
-      "addService": "Add service",
       "addAsset": "Add asset",
       "deposit": "Deposit",
       "withdrawal": "Withdrawal",
@@ -4235,7 +4234,6 @@
       "accountSettings": "Account settings",
       "saveUrl": "Save link",
       "open": "Open",
-      "createManual": "Add manual account",
       "more": "More actions",
       "linkTransfer": "Link as transfer",
       "unlinkTransfer": "Unlink transfer"
@@ -4326,28 +4324,12 @@
       }
     },
     "catalog": {
-      "title": "Catalog",
-      "subtitle": "Pick the service to add. eToro and Binance connect with a read-only key; a manual account works for any of them.",
-      "sections": {
-        "accounts": "Accounts",
-        "broker": "Online brokers",
-        "crypto": "Crypto"
-      },
-      "status": {
-        "connected": "Linked",
-        "available": "Available",
-        "planned": "Coming soon"
-      },
-      "manualName": "Manual account",
-      "manualDescription": "Directa, Fineco, a deposit account, BTPs, funds: anything you record by hand.",
-      "plannedDescription": "Not connectable yet: use a manual account meanwhile.",
       "linked": "Linked: {names}",
-      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades.",
-      "plannedSection": "Coming soon · {count}"
+      "connectDescription": "Connect it with a read-only key: Ledgerly reads the value twice a day and never trades."
     },
     "manualForm": {
-      "title": "Add an account from Accounts",
-      "description": "Investments shows an account that already exists in Accounts. Its value is the account balance; deposits and withdrawals are its transactions. A new account is created in Accounts.",
+      "title": "Account with value only",
+      "description": "Its value is the account balance, typed by you; deposits and withdrawals are its transactions. Pick an account of Accounts, or make a new one here.",
       "category": "Category",
       "url": "Link",
       "urlHint": "Optional: the address of the service's site.",
@@ -4360,7 +4342,11 @@
         "managed": "already a service",
         "synced": "read by Wallet"
       },
-      "submit": "Add"
+      "submit": "Add",
+      "newAccount": "New account",
+      "name": "Name",
+      "currency": "Currency",
+      "value": "Value today"
     },
     "detail": {
       "since": "Managed since {date}",
@@ -4747,7 +4733,7 @@
       "in": "In on {date} ← {name}, out on {other}"
     },
     "home": {
-      "empty": "Connect eToro or Binance, or create a manual account.",
+      "empty": "Connect a service, or add an account with value only or a pension fund.",
       "funds": "funds ({amount}) are in <link>Funds</link>",
       "hero": {
         "title": "Profit and loss · {period}",
@@ -5153,6 +5139,17 @@
         },
         "brand": "Data from Binance, read with your key."
       }
+    },
+    "add": {
+      "open": "Add investment",
+      "title": "Add investment",
+      "connect": "Connect a service",
+      "connectDescription": "eToro or Binance, with a read-only key: Ledgerly reads the value twice a day and never trades.",
+      "value": "Account with value only",
+      "valueDescription": "A broker, a deposit account, BTPs: you type the value, in its own currency.",
+      "fund": "Pension fund",
+      "fundDescription": "The fund, how you pay in and its fees, in four steps.",
+      "back": "Back"
     }
   },
   "payroll": {

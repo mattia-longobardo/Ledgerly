@@ -35,7 +35,8 @@ export async function catalogView(ctx: Pick<Ctx, "userId" | "timeZone">): Promis
     today(ctx.timeZone),
   );
   return {
-    providers: INVESTMENT_PROVIDERS.map((provider) => ({
+    // No entry to come (R5b, decision B1c): «Connect a service» lists only what can be connected.
+    providers: INVESTMENT_PROVIDERS.filter((provider) => provider.status !== "planned").map((provider) => ({
       ...provider,
       connected: investments
         .filter((investment) => investment.provider === provider.id)

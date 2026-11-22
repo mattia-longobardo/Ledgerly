@@ -35,8 +35,8 @@ import { LeaveDialog, useLeaveGuard } from "./wizard-leave";
 import { WizardSection } from "./wizard-section";
 import { SourcesStep } from "./wizard-sources";
 
-const HOME = "/funds" as Route;
-const stepHref = (step: WizardStep) => `/funds/new?step=${step}` as Route;
+const HOME = "/investments" as Route;
+const stepHref = (step: WizardStep) => `/investments/new-fund?step=${step}` as Route;
 
 export interface FundWizardProps {
   /** The open accounts a recurring debit can be watched on. */
@@ -211,11 +211,11 @@ export function FundWizard({
     setFailure(null);
     startTransition(async () => {
       const result = await createFundAction(wizardFormOf(draft, sourceOn));
-      if (result.ok && result.id) {
+      if (result.ok && result.accountId) {
         setReleased(true);
         unsaved.saved();
         notify(t("created"));
-        router.push(`/funds/${result.id}` as Route);
+        router.push(`/investments/${result.accountId}` as Route);
         return;
       }
       const error = result.ok ? "failed" : result.error;

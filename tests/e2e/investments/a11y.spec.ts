@@ -20,7 +20,6 @@ const PAGES: Screen[] = [
     session: "layout",
     open: go("/investments?preset=all&view=value&by=class"),
   },
-  { name: "/investments/catalog", session: "layout", open: go("/investments/catalog") },
   // The tabs of a service (§3.2–§3.6, U3): the three of the two manual accounts, which keep no
   // positions (PERS-335), and the four of the two connected ones.
   ...(
@@ -66,6 +65,17 @@ const PAGES: Screen[] = [
   },
 ];
 
+/** «Add investment» on the home, and then one of its choices when named (rewrite plan R5b, B1c). */
+async function addInvestment(page: Page, choice?: RegExp) {
+  await page.goto("/investments");
+  await settled(page);
+  await page.getByRole("button", { name: "Add investment" }).first().click();
+  await settledDialog(page);
+  if (!choice) return;
+  await page.getByRole("dialog").getByRole("button", { name: choice }).click();
+  await settledDialog(page);
+}
+
 const OVERLAYS: Screen[] = [
   {
     name: "the period picker of Investments",
@@ -78,15 +88,22 @@ const OVERLAYS: Screen[] = [
     },
   },
   {
-    name: "the add manual account dialog",
+    name: "the add investment dialog",
     session: "layout",
     roots: ['[role="dialog"]'],
-    open: async (page) => {
-      await page.goto("/investments/catalog");
-      await settled(page);
-      await page.getByRole("button", { name: "Add manual account" }).first().click();
-      await settledDialog(page);
-    },
+    open: async (page) => addInvestment(page),
+  },
+  {
+    name: "the account with value only dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => addInvestment(page, /^Account with value only/),
+  },
+  {
+    name: "the connect a service dialog",
+    session: "admin",
+    roots: ['[role="dialog"]'],
+    open: async (page) => addInvestment(page, /^Connect a service/),
   },
   {
     name: "the update value dialog",
@@ -103,8 +120,7 @@ const OVERLAYS: Screen[] = [
     session: "admin",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/investments/catalog");
-      await settled(page);
+      await addInvestment(page, /^Connect a service/);
       await page.getByRole("button", { name: "Connect", exact: true }).first().click();
       await settledDialog(page);
     },
@@ -114,10 +130,9 @@ const OVERLAYS: Screen[] = [
     session: "admin",
     roots: ['[role="dialog"]'],
     open: async (page) => {
-      await page.goto("/investments/catalog");
-      await settled(page);
+      await addInvestment(page, /^Connect a service/);
       await page
-        .getByTestId("catalog-card")
+        .getByTestId("provider-row")
         .filter({ hasText: "Binance" })
         .getByRole("button", { name: "Connect", exact: true })
         .click();

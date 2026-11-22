@@ -11,7 +11,7 @@ import { FundWizard, type FundWizardProps } from "./fund-wizard";
 let search = "";
 let redraw = () => {};
 const push = vi.fn((href: string) => {
-  if (href.startsWith("/funds/new")) {
+  if (href.startsWith("/investments/new-fund")) {
     search = href.split("?")[1] ?? "";
     redraw();
   }
@@ -21,8 +21,13 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(search),
 }));
 
-type Result = { ok: true; id: string } | { ok: false; error: string; detail?: string | null };
-const createFund = vi.fn<(form: WizardForm) => Promise<Result>>(async () => ({ ok: true, id: "f1" }));
+type Result =
+  { ok: true; id: string; accountId: string } | { ok: false; error: string; detail?: string | null };
+const createFund = vi.fn<(form: WizardForm) => Promise<Result>>(async () => ({
+  ok: true,
+  id: "f1",
+  accountId: "a1",
+}));
 vi.mock("../calls", () => ({
   createFundAction: (form: WizardForm) => createFund(form),
 }));
@@ -71,7 +76,7 @@ beforeEach(() => {
   search = "";
   push.mockClear();
   createFund.mockClear();
-  createFund.mockImplementation(async () => ({ ok: true, id: "f1" }));
+  createFund.mockImplementation(async () => ({ ok: true, id: "f1", accountId: "a1" }));
 });
 
 describe("FundWizard", () => {
@@ -128,7 +133,7 @@ describe("FundWizard", () => {
   it("goes back to step 1 from an address that names a later step", async () => {
     search = "step=fees";
     renderWizard();
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/funds/new?step=fund"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/investments/new-fund?step=fund"));
     expect(screen.getByTestId("wizard-step-fund")).toBeVisible();
   });
 
@@ -145,7 +150,7 @@ describe("FundWizard", () => {
     ).toBeInTheDocument();
     expect(step("review").getByText("No fees.")).toBeInTheDocument();
     await next("review", "Create fund");
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/funds/f1"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/investments/a1"));
     expect(createFund).toHaveBeenCalledOnce();
     expect(createFund.mock.calls[0][0]).toMatchObject({
       fund: { name: "Fondo Gamma", provider: "Esempio Previdenza", startOn: "2026-03-01" },

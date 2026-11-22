@@ -381,8 +381,8 @@ export const getInvestmentsCatalog = defineRoute({
   scope: "investments:read",
   capability: "investments",
   summary:
-    "The providers a service can be added from, with the accounts each is connected to (`status` " +
-    "`planned`: one to come, which cannot be connected yet), and the investment and crypto accounts a " +
+    "The providers a service can be added from, with the accounts each is connected to (no entry " +
+    "`planned` since R5b: the value stays in the schema until R5f), and the investment and crypto accounts a " +
     "service can use, with why one cannot.",
   actions: [],
   response: investmentsCatalog,

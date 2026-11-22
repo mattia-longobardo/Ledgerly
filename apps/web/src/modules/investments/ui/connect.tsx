@@ -1,7 +1,8 @@
 "use client";
 
-// The key of a provider (§4.2, §5): its fields, write only, and «Connect» from the catalog. A key
-// stays in the page no longer than the call: the fields are cleared whatever the answer.
+// The key of a provider (§4.2, §5): its fields, write only, and «Connect». A key
+// stays in the page no longer than the call: the fields are cleared whatever the answer. «Connect a
+// service» of «Add investment» opens it.
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import type { NumberFormat } from "@ledgerly/format/format";
@@ -13,7 +14,7 @@ import { Modal } from "@ledgerly/ui/modal";
 import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
 import { connectProvider } from "../calls";
-import { FORM_GRID, Opener, useInvestmentResult } from "./dialog-kit";
+import { FORM_GRID, useInvestmentResult } from "./dialog-kit";
 import { useProviderWords } from "./provider-words";
 import { type ExistingChoice, optionText, reasonText } from "./manual-service";
 
@@ -77,25 +78,6 @@ export function clearKeys(provider: ConnectableProvider, form: HTMLFormElement):
     const input = form.elements.namedItem(field);
     if (input instanceof HTMLInputElement) input.value = "";
   }
-}
-
-export function ConnectProviderButton({
-  provider,
-  existing,
-  numberFormat,
-}: {
-  provider: ConnectableProvider;
-  existing: readonly ExistingChoice[];
-  numberFormat: NumberFormat;
-}) {
-  const text = useTranslations("investments");
-  return (
-    <Opener label={text("connect.open")} variant="primary">
-      {(close) => (
-        <ConnectDialog onClose={close} provider={provider} existing={existing} numberFormat={numberFormat} />
-      )}
-    </Opener>
-  );
 }
 
 /** Connected with a key that works from any IP (PERS-87 SEC-02): said before the service opens. */
@@ -223,7 +205,7 @@ function useConnect(provider: ConnectableProvider, accountId: string, onClose: (
   return { pending, error, unrestricted, open, onSubmit };
 }
 
-function ConnectDialog({
+export function ConnectDialog({
   onClose,
   provider,
   existing,

@@ -1,6 +1,8 @@
 "use client";
 
-// «Manual account» of the catalog: an investment or crypto account of Accounts becomes a service.
+// «Account with value only» of «Add investment» (rewrite plan R5b, B1c, ST-3): a new account from four
+// fields — name, kind, currency, value today — or an investment or crypto account of Accounts, which
+// becomes a service.
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { parseCents } from "@ledgerly/format/cents";
@@ -10,10 +12,10 @@ import { FormDialog } from "@ledgerly/ui/form-dialog";
 import { Input, Select } from "@ledgerly/ui/input";
 import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
-import { createManualService } from "../calls";
-import { FORM_GRID, Opener, useInvestmentResult } from "./dialog-kit";
+import { createManualService, createValueAccount } from "../calls";
+import { FORM_GRID, useInvestmentResult } from "./dialog-kit";
 
-/** An account of Accounts, as the catalog's dialogs offer it. */
+/** An account of Accounts, as the dialogs of «Add investment» offer it. */
 export interface ExistingChoice {
   id: string;
   name: string;
@@ -42,25 +44,13 @@ export function optionText(
   });
 }
 
-export function CreateManualServiceButton({
-  existing,
-  numberFormat,
-  variant = "primary",
-}: {
-  existing: readonly ExistingChoice[];
-  numberFormat: NumberFormat;
-  variant?: "primary" | "secondary";
-}) {
-  const text = useTranslations("investments");
-  return (
-    <Opener label={text("actions.createManual")} variant={variant}>
-      {(close) => <ManualServiceDialog onClose={close} existing={existing} numberFormat={numberFormat} />}
-    </Opener>
-  );
-}
-
 const CATEGORIES = ["accounts", "broker", "crypto"] as const;
+type Category = (typeof CATEGORIES)[number];
 const REASONS = ["fund", "managed", "synced"] as const;
+/** The choice of the select that makes a new account. */
+const NEW = "new";
+/** Every currency the browser knows, by its ISO code: the server says if it has no rate for one. */
+const CURRENCIES = Intl.supportedValuesOf("currency");
 
 /** Why an account cannot be picked, in words; nothing when it can. */
 export function reasonText(
@@ -71,7 +61,7 @@ export function reasonText(
   return known ? ` — ${text(`manualForm.reasons.${known}`)}` : "";
 }
 
-/** The account the service is made of: the eligible ones can be picked, the others say why not. */
+/** The account the service is made of: a new one, or an eligible one of Accounts; the others say why not. */
 function AccountField({
   id,
   existing,
@@ -93,20 +83,43 @@ function AccountField({
         htmlFor={`${id}-account`}
         hint={text("manualForm.existingHint")}
       >
-        {existing.length === 0 ? (
-          <p className="text-sm text-muted">{text("manualForm.noExisting")}</p>
-        ) : (
-          <Select id={`${id}-account`} value={accountId} onChange={(event) => onChange(event.target.value)}>
-            {existing.map((one) => (
-              <option key={one.id} value={one.id} disabled={one.reason !== null}>
-                {optionText(text, one, numberFormat)}
-                {reasonText(text, one.reason)}
-              </option>
-            ))}
-          </Select>
-        )}
+        <Select id={`${id}-account`} value={accountId} onChange={(event) => onChange(event.target.value)}>
+          <option value={NEW}>{text("manualForm.newAccount")}</option>
+          {existing.map((one) => (
+            <option key={one.id} value={one.id} disabled={one.reason !== null}>
+              {optionText(text, one, numberFormat)}
+              {reasonText(text, one.reason)}
+            </option>
+          ))}
+        </Select>
       </Field>
     </div>
+  );
+}
+
+/** The new account: its name, its currency and its value today. */
+function NewAccountFields({ id, currency }: { id: string; currency: string }) {
+  const text = useTranslations("investments");
+  return (
+    <>
+      <div className="col-span-full">
+        <Field label={text("manualForm.name")} htmlFor={`${id}-name`}>
+          <Input id={`${id}-name`} name="name" required maxLength={80} autoComplete="off" />
+        </Field>
+      </div>
+      <Field label={text("manualForm.currency")} htmlFor={`${id}-currency`}>
+        <Select id={`${id}-currency`} name="currency" defaultValue={currency}>
+          {CURRENCIES.map((one) => (
+            <option key={one} value={one}>
+              {one}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Field label={text("manualForm.value")} htmlFor={`${id}-value`}>
+        <Input id={`${id}-value`} name="value" required inputMode="decimal" autoComplete="off" />
+      </Field>
+    </>
   );
 }
 
@@ -150,36 +163,60 @@ function ServiceFields({
   );
 }
 
-function ManualServiceDialog({
-  onClose,
-  existing,
-  numberFormat,
-}: {
-  onClose: () => void;
-  existing: readonly ExistingChoice[];
-  numberFormat: NumberFormat;
-}) {
+/** «Add»: a new account from its four fields, or the service of an account of Accounts; then its page. */
+function useSubmit(
+  existing: readonly ExistingChoice[],
+  accountId: string,
+  category: Category,
+  onClose: () => void,
+) {
   const text = useTranslations("investments");
-  const id = useId();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const { error, report } = useInvestmentResult();
-  const [accountId, setAccountId] = useState(existing.find((one) => one.reason === null)?.id ?? "");
-  const [category, setCategory] = useState<(typeof CATEGORIES)[number]>("broker");
-
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const url = String(new FormData(event.currentTarget).get("url") ?? "");
-    const name = existing.find((one) => one.id === accountId)?.name ?? "";
+    const form = new FormData(event.currentTarget);
+    const field = (name: string) => String(form.get(name) ?? "");
+    const url = field("url");
+    const fresh = accountId === NEW;
+    const name = fresh ? field("name").trim() : (existing.find((one) => one.id === accountId)?.name ?? "");
     startTransition(async () => {
-      const result = await createManualService({ accountId, category, url });
+      const result = fresh
+        ? await createValueAccount({
+            name,
+            category,
+            currency: field("currency"),
+            value: field("value"),
+            url,
+          })
+        : await createManualService({ accountId, category, url });
       if (!report(result) || !result.ok) return;
       notify(text("toasts.serviceCreated", { name }));
       onClose();
       router.push(`/investments/${result.accountId}`);
     });
   }
+  return { pending, error, onSubmit };
+}
 
+export function ValueAccountDialog({
+  onClose,
+  existing,
+  numberFormat,
+  currency,
+}: {
+  onClose: () => void;
+  existing: readonly ExistingChoice[];
+  numberFormat: NumberFormat;
+  /** The display currency: the new account's, unless another is picked. */
+  currency: string;
+}) {
+  const text = useTranslations("investments");
+  const id = useId();
+  const [accountId, setAccountId] = useState(NEW);
+  const [category, setCategory] = useState<Category>("broker");
+  const { pending, error, onSubmit } = useSubmit(existing, accountId, category, onClose);
   return (
     <FormDialog
       onClose={onClose}
@@ -189,7 +226,7 @@ function ManualServiceDialog({
       className={FORM_GRID}
       onSubmit={onSubmit}
       error={error}
-      pending={pending || accountId === ""}
+      pending={pending}
       cancelLabel={text("form.cancel")}
       submitLabel={text("manualForm.submit")}
     >
@@ -200,6 +237,7 @@ function ManualServiceDialog({
         accountId={accountId}
         onChange={setAccountId}
       />
+      {accountId === NEW && <NewAccountFields id={id} currency={currency} />}
       <ServiceFields id={id} category={category} onCategory={setCategory} />
     </FormDialog>
   );

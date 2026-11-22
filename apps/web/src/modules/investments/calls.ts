@@ -71,6 +71,24 @@ export function createManualService(input: {
   );
 }
 
+/** «Account with value only» on a new account: the account and its service in one write (R5b). */
+export async function createValueAccount(input: {
+  name: string;
+  category: "accounts" | "broker" | "crypto";
+  currency: string;
+  /** As typed, in the person's number format. */
+  value: string;
+  url: string;
+}): Promise<{ ok: true; accountId: string } | Failure> {
+  return attempt(async () => {
+    const value = amountOf(input.value, await formatOf());
+    if (value === null) throw new RangeError("value");
+    return call(register.createManualService, {
+      body: { name: input.name, category: input.category, currency: input.currency, value, url: input.url },
+    });
+  });
+}
+
 export function updateServiceUrl(accountId: string, url: string): Promise<ActionResult> {
   return attempt(() => done(call(register.updateServiceUrl, { params: { accountId }, body: { url } })));
 }

@@ -4212,10 +4212,9 @@
     "subtitle": "I tuoi broker, exchange e conti di investimento: quanto valgono, quanto hai versato e quanto hanno reso.",
     "empty": {
       "title": "Nessun servizio",
-      "description": "Aggiungi un conto manuale dal catalogo, poi registra versamenti, asset e valutazioni."
+      "description": "Aggiungi un servizio, un conto con solo valore o un fondo pensione."
     },
     "actions": {
-      "addService": "Aggiungi servizio",
       "addAsset": "Aggiungi asset",
       "deposit": "Versamento",
       "withdrawal": "Prelievo",
@@ -4235,7 +4234,6 @@
       "accountSettings": "Impostazioni del conto",
       "saveUrl": "Salva link",
       "open": "Apri",
-      "createManual": "Aggiungi conto manuale",
       "more": "Altre azioni",
       "linkTransfer": "Collega come giroconto",
       "unlinkTransfer": "Scollega giroconto"
@@ -4326,28 +4324,12 @@
       }
     },
     "catalog": {
-      "title": "Catalogo",
-      "subtitle": "Scegli il servizio da aggiungere. eToro e Binance si collegano con una chiave in sola lettura; un conto manuale va bene per tutti.",
-      "sections": {
-        "accounts": "Conti",
-        "broker": "Online broker",
-        "crypto": "Crypto"
-      },
-      "status": {
-        "connected": "Collegato",
-        "available": "Disponibile",
-        "planned": "In arrivo"
-      },
-      "manualName": "Conto manuale",
-      "manualDescription": "Directa, Fineco, conto deposito, BTP, fondi: tutto ciò che registri a mano.",
-      "plannedDescription": "Non ancora collegabile: nel frattempo usa un conto manuale.",
       "linked": "Collegato: {names}",
-      "connectDescription": "Collegalo con una chiave in sola lettura: Ledgerly legge il valore due volte al giorno e non fa mai trading.",
-      "plannedSection": "In arrivo · {count}"
+      "connectDescription": "Collegalo con una chiave in sola lettura: Ledgerly legge il valore due volte al giorno e non fa mai trading."
     },
     "manualForm": {
-      "title": "Aggiungi un conto di Conti",
-      "description": "Investimenti mostra un conto che esiste già in Conti. Il valore è il saldo del conto; versamenti e prelievi sono i suoi movimenti. Un conto nuovo si crea in Conti.",
+      "title": "Conto con solo valore",
+      "description": "Il valore è il saldo del conto, scritto da te; versamenti e prelievi sono i suoi movimenti. Scegli un conto di Conti, o creane uno nuovo qui.",
       "category": "Categoria",
       "url": "Link",
       "urlHint": "Facoltativo: l'indirizzo del sito del servizio.",
@@ -4360,7 +4342,11 @@
         "managed": "già un servizio",
         "synced": "letto da Wallet"
       },
-      "submit": "Aggiungi"
+      "submit": "Aggiungi",
+      "newAccount": "Conto nuovo",
+      "name": "Nome",
+      "currency": "Valuta",
+      "value": "Valore di oggi"
     },
     "detail": {
       "since": "Gestito dal {date}",
@@ -4747,7 +4733,7 @@
       "in": "Entrata il {date} ← {name}, uscita il {other}"
     },
     "home": {
-      "empty": "Collega eToro o Binance, o crea un conto manuale.",
+      "empty": "Collega un servizio, o aggiungi un conto con solo valore o un fondo pensione.",
       "funds": "i fondi ({amount}) sono in <link>Funds</link>",
       "hero": {
         "title": "Profitto e perdita · {period}",
@@ -5153,6 +5139,17 @@
         },
         "brand": "Dati di Binance, letti con la tua chiave."
       }
+    },
+    "add": {
+      "open": "Aggiungi investimento",
+      "title": "Aggiungi investimento",
+      "connect": "Collega un servizio",
+      "connectDescription": "eToro o Binance, con una chiave in sola lettura: Ledgerly legge il valore due volte al giorno e non opera mai.",
+      "value": "Conto con solo valore",
+      "valueDescription": "Un broker, un conto deposito, BTP: scrivi tu il valore, nella sua valuta.",
+      "fund": "Fondo pensione",
+      "fundDescription": "Il fondo, come versi e le commissioni, in quattro passi.",
+      "back": "Indietro"
     }
   },
   "payroll": {

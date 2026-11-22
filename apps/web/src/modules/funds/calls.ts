@@ -22,7 +22,7 @@ import {
 import { refusal } from "@/platform/writes";
 
 export type ActionResult =
-  | { ok: true; id?: string; count?: number }
+  | { ok: true; id?: string; count?: number; accountId?: string }
   /** `detail` says more about some errors: the fund that holds a payslip component already. */
   | { ok: false; error: string; detail?: string | null };
 
@@ -169,7 +169,9 @@ export function createFundAction(form: WizardForm): Promise<ActionResult> {
         }),
       },
     });
-    return { id: answer.id, count: answer.published };
+    // The fund's page is its account's in Investments (R5b, B1b): the new fund's account is read back.
+    const { fund } = await call(funds.getFundSettings, { params: { id: answer.id } });
+    return { id: answer.id, count: answer.published, accountId: fund.accountId };
   });
 }
 

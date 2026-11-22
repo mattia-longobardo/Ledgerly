@@ -22,39 +22,51 @@ async function openTab(page: Page, name: "Overview" | "Activity" | "Connection" 
   ).toHaveAttribute("aria-current", "page");
 }
 
-/** "Add manual account" from the catalog: an account of Accounts, never a new one (PERS-342). */
+/** «Account with value only» of «Add investment», on an account of Accounts (PERS-342). */
 async function addManual(page: Page, account: string) {
-  await page.goto("/investments/catalog");
-  await page.getByRole("button", { name: "Add manual account" }).click();
-  const dialog = page.getByRole("dialog", { name: "Add an account from Accounts" });
-  await expect(dialog.getByLabel("Name")).toHaveCount(0);
+  await page.goto("/investments");
+  await page.getByRole("button", { name: "Add investment" }).first().click();
+  await page
+    .getByRole("dialog", { name: "Add investment" })
+    .getByRole("button", { name: /^Account with value only/ })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Account with value only" });
   const select = dialog.getByLabel("Account");
   const label = await select.locator("option", { hasText: account }).first().textContent();
   await select.selectOption({ label: label ?? account });
+  // An account of Accounts keeps its own name, currency and value: the fields of a new one go.
+  await expect(dialog.getByLabel("Name")).toHaveCount(0);
   await dialog.getByRole("button", { name: "Add", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("heading", { name: account, level: 1 })).toBeVisible();
 }
 
 test("a manual service shows an account of Accounts, and Accounts shows the same value", async ({ page }) => {
-  await test.step("an empty section sends to the catalog", async () => {
+  await test.step("an empty section offers the three choices of «Add investment»", async () => {
     await page.goto("/investments");
     await expect(page.getByRole("heading", { name: "No services yet" })).toBeVisible();
-    await page.getByRole("link", { name: "Add service" }).first().click();
-    await expect(page).toHaveURL(/\/investments\/catalog$/);
-    // C1: both providers that connect are named; C2: the rest is closed under "Coming soon", with
-    // its count, and Kraken is not listed.
-    await expect(page.getByText("eToro and Binance connect with a read-only key")).toBeVisible();
-    await expect(page.getByTestId("catalog-card").filter({ hasText: "eToro" })).toContainText("Available");
-    await expect(page.getByTestId("catalog-card").filter({ hasText: "Binance" })).toContainText("Available");
-    await expect(page.getByTestId("catalog-card").filter({ hasText: "Kraken" })).toHaveCount(0);
-    const planned = page.getByTestId("catalog-planned");
-    await expect(planned).not.toHaveAttribute("open");
-    await expect(planned.getByText(/^Coming soon · \d+$/)).toBeVisible();
-    const ibkr = planned.getByTestId("catalog-card").filter({ hasText: "Interactive Brokers" });
-    await expect(ibkr).toBeHidden();
-    await planned.getByText(/^Coming soon · \d+$/).click();
-    await expect(ibkr).toContainText("Coming soon");
+    await page.getByRole("button", { name: "Add investment" }).first().click();
+    const choices = page.getByRole("dialog", { name: "Add investment" });
+    await expect(choices.getByRole("button", { name: /^Connect a service/ })).toBeVisible();
+    await expect(choices.getByRole("button", { name: /^Account with value only/ })).toBeVisible();
+    await expect(choices.getByRole("link", { name: /^Pension fund/ })).toHaveAttribute(
+      "href",
+      "/investments/new-fund",
+    );
+    // B1c: «Connect a service» names the providers that connect, and none to come.
+    await choices.getByRole("button", { name: /^Connect a service/ }).click();
+    const connect = page.getByRole("dialog", { name: "Connect a service" });
+    await expect(connect.getByTestId("provider-row").filter({ hasText: "eToro" })).toBeVisible();
+    await expect(connect.getByTestId("provider-row").filter({ hasText: "Binance" })).toBeVisible();
+    await expect(connect.getByTestId("provider-row").filter({ hasText: "Interactive Brokers" })).toHaveCount(
+      0,
+    );
+    await expect(connect.getByText("Coming soon")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(connect).toBeHidden();
+    // The catalog's old address leads to the home.
+    await page.goto("/investments/catalog");
+    await expect(page).toHaveURL(/\/investments$/);
   });
 
   await test.step("Directa, typed by hand: its balance is the value, no positions, no deposits to type", async () => {

@@ -283,7 +283,17 @@ export const MODULES: Module[] = [
     files: ["apps/web/src/modules/funds/**", "packages/domain/src/modules/funds/**", page("funds")],
     integration: ["apps/web/src/modules/funds", "packages/domain/src/modules/funds"],
     flows: ["funds"],
-    usedBy: ["investments", "payroll", "export", "jobs", "accounts", "api", "e2e:accounts", "e2e:shell"],
+    usedBy: [
+      "investments",
+      "payroll",
+      "export",
+      "jobs",
+      "accounts",
+      "api",
+      "e2e:accounts",
+      "e2e:shell",
+      "e2e:investments",
+    ],
   },
   {
     id: "investments",
