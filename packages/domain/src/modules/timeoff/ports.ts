@@ -12,6 +12,11 @@ export interface LeaveCalendarSync {
   isBusy(error: unknown): boolean;
   /** Asks the worker for a pass, so a write never waits on the provider; nothing without a calendar. */
   requestPass(ctx: Pick<Ctx, "userId">): Promise<void>;
+  /** What the calendar's last pass said of `year`, in days; null without a calendar or that pass. */
+  figuresOf(
+    ctx: Pick<Ctx, "userId">,
+    year: number,
+  ): Promise<{ used: number; remaining: number; totalAvailable: number } | null>;
 }
 
 /**

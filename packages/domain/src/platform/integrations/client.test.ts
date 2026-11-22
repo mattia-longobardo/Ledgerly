@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import * as client from "./client";
 import {
+  DEFAULT_SYNC_SCHEDULE,
   clock,
   codeKey,
   daysToExpiry,
@@ -14,8 +15,9 @@ import {
 } from "./index";
 
 describe("the browser's entry of integrations", () => {
-  it("is the server entry's functions, name by name", () => {
+  it("is the server entry's names, name by name", () => {
     expect({ ...client }).toEqual({
+      DEFAULT_SYNC_SCHEDULE,
       clock,
       codeKey,
       daysToExpiry,

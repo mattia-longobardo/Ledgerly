@@ -28,10 +28,11 @@ export function allowanceOut(allowance: Allowance): WireAllowance {
 }
 
 /** The Time off page of one year. */
-export function timeOffYear(view: View): Year {
+export function timeOffYear(view: View, external: Year["external"]): Year {
   const { allowance, rows, residualInputs, forecastInputs, ...rest } = view;
   return {
     ...rest,
+    external,
     residualInputs: { vacation: withDays(residualInputs.vacation), rol: withDays(residualInputs.rol) },
     forecastInputs: { vacation: withDays(forecastInputs.vacation), rol: withDays(forecastInputs.rol) },
     allowance: allowance === null ? null : allowanceOut(allowance),

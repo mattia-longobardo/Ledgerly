@@ -1053,6 +1053,7 @@
      "minutesPerDay": 480
     }
    },
+   "external": null,
    "accrual": {
     "vacation": {
      "rate": {

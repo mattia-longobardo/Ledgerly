@@ -134,8 +134,8 @@ const leaveRow = z.discriminatedUnion("source", [
 ]);
 
 /**
- * The Time off page of one year (`timeOffView`, TOF-7). The figures of the external calendar are not
- * here (TOF-4): they are the plugin's, not the read-model's.
+ * The Time off page of one year (`timeOffView`, TOF-7). The figures of the external calendar are in
+ * `external`, apart (TOF-4): they are what the calendar last said, not the read-model's.
  */
 export const timeOffYear = z.object({
   year: z.number().int(),
@@ -194,6 +194,8 @@ export const timeOffYear = z.object({
   /** The days of the year this person does not work, ascending. */
   holidays: z.array(civilDate()),
   residualInputs: z.object({ vacation: residualInput, rol: residualInput }),
+  /** The external calendar's own figures of the year, in days, from its last pass; null without one. */
+  external: z.object({ used: z.number(), remaining: z.number(), totalAvailable: z.number() }).nullable(),
   accrual: z.object({
     vacation: accrualView(),
     rol: accrualView(),
@@ -314,6 +316,7 @@ export const TIMEOFF_YEAR_EXAMPLE = {
       minutesPerDay: 480,
     },
   },
+  external: { used: 11, remaining: 18, totalAvailable: 29 },
   accrual: {
     vacation: { rate: FORECAST_EXAMPLE.rate, yearEndMinutes: 10080, payslipPeriod: null, leads: false },
     rol: { rate: null, yearEndMinutes: null, payslipPeriod: null, leads: false },

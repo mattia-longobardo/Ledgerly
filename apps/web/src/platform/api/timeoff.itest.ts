@@ -15,6 +15,10 @@ const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition"
 const { apiRoutes, wireDomain } = await import("@ledgerly/api");
 const timeoff = await import("@ledgerly/domain/timeoff");
 const client = await import("@ledgerly/domain/timeoff/client");
+const integrations = {
+  ...(await import("@domain/platform/integrations")),
+  ...(await import("@domain/platform/integrations/service")),
+};
 
 function contextFor(userId: string): Ctx {
   return {
@@ -71,7 +75,9 @@ beforeEach(async () => {
   bob = contextFor((await createTestUser()).id);
   requestPass.mockClear();
   // The external calendar of the test: what `LeaveChanged` asks of it, and nothing else.
-  timeoff.wireTimeoff({ calendar: { passNow: async () => null, isBusy: () => false, requestPass } });
+  timeoff.wireTimeoff({
+    calendar: { passNow: async () => null, isBusy: () => false, requestPass, figuresOf: async () => null },
+  });
 });
 
 afterAll(async () => {
@@ -150,6 +156,31 @@ describe("the routes of time off", () => {
     const unknown = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
     expect((await send(alice, "DELETE", `/timeoff/holidays/calendars/${unknown}`)).status).toBe(404);
     expect((await send(alice, "POST", `/timeoff/holidays/calendars/${unknown}/refresh`)).status).toBe(404);
+  });
+});
+
+describe("the external calendar's figures on GET /timeoff/{year}", () => {
+  it("are null without a calendar, and what its last pass said once it has one", async () => {
+    // The calendar of the application, not the test's: its figures are what this route answers.
+    const { leaveCalendar } = await import("@ledgerly/domain/platform/integrations/calendar");
+    timeoff.wireTimeoff({ calendar: leaveCalendar });
+    expect((await send(alice, "GET", "/timeoff/2026")).body.external).toBeNull();
+
+    const connection = await integrations.saveConnection(alice, {
+      provider: integrations.TREK_PROVIDER,
+      credentials: { baseUrl: "https://trek.example", clientId: "id", clientSecret: "secret" },
+    });
+    const cursor = { year: "2026", used: "11", remaining: "18", totalAvailable: "29" };
+    await integrations.saveSyncJob(alice, connection.id, "leave", { cursor });
+
+    expect((await send(alice, "GET", "/timeoff/2026")).body.external).toEqual({
+      used: 11,
+      remaining: 18,
+      totalAvailable: 29,
+    });
+    // Another year, or another person, has none.
+    expect((await send(alice, "GET", "/timeoff/2025")).body.external).toBeNull();
+    expect((await send(bob, "GET", "/timeoff/2026")).body.external).toBeNull();
   });
 });
 

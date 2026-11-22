@@ -1080,6 +1080,7 @@
     "yearsToRefresh"
   ],
   "packages/domain/src/platform/integrations/client.ts": [
+    "DEFAULT_SYNC_SCHEDULE",
     "clock",
     "codeKey",
     "daysToExpiry",

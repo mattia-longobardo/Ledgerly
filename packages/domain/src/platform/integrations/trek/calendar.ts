@@ -2,11 +2,12 @@
 // `LeaveCalendarSync`, wired by `wireDomain` in `apps/api`. Until R5c makes Trek a plugin.
 import type { LeaveCalendarSync } from "../../../modules/timeoff";
 import { enqueue } from "../../jobs/queue";
-import { isTrekBusy, syncTrekNow, trekConnection } from "./sync";
+import { isTrekBusy, syncTrekNow, trekConnection, trekStatsOf } from "./sync";
 
 export const trekCalendar: LeaveCalendarSync = {
   passNow: (ctx) => syncTrekNow(ctx),
   isBusy: (error) => isTrekBusy(error),
+  figuresOf: (ctx, year) => trekStatsOf(ctx, year),
   /**
    * The «update now» of the connection, run by the worker (the task of `tasks.updateConnection` of
    * the web): a person with no Trek link asks for nothing.

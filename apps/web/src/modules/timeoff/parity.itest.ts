@@ -190,7 +190,9 @@ beforeEach(async () => {
   bob = contextFor((await createTestUser()).id);
   requestPass.mockClear();
   // The external calendar of the test: what `LeaveChanged` asks of it, and nothing else.
-  timeoff.wireTimeoff({ calendar: { passNow: async () => null, isBusy: () => false, requestPass } });
+  timeoff.wireTimeoff({
+    calendar: { passNow: async () => null, isBusy: () => false, requestPass, figuresOf: async () => null },
+  });
 });
 
 afterAll(async () => {

@@ -20,6 +20,7 @@ import {
   TimeOffError,
   allowanceOf,
   bookLeave,
+  calendarSync,
   listAllowances,
   saveAllowance,
   timeOffView,
@@ -67,9 +68,14 @@ function serveYear(app: Hono<ApiEnv>, guard: Guard): void {
     if (saved === null) throw new Error("timeoff: the allowance just saved is not there");
     return allowanceOut(saved);
   });
-  serve(app, guard, timeoff.getTimeOff, async ({ ctx, params }) =>
-    timeOffYear(await refusing(() => timeOffView(ctx, Number(params.year)))),
-  );
+  serve(app, guard, timeoff.getTimeOff, async ({ ctx, params }) => {
+    const year = Number(params.year);
+    const [view, external] = await Promise.all([
+      refusing(() => timeOffView(ctx, year)),
+      calendarSync().figuresOf(ctx, year),
+    ]);
+    return timeOffYear(view, external);
+  });
 }
 
 function serveLeave(app: Hono<ApiEnv>, guard: Guard): void {

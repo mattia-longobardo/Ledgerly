@@ -16,6 +16,8 @@ written before it keeps working.
   `core_provider` is gone.
 - The web's session counts its calls in two windows of 1200 a minute: the browser's (`Sec-Fetch-Site`
   sent) and the web's server's (not sent). A client in a loop is still answered `429` in either.
+- `GET /timeoff/{year}`: `external`, the external calendar's own figures of the year in days (`used`,
+  `remaining`, `totalAvailable`) as its last pass said them; null without a calendar or a pass of that year.
 - `GET /connections`: each connection has `historyDepth`, the months of movements its cursor reads
   today (null for a provider without a chosen depth); `shared`, the accounts a bank's access shares,
   also for a plugin paused (null for a connection that is not a plugin's); `service`, the `accountId`

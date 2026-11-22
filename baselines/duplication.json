@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105963,
+    "lines": 105975,
     "duplicatedLines": 16293,
-    "percent": 15.38,
+    "percent": 15.37,
     "blocks": 1247
   },
   "units": {
     "api": {
-      "lines": 5577,
+      "lines": 5583,
       "duplicatedLines": 1153,
-      "percent": 20.67,
+      "percent": 20.65,
       "blocks": 103
     },
     "app": {
@@ -89,9 +89,9 @@
       "blocks": 27
     },
     "modules/timeoff": {
-      "lines": 4246,
+      "lines": 4251,
       "duplicatedLines": 312,
-      "percent": 7.35,
+      "percent": 7.34,
       "blocks": 29
     },
     "modules/transactions": {
@@ -227,9 +227,9 @@
       "blocks": 0
     },
     "platform/integrations/trek": {
-      "lines": 1027,
+      "lines": 1028,
       "duplicatedLines": 105,
-      "percent": 10.22,
+      "percent": 10.21,
       "blocks": 8
     },
     "platform/integrations/wallet": {

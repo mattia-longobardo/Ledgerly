@@ -51428,6 +51428,32 @@
                         "rol"
                       ]
                     },
+                    "external": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "used": {
+                              "type": "number"
+                            },
+                            "remaining": {
+                              "type": "number"
+                            },
+                            "totalAvailable": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "used",
+                            "remaining",
+                            "totalAvailable"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "accrual": {
                       "type": "object",
                       "properties": {
@@ -51795,6 +51821,7 @@
                     "allowanceMismatch",
                     "holidays",
                     "residualInputs",
+                    "external",
                     "accrual",
                     "forecastInputs"
                   ]
