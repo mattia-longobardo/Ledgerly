@@ -50,32 +50,39 @@ export interface FoundInstrument {
  * shortcut: a market's currency is its usual one (an ETF can trade in USD on Xetra); the close the
  * source returns carries its own currency. Read the currency per listing if a source gives it.
  */
-const MARKETS: Record<string, { mic: string; currency: string }> = {
-  IM: { mic: "XMIL", currency: "EUR" },
-  GY: { mic: "XETR", currency: "EUR" },
-  GR: { mic: "XETR", currency: "EUR" },
-  GF: { mic: "XFRA", currency: "EUR" },
-  FP: { mic: "XPAR", currency: "EUR" },
-  NA: { mic: "XAMS", currency: "EUR" },
-  BB: { mic: "XBRU", currency: "EUR" },
-  PL: { mic: "XLIS", currency: "EUR" },
-  SM: { mic: "XMAD", currency: "EUR" },
-  SW: { mic: "XSWX", currency: "CHF" },
-  SE: { mic: "XSWX", currency: "CHF" },
-  LN: { mic: "XLON", currency: "GBP" },
-  UN: { mic: "XNYS", currency: "USD" },
-  UW: { mic: "XNAS", currency: "USD" },
-  UQ: { mic: "XNAS", currency: "USD" },
-  UR: { mic: "XNAS", currency: "USD" },
-  UP: { mic: "ARCX", currency: "USD" },
-};
+const MARKETS = new Map(
+  [
+    "IM XMIL EUR",
+    "GY XETR EUR",
+    "GR XETR EUR",
+    "GF XFRA EUR",
+    "FP XPAR EUR",
+    "NA XAMS EUR",
+    "BB XBRU EUR",
+    "PL XLIS EUR",
+    "SM XMAD EUR",
+    "SW XSWX CHF",
+    "SE XSWX CHF",
+    "LN XLON GBP",
+    "UN XNYS USD",
+    "UW XNAS USD",
+    "UQ XNAS USD",
+    "UR XNAS USD",
+    "UP ARCX USD",
+  ].map((line) => {
+    const [code, mic, currency] = line.split(" ");
+    return [code, { mic, currency }];
+  }),
+);
 
+/** OpenFIGI leaves out, or sends as null, any field it does not know. */
+const figiField = z.string().nullable().optional();
 const figiRecord = z.object({
-  name: z.string().nullable().optional(),
-  ticker: z.string().nullable().optional(),
-  exchCode: z.string().nullable().optional(),
-  shareClassFIGI: z.string().nullable().optional(),
-  securityType: z.string().nullable().optional(),
+  name: figiField,
+  ticker: figiField,
+  exchCode: figiField,
+  shareClassFIGI: figiField,
+  securityType: figiField,
 });
 type FigiRecord = z.infer<typeof figiRecord>;
 
@@ -102,7 +109,7 @@ const firdsSchema = z.object({
 function listingsOf(records: readonly FigiRecord[]): FoundListing[] {
   const byMic = new Map<string, FoundListing>();
   for (const record of records) {
-    const market = MARKETS[record.exchCode ?? ""];
+    const market = MARKETS.get(record.exchCode ?? "");
     const ticker = record.ticker?.trim();
     if (!market || !ticker || ticker.length > 20 || byMic.has(market.mic)) continue;
     // Xetra's own code wins over Germany's composite, whatever the order of the records.
