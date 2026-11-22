@@ -100,8 +100,10 @@ function PortfolioRow({ row, context }: { row: Row; context: HomeContext }) {
       className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 last:border-0"
     >
       <span className="flex min-w-0 flex-col">
+        {/* No prefetch: each row's page asks the server who holds the account (2-3 reads of `/api/v1`). */}
         <Link
           href={rowHref(row, context)}
+          prefetch={false}
           className="focus-ring inline-flex min-h-6 min-w-0 items-center rounded-sm font-medium hover:underline"
         >
           <span className="truncate">{row.name}</span>
