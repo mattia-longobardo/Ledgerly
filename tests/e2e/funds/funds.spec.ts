@@ -2,6 +2,7 @@
 // one fund model since release N6, docs/design/rewrite-plan/ux/n6-pension-fund.md §3, §9).
 import { expect, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
+import { addFund, FUNDS } from "./place";
 
 // Its own user: two Fideuram debits on a synced account (scripts/seed-e2e.ts).
 test.use({ storageState: sessionState("funds") });
@@ -19,10 +20,11 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
   let fundUrl = "";
 
   await test.step("the fund is created from the form, with its debit and its two fees", async () => {
-    await page.goto("/funds");
-    await expect(page.getByRole("heading", { name: "No pension funds" })).toBeVisible();
-    await page.getByRole("link", { name: "Add fund" }).first().click();
-    await expect(page).toHaveURL(/\/funds\/new$/);
+    // No fund yet: «Pension funds» is not a group of the home (R5b), and «Add investment» offers it.
+    await page.goto("/investments");
+    await expect(page.getByTestId("portfolio-group-pension_funds")).toHaveCount(0);
+    await addFund(page);
+    await expect(page).toHaveURL(/\/investments\/new-fund$/);
     const form = page.getByTestId("fund-wizard");
     await form.getByLabel("Name").fill("Fideuram Piano Accumulo");
     await form.getByLabel("Provider").fill("Fideuram");
@@ -55,7 +57,7 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
 
     await expect(page).toHaveURL(/step=review$/);
     await form.getByRole("button", { name: "Create fund" }).click();
-    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Fideuram Piano Accumulo", level: 1 })).toBeVisible();
     fundUrl = page.url();
   });
@@ -97,11 +99,11 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
   });
 
   await test.step("the list shows the fund and the palette finds it", async () => {
-    await page.goto("/funds?preset=all");
-    const row = page.getByTestId("fund-home-row");
+    // R5b: the fund is a row of «Pension funds» on the Investments home, with its value today.
+    await page.goto(FUNDS);
+    const row = page.getByTestId("portfolio-group-pension_funds").getByTestId("portfolio-row");
     await expect(row).toContainText("Fideuram Piano Accumulo");
     await expect(row).toContainText("5.600,00 €");
-    await expect(row).toContainText("5.502,00 €");
     await page.getByRole("button", { name: /Search or jump to/ }).click();
     await page.getByRole("combobox", { name: /Search or jump to/ }).fill("fideur");
     await expect(page.getByRole("option", { name: /Fideuram Piano Accumulo/ })).toBeVisible();

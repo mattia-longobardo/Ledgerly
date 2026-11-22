@@ -843,5 +843,55 @@
     "file": "apps/web/src/app/(app)/navigation.test.ts",
     "decision": "R5b client (PERS-586)",
     "reason": "R5b, decisione B1b: la voce di menu «Funds» sparisce, i fondi pensione sono un gruppo di Investments"
+  },
+  {
+    "file": "tests/e2e/funds/a11y.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: via la home di Funds; si misura il chip «Fondi pensione» di Investments e le pagine dei fondi a /investments/{accountId}"
+  },
+  {
+    "file": "tests/e2e/funds/funds-detail.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: la pagina del fondo è a /investments/{accountId}; la home di Funds non c'è più, «Tutti» si confronta con list_funds e ogni periodo con i suoi tratti"
+  },
+  {
+    "file": "tests/e2e/funds/funds-home.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: via la home di Funds e le sue cifre; restano i redirect permanenti di /funds, /funds/{id} e /funds/new"
+  },
+  {
+    "file": "tests/e2e/funds/funds-new.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisioni B1b e B1c: «Fondo pensione» di «Aggiungi investimento», procedura a /investments/new-fund, il fondo si apre a /investments/{accountId}"
+  },
+  {
+    "file": "tests/e2e/funds/funds-payslip.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: il fondo è una riga di «Fondi pensione» in Investments, con il valore di oggi; la pagina è a /investments/{accountId}"
+  },
+  {
+    "file": "tests/e2e/funds/funds-settings.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: il fondo si trova dalla riga di «Fondi pensione» in Investments"
+  },
+  {
+    "file": "tests/e2e/funds/funds-tabs.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: il fondo si trova dalla riga di «Fondi pensione» in Investments; la vecchia pagina dei rendimenti resta solo con l'indirizzo /funds/{id}/returns"
+  },
+  {
+    "file": "tests/e2e/funds/funds.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisioni B1b e B1c: il fondo nasce da «Aggiungi investimento» ed è una riga di «Fondi pensione» in Investments"
+  },
+  {
+    "file": "tests/e2e/funds/keyboard.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: via la home di Funds e i suoi controlli da tastiera; il fondo si apre dalla riga di «Fondi pensione»"
+  },
+  {
+    "file": "tests/e2e/funds/mobile.spec.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: il fondo si trova dalla riga di «Fondi pensione» in Investments"
   }
 ]

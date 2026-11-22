@@ -3,6 +3,7 @@
 // person edits, on the funds of the `fundsSetup` seed — one fund per journey.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
+import { fundPath } from "./place";
 
 // The tests of this file change the data of one user, each from what the one before left: they run
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
@@ -11,15 +12,9 @@ test.describe.configure({ mode: "default" });
 const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
 const Y = Number(TODAY.slice(0, 4));
 
-/** The Settings tab of a fund, by its name: the id is read from the home, never written down. */
+/** The Settings tab of a fund, by its name: the address is read from the home, never written down. */
 async function openSettings(page: Page, name: string): Promise<string> {
-  await page.goto("/funds?preset=all");
-  const href = await page
-    .getByRole("link", { name, exact: true })
-    .filter({ visible: true })
-    .first()
-    .getAttribute("href");
-  const path = href!.split("?")[0];
+  const path = await fundPath(page, name, "?preset=all");
   await page.goto(`${path}?tab=settings`);
   await expect(page.getByTestId("fund-sources")).toBeVisible();
   return path;

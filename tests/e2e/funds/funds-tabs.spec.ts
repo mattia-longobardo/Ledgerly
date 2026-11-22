@@ -4,26 +4,17 @@
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
 import { THIS_YEAR } from "../_shared/helpers";
+import { FUNDS as HOME, fundPath, fundsList } from "./place";
 
 // The tests of this file change the data of one user, each from what the one before left: they run
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
 test.describe.configure({ mode: "default" });
 
-const HOME = "/funds";
 const Y = THIS_YEAR;
 
 test.describe("the tabs", () => {
   test.use({ storageState: sessionState("fundsDetail") });
 
-  async function fundPath(page: Page, name: string): Promise<string> {
-    await page.goto(HOME);
-    const href = await page
-      .getByTestId("fund-home-row")
-      .filter({ hasText: name })
-      .getByRole("link", { name })
-      .getAttribute("href");
-    return href!.split("?")[0];
-  }
   /** A loading skeleton is a `<main>` too, and it says nothing about the page. */
   const main = (page: Page) => page.locator('main:not([data-testid$="-loading"])');
   const periodControl = (page: Page) => page.getByRole("group", { name: "Date range" }).first();
@@ -159,9 +150,9 @@ test.describe("the tabs", () => {
   test("a returns address with no fund in it answers 404, and a span that is no span is ignored", async ({
     page,
   }) => {
-    const bad = await page.request.get(`${HOME}/not%0D%0Aan-id/returns`, { maxRedirects: 0 });
+    const bad = await page.request.get(`/funds/not%0D%0Aan-id/returns`, { maxRedirects: 0 });
     expect(bad.status()).toBe(404);
-    const euro = await page.request.get(`${HOME}/%E2%82%AC/returns`, { maxRedirects: 0 });
+    const euro = await page.request.get(`/funds/%E2%82%AC/returns`, { maxRedirects: 0 });
     expect(euro.status()).toBe(404);
     const path = await fundPath(page, "Piano Uno");
     await page.goto(`${path}?span=99999999999`);
@@ -172,12 +163,15 @@ test.describe("the tabs", () => {
 
   test("the old returns page goes to Values, with its period", async ({ page }) => {
     const path = await fundPath(page, "Piano Uno");
-    await page.goto(`${path}/returns?off=1`);
+    // The returns page has only its old address, by the fund's id: it ends on the fund's page (R5b).
+    const id = (await fundsList(page)).find((fund) => fund.name === "Piano Uno")!.id;
+    const returns = `/funds/${id}/returns`;
+    await page.goto(`${returns}?off=1`);
     await expect(page).toHaveURL(new RegExp(`${path}\\?tab=valuations&off=1$`));
     await expect(page.getByTestId("fund-valuations")).toBeVisible();
-    await page.goto(`${path}/returns?span=60`);
+    await page.goto(`${returns}?span=60`);
     await expect(page).toHaveURL(new RegExp(`${path}\\?tab=valuations&preset=all$`));
-    await page.goto(`${path}/returns?from=${Y - 1}-01&to=${Y - 1}-03`);
+    await page.goto(`${returns}?from=${Y - 1}-01&to=${Y - 1}-03`);
     await expect(page).toHaveURL(new RegExp(`from=${Y - 1}-01-01&to=${Y - 1}-03-31`));
   });
 
@@ -235,13 +229,7 @@ test.describe("the tabs", () => {
     test("an exit is in the register with a minus sign, and the gain does not fall by its amount", async ({
       page,
     }) => {
-      await page.goto(`${HOME}?preset=all`);
-      const href = await page
-        .getByTestId("fund-home-row")
-        .filter({ hasText: "Fondo Uscita" })
-        .getByRole("link", { name: "Fondo Uscita" })
-        .getAttribute("href");
-      const path = href!.split("?")[0];
+      const path = await fundPath(page, "Fondo Uscita");
       const gain = async () => {
         await page.goto(`${path}?preset=all`);
         return BigInt((await page.getByTestId("funds-hero").getAttribute("data-cents")) || "0");
@@ -342,7 +330,7 @@ test.describe("the tabs", () => {
         }
 
         test("the home has no technical word", async ({ page }) => {
-          await page.goto(`${HOME}?preset=all`);
+          await page.goto(`${HOME}&preset=all`);
           await expect(main(page)).toBeVisible();
           expect(await main(page).innerText()).not.toMatch(WORDS[language]);
         });

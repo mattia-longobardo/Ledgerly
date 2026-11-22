@@ -3,6 +3,7 @@
 // kind, nothing written before "Create fund".
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
+import { addFund } from "./place";
 
 const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
 const Y = Number(TODAY.slice(0, 4));
@@ -27,7 +28,7 @@ test.describe("the form", () => {
   test.describe.configure({ mode: "serial" });
 
   test("the four steps are walked with the keyboard only, and the fund is created", async ({ page }) => {
-    await page.goto("/funds/new");
+    await page.goto("/investments/new-fund");
     await expect(step(page, "fund")).toBeVisible();
     const steps = page.getByRole("list", { name: "Steps" });
     await expect(steps.locator('[aria-current="step"]')).toContainText("The fund");
@@ -46,7 +47,7 @@ test.describe("the form", () => {
     await page.keyboard.press("Enter");
 
     // Step 2. The focus is on the step's heading; Space switches a source on and keeps the focus.
-    await expect(page).toHaveURL(/\/funds\/new\?step=sources$/);
+    await expect(page).toHaveURL(/\/investments\/new-fund\?step=sources$/);
     await expect(page.getByRole("heading", { name: "How you pay in", level: 2 })).toBeFocused();
     await expect(steps.locator('[aria-current="step"]')).toContainText("How you pay in");
     await expect(steps.getByRole("link", { name: /The fund/ })).toContainText("done");
@@ -75,7 +76,7 @@ test.describe("the form", () => {
     await tabTo(page, step(page, "review").getByRole("button", { name: "Create fund" }));
     await page.keyboard.press("Enter");
 
-    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Fondo Tastiera", level: 1 })).toBeVisible();
     await expect(page.getByText("Fund created")).toBeVisible();
     // "One-off payments" puts "Record contribution" at the top of the fund's page.
@@ -83,9 +84,8 @@ test.describe("the form", () => {
   });
 
   test("with the first step alone the fund is created and its page opens", async ({ page }) => {
-    await page.goto("/funds");
-    await page.getByRole("link", { name: "Add fund" }).first().click();
-    await expect(page).toHaveURL(/\/funds\/new$/);
+    await addFund(page);
+    await expect(page).toHaveURL(/\/investments\/new-fund$/);
     // No dialog and no fund kind any more.
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(form(page).getByRole("button", { name: /PAC|Pension fund|Accumulation/ })).toHaveCount(0);
@@ -109,7 +109,7 @@ test.describe("the form", () => {
     await expect(review).toContainText("No fees.");
     await review.getByRole("button", { name: "Create fund" }).click();
 
-    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Fondo Minimo", level: 1 })).toBeVisible();
     // A fund just created: its two first steps, and nothing a source would add.
     await expect(page.getByTestId("fund-first-steps")).toBeVisible();
@@ -121,7 +121,7 @@ test.describe("the form", () => {
   });
 
   test("a second fund with the same name is refused on the first step", async ({ page }) => {
-    await page.goto("/funds/new");
+    await page.goto("/investments/new-fund");
     await form(page).getByLabel("Name").fill("Fondo Minimo");
     await form(page)
       .getByLabel("Member since")
@@ -131,14 +131,14 @@ test.describe("the form", () => {
     await step(page, "fees").getByRole("button", { name: "Skip for now" }).click();
     await step(page, "review").getByRole("button", { name: "Create fund" }).click();
     // Back on step 1, under the name, with the focus on it.
-    await expect(page).toHaveURL(/\/funds\/new(\?step=fund)?$/);
+    await expect(page).toHaveURL(/\/investments\/new-fund(\?step=fund)?$/);
     await expect(step(page, "fund")).toContainText("A fund with that name already exists.");
     await expect(form(page).getByLabel("Name")).toBeFocused();
   });
 
   test("an address past the first step, with nothing written, goes back to it", async ({ page }) => {
-    await page.goto("/funds/new?step=review");
-    await expect(page).toHaveURL(/\/funds\/new\?step=fund$/);
+    await page.goto("/investments/new-fund?step=review");
+    await expect(page).toHaveURL(/\/investments\/new-fund\?step=fund$/);
     await expect(step(page, "fund")).toBeVisible();
     await expect(step(page, "review")).toBeHidden();
   });
@@ -146,7 +146,7 @@ test.describe("the form", () => {
   test("with the three sources and two fees the summary has a line per choice, and the fund shows them", async ({
     page,
   }) => {
-    await page.goto("/funds/new");
+    await page.goto("/investments/new-fund");
     await form(page).getByLabel("Name").fill("Fondo Completo");
     await form(page).getByLabel("Provider").fill("Esempio Previdenza");
     await form(page).getByLabel("Line or compartment").fill("Bilanciata");
@@ -243,7 +243,7 @@ test.describe("the form", () => {
     await review.getByRole("button", { name: "Create fund" }).click();
 
     // The fund's page shows the same choices.
-    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/);
+    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]{36}$/);
     const path = new URL(page.url()).pathname;
     await expect(page.getByRole("heading", { name: "Fondo Completo", level: 1 })).toBeVisible();
     await expect(page.getByTestId("fund-meta")).toContainText("Esempio Previdenza · Bilanciata");
@@ -281,7 +281,7 @@ test.describe("the payslip already feeds another fund", () => {
   test.use({ storageState: sessionState("fundsSetup") });
 
   test("its components are disabled in step 2, each with the fund that holds it", async ({ page }) => {
-    await page.goto("/funds/new");
+    await page.goto("/investments/new-fund");
     await form(page).getByLabel("Name").fill("Fondo Secondo");
     await form(page)
       .getByLabel("Member since")
@@ -294,10 +294,10 @@ test.describe("the payslip already feeds another fund", () => {
     }
     await expect(components.getByText("Already assigned to “Fondo Busta”")).toHaveCount(3);
     // Nothing was written: the form is left with its own "Leave" question.
-    await page.getByRole("banner").getByRole("link", { name: "Funds" }).click();
+    await page.getByRole("banner").getByRole("link", { name: "Investments" }).click();
     const leave = page.getByRole("dialog", { name: "Leave without creating the fund?" });
     await leave.getByRole("button", { name: "Leave" }).click();
-    await expect(page).toHaveURL(/\/funds$/);
+    await expect(page).toHaveURL(/\/investments$/);
     await expect(page.getByRole("link", { name: "Fondo Secondo" })).toHaveCount(0);
   });
 });

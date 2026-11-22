@@ -2,6 +2,7 @@
 // `mobile` of playwright.config.ts runs every `mobile.spec.ts`).
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
+import { fundPath } from "./place";
 import { LAST_YEAR } from "../_shared/helpers";
 
 /**
@@ -17,7 +18,7 @@ test.describe("the form of a fund on a phone", () => {
   test("each step fits the screen, with the step's command first and as wide as the card", async ({
     page,
   }) => {
-    await page.goto("/funds/new");
+    await page.goto("/investments/new-fund");
     const form = page.getByTestId("fund-wizard");
     const card = (name: string) => page.getByTestId(`wizard-step-${name}`);
     const steps = page.getByRole("list", { name: "Steps" });
@@ -79,13 +80,7 @@ test.describe("a fund's page on a phone", () => {
 
   for (const fund of ["Piano Uno", "Pensione Beta"]) {
     test(`${fund}: the four tabs are on one row, and no tab scrolls the page sideways`, async ({ page }) => {
-      await page.goto("/funds?preset=all");
-      const href = await page
-        .getByTestId("fund-home-item")
-        .filter({ hasText: fund })
-        .getByRole("link", { name: fund })
-        .getAttribute("href");
-      const path = href!.split("?")[0];
+      const path = await fundPath(page, fund, "?preset=all");
       await page.goto(path);
       const tabs = page.getByRole("navigation", { name: "Fund" });
       const tops: number[] = [];

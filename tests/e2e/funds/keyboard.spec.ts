@@ -3,91 +3,20 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { dialogHasFocus, focused, focusIsVisible, focusOn } from "../_shared/keyboard";
 import { sessionState } from "../_shared/env";
-import { LAST_YEAR, THIS_YEAR } from "../_shared/helpers";
+import { LAST_YEAR } from "../_shared/helpers";
+import { FUNDS, fundLink, fundPath } from "./place";
 
 test.use({ storageState: sessionState("layout") });
-
-test.describe("the Funds home", () => {
-  test.use({ storageState: sessionState("fundsHome") });
-
-  test("the period, the chart's view, a fund's name and its value are walked from the keyboard", async ({
-    page,
-  }) => {
-    await page.goto("/funds");
-
-    const period = page.getByRole("group", { name: "Date range" });
-    await focusOn(period.getByRole("link", { name: "Year to date" }));
-    expect(await focusIsVisible(page), "the Year link draws no ring").toBe(true);
-    await page.keyboard.press("Tab");
-    await expect(period.getByRole("link", { name: "All" })).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/funds\?preset=all$/);
-
-    const value = page
-      .getByRole("group", { name: "What the chart shows" })
-      .getByRole("link", { name: "Value" });
-    await focusOn(value);
-    expect(await focusIsVisible(page), "the Value link draws no ring").toBe(true);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/preset=all&view=value|view=value&preset=all/);
-
-    // The stepper keeps the chart's view from one year to the next.
-    await page.goto("/funds?view=value");
-    const stepper = page.getByRole("group", { name: "Date range" });
-    await focusOn(stepper.getByRole("link", { name: "Previous period" }));
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/off=\d+/);
-    await expect(page).toHaveURL(/view=value/);
-
-    // A row's series toggle, its name and its action are three stops, each with its ring.
-    await page.goto("/funds");
-    const row = page.getByTestId("fund-home-row").filter({ hasText: "Piano Beta" });
-    const toggle = row.getByRole("button", { name: /Highlight Piano Beta/ });
-    await focusOn(toggle);
-    expect(await focusIsVisible(page), "the series toggle draws no ring").toBe(true);
-    await page.keyboard.press("Enter");
-    await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    await page.keyboard.press("Tab");
-    await expect(row.getByRole("link", { name: "Piano Beta" })).toBeFocused();
-    expect(await focusIsVisible(page), "the fund's name draws no ring").toBe(true);
-
-    const record = row.getByRole("button", { name: "Update value" });
-    await focusOn(record);
-    expect(await focusIsVisible(page), "the action draws no ring").toBe(true);
-    await page.keyboard.press("Enter");
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
-    await expect(record, "closing the dialog did not give the focus back").toBeFocused();
-  });
-
-  test("a year of Year by year opens from the keyboard", async ({ page }) => {
-    await page.goto("/funds?preset=all");
-    const year = THIS_YEAR - 3;
-    const link = page
-      .getByTestId("year-row")
-      .getByRole("link", { name: `Open ${year}` })
-      .first();
-    await focusOn(link);
-    expect(await focusIsVisible(page), "the year's link draws no ring").toBe(true);
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/off=3$/);
-  });
-});
 
 test.describe("a fund's new page", () => {
   test.use({ storageState: sessionState("fundsDetail") });
 
   test("the fund, its tabs, its period and its projection are walked from the keyboard", async ({ page }) => {
-    await page.goto("/funds");
-    const name = page
-      .getByTestId("fund-home-row")
-      .filter({ hasText: "Pensione Beta" })
-      .getByRole("link", { name: "Pensione Beta" });
+    await page.goto(FUNDS);
+    const name = fundLink(page, "Pensione Beta");
     await focusOn(name);
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/funds\/[0-9a-f-]+$/);
+    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]+$/);
 
     const period = page.getByRole("group", { name: "Date range" });
     const all = period.getByRole("link", { name: "All" });
@@ -121,13 +50,7 @@ test.describe("a fund's new page", () => {
     ["Pensione Beta", "Values", "valuations"],
   ] as const) {
     test(`${fund}: ${tab}, its period and its controls are walked from the keyboard`, async ({ page }) => {
-      await page.goto("/funds");
-      const href = await page
-        .getByTestId("fund-home-row")
-        .filter({ hasText: fund })
-        .getByRole("link", { name: fund })
-        .getAttribute("href");
-      await page.goto(href!);
+      await page.goto(await fundPath(page, fund));
 
       const link = page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: tab });
       await focusOn(link);
@@ -159,13 +82,7 @@ test.describe("a fund's new page", () => {
 test.describe("a fund's dialogs and the form that creates one", () => {
   /** A tab of one of `layout`'s funds, by the fund's name. */
   async function openFund(page: Page, name: string, query: string): Promise<void> {
-    await page.goto("/funds?preset=all");
-    const href = await page
-      .getByTestId("fund-home-row")
-      .filter({ hasText: name })
-      .getByRole("link", { name })
-      .getAttribute("href");
-    await page.goto(`${href!.split("?")[0]}${query}`);
+    await page.goto(`${await fundPath(page, name, "?preset=all")}${query}`);
   }
 
   /** Still in the dialog, or on one of the stops Base UI's trap crosses on its way round. */
@@ -297,7 +214,7 @@ test.describe("a fund's dialogs and the form that creates one", () => {
   test("the form: every stop draws a ring, a step gives the focus to its heading, Escape does nothing", async ({
     page,
   }) => {
-    await page.goto("/funds/new");
+    await page.goto("/investments/new-fund");
     const form = page.getByTestId("fund-wizard");
     const step = (name: string) => page.getByTestId(`wizard-step-${name}`);
 

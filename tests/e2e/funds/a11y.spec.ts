@@ -12,45 +12,33 @@ import {
   settledDialog,
 } from "../_shared/a11y";
 import { THIS_YEAR } from "../_shared/helpers";
+import { FUNDS } from "./place";
 
 const PAGES: Screen[] = [
-  { name: "/funds", session: "layout", smoke: true, open: go("/funds"), everyWidth: true },
+  // The pension funds are a group of Investments since R5b (decision B1b): its chip is the old home.
+  {
+    name: "/investments?group=pension_funds",
+    session: "layout",
+    smoke: true,
+    open: go(FUNDS),
+    everyWidth: true,
+  },
   // The form "Add pension fund" (release N6), at each of its four steps.
   ...(["fund", "sources", "fees", "review"] as const).map((step): Screen => ({
-    name: `/funds/new?step=${step}`,
+    name: `/investments/new-fund?step=${step}`,
     session: "layout",
     open: (page) => fundForm(page, step),
     everyWidth: step === "fund",
   })),
-  // The seeded `layout` has years of its own: one measured and one with money and no value.
   ...(
     [
-      ["last year", `?off=1`],
-      ["a year with money and no value", `?off=2`],
-      ["All", "?preset=all"],
+      ["the year running", "fundsHome", ""],
+      ["last year", "fundsHome", "&off=1"],
     ] as const
-  ).map(([what, query]): Screen => ({
-    name: `/funds, as \`layout\`, ${what}`,
-    session: "layout",
-    open: go(`/funds${query}`),
-  })),
-  ...(
-    [
-      ["the year running", ""],
-      ["the value chart", "?view=value"],
-      ["All, with the years", "?preset=all"],
-      ["All, the value chart", "?preset=all&view=value"],
-      ["a measured year", `?off=3`],
-      ["a year with money and no value", `?off=2`],
-      ["a year with nothing", `?off=1`],
-      ["a year with payslips alone", `?off=4`],
-      ["a year before the data", `?off=9`],
-      ["a custom period", `?from=${THIS_YEAR - 3}-01-01&to=${THIS_YEAR - 3}-03-31`],
-    ] as const
-  ).map(([what, query]): Screen => ({
-    name: `/funds, ${what}`,
-    session: "fundsHome",
-    open: go(`/funds${query}`),
+  ).map(([what, session, query]): Screen => ({
+    name: `/investments?group=pension_funds, ${what}`,
+    session,
+    open: go(`${FUNDS}${query}`),
   })),
   ...(["Piano Uno", "Pensione Beta"] as const).flatMap((fund) =>
     (
@@ -70,10 +58,10 @@ const PAGES: Screen[] = [
         ["Settings", "?tab=settings"],
       ] as const
     ).map(([what, query]): Screen => ({
-      name: `/funds/[id], ${fund}, ${what}`,
+      name: `/investments/[accountId], a fund, ${fund}, ${what}`,
       session: "fundsDetail",
       open: async (page) => {
-        await follow(page, "/funds", new RegExp(`^${fund}$`));
+        await follow(page, FUNDS, new RegExp(`^${fund}$`));
         await page.goto(`${new URL(page.url()).pathname}${query}`);
         await settled(page);
       },
@@ -87,10 +75,10 @@ const PAGES: Screen[] = [
       ["Values, a year of payslips alone", `?tab=valuations&off=4`],
     ] as const
   ).map(([what, query]): Screen => ({
-    name: `/funds/[id], ${what}`,
+    name: `/investments/[accountId], a fund, ${what}`,
     session: "fundsHome",
     open: async (page) => {
-      await follow(page, "/funds", /^Pensione Alfa$/);
+      await follow(page, FUNDS, /^Pensione Alfa$/);
       await page.goto(`${new URL(page.url()).pathname}${query}`);
       await settled(page);
     },
@@ -112,7 +100,7 @@ const PAGES: Screen[] = [
         ["Settings", "?tab=settings"],
       ] as const
     ).map(([tab, query]): Screen => ({
-      name: `/funds/[id], ${what}, ${tab}`,
+      name: `/investments/[accountId], a fund, ${what}, ${tab}`,
       session: "layout",
       open: (page) => layoutFund(page, fund, query),
       everyWidth: what === "Cometa, fed by the payslip" && tab === "Overview",
@@ -127,10 +115,10 @@ const PAGES: Screen[] = [
       ["Settings", "?tab=settings"],
     ] as const
   ).map(([tab, query]): Screen => ({
-    name: `/funds/[id], a fund with no source, ${tab}`,
+    name: `/investments/[accountId], a fund, a fund with no source, ${tab}`,
     session: "fundsSetup",
     open: async (page) => {
-      await follow(page, "/funds?preset=all", /^Fondo Vuoto$/);
+      await follow(page, `${FUNDS}&preset=all`, /^Fondo Vuoto$/);
       await page.goto(`${new URL(page.url()).pathname}${query}`);
       await settled(page);
     },

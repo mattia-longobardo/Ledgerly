@@ -4,43 +4,32 @@
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
 import { THIS_YEAR } from "../_shared/helpers";
+import { cents, FUNDS as HOME, fundLink, fundPath, fundsList } from "./place";
 
-const HOME = "/funds";
 const Y = THIS_YEAR;
 
 test.describe("a fund's page", () => {
   test.use({ storageState: sessionState("fundsDetail") });
 
-  const row = (page: Page, name: string) => page.getByTestId("fund-home-row").filter({ hasText: name });
   const hero = (page: Page) => page.getByTestId("funds-hero");
-
-  /** The fund's own address, read from its link in the home. */
-  async function fundPath(page: Page, name: string): Promise<string> {
-    await page.goto(HOME);
-    const href = await row(page, name).getByRole("link", { name }).getAttribute("href");
-    return href!.split("?")[0];
-  }
 
   for (const name of ["Piano Uno", "Pensione Beta"]) {
     for (const query of ["", `?off=1`, `?off=2`, "?preset=all"]) {
-      // One test for the two checks of a period (funds-tabs had the second one on the same funds
-      // and the same periods): the page against the home, then its stretches against the page.
-      test(`${name}: the same gain and the same return as the home, and Σ of the stretches = the gain, ${query || "the year running"}`, async ({
+      // The Funds home that the page was held to went in R5b (B1b): «All» is held to `list_funds`,
+      // which gives the gain since the fund started, and every period to the page's own stretches.
+      test(`${name}: Σ of the stretches = the gain${query === "?preset=all" ? ", the gain of list_funds" : ""}, ${query || "the year running"}`, async ({
         page,
       }) => {
-        await page.goto(`${HOME}${query}`);
-        const home = row(page, name);
-        const cents = await home.getByTestId("fund-gain").getAttribute("data-cents");
-        const rate = await home.getByTestId("fund-rate").textContent();
-        const paid = await home.locator("td").nth(1).textContent();
-        await home.getByRole("link", { name }).click();
-        await expect(page).toHaveURL(new RegExp(`/funds/[0-9a-f-]+${query.replace("?", "\\?")}$`));
-        await expect(hero(page)).toHaveAttribute("data-cents", cents!);
-        await expect(page.getByTestId("funds-rate")).toHaveText(rate!);
-        await expect(page.getByTestId("kpi-paid")).toContainText(paid!);
+        const path = await fundPath(page, name, query);
+        await fundLink(page, name).click();
+        await expect(page).toHaveURL(new RegExp(`/investments/[0-9a-f-]+${query.replace("?", "\\?")}$`));
+        expect(new URL(page.url()).pathname).toBe(path);
+        const gain = BigInt((await hero(page).getAttribute("data-cents")) || "0");
+        if (query === "?preset=all") {
+          const fund = (await fundsList(page)).find((one) => one.name === name)!;
+          expect(gain).toBe(cents(fund.gain!));
+        }
 
-        const path = new URL(page.url()).pathname;
-        const gain = BigInt((await page.getByTestId("funds-hero").getAttribute("data-cents")) || "0");
         await page.goto(`${path}${query}${query ? "&" : "?"}tab=valuations`);
         // The tab draws its lines once `/api/v1` answers: the card is there with them.
         await page.getByTestId("fund-valuations").waitFor();
@@ -68,8 +57,8 @@ test.describe("a fund's page", () => {
   test("the period stays from the home to the fund, from tab to tab, and back to the home", async ({
     page,
   }) => {
-    await page.goto(`${HOME}?off=1`);
-    await row(page, "Piano Uno").getByRole("link", { name: "Piano Uno" }).click();
+    await page.goto(`${HOME}&off=1`);
+    await fundLink(page, "Piano Uno").click();
     await expect(page).toHaveURL(new RegExp(`off=1$`));
     await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
     const tabs = page.getByRole("navigation", { name: "Fund" });
@@ -79,8 +68,9 @@ test.describe("a fund's page", () => {
     await expect(page).toHaveURL(new RegExp(`off=1`));
     await tabs.getByRole("link", { name: "Overview" }).click();
     await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
-    await page.locator(`header a[href="${HOME}?off=1"]`).click();
-    await expect(page).toHaveURL(new RegExp(`/funds\\?off=1$`));
+    // The parent is Investments now (R5b), with the period.
+    await page.locator(`header a[href="/investments?off=1"]`).click();
+    await expect(page).toHaveURL(new RegExp(`/investments\\?off=1$`));
     await expect(page.locator('[data-testid="period-text"] summary')).toHaveText(String(Y - 1));
   });
 
@@ -218,14 +208,13 @@ test.describe("a fund's page", () => {
     const other = await browser.newContext({ storageState: sessionState("fundsHome") });
     const theirs = await other.newPage();
     await theirs.goto(HOME);
-    const href = await row(theirs, "Piano Beta")
-      .getByRole("link", { name: "Piano Beta" })
-      .getAttribute("href");
+    const href = await fundLink(theirs, "Piano Beta").getAttribute("href");
     expect((await theirs.goto(href!))?.status()).toBe(200);
     await other.close();
     expect((await page.goto(href!))?.status()).toBe(404);
     await expect(page.getByTestId("funds-hero")).toHaveCount(0);
-    expect((await page.goto(`${HOME}/not-a-fund`))?.status()).toBe(404);
+    expect((await page.goto("/funds/not-a-fund"))?.status()).toBe(404);
+    expect((await page.goto("/investments/not-an-account"))?.status()).toBe(404);
   });
 
   test.describe("a fund with no value in the year running", () => {
@@ -233,11 +222,7 @@ test.describe("a fund's page", () => {
 
     test("no value yet, never zero: the last one with its date, and the action", async ({ page }) => {
       await page.goto(HOME);
-      await page
-        .getByTestId("fund-home-row")
-        .filter({ hasText: "Pensione Alfa" })
-        .getByRole("link", { name: "Pensione Alfa" })
-        .click();
+      await fundLink(page, "Pensione Alfa").click();
       await expect(hero(page)).toHaveAttribute("data-cents", "");
       await expect(hero(page)).toHaveText(`No value yet in ${Y}`);
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
@@ -247,35 +232,27 @@ test.describe("a fund's page", () => {
     test("an archived fund: its badge, its gain, and a last value that is not held today", async ({
       page,
     }) => {
-      await page.goto(`${HOME}?preset=all`);
-      const gamma = page.getByTestId("fund-home-row").filter({ hasText: "Piano Gamma" });
-      const cents = await gamma.getByTestId("fund-gain").getAttribute("data-cents");
-      await gamma.getByRole("link", { name: "Piano Gamma" }).click();
-      await expect(hero(page)).toHaveAttribute("data-cents", cents!);
+      // An archived fund is no row of the home (R5b): its old address leads to its page, and its gain
+      // since the start is the one of `list_funds`.
+      const gamma = (await fundsList(page)).find((one) => one.name === "Piano Gamma")!;
+      await page.goto(`/funds/${gamma.id}?preset=all`);
+      await expect(hero(page)).toHaveAttribute("data-cents", String(cents(gamma.gain!)));
       await expect(page.locator("h1")).toContainText("Archived");
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
       await expect(page.getByRole("button", { name: "Update value" })).toHaveCount(0);
     });
 
     test("a past year with no value: the last one known, and today's", async ({ page }) => {
-      await page.goto(`${HOME}?off=1`);
-      await page
-        .getByTestId("fund-home-row")
-        .filter({ hasText: "Piano Beta" })
-        .getByRole("link", { name: "Piano Beta" })
-        .click();
+      await page.goto(`${HOME}&off=1`);
+      await fundLink(page, "Piano Beta").click();
       await expect(hero(page)).toHaveText(`No value in ${Y - 1}`);
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
       await expect(page.getByTestId("fund-value-today")).toContainText("3.300,00");
     });
 
     test("a year of payslips alone: not determinable, with where to go", async ({ page }) => {
-      await page.goto(`${HOME}?off=4`);
-      await page
-        .getByTestId("payslips-only")
-        .getByRole("link", { name: `Open the contributions of ${Y - 4}` })
-        .click();
-      await expect(page).toHaveURL(new RegExp(`off=4`));
+      // The home's link to that year went with the Funds home (R5b): the fund's own tab.
+      await page.goto(`${await fundPath(page, "Pensione Alfa")}?tab=contributions&off=4`);
       await expect(page.getByTestId("fund-payslips")).toBeVisible();
       await page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Overview" }).click();
       await expect(hero(page)).toHaveText("Not determinable");
@@ -292,13 +269,7 @@ test.describe("a fund's page", () => {
     test("no payslip section, no debit section, and the two actions in the empty states", async ({
       page,
     }) => {
-      await page.goto(`${HOME}?preset=all`);
-      const href = await page
-        .getByRole("link", { name: "Fondo Vuoto", exact: true })
-        .filter({ visible: true })
-        .first()
-        .getAttribute("href");
-      const path = href!.split("?")[0];
+      const path = await fundPath(page, "Fondo Vuoto", "?preset=all");
       const banner = page.getByRole("banner");
 
       await test.step("Overview: the first steps, and nothing a source would add", async () => {
@@ -376,13 +347,7 @@ test.describe("a fund's page", () => {
 
   test("the phone has the same controls", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(HOME);
-    const href = await page
-      .getByTestId("fund-home-item")
-      .filter({ hasText: "Pensione Beta" })
-      .getByRole("link", { name: "Pensione Beta" })
-      .getAttribute("href");
-    await page.goto(href!);
+    await page.goto(await fundPath(page, "Pensione Beta"));
     await expect(page.getByRole("group", { name: "Date range" }).first()).toBeVisible();
     await expect(
       page.getByRole("navigation", { name: "Fund" }).getByRole("link", { name: "Settings" }),

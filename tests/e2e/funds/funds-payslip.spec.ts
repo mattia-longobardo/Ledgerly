@@ -7,6 +7,7 @@ import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../../../test/fixtu
 import { twinPdf } from "../../../test/fixtures/payroll/twin";
 import { sessionState } from "../_shared/env";
 import { LAST_YEAR } from "../_shared/helpers";
+import { addFund, FUNDS, fundLink, fundPath } from "./place";
 
 /** The twins are dated 2031, and a fund's pages read nothing after today: last year, every day of it past. */
 const lastYear = <T>(twin: T): T =>
@@ -61,9 +62,8 @@ test.describe("a fund fed by the payslip", () => {
     });
 
     await test.step("the fund is created and publishes what the payslips accrued", async () => {
-      await page.goto("/funds");
       // One form for every fund (release N6): the payslip is a source chosen in its second step.
-      await page.getByRole("link", { name: "Add fund" }).first().click();
+      await addFund(page);
       const form = page.getByTestId("fund-wizard");
       await form.getByLabel("Name").fill("Cometa");
       await form.getByLabel("Provider").fill("Cometa");
@@ -83,7 +83,7 @@ test.describe("a fund fed by the payslip", () => {
       await sources.getByRole("button", { name: "Continue" }).click();
       await page.getByTestId("wizard-step-fees").getByRole("button", { name: "Skip for now" }).click();
       await page.getByTestId("wizard-step-review").getByRole("button", { name: "Create fund" }).click();
-      await expect(page).toHaveURL(/\/funds\/[0-9a-f-]{36}$/);
+      await expect(page).toHaveURL(/\/investments\/[0-9a-f-]{36}$/);
       fundUrl = page.url();
       await expect(page.getByRole("heading", { name: "Cometa", level: 1 })).toBeVisible();
       // 4 × (25,00 + 45,00 + 150,00) + the 13th's 5,00 = 885,00 € accrued, nothing credited yet.
@@ -201,19 +201,18 @@ test.describe("a fund fed by the payslip", () => {
     });
 
     await test.step("the list shows the fund", async () => {
-      await page.goto(`/funds?off=1`);
-      const row = page.getByTestId("fund-home-row").filter({ hasText: "Cometa" });
+      // R5b: a row of «Pension funds» on the Investments home, with its value today.
+      await page.goto(FUNDS);
+      const row = page.getByTestId("portfolio-row").filter({ hasText: "Cometa" });
       await expect(row).toContainText("950,00 €");
-      await expect(row).toContainText("890,32 €");
     });
   });
 
   test("the fund reads at 400 px", async ({ page }) => {
     await page.setViewportSize({ width: 400, height: 900 });
-    await page.goto(`/funds?off=1`);
-    const item = page.getByTestId("fund-home-item").filter({ hasText: "Cometa" });
-    await expect(item).toBeVisible();
-    await item.getByRole("link", { name: "Cometa" }).click();
+    await page.goto(`${FUNDS}&off=1`);
+    await expect(fundLink(page, "Cometa")).toBeVisible();
+    await fundLink(page, "Cometa").click();
     await expect(page.getByRole("heading", { name: "Cometa", level: 1 })).toBeVisible();
     await expect(page.getByText("950,00 €").first()).toBeVisible();
     await expect(page.getByTestId("fund-bridge")).toBeVisible();
@@ -225,12 +224,8 @@ test.describe("a fund fed by the payslip", () => {
   // The assertion of the journey of before N6 ("the quarters reconcile"): January's payslip accrues
   // the enrolment quota in the first quarter, and the enrolment written by hand names that quarter.
   test("the quarter with the enrolment quota reconciles", async ({ page }) => {
-    await page.goto(`/funds?off=1`);
-    await page
-      .getByTestId("fund-home-row")
-      .filter({ hasText: "Cometa" })
-      .getByRole("link", { name: "Cometa" })
-      .click();
+    await page.goto(`${FUNDS}&off=1`);
+    await fundLink(page, "Cometa").click();
     await tab(page, "Contributions").click();
     const first = page.getByTestId("quarter-line").filter({ hasText: `Q1 ${LAST_YEAR}` });
     await expect(first).toBeVisible();
@@ -244,13 +239,7 @@ test.describe("a quarter the payslips accrued, with no enrolment quota", () => {
   test.use({ storageState: sessionState("fundsSetup") });
 
   test("a contribution from the payslip, written by hand, reconciles the period", async ({ page }) => {
-    await page.goto("/funds?preset=all");
-    const href = await page
-      .getByTestId("fund-home-row")
-      .filter({ hasText: "Fondo Busta" })
-      .getByRole("link", { name: "Fondo Busta" })
-      .getAttribute("href");
-    await page.goto(`${href!.split("?")[0]}?tab=contributions&preset=all`);
+    await page.goto(`${await fundPath(page, "Fondo Busta")}?tab=contributions&preset=all`);
     const quarter = page.getByTestId("quarter-line").filter({ hasText: `Q1 ${LAST_YEAR}` });
     await expect(quarter).toContainText("accrued 360,00 € · in the fund —");
     await expect(quarter).not.toContainText("Reconciled");
@@ -306,13 +295,7 @@ test.describe("what a document left before release N6", () => {
   test.use({ storageState: sessionState("layout") });
 
   test("the statements already read are read only, with no link to a file", async ({ page }) => {
-    await page.goto(`/funds?off=1`);
-    const href = await page
-      .getByTestId("fund-home-row")
-      .filter({ hasText: "Cometa" })
-      .getByRole("link", { name: "Cometa" })
-      .getAttribute("href");
-    const path = href!.split("?")[0];
+    const path = await fundPath(page, "Cometa");
 
     await page.goto(`${path}?tab=valuations&preset=all`);
     const statements = page.getByTestId("fund-statements");
