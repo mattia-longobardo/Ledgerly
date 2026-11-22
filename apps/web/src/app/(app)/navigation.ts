@@ -69,7 +69,8 @@ export function navFor(role: Role, addons?: readonly AddonId[]): NavItem[] {
   return NAV_ITEMS.filter((entry) => (!entry.adminOnly || role === "admin") && isOn(entry.addon, addons));
 }
 
-type SettingsTabId = "profile" | "security" | "finance" | "plugins" | "data" | "users" | "server";
+type SettingsTabId =
+  "profile" | "security" | "finance" | "plugins" | "addons" | "notifications" | "data" | "users" | "server";
 
 interface SettingsTab {
   id: SettingsTabId;
@@ -80,13 +81,15 @@ interface SettingsTab {
 
 /**
  * The single list of the pages of Settings (audit UI-NAV-2): the tabs and the palette derive from it.
- * Finance and Plugins are decision D3's; Rules is a page of Finance.
+ * Finance and Plugins are decision D3's; Rules is a page of Finance. Addons is PA16's, Alerts R5e's.
  */
 const SETTINGS_TABS: readonly SettingsTab[] = [
   { id: "profile", href: "/settings/profile", adminOnly: false },
   { id: "security", href: "/settings/security", adminOnly: false },
   { id: "finance", href: "/settings/finance", adminOnly: false },
   { id: "plugins", href: "/settings/plugins", adminOnly: false },
+  { id: "addons", href: "/settings/addons", adminOnly: false },
+  { id: "notifications", href: "/settings/notifications", adminOnly: false },
   { id: "data", href: "/settings/data", adminOnly: false },
   { id: "users", href: "/settings/users", adminOnly: true },
   { id: "server", href: "/settings/server", adminOnly: true },

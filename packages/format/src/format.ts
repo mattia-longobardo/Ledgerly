@@ -28,6 +28,20 @@ export type NumberFormat = NumberFormatName | NumberStyle;
 export type UiLocale = "en" | "it";
 
 export const NULL_DISPLAY = "—";
+
+/** What an amount reads as while «Hide amounts» is on (R5e, D3): no digit, no sign, no currency. */
+export const AMOUNT_MASK = "•••••";
+
+let amountsMasked = false;
+
+/**
+ * Turns the mask of every amount on or off. Only the browser calls it, from the one component of
+ * «Hide amounts» (`@ledgerly/ui/hidden-amounts`): a server answers many people, and its mails keep
+ * their amounts (decision D1 of R5e). It changes the text only, never a figure.
+ */
+export function maskAmounts(hidden: boolean): void {
+  amountsMasked = hidden;
+}
 const MINUS = "−";
 const NBSP = " ";
 /** What an amount is in when the caller does not say: every value stored before D1 is in euro. */
@@ -153,6 +167,7 @@ export function formatMoney(
   options: { decimals?: boolean; signed?: boolean; currency?: string } = {},
 ): string {
   if (cents === null) return NULL_DISPLAY;
+  if (amountsMasked) return AMOUNT_MASK;
   const digits = options.decimals === false ? 0 : 2;
   const style = resolveStyle(format, options.currency);
   const { sign, body } = digitsOf(centsToDecimal(cents) as `${number}`, style, {
@@ -174,6 +189,7 @@ export function formatDecimalText(
   format: NumberFormat,
   options: { min?: number; max: number; currency?: string },
 ): string {
+  if (amountsMasked && options.currency !== undefined) return AMOUNT_MASK;
   const style = resolveStyle(format, options.currency);
   const { sign, body } = digitsOf(value as `${number}`, style, {
     minimumFractionDigits: options.min ?? 0,

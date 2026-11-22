@@ -15,7 +15,7 @@ import { paletteCommands } from "./palette-commands";
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
-  const [text, { weekStart }] = await Promise.all([getTranslations(), requirePreferences()]);
+  const [text, { weekStart, hideAmounts }] = await Promise.all([getTranslations(), requirePreferences()]);
   const links: NavLink[] = navFor(ctx.role, ctx.addons).map(
     ({ id, href, icon, group, mobile, labelKey }) => ({
       id,
@@ -30,6 +30,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <AppShell
       initialSidebar={parseSidebar((await cookies()).get(SIDEBAR_COOKIE)?.value)}
       weekStart={weekStart}
+      hideAmounts={hideAmounts}
+      addons={ctx.addons}
       links={links}
       searchLinks={paletteCommands(ctx.role, text, ctx.addons)}
     >

@@ -12,6 +12,7 @@ import { searchRecords } from "@ledgerly/api-contract/core";
 import { profile } from "@ledgerly/api-contract/settings";
 import { movements } from "@ledgerly/api-contract/transactions";
 import { useApi } from "@ledgerly/ui/data";
+import { HiddenAmounts } from "@ledgerly/ui/hidden-amounts";
 import { CommandPalette } from "@ledgerly/ui/shell/command-palette";
 import { MobileNav } from "@ledgerly/ui/shell/mobile-nav";
 import { useSaveTheme, useShellLabels } from "@ledgerly/ui/shell/shell-labels";
@@ -21,6 +22,8 @@ import { Sidebar } from "@ledgerly/ui/shell/sidebar";
 import { Toaster } from "@ledgerly/ui/toast";
 import { WeekStartProvider } from "@ledgerly/ui/week-start";
 import { AppShellProvider } from "@/ui/app-shell-provider";
+import type { AddonId } from "@ledgerly/api-contract";
+import { AddonsProvider } from "./addons-context";
 
 type PaletteProps = ComponentProps<typeof CommandPalette>;
 
@@ -37,12 +40,18 @@ const searchPayees: PaletteProps["searchPayees"] = async (term) =>
 export function AppShell({
   initialSidebar,
   weekStart,
+  hideAmounts,
+  addons,
   links,
   searchLinks,
   children,
 }: {
   initialSidebar: SidebarState;
   weekStart: 0 | 1;
+  /** «Hide amounts» of the person (R5e): every screen masks its amounts. */
+  hideAmounts: boolean;
+  /** The addons that are on (the session's); absent, all of them. */
+  addons?: readonly AddonId[];
   links: NavLink[];
   searchLinks: NavLink[];
   children: ReactNode;
@@ -65,21 +74,25 @@ export function AppShell({
   return (
     <AppShellProvider initialSidebar={initialSidebar} labels={labels} saveTheme={saveTheme}>
       <WeekStartProvider value={weekStart}>
-        <div className="flex h-dvh overflow-hidden">
-          <Sidebar links={links} user={user} />
-          {/* `relative`: the containing block of every absolutely placed element of a page. Without it
+        <HiddenAmounts hidden={hideAmounts}>
+          <AddonsProvider addons={addons}>
+            <div className="flex h-dvh overflow-hidden">
+              <Sidebar links={links} user={user} />
+              {/* `relative`: the containing block of every absolutely placed element of a page. Without it
             an `sr-only` label far down a long list was placed against the viewport instead, and
             stretched the document itself: a second scrollbar over an empty half page (2026-09-18). */}
-          <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
-        </div>
-        <MobileNav links={links} user={user} />
-        <CommandPalette
-          links={links}
-          searchLinks={searchLinks}
-          searchPayees={searchPayees}
-          searchRecords={findRecords}
-        />
-        <Toaster closeLabel={text("common.close")} />
+              <div className="relative flex min-w-0 flex-1 flex-col overflow-y-auto">{children}</div>
+            </div>
+            <MobileNav links={links} user={user} />
+            <CommandPalette
+              links={links}
+              searchLinks={searchLinks}
+              searchPayees={searchPayees}
+              searchRecords={findRecords}
+            />
+            <Toaster closeLabel={text("common.close")} />
+          </AddonsProvider>
+        </HiddenAmounts>
       </WeekStartProvider>
     </AppShellProvider>
   );

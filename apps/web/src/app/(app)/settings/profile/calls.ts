@@ -57,3 +57,9 @@ export async function savePreferencesAction(input: {
   invalidate(profile.getPreferences);
   return { ok: true };
 }
+
+/** «Hide amounts» (R5e, D3) on its own: the form of the preferences never writes it. */
+export async function saveHideAmounts(hideAmounts: boolean): Promise<void> {
+  await call(profile.updatePreferences, { body: { hideAmounts } });
+  invalidate(profile.getPreferences);
+}

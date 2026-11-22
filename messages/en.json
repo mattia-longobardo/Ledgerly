@@ -248,7 +248,9 @@
       "rules": "Rules",
       "data": "Data",
       "users": "Users",
-      "server": "Server"
+      "server": "Server",
+      "addons": "Addons",
+      "notifications": "Alerts"
     },
     "integrations": {
       "title": "Data sources",
@@ -1602,6 +1604,64 @@
         "description": "A rule gives a category to new transactions by itself.",
         "open": "Open the rules"
       }
+    },
+    "privacy": {
+      "title": "Privacy",
+      "description": "What the screens show when someone looks over your shoulder.",
+      "hideAmounts": "Hide amounts",
+      "hint": "Every screen writes dots in place of the amounts, in every app you use. Totals and charts do not change.",
+      "failed": "The choice was not saved. Try again."
+    },
+    "addons": {
+      "title": "Addons",
+      "description": "The parts of Ledgerly you can turn off. An addon that is off leaves the menu; its data stays and comes back when you turn it on.",
+      "offNotice": "The page you opened belongs to {name}, which is off. Turn it on here to open it again.",
+      "turnedOn": "{name}: on",
+      "turnedOff": "{name}: off",
+      "failed": "The addon did not change. Try again.",
+      "work": {
+        "description": "Payroll and Time off. Turn off Work to turn off both.",
+        "hint": "Payroll and Time off together."
+      },
+      "items": {
+        "investments": "Connected services, portfolio and their transactions.",
+        "funds": "Pension and other funds, with their contributions.",
+        "payroll": "Payslips and what they pay.",
+        "timeoff": "Holidays, leave and the calendar.",
+        "budgets": "Monthly limits for your categories.",
+        "subscriptions": "Recurring payments and their checks.",
+        "pockets": "Money set aside inside an account.",
+        "interests": "Interest rates of accounts, funds and pockets."
+      },
+      "confirm": {
+        "title": "Turn off {name}?",
+        "description": "This is what stops while it is off:",
+        "pages": "{name} leaves the menu, the palette and Overview.",
+        "jobs": "Its readings, alerts and emails stop.",
+        "data": "Your data stays, and net worth and totals do not change.",
+        "action": "Turn off"
+      },
+      "stops": {
+        "payslip_balances": "{addon} no longer reads the balances from the payslips.",
+        "payroll_contributions": "{addon} no longer gets contributions from the payslips.",
+        "interest": "{addon} no longer accrues interest."
+      }
+    },
+    "notifications": {
+      "title": "Alerts",
+      "description": "For each event, where it reaches you: in the app, by email, on your devices.",
+      "event": "Event",
+      "inApp": "In the app",
+      "email": "Email",
+      "device": "Device",
+      "locked": "Fixed: it cannot be changed.",
+      "addonOff": "{name} is off: this event sends nothing.",
+      "failed": "The choice was not saved. Try again.",
+      "categories": {
+        "action": "Asks for an action",
+        "reminder": "Reminder",
+        "report": "Report"
+      }
     }
   },
   "errors": {
@@ -1613,7 +1673,9 @@
     "generic": {
       "title": "Something went wrong",
       "description": "The page could not be shown. Your data is safe; try again."
-    }
+    },
+    "moduleInactive": "This part of Ledgerly is off.",
+    "moduleInactiveLink": "Turn it on in Settings › Addons"
   },
   "expenses": {
     "title": "Expenses",
@@ -2146,7 +2208,12 @@
       "inPeriod": "in the period",
       "legend": "Accounts in the chart"
     },
-    "manageAccounts": "Manage"
+    "manageAccounts": "Manage",
+    "todo": {
+      "title": "To do",
+      "empty": "Nothing to do.",
+      "open": "Open"
+    }
   },
   "accounts": {
     "title": "Accounts",
@@ -5872,6 +5939,32 @@
         "description": "We take you to the bank's site. The accounts stay the same: you do not choose them again.",
         "cancel": "Cancel"
       }
+    }
+  },
+  "notifications": {
+    "names": {
+      "connection_failed": "Connection in error",
+      "connection_stale": "Connection without readings",
+      "connection_expiring": "Bank access ending",
+      "account_low_balance": "Low balance",
+      "budget_threshold": "Budget threshold",
+      "monthly_summary": "Monthly summary",
+      "transactions_to_categorize": "Transactions to categorize",
+      "payslips_to_review": "Payslips to review",
+      "transfers_to_confirm": "Transfers to confirm",
+      "fund_to_verify": "Fund to check"
+    },
+    "todo": {
+      "connection_failed": "A connection stopped reading. Repair it.",
+      "connection_stale": "A connection has had no good reading for a while. Check it.",
+      "connection_expiring": "A bank access ends in {days, plural, one {# day} other {# days}}, on {date}. Renew it.",
+      "transactions_to_categorize": "{count, plural, one {# transaction} other {# transactions}} to categorize",
+      "payslips_to_review": "{count, plural, one {# payslip} other {# payslips}} to review",
+      "transfers_to_confirm": "{count, plural, one {# transfer} other {# transfers}} to confirm",
+      "fund_to_verify": "A fund to check after its end date",
+      "account_low_balance": "An account is below its threshold",
+      "budget_threshold": "A budget reached {percent}%",
+      "monthly_summary": "The monthly summary is ready"
     }
   }
 }

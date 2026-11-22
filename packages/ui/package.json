@@ -37,6 +37,7 @@
     "./form-dialog": "./src/form-dialog.tsx",
     "./form-fields": "./src/form-fields.tsx",
     "./hero-figure": "./src/hero-figure.tsx",
+    "./hidden-amounts": "./src/hidden-amounts.tsx",
     "./highlight": "./src/highlight.tsx",
     "./initials": "./src/initials.ts",
     "./input": "./src/input.tsx",

@@ -11,6 +11,7 @@ import type { Preferences } from "@ledgerly/domain/users/client";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
+import { HideAmountsSwitch } from "./hide-amounts";
 import { NameForm } from "./name-form";
 import { PreferencesForm } from "./preferences-form";
 
@@ -78,6 +79,9 @@ export function ProfileScreen() {
             );
           }}
         </Loaded>
+      </SettingsSection>
+      <SettingsSection title={text("privacy.title")} description={text("privacy.description")}>
+        <Loaded state={preferences}>{(saved) => <HideAmountsSwitch initial={saved.hideAmounts} />}</Loaded>
       </SettingsSection>
     </SettingsGrid>
   );

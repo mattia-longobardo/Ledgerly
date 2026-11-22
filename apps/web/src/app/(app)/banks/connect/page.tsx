@@ -5,14 +5,14 @@ import { connections as connectionRoutes, sources } from "@ledgerly/api-contract
 import { ApiError, type RouteInput, type RouteOutput } from "@ledgerly/api-client";
 import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { parseCents } from "@ledgerly/format/cents";
-import { formatDate, formatInstant, formatMoney } from "@ledgerly/format/format";
+import { AMOUNT_MASK, formatDate, formatInstant, formatMoney } from "@ledgerly/format/format";
 import { ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { Page } from "@ledgerly/ui/shell/page";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { withParams } from "@ledgerly/ui/url";
 import { apiRead } from "@/platform/api-read";
-import { requireSession } from "@/platform/auth/session";
+import { requirePreferences, requireSession } from "@/platform/auth/session";
 import { BANK_PLUGIN_ID } from "../plugin";
 import { AccountsStep } from "./accounts-step";
 import { BankStep } from "./bank-step";
@@ -122,6 +122,7 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
       { reason: "not_chosen", href: `${HERE}?step=accounts&c=${connectionId}` as Route },
     );
     const { bank, reading, categories } = outcome;
+    const { hideAmounts } = await requirePreferences();
     const reviewHref = withParams(
       "/expenses/review",
       {},
@@ -154,11 +155,14 @@ export default async function ConnectBankPage({ searchParams }: PageProps<"/bank
                 {t("done.account", {
                   count: account.movements,
                   date: account.firstOn ? formatDate(account.firstOn, "long", ctx.locale) : "",
-                  balance: formatMoney(
-                    account.balance === null ? null : parseCents(account.balance),
-                    ctx.numberFormat,
-                    { currency: account.currency },
-                  ),
+                  // Drawn on the server, where the mask of «Hide amounts» never runs: the page asks itself.
+                  balance: hideAmounts
+                    ? AMOUNT_MASK
+                    : formatMoney(
+                        account.balance === null ? null : parseCents(account.balance),
+                        ctx.numberFormat,
+                        { currency: account.currency },
+                      ),
                 })}
               </div>
               {!account.shared && <div className="text-sm text-muted">{t("done.accountGone")}</div>}

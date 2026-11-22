@@ -248,7 +248,9 @@
       "rules": "Regole",
       "data": "Dati",
       "users": "Utenti",
-      "server": "Server"
+      "server": "Server",
+      "addons": "Addons",
+      "notifications": "Avvisi"
     },
     "integrations": {
       "title": "Sorgenti dei dati",
@@ -1602,6 +1604,64 @@
         "description": "Una regola dà da sola la categoria ai movimenti nuovi.",
         "open": "Apri le regole"
       }
+    },
+    "privacy": {
+      "title": "Privacy",
+      "description": "Cosa mostrano le schermate quando qualcuno guarda da dietro le tue spalle.",
+      "hideAmounts": "Nascondi importi",
+      "hint": "Ogni schermata scrive dei punti al posto degli importi, in ogni app che usi. Totali e grafici non cambiano.",
+      "failed": "La scelta non è stata salvata. Riprova."
+    },
+    "addons": {
+      "title": "Addons",
+      "description": "Le parti di Ledgerly che puoi spegnere. Un addon spento esce dal menu; i suoi dati restano e tornano quando lo riaccendi.",
+      "offNotice": "La pagina che hai aperto è di {name}, che è spento. Accendilo qui per riaprirla.",
+      "turnedOn": "{name}: acceso",
+      "turnedOff": "{name}: spento",
+      "failed": "L'addon non è cambiato. Riprova.",
+      "work": {
+        "description": "Buste paga e Ferie. Spegni Lavoro per spegnerli tutti e due.",
+        "hint": "Buste paga e Ferie insieme."
+      },
+      "items": {
+        "investments": "Servizi collegati, portafoglio e i loro movimenti.",
+        "funds": "Fondi pensione e altri fondi, con i contributi.",
+        "payroll": "Cedolini e quello che pagano.",
+        "timeoff": "Ferie, permessi e calendario.",
+        "budgets": "Limiti mensili per le tue categorie.",
+        "subscriptions": "Pagamenti ricorrenti e i loro controlli.",
+        "pockets": "Soldi messi da parte dentro un conto.",
+        "interests": "Tassi di interesse di conti, fondi e pocket."
+      },
+      "confirm": {
+        "title": "Spegnere {name}?",
+        "description": "Ecco cosa si ferma finché è spento:",
+        "pages": "{name} esce dal menu, dalla palette e da Panoramica.",
+        "jobs": "Si fermano le sue letture, i suoi avvisi e le sue mail.",
+        "data": "I tuoi dati restano, e patrimonio e totali non cambiano.",
+        "action": "Spegni"
+      },
+      "stops": {
+        "payslip_balances": "{addon} non legge più i saldi dai cedolini.",
+        "payroll_contributions": "{addon} non riceve più contributi dai cedolini.",
+        "interest": "{addon} non matura più interessi."
+      }
+    },
+    "notifications": {
+      "title": "Avvisi",
+      "description": "Per ogni evento, dove ti raggiunge: in app, per mail, sui tuoi dispositivi.",
+      "event": "Evento",
+      "inApp": "In app",
+      "email": "Mail",
+      "device": "Dispositivo",
+      "locked": "Fisso: non si può cambiare.",
+      "addonOff": "{name} è spento: questo evento non manda niente.",
+      "failed": "La scelta non è stata salvata. Riprova.",
+      "categories": {
+        "action": "Chiede un'azione",
+        "reminder": "Promemoria",
+        "report": "Riepilogo"
+      }
     }
   },
   "errors": {
@@ -1613,7 +1673,9 @@
     "generic": {
       "title": "Qualcosa è andato storto",
       "description": "Non è stato possibile mostrare la pagina. I tuoi dati sono al sicuro: riprova."
-    }
+    },
+    "moduleInactive": "Questa parte di Ledgerly è spenta.",
+    "moduleInactiveLink": "Accendila in Impostazioni › Addons"
   },
   "expenses": {
     "title": "Spese",
@@ -2146,7 +2208,12 @@
       "inPeriod": "nel periodo",
       "legend": "Conti nel grafico"
     },
-    "manageAccounts": "Gestisci"
+    "manageAccounts": "Gestisci",
+    "todo": {
+      "title": "Da fare",
+      "empty": "Niente da fare.",
+      "open": "Apri"
+    }
   },
   "accounts": {
     "title": "Conti",
@@ -5872,6 +5939,32 @@
         "description": "Ti portiamo sul sito della banca. I conti restano gli stessi: non devi sceglierli di nuovo.",
         "cancel": "Annulla"
       }
+    }
+  },
+  "notifications": {
+    "names": {
+      "connection_failed": "Collegamento in errore",
+      "connection_stale": "Collegamento senza letture",
+      "connection_expiring": "Accesso alla banca in scadenza",
+      "account_low_balance": "Saldo basso",
+      "budget_threshold": "Soglia di un budget",
+      "monthly_summary": "Riepilogo mensile",
+      "transactions_to_categorize": "Movimenti da categorizzare",
+      "payslips_to_review": "Cedolini da rivedere",
+      "transfers_to_confirm": "Giroconti da confermare",
+      "fund_to_verify": "Fondo da verificare"
+    },
+    "todo": {
+      "connection_failed": "Un collegamento non legge più. Riparalo.",
+      "connection_stale": "Un collegamento non ha letture buone da tempo. Controllalo.",
+      "connection_expiring": "Un accesso alla banca scade tra {days, plural, one {# giorno} other {# giorni}}, il {date}. Rinnovalo.",
+      "transactions_to_categorize": "{count, plural, one {# movimento} other {# movimenti}} da categorizzare",
+      "payslips_to_review": "{count, plural, one {# cedolino} other {# cedolini}} da rivedere",
+      "transfers_to_confirm": "{count, plural, one {# giroconto} other {# giroconti}} da confermare",
+      "fund_to_verify": "Un fondo da verificare dopo la scadenza",
+      "account_low_balance": "Un conto è sotto la sua soglia",
+      "budget_threshold": "Un budget ha raggiunto il {percent}%",
+      "monthly_summary": "Il riepilogo mensile è pronto"
     }
   }
 }

@@ -25,6 +25,8 @@ import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { type CardFormat, centsOf, counterValue, NetWorthCard } from "@/modules/accounts/client";
 import { BudgetsOverviewCard } from "@/modules/budgets";
 import { PocketsOverviewTile } from "@/modules/pockets";
+import { useAddonOn } from "./addons-context";
+import { TodoCard } from "./todo-card";
 
 type NetWorth = RouteOutput<typeof views.getNetWorth>;
 type ViewRow = NetWorth["accounts"][number];
@@ -68,6 +70,9 @@ function OverviewView({ view, format }: { view: NetWorth; format: CardFormat }) 
   const text = useTranslations("overview");
   const accountsText = useTranslations("accounts");
   const search = useSearchParams();
+  // The blocks of an addon that is off go (PA10); net worth and its buckets do not change (PA11).
+  const pockets = useAddonOn("pockets");
+  const budgets = useAddonOn("budgets");
 
   if (view.accounts.length === 0) return <NoAccounts />;
 
@@ -89,6 +94,8 @@ function OverviewView({ view, format }: { view: NetWorth; format: CardFormat }) 
         </p>
       )}
 
+      <TodoCard locale={format.locale} />
+
       <div className="grid grid-cols-2 gap-4 @4xl:grid-cols-4">
         {kpis.map(({ key, bucket }) => (
           <KpiTile
@@ -99,7 +106,7 @@ function OverviewView({ view, format }: { view: NetWorth; format: CardFormat }) 
           />
         ))}
         {/* The fourth tile of the design, deferred by F1 until pockets existed (F3). */}
-        <PocketsOverviewTile numberFormat={format.numberFormat} />
+        {pockets && <PocketsOverviewTile numberFormat={format.numberFormat} />}
       </div>
 
       {/* Past the wide threshold the chart and the accounts sit side by side (spec §8.2, F2.5). */}
@@ -116,7 +123,7 @@ function OverviewView({ view, format }: { view: NetWorth; format: CardFormat }) 
       </div>
 
       {/* The card spans the page's whole column, and so do its rows' bars (spec §8.2). */}
-      <BudgetsOverviewCard format={format} />
+      {budgets && <BudgetsOverviewCard format={format} />}
     </>
   );
 }

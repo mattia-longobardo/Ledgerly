@@ -12,6 +12,8 @@ describe("paletteCommands", () => {
       ["settings-security", "/settings/security"],
       ["settings-finance", "/settings/finance"],
       ["settings-plugins", "/settings/plugins"],
+      ["settings-addons", "/settings/addons"],
+      ["settings-notifications", "/settings/notifications"],
       ["settings-data", "/settings/data"],
       ["to-review", "/expenses/review"],
       ["categories", "/expenses/categories"],
@@ -25,7 +27,7 @@ describe("paletteCommands", () => {
     expect(
       paletteCommands("admin", t)
         .map((one) => one.id)
-        .slice(4, 7),
+        .slice(6, 9),
     ).toEqual(["settings-data", "settings-users", "settings-server"]);
   });
 

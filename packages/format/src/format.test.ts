@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAmount, plainDecimalOf } from "./format";
+import { AMOUNT_MASK, formatDecimalText, maskAmounts, parseAmount, plainDecimalOf } from "./format";
 import {
   formatAmountInput,
   formatDate,
@@ -210,5 +210,23 @@ describe("plainDecimalOf", () => {
 
   it("refuses an empty field as parseAmount does", () => {
     expect(() => plainDecimalOf("  ", "it-IT")).toThrow(RangeError);
+  });
+});
+
+describe("maskAmounts («Hide amounts»)", () => {
+  it("writes every amount as the mask, and the figures again once it is off", () => {
+    maskAmounts(true);
+    try {
+      expect(formatMoney(713595n, "it-IT")).toBe(AMOUNT_MASK);
+      expect(formatMoney(-31240n, "en-US", { signed: true, currency: "USD" })).toBe(AMOUNT_MASK);
+      expect(formatDecimalText("12.5", "it-IT", { max: 2, currency: "EUR" })).toBe(AMOUNT_MASK);
+      // Nothing to hide: no value, a quantity, a percent.
+      expect(formatMoney(null, "it-IT")).toBe("—");
+      expect(formatDecimalText("12.5", "it-IT", { max: 2 })).toBe("12,5");
+      expect(formatPercent(0.0275, "it-IT")).not.toBe(AMOUNT_MASK);
+    } finally {
+      maskAmounts(false);
+    }
+    expect(plain(formatMoney(713595n, "it-IT"))).toBe("7.135,95 €");
   });
 });
