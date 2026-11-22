@@ -136,7 +136,7 @@ function serveSearch(app: Hono<ApiEnv>, guard: Guard): void {
     const none = async () => [];
     const [pockets, funds, subscriptions] = await Promise.all([
       addonOn(ctx, "pockets") ? searchPockets(ctx, query.q) : none(),
-      addonOn(ctx, "funds") ? searchFunds(ctx, query.q) : none(),
+      addonOn(ctx, "investments") ? searchFunds(ctx, query.q) : none(),
       addonOn(ctx, "subscriptions") ? searchSubscriptions(ctx, query.q) : none(),
     ]);
     return {

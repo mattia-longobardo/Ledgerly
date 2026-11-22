@@ -1,3 +1,3 @@
 import { addonLayout } from "../addon-layout";
 
-export default addonLayout("funds");
+export default addonLayout("investments");

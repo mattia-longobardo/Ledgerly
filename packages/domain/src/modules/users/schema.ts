@@ -12,6 +12,13 @@ import {
   THEMES,
 } from "./rules";
 
+/**
+ * What `modules` may hold: the addons, and `funds`, an addon until R5b made it part of Investments
+ * (§13.7). Rows of before keep it; nothing reads it (`addonsOf` drops a name `ADDONS` has not). The
+ * default and the check stay as the migration wrote them; R5f removes the name.
+ */
+const STORED_MODULES = [ADDONS[0], "funds", ...ADDONS.slice(1)];
+
 export const userPreferences = pgTable(
   "user_preferences",
   {
@@ -44,7 +51,7 @@ export const userPreferences = pgTable(
     modules: text("modules")
       .array()
       .notNull()
-      .default(sql.raw(`'{${ADDONS.join(",")}}'::text[]`)),
+      .default(sql.raw(`'{${STORED_MODULES.join(",")}}'::text[]`)),
     // The person's country (R5a, E4): its pack proposes the defaults; null is a country without one.
     country: text("country"),
     // When the person finished the first start (R5a). Null: it is still ahead of them. Every row
@@ -65,7 +72,7 @@ export const userPreferences = pgTable(
     check("user_preferences_country_ck", sql`${table.country} is null or ${table.country} ~ '^[A-Z]{2}$'`),
     check(
       "user_preferences_modules_ck",
-      sql`${table.modules} <@ ${sql.raw(`'{${ADDONS.join(",")}}'::text[]`)}`,
+      sql`${table.modules} <@ ${sql.raw(`'{${STORED_MODULES.join(",")}}'::text[]`)}`,
     ),
     checkIn("user_preferences_theme_ck", table.theme, THEMES),
     checkIn("user_preferences_default_range_ck", table.defaultRange, DEFAULT_RANGES),

@@ -1,13 +1,13 @@
 // The Addons (rewrite plan R5a, H52, 13-plugins-addons.md §13.3): the modules of the core a person
 // may turn off. The base modules (Overview, Accounts, Expenses, Settings, connections, alerts,
 // export) are not in this list, so they have no switch. «Work» is the group of Payroll and Time Off,
-// not an addon of its own. Funds is an addon of its own until R5b merges it into Investments.
+// not an addon of its own. The pension funds are part of Investments since R5b (§13.7, PA9): their
+// routes, jobs and alerts follow the addon `investments`.
 import { z } from "zod";
 import { defineRoute } from "./route";
 
 export const ADDONS = [
   "investments",
-  "funds",
   "payroll",
   "timeoff",
   "budgets",
@@ -25,7 +25,7 @@ export const ADDON_GROUPS: Partial<Record<AddonId, "work">> = { payroll: "work",
 export const ADDON_STOPS: Partial<Record<AddonId, ReadonlyArray<{ addon: AddonId; what: AddonPart }>>> = {
   payroll: [
     { addon: "timeoff", what: "payslip_balances" },
-    { addon: "funds", what: "payroll_contributions" },
+    { addon: "investments", what: "payroll_contributions" },
   ],
   interests: [{ addon: "pockets", what: "interest" }],
 };
@@ -52,7 +52,7 @@ const ADDONS_EXAMPLE = {
       active: true,
       stops: [
         { addon: "timeoff", what: "payslip_balances" },
-        { addon: "funds", what: "payroll_contributions" },
+        { addon: "investments", what: "payroll_contributions" },
       ],
     },
     { id: "budgets", group: null, active: false, stops: [] },

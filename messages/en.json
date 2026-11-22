@@ -1643,7 +1643,7 @@
       },
       "stops": {
         "payslip_balances": "{addon} no longer reads the balances from the payslips.",
-        "payroll_contributions": "{addon} no longer gets contributions from the payslips.",
+        "payroll_contributions": "The pension funds of {addon} no longer get contributions from the payslips.",
         "interest": "{addon} no longer accrues interest."
       }
     },

@@ -19,7 +19,7 @@ export const fundsDepositsJob: JobDefinition = {
       async (_person, ctx) => {
         written += (await matchDebits(ctx)).written;
       },
-      { addon: "funds" },
+      { addon: "investments" },
     );
     return { ...counts, depositsWritten: written };
   },

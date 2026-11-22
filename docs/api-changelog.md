@@ -3,6 +3,13 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Addons: the pension funds are part of Investments (R5b)
+
+- `GET /addons` no longer lists `funds`, and `PUT /addons/funds` answers `invalid`: the pension funds
+  follow the addon `investments` (routes, MCP tools, the job of the debits, the alert «fund to
+  verify», the search). Payroll's `stops` name `investments` for `payroll_contributions`.
+- A person who had `funds` off and `investments` on now sees the funds; nobody has that today.
+
 ## Unreleased · Investments: one list with the pension funds (R5b)
 
 - `GET /investments/home`: `total` and `groups`. One total of the services, the manual portfolios and

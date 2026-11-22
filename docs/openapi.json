@@ -4853,7 +4853,6 @@
                             "type": "string",
                             "enum": [
                               "investments",
-                              "funds",
                               "payroll",
                               "timeoff",
                               "budgets",
@@ -4887,7 +4886,6 @@
                                   "type": "string",
                                   "enum": [
                                     "investments",
-                                    "funds",
                                     "payroll",
                                     "timeoff",
                                     "budgets",
@@ -4983,7 +4981,6 @@
               "type": "string",
               "enum": [
                 "investments",
-                "funds",
                 "payroll",
                 "timeoff",
                 "budgets",
@@ -5029,7 +5026,6 @@
                             "type": "string",
                             "enum": [
                               "investments",
-                              "funds",
                               "payroll",
                               "timeoff",
                               "budgets",
@@ -5063,7 +5059,6 @@
                                   "type": "string",
                                   "enum": [
                                     "investments",
-                                    "funds",
                                     "payroll",
                                     "timeoff",
                                     "budgets",
@@ -15409,7 +15404,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "post": {
         "operationId": "create_fund",
@@ -15949,7 +15944,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}": {
@@ -17444,7 +17439,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "patch": {
         "operationId": "update_fund",
@@ -17596,7 +17591,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/competences/rebuild": {
@@ -17706,7 +17701,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/contributions": {
@@ -18911,7 +18906,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/debit-match": {
@@ -19108,7 +19103,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/fees": {
@@ -19350,7 +19345,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/fees/{feeId}": {
@@ -19453,7 +19448,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "patch": {
         "operationId": "update_fund_fee",
@@ -19681,7 +19676,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/movement-candidates": {
@@ -19828,7 +19823,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/operations": {
@@ -20174,7 +20169,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/operations/{operationId}": {
@@ -20277,7 +20272,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "patch": {
         "operationId": "update_fund_operation",
@@ -20614,7 +20609,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/periods/{year}/{index}/{component}/decision": {
@@ -20741,7 +20736,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "put": {
         "operationId": "decide_fund_difference",
@@ -20887,7 +20882,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/settings": {
@@ -21545,7 +21540,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/sources": {
@@ -21868,7 +21863,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/sources/{sourceId}": {
@@ -22322,7 +22317,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "patch": {
         "operationId": "update_fund_source",
@@ -22653,7 +22648,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/sources/{sourceId}/state": {
@@ -22779,7 +22774,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/sources/restore": {
@@ -23226,7 +23221,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/state": {
@@ -23342,7 +23337,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/valuations": {
@@ -23944,7 +23939,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "post": {
         "operationId": "record_fund_valuation",
@@ -24088,7 +24083,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/{id}/valuations/{valuationId}": {
@@ -24191,7 +24186,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       },
       "patch": {
         "operationId": "update_fund_valuation",
@@ -24328,7 +24323,7 @@
           }
         ],
         "x-scope": "write",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/funds/setup": {
@@ -24589,7 +24584,7 @@
           }
         ],
         "x-scope": "read",
-        "x-addon": "funds"
+        "x-addon": "investments"
       }
     },
     "/imports": {
@@ -37427,7 +37422,6 @@
                                 "type": "string",
                                 "enum": [
                                   "investments",
-                                  "funds",
                                   "payroll",
                                   "timeoff",
                                   "budgets",
@@ -37625,7 +37619,6 @@
                                 "type": "string",
                                 "enum": [
                                   "investments",
-                                  "funds",
                                   "payroll",
                                   "timeoff",
                                   "budgets",
@@ -38216,7 +38209,6 @@
                       "type": "string",
                       "enum": [
                         "investments",
-                        "funds",
                         "payroll",
                         "timeoff",
                         "budgets",
@@ -57088,7 +57080,6 @@
                                 "type": "string",
                                 "enum": [
                                   "investments",
-                                  "funds",
                                   "payroll",
                                   "timeoff",
                                   "budgets",

@@ -29,14 +29,13 @@ beforeEach(() => {
   search.delete("off");
   addons = [
     { id: "investments", group: null, active: true, stops: [] },
-    { id: "funds", group: null, active: true, stops: [] },
     {
       id: "payroll",
       group: "work",
       active: true,
       stops: [
         { addon: "timeoff", what: "payslip_balances" },
-        { addon: "funds", what: "payroll_contributions" },
+        { addon: "investments", what: "payroll_contributions" },
       ],
     },
     { id: "timeoff", group: "work", active: true, stops: [] },
@@ -81,7 +80,9 @@ describe("Settings › Addons", () => {
     const dialog = await screen.findByRole("dialog", { name: "Turn off Payroll?" });
     const stops = within(dialog).getByTestId("addon-stops");
     expect(stops).toHaveTextContent("Time off no longer reads the balances from the payslips.");
-    expect(stops).toHaveTextContent("Funds no longer gets contributions from the payslips.");
+    expect(stops).toHaveTextContent(
+      "The pension funds of Investments no longer get contributions from the payslips.",
+    );
     expect(writes).toEqual([]);
 
     await userEvent.click(within(dialog).getByRole("button", { name: "Turn off" }));
@@ -103,7 +104,9 @@ describe("Settings › Addons", () => {
     await userEvent.click(await screen.findByRole("switch", { name: "Work" }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByTestId("addon-stops")).not.toHaveTextContent("Time off no longer reads");
-    expect(within(dialog).getByTestId("addon-stops")).toHaveTextContent("Funds no longer gets contributions");
+    expect(within(dialog).getByTestId("addon-stops")).toHaveTextContent(
+      "The pension funds of Investments no longer get contributions",
+    );
     await userEvent.click(within(dialog).getByRole("button", { name: "Turn off" }));
     await vi.waitFor(() =>
       expect(writes).toEqual([

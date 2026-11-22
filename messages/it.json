@@ -1643,7 +1643,7 @@
       },
       "stops": {
         "payslip_balances": "{addon} non legge più i saldi dai cedolini.",
-        "payroll_contributions": "{addon} non riceve più contributi dai cedolini.",
+        "payroll_contributions": "I fondi pensione di {addon} non ricevono più contributi dai cedolini.",
         "interest": "{addon} non matura più interessi."
       }
     },

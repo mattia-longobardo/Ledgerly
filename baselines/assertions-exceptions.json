@@ -803,5 +803,20 @@
     "file": "packages/domain/src/modules/portfolio/rules.test.ts",
     "decision": "R5b (PERS-575)",
     "reason": "R5b (PERS-575): il gruppo di un conto viene dal suo tipo, per riportare GET /net-worth a 10 query (G9), correzione chiesta dall'orchestratore del 22/11"
+  },
+  {
+    "file": "apps/web/src/app/(app)/settings/addons/addons-screen.test.tsx",
+    "decision": "R5b (PERS-575)",
+    "reason": "R5b (PERS-575): i fondi pensione sono dentro l'addon Investments (13-plugins-addons.md §13.7, PA9); l'addon funds esce da ADDONS, passo 4 chiesto dall'orchestratore"
+  },
+  {
+    "file": "apps/web/src/platform/api/addons.itest.ts",
+    "decision": "R5b (PERS-575)",
+    "reason": "R5b (PERS-575): i fondi pensione sono dentro l'addon Investments (13-plugins-addons.md §13.7, PA9); l'addon funds esce da ADDONS, passo 4 chiesto dall'orchestratore"
+  },
+  {
+    "file": "tests/e2e/addons/addons.spec.ts",
+    "decision": "R5b (PERS-575)",
+    "reason": "R5b (PERS-575): i fondi pensione sono dentro l'addon Investments (13-plugins-addons.md §13.7, PA9); l'addon funds esce da ADDONS, passo 4 chiesto dall'orchestratore"
   }
 ]

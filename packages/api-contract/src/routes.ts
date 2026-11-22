@@ -216,8 +216,8 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
 const ROUTE_ADDONS = new Map<string, AddonId>(
   (
     [
-      ["investments", INVESTMENTS_ROUTES],
-      ["funds", FUNDS_ROUTES],
+      // The pension funds are part of Investments since R5b (13-plugins-addons.md §13.7).
+      ["investments", [...INVESTMENTS_ROUTES, ...FUNDS_ROUTES]],
       ["payroll", [...PAYROLL_ROUTES, ...IMPORTS_ROUTES]],
       ["timeoff", TIMEOFF_ROUTES],
       ["budgets", BUDGETS_ROUTES],

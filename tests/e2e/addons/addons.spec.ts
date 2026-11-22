@@ -11,7 +11,6 @@ test.describe.configure({ mode: "serial" });
 /** Every addon, the page of its menu item, and the block of Overview it has, when it has one. */
 const ADDONS = [
   { id: "investments", name: "Investments", href: "/investments" },
-  { id: "funds", name: "Funds", href: "/funds" },
   { id: "payroll", name: "Payroll", href: "/payroll" },
   { id: "timeoff", name: "Time off", href: "/timeoff" },
   { id: "budgets", name: "Budgets", href: "/budgets", overview: "budgets" },
@@ -105,7 +104,9 @@ test("Work turns Payroll and Time off off together, after listing what stops", a
   await hydrated(work);
   await work.click();
   const dialog = page.getByRole("dialog", { name: "Turn off Payroll, Time off?" });
-  await expect(dialog.getByTestId("addon-stops")).toContainText("Funds no longer gets contributions");
+  await expect(dialog.getByTestId("addon-stops")).toContainText(
+    "The pension funds of Investments no longer get contributions",
+  );
   await dialog.getByRole("button", { name: "Turn off" }).click();
   for (const name of ["Payroll", "Time off"])
     await expect(page.getByRole("switch", { name, exact: true })).toHaveAttribute("aria-checked", "false");

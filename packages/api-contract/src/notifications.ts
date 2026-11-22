@@ -53,7 +53,7 @@ export const NOTIFICATION_EVENTS = {
   transactions_to_categorize: { category: "action", addon: null, page: "expenses_review" },
   payslips_to_review: { category: "action", addon: "payroll", page: "payroll_review" },
   transfers_to_confirm: { category: "action", addon: "investments", page: "investments_transfers" },
-  fund_to_verify: { category: "action", addon: "funds", page: "fund" },
+  fund_to_verify: { category: "action", addon: "investments", page: "fund" },
 } as const satisfies Record<
   NotificationEvent,
   { category: NotificationCategory; addon: AddonId | null; page: (typeof NOTIFICATION_PAGES)[number] }

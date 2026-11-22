@@ -49,7 +49,7 @@ const NAV_ITEMS: readonly NavItem[] = [
   item("budgets", "/budgets", "everyday", "budgets"),
   item("subscriptions", "/subscriptions", "everyday", "subscriptions"),
   item("investments", "/investments", "savings", "investments"),
-  item("funds", "/funds", "savings", "funds"),
+  item("funds", "/funds", "savings", "investments"),
   item("pockets", "/pockets", "savings", "pockets"),
   item("interests", "/interests", "savings", "interests"),
   item("payroll", "/payroll", "work", "payroll"),

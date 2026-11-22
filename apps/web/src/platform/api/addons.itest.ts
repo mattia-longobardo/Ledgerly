@@ -104,7 +104,7 @@ describe("GET and PUT /addons", () => {
       active: true,
       stops: [
         { addon: "timeoff", what: "payslip_balances" },
-        { addon: "funds", what: "payroll_contributions" },
+        { addon: "investments", what: "payroll_contributions" },
       ],
     });
   });
