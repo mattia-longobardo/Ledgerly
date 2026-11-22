@@ -36385,6 +36385,661 @@
         "x-scope": "read"
       }
     },
+    "/notification-preferences": {
+      "get": {
+        "operationId": "get_notification_preferences",
+        "summary": "For every event, the channels it uses: in the app, email, the device. The thresholds stay on the budget and on the account.",
+        "tags": [
+          "notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "event": {
+                            "type": "string",
+                            "enum": [
+                              "connection_failed",
+                              "connection_stale",
+                              "connection_expiring",
+                              "account_low_balance",
+                              "budget_threshold",
+                              "monthly_summary",
+                              "transactions_to_categorize",
+                              "payslips_to_review",
+                              "transfers_to_confirm",
+                              "fund_to_verify"
+                            ]
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "action",
+                              "reminder",
+                              "report"
+                            ]
+                          },
+                          "addon": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "investments",
+                                  "funds",
+                                  "payroll",
+                                  "timeoff",
+                                  "budgets",
+                                  "subscriptions",
+                                  "pockets",
+                                  "interests"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "addonActive": {
+                            "type": "boolean"
+                          },
+                          "channels": {
+                            "type": "object",
+                            "properties": {
+                              "inApp": {
+                                "type": "boolean"
+                              },
+                              "email": {
+                                "type": "boolean"
+                              },
+                              "device": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "inApp",
+                              "email",
+                              "device"
+                            ]
+                          },
+                          "locked": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "inApp",
+                                "email",
+                                "device"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "event",
+                          "category",
+                          "addon",
+                          "addonActive",
+                          "channels",
+                          "locked"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "events"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/notification-preferences/{event}": {
+      "put": {
+        "operationId": "set_notification_preference",
+        "summary": "Turns the channels of one event on or off; a channel left out keeps its value. Answers every event.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "event",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "connection_failed",
+                "connection_stale",
+                "connection_expiring",
+                "account_low_balance",
+                "budget_threshold",
+                "monthly_summary",
+                "transactions_to_categorize",
+                "payslips_to_review",
+                "transfers_to_confirm",
+                "fund_to_verify"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "inApp": {
+                    "type": "boolean"
+                  },
+                  "email": {
+                    "type": "boolean"
+                  },
+                  "device": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "event": {
+                            "type": "string",
+                            "enum": [
+                              "connection_failed",
+                              "connection_stale",
+                              "connection_expiring",
+                              "account_low_balance",
+                              "budget_threshold",
+                              "monthly_summary",
+                              "transactions_to_categorize",
+                              "payslips_to_review",
+                              "transfers_to_confirm",
+                              "fund_to_verify"
+                            ]
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "action",
+                              "reminder",
+                              "report"
+                            ]
+                          },
+                          "addon": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "investments",
+                                  "funds",
+                                  "payroll",
+                                  "timeoff",
+                                  "budgets",
+                                  "subscriptions",
+                                  "pockets",
+                                  "interests"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "addonActive": {
+                            "type": "boolean"
+                          },
+                          "channels": {
+                            "type": "object",
+                            "properties": {
+                              "inApp": {
+                                "type": "boolean"
+                              },
+                              "email": {
+                                "type": "boolean"
+                              },
+                              "device": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "inApp",
+                              "email",
+                              "device"
+                            ]
+                          },
+                          "locked": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "inApp",
+                                "email",
+                                "device"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "event",
+                          "category",
+                          "addon",
+                          "addonActive",
+                          "channels",
+                          "locked"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "events"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/notifications": {
+      "get": {
+        "operationId": "list_notifications",
+        "summary": "The notifications for the device, newer than the cursor: the read of the apps' periodic check (G4). Only events with the device channel on.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "event": {
+                            "type": "string",
+                            "enum": [
+                              "connection_failed",
+                              "connection_stale",
+                              "connection_expiring",
+                              "account_low_balance",
+                              "budget_threshold",
+                              "monthly_summary",
+                              "transactions_to_categorize",
+                              "payslips_to_review",
+                              "transfers_to_confirm",
+                              "fund_to_verify"
+                            ]
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "action",
+                              "reminder",
+                              "report"
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "count": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "percent": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "days": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "date": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "target": {
+                            "type": "object",
+                            "properties": {
+                              "page": {
+                                "type": "string",
+                                "enum": [
+                                  "connection",
+                                  "account",
+                                  "budget",
+                                  "expenses_review",
+                                  "payroll_review",
+                                  "investments_transfers",
+                                  "fund",
+                                  "overview"
+                                ]
+                              },
+                              "id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "page",
+                              "id"
+                            ]
+                          },
+                          "openedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "readAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "event",
+                          "category",
+                          "params",
+                          "target",
+                          "openedAt",
+                          "readAt"
+                        ]
+                      }
+                    },
+                    "cursor": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "cursor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/notifications/{id}/read": {
+      "post": {
+        "operationId": "mark_notification_read",
+        "summary": "Marks one notification read: the device does not show it again. A second call changes nothing. The item stays in «Da fare» while its fact is true.",
+        "tags": [
+          "notifications"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
     "/payees": {
       "get": {
         "operationId": "search_payees",
@@ -54750,6 +55405,180 @@
         ],
         "x-scope": "write",
         "x-addon": "timeoff"
+      }
+    },
+    "/todo": {
+      "get": {
+        "operationId": "list_todo",
+        "summary": "«Da fare»: the open facts that ask the person for an action, oldest first. One item per fact; an item goes when its fact is no longer true.",
+        "tags": [
+          "notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "event": {
+                            "type": "string",
+                            "enum": [
+                              "connection_failed",
+                              "connection_stale",
+                              "connection_expiring",
+                              "account_low_balance",
+                              "budget_threshold",
+                              "monthly_summary",
+                              "transactions_to_categorize",
+                              "payslips_to_review",
+                              "transfers_to_confirm",
+                              "fund_to_verify"
+                            ]
+                          },
+                          "addon": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "investments",
+                                  "funds",
+                                  "payroll",
+                                  "timeoff",
+                                  "budgets",
+                                  "subscriptions",
+                                  "pockets",
+                                  "interests"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "params": {
+                            "type": "object",
+                            "properties": {
+                              "count": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "percent": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              "days": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "date": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "target": {
+                            "type": "object",
+                            "properties": {
+                              "page": {
+                                "type": "string",
+                                "enum": [
+                                  "connection",
+                                  "account",
+                                  "budget",
+                                  "expenses_review",
+                                  "payroll_review",
+                                  "investments_transfers",
+                                  "fund",
+                                  "overview"
+                                ]
+                              },
+                              "id": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "page",
+                              "id"
+                            ]
+                          },
+                          "since": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "event",
+                          "addon",
+                          "params",
+                          "target",
+                          "since"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
       }
     },
     "/transactions": {
