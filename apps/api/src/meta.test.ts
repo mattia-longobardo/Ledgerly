@@ -30,6 +30,7 @@ describe("GET /meta", () => {
       minClientLevel: MIN_CLIENT_LEVEL,
       capabilities: [
         "accounts",
+        "addons",
         "budgets",
         "categories",
         "connections",

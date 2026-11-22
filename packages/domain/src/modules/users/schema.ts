@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, integer, pgTable, smallint, text, uuid } from "drizzle-orm/pg-core";
 import { checkIn, createdAtColumn, idColumn, updatedAtColumn } from "../../platform/db/columns";
+import { ADDONS } from "@ledgerly/api-contract";
 import { users } from "../../platform/auth/schema";
 import {
   CURRENCY_POSITIONS,
@@ -36,6 +37,12 @@ export const userPreferences = pgTable(
     minutesPerDay: integer("minutes_per_day").notNull(),
     patronMonth: smallint("patron_month"),
     patronDay: smallint("patron_day"),
+    // The addons the person has on (R5a, H52). Every row written before R5a has them all (PA13):
+    // for the people of today nothing changes.
+    modules: text("modules")
+      .array()
+      .notNull()
+      .default(sql.raw(`'{${ADDONS.join(",")}}'::text[]`)),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
@@ -48,6 +55,10 @@ export const userPreferences = pgTable(
     checkIn("user_preferences_decimal_separator_ck", table.decimalSeparator, DECIMAL_SEPARATORS, true),
     checkIn("user_preferences_currency_position_ck", table.currencyPosition, CURRENCY_POSITIONS, true),
     check("user_preferences_display_currency_ck", sql`${table.displayCurrency} ~ '^[A-Z]{3}$'`),
+    check(
+      "user_preferences_modules_ck",
+      sql`${table.modules} <@ ${sql.raw(`'{${ADDONS.join(",")}}'::text[]`)}`,
+    ),
     checkIn("user_preferences_theme_ck", table.theme, THEMES),
     checkIn("user_preferences_default_range_ck", table.defaultRange, DEFAULT_RANGES),
     check(

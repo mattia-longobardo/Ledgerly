@@ -4,12 +4,15 @@ export type { Person } from "./jobs";
 export { describeUserAgent } from "./rules";
 export { buildCtx } from "./rules";
 export type { Preferences, TimeOffPreferences } from "./rules";
+export type { SavedPreferences } from "./service";
 export {
   changePreferences,
   findSessionToken,
   getPreferences,
+  getSavedPreferences,
   listOwnSessions,
   profileChange,
+  setAddon,
   updatePreferences,
   updateTimeOffPreferences,
 } from "./service";

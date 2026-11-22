@@ -1,0 +1,2 @@
+ALTER TABLE "user_preferences" ADD COLUMN "modules" text[] DEFAULT '{investments,funds,payroll,timeoff,budgets,subscriptions,pockets,interests}'::text[] NOT NULL;--> statement-breakpoint
+ALTER TABLE "user_preferences" ADD CONSTRAINT "user_preferences_modules_ck" CHECK ("user_preferences"."modules" <@ '{investments,funds,payroll,timeoff,budgets,subscriptions,pockets,interests}'::text[]);

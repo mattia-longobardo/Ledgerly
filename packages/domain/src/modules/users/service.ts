@@ -11,8 +11,15 @@ import {
   timeOffPreferencesSchema,
 } from "./rules";
 import { userPreferences } from "./schema";
+import { ADDONS, type AddonId } from "@ledgerly/api-contract";
 
 type Row = typeof userPreferences.$inferSelect;
+
+/** The preferences as saved, with the addons the person has on (R5a, H52). */
+export type SavedPreferences = Preferences & { addons: AddonId[] };
+
+/** The saved list, in the order of `ADDONS`; a name the list no longer has is dropped. */
+const addonsOf = (modules: readonly string[]): AddonId[] => ADDONS.filter((addon) => modules.includes(addon));
 
 function fromRow(row: Row): Preferences {
   return {
@@ -34,14 +41,55 @@ function fromRow(row: Row): Preferences {
   };
 }
 
-export async function getPreferences(ctx: Pick<Ctx, "userId">): Promise<Preferences> {
+/** The preferences and the addons, in one read: what a context is built from. */
+export async function getSavedPreferences(ctx: Pick<Ctx, "userId">): Promise<SavedPreferences> {
   const [row] = await getDb().select().from(userPreferences).where(userScoped(ctx).owns(userPreferences));
-  return row ? fromRow(row) : { ...DEFAULT_PREFERENCES };
+  // No row yet: every addon is on, as for the people of today (PA13) until the first start of R5a.
+  return row
+    ? { ...fromRow(row), addons: addonsOf(row.modules) }
+    : { ...DEFAULT_PREFERENCES, addons: [...ADDONS] };
+}
+
+export async function getPreferences(ctx: Pick<Ctx, "userId">): Promise<Preferences> {
+  const { addons, ...preferences } = await getSavedPreferences(ctx);
+  void addons;
+  return preferences;
+}
+
+/**
+ * Turns one addon on or off (H52, PA10): only the list changes. The addon's data stays as it is, so
+ * turning it back on shows it as it was; nothing it missed while off is written afterwards (D8).
+ */
+export async function setAddon(
+  ctx: Pick<Ctx, "userId">,
+  addon: AddonId,
+  active: boolean,
+): Promise<AddonId[]> {
+  const current = (await getSavedPreferences(ctx)).addons;
+  const modules = active ? addonsOf([...current, addon]) : current.filter((other) => other !== addon);
+  // A person with no row yet gets one with the defaults, then the list.
+  const values = { ...rowValues({ ...DEFAULT_PREFERENCES }), modules };
+  const [row] = await getDb()
+    .insert(userPreferences)
+    .values(userScoped(ctx).stamp(values))
+    .onConflictDoUpdate({ target: userPreferences.userId, set: { modules } })
+    .returning({ modules: userPreferences.modules });
+  return addonsOf(row.modules);
 }
 
 export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown): Promise<Preferences> {
-  const prefs = preferencesInputSchema.parse(input);
-  const values = {
+  const values = rowValues(preferencesInputSchema.parse(input));
+  const [row] = await getDb()
+    .insert(userPreferences)
+    .values(userScoped(ctx).stamp(values))
+    .onConflictDoUpdate({ target: userPreferences.userId, set: values })
+    .returning();
+  return fromRow(row);
+}
+
+/** The columns of the preferences; `modules` is not one of them (`setAddon`). */
+function rowValues(prefs: Preferences) {
+  return {
     timeZone: prefs.timeZone,
     locale: prefs.locale,
     numberFormat: prefs.numberFormat,
@@ -56,12 +104,6 @@ export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown
     patronMonth: prefs.patronSaint?.month ?? null,
     patronDay: prefs.patronSaint?.day ?? null,
   };
-  const [row] = await getDb()
-    .insert(userPreferences)
-    .values(userScoped(ctx).stamp(values))
-    .onConflictDoUpdate({ target: userPreferences.userId, set: values })
-    .returning();
-  return fromRow(row);
 }
 
 /** What the Profile form may change: the fields it sends of Time off are dropped, not saved. */

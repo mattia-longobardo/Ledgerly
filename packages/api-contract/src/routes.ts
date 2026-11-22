@@ -1,5 +1,7 @@
 // Every route of the contract, in one list: `apps/api` serves them, the OpenAPI document and the
 // MCP tools of the reads are generated from them (rewrite plan R2). A module's step adds its own.
+import * as addons from "./addons";
+import type { AddonId } from "./addons";
 import * as accountLinks from "./accounts/links";
 import * as accounts from "./accounts/accounts";
 import * as balances from "./accounts/balances";
@@ -170,9 +172,13 @@ export const INVESTMENTS_ROUTES: readonly RouteContract[] = [
   ...Object.values(investmentsConnection),
 ];
 
+/** The Addons of a person (R5a, H52): which modules are on. */
+export const ADDONS_ROUTES: readonly RouteContract[] = [addons.getAddons, addons.setAddon];
+
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
+  ...ADDONS_ROUTES,
   ...ACCOUNTS_ROUTES,
   ...TRANSACTIONS_ROUTES,
   ...BUDGETS_ROUTES,
@@ -185,3 +191,25 @@ export const CONTRACT_ROUTES: readonly RouteContract[] = [
   ...FUNDS_ROUTES,
   ...INVESTMENTS_ROUTES,
 ];
+
+// The addon each module's routes belong to (H52, PA10): a route of an addon that is off answers
+// `module_inactive`, on REST and MCP alike. A route not listed is of a base module.
+const ROUTE_ADDONS = new Map<string, AddonId>(
+  (
+    [
+      ["investments", INVESTMENTS_ROUTES],
+      ["funds", FUNDS_ROUTES],
+      ["payroll", [...PAYROLL_ROUTES, ...IMPORTS_ROUTES]],
+      ["timeoff", TIMEOFF_ROUTES],
+      ["budgets", BUDGETS_ROUTES],
+      ["subscriptions", SUBSCRIPTIONS_ROUTES],
+      ["pockets", POCKETS_ROUTES],
+      ["interests", INTERESTS_ROUTES],
+    ] as const
+  ).flatMap(([addon, routes]) => routes.map((route) => [route.id, addon] as const)),
+);
+
+/** The addon a route belongs to, or null for a route of a base module. */
+export function addonOf(route: Pick<RouteContract, "id">): AddonId | null {
+  return ROUTE_ADDONS.get(route.id) ?? null;
+}

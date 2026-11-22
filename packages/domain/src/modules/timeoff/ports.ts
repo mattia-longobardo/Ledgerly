@@ -50,9 +50,9 @@ interface LeaveTaken {
 /** The leave balances of the applied payslips. */
 export interface LeaveBalanceSource {
   /** Every balance of every year, oldest first. */
-  snapshotHistory(ctx: Pick<Ctx, "userId">): Promise<LeaveBalance[]>;
+  snapshotHistory(ctx: Pick<Ctx, "userId" | "addons">): Promise<LeaveBalance[]>;
   /** The leave taken in `year`, by the month it was used in, oldest first. */
-  eventsOf(ctx: Pick<Ctx, "userId">, year: number): Promise<LeaveTaken[]>;
+  eventsOf(ctx: Pick<Ctx, "userId" | "addons">, year: number): Promise<LeaveTaken[]>;
 }
 
 // On `globalThis`, as the pool of the database: one process may load this file in more than one

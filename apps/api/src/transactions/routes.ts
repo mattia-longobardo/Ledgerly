@@ -21,7 +21,7 @@ import {
   updateTransaction,
   type TransactionRow,
 } from "@ledgerly/domain/transactions";
-import type { Ctx } from "@ledgerly/domain/platform/context";
+import { addonOn, type Ctx } from "@ledgerly/domain/platform/context";
 import { parseCents } from "@ledgerly/domain/shared/money";
 import { today } from "@ledgerly/domain/shared/dates";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
@@ -132,10 +132,12 @@ function serveSpending(app: Hono<ApiEnv>, guard: Guard): void {
 /** The search across modules of the ⌘K palette: it belongs to no module, so it lives with the first that serves it until R4. */
 function serveSearch(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, searchRecords, async ({ ctx, query }) => {
+    // An addon that is off is not searched (H52, PA10): the palette never offers it.
+    const none = async () => [];
     const [pockets, funds, subscriptions] = await Promise.all([
-      searchPockets(ctx, query.q),
-      searchFunds(ctx, query.q),
-      searchSubscriptions(ctx, query.q),
+      addonOn(ctx, "pockets") ? searchPockets(ctx, query.q) : none(),
+      addonOn(ctx, "funds") ? searchFunds(ctx, query.q) : none(),
+      addonOn(ctx, "subscriptions") ? searchSubscriptions(ctx, query.q) : none(),
     ]);
     return {
       records: [

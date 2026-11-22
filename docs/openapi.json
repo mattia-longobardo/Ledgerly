@@ -4829,6 +4829,330 @@
         "x-scope": "read"
       }
     },
+    "/addons": {
+      "get": {
+        "operationId": "get_addons",
+        "summary": "The addons of the person, which of them are on, and what turning one off stops elsewhere.",
+        "tags": [
+          "addons"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "addons": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "investments",
+                              "funds",
+                              "payroll",
+                              "timeoff",
+                              "budgets",
+                              "subscriptions",
+                              "pockets",
+                              "interests"
+                            ]
+                          },
+                          "group": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "work"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "stops": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "addon": {
+                                  "type": "string",
+                                  "enum": [
+                                    "investments",
+                                    "funds",
+                                    "payroll",
+                                    "timeoff",
+                                    "budgets",
+                                    "subscriptions",
+                                    "pockets",
+                                    "interests"
+                                  ]
+                                },
+                                "what": {
+                                  "type": "string",
+                                  "enum": [
+                                    "payslip_balances",
+                                    "payroll_contributions",
+                                    "interest"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "addon",
+                                "what"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "group",
+                          "active",
+                          "stops"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "addons"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
+    "/addons/{id}": {
+      "put": {
+        "operationId": "set_addon",
+        "summary": "Turns one addon on or off. Its data stays; net worth and totals do not change. Answers every addon.",
+        "tags": [
+          "addons"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "investments",
+                "funds",
+                "payroll",
+                "timeoff",
+                "budgets",
+                "subscriptions",
+                "pockets",
+                "interests"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "active": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "active"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "addons": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "enum": [
+                              "investments",
+                              "funds",
+                              "payroll",
+                              "timeoff",
+                              "budgets",
+                              "subscriptions",
+                              "pockets",
+                              "interests"
+                            ]
+                          },
+                          "group": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "work"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "stops": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "addon": {
+                                  "type": "string",
+                                  "enum": [
+                                    "investments",
+                                    "funds",
+                                    "payroll",
+                                    "timeoff",
+                                    "budgets",
+                                    "subscriptions",
+                                    "pockets",
+                                    "interests"
+                                  ]
+                                },
+                                "what": {
+                                  "type": "string",
+                                  "enum": [
+                                    "payslip_balances",
+                                    "payroll_contributions",
+                                    "interest"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "addon",
+                                "what"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "group",
+                          "active",
+                          "stops"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "addons"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
     "/api-clients": {
       "get": {
         "operationId": "list_api_clients",
@@ -5539,6 +5863,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -5555,7 +5889,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "budgets"
       }
     },
     "/budgets/{budget}": {
@@ -5842,6 +6177,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -5858,7 +6203,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "budgets"
       }
     },
     "/budgets/{budget}/alerts": {
@@ -5976,6 +6322,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -5992,7 +6348,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "budgets"
       }
     },
     "/budgets/{budget}/limit": {
@@ -6081,6 +6438,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -6097,7 +6464,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "budgets"
       }
     },
     "/budgets/{budget}/stop": {
@@ -6181,6 +6549,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -6197,7 +6575,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "budgets"
       }
     },
     "/budgets/overview": {
@@ -6394,6 +6773,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -6410,7 +6799,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "budgets"
       }
     },
     "/budgets/view": {
@@ -6738,6 +7128,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -6754,7 +7154,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "budgets"
       }
     },
     "/categories": {
@@ -14752,6 +15153,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -14768,7 +15179,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       },
       "post": {
         "operationId": "create_fund",
@@ -15282,7 +15694,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -15307,7 +15719,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}": {
@@ -16775,6 +17188,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -16791,7 +17214,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       },
       "patch": {
         "operationId": "update_fund",
@@ -16917,7 +17341,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -16942,7 +17366,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/competences/rebuild": {
@@ -17026,7 +17451,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -17051,7 +17476,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/contributions": {
@@ -18229,6 +18655,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -18245,7 +18681,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/debit-match": {
@@ -18416,7 +18853,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -18441,7 +18878,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/fees": {
@@ -18657,7 +19095,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -18682,7 +19120,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/fees/{feeId}": {
@@ -18759,7 +19198,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -18784,7 +19223,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       },
       "patch": {
         "operationId": "update_fund_fee",
@@ -18986,7 +19426,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -19011,7 +19451,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/movement-candidates": {
@@ -19131,6 +19572,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -19147,7 +19598,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/operations": {
@@ -19467,7 +19919,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -19492,7 +19944,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/operations/{operationId}": {
@@ -19569,7 +20022,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -19594,7 +20047,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       },
       "patch": {
         "operationId": "update_fund_operation",
@@ -19905,7 +20359,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -19930,7 +20384,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/periods/{year}/{index}/{component}/decision": {
@@ -20031,7 +20486,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -20056,7 +20511,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       },
       "put": {
         "operationId": "decide_fund_difference",
@@ -20176,7 +20632,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -20201,7 +20657,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/settings": {
@@ -20832,6 +21289,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -20848,7 +21315,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/sources": {
@@ -21145,7 +21613,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -21170,7 +21638,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/sources/{sourceId}": {
@@ -21598,7 +22067,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -21623,7 +22092,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       },
       "patch": {
         "operationId": "update_fund_source",
@@ -21928,7 +22398,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -21953,7 +22423,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/sources/{sourceId}/state": {
@@ -22053,7 +22524,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -22078,7 +22549,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/sources/restore": {
@@ -22499,7 +22971,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -22524,7 +22996,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/state": {
@@ -22614,7 +23087,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -22639,7 +23112,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/valuations": {
@@ -23214,6 +23688,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -23230,7 +23714,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       },
       "post": {
         "operationId": "record_fund_valuation",
@@ -23348,7 +23833,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -23373,7 +23858,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/{id}/valuations/{valuationId}": {
@@ -23450,7 +23936,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -23475,7 +23961,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       },
       "patch": {
         "operationId": "update_fund_valuation",
@@ -23586,7 +24073,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -23611,7 +24098,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "funds"
       }
     },
     "/funds/setup": {
@@ -23845,6 +24333,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -23861,7 +24359,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "funds"
       }
     },
     "/imports": {
@@ -24037,6 +24536,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "413": {
             "description": "too_large",
             "content": {
@@ -24073,7 +24582,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "imports"
+        "x-scope": "imports",
+        "x-addon": "payroll"
       }
     },
     "/interests": {
@@ -24321,6 +24831,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -24337,7 +24857,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "interests"
       },
       "post": {
         "operationId": "create_interest_rule",
@@ -24546,7 +25067,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -24571,7 +25092,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "interests"
       }
     },
     "/interests/{id}": {
@@ -24980,6 +25502,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -24996,7 +25528,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "interests"
       },
       "put": {
         "operationId": "update_interest_rule",
@@ -25200,7 +25733,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -25225,7 +25758,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "interests"
       }
     },
     "/interests/{id}/settlements/{entryId}/posted": {
@@ -25312,6 +25846,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -25328,7 +25872,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "interests"
       }
     },
     "/interests/{id}/settlements/{entryId}/posting": {
@@ -25434,6 +25979,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -25450,7 +26005,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "interests"
       }
     },
     "/interests/{id}/state": {
@@ -25540,7 +26096,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -25565,7 +26121,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "interests"
       }
     },
     "/investments": {
@@ -26147,6 +26704,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -26163,7 +26730,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "investments:read"
+        "x-scope": "investments:read",
+        "x-addon": "investments"
       },
       "post": {
         "operationId": "create_investment_service",
@@ -26275,7 +26843,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -26300,7 +26868,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}": {
@@ -28000,6 +28569,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -28016,7 +28595,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "investments:read"
+        "x-scope": "investments:read",
+        "x-addon": "investments"
       },
       "patch": {
         "operationId": "update_investment_service",
@@ -28101,7 +28681,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -28126,7 +28706,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/activity": {
@@ -28898,6 +29479,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -28914,7 +29505,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "investments:read"
+        "x-scope": "investments:read",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/connection": {
@@ -28981,7 +29573,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -29006,7 +29598,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       },
       "get": {
         "operationId": "get_investment_connection",
@@ -29720,6 +30313,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -29736,7 +30339,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "session"
+        "x-scope": "session",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/holdings": {
@@ -29961,6 +30565,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -29977,7 +30591,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "investments:read"
+        "x-scope": "investments:read",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/holdings/{holdingId}/reconciliation": {
@@ -30120,7 +30735,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -30145,7 +30760,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/key": {
@@ -30238,7 +30854,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -30263,7 +30879,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "session"
+        "x-scope": "session",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/key/check": {
@@ -30330,7 +30947,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -30355,7 +30972,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/key/revoked": {
@@ -30422,7 +31040,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -30447,7 +31065,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/operations": {
@@ -30752,7 +31371,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -30777,7 +31396,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/operations/{eventId}": {
@@ -30854,7 +31474,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -30879,7 +31499,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/positions": {
@@ -31866,6 +32487,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -31882,7 +32513,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "investments:read"
+        "x-scope": "investments:read",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/readings/{readingId}/zero": {
@@ -31959,7 +32591,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -31984,7 +32616,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/sync": {
@@ -32051,7 +32684,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -32076,7 +32709,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/transfers": {
@@ -32187,7 +32821,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -32212,7 +32846,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/transfers/{eventId}": {
@@ -32289,7 +32924,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -32314,7 +32949,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/{accountId}/value": {
@@ -32405,7 +33041,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -32430,7 +33066,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "investments"
       }
     },
     "/investments/catalog": {
@@ -32677,6 +33314,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -32693,7 +33340,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "investments:read"
+        "x-scope": "investments:read",
+        "x-addon": "investments"
       }
     },
     "/investments/connections": {
@@ -32824,7 +33472,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -32849,7 +33497,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "session"
+        "x-scope": "session",
+        "x-addon": "investments"
       }
     },
     "/investments/home": {
@@ -34188,6 +34837,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -34204,7 +34863,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "investments:read"
+        "x-scope": "investments:read",
+        "x-addon": "investments"
       }
     },
     "/labels": {
@@ -35940,6 +36600,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -35956,7 +36626,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "payroll"
       }
     },
     "/payroll/codes/{code}": {
@@ -36022,7 +36693,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -36047,7 +36718,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       },
       "put": {
         "operationId": "set_payroll_code",
@@ -36172,7 +36844,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -36197,7 +36869,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips": {
@@ -37066,6 +37739,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -37082,7 +37765,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}": {
@@ -37168,7 +37852,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -37193,7 +37877,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       },
       "get": {
         "operationId": "get_payslip",
@@ -37783,6 +38468,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -37799,7 +38494,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "payroll"
       },
       "patch": {
         "operationId": "rename_payslip",
@@ -37885,7 +38581,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -37910,7 +38606,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/apply": {
@@ -37977,7 +38674,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -38002,7 +38699,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/fields/{field}": {
@@ -38642,7 +39340,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -38667,7 +39365,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/llm-fill": {
@@ -38757,7 +39456,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -38792,7 +39491,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "session"
+        "x-scope": "session",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/original-link": {
@@ -38870,6 +39570,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -38886,7 +39596,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/reject": {
@@ -38953,7 +39664,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -38978,7 +39689,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/reopen": {
@@ -39060,7 +39772,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -39085,7 +39797,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/retry": {
@@ -39152,7 +39865,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -39177,7 +39890,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/payroll/payslips/{id}/verify": {
@@ -39263,7 +39977,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -39288,7 +40002,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "payroll"
       }
     },
     "/people": {
@@ -40824,6 +41539,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -40840,7 +41565,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "pockets"
       },
       "post": {
         "operationId": "create_pocket",
@@ -40985,7 +41711,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -41010,7 +41736,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       }
     },
     "/pockets/{id}": {
@@ -41409,6 +42136,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -41425,7 +42162,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "pockets"
       },
       "put": {
         "operationId": "update_pocket",
@@ -41565,7 +42303,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -41590,7 +42328,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       }
     },
     "/pockets/{id}/deposits": {
@@ -41681,7 +42420,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -41706,7 +42445,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       }
     },
     "/pockets/{id}/expenses/{transaction}": {
@@ -41783,7 +42523,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -41808,7 +42548,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       },
       "put": {
         "operationId": "link_pocket_expense",
@@ -41883,7 +42624,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -41908,7 +42649,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       }
     },
     "/pockets/{id}/planned": {
@@ -42005,7 +42747,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -42030,7 +42772,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       }
     },
     "/pockets/{id}/state": {
@@ -42121,7 +42864,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -42146,7 +42889,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       }
     },
     "/pockets/candidates": {
@@ -42231,6 +42975,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -42247,7 +43001,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "pockets"
       }
     },
     "/pockets/overview": {
@@ -42308,6 +43063,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -42324,7 +43089,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "pockets"
       }
     },
     "/pockets/planned/{id}": {
@@ -42391,7 +43157,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -42416,7 +43182,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "pockets"
       }
     },
     "/preferences": {
@@ -49750,6 +50517,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -49766,7 +50543,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "subscriptions"
       },
       "post": {
         "operationId": "create_subscription",
@@ -49924,7 +50702,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -49949,7 +50727,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "subscriptions"
       }
     },
     "/subscriptions/{id}": {
@@ -50016,7 +50795,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -50041,7 +50820,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "subscriptions"
       },
       "put": {
         "operationId": "update_subscription",
@@ -50194,7 +50974,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -50219,7 +50999,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "subscriptions"
       }
     },
     "/subscriptions/{id}/state": {
@@ -50310,7 +51091,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -50335,7 +51116,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "subscriptions"
       }
     },
     "/subscriptions/suggestions": {
@@ -50443,6 +51225,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -50459,7 +51251,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "subscriptions"
       }
     },
     "/summary": {
@@ -51953,6 +52746,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -51969,7 +52772,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/allowances": {
@@ -52059,6 +52863,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -52075,7 +52889,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/allowances/{year}": {
@@ -52241,6 +53056,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -52257,7 +53082,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/days/{date}": {
@@ -52409,7 +53235,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -52434,7 +53260,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/holidays/calendars": {
@@ -52545,6 +53372,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -52561,7 +53398,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "timeoff"
       },
       "post": {
         "operationId": "add_holiday_calendar",
@@ -52673,7 +53511,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -52708,7 +53546,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/holidays/calendars/{id}": {
@@ -52764,6 +53603,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -52780,7 +53629,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/holidays/calendars/{id}/refresh": {
@@ -52836,6 +53686,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -52862,7 +53722,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/holidays/countries": {
@@ -52938,6 +53799,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -52964,7 +53835,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/holidays/subdivisions": {
@@ -53066,6 +53938,16 @@
               }
             }
           },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "rate_limited",
             "content": {
@@ -53092,7 +53974,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "read"
+        "x-scope": "read",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/leave": {
@@ -53252,7 +54135,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -53277,7 +54160,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       },
       "post": {
         "operationId": "save_leave",
@@ -53512,7 +54396,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -53537,7 +54421,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/leave/{id}": {
@@ -53691,7 +54576,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -53716,7 +54601,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/timeoff/leave/undo": {
@@ -53837,7 +54723,7 @@
             }
           },
           "409": {
-            "description": "conflict",
+            "description": "conflict, module_inactive",
             "content": {
               "application/json": {
                 "schema": {
@@ -53862,7 +54748,8 @@
             "bearer": []
           }
         ],
-        "x-scope": "write"
+        "x-scope": "write",
+        "x-addon": "timeoff"
       }
     },
     "/transactions": {
@@ -59215,7 +60102,8 @@
               "unsupported_format",
               "rate_limited",
               "server_error",
-              "unavailable"
+              "unavailable",
+              "module_inactive"
             ]
           },
           "reason": {

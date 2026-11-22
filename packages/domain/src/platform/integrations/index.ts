@@ -6,6 +6,7 @@ export {
   KINDS_OF,
   PLUGIN_KINDS,
   PROVIDERS,
+  PROVIDER_ADDONS,
   TREK_PROVIDER,
   WALLET_PROVIDER,
   coreCreatesRecords,

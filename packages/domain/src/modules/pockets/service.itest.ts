@@ -26,6 +26,9 @@ import {
   updatePocket,
 } from "./service";
 import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { ADDONS } from "@ledgerly/api-contract";
+import { setAddon } from "../users/service";
+import { pocketMovements } from "./schema";
 
 let ctx: Ctx;
 let thisMonth: string;
@@ -275,6 +278,26 @@ describe("interest on the backing account (spec §7.4)", () => {
     const view = (await pocketsView(ctx)).pockets[0];
     // The window is the 365 days to today and today has not accrued yet: 364,00 € × 2.500 / 10.000.
     expect(view).toMatchObject({ interestCents: 9_100n, interestReason: "estimate" });
+    // Without Interests the pocket stays, without the interest of its account (H52, PA12).
+    const noInterests = ADDONS.filter((addon) => addon !== "interests");
+    const without = (await pocketsView({ ...ctx, addons: noInterests })).pockets[0];
+    expect(without.interestCents).not.toBe(9_100n);
+    expect(without.balanceCents).toBe(view.balanceCents);
+  });
+});
+
+describe("Pockets off (H52, PA10)", () => {
+  it("writes no accrual while the addon is off, and accrues again once it is back on", async () => {
+    const pocket = await createPocket(ctx, pocketInput());
+    // The month the pocket was made in is accrued at once: the job is given it to write again.
+    await getDb().delete(pocketMovements).where(eq(pocketMovements.pocketId, pocket.id));
+    await setAddon(ctx, "pockets", false);
+    expect(await pocketsAccrualJob.run()).toMatchObject({ accrualsWritten: 0, failed: 0 });
+    expect(await balanceOf(pocket.id)).toBe(0n);
+
+    await setAddon(ctx, "pockets", true);
+    expect(await pocketsAccrualJob.run()).toMatchObject({ accrualsWritten: 1, failed: 0 });
+    expect(await balanceOf(pocket.id)).toBe(25_000n);
   });
 });
 

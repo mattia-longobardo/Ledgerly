@@ -6,12 +6,13 @@ import type { Context, Hono, MiddlewareHandler } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { z } from "zod";
 import {
+  addonOf,
   API_ERRORS,
   type ApiErrorCode,
   type ContractScope,
   type RouteContract,
 } from "@ledgerly/api-contract";
-import type { Ctx } from "@ledgerly/domain/platform/context";
+import { addonOn, type Ctx } from "@ledgerly/domain/platform/context";
 
 /** What every handler reads off the context once the guard accepted the token. */
 export interface ApiEnv {
@@ -31,7 +32,8 @@ export class ApiRefusal extends Error {
     /** `not_bookable` of time off: the dates refused and why. */
     readonly refused?: ReadonlyArray<{ on: string; reason: "weekend" | "holiday" }>,
   ) {
-    super(reason ?? code);
+    // An MCP tool answers the message: `module_inactive` names its addon, so the model knows why.
+    super(code === "module_inactive" ? `${code}: ${reason}` : (reason ?? code));
     this.name = "ApiRefusal";
   }
 }
@@ -158,7 +160,12 @@ export function serve<R extends RouteContract>(
   if (route.scope === null) throw new Error(`${route.id}: a public route is served by its own router`);
   const handlers = HANDLERS.get(app) ?? new Map<string, (input: RawInput) => Promise<unknown>>();
   HANDLERS.set(app, handlers);
+  // The addon of the route (H52, PA10): while the person has it off, the route and its MCP tool
+  // answer `module_inactive` with the addon's name, before any read.
+  const addon = addonOf(route);
+  const inactive = (ctx: Ctx) => addon !== null && !addonOn(ctx, addon);
   handlers.set(route.id, async (input) => {
+    if (inactive(input.ctx)) throw new ApiRefusal("module_inactive", addon ?? undefined);
     if (!fitsContract(route, input)) throw new ApiRefusal("invalid");
     return handler(input);
   });
@@ -172,6 +179,7 @@ export function serve<R extends RouteContract>(
     };
     // `admin` is the second gate, never the first: the role is checked at every call (plan F8 §3.4.8).
     if (route.scope === "admin" && input.ctx.role !== "admin") return fail(context, "forbidden");
+    if (inactive(input.ctx)) return fail(context, "module_inactive", { reason: addon ?? undefined });
     if (!fitsContract(route, input)) return fail(context, "invalid");
     let answer: unknown;
     try {

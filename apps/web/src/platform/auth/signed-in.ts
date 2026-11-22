@@ -1,5 +1,5 @@
 import "server-only";
-import { buildCtx, getPreferences, type Preferences } from "@ledgerly/domain/users";
+import { buildCtx, getSavedPreferences, type Preferences } from "@ledgerly/domain/users";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { readEnv } from "@ledgerly/domain/platform/env";
 import { getAuth, hasPasswordAccount, twoFactorSetupRequired } from "@ledgerly/domain/platform/auth";
@@ -31,11 +31,8 @@ export async function signedInFrom(requestHeaders: Headers) {
       twoFactorEnabled,
       hasPassword: await hasPasswordAccount(session.user.id),
     });
-  return {
-    user: session.user,
-    preferences: await getPreferences({ userId: session.user.id }),
-    setupPending,
-  };
+  const { addons, ...preferences } = await getSavedPreferences({ userId: session.user.id });
+  return { user: session.user, preferences, addons, setupPending };
 }
 
 /**
@@ -46,7 +43,7 @@ export async function signedInFrom(requestHeaders: Headers) {
 export async function sessionCtxOf(requestHeaders: Headers): Promise<Ctx | null> {
   const signedIn = await signedInFrom(requestHeaders);
   if (!signedIn || signedIn.setupPending || signedIn.user.banned === true) return null;
-  return buildCtx(signedIn.user, signedIn.preferences);
+  return buildCtx(signedIn.user, { ...signedIn.preferences, addons: signedIn.addons });
 }
 
 /** What `/api/web/session` answers: the person, their preferences, their context, the setup gate. */
@@ -55,7 +52,9 @@ export function remoteSignedIn(signedIn: Awaited<ReturnType<typeof signedInFrom>
     signedIn && {
       user: { id: signedIn.user.id, role: signedIn.user.role ?? null, email: signedIn.user.email },
       preferences: signedIn.preferences,
-      ctx: buildCtx(signedIn.user, signedIn.preferences),
+      ctx: buildCtx(signedIn.user, { ...signedIn.preferences, addons: signedIn.addons }),
+      // The addons the person has on (R5a, H52): the menu, the mobile tabs and the palette show these.
+      addons: signedIn.addons,
       setupPending: signedIn.setupPending,
     }
   );

@@ -7,9 +7,9 @@ import type { Ctx } from "../../platform/context";
 /** The payslips, as a fund's detail reads them. */
 interface PayslipDirectory {
   /** The code map: each body code with the role it has. */
-  codeRoles(ctx: Pick<Ctx, "userId">): Promise<{ code: string; role: string }[]>;
+  codeRoles(ctx: Pick<Ctx, "userId" | "addons">): Promise<{ code: string; role: string }[]>;
   /** Each payslip's id → the document its review page is served from. */
-  payslipDocuments(ctx: Pick<Ctx, "userId">): Promise<Map<string, string>>;
+  payslipDocuments(ctx: Pick<Ctx, "userId" | "addons">): Promise<Map<string, string>>;
 }
 
 declare global {

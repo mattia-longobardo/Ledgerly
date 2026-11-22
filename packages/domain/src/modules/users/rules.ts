@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AddonId } from "@ledgerly/api-contract";
 import type { Ctx } from "../../platform/context";
 import { DEFAULT_DISPLAY_CURRENCY, DISPLAY_CURRENCIES } from "../../platform/fx/rules";
 import { numberStyle } from "../../platform/format";
@@ -109,8 +110,12 @@ export type { PersonAction, PersonRefusal } from "../../platform/auth/people-rul
  * currency. The session, an API token and a job all build it here; a job passes no role and acts
  * as a user.
  */
-export function buildCtx(user: { id: string; role?: string | null }, preferences: Preferences): Ctx {
+export function buildCtx(
+  user: { id: string; role?: string | null },
+  preferences: Preferences & { addons?: readonly AddonId[] },
+): Ctx {
   return {
+    ...(preferences.addons ? { addons: preferences.addons } : {}),
     userId: user.id,
     role: user.role === "admin" ? "admin" : "user",
     locale: preferences.locale,

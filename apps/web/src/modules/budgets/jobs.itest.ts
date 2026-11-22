@@ -12,6 +12,7 @@ import { BUDGET_ALERT_KIND, budgetAlertsJob } from "./jobs";
 import { budgetDetail } from "@domain/modules/budgets/queries";
 import { saveAlerts, setLimit } from "@domain/modules/budgets/service";
 import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { setAddon } from "@domain/modules/users/service";
 
 // One instant for the whole file, for the clock of JavaScript alone: "today" read at two moments is
 // two days when midnight falls between them, and a test that crosses it fails for no fault.
@@ -78,6 +79,19 @@ describe("budgetAlertsJob", () => {
     await saveAlerts(ctx, { categoryId: null, accountId, enabled: true, thresholds: [50] });
     await budgetAlertsJob.run();
     expect((await claims()).map((row) => row.key)).toEqual([`*|${accountId}|${month}|50`]);
+  });
+});
+
+describe("budgetAlertsJob with Budgets off (H52, PA10)", () => {
+  it("sends no alert while the addon is off, and alerts again once it is back on", async () => {
+    await setAddon(ctx, "budgets", false);
+    await spend(12_000n);
+    await budgetAlertsJob.run();
+    expect(await claims()).toHaveLength(0);
+
+    await setAddon(ctx, "budgets", true);
+    await budgetAlertsJob.run();
+    expect((await claims()).map((row) => row.key)).toEqual([`*|${accountId}|${month}|100`]);
   });
 });
 

@@ -19,14 +19,18 @@ export const documentsSweepJob: JobDefinition = {
     let read = 0;
     const now = new Date();
     const kinds = readKinds();
-    const counts = await forEachUser("documents-sweep", async (_person, ctx) => {
-      for (const document of await stuckDocuments(ctx, kinds, now, STUCK_AFTER_MS)) {
-        const done = await readDocument(ctx, document.id, {
-          stuckBefore: new Date(now.getTime() - STUCK_AFTER_MS),
-        });
-        if (done) read += 1;
-      }
-    });
+    const counts = await forEachUser(
+      "documents-sweep",
+      async (_person, ctx) => {
+        for (const document of await stuckDocuments(ctx, kinds, now, STUCK_AFTER_MS)) {
+          const done = await readDocument(ctx, document.id, {
+            stuckBefore: new Date(now.getTime() - STUCK_AFTER_MS),
+          });
+          if (done) read += 1;
+        }
+      },
+      { addon: "payroll" },
+    );
     return { ...counts, documentsRead: read };
   },
 };

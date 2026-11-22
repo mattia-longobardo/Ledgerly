@@ -2,7 +2,7 @@ import { and, asc, eq, ne } from "drizzle-orm";
 import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts";
 import { accruedInterestByAccount } from "../interests";
 import { chargeCandidates, transactionsByIds } from "../transactions";
-import type { Ctx } from "../../platform/context";
+import { addonOn, type Ctx } from "../../platform/context";
 import {
   addDays,
   addMonths,
@@ -250,7 +250,7 @@ export async function pocketBalances(
 
 /** Everything the Pockets pages render (spec §7.4), read once. */
 export async function pocketsView(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
+  ctx: Pick<Ctx, "userId" | "timeZone" | "addons">,
   now: Date = new Date(),
 ): Promise<PocketsView> {
   const todayOn = today(ctx.timeZone, now);
@@ -272,7 +272,10 @@ export async function pocketsView(
   ];
   const [balances, accrued] = await Promise.all([
     readingsAt(ctx, backingIds, todayOn),
-    accruedInterestByAccount(ctx, backingIds, addDays(todayOn, -364), todayOn),
+    // Without Interests a pocket shows no interest of its account (H52, PA12); it stays otherwise.
+    addonOn(ctx, "interests")
+      ? accruedInterestByAccount(ctx, backingIds, addDays(todayOn, -364), todayOn)
+      : new Map<string, bigint>(),
   ]);
 
   const views: PocketView[] = ledgers.map(({ pocket, own, spent, ledger, balanceCents }) => {
