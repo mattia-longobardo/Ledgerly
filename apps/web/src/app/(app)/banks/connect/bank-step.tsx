@@ -10,7 +10,8 @@ import { Field } from "@ledgerly/ui/field";
 import { Input, Select } from "@ledgerly/ui/input";
 import { Skeleton } from "@ledgerly/ui/skeleton";
 import { EmptyState } from "@ledgerly/ui/states";
-import { type BankChoice, listBanksAction, startBankAccessAction } from "./actions";
+import { startBankAccessAction } from "./actions";
+import { type BankChoice, listBanksAction } from "./calls";
 
 /** Why the person is back on this step, from the return route (ux/n1-plugin-bank.md §6.3). */
 type BankStepError =

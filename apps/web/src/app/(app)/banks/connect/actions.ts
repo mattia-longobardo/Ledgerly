@@ -1,25 +1,14 @@
-// src/app/(app)/banks/connect/actions.ts — the procedure "Connect a bank" (ux/n1-plugin-bank.md
-// §6). The steps are the use cases of `cases.ts`, which `/api/v1` calls too; the start of an access
-// is the browser's, bound to its session. The return from the bank is `/api/v1/plugins/<id>/callback`.
+// src/app/(app)/banks/connect/actions.ts — the start of an access to a bank (ux/n1-plugin-bank.md
+// §6), bound to the browser's session until `/api/v1` serves it (§6 #4). The other steps are
+// `calls.ts`. The return from the bank is `/api/v1/plugins/<id>/callback`.
 "use server";
 
 import { notFound } from "next/navigation";
 import { getOptionalSession } from "@/platform/auth/session";
 import { institutionOf, listPluginConnections } from "@ledgerly/domain/platform/plugins";
-import { type AccountDecision, startAccess } from "@ledgerly/plugin-host";
+import { startAccess } from "@ledgerly/plugin-host";
 import { BANK_PLUGIN_ID } from "../plugin";
-import { requestPresence } from "../presence";
-import {
-  type BankChoice,
-  type BankRefusal,
-  bankRefusal,
-  cancelBankConnection,
-  importBankAccounts,
-  listBanks,
-  retryBankReading,
-} from "./cases";
-
-export type { BankChoice } from "./cases";
+import { type BankRefusal, bankRefusal } from "./cases";
 
 async function signedIn() {
   const session = await getOptionalSession();
@@ -28,12 +17,6 @@ async function signedIn() {
 }
 
 const COUNTRY = /^[A-Z]{2}$/;
-
-export async function listBanksAction(
-  country: string,
-): Promise<{ ok: true; banks: BankChoice[] } | BankRefusal> {
-  return listBanks((await signedIn()).ctx, country);
-}
 
 export async function startBankAccessAction(
   country: string,
@@ -72,24 +55,4 @@ export async function renewBankAccessAction(
   } catch (error) {
     return bankRefusal(error);
   }
-}
-
-/**
- * Applies the choice of the accounts and reads the bank at once, in the same request (§6.6): the
- * history older than 90 days is only there in the first minutes after the access. A reading that
- * fails does not undo the choice — the outcome page says so and offers to try again.
- */
-export async function importBankAccountsAction(
-  connectionId: string,
-  decisions: AccountDecision[],
-): Promise<{ ok: true } | BankRefusal> {
-  return importBankAccounts((await signedIn()).ctx, connectionId, decisions, await requestPresence());
-}
-
-export async function retryBankReadingAction(connectionId: string): Promise<{ ok: true } | BankRefusal> {
-  return retryBankReading((await signedIn()).ctx, connectionId, await requestPresence());
-}
-
-export async function cancelBankConnectionAction(connectionId: string): Promise<{ ok: true } | BankRefusal> {
-  return cancelBankConnection((await signedIn()).ctx, connectionId);
 }

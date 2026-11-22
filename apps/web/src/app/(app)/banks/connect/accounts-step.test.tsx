@@ -9,7 +9,7 @@ const importAccounts = vi.fn();
 const cancelConnection = vi.fn();
 const push = vi.fn();
 
-vi.mock("./actions", () => ({
+vi.mock("./calls", () => ({
   importBankAccountsAction: (...args: unknown[]) => importAccounts(...args),
   cancelBankConnectionAction: (...args: unknown[]) => cancelConnection(...args),
 }));

@@ -17,7 +17,7 @@ export const listBanks = defineRoute({
   scope: "read",
   capability: "connections",
   summary: "The banks of a country the bank plugin can connect.",
-  actions: ["listBanksAction"],
+  actions: [],
   query: z.object({ country: z.string().regex(/^[A-Z]{2}$/) }),
   response: z.object({
     banks: z.array(
@@ -73,7 +73,7 @@ export const readBankNow = defineRoute({
   scope: "write",
   capability: "connections",
   summary: "Tries the first reading of a bank again, now, after a refusal.",
-  actions: ["retryBankReadingAction"],
+  actions: [],
   params: byId,
   response: null,
   status: 204,

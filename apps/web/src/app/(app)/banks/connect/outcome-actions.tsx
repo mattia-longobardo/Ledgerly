@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
-import { renewBankAccessAction, retryBankReadingAction } from "./actions";
+import { renewBankAccessAction } from "./actions";
+import { retryBankReadingAction } from "./calls";
 
 /** "Try again now" on the outcome of a first reading that failed (ux/n1-plugin-bank.md §6.6). */
 export function RetryReading({ connectionId }: { connectionId: string }) {

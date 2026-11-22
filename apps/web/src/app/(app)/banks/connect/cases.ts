@@ -22,7 +22,7 @@ import { tasks } from "@/platform/jobs/queue";
 import { BANK_PLUGIN_ID } from "../plugin";
 import { bankSink } from "../sink";
 
-export interface BankChoice {
+interface BankChoice {
   name: string;
   /** How many days an access to this bank lasts, at most; null when the bank does not say. */
   maxAccessDays: number | null;

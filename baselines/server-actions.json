@@ -2,11 +2,7 @@
   "apps/web/src/app/(app)/banks/connect/actions.ts": {
     "closedBy": "R3 of the connections (bank procedure)",
     "actions": [
-      "cancelBankConnectionAction",
-      "importBankAccountsAction",
-      "listBanksAction",
       "renewBankAccessAction",
-      "retryBankReadingAction",
       "startBankAccessAction"
     ]
   },

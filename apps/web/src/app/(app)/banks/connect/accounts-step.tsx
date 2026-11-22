@@ -11,7 +11,7 @@ import { Input, Select } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { ProgressBar } from "@ledgerly/ui/progress-bar";
 import type { AccountDecision } from "@ledgerly/plugin-host";
-import { cancelBankConnectionAction, importBankAccountsAction } from "./actions";
+import { cancelBankConnectionAction, importBankAccountsAction } from "./calls";
 
 /** An account the bank exposes and the person has not chosen anything for yet. */
 interface AccountToChoose {
