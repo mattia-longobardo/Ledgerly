@@ -30,15 +30,6 @@
       "resumeSourceAccountAction"
     ]
   },
-  "apps/web/src/app/(app)/settings/integrations/plugin-actions.ts": {
-    "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
-    "actions": [
-      "disconnectBankAction",
-      "removeBankCredentialsAction",
-      "saveBankCredentialsAction",
-      "setPluginActiveAction"
-    ]
-  },
   "apps/web/src/app/(app)/settings/security/actions.ts": {
     "closedBy": "POST /api-clients, with git-policy \u00a76 #4",
     "actions": [

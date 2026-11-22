@@ -194,7 +194,7 @@ export const disconnect = defineRoute({
   capability: "connections",
   summary:
     "Disconnects: the credentials go, the accounts and movements stay. Also cancels a bank connection not finished.",
-  actions: ["disconnectBankAction", "cancelBankConnectionAction"],
+  actions: ["cancelBankConnectionAction"],
   params: byId,
   response: null,
   status: 204,

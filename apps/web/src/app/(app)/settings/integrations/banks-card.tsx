@@ -2,6 +2,7 @@
 
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
 import { Button, ButtonLink } from "@ledgerly/ui/button";
@@ -12,11 +13,11 @@ import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import { type ActionKind, ConnectionRow, type ConnectionRowProps, DeactivateLink } from "./connection-row";
 import {
-  disconnectBankAction,
+  disconnectBank,
   type PluginActionResult,
-  removeBankCredentialsAction,
-  saveBankCredentialsAction,
-} from "./plugin-actions";
+  removeBankCredentials,
+  saveBankCredentials,
+} from "./plugin-calls";
 
 /**
  * Everything the browser is told about the section (ux/n1-plugin-bank.md §3.1). **Never a value of
@@ -68,6 +69,8 @@ export function BanksCard({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
+  // The rows come from the page's server render until Settings › Integrations reads `/api/v1` itself.
+  const router = useRouter();
   const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
@@ -107,6 +110,7 @@ export function BanksCard({
       setDialog(null);
       setDisconnecting(null);
       notify(success);
+      router.refresh();
     });
   }
 
@@ -120,7 +124,7 @@ export function BanksCard({
     // Read once and handed to the action: nothing typed here is kept where it can be drawn again.
     const form = new FormData(event.currentTarget);
     run(
-      () => saveBankCredentialsAction(pluginId, form),
+      () => saveBankCredentials(pluginId, form),
       replacing ? t("toasts.replaced") : t("toasts.saved"),
       // After a refusal the fields come back empty (§4.1): a new form, whose first field takes
       // the focus as it mounts.
@@ -336,7 +340,7 @@ export function BanksCard({
               variant="danger"
               size="sm"
               disabled={pending}
-              onClick={() => run(() => removeBankCredentialsAction(pluginId), t("toasts.removed"))}
+              onClick={() => run(() => removeBankCredentials(pluginId), t("toasts.removed"))}
             >
               {t("remove.confirm")}
             </Button>
@@ -380,7 +384,7 @@ export function BanksCard({
               onClick={() => {
                 if (leaving === null) return;
                 const { id, name } = leaving;
-                run(() => disconnectBankAction(pluginId, id), t("toasts.disconnected", { bank: name }));
+                run(() => disconnectBank(id), t("toasts.disconnected", { bank: name }));
               }}
             >
               {t("disconnect.confirm")}

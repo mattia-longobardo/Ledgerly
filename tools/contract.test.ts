@@ -176,7 +176,6 @@ const SETTINGS_ACTION_FILES = [
   "apps/web/src/app/(app)/settings/security/actions.ts",
   "apps/web/src/app/(app)/settings/integrations/actions.ts",
   "apps/web/src/app/(app)/settings/integrations/deactivate-actions.ts",
-  "apps/web/src/app/(app)/settings/integrations/plugin-actions.ts",
   "apps/web/src/app/(app)/banks/connect/actions.ts",
 ];
 

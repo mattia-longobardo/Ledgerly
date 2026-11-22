@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
@@ -8,7 +9,7 @@ import { ActionMenu } from "@ledgerly/ui/menu";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import { TONE_TEXT } from "@ledgerly/ui/tone";
-import { setPluginActiveAction } from "./plugin-actions";
+import { setPluginActive } from "./plugin-calls";
 
 /**
  * What the browser is told about a plugin (ux/n1-plugin-bank.md §2.2): its name and description
@@ -45,13 +46,15 @@ export function PluginRow({
   const [confirming, setConfirming] = useState(false);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
+  // The rows come from the page's server render until Settings › Integrations reads `/api/v1` itself.
+  const router = useRouter();
   const active = state === "active";
 
   function change(next: boolean) {
     startTransition(async () => {
       let ok = false;
       try {
-        ok = (await setPluginActiveAction(id, next)).ok;
+        ok = (await setPluginActive(id, next)).ok;
       } catch {
         ok = false;
       }
@@ -59,6 +62,7 @@ export function PluginRow({
       if (!ok) return;
       setConfirming(false);
       notify(next ? t("toasts.enabled", { name }) : t("toasts.disabled", { name }));
+      router.refresh();
     });
   }
 
