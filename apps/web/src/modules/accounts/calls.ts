@@ -7,7 +7,7 @@ import { ApiError, call } from "@ledgerly/api-client";
 import { centsToDecimal } from "@ledgerly/format/cents";
 import { numberStyle, parseAmount } from "@ledgerly/format/format";
 import { ACCOUNT_TYPES, REMINDERS, TRENDS } from "@ledgerly/domain/accounts/client";
-import { read } from "@ledgerly/ui/data";
+import { invalidate, read } from "@ledgerly/ui/data";
 
 export type ActionResult = { ok: true } | { ok: false; error: string; other?: string };
 
@@ -110,8 +110,10 @@ export function restoreAccountAction(id: string) {
 }
 
 /** «Take snapshot now» (spec §10.3): the month before today's, as the monthly job takes. */
-export function runSnapshotNowAction() {
-  return writing(() => call(summary.runSnapshot, { body: {} }));
+export async function runSnapshotNowAction() {
+  const result = await writing(() => call(summary.runSnapshot, { body: {} }));
+  if (result.ok) invalidate(summary.listSnapshots);
+  return result;
 }
 
 interface LinkInput {

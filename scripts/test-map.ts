@@ -516,7 +516,7 @@ export const MODULES: Module[] = [
   {
     id: "export",
     files: ["apps/web/src/platform/export/**", page("settings/data")],
-    integration: ["apps/web/src/platform/export"],
+    integration: ["apps/web/src/platform/export", "apps/web/src/app/(app)/settings/data"],
     flows: ["api"],
     usedBy: ["subscriptions", "jobs", "admin", "e2e:admin", "e2e:subscriptions"],
   },

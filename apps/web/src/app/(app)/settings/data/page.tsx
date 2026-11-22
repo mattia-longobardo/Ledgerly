@@ -1,79 +1,12 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
-import { listSnapshotRuns } from "@ledgerly/domain/accounts";
-import { SnapshotButton } from "@/modules/accounts/ui/snapshot-button";
-import { requireSession } from "@/platform/auth/session";
-import { formatDate, formatMoney, NULL_DISPLAY } from "@ledgerly/domain/platform/format";
-import { Badge } from "@ledgerly/ui/badge";
-import { buttonClassName } from "@ledgerly/ui/button";
-import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
+import { DataScreen } from "./data-screen";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: (await getTranslations("settings.tabs"))("data") };
 }
 
-export default async function SettingsDataPage() {
-  const ctx = await requireSession();
-  const t = await getTranslations("settings.snapshots");
-  const mine = await getTranslations("settings.exportMine");
-  const runs = await listSnapshotRuns(ctx);
-
-  return (
-    <SettingsGrid>
-      <SettingsSection title={t("title")} description={t("description")}>
-        <SnapshotButton />
-      </SettingsSection>
-
-      <SettingsSection title={t("log.title")} description={t("log.description")} padded={false}>
-        {runs.length === 0 ? (
-          <p className="p-4 text-muted">{t("log.empty")}</p>
-        ) : (
-          <Table>
-            <THead>
-              <Th>{t("log.month")}</Th>
-              <Th>{t("log.result")}</Th>
-              <Th align="right">{t("log.accounts")}</Th>
-              <Th align="right">{t("log.total")}</Th>
-              <Th>{t("log.detail")}</Th>
-            </THead>
-            <TBody>
-              {runs.map((run) => (
-                <Tr key={run.id}>
-                  <Td>{formatDate(run.month, "monthYear", ctx.locale)}</Td>
-                  <Td>
-                    <Badge tone={run.state === "success" ? "pos" : run.state === "warning" ? "warn" : "neg"}>
-                      {t(`states.${run.state}`)}
-                    </Badge>
-                  </Td>
-                  <Td align="right">
-                    {t("log.written", { written: run.accountsWritten, skipped: run.accountsSkipped })}
-                  </Td>
-                  <Td align="right">
-                    {formatMoney(run.totalCents, ctx.numberFormat, { currency: run.totalCurrency })}
-                  </Td>
-                  <Td muted>
-                    {run.warnings && run.warnings.length > 0
-                      ? t("log.stale", { accounts: run.warnings.join(", ") })
-                      : NULL_DISPLAY}
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </Table>
-        )}
-      </SettingsSection>
-
-      <SettingsSection title={mine("title")} description={mine("description")}>
-        {/* A plain link and not a button: the response *is* the file, so the browser downloads it
-            without a round trip through a Server Action that would have to buffer it first. */}
-        <div className="flex flex-col items-start gap-2">
-          <a href="/settings/data/export.zip" download className={buttonClassName("secondary", "md")}>
-            {mine("download")}
-          </a>
-          <p className="text-sm text-muted">{mine("hint")}</p>
-        </div>
-      </SettingsSection>
-    </SettingsGrid>
-  );
+/** Settings › Data: the screen reads everything it shows from `/api/v1` (rewrite plan R3). */
+export default function SettingsDataPage() {
+  return <DataScreen />;
 }
