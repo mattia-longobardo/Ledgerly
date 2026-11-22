@@ -31,8 +31,8 @@ afterAll(closeDatabase);
 
 const origin = () => new URL(readEnv().BETTER_AUTH_URL).origin;
 
-/** A signed-in person with no password row: the session owes no TOTP setup. */
-async function person() {
+/** A signed-in person with no password row: the session owes no TOTP setup. `others`: more sessions. */
+async function person(others = 0) {
   const auth = await getAuth();
   const email = `${randomUUID()}@example.test`;
   const created = await auth.api.createUser({
@@ -45,6 +45,9 @@ async function person() {
       "user-agent": "Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0",
     }),
   });
+  for (let one = 0; one < others; one += 1) {
+    await auth.api.signInEmail({ body: { email, password: "correct-horse-battery" } });
+  }
   await getDb()
     .delete(authAccounts)
     .where(and(eq(authAccounts.userId, created.user.id), eq(authAccounts.providerId, "credential")));
@@ -162,5 +165,32 @@ describe("Settings › Security, signing a session out", () => {
     );
     expect(response.status).toBe(204);
     expect(((await send("/sessions", bob.cookie)) as { sessions: unknown[] }).sessions).toHaveLength(1);
+  });
+});
+
+/** R3 parity of «Sign out the other sessions»: what the Server Action did is what its call does now. */
+describe("Settings › Security, old action = new call", () => {
+  it("signs the other sessions out the same way, and keeps the one of this browser", async () => {
+    const alice = await person(2);
+    const bob = await person(2);
+    // `revokeOtherSessionsAction`: Better Auth's API with the request's headers.
+    await (await getAuth()).api.revokeOtherSessions({ headers: new Headers({ cookie: alice.cookie }) });
+    // The call: Better Auth's own endpoint, as the browser's `authClient` sends it.
+    const response = await (
+      await getAuth()
+    ).handler(
+      new Request(`${origin()}/api/auth/revoke-other-sessions`, {
+        method: "POST",
+        headers: { cookie: bob.cookie, origin: origin(), "content-type": "application/json" },
+        body: "{}",
+      }),
+    );
+    expect(response.status).toBe(200);
+    const left = async (cookie: string) =>
+      ((await send("/sessions", cookie)) as { sessions: { current: boolean }[] }).sessions.map(
+        (session) => session.current,
+      );
+    expect(await left(bob.cookie)).toEqual(await left(alice.cookie));
+    expect(await left(bob.cookie)).toEqual([true]);
   });
 });

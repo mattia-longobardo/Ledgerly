@@ -50,11 +50,5 @@
     "actions": [
       "acceptInviteAction"
     ]
-  },
-  "apps/web/src/modules/users/actions.ts": {
-    "closedBy": "revokeOtherSessionsAction kept (web cookie)",
-    "actions": [
-      "revokeOtherSessionsAction"
-    ]
   }
 }

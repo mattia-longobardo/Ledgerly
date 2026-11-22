@@ -1,11 +1,10 @@
-// The calls of Settings › Security to `/api/v1` (rewrite plan R3): each answers `{ ok }` or a
-// catalogued error key, as the Server Actions they replace did. Signing the other sessions out stays
-// a Server Action (`tools/contract.test.ts`, EXCLUDED: «the other sessions» are the cookie's).
+// The calls of Settings › Security (rewrite plan R3): each answers `{ ok }` or a catalogued error
+// key, as the Server Actions they replace did. They go to `/api/v1`; signing the other sessions out
+// goes to Better Auth's own endpoint under `/api/auth`, which knows the session of the cookie.
 import { security } from "@ledgerly/api-contract/settings";
 import { ApiError, call } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
-
-export { revokeOtherSessionsAction } from "@/modules/users/actions";
+import { authClient } from "@/platform/auth/client";
 
 type CallResult = { ok: true } | { ok: false; error: string };
 
@@ -46,5 +45,13 @@ export async function revokeConnectedAppAction(clientId: string): Promise<CallRe
     return refused(error, ["invalid", "not_found"]);
   }
   invalidate(security.listConnectedApps);
+  return { ok: true };
+}
+
+/** Signs out every session of the person but the one of this browser. */
+export async function revokeOtherSessionsAction(): Promise<CallResult> {
+  const { error } = await authClient.revokeOtherSessions().catch((failure: unknown) => ({ error: failure }));
+  if (error) return { ok: false, error: "failed" };
+  invalidate(security.listSessions);
   return { ok: true };
 }

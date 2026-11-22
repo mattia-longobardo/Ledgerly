@@ -172,7 +172,6 @@ describe("the contract of /api/v1", () => {
  * written list of exclusions of the module.
  */
 const SETTINGS_ACTION_FILES = [
-  "apps/web/src/modules/users/actions.ts",
   "apps/web/src/app/(auth)/actions.ts",
   "apps/web/src/app/(app)/settings/security/actions.ts",
   "apps/web/src/app/(app)/settings/integrations/actions.ts",
@@ -182,7 +181,6 @@ const SETTINGS_ACTION_FILES = [
 ];
 
 const EXCLUDED: Record<string, string> = {
-  revokeOtherSessionsAction: "web cookie: «the other sessions» are the ones that are not the cookie's",
   acceptInviteAction: "web cookie: it creates the account and signs it in, before any token exists",
   coreConnectionAction: "Wallet and Trek «test» and «history» until R5c: the routes answer `core_provider`",
   // The providers of the core keep their cards on the web until they are plugins (R5c): moving
