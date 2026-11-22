@@ -8,3 +8,5 @@ export { OIDC_PROVIDER_ID } from "./provider";
 export { API_SCOPES } from "./scopes";
 export type { Scope } from "./scopes";
 export type { TwoFactorPolicy } from "./two-factor-policy";
+export { authorizeContinuation, safeNext } from "./oauth";
+export { TRUST_DEVICE_DAYS, TWO_FACTOR_SETUP_PATH } from "./two-factor-policy";

@@ -1,6 +1,9 @@
 /** `TWO_FACTOR_POLICY` (docs/auth-design.md D2): whether a password account must have TOTP. */
 export type TwoFactorPolicy = "required" | "optional";
 
+/** How long "Trust this device" skips the TOTP prompt (docs/auth-design.md D2). */
+export const TRUST_DEVICE_DAYS = 30;
+
 export const TWO_FACTOR_SETUP_PATH = "/sign-in/two-factor/setup";
 
 /**

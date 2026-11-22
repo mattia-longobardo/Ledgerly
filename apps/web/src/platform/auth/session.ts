@@ -5,17 +5,21 @@ import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { getAuth } from "@ledgerly/domain/platform/auth";
-import { TWO_FACTOR_SETUP_PATH } from "@ledgerly/domain/platform/auth";
-import { buildCtx, type Preferences, signedInFrom } from "./signed-in";
+import { TWO_FACTOR_SETUP_PATH } from "@ledgerly/domain/platform/auth/client";
+import { buildCtx, type Preferences } from "./signed-in";
+import { fetchSignedIn } from "./remote";
 
 /** The session's context: the one mapping of the domain (audit USR-3). */
 export { buildCtx as ctxFrom };
 
-/** The signed-in user of this render, cached per request (`signedInFrom`). */
+/**
+ * The signed-in user of this render, cached per request: the server's process reads it
+ * (`/api/web/session`), because the web has no database of its own (rewrite plan R4).
+ */
 const getSignedIn = cache(async () =>
-  // Headers first: it marks the render as dynamic before Better Auth (and its env) is touched, so
-  // pages Next.js tries to prerender at build time (e.g. /_not-found) never reach it.
-  signedInFrom(await headers()),
+  // Headers first: it marks the render as dynamic before the server is asked, so pages Next.js
+  // tries to prerender at build time (e.g. /_not-found) never reach it.
+  fetchSignedIn(await headers()),
 );
 
 /**
@@ -31,6 +35,9 @@ export const getOptionalCtx = cache(async (): Promise<Ctx | null> => {
  * The signed-in user's context with the id of the session they hold, or null. For the one flow
  * that leaves the app and comes back (an access to a bank): what comes back must have left from
  * this very session, so the id is what the flow is tied to. The id never goes to a browser.
+ *
+ * shortcut: reads the database itself; its last caller (`banks/connect/actions.ts`) moves to
+ * `/api/v1` before the web runs without a database (R3-coda), and this goes with it.
  */
 export async function getOptionalSession(): Promise<{ ctx: Ctx; sessionId: string } | null> {
   const ctx = await getOptionalCtx();
@@ -71,4 +78,10 @@ export async function requireAdmin(): Promise<Ctx> {
   const ctx = await requireSession();
   if (ctx.role !== "admin") notFound();
   return ctx;
+}
+
+/** The signed-in user's saved preferences, behind the same gate as `requireSession`. */
+export async function requirePreferences(): Promise<Preferences> {
+  await requireSession();
+  return (await getSignedIn())?.preferences ?? redirect("/sign-in" as Route);
 }

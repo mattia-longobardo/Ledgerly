@@ -337,7 +337,7 @@
   {
     "file": "packages/domain/src/platform/integrations/rules.test.ts",
     "decision": "R0",
-    "reason": "Q9, audit INTG-8 (05-refactor.md §5.3): `isDue` had no use outside its own test and is removed with it; the other assertions are the same"
+    "reason": "Q9, audit INTG-8 (05-refactor.md \u00a75.3): `isDue` had no use outside its own test and is removed with it; the other assertions are the same"
   },
   {
     "file": "apps/web/src/platform/integrations/jobs.itest.ts",
@@ -372,92 +372,92 @@
   {
     "file": "apps/web/src/modules/budgets/jobs.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "apps/web/src/platform/api/api.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "apps/web/src/platform/export/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "apps/web/src/platform/jobs/after-sync.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "apps/web/src/platform/reports/monthly.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/accounts/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/budgets/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/funds/pension/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/funds/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/interests/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/pockets/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/subscriptions/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/transactions/duplicates.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/transactions/matching.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/transactions/service.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/transactions/source-categories.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "packages/domain/src/modules/transactions/taxonomy.itest.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "test/reference-user.ts",
     "decision": "TRX-6",
-    "reason": "05-refactor.md §5.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
+    "reason": "05-refactor.md \u00a75.5: `provider` is always passed by the caller, never a default; the calls name WALLET_PROVIDER, the value they relied on, and Prettier rewraps them. With whitespace and that argument removed the file is the same: no assertion changed"
   },
   {
     "file": "apps/web/src/modules/transactions/ui/categories.test.tsx",
@@ -532,7 +532,7 @@
   {
     "file": "packages/domain/src/modules/interests/rules.test.ts",
     "decision": "D7",
-    "reason": "«stale» becomes one rule, isStale of accounts, with the accrual's threshold ACCRUAL_READING_MAX_AGE_HOURS (D7): the same cases and the same verdicts through it (fresh = not stale), and a test added that one reading is stale for the accrual and fresh for Accounts"
+    "reason": "\u00abstale\u00bb becomes one rule, isStale of accounts, with the accrual's threshold ACCRUAL_READING_MAX_AGE_HOURS (D7): the same cases and the same verdicts through it (fresh = not stale), and a test added that one reading is stale for the accrual and fresh for Accounts"
   },
   {
     "file": "apps/web/src/modules/timeoff/actions.test.ts",
@@ -582,7 +582,7 @@
   {
     "file": "apps/web/src/platform/api/session.itest.ts",
     "decision": "PAY-8",
-    "reason": "a test added: «Fill with AI» of payroll answers the session and refuses a token with 403 (scope session); no existing assertion changed"
+    "reason": "a test added: \u00abFill with AI\u00bb of payroll answers the session and refuses a token with 403 (scope session); no existing assertion changed"
   },
   {
     "file": "packages/domain/src/modules/payroll/pension.test.ts",
@@ -728,5 +728,10 @@
     "file": "tests/e2e/_shared/origin.ts",
     "decision": "@site on origin (Mattia, 2026-11-21)",
     "reason": "the comment names the @site tests too; no assertion in the file"
+  },
+  {
+    "file": "apps/web/src/platform/auth/session.test.ts",
+    "decision": "R4",
+    "reason": "the web reads the session from the server's process (/api/web/session): one mock of that request, which answers with signedInFrom; no assertion changed"
   }
 ]

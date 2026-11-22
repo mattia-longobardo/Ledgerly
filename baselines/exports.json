@@ -299,6 +299,7 @@
     "applyTemplate",
     "arrangeFees",
     "fractionOfPercent",
+    "isFundId",
     "newContributionForm",
     "newFeeForm",
     "newSourceForm",
@@ -958,10 +959,14 @@
     "MIN_PASSWORD_LENGTH",
     "OIDC_PROVIDER_ID",
     "Scope",
+    "TRUST_DEVICE_DAYS",
+    "TWO_FACTOR_SETUP_PATH",
     "TwoFactorPolicy",
     "accessControl",
+    "authorizeContinuation",
     "isPasswordLengthValid",
-    "roles"
+    "roles",
+    "safeNext"
   ],
   "packages/domain/src/platform/auth/index.ts": [
     "ACCESS_TOKEN_TYPE",

@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { getPreferences } from "@ledgerly/domain/users";
-import { requireSession } from "@/platform/auth/session";
+import { requirePreferences, requireSession } from "@/platform/auth/session";
 import type { NavLink } from "@ledgerly/ui/shell/nav-types";
 import { parseSidebar, SIDEBAR_COOKIE } from "@ledgerly/ui/shell/sidebar-state";
 import { AppShell } from "./app-shell";
@@ -16,7 +15,7 @@ import { paletteCommands } from "./palette-commands";
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const ctx = await requireSession();
-  const [text, { weekStart }] = await Promise.all([getTranslations(), getPreferences(ctx)]);
+  const [text, { weekStart }] = await Promise.all([getTranslations(), requirePreferences()]);
   const links: NavLink[] = navFor(ctx.role).map(({ id, href, icon, group, mobile, labelKey }) => ({
     id,
     href,

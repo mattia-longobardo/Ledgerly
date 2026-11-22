@@ -19,6 +19,8 @@ vi.mock("@domain/platform/env", () => ({ readEnv: () => env }));
 
 vi.mock("@domain/platform/auth/auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+// The web asks the server's process (`/api/web/session`), which answers with `signedInFrom`.
+vi.mock("./remote", async () => ({ fetchSignedIn: (await import("./signed-in")).signedInFrom }));
 vi.mock("@domain/modules/users/service", () => ({
   getPreferences: async () => ({ ...DEFAULT_PREFERENCES, theme: "system" }),
 }));

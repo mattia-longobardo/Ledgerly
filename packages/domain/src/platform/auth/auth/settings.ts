@@ -72,8 +72,7 @@ export async function noUsersYet(): Promise<boolean> {
 
 type OidcPlugin = ReturnType<typeof genericOAuth>;
 
-/** How long "Trust this device" skips the TOTP prompt (docs/auth-design.md D2). */
-export const TRUST_DEVICE_DAYS = 30;
+export { TRUST_DEVICE_DAYS } from "../two-factor-policy";
 
 /**
  * Every endpoint that checks a second factor or changes it. Five a minute per client, on top of the

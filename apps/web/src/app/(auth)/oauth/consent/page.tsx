@@ -1,10 +1,8 @@
-import { verifyOAuthQueryParams } from "@better-auth/oauth-provider";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { API_SCOPES, type ApiScope } from "@ledgerly/domain/platform/auth";
-import { consentClient } from "@ledgerly/domain/platform/auth";
+import { fetchConsent } from "@/platform/auth/remote";
 import { requireSession } from "@/platform/auth/session";
-import { readEnv } from "@ledgerly/domain/platform/env";
 import { AuthCard } from "../../auth-card";
 import { ConsentForm } from "./consent-form";
 
@@ -27,39 +25,24 @@ export default async function ConsentPage({ searchParams }: PageProps<"/oauth/co
       query.append(key, one);
   }
   const signed = query.toString();
-  const clientId = query.get("client_id");
-  const valid = clientId !== null && (await verifyOAuthQueryParams(signed, readEnv().BETTER_AUTH_SECRET));
-  if (!valid) {
+  // The signature and the client's row are the server's (`/api/web/consent`, rewrite plan R4).
+  const view = await fetchConsent(signed, await headers());
+  if (!view) {
     return (
       <AuthCard title={t("title")} description={t("invalid")}>
         {null}
       </AuthCard>
     );
   }
-
-  // Read from the table, not the public endpoint: the screen has to say where the code goes and
-  // whether anyone vouches for the client (PERS-49 SEC-01).
-  const client = await consentClient(clientId);
-  if (!client) {
-    return (
-      <AuthCard title={t("title")} description={t("invalid")}>
-        {null}
-      </AuthCard>
-    );
-  }
-
-  const requested = (query.get("scope") ?? "").split(" ").filter(Boolean);
-  const scopes = API_SCOPES.filter((scope): scope is ApiScope => requested.includes(scope));
-  const offline = requested.includes("offline_access");
 
   return (
-    <AuthCard title={t("title")} description={t("description", { client: client.name ?? clientId })}>
+    <AuthCard title={t("title")} description={t("description", { client: view.clientName })}>
       <ConsentForm
         oauthQuery={signed}
-        scopes={scopes}
-        offline={offline}
-        hosts={client.hosts}
-        verified={client.verified}
+        scopes={view.scopes}
+        offline={view.offline}
+        hosts={view.hosts}
+        verified={view.verified}
       />
     </AuthCard>
   );

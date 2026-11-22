@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
-import { authorizeContinuation } from "@ledgerly/domain/platform/auth";
+import { authorizeContinuation } from "@ledgerly/domain/platform/auth/client";
 import { signedInDestination } from "@/platform/auth/session";
 import { AuthCard } from "../auth-card";
 import { signInErrorKey } from "./errors";
