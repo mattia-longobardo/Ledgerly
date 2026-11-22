@@ -1,13 +1,13 @@
-// src/app/(app)/banks/connect/cases.ts — the steps of "Connect a bank" that do not need the browser
-// (ux/n1-plugin-bank.md §6): the banks of a country, the choice of the accounts with the first
-// reading, a reading tried again and the way out. The Server Actions and `/api/v1` call these; the
-// start of an access stays the browser's, bound to its session (the return checks it).
+// src/app/(app)/banks/connect/cases.ts — the steps of "Connect a bank" (ux/n1-plugin-bank.md §6): the
+// banks of a country, the start or the renewal of an access, the choice of the accounts with the first
+// reading, a reading tried again and the way out. The Server Actions and `/api/v1` call these; an
+// access is bound to the browser's session that starts it (the return checks it).
 import "server-only";
 import { revalidatePath } from "next/cache";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { instanceKeyOf, listPluginConnections } from "@ledgerly/domain/platform/plugins";
+import { institutionOf, instanceKeyOf, listPluginConnections } from "@ledgerly/domain/platform/plugins";
 import {
   type AccountDecision,
   chooseAccounts,
@@ -17,6 +17,7 @@ import {
   PluginActionError,
   type Presence,
   readBank,
+  startAccess,
 } from "@ledgerly/plugin-host";
 import { tasks } from "@/platform/jobs/queue";
 import { BANK_PLUGIN_ID } from "../plugin";
@@ -32,7 +33,7 @@ interface BankChoice {
 
 export type BankRefusal = { ok: false; error: PluginActionCode };
 
-export function bankRefusal(error: unknown): BankRefusal {
+function bankRefusal(error: unknown): BankRefusal {
   if (error instanceof PluginActionError) return { ok: false, error: error.code };
   console.error("[plugins] an action failed", redactForLog(error));
   return { ok: false, error: "failed" };
@@ -58,6 +59,48 @@ export async function listBanks(
         connected: connected.has(instanceKeyOf({ name, country })),
       })),
     };
+  } catch (error) {
+    return bankRefusal(error);
+  }
+}
+
+/** Starts an access to a bank of `country`, bound to the browser's session: the answer is the bank's page. */
+export async function startBankAccess(
+  ctx: Ctx,
+  sessionId: string,
+  institution: { country: string; name: string },
+): Promise<{ ok: true; url: string } | BankRefusal> {
+  const { country, name } = institution;
+  if (!COUNTRY.test(country) || name.length < 1 || name.length > 200) return { ok: false, error: "failed" };
+  try {
+    const { url } = await startAccess(ctx, {
+      pluginId: BANK_PLUGIN_ID,
+      sessionId,
+      institution: { name, country },
+    });
+    return { ok: true, url };
+  } catch (error) {
+    return bankRefusal(error);
+  }
+}
+
+/** "Renew access" (§6.7): the same start, for the bank of a connection the person already has. */
+export async function renewBankAccess(
+  ctx: Ctx,
+  sessionId: string,
+  connectionId: string,
+): Promise<{ ok: true; url: string } | BankRefusal> {
+  try {
+    const connection = (await listPluginConnections(ctx, BANK_PLUGIN_ID)).find(
+      (one) => one.id === connectionId,
+    );
+    if (!connection) return { ok: false, error: "not_found" };
+    const { url } = await startAccess(ctx, {
+      pluginId: BANK_PLUGIN_ID,
+      sessionId,
+      institution: institutionOf(connection.instanceKey),
+    });
+    return { ok: true, url };
   } catch (error) {
     return bankRefusal(error);
   }

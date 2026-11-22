@@ -1,8 +1,9 @@
 // src/app/(app)/settings/integrations/connection-list.ts — the person's connections as data, for
 // `GET /api/v1/connections` (rewrite plan R2): what the rows of the page show, without sentences.
-// The capabilities are what a client of the API can ask for: the providers of the core keep their
-// own cards on the web until R5c, so through the API they offer "Update now" only.
+// The capabilities are what a client of the API can ask for: a provider of the core offers what its
+// card does (`core-cases.ts`), a bank what its plugin does, an investment service "Update now".
 import "server-only";
+import { coreCardOf } from "./core-cases";
 import { listAccounts } from "@ledgerly/domain/accounts";
 import { listInvestmentAccounts, providerOf } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
@@ -17,7 +18,7 @@ import {
 } from "@ledgerly/domain/platform/integrations";
 import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
 import { connectionSummary } from "@ledgerly/plugin-host";
-import { labelOf } from "@/platform/integrations/registry";
+import { labelOf, passFor } from "@/platform/integrations/registry";
 import { sourceSlugOf, statusOf } from "./connection-view";
 
 const DAY_MS = 86_400_000;
@@ -89,6 +90,20 @@ async function bankFacts(
   };
 }
 
+/** What the card of a provider of the core does through the API; "Update now" only for anybody else. */
+function coreCapabilities(provider: string): Capabilities {
+  const card = coreCardOf(provider);
+  if (!card) return { ...NONE, sync: true };
+  return {
+    ...NONE,
+    sync: true,
+    test: true,
+    disconnect: true,
+    chooseAccounts: card.accounts !== undefined,
+    historyMonths: card.history ? [...(passFor(provider)?.history?.choices ?? [])] : [],
+  };
+}
+
 const instant = (moment: Date | null) => moment?.toISOString() ?? null;
 
 /** One connection as the contract says it. */
@@ -155,7 +170,7 @@ export async function connectionList(ctx: Ctx, now: Date = new Date()) {
       accountsChosen: true,
       keyRefused: false,
       nextAttempt: null,
-      capabilities: { ...NONE, sync: true },
+      capabilities: coreCapabilities(connection.provider),
     };
     if (isPluginProvider(connection.provider)) {
       const pluginId = connection.provider.slice("plugin:".length);

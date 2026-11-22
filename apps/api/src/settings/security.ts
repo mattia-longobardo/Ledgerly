@@ -1,12 +1,13 @@
 // Users and settings · security and people (rewrite plan R2): behind the scopes `security` and
 // `admin`, which only the first-party clients will be granted (git-policy §6 #4): until then every
-// token is answered 403. The making of a Client API needs the person's session (Better Auth) and
-// comes with that change.
+// token is answered 403. A Client API is made inside the person's session (Better Auth): the cookie
+// of the call is the session, as it was for the Server Action.
 import type { Hono } from "hono";
 import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
 import {
   AdminError,
   ApiClientError,
+  createApiClientWith,
   deleteApiClient,
   endOwnSession,
   getAuth,
@@ -84,6 +85,10 @@ function serveSecurity(app: Hono<ApiEnv>, guard: Guard): void {
       createdAt: client.createdAt.toISOString(),
     })),
   }));
+  // The secret is answered once; only its hash is kept. A refusal of the input is `invalid`, as the action's.
+  serve(app, guard, security.createApiClient, async ({ body, headers }) =>
+    refusing(async () => createApiClientWith(await getAuth(), headers, body)),
+  );
   serve(app, guard, security.deleteApiClient, ({ ctx, params }) =>
     refusing(() => deleteApiClient(ctx, params.clientId)),
   );
@@ -123,11 +128,9 @@ function servePeople(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, people.removePerson, ({ ctx, params }) => refusing(() => removePerson(ctx, params.id)));
 }
 
-/** The routes of security and people; `POST /api-clients` comes with §6 #4. */
+/** The routes of security and people. */
 export function serveSecurityAndPeople(app: Hono<ApiEnv>, guard: Guard): readonly RouteContract[] {
   serveSecurity(app, guard);
   servePeople(app, guard);
-  return [...Object.values(security), ...Object.values(people)].filter(
-    (route) => route !== security.createApiClient,
-  );
+  return [...Object.values(security), ...Object.values(people)];
 }

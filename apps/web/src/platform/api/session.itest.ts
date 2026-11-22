@@ -479,3 +479,78 @@ describe("POST /connections/{id}/schedule/preview", () => {
     expect(crossSite.status).toBe(403);
   });
 });
+
+// R3 parity of the writes that need the browser's session (03-releases.md §R3, criterion 11; §6 #4):
+// a Client API and the access to a bank. What the Server Action's use case answered is what the route answers.
+describe("the writes made inside the person's session", () => {
+  it("makes a Client API, answers its secret once, and refuses what the action refused", async () => {
+    const made = await call("/api-clients", alice, {
+      method: "POST",
+      body: { name: "Home", scopes: ["read"] },
+    });
+    expect(made.status).toBe(201);
+    const minted = await made.json();
+    expect(minted).toEqual({
+      clientId: expect.any(String),
+      clientSecret: expect.any(String),
+      tokenEndpoint: `${origin()}/api/auth/oauth2/token`,
+      resource: `${origin()}/api/v1`,
+    });
+    const { clients } = await (await call("/api-clients", alice)).json();
+    expect(clients.map((one: { clientId: string; name: string }) => [one.clientId, one.name])).toEqual([
+      [minted.clientId, "Home"],
+    ]);
+    // The action's `invalid`: a name the rule refuses, a scope no Client API may have.
+    for (const body of [
+      { name: " ", scopes: ["read"] },
+      { name: "Home", scopes: ["security"] },
+    ]) {
+      await expect(
+        createApiClientWith(await getAuth(), new Headers({ cookie: alice.cookie }), body),
+      ).rejects.toMatchObject({ code: "invalid" });
+      const refused = await call("/api-clients", alice, { method: "POST", body });
+      expect(refused.status).toBe(400);
+      expect(await refused.json()).toEqual({ error: "invalid" });
+    }
+    // A token is never granted `security`: it cannot make a client with its own.
+    const token = await tokenFor(alice, ["read", "write"]);
+    expect(
+      (
+        await call(
+          "/api-clients",
+          { bearer: token },
+          { method: "POST", body: { name: "X", scopes: ["read"] } },
+        )
+      ).status,
+    ).toBe(403);
+  });
+
+  it("starts and renews the access to a bank with the answers of the action's use case", async () => {
+    const { renewBankAccess, startBankAccess } = await import("@/app/(app)/banks/connect/cases");
+    const [own] = await getDb()
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.userId, alice.userId));
+    const ctx = contextFor(alice.userId);
+    const institution = { country: "IT", name: "Example Bank" };
+    const asRoute = (outcome: { ok: true } | { ok: false; error: string }) =>
+      outcome.ok ? 201 : outcome.error === "not_found" ? 404 : outcome.error;
+    const started = await call("/banks/access", alice, { method: "POST", body: institution });
+    const before = await startBankAccess(ctx, own.id, institution);
+    expect(started.status === 409 ? (await started.json()).reason : started.status).toBe(asRoute(before));
+
+    const missing = randomUUID();
+    const renewed = await call(`/connections/${missing}/renew`, alice, { method: "POST" });
+    expect(renewed.status).toBe(asRoute(await renewBankAccess(ctx, own.id, missing)));
+
+    // The input the action refused as `failed` is the contract's `invalid`.
+    expect(
+      (await call("/banks/access", alice, { method: "POST", body: { country: "it", name: "X" } })).status,
+    ).toBe(400);
+    // An access is bound to a browser's session: a token has none.
+    const token = await tokenFor(alice, ["read", "write"]);
+    const byToken = await call("/banks/access", { bearer: token }, { method: "POST", body: institution });
+    expect(byToken.status).toBe(409);
+    expect(await byToken.json()).toEqual({ error: "conflict", reason: "no_session" });
+  });
+});

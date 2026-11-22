@@ -25,7 +25,5 @@ export const CONNECTION_REFUSALS = [
   "provider_down",
   "invalid_data",
   "failed",
-  /** `test` and `history` of a provider of the core: its card on the web does them until R5c. */
-  "core_provider",
 ] as const;
 export const byId = z.object({ id: id() });

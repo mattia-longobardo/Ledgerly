@@ -1,7 +1,7 @@
 // src/app/(app)/settings/integrations/actions.ts — Settings › Integrations: the Wallet link of
 // spec §9.1 and the Trek link of §9.2. Both offer the
 // same four: save the credential, prove it works, sync on demand, disconnect; and each has its own
-// sync schedule (D7).
+// sync schedule (D7). The steps are `core-cases.ts`, which `/api/v1/connections` calls too.
 //
 // Every one of these is the *user's own* connection (spec §10.3: "Sync now" is per user). None of
 // them takes a connection id from the browser — the id is resolved from the session, so a pasted
@@ -10,48 +10,15 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/platform/auth/session";
-import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { tasks } from "@/platform/jobs/queue";
-import type { Ctx } from "@ledgerly/domain/platform/context";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
-import { BACKFILL_CHOICES } from "@ledgerly/domain/platform/integrations/wallet";
-import {
-  chooseWalletAccounts,
-  isSyncBusy,
-  requestWalletBackfill,
-  syncWalletNow,
-  walletAccountChoices,
-} from "@ledgerly/domain/platform/integrations/wallet";
-import {
-  type Connection,
-  deleteConnection,
-  IntegrationError,
-  listConnections,
-  markConnection,
-  readCredentials,
-  saveConnection,
-} from "@ledgerly/domain/platform/integrations";
-import {
-  createWalletClient,
-  isTokenRejected,
-  isUsableToken,
-  WalletError,
-} from "@ledgerly/domain/platform/integrations/wallet";
-import {
-  createTrekClient,
-  isTokenRejected as isTrekTokenRejected,
-  TrekError,
-} from "@ledgerly/domain/platform/integrations/trek";
-import { isTrekBusy, syncTrekNow } from "@ledgerly/domain/platform/integrations/trek";
-import { restoreSourceAccounts } from "@ledgerly/domain/accounts";
-import { closePendingDeletes } from "@ledgerly/domain/timeoff";
+import type { CardAccount, CardError } from "@ledgerly/domain/platform/integrations";
+import { chooseCoreAccounts, connectCore, coreAccounts, disconnectCore, runCore } from "./core-cases";
 
 /**
  * Why an action refused, as one of the `settings.integrations.errors.*` keys. A code, not a
  * sentence: the card turns it into a catalogued message, so no English text is built here.
  */
-type IntegrationActionError =
-  "rejected" | "unreachable" | "provider" | "empty" | "notConnected" | "busy" | "failed" | "schedule";
+type IntegrationActionError = CardError | "schedule";
 
 /**
  * What the card gets back. Deliberately this narrow: there is no field a token could travel in,
@@ -61,204 +28,58 @@ export type IntegrationActionResult =
   /** `back`: the accounts a source turned on again tied back (plugin-settings.md §3.4). */
   { ok: true; back?: number } | { ok: false; error: IntegrationActionError };
 
+/** The pages a change of a source's link shows on. */
 function revalidate(): void {
   revalidatePath("/settings/integrations", "layout");
+  revalidatePath("/subscriptions");
+  revalidatePath("/funds");
+  revalidatePath("/timeoff");
 }
 
-/** The signed-in user's Wallet connection, or `null` when no token has ever been saved. */
-async function walletConnection(ctx: Ctx): Promise<Connection | null> {
-  const connections = await listConnections(ctx);
-  return connections.find((connection) => connection.provider === WALLET_PROVIDER) ?? null;
-}
+const answer = (outcome: { ok: true } | { ok: false; error: CardError }): IntegrationActionResult => {
+  revalidate();
+  return outcome.ok ? { ok: true } : { ok: false, error: outcome.error };
+};
 
-/**
- * A Wallet failure as the card names it, and as the connection records it: a refused token is a
- * fact about the credential (`revoked`), anything else is a bad afternoon (`error`). The mapping
- * is the one agreed with T1.
- */
-function walletFailure(error: unknown): { code: IntegrationActionError; detail: string } {
-  if (error instanceof WalletError) {
-    // Only a real connectivity failure is reported as one. A provider that *answered* — an HTTP
-    // status, a body this app cannot read — is a different sentence, and the collaudo of
-    // 2026-09-17 showed why it matters: "Wallet could not be reached" sent the owner hunting the
-    // network while the answer, and its reason, were sitting in the sync log.
-    const code: IntegrationActionError = isTokenRejected(error)
-      ? "rejected"
-      : error.kind === "network" || error.kind === "timeout"
-        ? "unreachable"
-        : "provider";
-    return { code, detail: error.message };
-  }
-  return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
+async function connect(
+  provider: string,
+  credentials: Record<string, string>,
+): Promise<IntegrationActionResult> {
+  const outcome = await connectCore(await requireSession(), provider, credentials);
+  if (!outcome.ok) return { ok: false, error: outcome.error };
+  revalidate();
+  return outcome.back > 0 ? { ok: true, back: outcome.back } : { ok: true };
 }
 
 /**
  * Stores a Wallet token, whether it is the first one or a replacement. The plaintext lives in this
  * function's argument and in `saveConnection`'s, and in nothing that comes back: the result says
  * `ok` and no more, so the browser learns that the token was accepted and never what it was.
- *
- * The token is not checked against Wallet here. Saving and proving are separate on purpose — a
- * provider that is down must not stop a correct token being stored — and "Test connection" is the
- * button that asks.
  */
 export async function connectWalletAction(token: string): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const secret = token.trim();
-  if (secret.length === 0) return { ok: false, error: "empty" };
-  // A token that cannot be sent as an HTTP header value can never authenticate anything, so it is
-  // refused here rather than encrypted and kept: `trim()` only cleans the edges, and a newline in
-  // the *middle* (pasted from a wrapped page) makes undici throw an error that quotes the value —
-  // which is how a token in clear reaches `sync_runs.error`, `last_error` and this very card.
-  // "Wallet rejected that token" is the honest sentence: it is the token that is wrong.
-  if (!isUsableToken(secret)) return { ok: false, error: "rejected" };
-  // Wallet turned on again: its accounts kept by hand come back to it before the connection can
-  // be read, so no reading makes them a second time (plugin-settings.md §3.4).
-  const back = await restoreSourceAccounts(ctx, WALLET_PROVIDER);
-  try {
-    await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: secret } });
-  } catch (error) {
-    // `IntegrationError` is the only refusal with a story; it carries a code, never the value it
-    // rejected, so nothing here can print the token.
-    if (error instanceof IntegrationError) return { ok: false, error: "failed" };
-    throw error;
-  }
-  revalidate();
-  return back > 0 ? { ok: true, back } : { ok: true };
-}
-
-/**
- * Asks Wallet whether the stored token still works, with a real read (spec §9.1) and outside any
- * transaction (spec §4.3) — the answer is applied afterwards, in `markConnection`'s own short
- * write.
- *
- * This is the one place in the route that opens the credential, and it opens it into a local
- * binding that goes straight into the client. It is not logged, not returned and not stored.
- */
-async function testWalletAction(): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const connection = await walletConnection(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-
-  const { token } = await readCredentials(ctx, connection.id);
-  try {
-    await createWalletClient(token).accounts();
-  } catch (error) {
-    const { code, detail } = walletFailure(error);
-    await markConnection(ctx, connection.id, code === "rejected" ? "revoked" : "error", detail);
-    revalidate();
-    return { ok: false, error: code };
-  }
-  await markConnection(ctx, connection.id, "active");
-  revalidate();
-  return { ok: true };
-}
-
-/**
- * "Sync now" (spec §10.3): the user's own connection, on demand. The engine is T8's, and it opens
- * the credential itself — this action hands it an id and nothing else.
- *
- * Running any job as an admin is a different button on a different card, and not F2's.
- */
-async function syncWalletNowAction(): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const connection = await walletConnection(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-
-  try {
-    await syncWalletNow(ctx, connection.id);
-    // The same checks as after a scheduled pass (docs/scheduler.md), only if the movements changed.
-    await enqueue(tasks.afterSync("manual"));
-    revalidatePath("/subscriptions");
-    revalidatePath("/funds");
-  } catch (error) {
-    // A sync writes rows before it fails, and it records its own `sync_runs` entry either way, so
-    // the log is refreshed on the way out of both branches.
-    revalidate();
-    // The hourly job (or another tab) holds this connection's advisory lock: nothing was written
-    // and nothing is wrong, so the card says "already running" instead of blaming the provider.
-    if (isSyncBusy(error)) return { ok: false, error: "busy" };
-    if (error instanceof IntegrationError) {
-      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
-    }
-    return { ok: false, error: walletFailure(error).code };
-  }
-  revalidate();
-  return { ok: true };
-}
-
-/**
- * "Download the history again" (spec §9.1, F2.5): the next pass reads `months` monthly windows,
- * and it runs now, exactly as "Sync now" does. Only the depths the card offers are accepted — the
- * number comes from the browser. The backfill imports and never removes, so asking for it cannot
- * cost anything already here; if the hourly job holds the connection, the request stays in the
- * cursor and that job's next pass is the backfill.
- */
-async function redownloadWalletHistoryAction(months: number): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  if (!BACKFILL_CHOICES.some((choice) => choice === months)) return { ok: false, error: "failed" };
-  const connection = await walletConnection(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-  await requestWalletBackfill(ctx, connection.id, months);
-  return syncWalletNowAction();
+  return connect(WALLET_PROVIDER, { token });
 }
 
 /** One Wallet account on the choice of the card: no id of an account here, only its name. */
-export interface WalletAccountRow {
-  externalId: string;
-  name: string;
-  /** The name of the account here it arrives in; `null` when Ledgerly does not have it. */
-  here: string | null;
-  chosen: boolean;
-}
+export type WalletAccountRow = CardAccount;
 
 /** "Choose the accounts" (PERS-419): the accounts Wallet has now, read when the dialog opens. */
 export async function walletAccountsAction(): Promise<
   { ok: true; accounts: WalletAccountRow[] } | { ok: false; error: IntegrationActionError }
 > {
-  const ctx = await requireSession();
-  const connection = await walletConnection(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-  try {
-    const choices = await walletAccountChoices(ctx, connection.id);
-    return {
-      ok: true,
-      accounts: choices.map((choice) => ({
-        externalId: choice.externalId,
-        name: choice.name,
-        here: choice.local?.name ?? null,
-        chosen: choice.chosen,
-      })),
-    };
-  } catch (error) {
-    if (error instanceof IntegrationError) {
-      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
-    }
-    return { ok: false, error: walletFailure(error).code };
-  }
+  const outcome = await coreAccounts(await requireSession(), WALLET_PROVIDER);
+  return outcome.ok ? outcome : { ok: false, error: outcome.error };
 }
 
 /**
  * Saves which Wallet accounts not here arrive here. When one comes back, the history is downloaded
- * again and the pass runs now, as "Download the history again" does: the account and its movements
- * are here when the dialog closes.
+ * again and the pass runs now, as "Download the history again" does.
  */
 export async function chooseWalletAccountsAction(chosen: string[]): Promise<IntegrationActionResult> {
   const ctx = await requireSession();
-  const connection = await walletConnection(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
   if (!Array.isArray(chosen) || chosen.some((id) => typeof id !== "string"))
     return { ok: false, error: "failed" };
-  let added: number;
-  try {
-    ({ added } = await chooseWalletAccounts(ctx, connection.id, chosen));
-  } catch (error) {
-    if (error instanceof IntegrationError) {
-      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
-    }
-    return { ok: false, error: walletFailure(error).code };
-  }
-  revalidate();
-  return added > 0 ? syncWalletNowAction() : { ok: true };
+  return answer(await chooseCoreAccounts(ctx, WALLET_PROVIDER, chosen));
 }
 
 /**
@@ -267,41 +88,10 @@ export async function chooseWalletAccountsAction(chosen: string[]): Promise<Inte
  * stay too, as the confirmation says.
  */
 export async function disconnectWalletAction(): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const connection = await walletConnection(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-  try {
-    await deleteConnection(ctx, connection.id);
-  } catch (error) {
-    if (error instanceof IntegrationError) {
-      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
-    }
-    throw error;
-  }
-  revalidate();
-  return { ok: true };
+  return answer(await disconnectCore(await requireSession(), WALLET_PROVIDER));
 }
 
 /* Trek — the leave calendar (spec §9.2, plan F7 L4) */
-
-/** The signed-in user's Trek connection, or `null` when nothing has ever been saved. */
-async function trekConnectionOf(ctx: Ctx): Promise<Connection | null> {
-  const connections = await listConnections(ctx);
-  return connections.find((connection) => connection.provider === TREK_PROVIDER) ?? null;
-}
-
-/** A Trek failure as the card names it, with the same three senses the Wallet mapping has. */
-function trekFailure(error: unknown): { code: IntegrationActionError; detail: string } {
-  if (error instanceof TrekError) {
-    const code: IntegrationActionError = isTrekTokenRejected(error)
-      ? "rejected"
-      : error.kind === "network" || error.kind === "timeout"
-        ? "unreachable"
-        : "provider";
-    return { code, detail: error.message };
-  }
-  return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
-}
 
 /**
  * Stores the Trek URL and token. Like Wallet's, saving and proving are separate: a Trek that is
@@ -312,116 +102,27 @@ export async function connectTrekAction(
   clientId: string,
   clientSecret: string,
 ): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const url = baseUrl.trim().replace(/\/+$/, "");
-  const id = clientId.trim();
-  const secret = clientSecret.trim();
-  if (url === "" || id === "" || secret === "") return { ok: false, error: "empty" };
-  // A header value is all either may be: a line break pasted out of a wrapped page would otherwise
-  // be quoted verbatim into a log and a page (the check Wallet's own token gets).
-  if (!isUsableToken(id) || !isUsableToken(secret)) return { ok: false, error: "empty" };
-  if (!/^https:\/\/[^\s]+$/.test(url)) return { ok: false, error: "provider" };
-
-  try {
-    await saveConnection(ctx, {
-      provider: TREK_PROVIDER,
-      credentials: { baseUrl: url, clientId: id, clientSecret: secret },
-    });
-  } catch (error) {
-    if (error instanceof IntegrationError) return { ok: false, error: "provider" };
-    throw error;
-  }
-  revalidate();
-  return { ok: true };
-}
-
-/** Asks Trek for this year, which proves the token without writing anything. */
-async function testTrekAction(): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const connection = await trekConnectionOf(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-  try {
-    const bag = await readCredentials(ctx, connection.id);
-    const client = createTrekClient({
-      baseUrl: bag.baseUrl ?? "",
-      clientId: bag.clientId ?? "",
-      clientSecret: bag.clientSecret ?? "",
-    });
-    await client.getEntries(new Date().getUTCFullYear());
-  } catch (error) {
-    const { code, detail } = trekFailure(error);
-    await markConnection(ctx, connection.id, code === "rejected" ? "revoked" : "error", detail);
-    revalidate();
-    return { ok: false, error: code };
-  }
-  await markConnection(ctx, connection.id, "active");
-  revalidate();
-  return { ok: true };
-}
-
-/** "Sync now" for Trek (spec §10.3). A pass already running is reported, never doubled. */
-async function syncTrekNowAction(): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const connection = await trekConnectionOf(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-  try {
-    await syncTrekNow(ctx);
-  } catch (error) {
-    if (isTrekBusy(error)) return { ok: false, error: "busy" };
-    const { code } = trekFailure(error);
-    revalidate();
-    return { ok: false, error: code };
-  }
-  revalidate();
-  revalidatePath("/timeoff");
-  return { ok: true };
+  return connect(TREK_PROVIDER, { baseUrl, clientId, clientSecret });
 }
 
 /**
- * Drops the Trek token — and, with it, every removal still waiting to be sent.
- *
- * A row marked `pending = 'delete'` is a day the app has already taken away from the person's
- * view and is only keeping so it can tell Trek to drop it too. Once the link is gone there is
- * nobody left to tell, so keeping it would leave a day nobody can see and nobody can remove
- * (plan F7 §3.4.10). The days themselves stay, as the confirmation says.
+ * Drops the Trek token — and, with it, every removal still waiting to be sent. The days themselves
+ * stay, as the confirmation says.
  */
 export async function disconnectTrekAction(): Promise<IntegrationActionResult> {
-  const ctx = await requireSession();
-  const connection = await trekConnectionOf(ctx);
-  if (!connection) return { ok: false, error: "notConnected" };
-  try {
-    await deleteConnection(ctx, connection.id);
-    await closePendingDeletes(ctx);
-  } catch (error) {
-    if (error instanceof IntegrationError) {
-      return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };
-    }
-    throw error;
-  }
-  revalidate();
-  revalidatePath("/timeoff");
-  return { ok: true };
+  return answer(await disconnectCore(await requireSession(), TREK_PROVIDER));
 }
 
 /* The row of a connection (ux/n2-connection-status.md §2.4) */
 
 /**
- * "Update now" and "Test the connection" for the two providers of this file, by provider id: the
- * row of every connection (`connection-calls.ts`) names no provider and asks here.
+ * "Update now", "Test the connection" and "Download the history again" for the two providers of this
+ * file, by provider id: the row of every connection (`connection-calls.ts`) names no provider and asks here.
  */
 export async function coreConnectionAction(
   provider: string,
   kind: "update" | "test" | "history",
   months?: number,
 ): Promise<IntegrationActionResult> {
-  if (provider === WALLET_PROVIDER) {
-    if (kind === "history") return redownloadWalletHistoryAction(months ?? 0);
-    return kind === "update" ? syncWalletNowAction() : testWalletAction();
-  }
-  if (provider === TREK_PROVIDER && kind !== "history") {
-    return kind === "update" ? syncTrekNowAction() : testTrekAction();
-  }
-  return { ok: false, error: "notConnected" };
+  return answer(await runCore(await requireSession(), provider, kind, months));
 }
-
-/* The schedule of any connection (D7) */

@@ -10592,7 +10592,7 @@
       },
       "post": {
         "operationId": "connect",
-        "summary": "Connects a provider that takes credentials. The fields of `credentials` are the ones the provider's descriptor names.",
+        "summary": "Connects a provider of the core that takes credentials, or replaces them. A refusal of the credentials is `invalid` with the card's code in `reason` (`empty`, `rejected`, `provider`).",
         "tags": [
           "connections"
         ],

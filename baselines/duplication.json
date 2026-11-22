@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105293,
-    "duplicatedLines": 16334,
-    "percent": 15.51,
-    "blocks": 1250
+    "lines": 105615,
+    "duplicatedLines": 16274,
+    "percent": 15.41,
+    "blocks": 1247
   },
   "units": {
     "api": {
-      "lines": 5347,
-      "duplicatedLines": 1138,
-      "percent": 21.28,
-      "blocks": 101
+      "lines": 5452,
+      "duplicatedLines": 1152,
+      "percent": 21.13,
+      "blocks": 103
     },
     "app": {
-      "lines": 20032,
-      "duplicatedLines": 2942,
-      "percent": 14.69,
-      "blocks": 229
+      "lines": 20002,
+      "duplicatedLines": 2804,
+      "percent": 14.02,
+      "blocks": 217
     },
     "global.d": {
       "lines": 12,
@@ -35,10 +35,10 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 5130,
-      "duplicatedLines": 983,
-      "percent": 19.16,
-      "blocks": 71
+      "lines": 5146,
+      "duplicatedLines": 996,
+      "percent": 19.35,
+      "blocks": 73
     },
     "modules/budgets": {
       "lines": 1525,
@@ -47,9 +47,9 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 13824,
+      "lines": 13820,
       "duplicatedLines": 2077,
-      "percent": 15.02,
+      "percent": 15.03,
       "blocks": 167
     },
     "modules/imports": {
@@ -66,9 +66,9 @@
     },
     "modules/investments": {
       "lines": 13895,
-      "duplicatedLines": 2371,
-      "percent": 17.06,
-      "blocks": 177
+      "duplicatedLines": 2377,
+      "percent": 17.11,
+      "blocks": 178
     },
     "modules/payroll": {
       "lines": 3776,
@@ -95,15 +95,15 @@
       "blocks": 29
     },
     "modules/transactions": {
-      "lines": 13024,
-      "duplicatedLines": 1665,
-      "percent": 12.78,
+      "lines": 13045,
+      "duplicatedLines": 1666,
+      "percent": 12.77,
       "blocks": 134
     },
     "modules/users": {
-      "lines": 862,
+      "lines": 845,
       "duplicatedLines": 205,
-      "percent": 23.78,
+      "percent": 24.26,
       "blocks": 18
     },
     "platform/alerts": {
@@ -113,15 +113,15 @@
       "blocks": 0
     },
     "platform/api": {
-      "lines": 155,
+      "lines": 164,
       "duplicatedLines": 15,
-      "percent": 9.68,
+      "percent": 9.15,
       "blocks": 1
     },
     "platform/auth": {
-      "lines": 1778,
+      "lines": 1822,
       "duplicatedLines": 314,
-      "percent": 17.66,
+      "percent": 17.23,
       "blocks": 19
     },
     "platform/backup": {
@@ -197,9 +197,9 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 2211,
+      "lines": 2264,
       "duplicatedLines": 438,
-      "percent": 19.81,
+      "percent": 19.35,
       "blocks": 35
     },
     "platform/integrations/ccxt": {
@@ -221,16 +221,16 @@
       "blocks": 0
     },
     "platform/integrations/trek": {
-      "lines": 973,
-      "duplicatedLines": 83,
-      "percent": 8.53,
-      "blocks": 6
+      "lines": 1027,
+      "duplicatedLines": 105,
+      "percent": 10.22,
+      "blocks": 8
     },
     "platform/integrations/wallet": {
-      "lines": 2349,
-      "duplicatedLines": 213,
-      "percent": 9.07,
-      "blocks": 18
+      "lines": 2420,
+      "duplicatedLines": 235,
+      "percent": 9.71,
+      "blocks": 20
     },
     "platform/jobs": {
       "lines": 499,
@@ -432,8 +432,9 @@
     "api/pockets/dto.ts": 33,
     "api/pockets/routes.ts": 63,
     "api/settings/categories.ts": 39,
-    "api/settings/category-moves.ts": 18,
-    "api/settings/connections.ts": 16,
+    "api/settings/category-board.ts": 6,
+    "api/settings/category-moves.ts": 19,
+    "api/settings/connections.ts": 23,
     "api/settings/security.ts": 35,
     "api/settings/server.ts": 6,
     "api/subscriptions/dto.ts": 43,
@@ -457,7 +458,6 @@
     "app/(app)/accounts/accounts-screen.tsx": 17,
     "app/(app)/accounts/accounts-table.tsx": 11,
     "app/(app)/accounts/api-cases.ts": 13,
-    "app/(app)/accounts/new/page.tsx": 7,
     "app/(app)/banks/connect/accounts-step.tsx": 46,
     "app/(app)/banks/connect/bank-step.tsx": 13,
     "app/(app)/banks/connect/outcome-actions.tsx": 9,
@@ -495,13 +495,12 @@
     "app/(app)/pockets/[id]/pocket-lists.tsx": 26,
     "app/(app)/pockets/[id]/pocket-screen.tsx": 15,
     "app/(app)/pockets/pockets-screen.tsx": 26,
-    "app/(app)/settings/categories/labels-card.tsx": 96,
+    "app/(app)/settings/categories/labels-card.tsx": 94,
     "app/(app)/settings/categories/merge-proposals.tsx": 8,
     "app/(app)/settings/categories/page.tsx": 15,
-    "app/(app)/settings/categories/source-actions.ts": 13,
-    "app/(app)/settings/categories/source-categories.tsx": 21,
-    "app/(app)/settings/data/page.tsx": 26,
-    "app/(app)/settings/integrations/actions.ts": 136,
+    "app/(app)/settings/categories/source-calls.ts": 19,
+    "app/(app)/settings/categories/source-categories.tsx": 8,
+    "app/(app)/settings/data/data-screen.tsx": 29,
     "app/(app)/settings/integrations/advanced/page.tsx": 25,
     "app/(app)/settings/integrations/banks-card.tsx": 72,
     "app/(app)/settings/integrations/connection-codes.ts": 17,
@@ -509,7 +508,7 @@
     "app/(app)/settings/integrations/connection-view.ts": 28,
     "app/(app)/settings/integrations/deactivate.ts": 10,
     "app/(app)/settings/integrations/page.tsx": 52,
-    "app/(app)/settings/integrations/plugin-row.tsx": 9,
+    "app/(app)/settings/integrations/plugin-row.tsx": 15,
     "app/(app)/settings/integrations/trek-card.tsx": 115,
     "app/(app)/settings/integrations/wallet-card.tsx": 165,
     "app/(app)/settings/profile/name-form.tsx": 21,
@@ -522,7 +521,7 @@
     "app/(app)/settings/rules/rules-screen.tsx": 18,
     "app/(app)/settings/rules/value-cell.tsx": 25,
     "app/(app)/settings/security/api-clients-table.tsx": 72,
-    "app/(app)/settings/security/calls.ts": 25,
+    "app/(app)/settings/security/calls.ts": 27,
     "app/(app)/settings/security/connected-apps-table.tsx": 59,
     "app/(app)/settings/security/new-api-client.tsx": 8,
     "app/(app)/settings/security/page.tsx": 8,
@@ -533,7 +532,7 @@
     "app/(app)/settings/server/jobs-card.tsx": 20,
     "app/(app)/settings/server/llm-card.tsx": 74,
     "app/(app)/settings/server/oidc-card.tsx": 74,
-    "app/(app)/settings/server/server-screen.tsx": 38,
+    "app/(app)/settings/server/server-screen.tsx": 41,
     "app/(app)/settings/server/smtp-card.tsx": 118,
     "app/(app)/settings/users/users-screen.tsx": 8,
     "app/(app)/timeoff/page.tsx": 7,
@@ -561,12 +560,12 @@
     "modules/accounts/service/provider-accounts.ts": 12,
     "modules/accounts/service/snapshot.ts": 9,
     "modules/accounts/service/switching.ts": 51,
-    "modules/accounts/ui/account-form.tsx": 39,
+    "modules/accounts/ui/account-form.tsx": 46,
     "modules/accounts/ui/balance-entries.tsx": 135,
     "modules/accounts/ui/connections.tsx": 38,
     "modules/accounts/ui/settings-form.tsx": 67,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
-    "modules/accounts/ui/switch/undo-switch.tsx": 7,
+    "modules/accounts/ui/switch/undo-switch.tsx": 13,
     "modules/budgets/jobs.ts": 12,
     "modules/budgets/queries.ts": 23,
     "modules/budgets/schema.ts": 34,
@@ -657,6 +656,7 @@
     "modules/investments/queries/detail.ts": 32,
     "modules/investments/queries/export.ts": 8,
     "modules/investments/queries/home.ts": 9,
+    "modules/investments/queries/snapshot.ts": 6,
     "modules/investments/queries/views.ts": 20,
     "modules/investments/rules/value.ts": 7,
     "modules/investments/rules/vocabulary.ts": 29,
@@ -786,7 +786,7 @@
     "modules/transactions/switch-rules.ts": 40,
     "modules/transactions/switching/doubles.ts": 64,
     "modules/transactions/switching/transfers.ts": 45,
-    "modules/transactions/taxonomy-calls.ts": 30,
+    "modules/transactions/taxonomy-calls.ts": 31,
     "modules/transactions/taxonomy/category-adoption.ts": 20,
     "modules/transactions/taxonomy/category-reads.ts": 50,
     "modules/transactions/taxonomy/category-writes.ts": 29,
@@ -835,8 +835,10 @@
     "platform/integrations/service/schedule.ts": 31,
     "platform/integrations/service/sources.ts": 76,
     "platform/integrations/status.ts": 20,
+    "platform/integrations/trek/card.ts": 22,
     "platform/integrations/trek/client.ts": 64,
     "platform/integrations/trek/sync.ts": 19,
+    "platform/integrations/wallet/card.ts": 22,
     "platform/integrations/wallet/categories.ts": 84,
     "platform/integrations/wallet/client.ts": 80,
     "platform/integrations/wallet/mapping.ts": 33,
