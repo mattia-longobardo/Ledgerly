@@ -9,11 +9,12 @@ const create = vi.fn();
 const save = vi.fn();
 const remove = vi.fn();
 
-vi.mock("./actions", () => ({
-  createLabelAction: (...args: unknown[]) => create(...args),
-  saveLabelAction: (...args: unknown[]) => save(...args),
-  deleteLabelAction: (...args: unknown[]) => remove(...args),
+vi.mock("@/modules/transactions", () => ({
+  createLabel: (...args: unknown[]) => create(...args),
+  saveLabel: (...args: unknown[]) => save(...args),
+  deleteLabel: (...args: unknown[]) => remove(...args),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const HOLIDAY: LabelRow = {
   id: "33333333-3333-7333-8333-333333333333",

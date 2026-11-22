@@ -16,13 +16,16 @@ export type { PreviewView, RuleCondition, RuleInput } from "./rule-calls";
 export {
   archiveCategory,
   createCategory,
+  createLabel,
   deleteCategory,
+  deleteLabel,
   macroMoveFacts,
   mergeCategories,
   moveCategory,
   moveToMacro,
   restoreCategories,
   saveCategory,
+  saveLabel,
   undoMerge,
   undoMoveToMacro,
 } from "./taxonomy-calls";

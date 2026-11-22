@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
@@ -9,7 +10,7 @@ import { ActionMenu } from "@ledgerly/ui/menu";
 import { Modal } from "@ledgerly/ui/modal";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { notify } from "@ledgerly/ui/toast";
-import { createLabelAction, deleteLabelAction, saveLabelAction } from "./actions";
+import { createLabel, deleteLabel, saveLabel } from "@/modules/transactions";
 import { ColorDot, ColorPicker } from "@ledgerly/ui/color-picker";
 import { CATEGORY_COLORS, NAME_MAX } from "@ledgerly/domain/transactions/client";
 
@@ -42,6 +43,8 @@ export function LabelsCard({ rows }: { rows: LabelRow[] }) {
   const [removing, setRemoving] = useState<LabelRow | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // The rows come from the page's server render until Settings › Categories reads `/api/v1` itself.
+  const router = useRouter();
 
   /** A `TaxonomyError` code, spelled out one branch at a time so the catalogue keys stay literal. */
   function messageFor(code: string): string {
@@ -65,7 +68,7 @@ export function LabelsCard({ rows }: { rows: LabelRow[] }) {
     const id = draft.id;
     startTransition(async () => {
       try {
-        const result = id ? await saveLabelAction(id, input) : await createLabelAction(input);
+        const result = id ? await saveLabel(id, input) : await createLabel(input);
         if (!result.ok) {
           setError(messageFor(result.error));
           return;
@@ -73,6 +76,7 @@ export function LabelsCard({ rows }: { rows: LabelRow[] }) {
         setError(null);
         setDraft(null);
         notify(t("saved"));
+        router.refresh();
       } catch {
         setError(t("errors.failed"));
       }
@@ -84,7 +88,7 @@ export function LabelsCard({ rows }: { rows: LabelRow[] }) {
     const id = removing.id;
     startTransition(async () => {
       try {
-        const result = await deleteLabelAction(id);
+        const result = await deleteLabel(id);
         if (!result.ok) {
           setError(messageFor(result.error));
           return;
@@ -92,6 +96,7 @@ export function LabelsCard({ rows }: { rows: LabelRow[] }) {
         setError(null);
         setRemoving(null);
         notify(t("removedToast"));
+        router.refresh();
       } catch {
         setError(t("errors.failed"));
       }

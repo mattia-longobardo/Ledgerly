@@ -29,12 +29,7 @@ import { ButtonLink } from "@ledgerly/ui/button";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { sourceCategoryRows } from "../categories/source";
 import { bankWait, ibanConflictNames } from "./connection-list";
-import {
-  keepSourceCategoryAction,
-  setSourceCategoryAction,
-  undoSourceCategoryAction,
-} from "../categories/source-actions";
-import { SourceCategories, type SourceCategoryCommands } from "../categories/source-categories";
+import { SourceCategories } from "../categories/source-categories";
 import { HistoryDepth } from "./advanced/history-depth";
 import { BanksCard } from "./banks-card";
 import { ConnectionRow, type ConnectionRowProps, type RowStatusValue, SourceLinkRow } from "./connection-row";
@@ -53,13 +48,6 @@ import { ScheduleCell } from "./schedule-cell";
 import { SourceWrites } from "./source-writes";
 import { TrekCard } from "./trek-card";
 import { WalletAccounts, WalletCard } from "./wallet-card";
-
-/** The writes of "Categories of {source}", handed to the component: actions of the application. */
-const SOURCE_COMMANDS: SourceCategoryCommands = {
-  set: setSourceCategoryAction,
-  undo: undoSourceCategoryAction,
-  keep: keepSourceCategoryAction,
-};
 
 /** Both routes: the list (`/settings/integrations`) and a source's page (`…/[source]`). */
 interface IntegrationsProps {
@@ -377,7 +365,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
             description={plugin("sections.categoriesHint", { provider: name })}
             padded={false}
           >
-            <SourceCategories source={categories.name} rows={categories.rows} commands={SOURCE_COMMANDS} />
+            <SourceCategories source={categories.name} rows={categories.rows} />
           </SettingsSection>
         )}
 

@@ -9,6 +9,7 @@ import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picke
 import { cn } from "@ledgerly/ui/cn";
 import { Segmented } from "@ledgerly/ui/segmented";
 import { notify } from "@ledgerly/ui/toast";
+import { SOURCE_CATEGORY_CALLS } from "./source-calls";
 
 /** One category of a source, as its row draws it. */
 export interface SourceCategoryRow {
@@ -55,12 +56,13 @@ export interface SourceCategoryCommands {
 export function SourceCategories({
   source,
   rows,
-  commands,
+  commands = SOURCE_CATEGORY_CALLS,
 }: {
   /** The name of the source, as a person reads it. */
   source: string;
   rows: readonly SourceCategoryRow[];
-  commands: SourceCategoryCommands;
+  /** `/api/v1/source-categories`; a test hands its own. */
+  commands?: SourceCategoryCommands;
 }) {
   const t = useTranslations("settings.categories.source");
   const tExpenses = useTranslations("expenses");

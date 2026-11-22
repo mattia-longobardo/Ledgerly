@@ -1,6 +1,6 @@
 // The calls of the categories' board to `/api/v1` (rewrite plan R3): create, change, move, merge,
-// archive, restore, delete and «Move to another section», each with its «Undo». Each keeps the answer
-// of the Server Action of `settings/categories/actions.ts` it replaces, so the board reads one shape;
+// archive, restore, delete and «Move to another section», each with its «Undo»; and the labels. Each
+// keeps the answer of the Server Action it replaces, so the board and the cards read one shape;
 // a refusal comes back as the use case's code (`duplicate`, `invalid_parent`, `not_found`…).
 import { budgets as budgetRoutes } from "@ledgerly/api-contract/budgets";
 import { categories, categoryBoard, labels, profile } from "@ledgerly/api-contract/settings";
@@ -33,6 +33,7 @@ function changed(): void {
     categories.listCategories,
     categories.getCategorySummary,
     categoryBoard.getCategoriesBoard,
+    labels.listLabels,
     labels.listSourceCategories,
     movements.getTransactionsView,
     movements.listTransactions,
@@ -134,5 +135,29 @@ export const moveToMacro = (
 export const undoMoveToMacro = (undo: Undo) =>
   writing(async () => {
     await call(categories.undoMoveToMacro, { body: { undo } });
+    return {};
+  });
+
+/** A label as the card's form sends it. */
+interface LabelFormInput {
+  name: string;
+  color: string | null;
+}
+
+export const createLabel = (input: LabelFormInput) =>
+  writing(async () => {
+    await call(labels.createLabel, { body: input });
+    return {};
+  });
+
+export const saveLabel = (id: string, input: LabelFormInput) =>
+  writing(async () => {
+    await call(labels.updateLabel, { params: { id }, body: input });
+    return {};
+  });
+
+export const deleteLabel = (id: string) =>
+  writing(async () => {
+    await call(labels.deleteLabel, { params: { id } });
     return {};
   });
