@@ -4,22 +4,22 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105950,
+    "lines": 105969,
     "duplicatedLines": 16293,
     "percent": 15.38,
     "blocks": 1247
   },
   "units": {
     "api": {
-      "lines": 5573,
+      "lines": 5577,
       "duplicatedLines": 1153,
-      "percent": 20.69,
+      "percent": 20.67,
       "blocks": 103
     },
     "app": {
-      "lines": 20191,
+      "lines": 20205,
       "duplicatedLines": 2824,
-      "percent": 13.99,
+      "percent": 13.98,
       "blocks": 217
     },
     "global.d": {
@@ -95,7 +95,7 @@
       "blocks": 29
     },
     "modules/transactions": {
-      "lines": 13047,
+      "lines": 13048,
       "duplicatedLines": 1668,
       "percent": 12.78,
       "blocks": 134

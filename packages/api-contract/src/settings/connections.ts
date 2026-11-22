@@ -36,6 +36,9 @@ const schedule = z.object({
   ),
 });
 
+/** The most runs of each connection `GET /connections?runs=` gives: what the page of a source groups. */
+const MAX_RUNS = 40;
+
 const run = z.object({
   /** What the run read: `accounts`, `transactions`, … (open vocabulary). */
   kind: z.string(),
@@ -73,6 +76,12 @@ const connection = z.object({
   keyRefused: z.boolean(),
   /** Names of accounts here whose IBAN a new account of the source carries. Never an IBAN. */
   ibanConflicts: z.array(z.string()),
+  /** The months of movements read today; null for a provider without a chosen depth of history. */
+  historyDepth: z.number().int().nullable(),
+  /** The accounts the bank's access shares; null for a connection that is not a plugin's. */
+  shared: z.number().int().nonnegative().nullable(),
+  /** An investment service with a key: its account, whose page has its settings; null otherwise. */
+  service: z.object({ accountId: id() }).nullable(),
   /** What the connection can do: the client offers only these. */
   capabilities: z.object({
     sync: z.boolean(),
@@ -103,7 +112,7 @@ const connection = z.object({
     ]),
     action: z.enum(["update", "renew", "replaceKey", "chooseAccounts", "resume", "enable"]).nullable(),
   }),
-  /** The last runs, newest first. */
+  /** The last runs, newest first: 10, or the `runs` of the query. */
   runs: z.array(run),
 });
 
@@ -125,6 +134,9 @@ const CONNECTION_EXAMPLE = {
   accountsChosen: true,
   keyRefused: false,
   ibanConflicts: [],
+  historyDepth: null,
+  shared: 2,
+  service: null,
   capabilities: {
     sync: true,
     test: false,
@@ -152,8 +164,11 @@ export const listConnections = defineRoute({
   path: "/connections",
   scope: "read",
   capability: "connections",
-  summary: "The person's connections with their state, schedule, capabilities and last runs.",
+  summary:
+    "The person's connections with their state, schedule, capabilities and last runs: 10 runs each, " +
+    `or \`runs\` (at most ${MAX_RUNS}).`,
   actions: [],
+  query: z.object({ runs: z.coerce.number().int().min(1).max(MAX_RUNS).optional() }),
   response: z.object({ connections: z.array(connection) }),
   errors: [],
   mcp: {

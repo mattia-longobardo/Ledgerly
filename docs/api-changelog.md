@@ -16,6 +16,11 @@ written before it keeps working.
   `core_provider` is gone.
 - The web's session counts its calls in two windows of 1200 a minute: the browser's (`Sec-Fetch-Site`
   sent) and the web's server's (not sent). A client in a loop is still answered `429` in either.
+- `GET /connections`: each connection has `historyDepth`, the months of movements its cursor reads
+  today (null for a provider without a chosen depth); `shared`, the accounts a bank's access shares,
+  also for a plugin paused (null for a connection that is not a plugin's); `service`, the `accountId`
+  of an investment service with a key, whose page has its settings (null otherwise).
+- `GET /connections?runs=N`: the last N runs of each connection, 1 to 40; 10 without it.
 - `GET /connections`: each connection has `consecutiveFailures`, the failed readings in a row since the
   last good one (0 after a good one).
 - `GET /plugins`: each plugin has `countries`, the ISO codes of its manifest's `country` connection field

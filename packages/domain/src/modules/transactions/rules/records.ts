@@ -205,6 +205,19 @@ export function categoryColor(
 }
 
 /**
+ * The colour a category is drawn in: its own when it is a group and somebody chose one, its
+ * group's when it is a sub-category, and otherwise the one derived from the id (`categoryColor`).
+ * Nothing is ever colourless, and a group and its children always agree.
+ */
+export function colorOfCategory(
+  category: { id: string; parentId: string | null; color: string | null },
+  groups: ReadonlyMap<string, { id: string; parentId: string | null; color: string | null }>,
+): string {
+  const group = category.parentId === null ? null : groups.get(category.parentId);
+  return categoryColor(category, group ? categoryColor(group) : null);
+}
+
+/**
  * Categories in the order of their tree (spec §7.2, F2.5): each group followed by its
  * sub-categories, with the depth a list indents them by. The order *within* each level is the one
  * the rows arrive in — the query's deterministic `ORDER BY` — so this only moves children under

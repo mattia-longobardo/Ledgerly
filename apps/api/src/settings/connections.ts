@@ -52,7 +52,8 @@ interface Decision {
 
 /** The use cases the web process lends until E5 and R4: the Server Actions call the same ones. */
 export interface ConnectionCases {
-  list(ctx: Ctx): Promise<z.input<typeof connections.listConnections.response>["connections"]>;
+  /** `runs`: the last runs of each connection to give, 10 when not asked. */
+  list(ctx: Ctx, runs?: number): Promise<z.input<typeof connections.listConnections.response>["connections"]>;
   run(
     ctx: Ctx,
     connectionId: string,
@@ -213,7 +214,10 @@ function serveConnectionAccounts(app: Hono<ApiEnv>, guard: Guard, cases: Connect
 }
 
 function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): void {
-  serve(app, guard, connections.listConnections, async ({ ctx }) => ({ connections: await cases.list(ctx) }));
+  serve(app, guard, connections.listConnections, async ({ ctx, query }) => {
+    const list = await cases.list(ctx, query.runs);
+    return { connections: list };
+  });
   serve(app, guard, connections.connect, async ({ ctx, body }) => {
     if (!isCore(body.provider)) throw new ApiRefusal("conflict", "not_by_credentials");
     const outcome = await cases.connectCore(ctx, body.provider, body.credentials);

@@ -12,7 +12,14 @@ export {
   TEXT_OPS,
 } from "./categorize/user-rules";
 export type { RuleField } from "./categorize/user-rules";
-export { CATEGORY_COLORS, NAME_MAX, TRANSACTION_TYPES, categoryFamily } from "./rules";
+export {
+  CATEGORY_COLORS,
+  NAME_MAX,
+  TRANSACTION_TYPES,
+  categoryColor,
+  categoryFamily,
+  colorOfCategory,
+} from "./rules";
 export { DEFAULT_GROUPS } from "./categorize/tables";
 export type { RowBadge } from "./rules";
 export type { CategoryType, TransactionType } from "./rules";

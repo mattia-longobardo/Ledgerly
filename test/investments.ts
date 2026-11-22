@@ -42,6 +42,21 @@ export async function manualService(ctx: Ctx, input: ServiceInput): Promise<{ ac
   return createManualService(ctx, { accountId, category: input.category, url: input.url ?? null });
 }
 
+/** The account of a service with a key, as the connection leaves it: no book, no period. */
+export async function keyServiceAccount(ctx: Ctx, provider: string): Promise<{ accountId: string }> {
+  const accountId = await serviceAccount(ctx, { name: provider, category: "broker", currency: "EUR" });
+  await getDb()
+    .insert(investmentAccounts)
+    .values({
+      userId: ctx.userId,
+      accountId,
+      category: "broker",
+      provider,
+      managedSince: today(ctx.timeZone),
+    });
+  return { accountId };
+}
+
 /**
  * The provider of {@link engineService}: no catalog entry, no connection — a service the module
  * writes, so the engine's tests can type its operations as a provider would deliver them.

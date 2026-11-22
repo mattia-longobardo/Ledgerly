@@ -22,7 +22,7 @@ import { labelOf, passFor } from "@/platform/integrations/registry";
 import { sourceSlugOf, statusOf } from "./connection-view";
 
 const DAY_MS = 86_400_000;
-/** The runs of a connection the list gives, newest first: the ten the row shows. */
+/** The runs of a connection the list gives, newest first, when not asked for more: the ten a row shows. */
 const RUNS_SHOWN = 10;
 
 interface Capabilities {
@@ -35,6 +35,8 @@ interface Capabilities {
 }
 
 interface Facts {
+  /** The accounts a bank's access shares; null for a connection that is not a plugin's. */
+  shared: number | null;
   providerActive: boolean;
   accountsChosen: boolean;
   keyRefused: boolean;
@@ -80,6 +82,7 @@ async function bankFacts(
   const summary = await connectionSummary(ctx, connection.id);
   const wait = await bankWait(ctx, connection.id, now);
   return {
+    shared: summary.accounts,
     providerActive: plugin.active,
     accountsChosen: summary.chosen,
     keyRefused: plugin.keyRefused,
@@ -111,9 +114,19 @@ async function rowOf(
   ctx: Ctx,
   connection: Connection,
   facts: Facts,
-  known: { runs: readonly RecentRun[]; ibanConflicts: (connection: Connection) => string[]; now: Date },
+  known: {
+    runs: readonly RecentRun[];
+    ibanConflicts: (connection: Connection) => string[];
+    service: { accountId: string } | null;
+    now: Date;
+  },
 ) {
   const label = await labelOf(connection, ctx.locale);
+  // The depth read today, as «History» of the source's page says it: one query, for a provider with one.
+  const history = passFor(connection.provider)?.history;
+  const historyDepth = history
+    ? history.depthOf((await readSyncJob(ctx, connection.id, "transactions"))?.cursor)
+    : null;
   const runs = known.runs.filter((run) => run.connectionId === connection.id);
   return {
     id: connection.id,
@@ -131,6 +144,8 @@ async function rowOf(
     ...facts,
     nextAttempt: instant(facts.nextAttempt),
     ibanConflicts: known.ibanConflicts(connection),
+    historyDepth,
+    service: known.service,
     // The state of the row, by the same rule as the page's (`syncStatus`): the client says it.
     status: statusOf({ connection, runs, ...facts }, known.now),
     runs: runs.map(({ kind, state, origin, errorCode, counts, startedAt }) => ({
@@ -145,10 +160,10 @@ async function rowOf(
 }
 
 /** Every connection of the person that a row shows: the core's, the plugins', the services'. */
-export async function connectionList(ctx: Ctx, now: Date = new Date()) {
+export async function connectionList(ctx: Ctx, now: Date = new Date(), runsShown: number = RUNS_SHOWN) {
   const [connections, runs, plugins, services] = await Promise.all([
     listConnections(ctx),
-    recentRuns(ctx, RUNS_SHOWN, new Date(now.getTime() - SYNC_RUN_RETENTION_DAYS * DAY_MS)),
+    recentRuns(ctx, runsShown, new Date(now.getTime() - SYNC_RUN_RETENTION_DAYS * DAY_MS)),
     listUserPlugins(ctx),
     listInvestmentAccounts(ctx),
   ]);
@@ -161,12 +176,13 @@ export async function connectionList(ctx: Ctx, now: Date = new Date()) {
   const rows = [];
   for (const connection of connections) {
     // A service of Investments has a row only while its account is there.
-    if (
-      providerOf(connection.provider) !== null &&
-      !services.some((one) => one.provider === connection.provider)
-    )
-      continue;
+    const investment = providerOf(connection.provider);
+    const account = services.find((one) => one.provider === connection.provider);
+    if (investment !== null && account === undefined) continue;
+    // A service with a key has its settings on its account's page.
+    const service = investment?.connect === "apikey" && account ? { accountId: account.accountId } : null;
     let facts: Facts = {
+      shared: null,
       providerActive: true,
       accountsChosen: true,
       keyRefused: false,
@@ -178,7 +194,7 @@ export async function connectionList(ctx: Ctx, now: Date = new Date()) {
       const active = plugins.some((one) => one.id === pluginId && one.state === "active");
       facts = await bankFacts(ctx, connection, { active, keyRefused: await keyRefused(pluginId) }, now);
     }
-    rows.push(await rowOf(ctx, connection, facts, { runs, ibanConflicts, now }));
+    rows.push(await rowOf(ctx, connection, facts, { runs, ibanConflicts, service, now }));
   }
   return rows;
 }

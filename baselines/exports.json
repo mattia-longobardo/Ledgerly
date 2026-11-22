@@ -766,7 +766,9 @@
     "TEXT_OPS",
     "TRANSACTION_TYPES",
     "TransactionType",
-    "categoryFamily"
+    "categoryColor",
+    "categoryFamily",
+    "colorOfCategory"
   ],
   "packages/domain/src/modules/transactions/index.ts": [
     "CATEGORY_NAME_MAX",

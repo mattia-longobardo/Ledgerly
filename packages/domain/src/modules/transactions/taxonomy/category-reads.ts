@@ -4,10 +4,12 @@ import type { Ctx } from "../../../platform/context";
 import { type Db, getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import type { EntityType } from "../../../platform/integrations/rules";
-import { CATEGORY_TYPES, categoryColor, type CategoryType, NAME_MAX, treeOrder } from "../rules";
+import { CATEGORY_TYPES, type CategoryType, colorOfCategory, NAME_MAX, treeOrder } from "../rules";
 import { retypeMovements } from "../macro";
 import { categories, labels, transactions } from "../schema";
 import { HEX_COLOR } from "../../../shared/inputs";
+
+export { colorOfCategory };
 
 export type Category = typeof categories.$inferSelect;
 export type Label = typeof labels.$inferSelect;
@@ -139,19 +141,6 @@ export async function listCategories(
     .where(categoryScope(ctx, options.includeArchived ?? false))
     .orderBy(...CATEGORY_ORDER);
   return treeOrder(rows);
-}
-
-/**
- * The colour a category is drawn in: its own when it is a group and somebody chose one, its
- * group's when it is a sub-category, and otherwise the one derived from the id (`categoryColor`).
- * Nothing is ever colourless, and a group and its children always agree.
- */
-export function colorOfCategory(
-  category: Pick<Category, "id" | "parentId" | "color">,
-  groups: ReadonlyMap<string, Pick<Category, "id" | "parentId" | "color">>,
-): string {
-  const group = category.parentId === null ? null : groups.get(category.parentId);
-  return categoryColor(category, group ? categoryColor(group) : null);
 }
 
 /**

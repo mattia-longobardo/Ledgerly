@@ -28,7 +28,7 @@ const coreOf = (ctx: Ctx) => (provider: string, kind: "update" | "test" | "histo
   runCore(ctx, provider, kind, months);
 
 export const connectionCases: ConnectionCases = {
-  list: connectionList,
+  list: (ctx, runs) => connectionList(ctx, new Date(), runs),
   async run(ctx, connectionId, kind, { months, headers }) {
     const outcome = await runConnection(ctx, connectionId, kind, {
       months,

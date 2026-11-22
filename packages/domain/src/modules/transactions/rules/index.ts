@@ -35,6 +35,7 @@ export {
   CATEGORY_COLORS,
   autoCategoryColor,
   categoryColor,
+  colorOfCategory,
   categoryFamily,
   treeOrder,
 } from "./records";

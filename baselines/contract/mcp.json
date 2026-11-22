@@ -193,7 +193,13 @@
     "inputSchema": {
      "$schema": "http://json-schema.org/draft-07/schema#",
      "type": "object",
-     "properties": {}
+     "properties": {
+      "runs": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 40
+      }
+     }
     },
     "annotations": {
      "readOnlyHint": true,
