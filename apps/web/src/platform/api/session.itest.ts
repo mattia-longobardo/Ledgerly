@@ -69,7 +69,8 @@ function call(
   init: { method?: string; body?: unknown; form?: FormData; origin?: string | null; csrf?: boolean } = {},
 ): Promise<Response> {
   const method = init.method ?? "GET";
-  const headers = new Headers();
+  // A browser's call: it always says where it comes from (`apiRead` of the web's server does not).
+  const headers = new Headers({ "sec-fetch-site": "same-origin" });
   if (who.cookie) headers.set("cookie", who.cookie);
   if (who.bearer) headers.set("authorization", `Bearer ${who.bearer}`);
   const write = method !== "GET";
@@ -144,6 +145,23 @@ describe("the session cookie on /api/v1", () => {
     for (let i = 0; i < left; i += 1)
       await takeSlot(`user:${alice.userId}`, new Date(), SESSION_MAX_PER_WINDOW);
     const stopped = await call("/profile", alice);
+    expect(stopped.status).toBe(429);
+    expect(Number(stopped.headers.get("retry-after"))).toBeGreaterThan(0);
+  });
+
+  it("counts the reads of the web's server in a window of their own, stopped at 1200 too (H57)", async () => {
+    const fromServer = () =>
+      api.fetch(new Request(`${origin()}/api/v1/profile`, { headers: { cookie: alice.cookie } }));
+    for (let i = 0; i < SESSION_MAX_PER_WINDOW; i += 1)
+      await takeSlot(`user:${alice.userId}`, new Date(), SESSION_MAX_PER_WINDOW);
+    expect((await call("/profile", alice)).status).toBe(429);
+    const server = await fromServer();
+    expect(server.status).toBe(200);
+    expect(server.headers.get("x-ratelimit-limit")).toBe(String(SESSION_MAX_PER_WINDOW));
+    const left = Number(server.headers.get("x-ratelimit-remaining"));
+    for (let i = 0; i < left; i += 1)
+      await takeSlot(`user:${alice.userId}:web`, new Date(), SESSION_MAX_PER_WINDOW);
+    const stopped = await fromServer();
     expect(stopped.status).toBe(429);
     expect(Number(stopped.headers.get("retry-after"))).toBeGreaterThan(0);
   });

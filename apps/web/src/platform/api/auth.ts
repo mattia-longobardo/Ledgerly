@@ -70,12 +70,27 @@ async function identify(value: string): Promise<ApiIdentity | null> {
   );
 }
 
+/**
+ * The window a session's call counts in (H57): the browser's, or the web's server's. A browser always
+ * sends `Sec-Fetch-Site` and a page cannot remove it; the web's server (`apiRead`, the title and the 404
+ * of a page) does not send it. Each window has the same limit, so a client in a loop is still stopped:
+ * one that leaves the header out only moves to the other window, twice the limit at worst.
+ */
+const sessionBudget = (userId: string, headers: Headers) =>
+  headers.has("sec-fetch-site") ? `user:${userId}` : `user:${userId}:web`;
+
 /** The web's session in the request's cookie, or null (no session, TOTP setup owed, blocked). */
 async function identifySession(headers: Headers): Promise<ApiIdentity | null> {
   const ctx = await sessionCtxOf(headers);
   if (!ctx) return null;
   const scopes = ctx.role === "admin" ? [...SESSION_SCOPES, "admin"] : SESSION_SCOPES;
-  return { kind: "session", ctx, scopes, budget: `user:${ctx.userId}`, limit: SESSION_MAX_PER_WINDOW };
+  return {
+    kind: "session",
+    ctx,
+    scopes,
+    budget: sessionBudget(ctx.userId, headers),
+    limit: SESSION_MAX_PER_WINDOW,
+  };
 }
 
 /**
@@ -132,7 +147,7 @@ export function withToken(scope: ContractScope): MiddlewareHandler<ApiEnv> {
     }
     if (identity.kind === "session" && !sameOriginWrite(c)) return fail(c, "forbidden");
 
-    // One budget per client (D6: key = client_id), one per person for the web's session.
+    // One budget per client (D6: key = client_id), two per person for the web's session (`sessionBudget`).
     const verdict = await takeSlot(identity.budget, new Date(), identity.limit);
     c.header("X-RateLimit-Limit", String(identity.limit));
     c.header("X-RateLimit-Remaining", String(verdict.remaining));

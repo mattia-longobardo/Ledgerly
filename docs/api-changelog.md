@@ -3,8 +3,10 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
-## Unreleased · R3-coda: merge proposals
+## Unreleased · R3-coda: merge proposals, the web's server reads
 
+- The web's session counts its calls in two windows of 1200 a minute: the browser's (`Sec-Fetch-Site`
+  sent) and the web's server's (not sent). A client in a loop is still answered `429` in either.
 - `GET /categories/merge-proposals`: the pairs of categories that look like the same one, each side with
   `id`, `name`, `color`, `usage`, `hasChildren`, `canKeepOther`, and `sumsBudgets`.
 
