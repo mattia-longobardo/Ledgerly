@@ -34,7 +34,8 @@ function hasSecret(request: IncomingMessage, secret: string): boolean {
 async function body(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const chunk of request as AsyncIterable<Buffer>) {
+  for await (const chunk of request) {
+    if (!(chunk instanceof Buffer)) throw new PluginFailure("invalid_request");
     size += chunk.length;
     if (size > MAX_BODY_BYTES) throw new PluginFailure("invalid_request");
     chunks.push(chunk);

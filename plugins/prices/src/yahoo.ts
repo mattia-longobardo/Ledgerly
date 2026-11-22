@@ -89,21 +89,18 @@ function decimal(value: number, minor: boolean): string {
   return fixed.replace(/\.?0+$/, "");
 }
 
-/**
- * The daily closes of one symbol from `from` to `to`, both included, in the exchange's days. The
- * bar of a session still open is left out: it enters the next call, once final.
- */
-export async function dailyCloses(
+type Chart = NonNullable<z.infer<typeof chartSchema>["chart"]["result"]>[number];
+
+/** Yahoo's chart of a symbol over the range, one day more on each side (the bounds are UTC). */
+async function chartOf(
   symbol: string,
   range: { from: string; to: string },
-  options: { fetchFn?: Fetch; now?: () => Date } = {},
-): Promise<Bar[] | BarsError> {
-  const doFetch = options.fetchFn ?? globalThis.fetch;
-  // One day more on each side: the days are the exchange's, the bounds are UTC.
+  fetchFn: Fetch,
+): Promise<Chart | BarsError> {
   const query = `?interval=1d&period1=${startOf(range.from) - 86_400}&period2=${startOf(range.to) + 2 * 86_400}`;
   let response: Response;
   try {
-    response = await doFetch(`${BASE}${encodeURIComponent(symbol)}${query}`, {
+    response = await fetchFn(`${BASE}${encodeURIComponent(symbol)}${query}`, {
       headers: { "user-agent": USER_AGENT, accept: "application/json" },
       redirect: "error",
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -116,24 +113,39 @@ export async function dailyCloses(
   if (!response.ok) return "provider_down";
   const parsed = chartSchema.safeParse(await response.json().catch(() => null));
   if (!parsed.success) return "provider_down";
-  const result = parsed.data.chart.result?.[0];
-  if (!result) return parsed.data.chart.error ? "unknown_symbol" : "no_data";
-  const { meta, timestamp = [] } = result;
+  return parsed.data.chart.result?.[0] ?? (parsed.data.chart.error ? "unknown_symbol" : "no_data");
+}
+
+/** The day of the exchange's session still open at `nowSeconds`, or null. */
+function openDayOf(meta: Chart["meta"], nowSeconds: number): string | null {
+  const regular = meta.currentTradingPeriod?.regular;
+  return regular && nowSeconds < regular.end ? civilDay(regular.start + meta.gmtoffset) : null;
+}
+
+/**
+ * The daily closes of one symbol from `from` to `to`, both included, in the exchange's days. The
+ * bar of a session still open is left out: it enters the next call, once final.
+ */
+export async function dailyCloses(
+  symbol: string,
+  range: { from: string; to: string },
+  options: { fetchFn?: Fetch; now?: () => Date } = {},
+): Promise<Bar[] | BarsError> {
+  const chart = await chartOf(symbol, range, options.fetchFn ?? globalThis.fetch);
+  if (typeof chart === "string") return chart;
+  const { meta, timestamp = [] } = chart;
   if (!meta.currency) return "no_data";
   const currency = MINOR_UNITS[meta.currency] ?? meta.currency;
   const minor = meta.currency in MINOR_UNITS;
-  const closes = result.indicators.quote[0]?.close ?? [];
-  const nowSeconds = (options.now ?? (() => new Date()))().getTime() / 1000;
-  const regular = meta.currentTradingPeriod?.regular;
-  // The session of the exchange's today, while it has not closed.
-  const openDay = regular && nowSeconds < regular.end ? civilDay(regular.start + meta.gmtoffset) : null;
+  const closes = chart.indicators.quote[0]?.close ?? [];
+  const openDay = openDayOf(meta, (options.now ?? (() => new Date()))().getTime() / 1000);
   const bars = new Map<string, Bar>();
   timestamp.forEach((seconds, index) => {
     const close = closes[index];
-    const on = civilDay(seconds + meta.gmtoffset);
-    if (close == null || close <= 0 || on === openDay || on < range.from || on > range.to) return;
+    const day = civilDay(seconds + meta.gmtoffset);
+    if (close == null || close <= 0 || day === openDay || day < range.from || day > range.to) return;
     // The last bar of a day wins: Yahoo can repeat today's as the session's last minute.
-    bars.set(on, { on, close: decimal(close, minor), currency });
+    bars.set(day, { on: day, close: decimal(close, minor), currency });
   });
   return bars.size === 0 ? "no_data" : [...bars.values()];
 }

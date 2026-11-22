@@ -494,6 +494,25 @@
     "stuckDocuments",
     "uploadDocuments"
   ],
+  "packages/domain/src/modules/instruments/index.ts": [
+    "Close",
+    "DEFAULT_DAILY_CALLS",
+    "FALLBACK_MIC",
+    "INSTRUMENT_CLASSES",
+    "InstrumentHit",
+    "PriceAnswer",
+    "PriceRequest",
+    "PriceSource",
+    "PricedMarket",
+    "PricesRun",
+    "SearchDeps",
+    "closesUpTo",
+    "isStale",
+    "lastCloses",
+    "pricedListings",
+    "refreshPrices",
+    "searchInstruments"
+  ],
   "packages/domain/src/modules/interests/client.ts": [
     "CATEGORY_NOT_LINKED",
     "DEFAULT_RUN_HOUR",
@@ -1315,6 +1334,7 @@
     "pluginDiagnostics",
     "pluginUserCredentials",
     "plugins",
+    "pricesPlugin",
     "providerAccountIdOf"
   ],
   "packages/domain/src/platform/settings/client.ts": [
@@ -1409,6 +1429,7 @@
     "forgetPlugin",
     "keepManifestsFresh",
     "listInstitutions",
+    "pluginPriceSource",
     "prepareAccessClosing",
     "previewBankAccount",
     "readBank",
