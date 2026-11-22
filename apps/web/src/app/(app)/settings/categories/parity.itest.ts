@@ -226,3 +226,53 @@ describe("the categories of a source, old action = new call", () => {
     expect(await sourceRowsOf(now)).toEqual(await sourceRowsOf(old));
   });
 });
+
+describe("the proposals to merge, page = new call", () => {
+  it("answers each side as the page drew it, and whether two budgets are summed", async () => {
+    const { createAccount } = await import("@domain/modules/accounts/service");
+    const { createManualTransaction } = await import("@domain/modules/transactions/manual");
+    const { mergeProposalsView } = await import("./merge");
+    const tobacco = await transactions.createCategory(now, { name: "Tobacco" });
+    await transactions.createCategory(now, { name: "Cigars", parentId: tobacco.id });
+    const vices = await transactions.createCategory(now, { name: "Vices" });
+    const both = await transactions.createCategory(now, { name: "Alcohol, tobacco", parentId: vices.id });
+    const account = await createAccount(now, { name: "Cash", type: "cash" });
+    for (const categoryId of [tobacco.id, both.id, both.id]) {
+      await createManualTransaction(now, {
+        kind: "expense",
+        amountCents: 500n,
+        on: "2026-11-02",
+        accountId: account.id,
+        categoryId,
+        payee: "Shop",
+        note: "",
+      });
+    }
+
+    // What `settings/categories/page.tsx` drew from `mergeProposalsView` and the categories.
+    const categories = await transactions.listCategoriesWithUsage(now, { includeArchived: true });
+    const byId = new Map(categories.map(({ category }) => [category.id, category]));
+    const hasChildren = (id: string) => categories.some((row) => row.category.parentId === id);
+    const side = (category: { id: string; name: string; usage: number }, other: { id: string }) => ({
+      id: category.id,
+      name: category.name,
+      color: transactions.colorOfCategory(byId.get(category.id)!, byId),
+      usage: category.usage,
+      hasChildren: hasChildren(category.id),
+      canKeepOther: !(hasChildren(other.id) && byId.get(category.id)?.parentId !== null),
+    });
+    const page = (await mergeProposalsView(now)).map((proposal) => ({
+      first: side(proposal.first, proposal.second),
+      second: side(proposal.second, proposal.first),
+      sumsBudgets: proposal.sumsBudgets,
+    }));
+
+    expect(page.some((one) => !one.first.canKeepOther || !one.second.canKeepOther)).toBe(true);
+    const answer = await send(now, "GET", "/categories/merge-proposals");
+    expect(answer).toEqual({ status: 200, body: { proposals: page } });
+    expect(await send(old, "GET", "/categories/merge-proposals")).toEqual({
+      status: 200,
+      body: { proposals: [] },
+    });
+  });
+});

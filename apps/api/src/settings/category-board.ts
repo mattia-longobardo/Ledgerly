@@ -3,20 +3,24 @@
 // the budget the budgets module's and the source note `sourceNotes`; only the app joins them (M8).
 import type { Hono } from "hono";
 import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
-import { type BudgetRow, budgetsView } from "@ledgerly/domain/budgets";
+import { type BudgetRow, budgetsView, categoriesWithLimit } from "@ledgerly/domain/budgets";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 import { periodEnd } from "@ledgerly/domain/platform/ranges";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 import {
   categoryMacroTotals,
   colorOfCategory,
+  listCategories,
   listCategoriesWithUsage,
+  listMergeProposals,
   macroViews,
+  type MergeProposal,
 } from "@ledgerly/domain/transactions";
 import { type ApiEnv, type Guard, serve } from "../serve";
 import { type SourceName, sourceNotes } from "./taxonomy";
 
-const { getCategoriesBoard } = SETTINGS.categoryBoard;
+const { getCategoriesBoard, getMergeProposals } = SETTINGS.categoryBoard;
 
 type Category = Awaited<ReturnType<typeof listCategoriesWithUsage>>[number]["category"];
 type Views = ReturnType<typeof macroViews>;
@@ -64,6 +68,51 @@ function boardLine(line: Line, joined: Joined) {
         ? { provider: note.provider, name: note.source, names: note.names }
         : null,
   };
+}
+
+/** A proposal with what the dialog has to say before the merge: whether two budgets are summed. */
+interface MergeProposalView extends MergeProposal {
+  sumsBudgets: boolean;
+}
+
+/** The pairs of categories to merge (ux/n3-categories-manual.md §6.3), with whether a merge sums two budgets. */
+export async function mergeProposalsView(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+): Promise<MergeProposalView[]> {
+  const proposals = await listMergeProposals(ctx);
+  if (proposals.length === 0) return [];
+  const limited = await categoriesWithLimit(
+    ctx,
+    [...new Set(proposals.flatMap((one) => [one.first.id, one.second.id]))],
+    monthKey(today(ctx.timeZone)),
+  );
+  return proposals.map((one) => ({
+    ...one,
+    sumsBudgets: limited.has(one.first.id) && limited.has(one.second.id),
+  }));
+}
+
+/** Settings › Categories: each side as the dialog shows it; a category with sub-categories stays a group. */
+async function mergeProposalSides(ctx: Ctx) {
+  const [proposals, all] = await Promise.all([
+    mergeProposalsView(ctx),
+    listCategories(ctx, { includeArchived: true }),
+  ]);
+  const byId = new Map(all.map((one) => [one.id, one]));
+  const hasChildren = (id: string) => all.some((one) => one.parentId === id);
+  const side = (category: MergeProposal["first"], other: MergeProposal["first"]) => ({
+    id: category.id,
+    name: category.name,
+    color: colorOfCategory(byId.get(category.id) ?? { ...category, color: null }, byId),
+    usage: category.usage,
+    hasChildren: hasChildren(category.id),
+    canKeepOther: !(hasChildren(other.id) && byId.get(category.id)?.parentId !== null),
+  });
+  return proposals.map((one) => ({
+    first: side(one.first, one.second),
+    second: side(one.second, one.first),
+    sumsBudgets: one.sumsBudgets,
+  }));
 }
 
 export function serveCategoryBoard(
@@ -114,5 +163,6 @@ export function serveCategoryBoard(
       })),
     };
   });
-  return [getCategoriesBoard];
+  serve(app, guard, getMergeProposals, async ({ ctx }) => ({ proposals: await mergeProposalSides(ctx) }));
+  return [getCategoriesBoard, getMergeProposals];
 }

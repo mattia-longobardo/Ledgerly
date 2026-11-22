@@ -16,6 +16,7 @@
     "deleteCategoryEverywhere",
     "exportServicesOut",
     "macroMoveView",
+    "mergeProposalsView",
     "mergeTwoCategories",
     "moveToMacro",
     "pnlJson",

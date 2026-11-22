@@ -106,3 +106,57 @@ export const getCategoriesBoard = defineRoute({
     },
   },
 });
+
+const mergeSide = z.object({
+  id: id(),
+  name: z.string(),
+  /** The colour it is drawn in (`colorOfCategory`). */
+  color: hexColor(),
+  /** How many movements point at it, ever. */
+  usage: z.number().int(),
+  /** It has sub-categories: it can only stay under a group. */
+  hasChildren: z.boolean(),
+  /** It can keep the other side: false when the other has sub-categories and this one is a sub-category. */
+  canKeepOther: z.boolean(),
+});
+
+export const getMergeProposals = defineRoute({
+  id: "get_merge_proposals",
+  method: "GET",
+  path: "/categories/merge-proposals",
+  scope: "read",
+  capability: "categories",
+  summary:
+    "Settings › Categories: the pairs of categories that look like the same one, each side with what the " +
+    "dialog says before the merge, and whether the merge sums two budgets.",
+  actions: [],
+  response: z.object({
+    proposals: z.array(z.object({ first: mergeSide, second: mergeSide, sumsBudgets: z.boolean() })),
+  }),
+  errors: [],
+  example: {
+    response: {
+      proposals: [
+        {
+          first: {
+            id: CATEGORY_ID,
+            name: "Groceries",
+            color: "#3366cc",
+            usage: 42,
+            hasChildren: false,
+            canKeepOther: true,
+          },
+          second: {
+            id: "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+            name: "Grocery",
+            color: "#3366cc",
+            usage: 3,
+            hasChildren: false,
+            canKeepOther: true,
+          },
+          sumsBudgets: false,
+        },
+      ],
+    },
+  },
+});

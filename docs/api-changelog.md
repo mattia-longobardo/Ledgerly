@@ -3,6 +3,11 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · R3-coda: merge proposals
+
+- `GET /categories/merge-proposals`: the pairs of categories that look like the same one, each side with
+  `id`, `name`, `color`, `usage`, `hasChildren`, `canKeepOther`, and `sumsBudgets`.
+
 ## 2026-11-21 · investments: the Return view of each service (0.57.0)
 
 - `chart.services[].returns` (`GET /investments/home` and the Overview of a service, which share the

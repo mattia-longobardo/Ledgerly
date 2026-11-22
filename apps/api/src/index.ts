@@ -8,6 +8,7 @@ export type { InvestmentCases } from "./investments/routes";
 export { exportServicesOut, pnlJson } from "./investments/dto";
 export type { ServerCases } from "./settings/server";
 export { deleteCategoryEverywhere } from "./settings/categories";
+export { mergeProposalsView } from "./settings/category-board";
 export {
   macroMoveView,
   mergeTwoCategories,
