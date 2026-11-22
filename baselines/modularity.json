@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 11,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 63,
+    "deepImports": 62,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -298,7 +298,6 @@
   ],
   "deepImports": [
     "app/(app)/accounts/[id]/switch/page.tsx → modules/accounts/ui/switch/switch-check",
-    "app/(app)/accounts/new/page.tsx → modules/accounts/ui/account-form",
     "app/(app)/expenses/row-view.ts → modules/transactions/ui/display",
     "app/(app)/expenses/row-view.ts → modules/transactions/ui/view",
     "app/(app)/settings/categories/default-groups.tsx → modules/transactions/ui/default-groups-form",

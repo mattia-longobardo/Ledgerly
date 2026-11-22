@@ -15,12 +15,36 @@ import { colorField } from "./display";
 import { ACCOUNT_TYPES, type AccountType, hasIbanField } from "@ledgerly/domain/accounts/client";
 import { ibanErrorText } from "./iban-field";
 import { FIELD_GRID } from "@ledgerly/ui/section";
+import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
+import { profile } from "@ledgerly/api-contract/settings";
+import { today } from "@ledgerly/domain/shared/dates";
+import { useApi } from "@ledgerly/ui/data";
+import { Loaded } from "@ledgerly/ui/loaded";
 
 /**
  * A new manual account, with the optional opening balance of spec §7.1. The amount stays text all
  * the way to the call, which reads it in the user's own number format.
  */
-export function AccountForm({ today, index }: { today: string; index: number }) {
+/**
+ * "New account" with what it reads from `/api/v1`: today in the person's zone, and the place the new
+ * account takes — last among the open ones, the list the Accounts page colours by — so its colour
+ * preview is the one it will really have.
+ */
+export function NewAccountForm() {
+  const preferences = useApi(profile.getPreferences, {});
+  const open = useApi(accountRoutes.listAccounts, {});
+  return (
+    <Loaded state={preferences}>
+      {(prefs) => (
+        <Loaded state={open}>
+          {({ accounts }) => <AccountForm today={today(prefs.timeZone)} index={accounts.length} />}
+        </Loaded>
+      )}
+    </Loaded>
+  );
+}
+
+function AccountForm({ today: todayOn, index }: { today: string; index: number }) {
   const t = useTranslations("accounts.new");
   const types = useTranslations("accounts.types");
   const settings = useTranslations("accounts.settings");
@@ -52,7 +76,7 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
           purpose: text("purpose"),
           openedOn: text("openedOn") || null,
           notes: "",
-          openingBalance: balance === "" ? null : { on: text("balanceOn") || today, amount: balance },
+          openingBalance: balance === "" ? null : { on: text("balanceOn") || todayOn, amount: balance },
         });
         if (!result.ok) {
           // The IBAN's error goes under its field (ux/n4-account-switch.md §2.4.1).
@@ -128,14 +152,14 @@ export function AccountForm({ today, index }: { today: string; index: number }) 
         />
       </Field>
       <Field label={t("openedOn")} htmlFor="openedOn">
-        <Input id="openedOn" name="openedOn" type="date" max={today} />
+        <Input id="openedOn" name="openedOn" type="date" max={todayOn} />
       </Field>
       <div />
       <Field label={t("openingBalance")} htmlFor="balance" hint={t("openingBalanceHint")}>
         <Input id="balance" name="balance" inputMode="decimal" numeric />
       </Field>
       <Field label={t("openingBalanceOn")} htmlFor="balanceOn">
-        <Input id="balanceOn" name="balanceOn" type="date" max={today} defaultValue={today} />
+        <Input id="balanceOn" name="balanceOn" type="date" max={todayOn} defaultValue={todayOn} />
       </Field>
       <CardFooter>
         <ButtonLink href="/accounts" size="sm">
