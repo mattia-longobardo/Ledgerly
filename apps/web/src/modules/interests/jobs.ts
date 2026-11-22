@@ -320,9 +320,13 @@ export const interestsAccrualJob: JobDefinition = {
   async hasWork() {
     const now = new Date();
     let any = false;
-    await forEachUser("interests-accrual", async (_person, ctx) => {
-      if (!any) any = (await dueRules(ctx, now)).length > 0;
-    });
+    await forEachUser(
+      "interests-accrual",
+      async (_person, ctx) => {
+        if (!any) any = (await dueRules(ctx, now)).length > 0;
+      },
+      { addon: "interests" },
+    );
     return any;
   },
   async run(): Promise<JobDetail> {
@@ -331,13 +335,17 @@ export const interestsAccrualJob: JobDefinition = {
     let posted = 0;
     let stale = 0;
     const reasons = new Set<StaleReason>();
-    const counts = await forEachUser("interests-accrual", async (_person, ctx) => {
-      const pass = await accrueDueRules(ctx, now);
-      rules += pass.rules;
-      posted += pass.posted;
-      stale += pass.stale;
-      for (const reason of pass.reasons) reasons.add(reason);
-    });
+    const counts = await forEachUser(
+      "interests-accrual",
+      async (_person, ctx) => {
+        const pass = await accrueDueRules(ctx, now);
+        rules += pass.rules;
+        posted += pass.posted;
+        stale += pass.stale;
+        for (const reason of pass.reasons) reasons.add(reason);
+      },
+      { addon: "interests" },
+    );
     // The Wallet pass before the accrual is a sync too: what it brought in gets the same checks.
     await runAfterSync("hourly");
     return {
@@ -362,9 +370,13 @@ export const interestsRematchJob: JobDefinition = {
   tier: "daily",
   async run(): Promise<JobDetail> {
     let matched = 0;
-    const counts = await forEachUser("interests-rematch", async (_person, ctx) => {
-      matched += await lookUpUnsure(ctx);
-    });
+    const counts = await forEachUser(
+      "interests-rematch",
+      async (_person, ctx) => {
+        matched += await lookUpUnsure(ctx);
+      },
+      { addon: "interests" },
+    );
     return { ...counts, matched };
   },
 };

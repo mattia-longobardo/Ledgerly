@@ -14,9 +14,13 @@ export const fundsDepositsJob: JobDefinition = {
   tier: "afterSync",
   async run(): Promise<JobDetail> {
     let written = 0;
-    const counts = await forEachUser("funds-deposits", async (_person, ctx) => {
-      written += (await matchDebits(ctx)).written;
-    });
+    const counts = await forEachUser(
+      "funds-deposits",
+      async (_person, ctx) => {
+        written += (await matchDebits(ctx)).written;
+      },
+      { addon: "funds" },
+    );
     return { ...counts, depositsWritten: written };
   },
 };

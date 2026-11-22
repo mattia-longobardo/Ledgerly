@@ -30,7 +30,9 @@ import {
   closeOrphanRuns,
   dueConnections,
   findConnection,
+  PROVIDER_ADDONS,
 } from "@ledgerly/domain/platform/integrations";
+import { addonOn } from "@ledgerly/domain/platform/context";
 
 /**
  * One pass of the dispatcher at `now`: every connection due by then, each moved on by its own
@@ -49,7 +51,10 @@ export async function dispatchDueConnections(now: Date): Promise<JobDetail> {
       const person = await personById(due.userId);
       if (!person) continue;
       const ctx = await contextFor(person);
-      const pass = passFor(due.provider);
+      // A provider of an addon the person has off reads nothing (H52, PA10): its schedule moves on
+      // as for a provider turned off (`absent`), so the minute tick does not find it due again.
+      const addon = PROVIDER_ADDONS[due.provider];
+      const pass = addon && !addonOn(ctx, addon) ? undefined : passFor(due.provider);
       // The schedule's own reading: its runs are recorded as automatic (`origin.ts`).
       const outcome: PassOutcome = pass ? await asAutomatic(() => pass.run(person, ctx, due, now)) : "absent";
       counts[outcome] += 1;

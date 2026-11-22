@@ -1,7 +1,7 @@
 import "server-only";
 import { createLocalJWKSet, type JSONWebKeySet, type JWTVerifyGetKey } from "jose";
 import { eq } from "drizzle-orm";
-import { getPreferences } from "@ledgerly/domain/users";
+import { getSavedPreferences } from "@ledgerly/domain/users";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { readEnv } from "@ledgerly/domain/platform/env";
@@ -86,7 +86,7 @@ export async function authenticateAccessToken(
     .where(eq(users.id, principal.userId));
   // A blocked person is blocked everywhere, not only at the sign-in form.
   if (!person || person.banned) return null;
-  const preferences = await getPreferences({ userId: principal.userId });
+  const preferences = await getSavedPreferences({ userId: principal.userId });
   return {
     ctx: buildCtx({ id: principal.userId, role: person.role }, preferences),
     scopes: principal.scopes,

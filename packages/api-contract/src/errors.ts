@@ -16,6 +16,7 @@ const API_ERROR_CODES = [
   "rate_limited",
   "server_error",
   "unavailable",
+  "module_inactive",
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
@@ -35,6 +36,8 @@ export const API_ERRORS: Record<ApiErrorCode, number> = {
   server_error: 500,
   // The server cannot compute the answer now (a check of the plugins): try again later.
   unavailable: 503,
+  // The route belongs to an addon the person turned off (H52, PA10); `reason` names the addon.
+  module_inactive: 409,
 };
 
 /** The body of every answer that is not a 2xx. */

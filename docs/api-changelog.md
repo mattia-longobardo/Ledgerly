@@ -3,6 +3,19 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Addons: the modules a person turns off (R5a)
+
+- `GET /addons` (scope `read`): every addon (`investments`, `funds`,
+  `payroll`, `timeoff`, `budgets`, `subscriptions`, `pockets`, `interests`) with `group` (`work` for
+  Payroll and Time Off), `active`, and `stops`, what another addon loses while this one is off.
+- `PUT /addons/{id}` (scope `write`) `{active}`: turns one addon on or off and answers as `GET /addons`.
+  The data of the addon stays; net worth and totals do not change.
+- Error code `module_inactive` (`409`, `reason` = the addon): every route and read tool of an addon the
+  person has off answers it; an MCP tool says `module_inactive: <addon>`. The OpenAPI document names the addon of a route in `x-addon`. A person of
+  today has every addon on, so nothing answers it until a switch is turned.
+- `GET /search` leaves out the kinds of an addon that is off.
+- `GET /api/web/session` (the web's own): `addons`, the addons that are on.
+
 ## Unreleased · payroll: a signed address of a payslip's original (R4)
 
 - `GET /payroll/payslips/{id}/original-link` (scope `read`): `{url, expiresAt}`, the address of the

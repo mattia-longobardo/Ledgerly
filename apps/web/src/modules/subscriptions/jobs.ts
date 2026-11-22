@@ -16,11 +16,15 @@ export const subscriptionsCheckJob: JobDefinition = {
   async run(): Promise<JobDetail> {
     let checked = 0;
     let written = 0;
-    const counts = await forEachUser("subscriptions-check", async (_person, ctx) => {
-      const outcome = await checkSubscriptions(ctx);
-      checked += outcome.checked;
-      written += outcome.written;
-    });
+    const counts = await forEachUser(
+      "subscriptions-check",
+      async (_person, ctx) => {
+        const outcome = await checkSubscriptions(ctx);
+        checked += outcome.checked;
+        written += outcome.written;
+      },
+      { addon: "subscriptions" },
+    );
     return { ...counts, subscriptionsChecked: checked, chargesWritten: written };
   },
 };

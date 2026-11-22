@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { ADDONS } from "@ledgerly/api-contract";
 import { API_SCOPES } from "@ledgerly/domain/platform/auth/client";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { Preferences } from "./signed-in";
@@ -10,6 +11,7 @@ const signedInSchema = z.object({
   user: z.object({ id: z.string(), role: z.string().nullable(), email: z.string() }),
   preferences: z.custom<Preferences>((value) => typeof value === "object" && value !== null),
   ctx: z.custom<Ctx>((value) => typeof value === "object" && value !== null),
+  addons: z.array(z.enum(ADDONS)),
   setupPending: z.boolean(),
 });
 

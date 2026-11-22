@@ -1,3 +1,4 @@
+import type { AddonId } from "@ledgerly/api-contract";
 /**
  * The vocabulary the integration tables are built on. Kept here rather than in `schema.ts` so the
  * tables and the pure rules that reason about them share one source (same split as
@@ -49,6 +50,16 @@ export const BINANCE_PROVIDER = "ccxt:binance";
 /** The providers a connection may be created for: one entry per provider the app can speak to. */
 export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER, ETORO_PROVIDER, BINANCE_PROVIDER] as const;
 export type Provider = (typeof PROVIDERS)[number];
+
+/**
+ * The addon whose data a provider reads (H52, PA10): its scheduled reads stop for a person who has
+ * that addon off. A provider not listed (Wallet, the bank plugins) reads the accounts: base.
+ */
+export const PROVIDER_ADDONS: Readonly<Record<string, AddonId>> = {
+  [TREK_PROVIDER]: "timeoff",
+  [ETORO_PROVIDER]: "investments",
+  [BINANCE_PROVIDER]: "investments",
+};
 
 export function isKnownProvider(provider: string): provider is Provider {
   return (PROVIDERS as readonly string[]).includes(provider);

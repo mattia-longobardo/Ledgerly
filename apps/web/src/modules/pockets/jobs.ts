@@ -15,9 +15,13 @@ export const pocketsAccrualJob: JobDefinition = {
   tier: "monthly",
   async run(): Promise<JobDetail> {
     let written = 0;
-    const counts = await forEachUser("pockets-accrual", async (_person, ctx) => {
-      written += (await accrueMonth(ctx, monthKey(today(ctx.timeZone)))).written;
-    });
+    const counts = await forEachUser(
+      "pockets-accrual",
+      async (_person, ctx) => {
+        written += (await accrueMonth(ctx, monthKey(today(ctx.timeZone)))).written;
+      },
+      { addon: "pockets" },
+    );
     return { ...counts, accrualsWritten: written };
   },
 };
@@ -31,9 +35,13 @@ export const pocketsPlannedCleanupJob: JobDefinition = {
   tier: "daily",
   async run(): Promise<JobDetail> {
     let removed = 0;
-    const counts = await forEachUser("pockets-planned-cleanup", async (_person, ctx) => {
-      removed += await purgeExpiredPlanned(ctx, today(ctx.timeZone));
-    });
+    const counts = await forEachUser(
+      "pockets-planned-cleanup",
+      async (_person, ctx) => {
+        removed += await purgeExpiredPlanned(ctx, today(ctx.timeZone));
+      },
+      { addon: "pockets" },
+    );
     return { ...counts, plannedRemoved: removed };
   },
 };

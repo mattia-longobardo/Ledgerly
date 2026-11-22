@@ -7,8 +7,8 @@ import "server-only";
 import { z } from "zod";
 import { readFirstFlows } from "@ledgerly/domain/investments";
 import { readDocument } from "@ledgerly/domain/imports";
-import type { Ctx } from "@ledgerly/domain/platform/context";
-import { findConnection, isPluginProvider } from "@ledgerly/domain/platform/integrations";
+import { addonOn, type Ctx } from "@ledgerly/domain/platform/context";
+import { findConnection, isPluginProvider, PROVIDER_ADDONS } from "@ledgerly/domain/platform/integrations";
 import type { Task } from "@ledgerly/domain/platform/jobs";
 import { categorisableAccountIds, categorise } from "@ledgerly/domain/transactions";
 import { contextFor, type Person, personById } from "@ledgerly/domain/users";
@@ -76,6 +76,9 @@ async function updateConnection(
     );
     if (!outcome.ok || outcome.created + outcome.updated === 0) return;
   } else {
+    // Queued before the person turned the provider's addon off (risk R-41): it reads nothing.
+    const addon = PROVIDER_ADDONS[connection.provider];
+    if (addon && !addonOn(ctx, addon)) return;
     await passFor(connection.provider)?.run(person, ctx, { ...connection, userId: ctx.userId }, new Date());
   }
   // The same checks as after a scheduled pass (docs/scheduler.md), only if the movements changed.
@@ -102,6 +105,8 @@ export async function runTask(raw: Pick<Task, "kind" | "payload">): Promise<void
   const ctx = await contextFor(person);
   switch (task.kind) {
     case "document-read":
+      // The only kind of document is the payslip: nothing is read while Payroll is off (H52).
+      if (!addonOn(ctx, "payroll")) return;
       // A failure leaves the document `extracting`: `documents-sweep` reads it again (spec §10.2).
       await readDocument(ctx, task.payload.documentId);
       return;
@@ -109,6 +114,7 @@ export async function runTask(raw: Pick<Task, "kind" | "payload">): Promise<void
       await categorise(ctx, await categorisableAccountIds(ctx), { train: task.payload.train });
       return;
     case "first-flows": {
+      if (!addonOn(ctx, "investments")) return;
       const connection = await findConnection(ctx, task.payload.connectionId);
       if (connection) await readFirstFlows(ctx, connection, task.payload.accountId, new Date());
       return;

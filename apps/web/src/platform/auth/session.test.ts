@@ -26,6 +26,7 @@ vi.mock("./remote", async () => {
 });
 vi.mock("@domain/modules/users/service", () => ({
   getPreferences: async () => ({ ...DEFAULT_PREFERENCES, theme: "system" }),
+  getSavedPreferences: async () => ({ ...DEFAULT_PREFERENCES, theme: "system", addons: [] }),
 }));
 
 describe("ctxFrom", () => {

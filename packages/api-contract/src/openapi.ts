@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { API_ERRORS } from "./errors";
 import { errorBody } from "./errors";
+import { addonOf } from "./routes";
 import type { RouteContract } from "./route";
 
 type Json = Record<string, unknown>;
@@ -52,14 +53,21 @@ function responses(route: RouteContract): Json {
           description: "Done",
           content: { "application/json": { schema: open(schemaOf(route.response, "output")) } },
         };
+  const codes = [
+    ...(route.scope === null ? [] : (["unauthorized", "forbidden", "rate_limited"] as const)),
+    ...route.errors,
+    // A route of an addon answers this one while the person has the addon off (H52).
+    ...(addonOf(route) ? (["module_inactive"] as const) : []),
+  ];
+  // Two codes of one status share its entry: `conflict` and `module_inactive` are both 409.
+  const byStatus = new Map<string, string[]>();
+  for (const code of codes)
+    byStatus.set(String(API_ERRORS[code]), [...(byStatus.get(String(API_ERRORS[code])) ?? []), code]);
   const failures = Object.fromEntries(
-    [
-      ...(route.scope === null ? [] : (["unauthorized", "forbidden", "rate_limited"] as const)),
-      ...route.errors,
-    ].map((code) => [
-      String(API_ERRORS[code]),
+    [...byStatus].map(([status, named]) => [
+      status,
       {
-        description: code,
+        description: named.join(", "),
         content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
       },
     ]),
@@ -91,6 +99,7 @@ function operation(route: RouteContract): Json {
       : {}),
     responses: responses(route),
     ...(route.scope === null ? { security: [] } : { security: [{ bearer: [] }], "x-scope": route.scope }),
+    ...(addonOf(route) ? { "x-addon": addonOf(route) } : {}),
   };
 }
 

@@ -7,9 +7,13 @@ export type { ContractScope } from "./scopes";
 export type { RouteContract } from "./route";
 export { API_LEVEL, MIN_CLIENT_LEVEL, metaRoute } from "./meta";
 export { openApiDocument } from "./openapi";
+export { ADDON_GROUPS, ADDON_STOPS, ADDONS, getAddons, setAddon } from "./addons";
+export type { AddonId } from "./addons";
 export {
   ACCOUNTS,
   ACCOUNTS_ROUTES,
+  ADDONS_ROUTES,
+  addonOf,
   BUDGETS,
   BUDGETS_ROUTES,
   CONTRACT_ROUTES,

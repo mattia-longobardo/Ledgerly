@@ -1,3 +1,4 @@
+import type { AddonId } from "@ledgerly/api-contract";
 import type { NumberFormat, UiLocale } from "./format";
 import type { DisplayCurrency } from "./fx/rules";
 
@@ -20,6 +21,16 @@ export interface Ctx {
    * §1.8, D1). A single account's own value stays in the account's currency.
    */
   displayCurrency: DisplayCurrency;
+  /**
+   * The addons the person has on (R5a, H52). Absent means every addon is on: a context a test or a
+   * script builds by hand acts as a person who never turned anything off.
+   */
+  addons?: readonly AddonId[];
+}
+
+/** Whether the person has `addon` on (H52): an addon that is off has no reads, jobs or alerts. */
+export function addonOn(ctx: Pick<Ctx, "addons">, addon: AddonId): boolean {
+  return ctx.addons === undefined || ctx.addons.includes(addon);
 }
 
 /** The one admin guard (audit PLT-4): a context that is not an admin's is refused with `refuse()`. */

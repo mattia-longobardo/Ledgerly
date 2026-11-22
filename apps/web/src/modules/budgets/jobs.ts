@@ -54,54 +54,58 @@ export const budgetAlertsJob: JobDefinition = {
   async run(): Promise<JobDetail> {
     const now = new Date();
     let sent = 0;
-    const counts = await forEachUser("budgets-alerts", async (person, ctx) => {
-      const month = monthKey(today(ctx.timeZone, now));
-      const [view, settings] = await Promise.all([budgetsView(ctx, month), alertSettings(ctx)]);
-      if (view.rows.length === 0) return;
-      const t = createTranslator({
-        locale: ctx.locale,
-        messages: CATALOGUES[ctx.locale],
-        namespace: "budgets",
-      });
-      for (const row of view.rows) {
-        const alerts = settings.get(row.key) ?? DEFAULT_ALERT_SETTINGS;
-        const keyOf = (percent: number) => `${row.key}|${month}|${percent}`;
-        for (const percent of alerts.thresholds) {
-          if (alerts.enabled && thresholdReached(row.spentCents, row.limitCents, percent)) continue;
-          await clearNotification(person.id, BUDGET_ALERT_KIND, keyOf(percent));
-        }
-        if (!alerts.enabled) continue;
-        const reached = reachedThreshold(row.spentCents, row.limitCents, alerts.thresholds);
-        if (reached === null) continue;
-        const over = row.status === "over";
-        const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
-        const delivered = await notifyOnce(
-          {
-            userId: person.id,
-            kind: BUDGET_ALERT_KIND,
-            key: keyOf(reached),
-            cooldownHours: COOLDOWN_HOURS,
-            mail: {
-              to: person.email,
-              ...alertMail(ctx.locale, over, {
-                budget: budgetName(row) ?? t("allCategories"),
-                account: row.accountName ?? t("allAccounts"),
-                month: formatDate(month, "monthYear", ctx.locale),
-                percent: formatWholePercent(row.percent, ctx.numberFormat),
-                threshold: formatWholePercent(reached, ctx.numberFormat),
-                spent: money(row.spentCents),
-                limit: money(row.limitCents),
-                left: money(row.limitCents - row.spentCents),
-                excess: money(row.spentCents - row.limitCents),
-                url: `${readEnv().BETTER_AUTH_URL}/budgets/${budgetSlug(row)}`,
-              }),
+    const counts = await forEachUser(
+      "budgets-alerts",
+      async (person, ctx) => {
+        const month = monthKey(today(ctx.timeZone, now));
+        const [view, settings] = await Promise.all([budgetsView(ctx, month), alertSettings(ctx)]);
+        if (view.rows.length === 0) return;
+        const t = createTranslator({
+          locale: ctx.locale,
+          messages: CATALOGUES[ctx.locale],
+          namespace: "budgets",
+        });
+        for (const row of view.rows) {
+          const alerts = settings.get(row.key) ?? DEFAULT_ALERT_SETTINGS;
+          const keyOf = (percent: number) => `${row.key}|${month}|${percent}`;
+          for (const percent of alerts.thresholds) {
+            if (alerts.enabled && thresholdReached(row.spentCents, row.limitCents, percent)) continue;
+            await clearNotification(person.id, BUDGET_ALERT_KIND, keyOf(percent));
+          }
+          if (!alerts.enabled) continue;
+          const reached = reachedThreshold(row.spentCents, row.limitCents, alerts.thresholds);
+          if (reached === null) continue;
+          const over = row.status === "over";
+          const money = (cents: bigint) => formatMoney(cents, ctx.numberFormat);
+          const delivered = await notifyOnce(
+            {
+              userId: person.id,
+              kind: BUDGET_ALERT_KIND,
+              key: keyOf(reached),
+              cooldownHours: COOLDOWN_HOURS,
+              mail: {
+                to: person.email,
+                ...alertMail(ctx.locale, over, {
+                  budget: budgetName(row) ?? t("allCategories"),
+                  account: row.accountName ?? t("allAccounts"),
+                  month: formatDate(month, "monthYear", ctx.locale),
+                  percent: formatWholePercent(row.percent, ctx.numberFormat),
+                  threshold: formatWholePercent(reached, ctx.numberFormat),
+                  spent: money(row.spentCents),
+                  limit: money(row.limitCents),
+                  left: money(row.limitCents - row.spentCents),
+                  excess: money(row.spentCents - row.limitCents),
+                  url: `${readEnv().BETTER_AUTH_URL}/budgets/${budgetSlug(row)}`,
+                }),
+              },
             },
-          },
-          now,
-        );
-        if (delivered) sent += 1;
-      }
-    });
+            now,
+          );
+          if (delivered) sent += 1;
+        }
+      },
+      { addon: "budgets" },
+    );
     return { ...counts, sent };
   },
 };
