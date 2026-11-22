@@ -34,6 +34,14 @@ services:
       - "traefik.http.routers.ledgerly-router.entrypoints=web"
       - "traefik.http.routers.ledgerly-router.middlewares=ledgerly-https"
       - "traefik.http.routers.ledgerly-router.service=ledgerly-service"
+      # The signed addresses of the originals (UI-PAY-2): the token is in the path, so this router
+      # keeps them out of the access log (which logs only 400-599 anyway). Same middleware, same service.
+      - "traefik.http.routers.ledgerly-originals-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`) && PathPrefix(`/api/v1/originals/`)"
+      - "traefik.http.routers.ledgerly-originals-router.priority=200"
+      - "traefik.http.routers.ledgerly-originals-router.entrypoints=web"
+      - "traefik.http.routers.ledgerly-originals-router.middlewares=ledgerly-https"
+      - "traefik.http.routers.ledgerly-originals-router.service=ledgerly-service"
+      - "traefik.http.routers.ledgerly-originals-router.observability.accessLogs=false"
       - "traefik.http.middlewares.ledgerly-https.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.services.ledgerly-service.loadbalancer.server.port=3000"
     networks:

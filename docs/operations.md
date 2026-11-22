@@ -91,7 +91,9 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
 `dash.longobardo.me` is public through the Cloudflare tunnel only. Traefik has two routers on the
 entrypoint `web`, the target of the Cloudflare tunnel, both with the middleware `ledgerly-https`:
 `ledgerly-router` takes `/api` and `/.well-known` to `ledgerly` (priority 100), and
-`ledgerly-web-router` takes the rest of the host to `ledgerly-web` (priority 10). The rate limits and
+`ledgerly-web-router` takes the rest of the host to `ledgerly-web` (priority 10). A third router,
+`ledgerly-originals-router` (priority 200), takes `/api/v1/originals/` to `ledgerly` with the access
+log off: the signed token of an original is in its path. The rate limits and
 the security headers are the app's own, in both containers. There is no `websecure` router: Pi-hole
 has no local record for `dash`, so the LAN also goes through Cloudflare.
 
