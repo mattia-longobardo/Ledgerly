@@ -1,5 +1,5 @@
 import { createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
-import { readEnv } from "../../platform/env";
+import { readEnv } from "../../../platform/env";
 
 /**
  * The signed address of a payslip's original (UI-PAY-2, rewrite plan R4): the person's own document,

@@ -68,7 +68,6 @@
     "apps/web/src/app/(app)/banks/connect/bank-step.tsx": 1,
     "apps/web/src/app/(app)/banks/connect/page.tsx": 1,
     "apps/web/src/app/(app)/expenses/categories/macro-dialog.tsx": 1,
-    "apps/web/src/app/(app)/expenses/row-view.ts": 1,
     "apps/web/src/app/(app)/settings/integrations/advanced/page.tsx": 1,
     "apps/web/src/app/(app)/settings/integrations/banks-card.tsx": 1,
     "apps/web/src/app/(app)/settings/integrations/connection-view.ts": 3,

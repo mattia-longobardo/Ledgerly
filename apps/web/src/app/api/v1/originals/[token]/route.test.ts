@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { originalLinkFor } from "@domain/modules/imports/original-link";
+import { originalLinkFor } from "@domain/modules/imports/service/original-link";
 import { GET } from "./route";
 
 const readOriginal = vi.hoisted(() => vi.fn());
