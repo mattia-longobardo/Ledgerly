@@ -33,6 +33,7 @@ function fromRow(row: Row): Preferences {
     theme: row.theme,
     defaultRange: row.defaultRange,
     monthlySummary: row.monthlySummary,
+    hideAmounts: row.hideAmounts,
     minutesPerDay: row.minutesPerDay,
     patronSaint:
       row.patronMonth !== null && row.patronDay !== null
@@ -100,6 +101,7 @@ function rowValues(prefs: Preferences) {
     theme: prefs.theme,
     defaultRange: prefs.defaultRange,
     monthlySummary: prefs.monthlySummary,
+    hideAmounts: prefs.hideAmounts,
     minutesPerDay: prefs.minutesPerDay,
     patronMonth: prefs.patronSaint?.month ?? null,
     patronDay: prefs.patronSaint?.day ?? null,
@@ -108,6 +110,8 @@ function rowValues(prefs: Preferences) {
 
 /** What the Profile form may change: the fields it sends of Time off are dropped, not saved. */
 const profileFormSchema = preferencesInputSchema.omit({
+  // Not a field of the Profile form: a form that does not send it must not turn it off.
+  hideAmounts: true,
   minutesPerDay: true,
   patronSaint: true,
   defaultRange: true,

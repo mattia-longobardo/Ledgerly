@@ -47,6 +47,8 @@ export const preferencesInputSchema = z.object({
   theme: z.enum(THEMES),
   defaultRange: z.enum(DEFAULT_RANGES),
   monthlySummary: z.boolean(),
+  // «Nascondi importi» (R5e, G5): one switch for every client of the person.
+  hideAmounts: z.boolean().default(false),
   minutesPerDay: z.number().int().min(60).max(720),
   patronSaint: patronSaintSchema.nullable(),
 });
@@ -71,6 +73,7 @@ export const DEFAULT_PREFERENCES: Readonly<Preferences> = Object.freeze({
   theme: "light",
   defaultRange: "this_month",
   monthlySummary: false,
+  hideAmounts: false,
   minutesPerDay: 480,
   patronSaint: null,
 });

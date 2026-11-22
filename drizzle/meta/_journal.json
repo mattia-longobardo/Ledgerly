@@ -463,6 +463,13 @@
       "when": 1795530000000,
       "tag": "0065_addons",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1795540000000,
+      "tag": "0066_notifications",
+      "breakpoints": true
     }
   ]
 }

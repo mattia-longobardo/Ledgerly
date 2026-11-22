@@ -15,7 +15,7 @@ import { civilDate, id, instant } from "./primitives";
 export const NOTIFICATION_CATEGORIES = ["action", "reminder", "report"] as const;
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 
-const EVENT_NAMES = [
+export const NOTIFICATION_EVENT_NAMES = [
   "connection_failed",
   "connection_stale",
   "connection_expiring",
@@ -28,7 +28,7 @@ const EVENT_NAMES = [
   "fund_to_verify",
 ] as const;
 
-export type NotificationEvent = (typeof EVENT_NAMES)[number];
+export type NotificationEvent = (typeof NOTIFICATION_EVENT_NAMES)[number];
 
 /** Every event of the service: its category and the addon it belongs to (`null`: a base module). */
 export const NOTIFICATION_EVENTS = {
@@ -73,6 +73,8 @@ const params = z
   })
   .strict();
 
+export type NotificationParams = z.infer<typeof params>;
+
 const target = z.object({
   page: z.enum(NOTIFICATION_PAGES),
   /** The connection, account, budget or fund; `null` for a page without one. */
@@ -81,7 +83,7 @@ const target = z.object({
 
 const todoItem = z.object({
   id: id(),
-  event: z.enum(EVENT_NAMES),
+  event: z.enum(NOTIFICATION_EVENT_NAMES),
   addon: z.enum(ADDONS).nullable(),
   params,
   target,
@@ -91,7 +93,7 @@ const todoItem = z.object({
 
 const notification = z.object({
   id: id(),
-  event: z.enum(EVENT_NAMES),
+  event: z.enum(NOTIFICATION_EVENT_NAMES),
   category: z.enum(NOTIFICATION_CATEGORIES),
   params,
   target,
@@ -102,7 +104,7 @@ const notification = z.object({
 const channels = z.object({ inApp: z.boolean(), email: z.boolean(), device: z.boolean() });
 
 const preference = z.object({
-  event: z.enum(EVENT_NAMES),
+  event: z.enum(NOTIFICATION_EVENT_NAMES),
   category: z.enum(NOTIFICATION_CATEGORIES),
   addon: z.enum(ADDONS).nullable(),
   /** False while the event's addon is off: the event sends nothing, the choice stays. */
@@ -255,7 +257,7 @@ export const setNotificationPreference = defineRoute({
   summary:
     "Turns the channels of one event on or off; a channel left out keeps its value. Answers every event.",
   actions: [],
-  params: z.object({ event: z.enum(EVENT_NAMES) }),
+  params: z.object({ event: z.enum(NOTIFICATION_EVENT_NAMES) }),
   body: channels.partial().strict(),
   response: preferencesBody,
   errors: ["invalid", "module_inactive"],

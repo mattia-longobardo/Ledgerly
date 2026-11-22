@@ -6,7 +6,8 @@ import { addMonths, monthKey, today } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/format/format";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
-import { notifyOnce } from "@/platform/notifications/service";
+import { notify } from "@/platform/notifications/service";
+import { resolve } from "@ledgerly/domain/platform/notifications";
 import en from "../../../../../messages/en.json";
 import it from "../../../../../messages/it.json";
 import { monthlyFigures } from "./monthly";
@@ -57,9 +58,12 @@ export const monthlySummaryJob: JobDefinition = {
       // must not be told about the wrong month.
       const month = addMonths(monthKey(today(ctx.timeZone, now)), -1);
       const figures = await monthlyFigures(ctx, month, now);
-      const delivered = await notifyOnce(
+      // One open summary: the month before is closed when this one opens.
+      await resolve(ctx, "monthly_summary", { keep: [month] }, now);
+      const delivered = await notify(
+        ctx,
+        { event: "monthly_summary", subject: month, params: { date: month } },
         {
-          userId: person.id,
           kind: "monthly_summary",
           key: month,
           cooldownHours: COOLDOWN_HOURS,

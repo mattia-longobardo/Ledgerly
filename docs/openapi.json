@@ -43938,6 +43938,9 @@
                     "monthlySummary": {
                       "type": "boolean"
                     },
+                    "hideAmounts": {
+                      "type": "boolean"
+                    },
                     "minutesPerDay": {
                       "type": "integer",
                       "minimum": 60,
@@ -43981,6 +43984,7 @@
                     "theme",
                     "defaultRange",
                     "monthlySummary",
+                    "hideAmounts",
                     "minutesPerDay",
                     "patronSaint"
                   ]
@@ -44121,6 +44125,9 @@
                   "monthlySummary": {
                     "type": "boolean"
                   },
+                  "hideAmounts": {
+                    "type": "boolean"
+                  },
                   "minutesPerDay": {
                     "type": "integer",
                     "minimum": 60,
@@ -44248,6 +44255,9 @@
                     "monthlySummary": {
                       "type": "boolean"
                     },
+                    "hideAmounts": {
+                      "type": "boolean"
+                    },
                     "minutesPerDay": {
                       "type": "integer",
                       "minimum": 60,
@@ -44291,6 +44301,7 @@
                     "theme",
                     "defaultRange",
                     "monthlySummary",
+                    "hideAmounts",
                     "minutesPerDay",
                     "patronSaint"
                   ]

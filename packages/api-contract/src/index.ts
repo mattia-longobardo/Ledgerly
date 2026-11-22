@@ -9,8 +9,13 @@ export { API_LEVEL, MIN_CLIENT_LEVEL, metaRoute } from "./meta";
 export { openApiDocument } from "./openapi";
 export { ADDON_GROUPS, ADDON_STOPS, ADDONS, getAddons, setAddon } from "./addons";
 export type { AddonId } from "./addons";
-export { NOTIFICATION_CATEGORIES, NOTIFICATION_EVENTS, NOTIFICATION_PAGES } from "./notifications";
-export type { NotificationCategory, NotificationEvent } from "./notifications";
+export {
+  NOTIFICATION_CATEGORIES,
+  NOTIFICATION_EVENT_NAMES,
+  NOTIFICATION_EVENTS,
+  NOTIFICATION_PAGES,
+} from "./notifications";
+export type { NotificationCategory, NotificationEvent, NotificationParams } from "./notifications";
 export {
   ACCOUNTS,
   ACCOUNTS_ROUTES,

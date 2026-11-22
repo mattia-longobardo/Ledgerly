@@ -23,6 +23,8 @@ const preferences = z.object({
   theme: z.enum(["system", "light", "dark"]),
   defaultRange: z.enum(["this_month", "last_30_days", "year_to_date"]),
   monthlySummary: z.boolean(),
+  /** «Nascondi importi» (R5e, G5): every client of the person hides amounts while it is on. */
+  hideAmounts: z.boolean(),
   /** Time off: the minutes of a working day. */
   minutesPerDay: z.number().int().min(60).max(720),
   patronSaint: patronSaint.nullable(),
@@ -39,6 +41,7 @@ const PREFERENCES_EXAMPLE = {
   theme: "system",
   defaultRange: "this_month",
   monthlySummary: false,
+  hideAmounts: false,
   minutesPerDay: 480,
   patronSaint: null,
 };

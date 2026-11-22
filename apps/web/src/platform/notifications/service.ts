@@ -5,7 +5,16 @@ import { getDb } from "@ledgerly/domain/platform/db";
 import { type Mail, sendMail } from "@ledgerly/domain/platform/mail";
 import { mailAllowed } from "@ledgerly/domain/platform/settings";
 import type { MailCategory } from "@ledgerly/domain/platform/settings";
-import { notificationsLog } from "@ledgerly/domain/platform/notifications";
+import type { Ctx } from "@ledgerly/domain/platform/context";
+import type { NotificationEvent } from "@ledgerly/api-contract";
+import {
+  channelsOf,
+  deleteOldFacts,
+  type Fact,
+  notificationsLog,
+  raise,
+  resolve,
+} from "@ledgerly/domain/platform/notifications";
 
 interface Notification {
   userId: string;
@@ -30,7 +39,7 @@ interface Notification {
  * afterwards, outside any transaction (spec §4.3), and a failure to deliver is logged rather than
  * thrown — a job must not stop because an SMTP server is down.
  */
-export async function notifyOnce(notification: Notification, now: Date = new Date()): Promise<boolean> {
+async function notifyOnce(notification: Notification, now: Date = new Date()): Promise<boolean> {
   if (notification.category && !(await mailAllowed(notification.category))) return false;
   const cutoff = new Date(now.getTime() - notification.cooldownHours * 3_600_000);
   const claimed = await getDb()
@@ -58,6 +67,36 @@ export async function notifyOnce(notification: Notification, now: Date = new Dat
   }
 }
 
+/**
+ * Tells the person about a fact (R5e): it opens in the app — once, however often it is raised — and
+ * its email goes as `notifyOnce` sends it, when the person keeps the email of the event on. Nothing
+ * at all for an event of an addon that is off. Returns whether an email left.
+ */
+export async function notify(
+  ctx: Pick<Ctx, "userId" | "addons">,
+  fact: Fact,
+  mail: Omit<Notification, "userId">,
+  now: Date = new Date(),
+): Promise<boolean> {
+  if (!(await raise(ctx, fact, now))) return false;
+  if (!(await channelsOf(ctx, fact.event)).email) return false;
+  return notifyOnce({ ...mail, userId: ctx.userId }, now);
+}
+
+/**
+ * The fact is over: it leaves the app, and its email is forgotten so the next occurrence is told at
+ * once (`clearNotification`). `kind` and `key` are the email's, which may name the fact differently.
+ */
+export async function settle(
+  ctx: Pick<Ctx, "userId">,
+  fact: { event: NotificationEvent; subject: string },
+  mail: { kind: string; key: string },
+  now: Date = new Date(),
+): Promise<void> {
+  await resolve(ctx, fact.event, { subject: fact.subject }, now);
+  await clearNotification(ctx.userId, mail.kind, mail.key);
+}
+
 /** Forgets a resolved condition, so the next occurrence notifies again immediately. */
 export async function clearNotification(userId: string, kind: string, key: string): Promise<void> {
   await getDb()
@@ -71,11 +110,14 @@ export async function clearNotification(userId: string, kind: string, key: strin
     );
 }
 
-/** Drops log rows older than the retention window, so the table cannot grow without bound. */
+/**
+ * Drops the log rows and the facts older than the retention window, so neither table can grow
+ * without bound.
+ */
 export async function deleteOldNotifications(cutoff: Date): Promise<number> {
   const rows = await getDb()
     .delete(notificationsLog)
     .where(lt(notificationsLog.sentAt, cutoff))
     .returning({ id: notificationsLog.id });
-  return rows.length;
+  return rows.length + (await deleteOldFacts(cutoff));
 }

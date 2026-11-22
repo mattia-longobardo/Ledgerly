@@ -5,7 +5,8 @@ import { today } from "@ledgerly/domain/shared/dates";
 import { formatMoney, type UiLocale } from "@ledgerly/format/format";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
-import { clearNotification, notifyOnce } from "@/platform/notifications/service";
+import { clearNotification, notify } from "@/platform/notifications/service";
+import { resolve } from "@ledgerly/domain/platform/notifications";
 import en from "../../../../../messages/en.json";
 import it from "../../../../../messages/it.json";
 import { accountsView } from "@ledgerly/domain/accounts";
@@ -81,24 +82,30 @@ export const accountAlertsJob: JobDefinition = {
           await clearNotification(person.id, kind, row.account.id);
         }
       }
+      // The facts of R5e: an account no longer under its threshold, or gone, is no longer told.
+      const low = view.alerts.filter((alert) => alert.kind === "low_balance").map((alert) => alert.accountId);
+      await resolve(ctx, "account_low_balance", { keep: low });
       for (const alert of view.alerts) {
         if (alert.kind !== "low_balance") continue;
         const row = view.rows.find((one) => one.account.id === alert.accountId);
         if (!row) continue;
-        const delivered = await notifyOnce({
-          userId: person.id,
-          kind: alert.kind,
-          key: alert.accountId,
-          cooldownHours: ALERT_COOLDOWN_HOURS,
-          mail: {
-            to: person.email,
-            ...lowBalanceMail(ctx.locale, {
-              account: row.account.name,
-              balance: formatMoney(row.balance, ctx.numberFormat),
-              threshold: formatMoney(row.account.lowBalanceCents, ctx.numberFormat),
-            }),
+        const delivered = await notify(
+          ctx,
+          { event: "account_low_balance", subject: alert.accountId, targetId: alert.accountId },
+          {
+            kind: alert.kind,
+            key: alert.accountId,
+            cooldownHours: ALERT_COOLDOWN_HOURS,
+            mail: {
+              to: person.email,
+              ...lowBalanceMail(ctx.locale, {
+                account: row.account.name,
+                balance: formatMoney(row.balance, ctx.numberFormat),
+                threshold: formatMoney(row.account.lowBalanceCents, ctx.numberFormat),
+              }),
+            },
           },
-        });
+        );
         if (delivered) sent += 1;
       }
     });

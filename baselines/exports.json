@@ -88,6 +88,14 @@
     "MAX_TIMES",
     "MIN_CLIENT_LEVEL",
     "MIN_SYNC_GAP_MINUTES",
+    "NOTIFICATIONS_ROUTES",
+    "NOTIFICATION_CATEGORIES",
+    "NOTIFICATION_EVENTS",
+    "NOTIFICATION_EVENT_NAMES",
+    "NOTIFICATION_PAGES",
+    "NotificationCategory",
+    "NotificationEvent",
+    "NotificationParams",
     "OVERVIEW_BUDGETS",
     "PAYROLL",
     "PAYROLL_ROUTES",
@@ -1213,7 +1221,12 @@
     "takeSlot"
   ],
   "packages/domain/src/platform/notifications/index.ts": [
-    "notificationsLog"
+    "Fact",
+    "channelsOf",
+    "deleteOldFacts",
+    "notificationsLog",
+    "raise",
+    "resolve"
   ],
   "packages/domain/src/platform/plugins/index.ts": [
     "AUTH_STATE_MINUTES",

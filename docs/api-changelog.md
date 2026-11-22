@@ -16,6 +16,8 @@ written before it keeps working.
   `write`, `{inApp?, email?, device?}`): the channels of each event. `locked` lists what cannot be
   turned off; `module_inactive` for an event of an addon that is off.
 - An event of an addon that is off is in none of these answers.
+- `GET` and `PATCH /preferences`: `hideAmounts` («Nascondi importi»), one switch for every client of
+  the person; off for everybody until they turn it on.
 
 ## Unreleased · Addons: the modules a person turns off (R5a)
 
