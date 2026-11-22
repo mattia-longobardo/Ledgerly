@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
-import { FundError, isFundId, isFutureYear, legacyFundQuery, requireFund } from "@ledgerly/domain/funds";
-import { sectionPeriod, type Query } from "@ledgerly/domain/investments";
+import { FundError, requireFund } from "@ledgerly/domain/funds";
+import { isFundId, isFutureYear, legacyFundQuery } from "@ledgerly/domain/funds/client";
+import type { Query } from "@ledgerly/domain/investments";
+import { sectionPeriod } from "@ledgerly/domain/investments/client";
 import { requireSession } from "@/platform/auth/session";
 import { today } from "@ledgerly/domain/shared/dates";
 import { withParams } from "@ledgerly/ui/url";

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { legacyPeriodQuery, type Query } from "@ledgerly/domain/investments";
+import type { Query } from "@ledgerly/domain/investments";
+import { legacyPeriodQuery } from "@ledgerly/domain/investments/client";
 import { today } from "@ledgerly/domain/shared/dates";
 import { withParams } from "@ledgerly/ui/url";
 import { InvestmentsHomeScreen } from "@/modules/investments/client";

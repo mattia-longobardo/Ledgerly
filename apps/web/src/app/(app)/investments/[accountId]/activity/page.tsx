@@ -1,5 +1,6 @@
 import { permanentRedirect } from "next/navigation";
-import { legacyPeriodQuery, type Query } from "@ledgerly/domain/investments";
+import type { Query } from "@ledgerly/domain/investments";
+import { legacyPeriodQuery } from "@ledgerly/domain/investments/client";
 import { today } from "@ledgerly/domain/shared/dates";
 import { withParams } from "@ledgerly/ui/url";
 import { ServiceScreen } from "@/modules/investments/client";
