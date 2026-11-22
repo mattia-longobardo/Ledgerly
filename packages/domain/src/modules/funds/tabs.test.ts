@@ -7,12 +7,11 @@ import {
   closesPeriodBefore,
   competenceOn,
   inPeriod,
-  legacyFundQuery,
   quarterInPeriod,
   readsPeriod,
-  returnsTarget,
   valuationLines,
 } from "./tabs";
+import { legacyFundQuery, returnsTarget } from "./rules";
 
 const TODAY = "2028-06-15";
 const flow = (on: string, chargedCents: bigint, employerCents = 0n, tfrCents = 0n): FundFlow => ({

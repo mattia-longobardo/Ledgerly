@@ -106,7 +106,6 @@
     "packages/domain/src/modules/funds/service/operations.ts": 1,
     "packages/domain/src/modules/funds/service/reads.ts": 1,
     "packages/domain/src/modules/funds/sources.ts": 1,
-    "packages/domain/src/modules/funds/tabs.ts": 1,
     "packages/domain/src/modules/investments/activity.ts": 1,
     "packages/domain/src/modules/investments/cutoff.ts": 1,
     "packages/domain/src/modules/investments/history.ts": 1,

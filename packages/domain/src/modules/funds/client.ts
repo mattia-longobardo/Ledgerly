@@ -9,3 +9,6 @@ export { ACCRUAL_PERIODS, INTERVAL_UNITS, PAYROLL_COMPONENTS, SOURCE_KINDS, next
 export type { DueCalendar, DueEntry, IntervalUnit, PayrollComponent, SourceKind } from "./sources";
 export { applyTemplate } from "./templates";
 export type { FundTemplate } from "./templates";
+// The redirects of the old addresses (§6): pure, for the web's pages.
+export { legacyFundQuery } from "./rules";
+export { isFutureYear } from "../../shared/period";

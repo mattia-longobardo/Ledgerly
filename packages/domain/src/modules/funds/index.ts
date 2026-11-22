@@ -68,12 +68,11 @@ export {
   closesPeriodBefore,
   competenceOn,
   inPeriod,
-  legacyFundQuery,
   quarterInPeriod,
   readsPeriod,
-  returnsTarget,
   valuationLines,
 } from "./tabs";
+export { legacyFundQuery, returnsTarget } from "./rules";
 export type { ValuationLine } from "./tabs";
 export {
   accruedNote,

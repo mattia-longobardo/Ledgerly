@@ -301,6 +301,8 @@
     "arrangeFees",
     "fractionOfPercent",
     "isFundId",
+    "isFutureYear",
+    "legacyFundQuery",
     "newContributionForm",
     "newFeeForm",
     "newSourceForm",
@@ -505,8 +507,10 @@
     "PRODUCTS",
     "PROVIDER_SCHEDULE",
     "describeEvent",
+    "legacyPeriodQuery",
     "priceText",
-    "quantityText"
+    "quantityText",
+    "sectionPeriod"
   ],
   "packages/domain/src/modules/investments/index.ts": [
     "ACTIVITY_FAMILIES",

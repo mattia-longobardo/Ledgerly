@@ -4,3 +4,5 @@ export { PRODUCTS } from "./rules";
 export type { AssetClass, InvestmentCategory } from "./rules";
 export { describeEvent, priceText, quantityText } from "./activity";
 export { PROVIDER_SCHEDULE } from "./catalog";
+// The period of the address (§1.2): pure, for the web's pages and their redirects.
+export { legacyPeriodQuery, sectionPeriod } from "./period";

@@ -1,4 +1,12 @@
-import { type CivilDate, daysBetween, lastDayOfMonth, type MonthKey } from "../../shared/dates";
+import {
+  addMonths,
+  type CivilDate,
+  daysBetween,
+  lastDayOfMonth,
+  type MonthKey,
+  monthKey,
+} from "../../shared/dates";
+import { legacyPeriodQuery, type Query } from "../../shared/period";
 import type { Cents } from "../../shared/money";
 import { simpleReturn } from "../../shared/returns";
 
@@ -214,4 +222,48 @@ export function annualisedOverPeriods(periods: readonly PeriodReturn[]): number 
   if (stats.compounded === null || stats.days < MONTHS_TO_ANNUALISE * 30) return null;
   if (1 + stats.compounded <= 0) return null;
   return (1 + stats.compounded) ** (365 / stats.days) - 1;
+}
+
+/* The old addresses of Funds sent to the new ones (docs/design/funds-ux.md §6). */
+
+const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
+
+const flat = (query: Query): Record<string, string> => {
+  const out: Record<string, string> = {};
+  for (const [name, value] of Object.entries(query)) {
+    const first = one(value);
+    if (first !== undefined) out[name] = first;
+  }
+  return out;
+};
+
+/**
+ * The address of the old page sent to the new parameters (§6). `from` and `to` by month are
+ * `legacyPeriodQuery`'s, and they win, as they did on the old page. `span` chose the last months of a chart:
+ * 60 was the old "All", 12 is the year running like the `1y` of Investments, and any other number stays the
+ * same months as days. `null` when nothing is old. A `span` that is not a number of months is dropped.
+ */
+export function legacyFundQuery(query: Query, todayOn: CivilDate): Record<string, string> | null {
+  const span = one(query.span);
+  const rest = Object.fromEntries(Object.entries(query).filter(([name]) => name !== "span"));
+  const legacy = legacyPeriodQuery(rest, todayOn);
+  if (span === undefined) return legacy;
+  // Past a century it is not a span of months: `addMonths` would write a date that does not exist.
+  const months = /^[1-9]\d{0,3}$/.test(span) && Number(span) <= 1200 ? Number(span) : null;
+  const named = ["period", "preset", "from", "to"].some((name) => rest[name] !== undefined);
+  if (legacy !== null || named || months === null || months === 12) return legacy ?? flat(rest);
+  if (months === 60) return { ...flat(rest), preset: "all" };
+  return { ...flat(rest), from: addMonths(monthKey(todayOn), -(months - 1)), to: todayOn };
+}
+
+/**
+ * Where the old returns page goes (§6): the Valuations tab of the fund, with the period the address had.
+ */
+export function returnsTarget(base: string, query: Query, todayOn: CivilDate): string {
+  const period = legacyFundQuery(query, todayOn) ?? flat(query);
+  const params = new URLSearchParams({ tab: "valuations" });
+  for (const name of ["preset", "from", "to", "off"]) {
+    if (period[name] !== undefined) params.set(name, period[name]);
+  }
+  return `${base}?${params}`;
 }
