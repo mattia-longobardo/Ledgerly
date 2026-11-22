@@ -2,7 +2,7 @@
 // key, as the Server Actions they replace did. They go to `/api/v1`; signing the other sessions out
 // goes to Better Auth's own endpoint under `/api/auth`, which knows the session of the cookie.
 import { security } from "@ledgerly/api-contract/settings";
-import { ApiError, call } from "@ledgerly/api-client";
+import { ApiError, call, type RouteInput, type RouteOutput } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
 import { authClient } from "@/platform/auth/client";
 
@@ -54,4 +54,20 @@ export async function revokeOtherSessionsAction(): Promise<CallResult> {
   if (error) return { ok: false, error: "failed" };
   invalidate(security.listSessions);
   return { ok: true };
+}
+
+/** A new Client API with its secret: shown once, only its hash is kept. */
+export type ApiClientMinted = RouteOutput<typeof security.createApiClient>;
+
+/** Creates a Client API: `invalid` for a name or scopes the route refuses, `failed` for anything else. */
+export async function createApiClientAction(
+  input: RouteInput<typeof security.createApiClient>["body"],
+): Promise<{ ok: true; client: ApiClientMinted } | { ok: false; error: "invalid" | "failed" }> {
+  try {
+    const client = await call(security.createApiClient, { body: input });
+    invalidate(security.listApiClients);
+    return { ok: true, client };
+  } catch (error) {
+    return { ok: false, error: error instanceof ApiError && error.code === "invalid" ? "invalid" : "failed" };
+  }
 }

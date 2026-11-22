@@ -1,17 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
-import { security } from "@ledgerly/api-contract/settings";
 import { API_SCOPES } from "@ledgerly/domain/platform/auth/client";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input } from "@ledgerly/ui/input";
-import { invalidate } from "@ledgerly/ui/data";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
-import { type ApiClientMinted, createApiClientAction } from "./actions";
+import { type ApiClientMinted, createApiClientAction } from "./calls";
 
 /**
  * "New client" (docs/auth-design.md D3): what replaces "New token". The secret exists outside the
@@ -21,7 +18,6 @@ export function NewApiClient() {
   const t = useTranslations("settings.apiClients");
   const scopesT = useTranslations("settings.tokens");
   const id = useId();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [minted, setMinted] = useState<ApiClientMinted | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,9 +41,6 @@ export function NewApiClient() {
       }
       setError(null);
       setMinted(result.client);
-      // The table reads `/api/v1/api-clients`; the client is created by a Server Action until §6 #4.
-      invalidate(security.listApiClients);
-      router.refresh();
     });
   }
 

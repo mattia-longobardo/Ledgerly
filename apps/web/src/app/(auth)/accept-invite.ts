@@ -1,13 +1,13 @@
 // src/app/(auth)/accept-invite.ts — accepting an invitation: the account is created and the invitee is
-// signed in (Better Auth's cookie, set by its `nextCookies`). The Server Action and the public route
-// `POST /api/invite/{token}/accept` call this one use case.
+// signed in (Better Auth's cookie, set by its `nextCookies`). The public route
+// `POST /api/invite/{token}/accept` calls this one use case.
 import "server-only";
 import { z } from "zod";
 import { getAuth, nameSchema } from "@ledgerly/domain/platform/auth";
 import { acceptInvitation, InvitationError } from "@/platform/auth/invitations";
 
 /** Why an invitation was not accepted: the codes the form turns into its sentences. */
-export type InviteRefusal = "invalid" | "email_taken" | "weak_password" | "mismatch" | "name";
+type InviteRefusal = "invalid" | "email_taken" | "weak_password" | "mismatch" | "name";
 
 // Public: the invitee has no session yet, so the input is whatever the caller sent.
 const acceptInviteInput = z.object({

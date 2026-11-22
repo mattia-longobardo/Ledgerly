@@ -10,7 +10,7 @@ const acceptInviteAction = vi.fn();
 vi.mock("@/platform/auth/client", () => ({
   authClient: { signIn: { social: (...a: unknown[]) => signInSocial(...a) } },
 }));
-vi.mock("../../actions", () => ({ acceptInviteAction: (...a: unknown[]) => acceptInviteAction(...a) }));
+vi.mock("./accept-call", () => ({ acceptInviteAction: (...a: unknown[]) => acceptInviteAction(...a) }));
 
 function renderForm(initialError: "email_mismatch" | null = null, token = "tok") {
   render(

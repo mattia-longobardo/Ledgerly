@@ -1,11 +1,4 @@
 {
-  "apps/web/src/app/(app)/banks/connect/actions.ts": {
-    "closedBy": "R3 of the connections (bank procedure)",
-    "actions": [
-      "renewBankAccessAction",
-      "startBankAccessAction"
-    ]
-  },
   "apps/web/src/app/(app)/settings/integrations/actions.ts": {
     "closedBy": "R3 users, Integrations; Wallet and Trek with R5c",
     "actions": [
@@ -24,18 +17,6 @@
       "deactivateSourceAction",
       "deactivationCountsAction",
       "resumeSourceAccountAction"
-    ]
-  },
-  "apps/web/src/app/(app)/settings/security/actions.ts": {
-    "closedBy": "POST /api-clients, with git-policy \u00a76 #4",
-    "actions": [
-      "createApiClientAction"
-    ]
-  },
-  "apps/web/src/app/(auth)/actions.ts": {
-    "closedBy": "kept: web cookie (contract test, EXCLUDED)",
-    "actions": [
-      "acceptInviteAction"
     ]
   }
 }

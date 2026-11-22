@@ -753,5 +753,10 @@
     "file": "apps/web/src/modules/users/actions.test.ts",
     "decision": "R3 settings",
     "reason": "deleted with modules/users/actions.ts, the Server Action it tested: the screen calls Better Auth's revoke endpoint, held by settings/security/parity.itest.ts"
+  },
+  {
+    "file": "apps/web/src/app/(auth)/actions.test.ts",
+    "decision": "R3",
+    "reason": "The Server Action `acceptInviteAction` is deleted with its test: the form calls `POST /api/invite/{token}/accept`, whose test (`app/api/invite/[token]/accept/route.test.ts`) holds the same cases of the same use case"
   }
 ]

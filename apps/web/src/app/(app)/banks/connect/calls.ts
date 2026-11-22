@@ -1,6 +1,6 @@
 // The steps of "Connect a bank" (ux/n1-plugin-bank.md §6) through `/api/v1` (rewrite plan R3): the banks
-// of a country, the choice of the accounts with the first reading, a reading tried again and the way
-// out. Each keeps the name and the answer of the Server Action it replaces: `ok`, or the plugin host's
+// of a country, the start or the renewal of an access (bound to the session of the call), the choice
+// of the accounts with the first reading, a reading tried again and the way out. Each keeps the name and the answer of the Server Action it replaces: `ok`, or the plugin host's
 // code; a failure of the server is `failed`.
 import { banks, connections } from "@ledgerly/api-contract/settings";
 import { ApiError, call, type RouteOutput } from "@ledgerly/api-client";
@@ -61,3 +61,26 @@ export const retryBankReadingAction = (connectionId: string) =>
 
 export const cancelBankConnectionAction = (connectionId: string) =>
   attempt(() => call(connections.disconnect, { params: { id: connectionId } }));
+
+/** Starts an access to a bank: the answer is the bank's page. */
+export async function startBankAccessAction(
+  country: string,
+  name: string,
+): Promise<{ ok: true; url: string } | Refusal> {
+  try {
+    return { ok: true, url: (await call(banks.startBankAccess, { body: { country, name } })).url };
+  } catch (error) {
+    return refused(error);
+  }
+}
+
+/** "Renew access" (§6.7): the same start, for the bank of a connection the person already has. */
+export async function renewBankAccessAction(
+  connectionId: string,
+): Promise<{ ok: true; url: string } | Refusal> {
+  try {
+    return { ok: true, url: (await call(banks.renewBankAccess, { params: { id: connectionId } })).url };
+  } catch (error) {
+    return refused(error);
+  }
+}

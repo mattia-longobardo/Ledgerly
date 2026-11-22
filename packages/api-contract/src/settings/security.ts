@@ -126,7 +126,7 @@ export const createApiClient = defineRoute({
   scope: "security",
   capability: "security",
   summary: "Creates a Client API and answers its secret once: only its hash is kept.",
-  actions: ["createApiClientAction"],
+  actions: [],
   body: z
     .object({
       name: z.string().trim().min(1).max(60),

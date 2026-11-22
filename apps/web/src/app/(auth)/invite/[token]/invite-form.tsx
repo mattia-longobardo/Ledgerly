@@ -1,6 +1,5 @@
 "use client";
 
-import { unstable_rethrow } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { MAX_NAME_LENGTH } from "@ledgerly/domain/platform/auth/client";
@@ -12,7 +11,7 @@ import {
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
-import { acceptInviteAction } from "../../actions";
+import { acceptInviteAction } from "./accept-call";
 import { startAuthentikSignIn } from "../../authentik";
 
 const ERROR_KEY = {
@@ -53,10 +52,10 @@ export function InviteForm({
     startTransition(async () => {
       try {
         const result = await acceptInviteAction(token, input);
-        if (result) setError(result.error);
-      } catch (thrown) {
-        // On success the action redirects, which reaches here as a rejection Next.js must handle.
-        unstable_rethrow(thrown);
+        // The session's cookie is set: the whole app loads again, signed in.
+        if ("error" in result) setError(result.error);
+        else window.location.assign(result.next);
+      } catch {
         setError("failed");
       }
     });

@@ -172,16 +172,11 @@ describe("the contract of /api/v1", () => {
  * written list of exclusions of the module.
  */
 const SETTINGS_ACTION_FILES = [
-  "apps/web/src/app/(auth)/actions.ts",
-  "apps/web/src/app/(app)/settings/security/actions.ts",
   "apps/web/src/app/(app)/settings/integrations/actions.ts",
   "apps/web/src/app/(app)/settings/integrations/deactivate-actions.ts",
-  "apps/web/src/app/(app)/banks/connect/actions.ts",
 ];
 
 const EXCLUDED: Record<string, string> = {
-  acceptInviteAction:
-    "public `POST /api/invite/{token}/accept`, outside /api/v1: it creates the account and signs it in, before any token exists",
   // The cards of the core are served by the generic routes of a connection, by the provider's id
   // (`core-cases.ts`, R5c anticipated): the contract names no provider (rule M12), so it names them here.
   coreConnectionAction: "Wallet and Trek: `POST /connections/{id}/sync`, `/test`, `/history`",
