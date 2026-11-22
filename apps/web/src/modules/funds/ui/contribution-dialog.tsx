@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, type RefObject, useId, useRef, useState, useTransition } from "react";
-import type { NumberFormat } from "@ledgerly/domain/platform/format";
+import type { NumberFormat } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";

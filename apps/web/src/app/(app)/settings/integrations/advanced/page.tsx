@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import "@/app/plugin-wiring";
 import { requireSession } from "@/platform/auth/session";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import { NULL_DISPLAY } from "@ledgerly/format/format";
 import { labelOf } from "@/platform/integrations/registry";
 import { connectionReport, scheduleSummary } from "@/platform/integrations/report";
 import { isPluginProvider } from "@ledgerly/domain/platform/integrations";

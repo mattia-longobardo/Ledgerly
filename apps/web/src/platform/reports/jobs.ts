@@ -3,7 +3,7 @@ import { createTranslator } from "use-intl/core";
 import { forEachUser } from "@ledgerly/domain/users";
 import { getPreferences } from "@ledgerly/domain/users";
 import { addMonths, monthKey, today } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/format/format";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { notifyOnce } from "@/platform/notifications/service";

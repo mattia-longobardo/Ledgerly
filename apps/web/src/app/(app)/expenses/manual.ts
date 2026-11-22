@@ -29,7 +29,7 @@ import {
 } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
-import type { UiLocale } from "@ledgerly/domain/platform/format";
+import type { UiLocale } from "@ledgerly/format/format";
 import { labelOf } from "@/platform/integrations/registry";
 import { coreCreatesRecords, isPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";

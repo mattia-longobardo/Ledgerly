@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, type ReactNode, useEffect, useId, useRef, useState, useTransition } from "react";
 import { createFundAction } from "../calls";
 import { type CivilDate } from "@ledgerly/domain/shared/dates";
-import { type NumberFormat, numberSeparators, type UiLocale } from "@ledgerly/domain/platform/format";
+import { type NumberFormat, numberSeparators, type UiLocale } from "@ledgerly/format/format";
 import { StepIndicator } from "@ledgerly/ui/step-indicator";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";

@@ -4,7 +4,7 @@
 // component of the payslip source.
 import { useTranslations } from "next-intl";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import type { NumberFormat, UiLocale } from "@ledgerly/domain/platform/format";
+import type { NumberFormat, UiLocale } from "@ledgerly/format/format";
 import { SOURCE_KINDS, type SourceKind } from "@ledgerly/domain/funds/client";
 import { FeeManager } from "./fee-list";
 import type { FeeScopeOption } from "./fee-text";

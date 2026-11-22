@@ -13,7 +13,7 @@ import { useTheme } from "@ledgerly/ui/theme-provider";
 import { notify } from "@ledgerly/ui/toast";
 import { useUnsavedForm } from "@ledgerly/ui/unsaved-changes";
 import { FIELD_GRID } from "@ledgerly/ui/section";
-import { intlLocale } from "@ledgerly/domain/platform/format";
+import { intlLocale } from "@ledgerly/format/format";
 
 /**
  * Starts from the saved preferences; the page re-mounts it (keyed by them) whenever they change

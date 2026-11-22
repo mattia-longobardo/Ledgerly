@@ -16,7 +16,7 @@ import type { Person } from "@ledgerly/domain/users";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { readEnv } from "@ledgerly/domain/platform/env";
-import { formatDate } from "@ledgerly/domain/platform/format";
+import { formatDate } from "@ledgerly/format/format";
 import { clearNotification, notifyOnce } from "@/platform/notifications/service";
 import en from "../../../../../messages/en.json";
 import it from "../../../../../messages/it.json";

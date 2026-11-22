@@ -1,7 +1,7 @@
 // What "Add pension fund" holds while it is typed (screens §3), and the checks of its first step.
-import { parseAmount } from "@ledgerly/domain/platform/format";
+import { parseAmount } from "@ledgerly/format/format";
 import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
-import type { NumberFormat } from "@ledgerly/domain/platform/format";
+import type { NumberFormat } from "@ledgerly/format/format";
 import {
   applyTemplate,
   type FeeForm,

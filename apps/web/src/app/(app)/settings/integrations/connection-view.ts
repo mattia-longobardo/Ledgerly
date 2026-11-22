@@ -9,7 +9,7 @@ import "@/app/plugin-wiring";
 import { getTranslations } from "next-intl/server";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { addDays, civilDateIn } from "@ledgerly/domain/shared/dates";
-import { formatDate } from "@ledgerly/domain/platform/format";
+import { formatDate } from "@ledgerly/format/format";
 import type { ConnectionLabel } from "@/platform/integrations/registry";
 import { isPluginProvider, PROVIDERS } from "@ledgerly/domain/platform/integrations";
 import type { Connection, RecentRun } from "@ledgerly/domain/platform/integrations";

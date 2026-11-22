@@ -4,7 +4,7 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
-import { NULL_DISPLAY } from "@ledgerly/domain/platform/format";
+import { NULL_DISPLAY } from "@ledgerly/format/format";
 import { Button, ButtonLink } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Input, Textarea } from "@ledgerly/ui/input";

@@ -1,7 +1,7 @@
 // The words of a fee row (release N6, screens §7.1), shared by the list, the summary of the form
 // that creates a fund and Settings. Pure: the translator comes from the caller.
 import type { useTranslations } from "next-intl";
-import { parseAmount } from "@ledgerly/domain/platform/format";
+import { parseAmount } from "@ledgerly/format/format";
 import { isCivilDate } from "@ledgerly/domain/shared/dates";
 import {
   formatDate,
@@ -9,7 +9,7 @@ import {
   formatPercent,
   type NumberFormat,
   type UiLocale,
-} from "@ledgerly/domain/platform/format";
+} from "@ledgerly/format/format";
 import { feeModes, needsPeriod } from "@ledgerly/domain/shared/fees";
 import { type FeeForm, fractionOfPercent } from "@ledgerly/domain/funds/client";
 

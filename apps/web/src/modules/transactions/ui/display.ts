@@ -7,7 +7,7 @@
 import { PALETTE } from "@ledgerly/design-tokens";
 import type { TransactionType } from "@ledgerly/domain/transactions/client";
 import type { MonthKey } from "@ledgerly/domain/shared/dates";
-import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, type UiLocale } from "@ledgerly/format/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { type Tone, toneOfSign } from "@ledgerly/ui/tone";
 

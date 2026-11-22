@@ -23,7 +23,7 @@ import {
   type SummedField,
   type YearSummary,
 } from "@ledgerly/domain/payroll/client";
-import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY, parseAmount } from "@ledgerly/domain/platform/format";
+import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY, parseAmount } from "@ledgerly/format/format";
 import { type Cents, centsToDecimal, parseCents } from "@ledgerly/domain/shared/money";
 import { numberStyle } from "@ledgerly/format/format";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";

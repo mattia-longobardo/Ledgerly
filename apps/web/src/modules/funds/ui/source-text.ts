@@ -2,9 +2,9 @@
 // source dialog and the list in Settings (release N6, screens §3.3 and §6.2). Pure: the translator
 // comes from the caller, the server's `getTranslations` or the client's `useTranslations`.
 import type { useTranslations } from "next-intl";
-import { parseAmount } from "@ledgerly/domain/platform/format";
+import { parseAmount } from "@ledgerly/format/format";
 import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/format/format";
 import type { SourceForm } from "@ledgerly/domain/funds/client";
 import {
   type DueCalendar,

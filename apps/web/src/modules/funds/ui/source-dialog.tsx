@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, type RefObject, useId, useState, useTransition } from "react";
 import { saveSourceAction } from "../calls";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/format/format";
 import { Button, LinkButton } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Select } from "@ledgerly/ui/input";

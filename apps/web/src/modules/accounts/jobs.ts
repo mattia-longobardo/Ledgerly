@@ -2,7 +2,7 @@ import "server-only";
 import { createTranslator } from "use-intl/core";
 import { forEachUser } from "@ledgerly/domain/users";
 import { today } from "@ledgerly/domain/shared/dates";
-import { formatMoney, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatMoney, type UiLocale } from "@ledgerly/format/format";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { clearNotification, notifyOnce } from "@/platform/notifications/service";

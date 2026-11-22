@@ -14,7 +14,7 @@ import { movementSpanByAccount } from "@ledgerly/domain/transactions";
 import { withParams } from "@ledgerly/ui/url";
 import { requireSession } from "@/platform/auth/session";
 import { civilDateIn, today } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney } from "@ledgerly/domain/platform/format";
+import { formatDate, formatMoney } from "@ledgerly/format/format";
 import { listRuns, readSyncJob } from "@ledgerly/domain/platform/integrations";
 import {
   credentialsStatus,

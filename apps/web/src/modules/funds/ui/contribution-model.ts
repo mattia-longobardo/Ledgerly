@@ -1,6 +1,6 @@
 // What "Record contribution" works out from the form as it is typed (rewrite plan, ux/n6-pension-fund.md
 // §8.1): the amounts it reads, what goes into the fund, and what is wrong before it is sent.
-import { formatMoney, type NumberFormat, NULL_DISPLAY, parseAmount } from "@ledgerly/domain/platform/format";
+import { formatMoney, type NumberFormat, NULL_DISPLAY, parseAmount } from "@ledgerly/format/format";
 import type { Cents } from "@ledgerly/domain/shared/money";
 import type { ContributionForm } from "@ledgerly/domain/funds/client";
 

@@ -3,9 +3,9 @@
 // Step 4 of "Add pension fund" (screens §3): what will be created, each group with its Edit.
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { parseAmount } from "@ledgerly/domain/platform/format";
+import { parseAmount } from "@ledgerly/format/format";
 import { isCivilDate } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/format/format";
 import type { SourceKind } from "@ledgerly/domain/funds/client";
 import { LinkButton } from "@ledgerly/ui/button";
 import { feeAmountText } from "./fee-text";

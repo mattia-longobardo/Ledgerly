@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import type { UiLocale } from "@ledgerly/domain/platform/format";
+import type { UiLocale } from "@ledgerly/format/format";
 import { SOURCE_KINDS, type SourceKind } from "@ledgerly/domain/funds/client";
 import { Switch } from "@ledgerly/ui/switch";
 import { SourceFields } from "./source-fields";

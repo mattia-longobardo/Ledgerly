@@ -9,7 +9,7 @@ import { runTrekPass } from "@/modules/timeoff/jobs";
 import { runWalletPass, WALLET_HISTORY } from "@/modules/transactions/jobs";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { Person } from "@ledgerly/domain/users";
-import type { UiLocale } from "@ledgerly/domain/platform/format";
+import type { UiLocale } from "@ledgerly/format/format";
 import en from "../../../../../messages/en.json";
 import it from "../../../../../messages/it.json";
 import {

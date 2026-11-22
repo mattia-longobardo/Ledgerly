@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
-import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, formatMoney, type NumberFormat, type UiLocale } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button, ButtonLink, LinkButton } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";

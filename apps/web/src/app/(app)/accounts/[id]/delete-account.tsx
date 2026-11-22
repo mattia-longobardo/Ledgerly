@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { type CivilDate, isCivilDate } from "@ledgerly/domain/shared/dates";
-import { formatDate, type UiLocale } from "@ledgerly/domain/platform/format";
+import { formatDate, type UiLocale } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
 import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Modal } from "@ledgerly/ui/modal";
