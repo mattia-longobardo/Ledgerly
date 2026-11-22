@@ -32,6 +32,7 @@
     "./platform/holidays/client": "./src/platform/holidays/client.ts",
     "./platform/iban": "./src/platform/iban.ts",
     "./platform/integrations": "./src/platform/integrations/index.ts",
+    "./platform/integrations/client": "./src/platform/integrations/client.ts",
     "./platform/integrations/source": "./src/platform/integrations/wallet/index.ts",
     "./platform/integrations/calendar": "./src/platform/integrations/trek/index.ts",
     "./platform/integrations/trek": "./src/platform/integrations/trek/index.ts",

@@ -56,6 +56,8 @@ const connection = z.object({
   providerName: z.string(),
   state: z.enum(["active", "error", "revoked"]),
   errorCode: z.string().nullable(),
+  /** The failed readings in a row since the last good one; 0 after a good one. */
+  consecutiveFailures: z.number().int().nonnegative(),
   lastOkAt: instant().nullable(),
   nextSyncAt: instant().nullable(),
   /** The end of a wait the provider asked for, when it is later than the schedule's next time. */
@@ -113,6 +115,7 @@ const CONNECTION_EXAMPLE = {
   providerName: "Enable Banking",
   state: "active",
   errorCode: null,
+  consecutiveFailures: 0,
   lastOkAt: "2026-11-18T07:00:00.000Z",
   nextSyncAt: "2026-11-18T13:00:00.000Z",
   nextAttempt: null,

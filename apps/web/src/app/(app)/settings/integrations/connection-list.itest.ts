@@ -68,3 +68,16 @@ describe("the state of GET /connections", () => {
     expect(row?.status).toEqual({ value: "paused", text: "pausedSchedule", action: "resume" });
   });
 });
+
+describe("the failures of GET /connections", () => {
+  it("says the failed readings in a row of each connection, 0 for a new one", async () => {
+    const wallet = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
+    expect((await connectionList(ctx, NOW)).find((row) => row.id === wallet.id)?.consecutiveFailures).toBe(0);
+
+    await getDb()
+      .update(integrationConnections)
+      .set({ consecutiveFailures: 3 })
+      .where(eq(integrationConnections.id, wallet.id));
+    expect((await connectionList(ctx, NOW)).find((row) => row.id === wallet.id)?.consecutiveFailures).toBe(3);
+  });
+});

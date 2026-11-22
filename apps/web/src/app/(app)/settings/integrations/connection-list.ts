@@ -123,6 +123,7 @@ async function rowOf(
     providerName: label.provider,
     state: connection.state,
     errorCode: connection.errorCode,
+    consecutiveFailures: connection.consecutiveFailures,
     lastOkAt: instant(connection.lastOkAt),
     nextSyncAt: instant(connection.nextSyncAt),
     expiresAt: instant(connection.expiresAt),

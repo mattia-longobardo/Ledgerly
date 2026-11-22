@@ -1077,6 +1077,17 @@
     "removeCalendar",
     "yearsToRefresh"
   ],
+  "packages/domain/src/platform/integrations/client.ts": [
+    "clock",
+    "codeKey",
+    "daysToExpiry",
+    "historyOf",
+    "isPluginProvider",
+    "isRunningNow",
+    "isSyncErrorCode",
+    "relativeNext",
+    "relativePast"
+  ],
   "packages/domain/src/platform/integrations/index.ts": [
     "BINANCE_PROVIDER",
     "CardAccount",
