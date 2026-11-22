@@ -207,3 +207,9 @@ export async function codeMapView(ctx: Pick<Ctx, "userId">) {
     seeded: isSeededCode(entry.code),
   }));
 }
+
+/** How many payslips wait for the person's review (rewrite plan R5e, «Da fare»). */
+export async function payslipsAwaitingReview(ctx: Pick<Ctx, "userId">): Promise<number> {
+  const documents = await listDocuments(ctx, ["payslip"]);
+  return documents.filter((document) => AWAITING_REVIEW.includes(document.state)).length;
+}

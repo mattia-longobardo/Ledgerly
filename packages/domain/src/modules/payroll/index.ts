@@ -4,5 +4,5 @@ export { fillWithLlm } from "./llm";
 export { payrollDirectory, payrollLeaveBalances } from "./adapters";
 export { appliedPayslips } from "./applied";
 export { wirePayroll } from "./events";
-export { codeMapView, registerView, reviewView } from "./queries";
+export { codeMapView, payslipsAwaitingReview, registerView, reviewView } from "./queries";
 export { PAYSLIP_DOCUMENT, PayrollError, applyPayslip, codeMapOf, decideField, deletePayslip, processPayslip, rejectPayslip, renamePayslip, reopenPayslip, resetCode, retryPayslip, setCodeRole, uploadPayslip, verifyPayslip } from "./service";

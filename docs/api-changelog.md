@@ -6,7 +6,8 @@ written before it keeps working.
 ## Unreleased · Alerts: «Da fare», the apps' check, the channels of each event (R5e)
 
 - `GET /todo` (scope `read`, MCP tool `list_todo`): the open facts that ask for an action, oldest first,
-  one item per fact: `event`, `addon`, `params` (counts, whole percents, days, dates: never an amount,
+  read fresh at each call (movements to categorise, payslips to review, transfers to confirm, a fund to
+  verify, a connection to repair or renew), one item per fact: `event`, `addon`, `params` (counts, whole percents, days, dates: never an amount,
   a bank, an account or a name), `target` (`page` and `id` to open), `since`.
 - `GET /notifications?since=&limit=` (scope `read`): the read of the apps' periodic check. Only events
   with the device channel on; `category` is `action`, `reminder` or `report`; `cursor` for the next call.
@@ -14,7 +15,9 @@ written before it keeps working.
   it is not yours.
 - `GET /notification-preferences` (scope `read`) and `PUT /notification-preferences/{event}` (scope
   `write`, `{inApp?, email?, device?}`): the channels of each event. `locked` lists what cannot be
-  turned off; `module_inactive` for an event of an addon that is off.
+  changed: `inApp` of an event that asks for an action, `email` of an event without one (the four
+  states of «Da fare»); `invalid` for a change of either, `module_inactive` for an event of an addon
+  that is off. The email of `monthly_summary` is the preference `monthlySummary`.
 - An event of an addon that is off is in none of these answers.
 - `GET` and `PATCH /preferences`: `hideAmounts` («Nascondi importi»), one switch for every client of
   the person; off for everybody until they turn it on.

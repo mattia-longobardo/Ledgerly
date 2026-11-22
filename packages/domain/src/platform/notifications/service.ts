@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, like, lt, notInArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, like, lt, ne, notInArray, notLike, type SQL, sql } from "drizzle-orm";
 import { NOTIFICATION_EVENTS, type NotificationEvent, type NotificationParams } from "@ledgerly/api-contract";
 import { addonOn, type Ctx } from "../context";
 import { getDb } from "../db/client";
@@ -14,7 +14,7 @@ export interface Fact {
   targetId?: string | null;
 }
 
-interface Channels {
+export interface Channels {
   inApp: boolean;
   email: boolean;
   device: boolean;
@@ -57,7 +57,7 @@ export async function channelsOf(ctx: Pick<Ctx, "userId">, event: NotificationEv
 }
 
 /** Whether the event can be told to the person at all: not while its addon is off (PA10). */
-function eventActive(ctx: Pick<Ctx, "addons">, event: NotificationEvent): boolean {
+export function eventActive(ctx: Pick<Ctx, "addons">, event: NotificationEvent): boolean {
   const { addon } = NOTIFICATION_EVENTS[event];
   return addon === null || addonOn(ctx, addon);
 }
@@ -96,9 +96,30 @@ export async function raise(
 
 /**
  * Which open facts of an event to close: one subject, the subjects that start with a prefix (every
- * threshold of one connection's end), or every subject but the ones still true.
+ * threshold of one connection's end), or every subject but the ones still true, by name or prefix.
  */
-type Match = { subject: string } | { prefix: string; except?: string } | { keep: readonly string[] };
+type Match =
+  | { subject: string }
+  | { prefix: string; except?: string }
+  | { keep: readonly string[] }
+  | { keepPrefixes: readonly string[] };
+
+/** A `like` pattern that reads the prefix literally. */
+const startsWith = (prefix: string) => `${prefix.replace(/[\\%_]/g, "\\$&")}%`;
+
+function subjectsOf(match: Match): SQL | undefined {
+  if ("subject" in match) return eq(notifications.subject, match.subject);
+  if ("prefix" in match) {
+    return and(
+      like(notifications.subject, startsWith(match.prefix)),
+      match.except === undefined ? undefined : ne(notifications.subject, match.except),
+    );
+  }
+  if ("keep" in match) {
+    return match.keep.length === 0 ? undefined : notInArray(notifications.subject, [...match.keep]);
+  }
+  return and(...match.keepPrefixes.map((prefix) => notLike(notifications.subject, startsWith(prefix))));
+}
 
 /** Closes the open facts of an event that are no longer true. */
 export async function resolve(
@@ -107,17 +128,7 @@ export async function resolve(
   match: Match,
   now: Date = new Date(),
 ): Promise<number> {
-  const which =
-    "subject" in match
-      ? eq(notifications.subject, match.subject)
-      : "prefix" in match
-        ? and(
-            like(notifications.subject, `${match.prefix.replace(/[\\%_]/g, "\\$&")}%`),
-            match.except === undefined ? undefined : sql`${notifications.subject} <> ${match.except}`,
-          )
-        : match.keep.length === 0
-          ? undefined
-          : notInArray(notifications.subject, [...match.keep]);
+  const which = subjectsOf(match);
   const rows = await getDb()
     .update(notifications)
     .set({ resolvedAt: now })

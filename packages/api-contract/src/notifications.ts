@@ -30,20 +30,6 @@ export const NOTIFICATION_EVENT_NAMES = [
 
 export type NotificationEvent = (typeof NOTIFICATION_EVENT_NAMES)[number];
 
-/** Every event of the service: its category and the addon it belongs to (`null`: a base module). */
-export const NOTIFICATION_EVENTS = {
-  connection_failed: { category: "action", addon: null },
-  connection_stale: { category: "action", addon: null },
-  connection_expiring: { category: "action", addon: null },
-  account_low_balance: { category: "reminder", addon: null },
-  budget_threshold: { category: "reminder", addon: "budgets" },
-  monthly_summary: { category: "report", addon: null },
-  transactions_to_categorize: { category: "action", addon: null },
-  payslips_to_review: { category: "action", addon: "payroll" },
-  transfers_to_confirm: { category: "action", addon: "investments" },
-  fund_to_verify: { category: "action", addon: "funds" },
-} as const satisfies Record<NotificationEvent, { category: NotificationCategory; addon: AddonId | null }>;
-
 /** The page a client opens for an event, with the id of what the event is about when it has one. */
 export const NOTIFICATION_PAGES = [
   "connection",
@@ -55,6 +41,23 @@ export const NOTIFICATION_PAGES = [
   "fund",
   "overview",
 ] as const;
+
+/** Every event of the service: its category, its addon (`null`: a base module) and the page it opens. */
+export const NOTIFICATION_EVENTS = {
+  connection_failed: { category: "action", addon: null, page: "connection" },
+  connection_stale: { category: "action", addon: null, page: "connection" },
+  connection_expiring: { category: "action", addon: null, page: "connection" },
+  account_low_balance: { category: "reminder", addon: null, page: "account" },
+  budget_threshold: { category: "reminder", addon: "budgets", page: "budget" },
+  monthly_summary: { category: "report", addon: null, page: "overview" },
+  transactions_to_categorize: { category: "action", addon: null, page: "expenses_review" },
+  payslips_to_review: { category: "action", addon: "payroll", page: "payroll_review" },
+  transfers_to_confirm: { category: "action", addon: "investments", page: "investments_transfers" },
+  fund_to_verify: { category: "action", addon: "funds", page: "fund" },
+} as const satisfies Record<
+  NotificationEvent,
+  { category: NotificationCategory; addon: AddonId | null; page: (typeof NOTIFICATION_PAGES)[number] }
+>;
 
 /**
  * What a client needs to write the sentence. Counts, whole percents, days and dates only: never an
@@ -110,7 +113,10 @@ const preference = z.object({
   /** False while the event's addon is off: the event sends nothing, the choice stays. */
   addonActive: z.boolean(),
   channels,
-  /** The channels a person cannot turn off: `inApp` of an event that asks for an action. */
+  /**
+   * The channels a person cannot change: `inApp` of an event that asks for an action (always on), and
+   * `email` of an event that has no email (always off).
+   */
   locked: z.array(z.enum(["inApp", "email", "device"])),
 });
 
@@ -200,7 +206,7 @@ export const listNotifications = defineRoute({
   }),
   errors: ["invalid"],
   example: {
-    query: { since: "c2026-11-28T07:00:00.000Z" },
+    query: { since: "2026-11-28T07:00:00.000Z_0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f70" },
     response: {
       items: [
         {
@@ -213,7 +219,7 @@ export const listNotifications = defineRoute({
           readAt: null,
         },
       ],
-      cursor: "c2026-11-28T07:00:00.000Z",
+      cursor: "2026-11-28T07:00:00.000Z_0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f70",
     },
   },
 });

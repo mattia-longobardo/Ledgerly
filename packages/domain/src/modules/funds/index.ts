@@ -4,7 +4,7 @@ export { acceptDifference } from "./service/decisions";
 export { assetsCost, contributionFee, periodFees } from "./fees";
 export { newContributionForm } from "./forms";
 export type { ContributionForm, FeeForm, FundForm, SourceForm, WizardForm } from "./forms";
-export { fundHomeRow, fundsHomeRows } from "./home-queries";
+export { fundHomeRow, fundsHomeRows, fundsToVerify } from "./home-queries";
 export {
   firstDataOn,
   gainBars,

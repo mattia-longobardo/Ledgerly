@@ -115,10 +115,15 @@
     "addonOf",
     "civilDate",
     "getAddons",
+    "getNotificationPreferences",
+    "listNotifications",
+    "listTodo",
+    "markNotificationRead",
     "metaRoute",
     "openApiDocument",
     "searchRecords",
     "setAddon",
+    "setNotificationPreference",
     "syncRuleSchema",
     "syncScheduleSchema"
   ],
@@ -395,6 +400,7 @@
     "fundsHomeRows",
     "fundsHomeView",
     "fundsOnAccount",
+    "fundsToVerify",
     "gainBars",
     "gainChart",
     "gainGrain",
@@ -615,6 +621,7 @@
     "servicePnlView",
     "servicePositions",
     "syncedServicesOf",
+    "transfersToConfirm",
     "unitPriceOf",
     "unlinkTransfer",
     "updateServiceUrl",
@@ -652,6 +659,7 @@
     "llmFillable",
     "payrollDirectory",
     "payrollLeaveBalances",
+    "payslipsAwaitingReview",
     "processPayslip",
     "registerView",
     "rejectPayslip",
@@ -956,6 +964,7 @@
     "updateRule",
     "updateTransaction",
     "upsertFromProvider",
+    "waitingForCategory",
     "writeTransferPairs"
   ],
   "packages/domain/src/modules/users/client.ts": [
@@ -1222,11 +1231,18 @@
   ],
   "packages/domain/src/platform/notifications/index.ts": [
     "Fact",
+    "NotificationError",
     "channelsOf",
+    "chooseChannels",
     "deleteOldFacts",
+    "deviceFeed",
+    "markRead",
+    "notificationChoices",
     "notificationsLog",
     "raise",
-    "resolve"
+    "resolve",
+    "syncFacts",
+    "todoOf"
   ],
   "packages/domain/src/platform/plugins/index.ts": [
     "AUTH_STATE_MINUTES",

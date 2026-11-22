@@ -314,3 +314,8 @@ export async function categoryTotals(
         (a.categoryId ?? "").localeCompare(b.categoryId ?? ""),
     );
 }
+
+/** How many movements of every date wait for a category (rewrite plan R5e, «Da fare»). */
+export async function waitingForCategory(ctx: Pick<Ctx, "userId" | "timeZone">): Promise<number> {
+  return (await countAllAndWaiting(ctx)).review.count;
+}

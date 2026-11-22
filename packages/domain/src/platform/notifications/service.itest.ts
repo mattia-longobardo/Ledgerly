@@ -6,6 +6,7 @@ import { getDb } from "../db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { notificationPreferences, notifications } from "./schema";
+import { syncFacts } from "./reads";
 import { channelsOf, defaultChannels, deleteOldFacts, openFacts, raise, resolve } from "./service";
 
 const NOW = new Date("2026-11-22T10:00:00Z");
@@ -115,5 +116,19 @@ describe("deleteOldFacts", () => {
     await raise(ctx, { event: "connection_stale", subject: "kept" }, later(5));
     expect(await deleteOldFacts(later(2))).toBe(2);
     expect((await rows()).map((row) => row.subject)).toEqual(["kept"]);
+  });
+});
+
+describe("syncFacts", () => {
+  it("raises the facts that are true, closes the others, and reads nothing of an addon that is off", async () => {
+    await syncFacts(ctx, "fund_to_verify", async () => [{ subject: "f1" }, { subject: "f2" }], NOW);
+    await syncFacts(ctx, "fund_to_verify", async () => [{ subject: "f2" }], later(1));
+    expect((await openFacts(ctx, ["fund_to_verify"])).map((row) => row.subject)).toEqual(["f2"]);
+
+    let read = false;
+    const off = { ...ctx, addons: ["payroll"] as const };
+    await syncFacts(off, "fund_to_verify", async () => ((read = true), []), later(2));
+    expect(read).toBe(false);
+    expect(await openFacts(ctx, ["fund_to_verify"])).toHaveLength(1);
   });
 });

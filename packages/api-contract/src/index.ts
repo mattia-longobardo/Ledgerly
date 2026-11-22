@@ -14,6 +14,11 @@ export {
   NOTIFICATION_EVENT_NAMES,
   NOTIFICATION_EVENTS,
   NOTIFICATION_PAGES,
+  getNotificationPreferences,
+  listNotifications,
+  listTodo,
+  markNotificationRead,
+  setNotificationPreference,
 } from "./notifications";
 export type { NotificationCategory, NotificationEvent, NotificationParams } from "./notifications";
 export {

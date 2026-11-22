@@ -558,6 +558,7 @@ describe("parity of users and settings: route = MCP tool", () => {
       "list_labels",
       "list_pockets",
       "list_subscriptions",
+      "list_todo",
       "list_transactions",
     ]);
     const paths: Record<string, string> = {

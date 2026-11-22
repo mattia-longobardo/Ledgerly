@@ -16,6 +16,7 @@ export { monthSpending, findMovements, chargeCandidates, payeeSamples, recurrenc
 export { matchMovements } from "./matching";
 export {
   countAllTransactions,
+  waitingForCategory,
   listTransactions,
   transactionsSummary,
   monthlyTotals,
