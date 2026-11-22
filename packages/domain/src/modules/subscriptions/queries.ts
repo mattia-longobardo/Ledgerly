@@ -10,6 +10,7 @@ import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
 import { groupBy, searchByName } from "../../shared/collections";
 import {
+  frequencyOf,
   commitPercent,
   foundCharges,
   PRICE_CURRENCY,
@@ -87,7 +88,7 @@ interface SubscriptionsView {
 const planOf = (row: SubscriptionRow) => ({
   id: row.subscription.id,
   priceCents: row.subscription.priceCents,
-  cycle: row.subscription.cycle,
+  cycle: frequencyOf(row.subscription),
   anchor: row.subscription.nextChargeOn,
   row,
 });
@@ -198,9 +199,9 @@ function rowOf(subscription: Subscription, sources: Sources): SubscriptionRow {
     accountName: subscription.paymentAccountId
       ? (sources.accountName.get(subscription.paymentAccountId) ?? null)
       : null,
-    monthlyCents: monthlyEquivalent(subscription.priceCents, subscription.cycle),
-    yearlyCents: yearlyEquivalent(subscription.priceCents, subscription.cycle),
-    nextChargeOn: nextCharge(subscription.nextChargeOn, subscription.cycle, todayOn, paid),
+    monthlyCents: monthlyEquivalent(subscription.priceCents, frequencyOf(subscription)),
+    yearlyCents: yearlyEquivalent(subscription.priceCents, frequencyOf(subscription)),
+    nextChargeOn: nextCharge(subscription.nextChargeOn, frequencyOf(subscription), todayOn, paid),
     current,
     lastMatch: lastMatchOf(own, sources.matched, sources.timeZone),
   };
@@ -312,7 +313,9 @@ export async function subscriptionsView(
   const paying = [...new Set(active.flatMap((row) => row.subscription.paymentAccountId ?? []))];
   const balances = await balancesInPriceCurrency(ctx, accounts, paying, todayOn);
   const commitments = { found: sources.found, balances };
-  const low = active.filter((row) => row.subscription.utility <= LOW_UTILITY);
+  const low = active.filter(
+    (row) => row.subscription.utility !== null && row.subscription.utility <= LOW_UTILITY,
+  );
   return {
     rows: active,
     inactive: rows.filter((row) => row.subscription.state !== "active"),
@@ -361,7 +364,12 @@ export async function subscriptionsOnAccount(
   accountId: string,
 ): Promise<{ count: number; monthlyCents: Cents }> {
   const rows = await getDb()
-    .select({ priceCents: subscriptions.priceCents, cycle: subscriptions.cycle })
+    .select({
+      priceCents: subscriptions.priceCents,
+      cycle: subscriptions.cycle,
+      everyUnit: subscriptions.everyUnit,
+      everyCount: subscriptions.everyCount,
+    })
     .from(subscriptions)
     .where(
       and(
@@ -370,7 +378,10 @@ export async function subscriptionsOnAccount(
         eq(subscriptions.state, "active"),
       ),
     );
-  return { count: rows.length, monthlyCents: monthlyCost(rows) };
+  return {
+    count: rows.length,
+    monthlyCents: monthlyCost(rows.map((row) => ({ priceCents: row.priceCents, cycle: frequencyOf(row) }))),
+  };
 }
 
 /** Subscriptions by name, for the ⌘K palette (spec §8.2). */

@@ -3086,7 +3086,8 @@
       "weekly": "Weekly",
       "monthly": "Monthly",
       "quarterly": "Quarterly",
-      "yearly": "Yearly"
+      "yearly": "Yearly",
+      "custom": "Custom"
     },
     "status": {
       "paid": "Paid",

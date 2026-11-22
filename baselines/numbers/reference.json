@@ -3166,6 +3166,7 @@
     "planned": [],
     "plannedCents": "0",
     "pocket": {
+     "accrualDay": 1,
      "archivedAt": null,
      "color": null,
      "monthlyCents": "25000",
@@ -3234,6 +3235,8 @@
     "subscription": {
      "cancelledAt": null,
      "categoryId": null,
+     "everyCount": null,
+     "everyUnit": null,
      "nextChargeOn": "2031-11-03",
      "priceCents": "1299",
      "utility": 7

@@ -26,29 +26,85 @@ const MAX_CHECKED_PERIODS = 24;
 /** Half the span of a weekly charge's window, in days: a week split around its date. */
 const WEEKLY_REACH = 3;
 
-const MONTHS_PER_CYCLE: Record<Exclude<Cycle, "weekly">, number> = { monthly: 1, quarterly: 3, yearly: 12 };
+/** The units of «every N weeks or months» (R5a, ST-15) and the largest N of each (D4). */
+export const EVERY_UNITS = ["week", "month"] as const;
+export const MAX_EVERY: Record<(typeof EVERY_UNITS)[number], number> = { week: 12, month: 24 };
 
-/** Spec §7.5: what a plan costs per month — ×52/12, ×1, ÷3, ÷12 — half-up to the cent. */
-export function monthlyEquivalent(price: Cents, cycle: Cycle): Cents {
-  switch (cycle) {
-    case "weekly":
-      return divRound(price * 52n, 12n);
-    case "monthly":
-      return price;
-    case "quarterly":
-      return divRound(price, 3n);
-    case "yearly":
-      return divRound(price, 12n);
-  }
+/** «Every N weeks or months»: what a cycle of the list is, and what it may also be since R5a. */
+export interface Every {
+  unit: (typeof EVERY_UNITS)[number];
+  count: number;
 }
 
-/** Spec §7.5: what a plan costs per year — ×52, ×12, ×4, ×1. */
-export function yearlyEquivalent(price: Cents, cycle: Cycle): Cents {
-  return price * { weekly: 52n, monthly: 12n, quarterly: 4n, yearly: 1n }[cycle];
+/** How often a subscription falls due: one of the 4 cycles, or every N weeks or months. */
+export type Frequency = Cycle | Every;
+
+const EVERY_OF_CYCLE: Record<Cycle, Every> = {
+  weekly: { unit: "week", count: 1 },
+  monthly: { unit: "month", count: 1 },
+  quarterly: { unit: "month", count: 3 },
+  yearly: { unit: "month", count: 12 },
+};
+
+/** A frequency as weeks or months. */
+export function everyOf(frequency: Frequency): Every {
+  return typeof frequency === "string" ? EVERY_OF_CYCLE[frequency] : frequency;
+}
+
+/** The cycle of the list a frequency is, or null when it is none of the 4. */
+export function cycleOf(frequency: Frequency): Cycle | null {
+  const every = everyOf(frequency);
+  return (
+    CYCLES.find(
+      (cycle) => EVERY_OF_CYCLE[cycle].unit === every.unit && EVERY_OF_CYCLE[cycle].count === every.count,
+    ) ?? null
+  );
+}
+
+/**
+ * The cycle of the list nearest to a frequency: what the `cycle` column keeps for a frequency that
+ * is none of the 4, so an image before R5a still reads a cycle it knows.
+ */
+export function nearestCycle(frequency: Frequency): Cycle {
+  const every = everyOf(frequency);
+  if (every.unit === "week") return "weekly";
+  return every.count < 3 ? "monthly" : every.count < 12 ? "quarterly" : "yearly";
+}
+
+/** A stored row's frequency: its «every» when it has one, its cycle otherwise. */
+export function frequencyOf(row: {
+  cycle: Cycle;
+  everyUnit: string | null;
+  everyCount: number | null;
+}): Frequency {
+  return row.everyUnit !== null && row.everyCount !== null
+    ? { unit: row.everyUnit === "week" ? "week" : "month", count: row.everyCount }
+    : row.cycle;
+}
+
+/** The columns of a frequency: a cycle of the list alone, or the nearest cycle and the «every». */
+export function frequencyColumns(cycle: Cycle, every: Every | null) {
+  if (every === null) return { cycle, everyUnit: null, everyCount: null };
+  const exact = cycleOf(every);
+  return exact !== null
+    ? { cycle: exact, everyUnit: null, everyCount: null }
+    : { cycle: nearestCycle(every), everyUnit: every.unit, everyCount: every.count };
+}
+
+/** Spec §7.5: what a plan costs per month — ×52/12, ×1, ÷3, ÷12; every N: ÷N — half-up to the cent. */
+export function monthlyEquivalent(price: Cents, frequency: Frequency): Cents {
+  const { unit, count } = everyOf(frequency);
+  return unit === "week" ? divRound(price * 52n, 12n * BigInt(count)) : divRound(price, BigInt(count));
+}
+
+/** Spec §7.5: what a plan costs per year — ×52, ×12, ×4, ×1; every N: ÷N, half-up to the cent. */
+export function yearlyEquivalent(price: Cents, frequency: Frequency): Cents {
+  const { unit, count } = everyOf(frequency);
+  return divRound(price * (unit === "week" ? 52n : 12n), BigInt(count));
 }
 
 /** What some plans cost per month together (SUB-3: the page's total and an account's row alike). */
-export function monthlyCost(plans: readonly { priceCents: Cents; cycle: Cycle }[]): Cents {
+export function monthlyCost(plans: readonly { priceCents: Cents; cycle: Frequency }[]): Cents {
   return plans.reduce<Cents>((sum, plan) => sum + monthlyEquivalent(plan.priceCents, plan.cycle), 0n);
 }
 
@@ -73,7 +129,9 @@ export function foundCharges(
  * The charges of some plans due in `[from, to]` that have not been found yet (SUB-1: one list
  * under "Next 30 days" and under every projection).
  */
-export function upcomingCharges<P extends { id: string; priceCents: Cents; cycle: Cycle; anchor: CivilDate }>(
+export function upcomingCharges<
+  P extends { id: string; priceCents: Cents; cycle: Frequency; anchor: CivilDate },
+>(
   plans: readonly P[],
   found: ReadonlyMap<string, ReadonlySet<CivilDate>>,
   from: CivilDate,
@@ -100,18 +158,20 @@ function pad(value: number): string {
  * own day, falling back to the last day of a shorter month, so a charge on the 31st is on the 28th
  * in February and back on the 31st in March.
  */
-export function addCycles(anchor: CivilDate, cycle: Cycle, count: number): CivilDate {
-  if (cycle === "weekly") return addDays(anchor, 7 * count);
+export function addCycles(anchor: CivilDate, cycle: Frequency, count: number): CivilDate {
+  const every = everyOf(cycle);
+  if (every.unit === "week") return addDays(anchor, 7 * every.count * count);
   const [year, month, day] = parts(anchor);
-  const index = year * 12 + (month - 1) + count * MONTHS_PER_CYCLE[cycle];
+  const index = year * 12 + (month - 1) + count * every.count;
   const first = `${Math.floor(index / 12)}-${pad((index % 12) + 1)}-01`;
   const last = Number(lastDayOfMonth(first).slice(8));
   return `${first.slice(0, 8)}${pad(Math.min(day, last))}`;
 }
 
 /** How many cycles from the anchor to the first charge on or after `date`. */
-function firstIndexFrom(anchor: CivilDate, cycle: Cycle, date: CivilDate): number {
-  const length = cycle === "weekly" ? 7 : MONTHS_PER_CYCLE[cycle] * 30.4;
+function firstIndexFrom(anchor: CivilDate, cycle: Frequency, date: CivilDate): number {
+  const every = everyOf(cycle);
+  const length = every.unit === "week" ? 7 * every.count : every.count * 30.4;
   let index = Math.floor((dayNumber(date) - dayNumber(anchor)) / length) - 1;
   while (addCycles(anchor, cycle, index) < date) index += 1;
   while (addCycles(anchor, cycle, index - 1) >= date) index -= 1;
@@ -119,7 +179,7 @@ function firstIndexFrom(anchor: CivilDate, cycle: Cycle, date: CivilDate): numbe
 }
 
 /** Every charge of the calendar between `from` and `to`, both included, in order. */
-export function dueDates(anchor: CivilDate, cycle: Cycle, from: CivilDate, to: CivilDate): CivilDate[] {
+export function dueDates(anchor: CivilDate, cycle: Frequency, from: CivilDate, to: CivilDate): CivilDate[] {
   const dates: CivilDate[] = [];
   for (let index = firstIndexFrom(anchor, cycle, from); ; index += 1) {
     const due = addCycles(anchor, cycle, index);
@@ -133,8 +193,9 @@ export function dueDates(anchor: CivilDate, cycle: Cycle, from: CivilDate, to: C
  * month of the charge for a monthly, quarterly or yearly plan (the design's "any day of the month",
  * "the renewal month"), three days either side of it for a weekly one.
  */
-export function periodOf(due: CivilDate, cycle: Cycle): { from: CivilDate; to: CivilDate } {
-  if (cycle === "weekly") return { from: addDays(due, -WEEKLY_REACH), to: addDays(due, WEEKLY_REACH) };
+export function periodOf(due: CivilDate, cycle: Frequency): { from: CivilDate; to: CivilDate } {
+  if (everyOf(cycle).unit === "week")
+    return { from: addDays(due, -WEEKLY_REACH), to: addDays(due, WEEKLY_REACH) };
   const month = monthKey(due);
   return { from: month, to: lastDayOfMonth(month) };
 }
@@ -142,7 +203,7 @@ export function periodOf(due: CivilDate, cycle: Cycle): { from: CivilDate; to: C
 /** The next charge on or after `today` whose period is not already paid (plan F3 §3.6.5). */
 export function nextCharge(
   anchor: CivilDate,
-  cycle: Cycle,
+  cycle: Frequency,
   today: CivilDate,
   paid: ReadonlySet<CivilDate>,
 ): CivilDate {
@@ -169,18 +230,15 @@ export type DueMoment =
   | { kind: "quarter"; quarter: 1 | 2 | 3 | 4 }
   | { kind: "month"; month: number };
 
-export function dueMoment(cycle: Cycle, on: CivilDate): DueMoment {
+export function dueMoment(cycle: Frequency, on: CivilDate): DueMoment {
   const [, month, day] = on.split("-").map(Number);
-  switch (cycle) {
-    case "weekly":
-      return { kind: "weekday", weekday: dayOfWeek(on) };
-    case "monthly":
-      return { kind: "day", day };
-    case "quarterly":
-      return { kind: "quarter", quarter: (Math.floor((month - 1) / 3) + 1) as 1 | 2 | 3 | 4 };
-    case "yearly":
-      return { kind: "month", month };
-  }
+  const every = everyOf(cycle);
+  // Every N weeks is a weekday; every 1 or 2 months a day, 3 a quarter, 4 or more a month.
+  if (every.unit === "week") return { kind: "weekday", weekday: dayOfWeek(on) };
+  if (every.count < 3) return { kind: "day", day };
+  if (every.count === 3)
+    return { kind: "quarter", quarter: (Math.floor((month - 1) / 3) + 1) as 1 | 2 | 3 | 4 };
+  return { kind: "month", month };
 }
 
 /**
@@ -207,7 +265,7 @@ export function withinTolerance(actual: Cents, expected: Cents, tolerance: strin
 export interface CheckedSubscription {
   id: string;
   priceCents: Cents;
-  cycle: Cycle;
+  cycle: Frequency;
   anchor: CivilDate;
   paymentAccountId: string | null;
   payeeMatch: string;
@@ -463,9 +521,17 @@ export function toleranceOf(percent: string | undefined): string {
 export const subscriptionInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   categoryId: z.uuid().nullable().default(null),
-  utility: z.number().int().min(1).max(10).default(5),
+  // Optional since R5a (ST-15): null is «no vote»; left out, the 5 of before.
+  utility: z.number().int().min(1).max(10).nullable().default(5),
   priceCents: z.bigint().positive(),
   cycle: z.enum(CYCLES),
+  /** «Every N weeks or months» (R5a, D4): when given, it is the frequency and `cycle` is its nearest. */
+  every: z
+    .object({ unit: z.enum(EVERY_UNITS), count: z.number().int().min(1) })
+    .refine((every) => every.count <= MAX_EVERY[every.unit], "Too many weeks or months")
+    .nullable()
+    // Left out: none for a new subscription; for a change, the one it has while `cycle` stays.
+    .optional(),
   nextChargeOn: civilDate(),
   paymentAccountId: z.uuid().nullable().default(null),
   payeeMatch: optionalText(80),

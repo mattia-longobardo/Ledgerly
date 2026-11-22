@@ -42,6 +42,8 @@ export const pocketRow = z.object({
   accountId: id().nullable(),
   account: z.string().nullable(),
   startMonth: monthStart(),
+  /** The day of the month its accrual lands on, when it is not the 1st (R5a). */
+  accrualDay: z.number().int().min(2).max(31).optional(),
   target: money().nullable(),
   /** What it is given each month; null when it is filled by hand only. */
   monthly: money().nullable(),

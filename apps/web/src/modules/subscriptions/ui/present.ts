@@ -13,7 +13,7 @@ import {
   type NumberFormat,
   type UiLocale,
 } from "@ledgerly/format/format";
-import { dueMoment } from "@ledgerly/domain/subscriptions/client";
+import { type Cycle, dueMoment, type Frequency, nearestCycle } from "@ledgerly/domain/subscriptions/client";
 import type { SubscriptionDraft } from "./subscription-dialog";
 import type { SubscriptionView } from "./subscriptions-table";
 import type { SuggestionView } from "./suggestions-dialog";
@@ -34,6 +34,18 @@ const typed = (decimal: string, format: Format) =>
 /** The tolerance the dialog starts from when none is typed: the contract's 5 %. */
 const defaultTolerance = (format: Format) => typed("5", format);
 
+/** A row's frequency: one of the 4 cycles, or its «every N weeks or months» (R5a). */
+const frequencyOf = (row: Row): Frequency =>
+  row.cycle === "custom" && row.every ? row.every : nearestOf(row);
+
+/**
+ * The cycle the screens of today show and edit.
+ * shortcut: «every N» shows as the nearest cycle until the screens of R5a show it; the server keeps
+ * an «every» a save does not change.
+ */
+const nearestOf = (row: Row): Cycle =>
+  row.cycle === "custom" ? (row.every ? nearestCycle(row.every) : "monthly") : row.cycle;
+
 function draftOf(row: Row, text: T, format: Format): SubscriptionDraft & { id: string } {
   return {
     id: row.id,
@@ -42,7 +54,7 @@ function draftOf(row: Row, text: T, format: Format): SubscriptionDraft & { id: s
     categoryId: row.categoryId,
     paymentAccountId: row.accountId,
     priceInput: typed(row.price, format),
-    cycle: row.cycle,
+    cycle: nearestOf(row),
     // The dialog edits the anchor of the calendar, the date the person entered.
     nextChargeOn: row.chargeOn,
     payeeMatch: row.payeeMatch ?? "",
@@ -112,7 +124,7 @@ function statusOf(row: Row, text: T, format: Format): Pick<SubscriptionView, "st
  * no civil date is parsed twice.
  */
 function presentDue(row: Row, text: T, format: Format): string {
-  const moment = dueMoment(row.cycle, row.nextChargeOn);
+  const moment = dueMoment(frequencyOf(row), row.nextChargeOn);
   switch (moment.kind) {
     case "day":
       return text("due.day", { day: moment.day });
@@ -140,7 +152,7 @@ export function presentRow(row: Row, text: T, format: Format): SubscriptionView 
     utility: row.utility,
     price: money(row.price),
     priceCents: parseCents(row.price),
-    cycle: row.cycle,
+    cycle: nearestOf(row),
     accountName: row.account ?? text("anyAccount"),
     monthly: money(row.monthly),
     monthlyCents: parseCents(row.monthly),

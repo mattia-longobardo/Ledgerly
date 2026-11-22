@@ -352,3 +352,44 @@ describe("isolation between users (spec §4.4, §11)", () => {
     expect(await balanceOf(pocket.id)).toBe(25_000n);
   });
 });
+
+describe("the day of the accrual (R5a, D6)", () => {
+  const accruals = async (pocketId: string) =>
+    (await getDb().select().from(pocketMovements).where(eq(pocketMovements.pocketId, pocketId)))
+      .filter((movement) => movement.kind === "accrual")
+      .map((movement) => movement.on)
+      .sort();
+
+  it("lands on the pocket's day, and not before it", async () => {
+    const pocket = await createPocket(ctx, pocketInput({ startMonth: "2026-01-01", accrualDay: 15 }));
+    await getDb().delete(pocketMovements).where(eq(pocketMovements.pocketId, pocket.id));
+    expect(await accrueMonth(ctx, "2026-03-01", [pocket.id], "2026-03-14")).toEqual({ written: 0 });
+    expect(await accrueMonth(ctx, "2026-03-01", [pocket.id], "2026-03-15")).toEqual({ written: 1 });
+    expect(await accruals(pocket.id)).toEqual(["2026-03-15"]);
+  });
+
+  it("lands on the last day of February and of a month of 30 days", async () => {
+    const pocket = await createPocket(ctx, pocketInput({ startMonth: "2026-01-01", accrualDay: 31 }));
+    await getDb().delete(pocketMovements).where(eq(pocketMovements.pocketId, pocket.id));
+    expect(await accrueMonth(ctx, "2026-02-01", [pocket.id], "2026-02-27")).toEqual({ written: 0 });
+    expect(await accrueMonth(ctx, "2026-02-01", [pocket.id], "2026-02-28")).toEqual({ written: 1 });
+    expect(await accrueMonth(ctx, "2026-04-01", [pocket.id], "2026-04-30")).toEqual({ written: 1 });
+    expect(await accruals(pocket.id)).toEqual(["2026-02-28", "2026-04-30"]);
+  });
+
+  it("writes one accrual a month, even when the day changes after it", async () => {
+    const pocket = await createPocket(ctx, pocketInput({ startMonth: "2026-01-01", accrualDay: 5 }));
+    await getDb().delete(pocketMovements).where(eq(pocketMovements.pocketId, pocket.id));
+    expect(await accrueMonth(ctx, "2026-03-01", [pocket.id], "2026-03-05")).toEqual({ written: 1 });
+    await updatePocket(ctx, pocket.id, pocketInput({ startMonth: "2026-01-01", accrualDay: 20 }));
+    expect(await accrueMonth(ctx, "2026-03-01", [pocket.id], "2026-03-31")).toEqual({ written: 0 });
+    expect(await accruals(pocket.id)).toContain("2026-03-05");
+    expect((await accruals(pocket.id)).filter((on) => on.startsWith("2026-03"))).toHaveLength(1);
+  });
+
+  it("keeps its day when a change leaves it out (the dialog before R5a)", async () => {
+    const pocket = await createPocket(ctx, pocketInput({ accrualDay: 20 }));
+    const changed = await updatePocket(ctx, pocket.id, pocketInput({ name: "Trips" }));
+    expect(changed.accrualDay).toBe(20);
+  });
+});

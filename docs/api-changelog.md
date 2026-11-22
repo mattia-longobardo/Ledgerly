@@ -59,6 +59,18 @@ written before it keeps working.
 - `GET` and `PATCH /preferences`: `hideAmounts` («Nascondi importi»), one switch for every client of
   the person; off for everybody until they turn it on.
 
+## Unreleased · Subscriptions every N weeks or months, the optional vote, the day of a pocket (R5a)
+
+- `POST` and `PUT /subscriptions`: `every` `{unit: "week" | "month", count}` (1 to 12 weeks, 1 to 24 months)
+  sets the frequency; `cycle` stays and is ignored when `every` is given. A change that leaves `every`
+  out keeps the one saved while `cycle` is the same. `noVote: true` saves no vote.
+- `GET /subscriptions`: `cycle` is `custom` when the frequency is none of the 4 cycles, and then the row
+  has `every`; `noVote: true` when there is no vote (`utility` is then 5). With `?account=<id>` the two
+  lists hold only what that account pays; the totals stay those of every subscription.
+- `POST` and `PUT /pockets`: `accrualDay`, 1 to 31, the day of the month the accrual lands on (the last
+  day of a shorter month); left out on a change, the pocket keeps its day. A pocket's row has
+  `accrualDay` when it is not the 1st.
+
 ## Unreleased · the first start and the defaults of the instance (R5a)
 
 - `GET /countries` (scope `read`): the countries with a pack of rules and what each proposes (currency,

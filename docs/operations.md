@@ -111,8 +111,8 @@ Times are Europe/Rome (`SCHEDULE` in the registry).
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Every minute             | `integrations-sync` (only for links that are due)                                                                                                                       |
 | Every hour, at :30       | `interests-accrual`, `documents-sweep`                                                                                                                                   |
-| Every day, at 12:00      | `housekeeping`, `accounts-alerts`, `subscriptions-check`, `interests-rematch`, `pockets-planned-cleanup`, `documents-retention`, `holidays-refresh`, `fx-rates-refresh`, `database-backup` |
-| The 1st of each month    | `accounts-snapshot`, `pockets-accrual`, `monthly-summary`                                                                                                                |
+| Every day, at 12:00      | `housekeeping`, `accounts-alerts`, `subscriptions-check`, `interests-rematch`, `pockets-accrual` (each pocket on its day of the month), `pockets-planned-cleanup`, `documents-retention`, `holidays-refresh`, `fx-rates-refresh`, `database-backup` |
+| The 1st of each month    | `accounts-snapshot`, `monthly-summary`                                                                                                                |
 | After a sync with changes | `recurrences-refresh`, `subscriptions-check`, `budgets-alerts`, `funds-deposits`                                                                                         |
 | Only by hand             | `export-all`                                                                                                                                                             |
 

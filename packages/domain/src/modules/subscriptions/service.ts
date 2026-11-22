@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, isNotNull, notInArray, sql } from "drizzle-orm";
+import type { z } from "zod";
 import { requireOpenAccount } from "../accounts";
 import { chargeCandidates } from "../transactions/queries";
 import { getCategory, TaxonomyError } from "../transactions/taxonomy";
@@ -7,6 +8,8 @@ import { addDays, type CivilDate, civilDateIn, today } from "../../shared/dates"
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
 import {
+  frequencyColumns,
+  frequencyOf,
   addCycles,
   type CheckedSubscription,
   periodOf,
@@ -57,13 +60,33 @@ async function checkReferences(
   }
 }
 
+/** The columns of a parsed input: the frequency as the table keeps it (R5a). */
+function columnsOf(parsed: z.output<typeof subscriptionInputSchema>, current?: Subscription) {
+  const { every, cycle, ...rest } = parsed;
+  // A form that does not know «every» (the screens before R5a) keeps the one saved while the
+  // nearest cycle it shows is sent back unchanged.
+  const kept =
+    every === undefined && current?.everyUnit && current.everyCount && current.cycle === cycle
+      ? frequencyOf(current)
+      : null;
+  return {
+    ...rest,
+    ...(kept && typeof kept !== "string"
+      ? frequencyColumns(cycle, kept)
+      : frequencyColumns(cycle, every ?? null)),
+  };
+}
+
 export async function createSubscription(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   input: SubscriptionInput,
 ): Promise<Subscription> {
   const parsed = subscriptionInputSchema.parse(input);
   await checkReferences(ctx, parsed);
-  const [row] = await getDb().insert(subscriptions).values(userScoped(ctx).stamp(parsed)).returning();
+  const [row] = await getDb()
+    .insert(subscriptions)
+    .values(userScoped(ctx).stamp(columnsOf(parsed)))
+    .returning();
   await checkSubscriptions(ctx, { ids: [row.id] });
   return row;
 }
@@ -78,7 +101,7 @@ export async function updateSubscription(
   await checkReferences(ctx, parsed, current);
   const [row] = await getDb()
     .update(subscriptions)
-    .set(parsed)
+    .set(columnsOf(parsed, current))
     .where(and(eq(subscriptions.id, id), userScoped(ctx).owns(subscriptions)))
     .returning();
   await checkSubscriptions(ctx, { ids: [id] });
@@ -183,7 +206,7 @@ async function chargePlan(
   const checked: CheckedSubscription[] = checkable.map((row) => ({
     id: row.id,
     priceCents: row.priceCents,
-    cycle: row.cycle,
+    cycle: frequencyOf(row),
     anchor: row.nextChargeOn,
     paymentAccountId: row.paymentAccountId,
     payeeMatch: row.payeeMatch ?? "", // only the checkable ones, which have it

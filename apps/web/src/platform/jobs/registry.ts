@@ -94,7 +94,7 @@ export const JOBS: readonly JobDefinition[] = [
   fxRatesRefreshJob,
   // Every day with the rest of the daily tier (spec §10.2); its retention is in `housekeeping`.
   backupJob,
-  // Last of the monthly tier: it reports numbers `accounts-snapshot` and `pockets-accrual` have
+  // Last of the monthly tier: it reports numbers `accounts-snapshot` has
   // just settled, and `runTier` runs a tier in this order (spec §10.2).
   monthlySummaryJob,
   // No tier asks for this one: it runs when an admin presses "Export all data" (spec §10.3).

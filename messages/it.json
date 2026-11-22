@@ -3086,7 +3086,8 @@
       "weekly": "Settimanale",
       "monthly": "Mensile",
       "quarterly": "Trimestrale",
-      "yearly": "Annuale"
+      "yearly": "Annuale",
+      "custom": "Personalizzata"
     },
     "status": {
       "paid": "Pagato",

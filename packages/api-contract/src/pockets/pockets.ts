@@ -191,6 +191,8 @@ const pocketBody = z
     target: amountInput().nullable(),
     monthly: amountInput().nullable(),
     startMonth: monthStart(),
+    /** The day of the month the accrual lands on, 1 to 31; the last day of a shorter month (R5a). */
+    accrualDay: z.number().int().min(1).max(31).optional(),
   })
   .strict();
 

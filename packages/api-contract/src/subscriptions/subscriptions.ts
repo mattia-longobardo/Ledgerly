@@ -23,6 +23,7 @@ import {
   SUBSCRIPTION_ROW_EXAMPLE,
   SUBSCRIPTION_STATES,
   subscriptionRow,
+  every,
 } from "./shared";
 
 export const listSubscriptions = defineRoute({
@@ -35,8 +36,10 @@ export const listSubscriptions = defineRoute({
     "The subscriptions (the active ones, then the paused and the cancelled), the totals of the " +
     "Subscriptions page, the payment alerts, the yearly cost by category group, what the active ones " +
     "commit on each paying account within 30 and 365 days, and the accounts a subscription can be " +
-    "paid from.",
+    "paid from. With `account`, the two lists hold only the subscriptions that account pays (R5a: the " +
+    "list of an account, which replaces its «Connections»); the totals stay those of every subscription.",
   actions: [],
+  query: z.object({ account: id().optional() }),
   response: z.object({
     /** The active ones, by name. */
     subscriptions: z.array(subscriptionRow),
@@ -67,6 +70,8 @@ export const listSubscriptions = defineRoute({
   }),
   errors: [],
   mcp: {
+    // The tool takes no argument, as before the filter of R5a.
+    arguments: {},
     title: "Subscriptions",
     description:
       "The subscriptions with their price, cycle, next charge and the payment check of the period under " +
@@ -175,10 +180,14 @@ const subscriptionBody = z
     accountId: id().nullable(),
     price: amountInput(),
     cycle: z.enum(CYCLES),
+    /** «Every N weeks or months» (R5a): when given, it is the frequency; `cycle` is then ignored. */
+    every: every.nullable().optional(),
     chargeOn: civilDate(),
     payeeMatch: z.string().trim().max(MAX_MATCH).nullable(),
     tolerance: percentInput().optional(),
     utility: z.number().int().min(MIN_UTILITY).max(MAX_UTILITY),
+    /** True: no vote (R5a, ST-15); `utility` is then not kept. */
+    noVote: z.boolean().optional(),
   })
   .strict();
 

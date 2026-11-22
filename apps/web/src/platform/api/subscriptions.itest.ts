@@ -210,3 +210,70 @@ describe("parity of subscriptions: action = route = MCP tool = export", () => {
     );
   });
 });
+
+describe("every N weeks or months, the optional vote and the list of an account (R5a)", () => {
+  it("answers `custom` with its «every», keeps it on a change that leaves it out, and takes no vote", async () => {
+    const account = await send(alice, "POST", "/accounts", {
+      name: "Checking",
+      type: "checking",
+      openingBalance: { on: "2026-01-01", amount: "900" },
+    });
+    const created = await send(alice, "POST", "/subscriptions", {
+      ...body({ accountId: account.body.id, noVote: true }),
+      cycle: "monthly",
+      every: { unit: "month", count: 2 },
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const rowOf = async () =>
+      (await send(alice, "GET", "/subscriptions")).body.subscriptions.find(
+        (row: { id: string }) => row.id === created.body.id,
+      );
+    expect(await rowOf()).toMatchObject({
+      cycle: "custom",
+      every: { unit: "month", count: 2 },
+      utility: 5,
+      noVote: true,
+    });
+    expect((await rowOf()).yearly).toBe("77.94");
+
+    // The dialog of today sends the nearest cycle and no «every»: the frequency stays.
+    const changed = await send(alice, "PUT", `/subscriptions/${created.body.id}`, {
+      ...body({ accountId: account.body.id, name: "Streaming 2", utility: 4 }),
+      cycle: "monthly",
+    });
+    expect(changed.status, JSON.stringify(changed.body)).toBe(204);
+    expect(await rowOf()).toMatchObject({ name: "Streaming 2", cycle: "custom", utility: 4 });
+    expect((await rowOf()).noVote).toBeUndefined();
+
+    // A cycle of the list given as «every» is that cycle, with no «every» on the wire.
+    await send(alice, "PUT", `/subscriptions/${created.body.id}`, {
+      ...body({ accountId: account.body.id }),
+      every: { unit: "month", count: 12 },
+    });
+    const yearly = await rowOf();
+    expect(yearly.cycle).toBe("yearly");
+    expect(yearly.every).toBeUndefined();
+
+    expect(
+      (await send(alice, "POST", "/subscriptions", { ...body(), every: { unit: "week", count: 13 } })).status,
+    ).toBe(400);
+  });
+
+  it("lists only what one account pays with `account`, the totals as for every subscription", async () => {
+    const account = await send(alice, "POST", "/accounts", {
+      name: "Card",
+      type: "checking",
+      openingBalance: { on: "2026-01-01", amount: "100" },
+    });
+    await send(alice, "POST", "/subscriptions", body({ name: "On the card", accountId: account.body.id }));
+    await send(alice, "POST", "/subscriptions", body({ name: "Anywhere", accountId: null }));
+    const all = await send(alice, "GET", "/subscriptions");
+    const one = await send(alice, "GET", `/subscriptions?account=${account.body.id}`);
+    expect(all.body.subscriptions.map((row: { name: string }) => row.name).sort()).toEqual([
+      "Anywhere",
+      "On the card",
+    ]);
+    expect(one.body.subscriptions.map((row: { name: string }) => row.name)).toEqual(["On the card"]);
+    expect(one.body.totals).toEqual(all.body.totals);
+  });
+});

@@ -142,7 +142,19 @@ export const pocketInputSchema = z.object({
   targetCents: positive.nullable().default(null),
   monthlyCents: positive.nullable().default(null),
   startMonth: monthKey,
+  /** The day of the month the accrual lands on (R5a, ST-15, D6): 1 to 31, the 1st as before. */
+  // Left out: the 1st for a new pocket, the day it has for a change (the screens before R5a).
+  accrualDay: z.number().int().min(1).max(31).optional(),
 });
+
+/**
+ * The day a month's accrual lands on (D6): the chosen day, or the last day of a month that does not
+ * have it (the 31st is the 28th in February and the 30th in April).
+ */
+export function accrualOn(month: CivilDate, day: number): CivilDate {
+  const last = Number(lastDayOfMonth(month).slice(8));
+  return `${month.slice(0, 8)}${String(Math.min(day, last)).padStart(2, "0")}`;
+}
 
 export type PocketInput = z.input<typeof pocketInputSchema>;
 

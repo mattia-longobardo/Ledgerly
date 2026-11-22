@@ -12,6 +12,13 @@ export const CHARGE_STATES = ["paid", "amount_differs", "due", "not_found"] as c
 /** The longest name and match text the form takes. */
 export const MAX_NAME = 80;
 export const MAX_MATCH = 80;
+/** «Every N weeks or months» (R5a, D4): 1 to 12 weeks, 1 to 24 months. */
+export const EVERY_UNITS = ["week", "month"] as const;
+export const MAX_EVERY = { week: 12, month: 24 } as const;
+export const every = z
+  .object({ unit: z.enum(EVERY_UNITS), count: z.number().int().min(1) })
+  .refine((value) => value.count <= MAX_EVERY[value.unit], "Too many weeks or months");
+
 /** The lowest and highest utility. */
 export const MIN_UTILITY = 1;
 export const MAX_UTILITY = 10;
@@ -58,12 +65,17 @@ export const subscriptionRow = z.object({
   account: z.string().nullable(),
   /** Positive, in EUR. */
   price: money(),
-  cycle: z.enum(CYCLES),
+  /** `custom`: every N weeks or months that is none of the 4 cycles; `every` says which (R5a). */
+  cycle: z.enum([...CYCLES, "custom"]),
+  every: every.optional(),
   /** The date of one charge, as the person entered it: the anchor of the calendar its form edits. */
   chargeOn: civilDate(),
   /** The next charge on or after today whose period is not paid yet. */
   nextChargeOn: civilDate(),
+  /** 5 when the person gave no vote (`noVote`). */
   utility: z.number().int().min(MIN_UTILITY).max(MAX_UTILITY),
+  /** The person gave no vote (R5a, ST-15): `utility` is then 5. Absent when there is a vote. */
+  noVote: z.literal(true).optional(),
   /** The text looked for in the payee; null: the subscription is not checked. */
   payeeMatch: z.string().nullable(),
   /** The tolerance as a percentage, two decimals ("5.00"). */

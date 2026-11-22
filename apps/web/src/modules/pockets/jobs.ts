@@ -6,19 +6,20 @@ import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { accrueMonth, purgeExpiredPlanned } from "@ledgerly/domain/pockets";
 
 /**
- * The 1st of the month at 00:05 (spec §10.2, §7.4): each user's current month accrued on every
- * active pocket, in their own zone. Idempotent — the database keeps one accrual per pocket and
- * month — so a second run, or one after a pocket was created on the 1st, writes nothing twice.
+ * Every day (spec §7.4; R5a, D6): the current month accrued on every active pocket whose day of
+ * the month has come, in each user's own zone. Idempotent — the database keeps one accrual per
+ * pocket and month — so a second run, or one after a pocket was created that day, writes nothing.
  */
 export const pocketsAccrualJob: JobDefinition = {
   name: "pockets-accrual",
-  tier: "monthly",
+  tier: "daily",
   async run(): Promise<JobDetail> {
     let written = 0;
     const counts = await forEachUser(
       "pockets-accrual",
       async (_person, ctx) => {
-        written += (await accrueMonth(ctx, monthKey(today(ctx.timeZone)))).written;
+        const todayOn = today(ctx.timeZone);
+        written += (await accrueMonth(ctx, monthKey(todayOn), undefined, todayOn)).written;
       },
       { addon: "pockets" },
     );
