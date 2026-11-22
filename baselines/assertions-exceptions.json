@@ -793,5 +793,15 @@
     "file": "tests/e2e/api/mcp.spec.ts",
     "decision": "R5e (PERS-571)",
     "reason": "R5e: strumento MCP list_todo, contratto confermato su PERS-571, decisione dell'orchestratore del 22/11"
+  },
+  {
+    "file": "tests/e2e/api/mcp.spec.ts",
+    "decision": "R5b (PERS-575)",
+    "reason": "R5b (PERS-575): strumento MCP list_funds, contratto confermato"
+  },
+  {
+    "file": "packages/domain/src/modules/portfolio/rules.test.ts",
+    "decision": "R5b (PERS-575)",
+    "reason": "R5b (PERS-575): il gruppo di un conto viene dal suo tipo, per riportare GET /net-worth a 10 query (G9), correzione chiesta dall'orchestratore del 22/11"
   }
 ]
