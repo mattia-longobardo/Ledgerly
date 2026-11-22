@@ -33,6 +33,7 @@ function changed(): void {
     categories.listCategories,
     categories.getCategorySummary,
     categoryBoard.getCategoriesBoard,
+    categoryBoard.getMergeProposals,
     labels.listLabels,
     labels.listSourceCategories,
     movements.getTransactionsView,

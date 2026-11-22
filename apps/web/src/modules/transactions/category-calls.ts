@@ -25,6 +25,7 @@ function changed(): void {
     categories.listCategories,
     categories.getCategorySummary,
     categoryBoard.getCategoriesBoard,
+    categoryBoard.getMergeProposals,
   );
 }
 
@@ -83,7 +84,7 @@ export async function dismissMerge(firstId: string, secondId: string, dismissed:
     await call(dismissed ? review.dismissMergeProposal : review.restoreMergeProposal, {
       body: { firstId, secondId },
     });
-    invalidate(review.getReview, categories.listCategories);
+    invalidate(review.getReview, categories.listCategories, categoryBoard.getMergeProposals);
     return { ok: true, count: 1 };
   } catch (error) {
     return refused(error);

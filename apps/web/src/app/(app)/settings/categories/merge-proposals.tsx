@@ -9,7 +9,7 @@ import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 
 /** One of the two categories of a proposal, as the row and the dialog show it. */
-export interface MergeSide {
+interface MergeSide {
   id: string;
   name: string;
   color: string;

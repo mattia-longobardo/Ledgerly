@@ -14,7 +14,6 @@ vi.mock("@/modules/transactions", () => ({
   saveLabel: (...args: unknown[]) => save(...args),
   deleteLabel: (...args: unknown[]) => remove(...args),
 }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const HOLIDAY: LabelRow = {
   id: "33333333-3333-7333-8333-333333333333",
