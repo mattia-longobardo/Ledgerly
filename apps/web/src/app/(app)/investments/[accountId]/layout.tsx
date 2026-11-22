@@ -25,9 +25,13 @@ export default async function InvestmentServiceLayout({
   params,
 }: LayoutProps<"/investments/[accountId]">) {
   const { accountId } = await params;
-  const context = UUID.test(accountId)
-    ? await apiRead(views.getAccountContext, { params: { id: accountId } })
-    : null;
+  // The account too: the title reads it (`cache`), and the metadata is streamed with the page.
+  const [context] = UUID.test(accountId)
+    ? await Promise.all([
+        apiRead(views.getAccountContext, { params: { id: accountId } }),
+        accountOf(accountId),
+      ])
+    : [null];
   if (!context?.inInvestments) notFound();
   return <>{children}</>;
 }

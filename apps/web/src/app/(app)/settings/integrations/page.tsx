@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import type { ReactNode } from "react";
+import { cache, type ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import { accounts as accountRoutes } from "@ledgerly/api-contract/accounts";
 import { interests } from "@ledgerly/api-contract/interests";
@@ -48,12 +48,15 @@ interface IntegrationsProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+/** The plugins of the person, read once for the title and the page (`cache`). */
+const pluginsOf = cache(() => apiRead(sources.listPlugins, {}));
+
 export async function generateMetadata({ params }: IntegrationsProps): Promise<Metadata> {
   const t = await getTranslations("settings");
   const { source } = await params;
   const base = `${t("tabs.integrations")} · ${t("title")}`;
   if (source === undefined) return { title: base };
-  const plugin = (await apiRead(sources.listPlugins, {}))?.plugins.find((one) => one.id === source);
+  const plugin = (await pluginsOf())?.plugins.find((one) => one.id === source);
   const providers = await getTranslations("settings.integrations.providers");
   const name =
     plugin?.name ??
@@ -97,7 +100,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   // The plugins of the instance (rewrite plan N1, decision H25): each person sees them, and turns
   // on their own. `GET /plugins` reads the manifests in the background: the page never waits.
   const [pluginsRead, connectionsRead] = await Promise.all([
-    apiRead(sources.listPlugins, {}),
+    pluginsOf(),
     apiRead(connectionRoutes.listConnections, { query: { runs: RUNS_PER_CONNECTION } }),
   ]);
   const userPlugins = pluginsRead?.plugins ?? [];
