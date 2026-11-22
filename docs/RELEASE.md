@@ -209,9 +209,9 @@ As the admin, in the app:
 ## 8. If it goes wrong — rollback
 
 ```bash
-# 1. back to the image of step 2
-docker tag ledgerly:pre-<id> ledgerly:latest
-docker compose up -d --no-build ledgerly
+# 1. back to the images of step 2
+docker tag ledgerly:pre-<id> ledgerly:latest && docker tag ledgerly-web:pre-<id> ledgerly-web:latest
+docker compose up -d --no-build ledgerly ledgerly-web ledgerly-worker
 
 # 2. only if a change to the data is wrong: restore the dump of step 2
 docker stop ledgerly

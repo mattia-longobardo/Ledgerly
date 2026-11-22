@@ -113,14 +113,22 @@ test("a payslip is uploaded, read, reviewed against its PDF, verified and applie
     await expect(toast(page, "fake.pdf: not a PDF")).toBeVisible();
   });
 
-  await test.step("the original is served to its owner only, inline and never cached", async () => {
-    const response = await page.request.get(`${reviewUrl}/original`);
+  await test.step("the original is served by its signed address, inline and never cached", async () => {
+    // As the viewer does: the browser asks the address, then opens it (UI-PAY-2).
+    const ask = (id: string) =>
+      page.evaluate(async (payslip) => {
+        const response = await fetch(`/api/v1/payroll/payslips/${payslip}/original-link`);
+        return { status: response.status, body: response.ok ? await response.json() : null };
+      }, id);
+    const link = await ask(new URL(reviewUrl).pathname.split("/").pop() ?? "");
+    expect(link.status).toBe(200);
+    expect(link.body.url).toMatch(/^\/api\/v1\/originals\/[\w-]+\.[\w-]+$/);
+    const response = await page.request.get(link.body.url);
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toBe("application/pdf");
     expect(response.headers()["cache-control"]).toContain("no-store");
-    expect((await page.request.get("/payroll/00000000-0000-7000-8000-000000000000/original")).status()).toBe(
-      404,
-    );
+    expect((await ask("00000000-0000-7000-8000-000000000000")).status).toBe(404);
+    expect((await page.request.get(`${link.body.url}x`)).status()).toBe(403);
   });
 
   await test.step("the code map is in Payroll › Settings, and a code's meaning can change", async () => {

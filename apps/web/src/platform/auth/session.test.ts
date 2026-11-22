@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
+import { buildCtx as ctxFrom } from "./signed-in";
 import {
-  ctxFrom,
   getOptionalCtx,
   getOptionalPreferences,
   requireAdmin,
@@ -20,7 +20,10 @@ vi.mock("@domain/platform/env", () => ({ readEnv: () => env }));
 vi.mock("@domain/platform/auth/auth", () => ({ getAuth: () => ({ api: { getSession } }) }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 // The web asks the server's process (`/api/web/session`), which answers with `signedInFrom`.
-vi.mock("./remote", async () => ({ fetchSignedIn: (await import("./signed-in")).signedInFrom }));
+vi.mock("./remote", async () => {
+  const { remoteSignedIn, signedInFrom } = await import("./signed-in");
+  return { fetchSignedIn: async (headers: Headers) => remoteSignedIn(await signedInFrom(headers)) };
+});
 vi.mock("@domain/modules/users/service", () => ({
   getPreferences: async () => ({ ...DEFAULT_PREFERENCES, theme: "system" }),
 }));

@@ -1,5 +1,4 @@
-import { signedInFrom } from "@/platform/auth/signed-in";
-import type { RemoteSignedIn } from "@/platform/auth/remote";
+import { remoteSignedIn, signedInFrom } from "@/platform/auth/signed-in";
 
 export const dynamic = "force-dynamic";
 
@@ -9,11 +8,6 @@ export const dynamic = "force-dynamic";
  * the same rules as `/api/v1`; the session's id never leaves (`getOptionalSession`).
  */
 export async function GET(request: Request): Promise<Response> {
-  const signedIn = await signedInFrom(request.headers);
-  const body: RemoteSignedIn | null = signedIn && {
-    user: { id: signedIn.user.id, role: signedIn.user.role ?? null, email: signedIn.user.email },
-    preferences: signedIn.preferences,
-    setupPending: signedIn.setupPending,
-  };
+  const body = remoteSignedIn(await signedInFrom(request.headers));
   return Response.json(body, { headers: { "Cache-Control": "private, no-store" } });
 }

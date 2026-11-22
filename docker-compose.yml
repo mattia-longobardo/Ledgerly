@@ -4,8 +4,12 @@ services:
 
 # Ledgerly # --------------------------------------------------------------------------------------------------------------
 
+  # The server (rewrite plan R4): `/api` and `/.well-known` — the API, MCP, Better Auth, OAuth, the
+  # health check — and the migrations, which it applies as it starts. The interface is `ledgerly-web`.
   ledgerly:
-    build: .
+    build:
+      context: .
+      target: server
     image: ledgerly:latest
     container_name: ledgerly
     user: "1000:1000"
@@ -24,9 +28,20 @@ services:
       - "autoheal=true"
       - "traefik.enable=true"
       - "traefik.docker.network=proxy_public"
-      - "traefik.http.routers.ledgerly-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`)"
+      # Above `ledgerly-web-router`, which takes the rest of the host.
+      - "traefik.http.routers.ledgerly-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`) && (PathPrefix(`/api`) || PathPrefix(`/.well-known`))"
+      - "traefik.http.routers.ledgerly-router.priority=100"
       - "traefik.http.routers.ledgerly-router.entrypoints=web"
       - "traefik.http.routers.ledgerly-router.middlewares=ledgerly-https"
+      - "traefik.http.routers.ledgerly-router.service=ledgerly-service"
+      # The signed addresses of the originals (UI-PAY-2): the token is in the path, so this router
+      # keeps them out of the access log (which logs only 400-599 anyway). Same middleware, same service.
+      - "traefik.http.routers.ledgerly-originals-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`) && PathPrefix(`/api/v1/originals/`)"
+      - "traefik.http.routers.ledgerly-originals-router.priority=200"
+      - "traefik.http.routers.ledgerly-originals-router.entrypoints=web"
+      - "traefik.http.routers.ledgerly-originals-router.middlewares=ledgerly-https"
+      - "traefik.http.routers.ledgerly-originals-router.service=ledgerly-service"
+      - "traefik.http.routers.ledgerly-originals-router.observability.accessLogs=false"
       - "traefik.http.middlewares.ledgerly-https.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.services.ledgerly-service.loadbalancer.server.port=3000"
     networks:
@@ -34,6 +49,52 @@ services:
       - db_internal
       - mail_internal
       - ledgerly_plugins
+      - ledgerly_internal
+
+# Ledgerly Web # --------------------------------------------------------------------------------------------------------------
+
+  # The interface (rewrite plan R4): the pages, which read and write through `/api/v1` and ask
+  # `ledgerly` for the session on `ledgerly_internal`. No database address, no key of the server:
+  # its environment is the list below and `.env.web`, which holds public values only
+  # (`OIDC_DISCOVERY_URL`, `INSTANCE_CONTACT`); `tools/web-env.test.ts` holds both to an allowlist.
+  ledgerly-web:
+    build:
+      context: .
+      target: web
+    image: ledgerly-web:latest
+    container_name: ledgerly-web
+    user: "1000:1000"
+    env_file:
+      - path: .env.web
+        required: false
+    environment:
+      LEDGERLY_API_URL: http://ledgerly:3000
+    depends_on:
+      ledgerly:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: "1.0"
+    healthcheck:
+      # A page drawn without a session: the process renders, and it needs no database.
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:3000/privacy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "autoheal=true"
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_public"
+      - "traefik.http.routers.ledgerly-web-router.rule=Host(`${LEDGERLY_HOST:-dash.longobardo.me}`)"
+      - "traefik.http.routers.ledgerly-web-router.priority=10"
+      - "traefik.http.routers.ledgerly-web-router.entrypoints=web"
+      - "traefik.http.routers.ledgerly-web-router.middlewares=ledgerly-https"
+      - "traefik.http.routers.ledgerly-web-router.service=ledgerly-web-service"
+      - "traefik.http.services.ledgerly-web-service.loadbalancer.server.port=3000"
+    networks:
+      - proxy_public
+      - ledgerly_internal
 
 # Ledgerly Worker # --------------------------------------------------------------------------------------------------------------
 
@@ -110,6 +171,11 @@ services:
       - ledgerly_plugins
 
 networks:
+  # The interface and the server, and nothing else (rewrite plan R4): the interface asks the server
+  # for the session. `internal`: no way out of the host from here.
+  ledgerly_internal:
+    name: ledgerly_internal
+    internal: true
   # The core and its plugins, and nothing else: a plugin is not on `db_internal`, `proxy_public` or
   # `mail_internal`. Not `internal`: a plugin calls its provider on the internet.
   ledgerly_plugins:

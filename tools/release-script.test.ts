@@ -128,7 +128,7 @@ describe("scripts/release.sh", () => {
     chmodSync(docker, 0o755);
   }
 
-  it("starts the image of the preview, and builds nothing, when it was built from the same commit", () => {
+  it("starts the image of the preview, and builds only the interface, when it was built from the same commit", () => {
     previewOf("abc1234abc1234abc1234abc1234abc1234abc123");
     const run = release("ok");
     expect(run.status).toBe(0);
@@ -139,7 +139,9 @@ describe("scripts/release.sh", () => {
       at("docker tag ledgerly:preview ledgerly:latest"),
     );
     expect(at("npm")).toBeLessThan(at("docker tag ledgerly:preview ledgerly:latest"));
-    expect(run.calls.some((call) => call.startsWith("docker compose build"))).toBe(false);
+    expect(run.calls.filter((call) => call.startsWith("docker compose build"))).toEqual([
+      "docker compose build ledgerly-web",
+    ]);
     expect(at("docker tag ledgerly:preview ledgerly:latest")).toBeLessThan(
       at("docker compose up -d --wait ledgerly"),
     );
@@ -150,7 +152,7 @@ describe("scripts/release.sh", () => {
     previewOf("fffffffffffffffffffffffffffffffffffffff0");
     const run = release("ok");
     expect(run.status).toBe(0);
-    expect(run.calls).toContain("docker compose build ledgerly");
+    expect(run.calls).toContain("docker compose build ledgerly ledgerly-web");
     expect(run.calls.some((call) => call.startsWith("docker tag ledgerly:preview"))).toBe(false);
   });
 
@@ -158,8 +160,10 @@ describe("scripts/release.sh", () => {
     previewOf("abc1234abc1234abc1234abc1234abc1234abc123");
     const run = release("ok", ["--plugin", "enablebanking"]);
     expect(run.status).toBe(0);
-    expect(run.calls).toContain("docker compose build ledgerly-plugin-enablebanking");
-    expect(run.calls).toContain("docker compose up -d --wait ledgerly ledgerly-plugin-enablebanking");
+    expect(run.calls).toContain("docker compose build ledgerly-web ledgerly-plugin-enablebanking");
+    expect(run.calls).toContain(
+      "docker compose up -d --wait ledgerly ledgerly-web ledgerly-plugin-enablebanking",
+    );
   });
 
   it("tags, builds and starts a plugin with the app when asked", () => {
@@ -168,8 +172,10 @@ describe("scripts/release.sh", () => {
     expect(run.calls).toContain(
       "docker tag ledgerly-plugin-enablebanking:latest ledgerly-plugin-enablebanking:pre-t1",
     );
-    expect(run.calls).toContain("docker compose build ledgerly ledgerly-plugin-enablebanking");
-    expect(run.calls).toContain("docker compose up -d --wait ledgerly ledgerly-plugin-enablebanking");
+    expect(run.calls).toContain("docker compose build ledgerly ledgerly-web ledgerly-plugin-enablebanking");
+    expect(run.calls).toContain(
+      "docker compose up -d --wait ledgerly ledgerly-web ledgerly-plugin-enablebanking",
+    );
   });
 
   it("keeps no image for a service deployed for the first time, and goes on", () => {
@@ -184,7 +190,9 @@ describe("scripts/release.sh", () => {
     expect(run.calls).toContain("docker tag ledgerly:latest ledgerly:pre-t1");
     expect(run.calls.some((call) => call.startsWith("docker tag ledgerly-plugin-enablebanking"))).toBe(false);
     expect(run.stdout).toContain("no image ledgerly-plugin-enablebanking:latest yet");
-    expect(run.calls).toContain("docker compose up -d --wait ledgerly ledgerly-plugin-enablebanking");
+    expect(run.calls).toContain(
+      "docker compose up -d --wait ledgerly ledgerly-web ledgerly-plugin-enablebanking",
+    );
   });
 
   it("refuses a plugin id that is not one", () => {

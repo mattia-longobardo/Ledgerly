@@ -3,7 +3,6 @@ import Link from "next/link";
 import { createTranslator } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { LOCALES } from "@/platform/i18n/locales";
-import { readEnv } from "@ledgerly/domain/platform/env";
 import { BrandLockup } from "@ledgerly/ui/shell/brand";
 import { type LegalLocale, legalLocale } from "./language";
 
@@ -52,7 +51,8 @@ async function LegalPage({
 }) {
   const locale = legalLocale(lang, await getLocale());
   const t = await translator(locale);
-  const contact = readEnv().INSTANCE_CONTACT;
+  // The environment itself: the interface's container has no server environment to check (R4).
+  const contact = process.env.INSTANCE_CONTACT?.trim() || undefined;
   const other: LegalDocument = document === "privacy" ? "terms" : "privacy";
   return (
     <article

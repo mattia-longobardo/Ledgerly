@@ -6,6 +6,7 @@
 // `GET /payroll/payslips/{id}`; the screen formats it. While the document is read, the review reads
 // its route again (audit UI-PAY-1).
 import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import { payroll } from "@ledgerly/api-contract/payroll";
 import { addMonths, civilDateIn } from "@ledgerly/format/dates";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/format/format";
@@ -16,6 +17,7 @@ import { usePolling } from "@ledgerly/ui/data";
 import { Link } from "@ledgerly/ui/router";
 import { StatusBadge } from "@ledgerly/ui/status-badge";
 import { type DocumentState, fieldGroups, type Format, hoursOf, moneyOf, type Review, STATE_TONE } from "./present";
+import { openOriginal, originalLink } from "./original";
 import { ReviewActions } from "./review-actions";
 import { ReviewLines } from "./review-lines";
 import { ReviewWorkspace } from "./review-workspace";
@@ -204,27 +206,30 @@ function Leave({ view, format }: Props) {
 function Values({ view, format }: Props) {
   const text = useTranslations("payroll");
   const { document } = view;
-  const originalUrl = document.hasOriginal ? `/payroll/${document.id}/original` : null;
+  // One function per payslip: the viewer loads again only when it changes, not at each poll.
+  const original = useMemo(
+    () => (document.hasOriginal ? () => originalLink(document.id) : null),
+    [document.id, document.hasOriginal],
+  );
   if (view.fields.length > 0)
     return (
       <ReviewWorkspace
         documentId={document.id}
         fileName={document.fileName}
-        originalUrl={originalUrl}
+        original={original}
         groups={fieldGroups(view.fields, format)}
         editable={document.state === "needs_review" || document.state === "verified"}
       />
     );
-  if (!originalUrl) return null;
+  if (!original) return null;
   return (
-    <a
-      href={originalUrl}
-      target="_blank"
-      rel="noopener"
+    <button
+      type="button"
+      onClick={() => openOriginal(original)}
       className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent hover:underline"
     >
       {text("review.viewer.open")}
-    </a>
+    </button>
   );
 }
 

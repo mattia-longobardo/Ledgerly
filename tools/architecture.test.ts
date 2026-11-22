@@ -2,7 +2,12 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { entryExports, measureModularity, type ModularityBaseline } from "../scripts/modularity";
-import { findClientDatabaseReach, measurePackages, workspaces } from "../scripts/packages";
+import {
+  findClientDatabaseReach,
+  findWebServerReach,
+  measurePackages,
+  workspaces,
+} from "../scripts/packages";
 import {
   asOneFile,
   cycleGroups,
@@ -292,6 +297,10 @@ describe("the packages", () => {
     expect(measure.clientDatabase).toEqual([]);
   });
 
+  it("give the web's container nothing of the server: no database, no key, no API (R4)", () => {
+    expect(measure.webServerReach).toEqual([]);
+  });
+
   it("export named names from every entry, no `export *` (M7)", () => {
     expect(measure.starExports).toEqual([]);
   });
@@ -379,5 +388,53 @@ describe("findClientDatabaseReach", () => {
       ["apps/static/src/b.ts", `import type { Pool } from "pg";`],
     ]);
     expect(findClientDatabaseReach(files, spaces)).toEqual(["packages/ui/src/a.ts → packages/ui/src/a.ts"]);
+  });
+});
+
+describe("findWebServerReach (R4)", () => {
+  const spaces = [
+    {
+      name: "@ledgerly/domain",
+      folder: "packages/domain",
+      dependencies: ["pg"],
+      exports: {
+        "./accounts": "./src/modules/accounts/index.ts",
+        "./accounts/client": "./src/modules/accounts/client.ts",
+      },
+    },
+  ];
+  const tree = (page: string) =>
+    new Map([
+      ["apps/web/src/app/(app)/accounts/page.tsx", page],
+      ["apps/web/src/app/api/v1/route.ts", `import { list } from "@ledgerly/domain/accounts";`],
+      ["apps/web/src/platform/helper.ts", `export { list } from "@ledgerly/domain/accounts";`],
+      ["packages/domain/src/modules/accounts/index.ts", `export { list } from "./queries";`],
+      ["packages/domain/src/modules/accounts/client.ts", `export const shareOf = 1;`],
+      ["packages/domain/src/modules/accounts/queries.ts", `import { db } from "../../platform/db/client";`],
+      ["packages/domain/src/platform/db/client.ts", `import { Pool } from "pg";`],
+      ["packages/domain/src/platform/env.ts", `export const readEnv = () => process.env;`],
+    ]);
+
+  it("finds a page that reaches the database through a helper in between", () => {
+    expect(findWebServerReach(tree(`import { list } from "@/platform/helper";`), spaces)).toEqual([
+      "apps/web/src/app/(app)/accounts/page.tsx → packages/domain/src/platform/db/client.ts",
+    ]);
+  });
+
+  it("finds a page that reads the server's environment, and one that names Better Auth's server", () => {
+    const files = tree(`import { readEnv } from "@domain/platform/env";`);
+    files.set("apps/web/src/app/(auth)/sign-in/page.tsx", `import { betterAuth } from "better-auth";`);
+    expect(findWebServerReach(files, spaces)).toEqual([
+      "apps/web/src/app/(app)/accounts/page.tsx → packages/domain/src/platform/env.ts",
+      "apps/web/src/app/(auth)/sign-in/page.tsx → apps/web/src/app/(auth)/sign-in/page.tsx",
+    ]);
+  });
+
+  it("leaves the server's routes and a page on the browser's entries alone", () => {
+    const files = tree(
+      `import { shareOf } from "@ledgerly/domain/accounts/client";\nimport type { X } from "@/platform/helper";`,
+    );
+    files.set("apps/web/src/proxy.ts", `import { getSessionCookie } from "better-auth/cookies";`);
+    expect(findWebServerReach(files, spaces)).toEqual([]);
   });
 });

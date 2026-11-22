@@ -36,7 +36,25 @@ RUN ./node_modules/.bin/esbuild apps/worker/src/main.ts --bundle --platform=node
       --banner:js="import{createRequire}from'node:module';const require=createRequire(import.meta.url);" \
       --outfile=worker.mjs
 
-FROM node:26-alpine AS runner
+# The interface (rewrite plan R4): the same build, without the migrations, the worker, the SQL files
+# and the database client. Its environment has no database address and no key of the server
+# (`docker-compose.yml`, service `ledgerly-web`); `LEDGERLY_ROLE=web` keeps the checks of the
+# server's environment out of its start (`apps/web/src/instrumentation.ts`).
+FROM node:26-alpine AS web
+RUN apk add --no-cache wget
+WORKDIR /app
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=3000 HOSTNAME=0.0.0.0 LEDGERLY_ROLE=web
+COPY --from=builder --chown=1000:1000 /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=1000:1000 /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=1000:1000 /app/apps/web/public ./apps/web/public
+RUN mkdir -p apps/web/.next/cache && chown -R 1000:1000 apps/web/.next
+USER 1000:1000
+EXPOSE 3000
+CMD ["node", "/app/apps/web/server.js"]
+
+# The server (`ledgerly` and `ledgerly-worker`): `/api`, `/.well-known`, the migrations and the jobs.
+# Last, so a build without a target (the preview, `scripts/preview-on-test.sh`) is this one.
+FROM node:26-alpine AS server
 # `wget` for the healthcheck; `postgresql18-client` for the daily backup (spec §10.2), which runs
 # `pg_dump -Fc` inside this container. The client may not be older than the server, and the
 # homelab's server is Postgres 18 (`pgvector/pgvector:pg18`): on Alpine 3.24 this package is

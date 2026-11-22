@@ -4,7 +4,7 @@ export { MAX_NAME_LENGTH } from "./name-policy";
 export type { ApiScope } from "./oauth";
 export { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, isPasswordLengthValid } from "./password-policy";
 export { accessControl, roles } from "./permissions";
-export { OIDC_PROVIDER_ID } from "./provider";
+export { identityProviderUrl, OIDC_PROVIDER_ID } from "./provider";
 export { API_SCOPES } from "./scopes";
 export type { Scope } from "./scopes";
 export type { TwoFactorPolicy } from "./two-factor-policy";

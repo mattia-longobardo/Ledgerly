@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { API_SCOPES } from "@ledgerly/domain/platform/auth/client";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { Preferences } from "./signed-in";
 
 // The preferences are the server's own row, already read by its schema: here only their shape is
@@ -8,11 +9,12 @@ import type { Preferences } from "./signed-in";
 const signedInSchema = z.object({
   user: z.object({ id: z.string(), role: z.string().nullable(), email: z.string() }),
   preferences: z.custom<Preferences>((value) => typeof value === "object" && value !== null),
+  ctx: z.custom<Ctx>((value) => typeof value === "object" && value !== null),
   setupPending: z.boolean(),
 });
 
 /** What `/api/web/session` answers for a signed-in request (`app/api/web/session/route.ts`). */
-export type RemoteSignedIn = z.infer<typeof signedInSchema>;
+type RemoteSignedIn = z.infer<typeof signedInSchema>;
 
 const consentSchema = z.object({
   clientName: z.string(),

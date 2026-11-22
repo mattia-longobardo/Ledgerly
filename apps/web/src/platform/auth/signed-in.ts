@@ -48,3 +48,30 @@ export async function sessionCtxOf(requestHeaders: Headers): Promise<Ctx | null>
   if (!signedIn || signedIn.setupPending || signedIn.user.banned === true) return null;
   return buildCtx(signedIn.user, signedIn.preferences);
 }
+
+/** What `/api/web/session` answers: the person, their preferences, their context, the setup gate. */
+export function remoteSignedIn(signedIn: Awaited<ReturnType<typeof signedInFrom>>) {
+  return (
+    signedIn && {
+      user: { id: signedIn.user.id, role: signedIn.user.role ?? null, email: signedIn.user.email },
+      preferences: signedIn.preferences,
+      ctx: buildCtx(signedIn.user, signedIn.preferences),
+      setupPending: signedIn.setupPending,
+    }
+  );
+}
+
+/**
+ * The context of the request's session with the session's id, or null. For the one flow that leaves
+ * the app and comes back (an access to a bank, `/api/v1/plugins/<id>/callback`): what comes back must
+ * have left from this very session, so the id is what the flow is tied to. The id never goes to a
+ * browser, nor to the web's container.
+ */
+export async function getOptionalSession(
+  requestHeaders: Headers,
+): Promise<{ ctx: Ctx; sessionId: string } | null> {
+  const ctx = await sessionCtxOf(requestHeaders);
+  if (!ctx) return null;
+  const session = await (await getAuth()).api.getSession({ headers: requestHeaders });
+  return session ? { ctx, sessionId: session.session.id } : null;
+}

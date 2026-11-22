@@ -4,15 +4,24 @@ How Ledgerly runs on the homelab, how to configure it, and the admin tasks.
 
 ## Architecture
 
-`docker-compose.yml` starts three containers. The app and the worker read `.env.homelab`.
+`docker-compose.yml` starts four containers. The server and the worker read `.env.homelab`; the
+interface reads none of it (rewrite plan R4).
 
-| Container                       | Role                                                                          |
-| ------------------------------- | ----------------------------------------------------------------------------- |
-| `ledgerly`                      | The app (Next.js). Applies pending migrations at start, then serves on 3000.  |
-| `ledgerly-worker`               | The jobs and the syncs: same image, `node /app/worker.mjs` (R1). See below.   |
-| `ledgerly-plugin-enablebanking` | A plugin: reads banks through Enable Banking when the app asks. See below.    |
+| Container                       | Role                                                                                     |
+| ------------------------------- | ---------------------------------------------------------------------------------------- |
+| `ledgerly`                      | The server (target `server`): `/api`, `/.well-known`. Applies the migrations at start.   |
+| `ledgerly-web`                  | The interface (target `web`, image `ledgerly-web`): every other path. No database.       |
+| `ledgerly-worker`               | The jobs and the syncs: the image `ledgerly`, `node /app/worker.mjs` (R1). See below.    |
+| `ledgerly-plugin-enablebanking` | A plugin: reads banks through Enable Banking when the app asks. See below.               |
 
-- The app is on `proxy_public` (Traefik) and `db_internal` (Postgres, S3). The worker is on
+- The interface's environment is `LEDGERLY_API_URL` (the server on `ledgerly_internal`),
+  `LEDGERLY_ROLE=web` (its image) and `.env.web`, which holds public values only:
+  `OIDC_DISCOVERY_URL` (the CSP's `form-action`) and `INSTANCE_CONTACT` (`/privacy`, `/terms`).
+  `tools/web-env.test.ts` holds the service and the file to that list: no `DATABASE_URL`, no key.
+  Its pages ask the server for the session (`/api/web/session`, the cookie only) and read the rest
+  from `/api/v1` in the browser. Its health check is `/privacy`, a page with no session.
+- The server is on `proxy_public` (Traefik), `db_internal` (Postgres, S3) and `ledgerly_internal`
+  (`internal: true`, the interface only). The worker is on
   `db_internal`, `mail_internal` and `ledgerly_plugins` (its way to the providers); it has no port.
 - At start, the app checks every environment variable (`src/platform/env.ts`). If a check fails,
   the app does not start.
@@ -79,9 +88,14 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
 
 ### Network access
 
-`dash.longobardo.me` is public through the Cloudflare tunnel only. Traefik has one router,
-`ledgerly-router` (entrypoint `web`), the target of the Cloudflare tunnel. There is no `websecure`
-router: Pi-hole has no local record for `dash`, so the LAN also goes through Cloudflare.
+`dash.longobardo.me` is public through the Cloudflare tunnel only. Traefik has two routers on the
+entrypoint `web`, the target of the Cloudflare tunnel, both with the middleware `ledgerly-https`:
+`ledgerly-router` takes `/api` and `/.well-known` to `ledgerly` (priority 100), and
+`ledgerly-web-router` takes the rest of the host to `ledgerly-web` (priority 10). A third router,
+`ledgerly-originals-router` (priority 200), takes `/api/v1/originals/` to `ledgerly` with the access
+log off: the signed token of an original is in its path. The rate limits and
+the security headers are the app's own, in both containers. There is no `websecure` router: Pi-hole
+has no local record for `dash`, so the LAN also goes through Cloudflare.
 
 Port 80 is not forwarded, so the tunnel is the only public entrance. Never publish port 3000 on the
 host.
@@ -111,10 +125,10 @@ Full procedure, with lock, health check and rollback: the repo's `AGENTS.md` (lo
 and [`RELEASE.md`](RELEASE.md). In short, for a release `<id>`:
 
 ```bash
-docker tag ledgerly:latest ledgerly:pre-<id>
+docker tag ledgerly:latest ledgerly:pre-<id> && docker tag ledgerly-web:latest ledgerly-web:pre-<id>
 folder=$(sh scripts/release-dump.sh <id> | tail -n 1)   # --no-dump: no migration, no data change
 npm run numbers -- "$folder" before
-docker compose build ledgerly && docker compose up -d --wait ledgerly
+docker compose build ledgerly ledgerly-web && docker compose up -d --wait ledgerly ledgerly-web
 docker compose up -d --wait --no-build ledgerly-worker
 curl -s https://dash.longobardo.me/api/health    # {"status":"ok","db":"up",…}
 npm run numbers -- "$folder" after --as-of <the instant "before" printed>
