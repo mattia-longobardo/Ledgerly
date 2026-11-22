@@ -40,6 +40,17 @@ export async function valuationAccountIds(ctx: Pick<Ctx, "userId">): Promise<Set
   return new Set(rows.map((row) => row.id));
 }
 
+/** Every fund by the account that holds its value: what makes an account a fund's row (R5b). */
+export async function fundsByAccount(
+  ctx: Pick<Ctx, "userId">,
+): Promise<Map<string, { id: string; name: string }>> {
+  const rows = await getDb()
+    .select({ id: funds.id, name: funds.name, accountId: funds.valuationAccountId })
+    .from(funds)
+    .where(userScoped(ctx).owns(funds));
+  return new Map(rows.map((row) => [row.accountId, { id: row.id, name: row.name }]));
+}
+
 /** Funds by name, for the ⌘K palette (spec §8.2). */
 export async function searchFunds(
   ctx: Pick<Ctx, "userId">,

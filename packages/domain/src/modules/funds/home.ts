@@ -168,9 +168,27 @@ function aggregateReturn(lines: readonly FundLine[]): { rate: number | null; xir
   const measured = lines.filter((line) => line.status === "measured");
   if (measured.length === 0) return { rate: null, xirr: null };
   if (measured.length === 1) return { rate: measured[0].measure.rate, xirr: measured[0].measure.xirr };
+  const span = aggregateSpan(measured);
+  if (span === null) return { rate: null, xirr: null };
+  const { rate, xirr: yearly } = moneyWeighted(span);
+  return { rate, xirr: yearly };
+}
+
+/**
+ * The average capital the funds' rate divides by (R5b): what lets Investments sum it with the rate of
+ * the services. The same span as {@link aggregateReturn}; for one fund, its own span. `null` without a rate.
+ */
+export function aggregateCapital(lines: readonly FundLine[]): number | null {
+  const span = aggregateSpan(lines.filter((line) => line.status === "measured"));
+  return span === null ? null : moneyWeighted(span).capital;
+}
+
+/** One span from the oldest start to the newest value of the measured funds, or none when they drift. */
+function aggregateSpan(measured: readonly FundLine[]) {
+  if (measured.length === 0) return null;
   const ends = measured.map((line) => line.measure.end!.on).sort();
   const to = ends[ends.length - 1];
-  if (daysBetween(ends[0], to) > AGGREGATE_RATE_DAYS) return { rate: null, xirr: null };
+  if (daysBetween(ends[0], to) > AGGREGATE_RATE_DAYS) return null;
   const from = measured.map((line) => line.measure.start!.on).sort()[0];
 
   let startCents = 0n;
@@ -185,7 +203,7 @@ function aggregateReturn(lines: readonly FundLine[]): { rate: number | null; xir
   }
   const pnlCents = sum(measured.map((line) => line.measure.gainCents!));
   const endCents = sum(measured.map((line) => line.measure.end!.cents));
-  return moneyWeighted({ from, to, startCents, endCents, pnlCents, flows });
+  return { from, to, startCents, endCents, pnlCents, flows };
 }
 
 function stateOf(input: {

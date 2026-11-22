@@ -39,6 +39,8 @@ type ActivityRowOut = Extract<Activity, { source: "events" }>["rows"][number];
 type Overview = z.input<Reads["getInvestment"]["response"]>;
 type Home = z.input<Reads["getInvestmentsHome"]["response"]>;
 type HomeData = Awaited<ReturnType<typeof investmentsHome>>;
+/** The open funds with their value today, read only (`fundValues` of funds). */
+type FundValues = readonly { fund: { id: string; name: string }; valueCents: Cents | null }[];
 type ActivityData = NonNullable<Awaited<ReturnType<typeof serviceActivity>>>;
 type Movements = NonNullable<Awaited<ReturnType<typeof serviceMovements>>>;
 
@@ -167,7 +169,12 @@ function composition(home: HomeData, rows: ReturnType<typeof homeRows>) {
 }
 
 /** The home of a period (§3.1): `home` is today's, `pnl` the period's, both the page's queries. */
-export function homeOut(home: HomeData, pnl: View): Home {
+export function homeOut(
+  home: HomeData,
+  pnl: View,
+  funds: FundValues,
+  parts: Pick<Home, "total" | "groups">,
+): Home {
   const { portfolio, period, todayOn } = pnl;
   const rows = homeRows(home, pnl);
   return {
@@ -182,9 +189,10 @@ export function homeOut(home: HomeData, pnl: View): Home {
     chart: chartOut(pnl, portfolio.parts?.pnlCents ?? null, portfolio.rate),
     ...composition(home, rows),
     funds: {
-      total: maybe(sumCents(home.funds.map((fund) => fund.valueCents)).total),
-      rows: home.funds.map((fund) => ({ id: fund.id, name: fund.name, value: maybe(fund.valueCents) })),
+      total: maybe(sumCents(funds.map((one) => one.valueCents)).total),
+      rows: funds.map((one) => ({ id: one.fund.id, name: one.fund.name, value: maybe(one.valueCents) })),
     },
+    ...parts,
   };
 }
 

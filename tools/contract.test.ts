@@ -46,6 +46,8 @@ import * as fundsPension from "@domain/modules/funds/pension/rules";
 import { FEE_BASES, FEE_PERIODS } from "@domain/shared/fees";
 import * as investmentsWire from "../packages/api-contract/src/investments/shared";
 import * as investmentsRules from "@domain/modules/investments/rules";
+import * as portfolioWire from "../packages/api-contract/src/investments/portfolio";
+import * as portfolioRules from "@domain/modules/portfolio/rules";
 import { ACTIVITY_FAMILIES } from "@domain/modules/investments/activity";
 import { CONNECTION_STATES } from "@domain/platform/integrations/rules";
 import type { InvestmentErrorCode } from "@domain/modules/investments/service";
@@ -533,6 +535,13 @@ describe("the Server Actions of investments", () => {
     expect(investmentsWire.PRODUCT_PATTERN).toEqual(investmentsRules.PRODUCT_PATTERN);
     expect(investmentsWire.ACTIVITY_FAMILIES).toEqual(ACTIVITY_FAMILIES);
     expect(investmentsWire.CONNECTION_STATES).toEqual(CONNECTION_STATES);
+    expect(portfolioWire.PORTFOLIO_KINDS).toEqual(portfolioRules.PORTFOLIO_KINDS);
+    expect(portfolioWire.PORTFOLIO_GROUPS).toEqual(portfolioRules.PORTFOLIO_GROUPS);
+    expect(portfolioWire.RATE_REASONS).toEqual(portfolioRules.RATE_REASONS);
+  });
+
+  it("have no value `pac` in any schema or example of the API and the MCP (R5b, decision H12)", () => {
+    expect(generated().toLowerCase()).not.toMatch(/"pac"/);
   });
 
   it("name every refusal of the domain as a reason", () => {

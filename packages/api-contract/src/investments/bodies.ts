@@ -20,6 +20,21 @@ export const manualServiceBody = z
   })
   .strict();
 
+/**
+ * A manual service on a new account, in one write (R5b, audit OP-8): the four fields of the form —
+ * name, kind (`category`), currency, value today — and the address. The account and the service are
+ * made together, or neither is.
+ */
+export const newManualServiceBody = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    category: z.enum(INVESTMENT_CATEGORIES),
+    currency: z.string().regex(/^[A-Z]{3}$/),
+    value: amountInput(),
+    url: z.string().max(500).nullable().default(null),
+  })
+  .strict();
+
 export const urlBody = z.object({ url: z.string().max(500) }).strict();
 
 export const valueBody = z.object({ on: civilDate(), amount: amountInput() }).strict();

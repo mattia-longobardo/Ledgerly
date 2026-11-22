@@ -114,6 +114,8 @@ const xirrStatus = z.enum(XIRR_STATUSES);
 
 /** A service as `list_investments` lists it: its value today in its currency and in the display one. */
 export const serviceRow = z.object({
+  /** The row's kind in the one list of Investments (R5b): `PORTFOLIO_KINDS` less `pension_fund`. */
+  kind: z.enum(["service", "manual_portfolio"]),
   accountId: id(),
   name: z.string(),
   category: z.enum(INVESTMENT_CATEGORIES),

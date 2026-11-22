@@ -27,7 +27,7 @@ import { budgetsView } from "@domain/modules/budgets/queries";
 import { fundSummary } from "@domain/modules/funds/detail";
 import { firstDataOn, homeSummary, valueToday } from "@domain/modules/funds/home";
 import { fundsHomeRows } from "@domain/modules/funds/home-queries";
-import { fundsExport } from "@domain/modules/funds/overview";
+import { fundsExport, fundValues } from "@domain/modules/funds/overview";
 import { interestsView, ruleDetail } from "@domain/modules/interests/queries";
 import { periodOf } from "@domain/modules/investments/pnl";
 import {
@@ -204,7 +204,13 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
       })),
       byClass: investments.byClass,
       byService: investments.byService,
-      funds: investments.funds,
+      // Read beside the home since R5b, which no longer reads the funds: the same rows as before.
+      funds: (await fundValues(ctx, now)).map((row) => ({
+        id: row.fund.id,
+        name: row.fund.name,
+        valueCents: row.valueCents,
+        kind: "pension",
+      })),
       periods: investmentPeriods,
       export: exportInvestments,
     },

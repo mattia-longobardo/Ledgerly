@@ -4,7 +4,7 @@
    {
     "name": "list_investments",
     "title": "Investments",
-    "description": "Every investment service (broker, exchange, manual account) with its value in its own `currency` and in the display currency, net invested, gain, simple return and XIRR, plus the portfolio's totals in the display `currency`, as GET /api/v1/investments. Returns are ratios (0.05 = 5 %). Gain and returns are null unless the service's history is complete (`reliable`; `reliableFrom` says from when it is); `xirrStatus` says why XIRR is missing. The portfolio leaves out transfers between its own services and includes the exchange effect. `pnl` is the profit and loss of the period (the year running by default), the number the screen shows: realized, unrealized (open positions only), income, fees, corrections and exchange effect add up to it, and the services add up to the portfolio with `transfers`.",
+    "description": "Every investment service (broker, exchange, manual account) with its value in its own `currency` and in the display currency, net invested, gain, simple return and XIRR, plus the portfolio's totals in the display `currency`, as GET /api/v1/investments. Returns are ratios (0.05 = 5 %). Gain and returns are null unless the service's history is complete (`reliable`; `reliableFrom` says from when it is); `xirrStatus` says why XIRR is missing. The portfolio leaves out transfers between its own services and includes the exchange effect. `pnl` is the profit and loss of the period (the year running by default), the number the screen shows: realized, unrealized (open positions only), income, fees, corrections and exchange effect add up to it, and the services add up to the portfolio with `transfers`. Each service has a `kind`: `service` (a provider or a bank reads it) or `manual_portfolio`. With `include` = `funds` the answer adds `total` and `groups`: the pension funds too, the two groups «stocks_crypto» and «pension_funds» with their rows, and for each the value today, the money put in, the gain and the return of the period; `total.value` is the net worth's investments.",
     "inputSchema": {
      "$schema": "http://json-schema.org/draft-07/schema#",
      "type": "object",
@@ -21,6 +21,13 @@
       "to": {
        "description": "Last day, YYYY-MM-DD.",
        "type": "string"
+      },
+      "include": {
+       "description": "`funds`: add the pension funds, the two groups and the one total.",
+       "type": "string",
+       "enum": [
+        "funds"
+       ]
       }
      }
     },
@@ -697,6 +704,25 @@
      "required": [
       "id"
      ]
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
+   },
+   {
+    "name": "list_funds",
+    "title": "Pension funds",
+    "description": "Every pension fund, open and archived, as GET /api/v1/investments/funds: its id (for get_fund), the `accountId` that holds its value, its provider, its value today in its own `currency` and in the display currency (`displayValue`), the day of its last valuation, and the money paid in and the gain since it started. An archived fund has no value: it holds no money today. Amounts are decimal strings. Read only.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {}
     },
     "annotations": {
      "readOnlyHint": true,
@@ -2610,6 +2636,7 @@
    },
    "services": [
     {
+     "kind": "manual_portfolio",
      "accountId": "<id-5>",
      "name": "Directa",
      "category": "broker",
@@ -3469,6 +3496,7 @@
     "firstOn": "2031-03-01"
    },
    "service": {
+    "kind": "manual_portfolio",
     "accountId": "<id-5>",
     "name": "Directa",
     "category": "broker",

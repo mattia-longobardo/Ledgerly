@@ -442,6 +442,7 @@ describe("MCP list_investments and get_investment_holdings (§5.5)", () => {
       "list_budgets",
       "list_categories",
       "list_connections",
+      "list_funds",
       "list_interest_rules",
       "list_investments",
       "list_labels",

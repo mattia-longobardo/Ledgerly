@@ -371,6 +371,7 @@
     "addContribution",
     "addFee",
     "addSource",
+    "aggregateCapital",
     "assetsCost",
     "assetsEstimate",
     "bestAndWorst",
@@ -395,6 +396,8 @@
     "fundSetupView",
     "fundSummary",
     "fundValuationsView",
+    "fundValues",
+    "fundsByAccount",
     "fundsConfiguration",
     "fundsExport",
     "fundsHomeRows",
@@ -454,6 +457,7 @@
     "updateFund",
     "updateSource",
     "updateValuation",
+    "valuationAccountIds",
     "valuationLines",
     "valueSeries",
     "valueToday",
@@ -583,6 +587,7 @@
     "connectableProvider",
     "contributionsOf",
     "createManualService",
+    "createManualServiceWithAccount",
     "deleteOperation",
     "describeEvent",
     "disconnectProvider",
@@ -604,6 +609,7 @@
     "periodReturnOf",
     "periodSpan",
     "plainDecimal",
+    "portfolioMeasure",
     "priceText",
     "providerOf",
     "quantityText",
@@ -627,6 +633,7 @@
     "updateServiceUrl",
     "updateServiceValue",
     "verifyKey",
+    "wireInvestments",
     "yearQuery"
   ],
   "packages/domain/src/modules/payroll/client.ts": [
@@ -695,6 +702,16 @@
     "setPocketState",
     "unlinkExpense",
     "updatePocket"
+  ],
+  "packages/domain/src/modules/portfolio/index.ts": [
+    "GroupMeasure",
+    "HeldAccount",
+    "Kpis",
+    "PortfolioGroup",
+    "groupTotals",
+    "portfolioRows",
+    "portfolioView",
+    "serviceKind"
   ],
   "packages/domain/src/modules/subscriptions/client.ts": [
     "CYCLES",

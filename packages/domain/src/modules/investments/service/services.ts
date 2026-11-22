@@ -1,14 +1,22 @@
 // The services (§1.3): the accounts a service can open on, a manual service, its value and its address.
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { readingsAt, getAccount, listAccounts, saveBalanceEntry } from "../../accounts";
-import { valuationAccountIds } from "../../funds/queries";
+import {
+  createAccount,
+  readingsAt,
+  getAccount,
+  listAccounts,
+  removeAccount,
+  saveBalanceEntry,
+} from "../../accounts";
 import type { Ctx } from "../../../platform/context";
 import { addDays, today } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { MANUAL_PROVIDER } from "../catalog";
-import { INVESTMENT_CATEGORIES, MANUAL_MODE } from "../rules";
+import { accountTypeOf, MANUAL_PROVIDER } from "../catalog";
+import { fundAccounts } from "../ports";
+import { INVESTMENT_CATEGORIES, type InvestmentCategory, MANUAL_MODE } from "../rules";
 import { investmentAccountPeriods, investmentAccounts } from "../schema";
 import { civilDate } from "../../../shared/inputs";
 import { requireInvestmentAccount } from "./book";
@@ -49,7 +57,7 @@ export type ManualServiceInput = z.input<typeof manualServiceSchema>;
 export async function eligibleAccounts(ctx: Pick<Ctx, "userId">) {
   const [all, funded, managed] = await Promise.all([
     listAccounts(ctx),
-    valuationAccountIds(ctx),
+    fundAccounts().accountIds(ctx),
     getDb()
       .select({ accountId: investmentAccounts.accountId })
       .from(investmentAccounts)
@@ -121,6 +129,39 @@ export async function createManualService(
     }
     return { accountId: parsed.accountId };
   });
+}
+
+/**
+ * A manual service on a new account of Accounts (R5b, audit OP-8): the account with today's value as
+ * its first balance, then the service. Two writes of two modules: when the second fails, the account
+ * is removed, so neither stays alone.
+ */
+export async function createManualServiceWithAccount(
+  ctx: Ctx,
+  input: {
+    name: string;
+    category: InvestmentCategory;
+    currency: string;
+    valueCents: Cents;
+    url: string | null;
+  },
+): Promise<{ accountId: string }> {
+  const account = await createAccount(ctx, {
+    name: input.name,
+    type: accountTypeOf(input.category),
+    currency: input.currency,
+    openingBalance: { on: today(ctx.timeZone), cents: input.valueCents },
+  });
+  try {
+    return await createManualService(ctx, {
+      accountId: account.id,
+      category: input.category,
+      url: input.url,
+    });
+  } catch (error) {
+    await removeAccount(ctx, account.id);
+    throw error;
+  }
 }
 
 /**

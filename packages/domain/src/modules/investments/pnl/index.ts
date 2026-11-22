@@ -12,5 +12,5 @@ export type { PositionAt } from "./positions";
 export { incomeAndFees, measuredStart, periodFlows } from "./start";
 export { attribute, costBases } from "./parts";
 export { pnlOf, pnlThrough } from "./measure";
-export { portfolioPnl } from "./portfolio";
+export { portfolioMeasure, portfolioPnl } from "./portfolio";
 export type { PortfolioPnl } from "./portfolio";

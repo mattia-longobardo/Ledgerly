@@ -34,6 +34,7 @@ export const TOTALS_EXAMPLE = {
 } as const;
 
 export const SERVICE_EXAMPLE = {
+  kind: "manual_portfolio",
   accountId: ACCOUNT_ID,
   name: "Directa",
   category: "broker",

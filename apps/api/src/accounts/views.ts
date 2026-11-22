@@ -17,6 +17,7 @@ import {
 import { syncedServicesOf } from "@ledgerly/domain/investments";
 import { addDays, type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
+import { overviewGroups } from "../investments/portfolio";
 import { refusing } from "./cases";
 import { delta, instant, money, viewRow } from "./dto";
 
@@ -32,10 +33,13 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
       through: query.through,
       includeArchived: query.includeArchived === "true",
     });
-    const services = await syncedServicesOf(
-      ctx,
-      view.rows.map((row) => row.account.id),
-    );
+    const [services, investments] = await Promise.all([
+      syncedServicesOf(
+        ctx,
+        view.rows.map((row) => row.account.id),
+      ),
+      overviewGroups(ctx, view.rows),
+    ]);
     // Overview's «Year to date»: from the end of December before the year of the window's last month.
     const january = view.months.indexOf(`${(view.months.at(-1) ?? "").slice(0, 4)}-01-01`);
     return {
@@ -60,6 +64,7 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
         investments: { ...view.buckets.investments, total: money(view.buckets.investments.total) },
         other: { ...view.buckets.other, total: money(view.buckets.other.total) },
       },
+      investmentGroups: investments.groups,
       alerts: view.alerts.map((alert) => ({ accountId: alert.accountId, kind: alert.kind })),
       missingRates: view.missingRates,
       lastSnapshotMonth: view.lastSnapshot?.month ?? null,
@@ -72,6 +77,7 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
           // An archived account is outside the total: a share of it would be a wrong number.
           share: row.account.state === "archived" ? null : shareOf(row.display.balance, view.total),
           service: service && { provider: service.provider, lastSyncedAt: instant(service.lastSyncedAt) },
+          investmentGroup: investments.groupOf.get(row.account.id) ?? null,
         });
       }),
     };

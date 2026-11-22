@@ -3,9 +3,9 @@
 // and only an application knows both. Every process calls it once, before any request, job or
 // test: the web server (`instrumentation.ts`), the worker, the test projects and the scripts.
 import { wireAccounts } from "@ledgerly/domain/accounts";
-import { payrollSource, wireFunds } from "@ledgerly/domain/funds";
+import { payrollSource, valuationAccountIds, wireFunds } from "@ledgerly/domain/funds";
 import { wireInterests } from "@ledgerly/domain/interests";
-import { managedAccountsOfInvestments } from "@ledgerly/domain/investments";
+import { managedAccountsOfInvestments, wireInvestments } from "@ledgerly/domain/investments";
 import { ledgerPosting } from "@ledgerly/domain/platform/integrations/source";
 import { leaveCalendar } from "@ledgerly/domain/platform/integrations/calendar";
 import { payrollDirectory, payrollLeaveBalances, wirePayroll } from "@ledgerly/domain/payroll";
@@ -31,4 +31,5 @@ export function wireDomain(): void {
   wireTimeoff({ calendar: leaveCalendar, balances: leaveBalances });
   wirePayroll({ listeners: [payrollSource] });
   wireFunds({ payslips });
+  wireInvestments({ funds: { accountIds: valuationAccountIds } });
 }

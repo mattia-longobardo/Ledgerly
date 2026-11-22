@@ -6,6 +6,7 @@ import { z } from "zod";
 import { defineRoute } from "../route";
 import { civilDate, id, instant, money, monthStart } from "../primitives";
 import { ACCOUNT_ID, ACCOUNT_ORIGINS, ACCOUNT_STATES, ACCOUNT_TYPES, byAccount, delta } from "./shared";
+import { PORTFOLIO_GROUPS } from "../investments/portfolio";
 
 /** The longest window of the views: ten years of month ends, three of days. */
 const MAX_MONTHS = 120;
@@ -54,6 +55,11 @@ const viewRow = z.object({
   lastSyncedAt: instant().nullable(),
   /** The service of Investments a provider feeds, and its last reading: what «Last synced» shows first. */
   service: z.object({ provider: z.string(), lastSyncedAt: instant().nullable() }).nullable(),
+  /**
+   * The group of Investments the account is in (R5b, decision O1): `pension_funds` for a fund's
+   * account, `stocks_crypto` for the other accounts of the «investments» bucket; null outside it.
+   */
+  investmentGroup: z.enum(PORTFOLIO_GROUPS).nullable(),
 });
 
 const VIEW_ROW_EXAMPLE = {
@@ -84,6 +90,7 @@ const VIEW_ROW_EXAMPLE = {
   share: 1,
   lastSyncedAt: null,
   service: null,
+  investmentGroup: null,
 };
 
 export const getNetWorth = defineRoute({
@@ -120,6 +127,11 @@ export const getNetWorth = defineRoute({
       investments: bucketTotal,
       other: bucketTotal,
     }),
+    /**
+     * `buckets.investments` in the two groups of Investments (R5b): their totals add up to it, and each
+     * is the subtotal of its group on the home of Investments. A group with no account is not listed.
+     */
+    investmentGroups: z.array(bucketTotal.extend({ id: z.enum(PORTFOLIO_GROUPS) })),
     alerts: z.array(z.object({ accountId: id(), kind: z.enum(["low_balance", "stale_sync"]) })),
     /** The currencies of accounts counted today that have no rate to `currency`. */
     missingRates: z.array(z.string()),
@@ -148,6 +160,7 @@ export const getNetWorth = defineRoute({
         investments: { total: null, partial: false, count: 0 },
         other: { total: null, partial: false, count: 0 },
       },
+      investmentGroups: [],
       alerts: [],
       missingRates: [],
       lastSnapshotMonth: "2026-10-01",

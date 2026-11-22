@@ -474,6 +474,7 @@
    },
    "services": [
     {
+     "kind": "manual_portfolio",
      "accountId": "<id-3>",
      "name": "Directa",
      "category": "broker",
@@ -561,6 +562,7 @@
    },
    "services": [
     {
+     "kind": "manual_portfolio",
      "accountId": "<id-3>",
      "name": "Directa",
      "category": "broker",
@@ -2121,6 +2123,7 @@
    "valueAtEnd": null,
    "services": [
     {
+     "kind": "manual_portfolio",
      "accountId": "<id-3>",
      "name": "Directa",
      "category": "broker",
@@ -2392,7 +2395,63 @@
       "value": "7719.00"
      }
     ]
-   }
+   },
+   "total": {
+    "value": "20369.00",
+    "valuePartial": false,
+    "paidIn": "19761.00",
+    "gain": "859.00",
+    "rate": 0.050529,
+    "rateReason": "ok"
+   },
+   "groups": [
+    {
+     "id": "stocks_crypto",
+     "kpis": {
+      "value": "12650.00",
+      "valuePartial": false,
+      "paidIn": "12000.00",
+      "gain": "650.00",
+      "rate": 0.060214,
+      "rateReason": "ok"
+     },
+     "rows": [
+      {
+       "kind": "manual_portfolio",
+       "accountId": "<id-3>",
+       "fundId": null,
+       "name": "Directa",
+       "currency": "EUR",
+       "value": "12650.00",
+       "displayValue": "12650.00",
+       "inTotal": true
+      }
+     ]
+    },
+    {
+     "id": "pension_funds",
+     "kpis": {
+      "value": "7719.00",
+      "valuePartial": false,
+      "paidIn": "7761.00",
+      "gain": "209.00",
+      "rate": 0.03368,
+      "rateReason": "ok"
+     },
+     "rows": [
+      {
+       "kind": "pension_fund",
+       "accountId": "<id-4>",
+       "fundId": "<id-37>",
+       "name": "Fideuram Piano Accumulo",
+       "currency": "EUR",
+       "value": "7719.00",
+       "displayValue": "7719.00",
+       "inTotal": true
+      }
+     ]
+    }
+   ]
   }
  },
  "GET /investments/<id-3>?period=all": {
@@ -2412,6 +2471,7 @@
     "firstOn": "2031-03-01"
    },
    "service": {
+    "kind": "manual_portfolio",
     "accountId": "<id-3>",
     "name": "Directa",
     "category": "broker",

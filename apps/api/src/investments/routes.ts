@@ -6,7 +6,8 @@
 import type { Hono } from "hono";
 import type { z } from "zod";
 import { INVESTMENTS, INVESTMENTS_ROUTES, type RouteContract } from "@ledgerly/api-contract";
-import { AccountError } from "@ledgerly/domain/accounts";
+import { AccountError, accountsView } from "@ledgerly/domain/accounts";
+import { fundValues } from "@ledgerly/domain/funds";
 import {
   catalogView,
   checkSyncNow,
@@ -14,6 +15,7 @@ import {
   confirmZeroReading,
   connectInvestmentProvider,
   createManualService,
+  createManualServiceWithAccount,
   deleteOperation,
   disconnectProvider,
   InvestmentError,
@@ -50,6 +52,7 @@ import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { holdingsOut, listOut } from "./dto";
 import { activityOut, homeOut, movementsOut, overviewOut } from "./pages";
 import { catalogOut, connectionOut, positionsOut } from "./tabs";
+import { fundsListOut, portfolioOut } from "./portfolio";
 
 const { investments, register, connection } = INVESTMENTS;
 
@@ -147,17 +150,23 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
       investmentsPortfolio(ctx, snapshot),
       investmentsPnl(ctx, params, snapshot),
     ]);
-    return listOut(portfolio, pnl);
+    // Without `include=funds` the answer of before, to the field (R5b).
+    if (query.include !== "funds") return listOut(portfolio, pnl);
+    const { rows } = await accountsView(ctx, { months: 1 });
+    return { ...listOut(portfolio, pnl), ...(await portfolioOut(ctx, { rows, portfolio, pnl })) };
   });
+  serve(app, guard, INVESTMENTS.funds.listFunds, async ({ ctx }) => fundsListOut(ctx));
   // The literal paths first: `/investments/{accountId}` would take them.
   serve(app, guard, investments.getInvestmentsHome, async ({ ctx, query }) => {
     const period = periodOf(ctx, query);
     const snapshot = await investmentsSnapshot(ctx);
-    const [home, pnl] = await Promise.all([
+    const [home, pnl, funds, { rows }] = await Promise.all([
       investmentsHome(ctx, snapshot),
       investmentsPnlView(ctx, period, snapshot),
+      fundValues(ctx),
+      accountsView(ctx, { months: 1 }),
     ]);
-    return homeOut(home, pnl);
+    return homeOut(home, pnl, funds, await portfolioOut(ctx, { rows, portfolio: home, pnl }));
   });
   serve(app, guard, investments.getInvestmentsCatalog, async ({ ctx }) => catalogOut(await catalogView(ctx)));
   serve(app, guard, investments.getInvestmentHoldings, async ({ ctx, params }) =>
@@ -269,7 +278,11 @@ function operationInput(body: OperationBody) {
 
 function serveRegister(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, register.createManualService, async ({ ctx, body }) =>
-    refusing(() => createManualService(ctx, body)),
+    refusing(() =>
+      "accountId" in body
+        ? createManualService(ctx, body)
+        : createManualServiceWithAccount(ctx, { ...body, valueCents: parseCents(body.value) }),
+    ),
   );
   serve(app, guard, register.updateServiceUrl, async ({ ctx, params, body }) => {
     await refusing(() => updateServiceUrl(ctx, params.accountId, body.url));

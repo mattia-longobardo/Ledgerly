@@ -6,6 +6,7 @@ export { newContributionForm } from "./forms";
 export type { ContributionForm, FeeForm, FundForm, SourceForm, WizardForm } from "./forms";
 export { fundHomeRow, fundsHomeRows, fundsToVerify } from "./home-queries";
 export {
+  aggregateCapital,
   firstDataOn,
   gainBars,
   gainGrain,
@@ -18,7 +19,7 @@ export {
   yearRows,
 } from "./home";
 export type { FundLine, GainGrain } from "./home";
-export { fundsConfiguration, fundsExport } from "./overview";
+export { fundsConfiguration, fundsExport, fundValues } from "./overview";
 export type { Operation, ValuationRow } from "./pension/operations";
 export { MAIN_COMPONENTS } from "./pension/reconcile";
 export type { ComponentStatus, QuarterStatus, Status } from "./pension/reconcile";
@@ -28,7 +29,7 @@ export { clearDecision, replaceCompetences } from "./pension/service";
 export { onTheWay } from "./period";
 export type { FundPeriod, MoneyOrigin } from "./period";
 export { wireFunds } from "./ports";
-export { calendarOf, hasPayrollCalendar, searchFunds } from "./queries";
+export { calendarOf, fundsByAccount, hasPayrollCalendar, searchFunds, valuationAccountIds } from "./queries";
 export type { FundDetail } from "./queries";
 export { FORECAST_RATES } from "./rules";
 export type { FundForecast } from "./rules";

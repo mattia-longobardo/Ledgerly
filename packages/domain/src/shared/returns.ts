@@ -123,13 +123,16 @@ export function moneyWeighted(input: {
   endCents: Cents;
   pnlCents: Cents;
   flows: readonly { on: CivilDate; cents: Cents }[];
-}): { rate: number | null; xirr: Xirr | null } {
+}): { rate: number | null; xirr: Xirr | null; capital: number | null } {
   const { from, to, startCents, endCents, pnlCents, flows } = input;
   const days = daysBetween(from, to);
-  if (days <= 0) return { rate: null, xirr: null };
+  if (days <= 0) return { rate: null, xirr: null, capital: null };
+  const dietz = modifiedDietz({ from: addDays(from, 1), to, startCents, pnlCents, flows });
   return {
-    rate: modifiedDietz({ from: addDays(from, 1), to, startCents, pnlCents, flows }).rate,
+    rate: dietz.rate,
     xirr: spanXirr({ from, to, startCents, endCents, flows }),
+    // The average capital the rate divides by, so that two rates can be summed (R5b, «Tutti»).
+    capital: dietz.rate === null ? null : dietz.averageCapital,
   };
 }
 
