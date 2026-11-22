@@ -176,6 +176,8 @@ export interface PackageMeasure {
   clientReach: string[];
   /** Must be empty: a browser file that reaches `platform/db` or `pg` through any chain of imports. */
   clientDatabase: string[];
+  /** Must be empty (R4): a page of the web's container that reaches what only the server has. */
+  webServerReach: string[];
   /** Must be empty: two workspaces that import each other, directly or not. */
   packageCycles: string[];
   /** Must be empty: an entry with `export *`. */
@@ -210,6 +212,7 @@ export function measurePackages(repo: string): PackageMeasure {
     aliases: [],
     clientReach: [],
     clientDatabase: [],
+    webServerReach: [],
     packageCycles: [],
     starExports: [],
     duplicateNames: [],
@@ -330,7 +333,9 @@ export function measurePackages(repo: string): PackageMeasure {
     if (distinct.length > 1) measure.duplicateNames.push(`${key} (${distinct.join(", ")})`);
   }
 
-  measure.clientDatabase = findClientDatabaseReach(new Map(files.map((one) => [one.path, one.text])), spaces);
+  const byPath = new Map(files.map((one) => [one.path, one.text]));
+  measure.clientDatabase = findClientDatabaseReach(byPath, spaces);
+  measure.webServerReach = findWebServerReach(byPath, spaces);
 
   for (const key of Object.keys(measure) as (keyof PackageMeasure)[])
     measure[key] = [...new Set(measure[key])].sort();
@@ -405,6 +410,67 @@ export function findClientDatabaseReach(
       // A Server Action is a reference in the bundle, not its code.
       if (path !== root && hasDirective(files.get(path)!, "use server")) continue;
       for (const next of edges.get(path) ?? []) {
+        if (!seen.has(next)) {
+          seen.add(next);
+          stack.push(next);
+        }
+      }
+    }
+  }
+  return [...found].sort();
+}
+
+/** The value imports of every file, resolved: our files, and the bare packages each one names. */
+function importGraph(files: ReadonlyMap<string, string>, spaces: readonly Workspace[]) {
+  const edges = new Map<string, { files: string[]; bare: string[] }>();
+  for (const [path, text] of files) {
+    const next = { files: [] as string[], bare: [] as string[] };
+    for (const { specifier, typeOnly } of importsOf(path, text)) {
+      if (typeOnly || specifier.startsWith("node:")) continue;
+      const target = resolveImport(path, specifier, files, spaces);
+      if (target === null) continue;
+      if ("bare" in target) next.bare.push(specifier);
+      else next.files.push(target.file);
+    }
+    edges.set(path, next);
+  }
+  return edges;
+}
+
+// What only the server's container has (rewrite plan R4): the database, the server's environment
+// and its checks, the API's own package, the plugins' host, and Better Auth's server (its cookie
+// reader, its browser client and its access rules run anywhere).
+const SERVER_FILES =
+  /^(packages\/domain\/src\/platform\/(db\/|env\.ts$)|apps\/api\/|packages\/plugin-host\/)/;
+const SERVER_PACKAGES =
+  /^(pg$|better-auth$|better-auth\/(?!cookies$|react$|client|plugins\/(admin\/)?access$)|@better-auth\/)/;
+
+// The entries of the web's container: what Next.js loads for a path that Traefik sends to it.
+const WEB_ENTRY =
+  /^apps\/web\/src\/(proxy\.ts|app\/(?!api\/|\.well-known\/)(.*\/)?(page|layout|template|default|loading|error|global-error|not-found|route)\.tsx?)$/;
+
+/**
+ * A page, layout or route of the web's container that reaches what only the server has, through any
+ * chain of value imports: `<entry> → <file>`. Traefik sends `/api` and `/.well-known` to the server,
+ * so their routes are not entries. A `"use server"` file would run in the web's process: it is followed.
+ */
+export function findWebServerReach(
+  files: ReadonlyMap<string, string>,
+  spaces: readonly Workspace[],
+): string[] {
+  const edges = importGraph(files, spaces);
+  const found = new Set<string>();
+  for (const root of [...files.keys()].filter((path) => WEB_ENTRY.test(path))) {
+    const seen = new Set([root]);
+    const stack = [root];
+    while (stack.length > 0) {
+      const path = stack.pop()!;
+      const out = edges.get(path)!;
+      if (SERVER_FILES.test(path) || out.bare.some((name) => SERVER_PACKAGES.test(name))) {
+        found.add(`${root} → ${path}`);
+        continue;
+      }
+      for (const next of out.files) {
         if (!seen.has(next)) {
           seen.add(next);
           stack.push(next);
