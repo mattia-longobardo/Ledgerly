@@ -3,6 +3,13 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · payroll: a signed address of a payslip's original (R4)
+
+- `GET /payroll/payslips/{id}/original-link` (scope `read`): `{url, expiresAt}`, the address of the
+  payslip's original PDF for five minutes. `404` when the payslip is not yours or its original is gone.
+- `GET /api/v1/originals/{token}`: the original itself, inline, without a session or a token (the
+  address is the credential). `403` with `reason` `link_invalid` (altered) or `link_expired`, `403`
+  in a browser signed in as another person or for a person blocked since, `404` when the original is gone.
 ## Unreleased · R3-coda: merge proposals, the web's server reads, the last writes of the web
 
 - `POST /api-clients` (scope `security`, the web's session only): makes a Client API and answers its

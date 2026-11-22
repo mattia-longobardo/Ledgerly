@@ -3,6 +3,7 @@
 // the review. Applying a payslip raises the event `PayslipApplied`, the same for an action and a
 // route: the pension fund decides on its own what it means. The upload stays `POST /imports`.
 import { z } from "zod";
+import { instant } from "../primitives";
 import { defineRoute } from "../route";
 import {
   byPayslip,
@@ -210,4 +211,28 @@ export const fillPayslipWithLlm = defineRoute({
   response: z.object({ asked: z.number().int(), filled: z.number().int() }),
   errors: [...PAYROLL_ERRORS, "unavailable"],
   example: { params: { id: DOCUMENT_ID }, response: { asked: 2, filled: 1 } },
+});
+
+const originalLink = z.object({
+  url: z.string().describe("Where the original opens: `/api/v1/originals/<token>`, for anyone who holds it."),
+  expiresAt: instant(),
+});
+
+export const getPayslipOriginalLink = defineRoute({
+  id: "get_payslip_original_link",
+  method: "GET",
+  path: "/payroll/payslips/{id}/original-link",
+  scope: "read",
+  capability: "payroll",
+  summary:
+    "A signed address of the payslip's original PDF, valid for five minutes: it opens without a session " +
+    "or a token, so a viewer or another app can load it. A payslip whose original is gone is not found.",
+  actions: [],
+  params: byPayslip,
+  response: originalLink,
+  errors: ["not_found"],
+  example: {
+    params: { id: DOCUMENT_ID },
+    response: { url: "/api/v1/originals/ODk.c2ln", expiresAt: "2026-11-22T10:05:00.000Z" },
+  },
 });

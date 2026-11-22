@@ -4,7 +4,7 @@
 // the payslip's own paths do not shadow each other.
 import type { Hono } from "hono";
 import { PAYROLL, PAYROLL_ROUTES, type RouteContract } from "@ledgerly/api-contract";
-import { ImportError } from "@ledgerly/domain/imports";
+import { ImportError, originalLinkFor } from "@ledgerly/domain/imports";
 import {
   PayrollError,
   applyPayslip,
@@ -57,6 +57,14 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, payroll.getPayroll, async ({ ctx }) => registerOut(await registerView(ctx)));
   serve(app, guard, payroll.getPayslip, async ({ ctx, params }) => review(ctx, params.id));
   serve(app, guard, codes.listPayrollCodes, async ({ ctx }) => codesOut(await codeMapView(ctx)));
+  // UI-PAY-2 (rewrite plan R4): the address the web's viewer and an app open; the original itself is
+  // served by `/api/v1/originals/<token>` (`apps/web/src/app/api/v1/originals`).
+  serve(app, guard, payroll.getPayslipOriginalLink, async ({ ctx, params }) => {
+    const view = await reviewView(ctx, params.id);
+    if (!view?.document.storageKey) throw new ApiRefusal("not_found");
+    const link = originalLinkFor(params.id, ctx.userId);
+    return { url: `/api/v1/originals/${link.token}`, expiresAt: link.expiresAt.toISOString() };
+  });
 }
 
 function serveReview(app: Hono<ApiEnv>, guard: Guard): void {
