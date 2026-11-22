@@ -1,6 +1,6 @@
 // The rows of `/api/v1` as the forms of Funds start from them (rewrite plan R3): the same fields the
-// domain's `sourceFormOf`, `feeFormOf` and `contributionFormOf` filled from the database, here from
-// the wire. Formatting only: a decimal becomes the text a person would type in their number format.
+// server pages filled from the database, here from the wire. Formatting only: a decimal becomes the
+// text a person would type in their number format.
 import type { RouteOutput } from "@ledgerly/api-client";
 import type { funds } from "@ledgerly/api-contract/funds";
 import { parseCents } from "@ledgerly/format/cents";

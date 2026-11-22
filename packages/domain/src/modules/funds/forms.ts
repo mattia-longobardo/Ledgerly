@@ -1,14 +1,10 @@
-// What the forms of Funds hold and how it becomes what the service takes (release N6 of the rewrite
-// plan; screens: docs/design/rewrite-plan/ux/n6-pension-fund.md). Pure: the same shapes go from the
-// page to the client component and back to the Server Action, as text the person typed.
-import { parseAmount } from "../../platform/format";
-import { fractionToPercent } from "../interests/rules";
+// What the forms of Funds hold (release N6 of the rewrite plan; screens:
+// docs/design/rewrite-plan/ux/n6-pension-fund.md). Pure: the same shapes go from the screen to the
+// API client, as text the person typed.
+import { type NumberFormat, numberSeparators } from "../../platform/format";
 import { percentToFraction } from "../../shared/money";
-import { formatAmountInput, type NumberFormat, numberSeparators } from "../../platform/format";
-import type { Cents } from "../../shared/money";
-import { type FeeBasis, feeModes, type FeePeriod, needsPeriod } from "../../shared/fees";
+import type { FeeBasis, FeePeriod } from "../../shared/fees";
 import type { ManualClass } from "./pension/rules";
-import type { ContributionInput, FeeInput, FundInput, SourceInput } from "./service";
 import {
   type AccrualPeriod,
   type IntervalUnit,
@@ -27,14 +23,6 @@ export interface FundForm {
   startOn: string;
   code: string;
 }
-
-export const fundInputOf = (form: FundForm): FundInput => ({
-  name: form.name,
-  provider: form.provider,
-  compartment: form.compartment,
-  startOn: form.startOn,
-  code: form.code,
-});
 
 // ——— Sources —————————————————————————————————————————————————————————————————————————————————
 
@@ -90,88 +78,6 @@ export function newSourceForm(kind: SourceKind, defaults: { payeeMatch?: string 
   };
 }
 
-/** The columns of a source the forms read: the row of the table, with nothing of the database in it. */
-interface SourceRow {
-  id: string;
-  kind: SourceKind;
-  state: SourceState;
-  components: PayrollComponent[] | null;
-  accrualPeriod: AccrualPeriod | null;
-  employer: string | null;
-  dueDay: number | null;
-  dueOffsetMonths: number | null;
-  dueEntries: unknown;
-  toleranceDays: number | null;
-  accountId: string | null;
-  payeeMatch: string | null;
-  amountCents: Cents | null;
-  debitDay: number | null;
-  intervalCount: number | null;
-  intervalUnit: IntervalUnit | null;
-  validFrom: string | null;
-  validTo: string | null;
-  note: string | null;
-}
-
-/** A stored source as its form starts from it. */
-export function sourceFormOf(source: SourceRow, format: NumberFormat): SourceForm {
-  const customDue = Array.isArray(source.dueEntries) && source.dueEntries.length > 0;
-  return {
-    ...newSourceForm(source.kind),
-    id: source.id,
-    state: source.state,
-    components: source.components ?? [...PAYROLL_COMPONENTS],
-    accrualPeriod: source.accrualPeriod ?? "month",
-    employer: source.employer ?? "",
-    hasDue: source.dueDay !== null,
-    dueDay: source.dueDay === null ? "" : String(source.dueDay),
-    dueOffsetMonths: source.dueOffsetMonths === null ? "1" : String(source.dueOffsetMonths),
-    toleranceDays: String(source.toleranceDays ?? 15),
-    note: source.note ?? "",
-    customDue,
-    amount: formatAmountInput(source.amountCents, format),
-    frequencyCount: String(source.intervalCount ?? 1),
-    frequencyUnit: source.intervalUnit ?? "month",
-    debitDay: source.debitDay === null ? "" : String(source.debitDay),
-    accountId: source.accountId ?? "",
-    payeeMatch: source.payeeMatch ?? "",
-    validFrom: source.validFrom ?? "",
-    validTo: source.validTo ?? "",
-  };
-}
-
-const whole = (text: string): number => {
-  if (!/^\d{1,3}$/.test(text.trim())) throw new RangeError(`Not a whole number: "${text}"`);
-  return Number(text.trim());
-};
-
-/** What the service takes for a source. Throws `RangeError` on a field that is not a number. */
-export function sourceInputOf(form: SourceForm, format: NumberFormat): SourceInput {
-  if (form.kind === "manual") return { kind: "manual" };
-  if (form.kind === "payroll") {
-    return {
-      kind: "payroll",
-      components: form.components,
-      accrualPeriod: form.accrualPeriod,
-      employer: form.employer,
-      due: form.hasDue ? { day: whole(form.dueDay), offsetMonths: whole(form.dueOffsetMonths) } : null,
-      toleranceDays: form.toleranceDays.trim() === "" ? 15 : whole(form.toleranceDays),
-      note: form.note,
-      keepDueEntries: form.customDue && !form.hasDue,
-    };
-  }
-  return {
-    kind: "bank_debit",
-    amountCents: parseAmount(form.amount, format),
-    frequency: { count: whole(form.frequencyCount), unit: form.frequencyUnit },
-    debitDay: form.debitDay.trim() === "" ? null : whole(form.debitDay),
-    accountId: form.accountId || null,
-    payeeMatch: form.payeeMatch,
-    validFrom: form.validFrom || null,
-    validTo: form.validTo || null,
-  };
-}
-
 // ——— Fees ————————————————————————————————————————————————————————————————————————————————————
 
 /**
@@ -208,25 +114,6 @@ export const newFeeForm = (): FeeForm => ({
   note: "",
 });
 
-interface FeeRow {
-  id: string;
-  label: string;
-  basis: FeeBasis;
-  amountCents: Cents | null;
-  rate: string | null;
-  period: FeePeriod | null;
-  sourceId: string | null;
-  component: PayrollComponent | null;
-  validFrom: string | null;
-  validTo: string | null;
-  note: string | null;
-}
-
-/** A percentage as text in the person's format, from the stored fraction. */
-function percentInput(rate: string, format: NumberFormat): string {
-  return fractionToPercent(rate).replace(".", numberSeparators(format).decimal);
-}
-
 /** The stored fraction of a percentage the person wrote; throws `RangeError` when it is not one. */
 export function fractionOfPercent(text: string, format: NumberFormat): string {
   const { decimal, group } = numberSeparators(format);
@@ -239,22 +126,6 @@ export function fractionOfPercent(text: string, format: NumberFormat): string {
   return fraction;
 }
 
-export function feeFormOf(fee: FeeRow, format: NumberFormat): FeeForm {
-  return {
-    id: fee.id,
-    label: fee.label,
-    basis: fee.basis,
-    mode: fee.rate === null ? "amount" : "rate",
-    value: fee.rate === null ? formatAmountInput(fee.amountCents, format) : percentInput(fee.rate, format),
-    period: fee.period ?? "year",
-    scope:
-      fee.sourceId === null ? "" : fee.component === null ? fee.sourceId : `${fee.sourceId}:${fee.component}`,
-    validFrom: fee.validFrom ?? "",
-    validTo: fee.validTo ?? "",
-    note: fee.note ?? "",
-  };
-}
-
 /** The source key and the component a scope names. */
 export function parseScope(scope: FeeScope): { key: string | null; component: PayrollComponent | null } {
   if (scope === "") return { key: null, component: null };
@@ -264,32 +135,6 @@ export function parseScope(scope: FeeScope): { key: string | null; component: Pa
     component: PAYROLL_COMPONENTS.includes(component as PayrollComponent)
       ? (component as PayrollComponent)
       : null,
-  };
-}
-
-/**
- * What the service takes for a fee, the source left as the key the form holds: the caller turns the
- * key into an id (Settings) or into an index (the form that creates a fund).
- */
-export function feeInputOf(
-  form: FeeForm,
-  format: NumberFormat,
-): Omit<FeeInput, "sourceId"> & { sourceKey: string | null } {
-  const modes = feeModes(form.basis);
-  const mode = modes.includes(form.mode) ? form.mode : modes[0];
-  const { key, component } =
-    form.basis === "on_assets" ? { key: null, component: null } : parseScope(form.scope);
-  return {
-    label: form.label,
-    basis: form.basis,
-    amountCents: mode === "amount" ? parseAmount(form.value, format) : null,
-    rate: mode === "rate" ? fractionOfPercent(form.value, format) : null,
-    period: needsPeriod(form.basis) ? form.period : null,
-    sourceKey: key,
-    component,
-    validFrom: form.validFrom || null,
-    validTo: form.validTo || null,
-    note: form.note,
   };
 }
 
@@ -333,96 +178,6 @@ export const newContributionForm = (
   transactionId: "",
   note: "",
 });
-
-interface OperationRow {
-  id: string;
-  classification: string;
-  operationDate: string;
-  workerCents: Cents;
-  employerCents: Cents;
-  tfrCents: Cents;
-  otherCents: Cents;
-  feesCents: Cents;
-  feesUnknown: boolean;
-  competenceYear: number | null;
-  competenceQuarter: number | null;
-  transactionId: string | null;
-  note: string | null;
-}
-
-/** A stored operation as the form that edits it starts from it. */
-export function contributionFormOf(operation: OperationRow, format: NumberFormat): ContributionForm {
-  const amount = (cents: Cents) =>
-    cents === 0n ? "" : formatAmountInput(cents < 0n ? -cents : cents, format);
-  const kind =
-    operation.classification === "voluntary"
-      ? "voluntary"
-      : operation.classification === "contribution"
-        ? "payroll"
-        : "other";
-  const gross = operation.workerCents + operation.employerCents + operation.tfrCents + operation.otherCents;
-  return {
-    id: operation.id,
-    kind,
-    classification:
-      kind === "other" ? (operation.classification as ContributionForm["classification"]) : "withdrawal",
-    on: operation.operationDate,
-    amount: kind === "payroll" ? "" : amount(gross),
-    worker: kind === "payroll" ? amount(operation.workerCents) : "",
-    employer: kind === "payroll" ? amount(operation.employerCents) : "",
-    tfr: kind === "payroll" ? amount(operation.tfrCents) : "",
-    period:
-      operation.competenceYear === null || operation.competenceQuarter === null
-        ? ""
-        : `${operation.competenceYear}-${operation.competenceQuarter}`,
-    fee: operation.feesUnknown ? "" : formatAmountInput(operation.feesCents, format),
-    feeUnknown: operation.feesUnknown,
-    transactionId: operation.transactionId ?? "",
-    note: operation.note ?? "",
-  };
-}
-
-/** What the service takes for an operation written by hand. An empty fee is no fee; unknown is `null`. */
-export function contributionInputOf(form: ContributionForm, format: NumberFormat): ContributionInput {
-  const amount = (text: string): Cents => (text.trim() === "" ? 0n : parseAmount(text, format));
-  const feeCents = form.feeUnknown ? null : amount(form.fee);
-  if (form.kind === "voluntary") {
-    return {
-      kind: "voluntary",
-      on: form.on,
-      amountCents: parseAmount(form.amount, format),
-      feeCents,
-      transactionId: form.transactionId || null,
-      note: form.note,
-    };
-  }
-  if (form.kind === "payroll") {
-    const [year, index] = form.period.split("-").map(Number);
-    return {
-      kind: "payroll",
-      on: form.on,
-      workerCents: amount(form.worker),
-      employerCents: amount(form.employer),
-      tfrCents: amount(form.tfr),
-      period: form.period === "" ? null : { year, index },
-      feeCents,
-      note: form.note,
-    };
-  }
-  const [otherYear, otherIndex] = form.period.split("-").map(Number);
-  return {
-    kind: "other",
-    classification: form.classification,
-    on: form.on,
-    amountCents: amount(form.amount),
-    period:
-      form.classification === "enrollment" && form.period !== ""
-        ? { year: otherYear, index: otherIndex }
-        : null,
-    feeCents,
-    note: form.note,
-  };
-}
 
 // ——— The form that creates a fund ————————————————————————————————————————————————————————————
 

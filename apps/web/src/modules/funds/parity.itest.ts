@@ -1,8 +1,8 @@
 // R3 parity of the writes of Funds (03-releases.md §R3, criterion 11): what a Server Action did with
-// what a person typed — the use case of the domain, the fields read in their number format — is what
+// what a person typed — the use case of the domain, on the fields read in their number format — is what
 // `calls.ts` does through the routes, on the same fields. The Server Actions are gone; `actions` is
-// what they did, line for line. Alice takes the old path, Bob the new one; what each fund then holds
-// is read from the same routes and compared without the ids.
+// the use case they ran, given the input they read from the fields. Alice takes the old path, Bob the
+// new one; what each fund then holds is read from the same routes and compared without the ids.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
 import {
@@ -11,9 +11,9 @@ import {
   newSourceForm,
   type ContributionForm,
   type FeeForm,
-  type SourceForm,
   type WizardForm,
 } from "@domain/modules/funds/forms";
+import type { ContributionInput, FeeInput, FundInput, SourceInput } from "@domain/modules/funds/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 
@@ -24,7 +24,6 @@ const { adapters } = await import("@/app/api/v1/[[...route]]/composition");
 const { apiRoutes } = await import("@ledgerly/api");
 const funds = await import("@ledgerly/domain/funds");
 const { appliedPayslips } = await import("@ledgerly/domain/payroll");
-const { parseAmount } = await import("@ledgerly/domain/platform/format");
 const { numberStyle } = await import("@ledgerly/format/format");
 const { read } = await import("@ledgerly/ui/data");
 const { profile } = await import("@ledgerly/api-contract/settings");
@@ -62,13 +61,11 @@ async function asPerson<T>(ctx: Ctx, work: () => Promise<T>): Promise<T> {
   return work();
 }
 
-/** The deleted Server Actions: the fields read on the server, the use case, the code of a refusal. */
+/** The deleted Server Actions: the use case on the input read from the fields, the code of a refusal. */
 const actions = (() => {
   function failed(error: unknown) {
     if (error instanceof funds.FundError)
       return { ok: false as const, error: error.code, detail: error.detail };
-    if (error instanceof RangeError || (error instanceof Error && error.name === "ZodError"))
-      return { ok: false as const, error: "invalid" };
     throw error;
   }
   async function run(work: () => Promise<string | void>) {
@@ -82,59 +79,37 @@ const actions = (() => {
   const publish = async (ctx: Ctx, fundId: string) =>
     funds.replaceCompetences(ctx, fundId, funds.competencesFromPayslips(await appliedPayslips(ctx)));
   return {
-    createFund: (ctx: Ctx, form: WizardForm) =>
+    createFund: (ctx: Ctx, input: Parameters<typeof funds.createFund>[1]) =>
       run(async () => {
-        const fund = await funds.createFund(ctx, {
-          fund: funds.fundInputOf(form.fund),
-          currency: form.currency || null,
-          value:
-            form.value.trim() === ""
-              ? null
-              : { on: form.valueOn, cents: parseAmount(form.value, ctx.numberFormat) },
-          sources: form.sources.map((source) => funds.sourceInputOf(source, ctx.numberFormat)),
-          fees: form.fees.map((fee) => {
-            const { sourceKey, ...input } = funds.feeInputOf(fee, ctx.numberFormat);
-            return { ...input, sourceIndex: sourceKey === null ? null : Number(sourceKey.slice(1)) };
-          }),
-        });
-        if (form.sources.some((source) => source.kind === "payroll")) await publish(ctx, fund.id);
+        const fund = await funds.createFund(ctx, input);
+        if (input.sources.some((source) => source.kind === "payroll")) await publish(ctx, fund.id);
         return fund.id;
       }),
-    saveSource: (ctx: Ctx, fundId: string, form: SourceForm) =>
+    addSource: (ctx: Ctx, fundId: string, input: SourceInput) =>
       run(async () => {
-        const input = funds.sourceInputOf(form, ctx.numberFormat);
-        if (form.id === null) await funds.addSource(ctx, fundId, input);
-        else await funds.updateSource(ctx, form.id, input);
-        if (form.kind === "payroll") await publish(ctx, fundId);
+        await funds.addSource(ctx, fundId, input);
       }),
-    saveFee: (ctx: Ctx, fundId: string, form: FeeForm) =>
+    addFee: (ctx: Ctx, fundId: string, input: FeeInput) =>
       run(async () => {
-        const { sourceKey, ...input } = funds.feeInputOf(form, ctx.numberFormat);
-        const fee = { ...input, sourceId: sourceKey };
-        if (form.id === null) await funds.addFee(ctx, fundId, fee);
-        else await funds.updateFee(ctx, form.id, fee);
+        await funds.addFee(ctx, fundId, input);
       }),
-    saveContribution: (ctx: Ctx, fundId: string, form: ContributionForm) =>
+    addContribution: (ctx: Ctx, fundId: string, input: ContributionInput) =>
       run(async () => {
-        const input = funds.contributionInputOf(form, ctx.numberFormat);
-        if (form.id === null) await funds.addContribution(ctx, fundId, input);
-        else await funds.updateContribution(ctx, form.id, input);
+        await funds.addContribution(ctx, fundId, input);
       }),
-    recordValuation: (ctx: Ctx, fundId: string, input: { on: string; value: string; note: string }) =>
+    recordValuation: (ctx: Ctx, fundId: string, input: { on: string; cents: bigint; note: string }) =>
       run(async () => {
-        await funds.recordValuation(ctx, fundId, {
-          on: input.on,
-          cents: parseAmount(input.value, ctx.numberFormat),
-          units: null,
-          note: input.note,
-        });
+        await funds.recordValuation(ctx, fundId, { ...input, units: null });
       }),
-    updateFund: (ctx: Ctx, id: string, form: WizardForm["fund"]) =>
+    updateFund: (ctx: Ctx, id: string, input: FundInput) =>
       run(async () => {
-        await funds.updateFund(ctx, id, funds.fundInputOf(form));
+        await funds.updateFund(ctx, id, input);
       }),
   };
 })();
+
+/** What a Server Action answered for a field it could not read. */
+const UNREADABLE = { ok: false, error: "invalid" };
 
 /** Every id and the fund's own name out of an answer: what tells Alice's fund from Bob's. */
 function plain(value: unknown): unknown {
@@ -167,7 +142,7 @@ const FUND = { name: "Fondo", provider: "Previdenza", compartment: "", startOn: 
 /** A fund with payments by hand, the same for both, made through the domain. */
 async function manualFund(ctx: Ctx) {
   const fund = await funds.createFund(ctx, {
-    fund: funds.fundInputOf(FUND),
+    fund: FUND,
     currency: null,
     value: null,
     sources: [{ kind: "manual" }],
@@ -217,7 +192,71 @@ describe("funds, old Server Action = new call", () => {
         },
       ],
     };
-    const old = await actions.createFund(alice, form);
+    const old = await actions.createFund(alice, {
+      fund: FUND,
+      currency: null,
+      value: { on: "2025-12-31", cents: 1000025n },
+      sources: [
+        {
+          kind: "payroll",
+          components: ["worker", "employer", "tfr"],
+          accrualPeriod: "month",
+          employer: "",
+          due: { day: 20, offsetMonths: 1 },
+          toleranceDays: 10,
+          note: "",
+          keepDueEntries: false,
+        },
+        {
+          kind: "bank_debit",
+          amountCents: 123450n,
+          frequency: { count: 1, unit: "month" },
+          debitDay: 5,
+          accountId: null,
+          payeeMatch: "Fondo",
+          validFrom: null,
+          validTo: null,
+        },
+      ],
+      fees: [
+        {
+          label: "Quota",
+          basis: "periodic",
+          amountCents: 1200n,
+          rate: null,
+          period: "year",
+          sourceIndex: 0,
+          component: null,
+          validFrom: null,
+          validTo: null,
+          note: "",
+        },
+        {
+          label: "TFR",
+          basis: "per_contribution",
+          amountCents: 150n,
+          rate: null,
+          period: null,
+          sourceIndex: 0,
+          component: "tfr",
+          validFrom: null,
+          validTo: null,
+          note: "",
+        },
+        {
+          label: "Gestione",
+          basis: "on_assets",
+          amountCents: null,
+          rate: "0.004500",
+          period: "year",
+          sourceIndex: null,
+          component: null,
+          validFrom: null,
+          validTo: null,
+          note: "",
+        },
+      ],
+    });
     const created = await asPerson(bob, () => calls.createFundAction(form));
     expect(old.ok && created).toMatchObject({ ok: true, count: 0 });
     if (!old.ok || !created.ok) return;
@@ -227,17 +266,21 @@ describe("funds, old Server Action = new call", () => {
   it("refuses the same fields with the same words", async () => {
     const future = { ...FUND, startOn: "2999-01-01" };
     const form: WizardForm = { fund: future, value: "", valueOn: "", currency: "", sources: [], fees: [] };
-    const old = await actions.createFund(alice, form);
+    const old = await actions.createFund(alice, {
+      fund: future,
+      currency: null,
+      value: null,
+      sources: [],
+      fees: [],
+    });
     expect(old).toMatchObject({ ok: false, error: "future_date" });
     expect(await asPerson(bob, () => calls.createFundAction(form))).toEqual({
       ok: false,
       error: "future_date",
     });
     const unreadable = { ...newSourceForm("bank_debit"), amount: "dodici", payeeMatch: "x" };
-    const [oldFund, newFund] = [await manualFund(alice), await manualFund(bob)];
-    expect(await asPerson(bob, () => calls.saveSourceAction(newFund, unreadable))).toEqual(
-      await actions.saveSource(alice, oldFund, unreadable),
-    );
+    const newFund = await manualFund(bob);
+    expect(await asPerson(bob, () => calls.saveSourceAction(newFund, unreadable))).toEqual(UNREADABLE);
     const rate = {
       ...newFeeForm(),
       label: "Troppo",
@@ -245,9 +288,7 @@ describe("funds, old Server Action = new call", () => {
       mode: "rate" as const,
       value: "150",
     };
-    expect(await asPerson(bob, () => calls.saveFeeAction(newFund, rate))).toEqual(
-      await actions.saveFee(alice, oldFund, rate),
-    );
+    expect(await asPerson(bob, () => calls.saveFeeAction(newFund, rate))).toEqual(UNREADABLE);
   });
 
   it("writes the same register, values, sources and fees", async () => {
@@ -268,15 +309,52 @@ describe("funds, old Server Action = new call", () => {
       feeUnknown: true,
     };
     const withdrawal = { ...newContributionForm("other", "2025-06-01"), amount: "300,10", note: "Anticipo" };
-    for (const form of [voluntary, enrollment, withdrawal]) {
+    const inputs: [ContributionForm, ContributionInput][] = [
+      [
+        voluntary,
+        {
+          kind: "voluntary",
+          on: "2025-03-10",
+          amountCents: 100000n,
+          feeCents: 250n,
+          transactionId: null,
+          note: "",
+        },
+      ],
+      [
+        enrollment,
+        {
+          kind: "other",
+          classification: "enrollment",
+          on: "2025-01-15",
+          amountCents: 2500n,
+          period: { year: 2025, index: 1 },
+          feeCents: null,
+          note: "",
+        },
+      ],
+      [
+        withdrawal,
+        {
+          kind: "other",
+          classification: "withdrawal",
+          on: "2025-06-01",
+          amountCents: 30010n,
+          period: null,
+          feeCents: 0n,
+          note: "Anticipo",
+        },
+      ],
+    ];
+    for (const [form, input] of inputs) {
       await both(
-        (ctx, id) => actions.saveContribution(ctx, id, form),
+        (ctx, id) => actions.addContribution(ctx, id, input),
         (id) => calls.saveContributionAction(id, form),
       );
     }
     const value = { on: "2025-12-31", value: "1.500,75", note: "Estratto" };
     await both(
-      (ctx, id) => actions.recordValuation(ctx, id, value),
+      (ctx, id) => actions.recordValuation(ctx, id, { on: "2025-12-31", cents: 150075n, note: "Estratto" }),
       (id) => calls.recordValuationAction(id, value),
     );
     const debit = {
@@ -288,12 +366,34 @@ describe("funds, old Server Action = new call", () => {
       validFrom: "2025-01-01",
     };
     await both(
-      (ctx, id) => actions.saveSource(ctx, id, debit),
+      (ctx, id) =>
+        actions.addSource(ctx, id, {
+          kind: "bank_debit",
+          amountCents: 5000n,
+          frequency: { count: 3, unit: "month" },
+          debitDay: null,
+          accountId: null,
+          payeeMatch: "Previdenza",
+          validFrom: "2025-01-01",
+          validTo: null,
+        }),
       (id) => calls.saveSourceAction(id, debit),
     );
     const fee = { ...newFeeForm(), label: "Ingresso", basis: "one_off" as const, value: "10" };
     await both(
-      (ctx, id) => actions.saveFee(ctx, id, fee),
+      (ctx, id) =>
+        actions.addFee(ctx, id, {
+          label: "Ingresso",
+          basis: "one_off",
+          amountCents: 1000n,
+          rate: null,
+          period: null,
+          sourceId: null,
+          component: null,
+          validFrom: null,
+          validTo: null,
+          note: "",
+        }),
       (id) => calls.saveFeeAction(id, fee),
     );
     const renamed = { ...FUND, provider: "Altra", code: "IT0001" };
@@ -331,16 +431,14 @@ describe("funds, old Server Action = new call", () => {
 
 /**
  * The forms the screens open from a row of `/api/v1` are the ones the server pages opened from the
- * database (`sourceFormOf`, `feeFormOf`, `contributionFormOf`): the same text in every field.
+ * database: the same text in every field.
  */
 describe("funds, the forms of a stored row = the forms of its wire row", () => {
   it("opens every source, fee and operation with the same fields", async () => {
-    const { sourceFormOf, feeFormOf, contributionFormOf } = await import("@domain/modules/funds/forms");
-    const { fundDetail } = await import("@domain/modules/funds/queries");
     const wire = await import("./ui/wire-forms");
     const format = alice.numberFormat;
     const fund = await funds.createFund(alice, {
-      fund: funds.fundInputOf(FUND),
+      fund: FUND,
       currency: null,
       value: null,
       sources: [
@@ -405,18 +503,36 @@ describe("funds, the forms of a stored row = the forms of its wire row", () => {
         },
       ],
     });
-    const voluntary = { ...newContributionForm("voluntary", "2025-03-10"), amount: "1.000,00", fee: "2,50" };
-    const withdrawal = { ...newContributionForm("other", "2025-06-01"), amount: "300,10", feeUnknown: true };
-    const payroll = {
-      ...newContributionForm("payroll", "2025-04-20"),
-      worker: "100",
-      tfr: "50,5",
-      period: "2025-1",
-    };
-    for (const form of [voluntary, withdrawal, payroll]) {
-      await funds.addContribution(alice, fund.id, funds.contributionInputOf(form, format));
-    }
-    const detail = await fundDetail(alice, fund.id);
+    const operations: ContributionInput[] = [
+      {
+        kind: "voluntary",
+        on: "2025-03-10",
+        amountCents: 100000n,
+        feeCents: 250n,
+        transactionId: null,
+        note: "",
+      },
+      {
+        kind: "other",
+        classification: "withdrawal",
+        on: "2025-06-01",
+        amountCents: 30010n,
+        period: null,
+        feeCents: null,
+        note: "",
+      },
+      {
+        kind: "payroll",
+        on: "2025-04-20",
+        workerCents: 10000n,
+        employerCents: 0n,
+        tfrCents: 5050n,
+        period: { year: 2025, index: 1 },
+        feeCents: 0n,
+        note: "",
+      },
+    ];
+    for (const input of operations) await funds.addContribution(alice, fund.id, input);
     session = alice;
     const contract = (await import("@ledgerly/api-contract/funds")).funds;
     const settings = contract.getFundSettings.response.parse(
@@ -426,18 +542,122 @@ describe("funds, the forms of a stored row = the forms of its wire row", () => {
       await (await routes.request(`/funds/${fund.id}/contributions?period=all`)).json(),
     );
 
-    const byId = <T extends { id: string }>(rows: readonly T[]) =>
-      [...rows].sort((a, b) => (a.id < b.id ? -1 : 1));
-    expect(byId(settings.sources).map((row) => wire.sourceFormOfRow(row, format))).toEqual(
-      byId(detail.sources).map((row) => sourceFormOf(row, format)),
-    );
-    expect(byId(settings.fees).map((row) => wire.feeFormOfRow(row, format))).toEqual(
-      byId(detail.fees).map((row) => feeFormOf(row, format)),
-    );
-    expect(byId(register.operations).map((row) => wire.contributionFormOfRow(row, format))).toEqual(
-      byId(detail.operations).map((row) => contributionFormOf(row, format)),
-    );
-    expect(register.operations).toHaveLength(3);
+    const byType = <T>(rows: readonly T[], type: (row: T) => string) =>
+      [...rows].sort((a, b) => (type(a) < type(b) ? -1 : 1));
+    const id = expect.any(String);
+    const payrollId = settings.sources.find((one) => one.kind === "payroll")!.id;
+    const source = {
+      state: "active",
+      components: ["worker", "employer", "tfr"],
+      accrualPeriod: "month",
+      employer: "",
+      hasDue: false,
+      dueDay: "",
+      dueOffsetMonths: "1",
+      toleranceDays: "15",
+      note: "",
+      customDue: false,
+      amount: "",
+      frequencyCount: "1",
+      frequencyUnit: "month",
+      debitDay: "",
+      accountId: "",
+      payeeMatch: "",
+      validFrom: "",
+      validTo: "",
+    };
+    const sourceForms = settings.sources.map((row) => wire.sourceFormOfRow(row, format));
+    expect(byType(sourceForms, (form) => form.kind)).toEqual([
+      {
+        ...source,
+        id,
+        kind: "bank_debit",
+        amount: "1234,50",
+        frequencyCount: "3",
+        debitDay: "5",
+        payeeMatch: "Previdenza",
+        validFrom: "2024-02-01",
+      },
+      { ...source, id, kind: "manual" },
+      {
+        ...source,
+        id,
+        kind: "payroll",
+        components: ["worker", "tfr"],
+        accrualPeriod: "quarter",
+        employer: "Datore",
+        hasDue: true,
+        dueDay: "20",
+        toleranceDays: "10",
+        note: "Nota",
+      },
+    ]);
+    const feeForms = settings.fees.map((row) => wire.feeFormOfRow(row, format));
+    expect(byType(feeForms, (form) => form.basis)).toEqual([
+      {
+        id,
+        label: "Gestione",
+        basis: "on_assets",
+        mode: "rate",
+        value: "0,45",
+        period: "year",
+        scope: "",
+        validFrom: "2024-01-01",
+        validTo: "",
+        note: "",
+      },
+      {
+        id,
+        label: "TFR",
+        basis: "per_contribution",
+        mode: "rate",
+        value: "0,15",
+        period: "year",
+        scope: `${payrollId}:tfr`,
+        validFrom: "",
+        validTo: "2025-12-31",
+        note: "x",
+      },
+      {
+        id,
+        label: "Quota",
+        basis: "periodic",
+        mode: "amount",
+        value: "12,00",
+        period: "year",
+        scope: payrollId,
+        validFrom: "",
+        validTo: "",
+        note: "",
+      },
+    ]);
+    const operation = {
+      id,
+      classification: "withdrawal",
+      amount: "",
+      worker: "",
+      employer: "",
+      tfr: "",
+      period: "",
+      fee: "",
+      feeUnknown: false,
+      transactionId: "",
+      note: "",
+    };
+    const operationForms = register.operations.map((row) => wire.contributionFormOfRow(row, format));
+    expect(byType(operationForms, (form) => form.kind)).toEqual([
+      { ...operation, kind: "other", on: "2025-06-01", amount: "300,10", feeUnknown: true },
+      {
+        ...operation,
+        kind: "payroll",
+        on: "2025-04-20",
+        worker: "100,00",
+        tfr: "50,50",
+        period: "2025-1",
+        fee: "0,00",
+      },
+      { ...operation, kind: "voluntary", on: "2025-03-10", amount: "1000,00", fee: "2,50" },
+    ]);
 
     // The live preview of the source dialog (an exception of the orchestrator: `nextDueDates` of
     // `funds/client`) says the due dates the server answers for the stored source.

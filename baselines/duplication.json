@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 105519,
-    "duplicatedLines": 16457,
-    "percent": 15.6,
-    "blocks": 1263
+    "lines": 105293,
+    "duplicatedLines": 16334,
+    "percent": 15.51,
+    "blocks": 1250
   },
   "units": {
     "api": {
@@ -47,10 +47,10 @@
       "blocks": 20
     },
     "modules/funds": {
-      "lines": 14050,
-      "duplicatedLines": 2200,
-      "percent": 15.66,
-      "blocks": 180
+      "lines": 13824,
+      "duplicatedLines": 2077,
+      "percent": 15.02,
+      "blocks": 167
     },
     "modules/imports": {
       "lines": 888,
@@ -574,8 +574,7 @@
     "modules/budgets/ui/add-budget.tsx": 45,
     "modules/budgets/ui/budgets-table.tsx": 47,
     "modules/budgets/ui/overview-card.tsx": 18,
-    "modules/funds/calls.ts": 64,
-    "modules/funds/forms.ts": 62,
+    "modules/funds/calls.ts": 28,
     "modules/funds/home-queries.ts": 8,
     "modules/funds/jobs.ts": 8,
     "modules/funds/overview.ts": 48,
@@ -630,7 +629,6 @@
     "modules/funds/ui/source-fields.tsx": 108,
     "modules/funds/ui/source-list-client.tsx": 8,
     "modules/funds/ui/source-text.ts": 13,
-    "modules/funds/ui/wire-forms.ts": 25,
     "modules/funds/ui/wizard-fund-step.tsx": 21,
     "modules/funds/ui/wizard-leave.tsx": 7,
     "modules/funds/ui/wizard-review.tsx": 7,

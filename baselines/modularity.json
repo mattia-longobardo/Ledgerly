@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 80,
+    "crossModuleImports": 79,
     "moduleIndexFiles": 12,
     "reciprocalModulePairs": 0,
     "reciprocalUnitPairs": 41,
@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 11,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 66,
+    "deepImports": 65,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -25,7 +25,6 @@
     "modules/budgets/schema.ts → modules/transactions/schema",
     "modules/budgets/service.ts → modules/accounts/index",
     "modules/budgets/service.ts → modules/transactions/index",
-    "modules/funds/forms.ts → modules/interests/rules",
     "modules/funds/jobs.ts → modules/users/index",
     "modules/funds/overview.ts → modules/accounts/index",
     "modules/funds/period.ts → modules/accounts/index",
@@ -312,7 +311,6 @@
     "app/(app)/settings/users/users-screen.tsx → modules/users/ui/invite-person",
     "app/(app)/settings/users/users-screen.tsx → modules/users/ui/people-table",
     "app/(auth)/sign-in/two-factor/setup/setup-flow.tsx → modules/users/ui/two-factor-setup",
-    "modules/funds/forms.ts → modules/interests/rules",
     "modules/funds/service.ts → modules/transactions/queries",
     "modules/funds/service.ts → modules/transactions/rules",
     "modules/interests/queries.ts → modules/transactions/queries",
