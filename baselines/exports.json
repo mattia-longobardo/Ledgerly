@@ -96,6 +96,8 @@
     "NotificationCategory",
     "NotificationEvent",
     "NotificationParams",
+    "ONBOARDING",
+    "ONBOARDING_ROUTES",
     "OVERVIEW_BUDGETS",
     "PAYROLL",
     "PAYROLL_ROUTES",
@@ -988,22 +990,30 @@
     "Preferences"
   ],
   "packages/domain/src/modules/users/index.ts": [
+    "OnboardingError",
     "Person",
     "Preferences",
+    "Region",
     "SavedPreferences",
     "TimeOffPreferences",
     "buildCtx",
     "changePreferences",
+    "completeOnboarding",
     "contextFor",
     "describeUserAgent",
     "findSessionToken",
     "forEachUser",
     "getPreferences",
     "getSavedPreferences",
+    "instanceDefaults",
     "listOwnSessions",
+    "onboardingOf",
     "personById",
     "profileChange",
+    "saveInstanceDefaults",
     "setAddon",
+    "setCountry",
+    "startOnboarding",
     "updatePreferences",
     "updateTimeOffPreferences"
   ],
@@ -1088,7 +1098,8 @@
     "setPersonBlocked",
     "setPersonRole",
     "twoFactorSetupRequired",
-    "users"
+    "users",
+    "wireAuth"
   ],
   "packages/domain/src/platform/db/index.ts": [
     "Tx",
@@ -1330,7 +1341,8 @@
     "sendTestEmail",
     "smtpView",
     "testLlmFallback",
-    "testOidc"
+    "testOidc",
+    "writeSetting"
   ],
   "packages/plugin-contract/src/index.ts": [
     "AuthCompleteResponse",

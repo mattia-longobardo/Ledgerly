@@ -20,6 +20,7 @@ export {
   smtpView,
   testLlmFallback,
   testOidc,
+  writeSetting,
 } from "./service";
 export type { MailProbeResult } from "./service";
 export type { MailCategory, SmtpInput } from "./smtp";

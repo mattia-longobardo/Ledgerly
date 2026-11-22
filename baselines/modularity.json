@@ -353,7 +353,7 @@
     "app/api/metrics/route.ts: jobRuns",
     "modules/transactions/switching/doubles.ts: providerLinks",
     "modules/users/jobs.ts: users",
-    "modules/users/service.ts: sessions",
+    "modules/users/service/preferences.ts: sessions",
     "platform/backup/service.ts: appSettings",
     "platform/export/jobs.ts: appSettings",
     "platform/integrations/service/schedule.ts: users",

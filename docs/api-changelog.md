@@ -41,6 +41,19 @@ written before it keeps working.
 - `GET` and `PATCH /preferences`: `hideAmounts` («Nascondi importi»), one switch for every client of
   the person; off for everybody until they turn it on.
 
+## Unreleased · the first start and the defaults of the instance (R5a)
+
+- `GET /countries` (scope `read`): the countries with a pack of rules and what each proposes (currency,
+  zone, number format, language, first day of the week, tax on interest). Any other country proposes nothing.
+- `GET /onboarding` (scope `read`): `{pending, country, proposal}`, whether the first start is ahead of
+  the person, their country, and the instance's defaults (null before an admin chose them).
+- `POST /onboarding` (scope `write`): country, format and addons; it ends the first start. The first
+  admin's choice becomes the instance's defaults.
+- `PUT /country` (scope `write`): the person's country; the format stays.
+- `GET` and `PUT /server/defaults` (scope `admin`): the instance's defaults, which a person signed up
+  later starts from.
+- `GET /api/web/session` (the web's own): `onboarding`, true while the first start is ahead of the person.
+
 ## Unreleased · Addons: the modules a person turns off (R5a)
 
 - `GET /addons` (scope `read`): every addon (`investments`, `funds`,

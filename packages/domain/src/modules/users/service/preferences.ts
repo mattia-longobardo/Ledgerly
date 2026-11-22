@@ -1,22 +1,29 @@
 import { and, desc, eq, gt } from "drizzle-orm";
-import { sessions } from "../../platform/auth/schema";
-import { getDb } from "../../platform/db/client";
-import { userScoped } from "../../platform/db/scope";
-import type { Ctx } from "../../platform/context";
-import { DEFAULT_DISPLAY_CURRENCY, isDisplayCurrency } from "../../platform/fx/rules";
+import { sessions } from "../../../platform/auth/schema";
+import { getDb } from "../../../platform/db/client";
+import { userScoped } from "../../../platform/db/scope";
+import type { Ctx } from "../../../platform/context";
+import { DEFAULT_DISPLAY_CURRENCY, isDisplayCurrency } from "../../../platform/fx/rules";
 import {
   DEFAULT_PREFERENCES,
   type Preferences,
   preferencesInputSchema,
   timeOffPreferencesSchema,
-} from "./rules";
-import { userPreferences } from "./schema";
+} from "../rules";
+import { userPreferences } from "../schema";
 import { ADDONS, type AddonId } from "@ledgerly/api-contract";
 
 type Row = typeof userPreferences.$inferSelect;
 
-/** The preferences as saved, with the addons the person has on (R5a, H52). */
-export type SavedPreferences = Preferences & { addons: AddonId[] };
+/**
+ * The preferences as saved, with what R5a adds: the addons the person has on (H52), their country
+ * (E4) and whether the first start is still ahead of them.
+ */
+export type SavedPreferences = Preferences & {
+  addons: AddonId[];
+  country: string | null;
+  onboarding: boolean;
+};
 
 /** The saved list, in the order of `ADDONS`; a name the list no longer has is dropped. */
 const addonsOf = (modules: readonly string[]): AddonId[] => ADDONS.filter((addon) => modules.includes(addon));
@@ -42,19 +49,29 @@ function fromRow(row: Row): Preferences {
   };
 }
 
-/** The preferences and the addons, in one read: what a context is built from. */
-export async function getSavedPreferences(ctx: Pick<Ctx, "userId">): Promise<SavedPreferences> {
+async function ownRow(ctx: Pick<Ctx, "userId">): Promise<Row | undefined> {
   const [row] = await getDb().select().from(userPreferences).where(userScoped(ctx).owns(userPreferences));
-  // No row yet: every addon is on, as for the people of today (PA13) until the first start of R5a.
+  return row;
+}
+
+/** The preferences and what R5a adds, in one read: what a context is built from. */
+export async function getSavedPreferences(ctx: Pick<Ctx, "userId">): Promise<SavedPreferences> {
+  const row = await ownRow(ctx);
+  // No row: a person made before R5a, or straight in the database. Every addon is on and the
+  // first start is behind them (PA13); a person signed up since R5a gets a row (`startOnboarding`).
   return row
-    ? { ...fromRow(row), addons: addonsOf(row.modules) }
-    : { ...DEFAULT_PREFERENCES, addons: [...ADDONS] };
+    ? {
+        ...fromRow(row),
+        addons: addonsOf(row.modules),
+        country: row.country,
+        onboarding: row.onboardedAt === null,
+      }
+    : { ...DEFAULT_PREFERENCES, addons: [...ADDONS], country: null, onboarding: false };
 }
 
 export async function getPreferences(ctx: Pick<Ctx, "userId">): Promise<Preferences> {
-  const { addons, ...preferences } = await getSavedPreferences(ctx);
-  void addons;
-  return preferences;
+  const row = await ownRow(ctx);
+  return row ? fromRow(row) : { ...DEFAULT_PREFERENCES };
 }
 
 /**
@@ -89,7 +106,7 @@ export async function updatePreferences(ctx: Pick<Ctx, "userId">, input: unknown
 }
 
 /** The columns of the preferences; `modules` is not one of them (`setAddon`). */
-function rowValues(prefs: Preferences) {
+export function rowValues(prefs: Preferences) {
   return {
     timeZone: prefs.timeZone,
     locale: prefs.locale,

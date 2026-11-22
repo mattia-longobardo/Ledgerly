@@ -10,6 +10,8 @@ import { ledgerPosting } from "@ledgerly/domain/platform/integrations/source";
 import { leaveCalendar } from "@ledgerly/domain/platform/integrations/calendar";
 import { payrollDirectory, payrollLeaveBalances, wirePayroll } from "@ledgerly/domain/payroll";
 import { wireTimeoff } from "@ledgerly/domain/timeoff";
+import { wireAuth } from "@ledgerly/domain/platform/auth";
+import { startOnboarding } from "@ledgerly/domain/users";
 import { addonOn } from "@ledgerly/domain/platform/context";
 import { movementsOfAccounts } from "@ledgerly/domain/transactions";
 
@@ -26,6 +28,7 @@ const payslips: Parameters<typeof wireFunds>[0]["payslips"] = {
 };
 
 export function wireDomain(): void {
+  wireAuth({ userCreated: startOnboarding });
   wireAccounts({ movements: movementsOfAccounts, managed: managedAccountsOfInvestments });
   wireInterests({ posting: ledgerPosting });
   wireTimeoff({ calendar: leaveCalendar, balances: leaveBalances });

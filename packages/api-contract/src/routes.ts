@@ -1,6 +1,7 @@
 // Every route of the contract, in one list: `apps/api` serves them, the OpenAPI document and the
 // MCP tools of the reads are generated from them (rewrite plan R2). A module's step adds its own.
 import * as addons from "./addons";
+import * as onboarding from "./onboarding";
 import type { AddonId } from "./addons";
 import * as accountLinks from "./accounts/links";
 import * as accounts from "./accounts/accounts";
@@ -187,12 +188,16 @@ export const NOTIFICATIONS_ROUTES: readonly RouteContract[] = [
   notifications.getNotificationPreferences,
   notifications.setNotificationPreference,
 ];
+/** The first start and the defaults of the instance (R5a, E4, E8). */
+export const ONBOARDING = onboarding;
+export const ONBOARDING_ROUTES: readonly RouteContract[] = Object.values(onboarding);
 
 export const CONTRACT_ROUTES: readonly RouteContract[] = [
   metaRoute,
   ...SETTINGS_ROUTES,
   ...ADDONS_ROUTES,
   ...NOTIFICATIONS_ROUTES,
+  ...ONBOARDING_ROUTES,
   ...ACCOUNTS_ROUTES,
   ...TRANSACTIONS_ROUTES,
   ...BUDGETS_ROUTES,

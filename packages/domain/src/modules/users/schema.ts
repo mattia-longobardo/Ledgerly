@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, integer, pgTable, smallint, text, uuid } from "drizzle-orm/pg-core";
-import { checkIn, createdAtColumn, idColumn, updatedAtColumn } from "../../platform/db/columns";
+import { checkIn, createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { ADDONS } from "@ledgerly/api-contract";
 import { users } from "../../platform/auth/schema";
 import {
@@ -45,6 +45,11 @@ export const userPreferences = pgTable(
       .array()
       .notNull()
       .default(sql.raw(`'{${ADDONS.join(",")}}'::text[]`)),
+    // The person's country (R5a, E4): its pack proposes the defaults; null is a country without one.
+    country: text("country"),
+    // When the person finished the first start (R5a). Null: it is still ahead of them. Every row
+    // written before R5a is set at the release: the people of today never see it.
+    onboardedAt: moment("onboarded_at"),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
@@ -57,6 +62,7 @@ export const userPreferences = pgTable(
     checkIn("user_preferences_decimal_separator_ck", table.decimalSeparator, DECIMAL_SEPARATORS, true),
     checkIn("user_preferences_currency_position_ck", table.currencyPosition, CURRENCY_POSITIONS, true),
     check("user_preferences_display_currency_ck", sql`${table.displayCurrency} ~ '^[A-Z]{3}$'`),
+    check("user_preferences_country_ck", sql`${table.country} is null or ${table.country} ~ '^[A-Z]{2}$'`),
     check(
       "user_preferences_modules_ck",
       sql`${table.modules} <@ ${sql.raw(`'{${ADDONS.join(",")}}'::text[]`)}`,

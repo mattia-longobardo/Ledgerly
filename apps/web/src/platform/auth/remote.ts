@@ -12,6 +12,7 @@ const signedInSchema = z.object({
   preferences: z.custom<Preferences>((value) => typeof value === "object" && value !== null),
   ctx: z.custom<Ctx>((value) => typeof value === "object" && value !== null),
   addons: z.array(z.enum(ADDONS)),
+  onboarding: z.boolean(),
   setupPending: z.boolean(),
 });
 
