@@ -406,6 +406,7 @@ export const MODULES: Module[] = [
       "packages/plugin-host/**",
       "packages/domain/src/platform/plugin-config*",
       "plugins/**",
+      "apps/egress/**",
       page("banks"),
       page("settings/plugins"),
       "apps/web/src/app/plugin-wiring.ts",
