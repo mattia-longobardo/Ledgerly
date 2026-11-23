@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { PluginCallError } from "@plugin-host/client";
-import { parseJsonPreservingNumbers } from "./client";
 import { parseCents } from "../../../shared/money";
+import { parseJsonPreservingNumbers } from "../../../../../../plugins/wallet/src/http";
 import { sendMarker } from "../../../../../../plugins/wallet/src/marker";
 import { servedSource } from "../../../../../../test/fixtures/wallet/served-plugin";
 import { isMovementRefusal, type MovementToSend, type SendDeps, sendManualMovements } from "./send";

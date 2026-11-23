@@ -12,7 +12,7 @@ export type InterestEntry = typeof interestEntries.$inferSelect;
 export type InterestAccrual = typeof interestAccruals.$inferSelect;
 
 type InterestErrorCode =
-  "not_found" | "invalid_account" | "invalid_tiers" | "not_synced" | "invalid_category";
+  "not_found" | "invalid_account" | "invalid_tiers" | "mode_retired" | "invalid_category";
 
 export class InterestError extends Error {
   constructor(readonly code: InterestErrorCode) {

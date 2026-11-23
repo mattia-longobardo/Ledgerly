@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts } from "@domain/modules/accounts/queries";
-import { applyProviderAccounts, archiveAccount, createAccount } from "@domain/modules/accounts/service";
+import { archiveAccount, createAccount } from "@domain/modules/accounts/service";
 import { setLimit } from "@domain/modules/budgets/service";
 import { createRule } from "@domain/modules/interests/service";
 import { createPocket } from "@domain/modules/pockets/service";
@@ -211,32 +211,6 @@ describe("what rests on an account", () => {
         }),
       ),
     ).toBe("account_taken");
-
-    // An interest rule that publishes to the source needs an account of a source.
-    await applyProviderAccounts(ctx, WALLET_PROVIDER, [
-      {
-        provider: WALLET_PROVIDER,
-        providerAccountId: "w-s",
-        name: "Synced",
-        type: "savings",
-        currency: "EUR",
-      },
-    ]);
-    const synced = (await listAccounts(ctx)).find((row) => row.providerAccountId === "w-s")!.id;
-    const posting = await createRule(ctx, {
-      accountId: synced,
-      taxRate: "0",
-      dayBasis: "365",
-      settlement: "monthly",
-      validFrom: "2026-01-01",
-      validTo: null,
-      payeeMatch: "interessi",
-      mode: "post_to_provider",
-      tiers: [{ upToCents: null, annualRate: "0.0365" }],
-    });
-    expect(await codeOf(moveDependent(ctx, synced, { kind: "interestRule", id: posting.id, to: next }))).toBe(
-      "not_synced",
-    );
   });
 });
 

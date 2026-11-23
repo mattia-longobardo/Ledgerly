@@ -13,7 +13,6 @@ import { ACCRUAL_READING_MAX_AGE_HOURS } from "@ledgerly/domain/interests";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { listConnections, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
 import { isSyncBusy, syncWalletNow } from "@ledgerly/domain/platform/integrations/wallet";
-import { lookUpUnsure, postPending } from "@ledgerly/domain/interests";
 import { runsAt } from "@ledgerly/domain/interests";
 import { bringUpToDate } from "@ledgerly/domain/interests";
 
@@ -234,8 +233,7 @@ function manualReadings(wanted: ReadonlySet<string>, before: ReadonlyMap<string,
  * What it does for a rule is unchanged: accrued up to yesterday — the day whose balance is closed
  * — and the periods that have ended settled, a missed day caught up on the next pass, in order.
  * One row per rule and day, so a second pass in the same hour (or the same day) writes nothing
- * twice. Then the settlements of the rules that publish are posted to Wallet (spec §7.6), with no
- * transaction open while Wallet is called; that too only in a pass that had a rule to accrue.
+ * twice. Nothing is published on the source any more (decision H37, release R5c).
  *
  * The hourly tick is Europe/Rome (`SCHEDULE` of the jobs registry): the hour a zone skips when it springs forward has
  * no pass of its own, and the hour it repeats when it falls back has two — harmless, being
@@ -253,8 +251,6 @@ function manualReadings(wanted: ReadonlySet<string>, before: ReadonlyMap<string,
 interface AccrualPass {
   /** Rules brought up to date. */
   rules: number;
-  /** Settlements published to Wallet. */
-  posted: number;
   /** Rules left alone because their balance was not one to accrue on. */
   stale: number;
   reasons: StaleReason[];
@@ -286,7 +282,7 @@ export async function accrueDueRules(
   now: Date,
   options: FreshnessOptions = {},
 ): Promise<AccrualPass> {
-  const pass: AccrualPass = { rules: 0, posted: 0, stale: 0, reasons: [] };
+  const pass: AccrualPass = { rules: 0, stale: 0, reasons: [] };
   const due = await dueRules(ctx, now);
   if (due.length === 0) return pass;
 
@@ -308,8 +304,6 @@ export async function accrueDueRules(
     await bringUpToDate(ctx, rule.id, now);
     pass.rules += 1;
   }
-  // Publishing comes after, outside every transaction; an unsure posting is left as it is.
-  pass.posted += await postPending(ctx);
   return pass;
 }
 
@@ -332,7 +326,6 @@ export const interestsAccrualJob: JobDefinition = {
   async run(): Promise<JobDetail> {
     const now = new Date();
     let rules = 0;
-    let posted = 0;
     let stale = 0;
     const reasons = new Set<StaleReason>();
     const counts = await forEachUser(
@@ -340,7 +333,6 @@ export const interestsAccrualJob: JobDefinition = {
       async (_person, ctx) => {
         const pass = await accrueDueRules(ctx, now);
         rules += pass.rules;
-        posted += pass.posted;
         stale += pass.stale;
         for (const reason of pass.reasons) reasons.add(reason);
       },
@@ -351,32 +343,10 @@ export const interestsAccrualJob: JobDefinition = {
     return {
       ...counts,
       rules,
-      posted,
       stale,
       // Why the skipped ones were skipped, once each: the run's own account of a pass that found
       // nothing fresh to accrue on, without a row per rule in a job detail.
       staleReasons: reasons.size === 0 ? null : [...reasons].sort().join(", "),
     };
-  },
-};
-
-/**
- * Every day (spec §10.2): a second look for the Wallet record of every settlement left unsure. It
- * only looks and never posts again — a repeat could be a second record of the same money — so what
- * it does not find stays unsure, with "Retry" on its page.
- */
-export const interestsRematchJob: JobDefinition = {
-  name: "interests-rematch",
-  tier: "daily",
-  async run(): Promise<JobDetail> {
-    let matched = 0;
-    const counts = await forEachUser(
-      "interests-rematch",
-      async (_person, ctx) => {
-        matched += await lookUpUnsure(ctx);
-      },
-      { addon: "interests" },
-    );
-    return { ...counts, matched };
   },
 };

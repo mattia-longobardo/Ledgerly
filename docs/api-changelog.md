@@ -3,6 +3,13 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Interests: no rule publishes on its source (R5c, decision H37)
+
+- `POST /interests` and `PUT /interests/{id}`: `mode: "post_to_provider"` answers `422` with the new error code `mode_retired`. The mode stays in
+  the schema and in the answers; the release turns every rule that had it to `analyze_only`.
+- `POST /interests/{id}/settlements/{entryId}/posting` publishes nothing: it answers the posting state
+  the settlement has. `PUT …/posted` is unchanged.
+
 ## Unreleased · Time off: a calendar that may only read (R5c)
 
 - `GET /connections` (and every answer that carries a connection's `status`): `status.text` can be

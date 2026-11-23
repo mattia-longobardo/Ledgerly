@@ -173,9 +173,11 @@ describe("the routes of interests", () => {
       error: "invalid",
       reason: "invalid_account",
     });
-    expect(
-      (await send(alice, "POST", "/interests", body(accountId, { mode: "post_to_provider" }))).body,
-    ).toEqual({ error: "conflict", reason: "not_synced" });
+    // No rule publishes on its source since R5c (H37): a declared refusal, not a bad body.
+    expect(await send(alice, "POST", "/interests", body(accountId, { mode: "post_to_provider" }))).toEqual({
+      status: 422,
+      body: { error: "mode_retired" },
+    });
   });
 
   it("posts and marks only a settlement of the rule in the path", async () => {

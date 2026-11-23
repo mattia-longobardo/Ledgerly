@@ -138,7 +138,7 @@ function walletStub(): SourceCalls {
 const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: null, days: false });
 const walletAccounts = () => listAccounts(ctx, { includeArchived: true });
 
-/** Wallet read once, with one account left out, one rule that publishes and one movement waiting. */
+/** Wallet read once, with one account left out, one interest rule (none publishes since R5c) and one movement waiting. */
 async function walletInUse() {
   const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
   const options = { now: NOW, source: walletStub() };
@@ -153,7 +153,7 @@ async function walletInUse() {
     validFrom: "2026-01-01",
     validTo: null,
     payeeMatch: "interessi",
-    mode: "post_to_provider",
+    mode: "analyze_only",
     tiers: [{ upToCents: null, annualRate: "0.0365" }],
   });
   await createManualTransaction(
@@ -183,7 +183,7 @@ describe("Turn off Wallet", () => {
     const movements = await movementCount();
 
     const counts = await deactivationCounts(ctx, wallet());
-    expect(counts).toMatchObject({ accounts: 1, rules: 1, unsent: 1, pendingDays: 0 });
+    expect(counts).toMatchObject({ accounts: 1, rules: 0, unsent: 1, pendingDays: 0 });
     expect(counts.categories).toBeGreaterThan(0);
 
     reads.length = 0;
@@ -265,7 +265,7 @@ describe("Turn off Wallet", () => {
     await expect(deactivateSource(ctx, wallet(), deps, later(1))).rejects.toThrow("the conversion failed");
     expect(await walletAccounts()).toEqual(accounts);
     expect(await listConnections(ctx)).toHaveLength(1);
-    expect(await deactivationCounts(ctx, wallet())).toMatchObject({ accounts: 2, rules: 1, unsent: 1 });
+    expect(await deactivationCounts(ctx, wallet())).toMatchObject({ accounts: 2, rules: 0, unsent: 1 });
     expect(differences(before, await numbers())).toEqual([]);
   });
 

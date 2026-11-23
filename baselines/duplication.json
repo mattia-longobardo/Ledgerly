@@ -4,20 +4,20 @@
     "minLines": 6
   },
   "total": {
-    "lines": 109003,
-    "duplicatedLines": 16137,
-    "percent": 14.8,
-    "blocks": 1244
+    "lines": 108368,
+    "duplicatedLines": 16098,
+    "percent": 14.85,
+    "blocks": 1243
   },
   "units": {
     "api": {
-      "lines": 6073,
-      "duplicatedLines": 1217,
-      "percent": 20.04,
-      "blocks": 112
+      "lines": 6074,
+      "duplicatedLines": 1212,
+      "percent": 19.95,
+      "blocks": 113
     },
     "app": {
-      "lines": 20978,
+      "lines": 20977,
       "duplicatedLines": 2799,
       "percent": 13.34,
       "blocks": 218
@@ -54,8 +54,8 @@
     },
     "modules/imports": {
       "lines": 951,
-      "duplicatedLines": 248,
-      "percent": 26.08,
+      "duplicatedLines": 247,
+      "percent": 25.97,
       "blocks": 16
     },
     "modules/instruments": {
@@ -65,15 +65,15 @@
       "blocks": 4
     },
     "modules/interests": {
-      "lines": 2468,
-      "duplicatedLines": 443,
-      "percent": 17.95,
-      "blocks": 32
+      "lines": 2164,
+      "duplicatedLines": 414,
+      "percent": 19.13,
+      "blocks": 30
     },
     "modules/investments": {
       "lines": 15919,
-      "duplicatedLines": 2550,
-      "percent": 16.02,
+      "duplicatedLines": 2549,
+      "percent": 16.01,
       "blocks": 197
     },
     "modules/payroll": {
@@ -84,8 +84,8 @@
     },
     "modules/pockets": {
       "lines": 1760,
-      "duplicatedLines": 530,
-      "percent": 30.11,
+      "duplicatedLines": 527,
+      "percent": 29.94,
       "blocks": 37
     },
     "modules/portfolio": {
@@ -251,15 +251,15 @@
       "blocks": 2
     },
     "platform/integrations/wallet": {
-      "lines": 1633,
+      "lines": 1303,
       "duplicatedLines": 16,
-      "percent": 0.98,
+      "percent": 1.23,
       "blocks": 2
     },
     "platform/jobs": {
-      "lines": 504,
+      "lines": 503,
       "duplicatedLines": 28,
-      "percent": 5.56,
+      "percent": 5.57,
       "blocks": 3
     },
     "platform/keyring": {
@@ -466,9 +466,9 @@
     "api/settings/security.ts": 35,
     "api/settings/server.ts": 12,
     "api/subscriptions/dto.ts": 37,
-    "api/subscriptions/routes.ts": 67,
+    "api/subscriptions/routes.ts": 61,
     "api/timeoff/dto.ts": 9,
-    "api/timeoff/routes.ts": 35,
+    "api/timeoff/routes.ts": 36,
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 27,
     "api/transactions/routes.ts": 12,
@@ -654,7 +654,7 @@
     "modules/funds/ui/wizard-fund-step.tsx": 21,
     "modules/funds/ui/wizard-leave.tsx": 7,
     "modules/funds/ui/wizard-review.tsx": 7,
-    "modules/imports/jobs.ts": 9,
+    "modules/imports/jobs.ts": 8,
     "modules/imports/pdf/layout.ts": 47,
     "modules/imports/rules.ts": 21,
     "modules/imports/schema.ts": 83,
@@ -662,13 +662,13 @@
     "modules/instruments/schema.ts": 62,
     "modules/instruments/service/prices.ts": 6,
     "modules/instruments/service/search.ts": 7,
-    "modules/interests/jobs.ts": 22,
+    "modules/interests/jobs.ts": 8,
     "modules/interests/queries.ts": 54,
     "modules/interests/rules.ts": 14,
     "modules/interests/schema.ts": 129,
     "modules/interests/service/accruals.ts": 7,
     "modules/interests/service/index.ts": 41,
-    "modules/interests/service/posting.ts": 23,
+    "modules/interests/service/posting.ts": 8,
     "modules/interests/service/records.ts": 30,
     "modules/interests/service/switching.ts": 13,
     "modules/interests/ui/rule-dialog.tsx": 110,
@@ -700,7 +700,7 @@
     "modules/investments/service/types.ts": 20,
     "modules/investments/sync/connect.ts": 70,
     "modules/investments/sync/history.ts": 78,
-    "modules/investments/sync/pass.ts": 54,
+    "modules/investments/sync/pass.ts": 53,
     "modules/investments/sync/quantities.ts": 91,
     "modules/investments/sync/readings.ts": 82,
     "modules/investments/sync/settle.ts": 51,
@@ -759,7 +759,7 @@
     "modules/payroll/ui/review-lines.tsx": 8,
     "modules/payroll/ui/review-sections.tsx": 10,
     "modules/payroll/ui/review-workspace.tsx": 15,
-    "modules/pockets/jobs.ts": 23,
+    "modules/pockets/jobs.ts": 20,
     "modules/pockets/queries.ts": 43,
     "modules/pockets/schema.ts": 115,
     "modules/pockets/service.ts": 152,

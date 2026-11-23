@@ -1,36 +1,7 @@
-// What is left of the Wallet mapping in the core: the amount of the interest posting's records and
-// the windows a pass reads. The rest is the plugin's (`plugins/wallet/src/plugin.test.ts`).
+// What is left of the Wallet mapping in the core: the windows a pass reads. The rest is the plugin's
+// (`plugins/wallet/src/plugin.test.ts`).
 import { describe, expect, it } from "vitest";
-import { firstLinkWindows, monthWindow, recentWindow, walletAmountToCents } from "./mapping";
-
-describe("walletAmountToCents", () => {
-  it.each([
-    ["1234.56", 123456n],
-    ["-8.615", -862n],
-    ["1.005", 101n],
-    ["0.1", 10n],
-    ["1900", 190000n],
-    ["+12.3", 1230n],
-    [" 7.10 ", 710n],
-  ])("reads the source text %s as cents", (text, expected) => {
-    expect(walletAmountToCents(text)).toBe(expected);
-  });
-
-  it("converts a genuine JSON number through its fixed decimal representation", () => {
-    expect(walletAmountToCents(0.1 + 0.2)).toBe(30n);
-    expect(walletAmountToCents(2615.39)).toBe(261539n);
-    expect(walletAmountToCents(-432.1)).toBe(-43210n);
-  });
-
-  it("routes exponent notation, which is legal JSON, through the same conversion", () => {
-    expect(walletAmountToCents("1e3")).toBe(100000n);
-    expect(walletAmountToCents("-1.5E2")).toBe(-15000n);
-  });
-
-  it.each(["", "   ", "abc", "1.234,56", "€1"])("rejects %s", (text) => {
-    expect(() => walletAmountToCents(text)).toThrow(RangeError);
-  });
-});
+import { firstLinkWindows, monthWindow, recentWindow } from "./mapping";
 
 describe("firstLinkWindows", () => {
   it("builds twelve monthly windows ending with today's own month", () => {

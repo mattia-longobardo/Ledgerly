@@ -4,7 +4,6 @@
 // test: the web server (`instrumentation.ts`), the worker, the test projects and the scripts.
 import { wireAccounts } from "@ledgerly/domain/accounts";
 import { payrollSource, valuationAccountIds, wireFunds } from "@ledgerly/domain/funds";
-import { wireInterests } from "@ledgerly/domain/interests";
 import { managedAccountsOfInvestments, wireInvestments } from "@ledgerly/domain/investments";
 import {
   closesUpTo,
@@ -15,7 +14,7 @@ import {
   listingsOf,
   marketKey,
 } from "@ledgerly/domain/instruments";
-import { ledgerPosting, wireSource } from "@ledgerly/domain/platform/integrations/source";
+import { wireSource } from "@ledgerly/domain/platform/integrations/source";
 import { leaveCalendar, wireCalendar } from "@ledgerly/domain/platform/integrations/calendar";
 import { payrollDirectory, payrollLeaveBalances, wirePayroll } from "@ledgerly/domain/payroll";
 import { wireTimeoff } from "@ledgerly/domain/timeoff";
@@ -40,7 +39,6 @@ const payslips: Parameters<typeof wireFunds>[0]["payslips"] = {
 export function wireDomain(): void {
   wireAuth({ userCreated: startOnboarding });
   wireAccounts({ movements: movementsOfAccounts, managed: managedAccountsOfInvestments });
-  wireInterests({ posting: ledgerPosting });
   wireSource({ open: openSource });
   wireCalendar({ open: openCalendar });
   wireTimeoff({ calendar: leaveCalendar, balances: leaveBalances });

@@ -197,7 +197,7 @@ const RULE_BODY_EXAMPLE = {
   dayBasis: "365",
   settlement: "monthly",
   payeeMatch: "INTEREST",
-  mode: "post_to_provider",
+  mode: "analyze_only",
   categoryId: CATEGORY_ID,
   state: "active",
 };
@@ -210,8 +210,8 @@ export const createInterestRule = defineRoute({
   capability: "interests",
   summary:
     "Creates a rule and accrues it at once up to yesterday, settling the periods that have closed. " +
-    "Rates are percentages; `conflict` (`not_synced`) for a rule that publishes on an account no " +
-    "source reads.",
+    "Rates are percentages; `mode_retired` (422) for `mode: post_to_provider`: no rule publishes on its " +
+    "source since R5c.",
   actions: [],
   body: ruleBody,
   response: z.object({ id: id() }),
@@ -263,9 +263,8 @@ export const postInterestSettlement = defineRoute({
   scope: "write",
   capability: "interests",
   summary:
-    "«Post now» (from not posted) or, with `retry`, «Retry» (from unsure): publishes a settlement on " +
-    "the account's source once, and answers where its posting stands. A posting that could not land " +
-    "is an answer, not an error.",
+    "«Post now» (from not posted) or, with `retry`, «Retry» (from unsure): answers where a settlement's " +
+    "posting stands. Since R5c nothing is published on the source (decision H37): the state stays as it is.",
   actions: [],
   params: bySettlement,
   body: z.object({ retry: z.boolean() }).strict(),

@@ -27,10 +27,11 @@ export const MAX_DAYS = 90;
 
 /**
  * A refusal of the interests' use cases (`InterestError`): `invalid` (`reason` `invalid`,
- * `invalid_account`, `invalid_tiers`, `invalid_category`), `conflict` (`reason` `not_synced`: a rule
- * that publishes needs a synced account), `not_found`.
+ * `invalid_account`, `invalid_tiers`, `invalid_category`), `conflict` (`reason` `not_synced`: no
+ * longer given since R5c), `not_found`, `mode_retired` (422: a rule that publishes on its source,
+ * `post_to_provider`, is no longer taken since R5c, decision H37).
  */
-export const INTEREST_ERRORS = ["invalid", "not_found", "conflict"] as const;
+export const INTEREST_ERRORS = ["invalid", "not_found", "conflict", "mode_retired"] as const;
 
 export const RULE_ID = "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d";
 export const ENTRY_ID = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";

@@ -2,7 +2,7 @@ import { accountAlertsJob, accountsSnapshotJob } from "@/modules/accounts/jobs";
 import { budgetAlertsJob } from "@/modules/budgets/jobs";
 import { fundsDepositsJob } from "@/modules/funds/jobs";
 import { documentsRetentionJob } from "@/modules/imports/jobs";
-import { interestsAccrualJob, interestsRematchJob } from "@/modules/interests/jobs";
+import { interestsAccrualJob } from "@/modules/interests/jobs";
 import { pocketsAccrualJob, pocketsPlannedCleanupJob } from "@/modules/pockets/jobs";
 import { subscriptionsCheckJob } from "@/modules/subscriptions/jobs";
 import { recurrencesRefreshJob } from "@/modules/transactions/jobs";
@@ -82,8 +82,6 @@ export const JOBS: readonly JobDefinition[] = [
   budgetAlertsJob,
   // Hourly, each rule at its own hour (spec §7.6): by the date, and it syncs its own balance first.
   interestsAccrualJob,
-  // Daily: a second look, lookup only, for the settlements whose posting was left unsure.
-  interestsRematchJob,
   fundsDepositsJob,
   pocketsAccrualJob,
   pocketsPlannedCleanupJob,

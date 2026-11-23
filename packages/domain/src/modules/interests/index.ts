@@ -1,5 +1,5 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
-export { lookUpUnsure, markPosted, postEntry, postPending } from "./service/posting";
+export { markPosted, postEntry } from "./service/posting";
 export { interestsView, publishingRulesOn, ruleAccounts, ruleDetail, rulesOnAccount } from "./queries";
 export type { RuleRow } from "./queries";
 export {
@@ -25,6 +25,4 @@ export {
   stopPublishingOnAccounts,
   updateRule,
 } from "./service";
-export { restorePublishing, stopPublishing } from "./service/switching";
-export { wireInterests } from "./ports";
-export type { LedgerPosting } from "./ports";
+export { stopPublishing } from "./service/switching";

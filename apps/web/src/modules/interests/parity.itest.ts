@@ -236,11 +236,12 @@ describe("interests, old Server Action = new call", () => {
       reason: "invalid_account",
     });
 
-    const publishOnManual = typed(oldAccount, { publish: true });
-    const refused = await actions.createRuleAction(publishOnManual);
-    expect(refused).toMatchObject({ ok: false });
-    expect((await send("POST", "/interests", wire(publishOnManual))).body).toMatchObject({
-      reason: (refused as { error: string }).error,
+    // A rule that publishes is retired (H37, ST-14): the action refused it, the route answers 422.
+    const publishes = typed(oldAccount, { publish: true });
+    expect(await actions.createRuleAction(publishes)).toEqual({ ok: false, error: "mode_retired" });
+    expect(await send("POST", "/interests", wire(publishes))).toEqual({
+      status: 422,
+      body: { error: "mode_retired" },
     });
   });
 });

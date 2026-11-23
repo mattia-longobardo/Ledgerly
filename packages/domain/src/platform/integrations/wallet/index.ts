@@ -9,8 +9,6 @@ export {
   syncWalletFor as syncSourceNow,
   walletEditableIds as editableAtSource,
 } from "./records";
-// The ledger interests publishes on (port `LedgerPosting`, audit INT-1), by a name that is no provider's.
-export { walletPosting as ledgerPosting } from "./posting";
 // The card of the source (rewrite plan R5c anticipated), by a name that is no provider's.
 export { walletCard as sourceCard } from "./card";
 // The port the engine reads and writes the source through (rewrite plan R5c), wired by the application.
