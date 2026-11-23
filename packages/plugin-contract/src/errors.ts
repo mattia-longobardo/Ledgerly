@@ -26,6 +26,8 @@ const PLUGIN_ERROR_CODES = [
   "invalid_data",
   /** Anything else. */
   "failed",
+  /** Contract 2: the provider said no to this one write; the next one may still go (`POST /push`). */
+  "refused",
 ] as const;
 export type PluginErrorCode = (typeof PLUGIN_ERROR_CODES)[number];
 
@@ -40,6 +42,7 @@ export const PLUGIN_ERROR_STATUS: Record<PluginErrorCode, number> = {
   institution_unavailable: 503,
   invalid_data: 502,
   failed: 500,
+  refused: 422,
 };
 
 export const errorBodySchema = z.object({

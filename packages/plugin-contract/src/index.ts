@@ -28,6 +28,33 @@ export type {
   SyncResponse,
   VerifyResponse,
 } from "./calls";
+export {
+  SOURCE_PATHS,
+  editRequestSchema,
+  editResponseSchema,
+  pushRequestSchema,
+  pushResponseSchema,
+  sourceAccountsRequestSchema,
+  sourceAccountsResponseSchema,
+  sourceCategoriesRequestSchema,
+  sourceCategoriesResponseSchema,
+  sourceMovementsRequestSchema,
+  sourceMovementsResponseSchema,
+  sourceRecordRequestSchema,
+  sourceRecordResponseSchema,
+  writeCategoriesRequestSchema,
+  writeCategoriesResponseSchema,
+} from "./calls-source";
+export type {
+  EditResponse,
+  PushResponse,
+  SourceAccountsResponse,
+  SourceCategoriesResponse,
+  SourceMovement,
+  SourceMovementsResponse,
+  SourceRecordResponse,
+  WriteCategoriesResponse,
+} from "./calls-source";
 export { PLUGIN_ERROR_STATUS, errorBodySchema } from "./errors";
 export type { PluginErrorBody, PluginErrorCode } from "./errors";
 export { PLUGIN_ID, acceptsContract, hasCapability, manifestSchema } from "./manifest";

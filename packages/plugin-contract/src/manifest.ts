@@ -8,7 +8,8 @@
 import { z } from "zod";
 
 /** The contract versions this core accepts: the current one and, when there is one, the one before. */
-const CONTRACT_VERSIONS = ["1"] as const;
+// 2 (R5c) adds the calls of a source read with a token (`calls-source.ts`) and keeps every call of 1.
+const CONTRACT_VERSIONS = ["1", "2"] as const;
 
 export const PLUGIN_ID = /^[a-z][a-z0-9-]{1,30}$/;
 
@@ -51,7 +52,9 @@ type Capability =
   | "costMethod"
   | "documents.read"
   // The plugin answers `POST /prices`: the daily closes of the markets it knows (R5d).
-  | "prices.daily";
+  | "prices.daily"
+  // Contract 2: the plugin answers the calls of `calls-source.ts`, with the person's credentials only.
+  | "source.read";
 
 export const manifestSchema = z.object({
   id: z.string().regex(PLUGIN_ID),

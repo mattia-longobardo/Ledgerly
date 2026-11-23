@@ -329,7 +329,9 @@ async function actionFailure(
     return new PluginActionError("auth");
   }
   if (error.code === "institution_unavailable") return new PluginActionError("bank_unavailable");
-  if (error.code === "key_format" || error.code === "invalid_request") return new PluginActionError("failed");
+  // `refused` answers a write of contract 2 (`POST /push`), never an action of this file.
+  if (error.code === "key_format" || error.code === "invalid_request" || error.code === "refused")
+    return new PluginActionError("failed");
   return new PluginActionError(error.code);
 }
 

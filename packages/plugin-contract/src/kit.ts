@@ -8,8 +8,9 @@
  * can run it as it is.
  */
 import { PLUGIN_PATHS, SECRET_HEADER } from "./calls";
+import { SOURCE_PATHS } from "./calls-source";
 import { errorBodySchema, PLUGIN_ERROR_STATUS } from "./errors";
-import { acceptsContract, manifestSchema } from "./manifest";
+import { acceptsContract, manifestSchema, type PluginManifest } from "./manifest";
 
 interface KitTarget {
   /** Where the plugin listens, with no path. */
@@ -101,9 +102,44 @@ export async function checkPlugin(target: KitTarget): Promise<string[]> {
     }
   }
 
+  if (parsed.success) failures.push(...(await checkSource(parsed.data, post)));
+
   const unknown = await post("/not-in-the-contract", "{}");
   if (!isContractError(unknown.status, await json(unknown), "invalid_request")) {
     failures.push("a path that is not in the contract must answer 400 invalid_request");
+  }
+  return failures;
+}
+
+type Post = (path: string, body: string) => Promise<Response>;
+
+/** A push the contract would take, but for its idempotency key: the source must refuse it. */
+const PUSH_WITHOUT_KEY = JSON.stringify({
+  credentials: { token: "kit" },
+  askedOn: null,
+  movement: {
+    accountExternalId: "kit",
+    day: "2026-01-01",
+    amount: "-1.00",
+    payee: null,
+    note: null,
+    categoryExternalId: null,
+  },
+});
+
+/** Contract 2: the calls of a source read with a token, for a plugin that declares them. */
+async function checkSource(manifest: PluginManifest, post: Post): Promise<string[]> {
+  if (!manifest.capabilities.includes("source.read")) return [];
+  const failures: string[] = [];
+  for (const path of Object.values(SOURCE_PATHS)) {
+    const refused = await post(path, "{}");
+    if (!isContractError(refused.status, await json(refused), "invalid_request")) {
+      failures.push(`POST ${path} with an empty object must answer 400 invalid_request`);
+    }
+  }
+  const unkeyed = await post(SOURCE_PATHS.push, PUSH_WITHOUT_KEY);
+  if (!isContractError(unkeyed.status, await json(unkeyed), "invalid_request")) {
+    failures.push(`POST ${SOURCE_PATHS.push} without an idempotency key must answer 400 invalid_request`);
   }
   return failures;
 }
