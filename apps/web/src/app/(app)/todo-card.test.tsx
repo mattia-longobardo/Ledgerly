@@ -86,9 +86,12 @@ describe("«To do» of Overview", () => {
     expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
       [
         "A plan instalment of 5 Dec 2026 has no cash. Record a deposit, then confirm it.Open",
-        "/investments/0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74",
+        "/investments/0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74/plans",
       ],
-      ["A plan instalment of 5 Dec 2026 to confirmOpen", "/investments/0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74"],
+      [
+        "A plan instalment of 5 Dec 2026 to confirmOpen",
+        "/investments/0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74/plans",
+      ],
     ]);
   });
 

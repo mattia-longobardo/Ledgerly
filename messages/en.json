@@ -4634,7 +4634,8 @@
       "sync_failed": "The sync failed: see the connection's last error.",
       "sync_refused": "The sync was refused: see the connection's state.",
       "not_a_transfer": "Those two operations cannot be linked as a transfer.",
-      "quantity_exceeded": "You cannot sell more than you hold of that asset: check the quantity."
+      "quantity_exceeded": "You cannot sell more than you hold of that asset: check the quantity.",
+      "before_positions": "Before that date the portfolio had its value only, with no positions: choose a later day."
     },
     "connect": {
       "open": "Connect",
@@ -4875,6 +4876,7 @@
       "label": "Sections of the service",
       "overview": "Overview",
       "positions": "Positions",
+      "plans": "Plans",
       "activity": "Activity",
       "connection": "Connection",
       "settings": "Settings",
@@ -5230,6 +5232,182 @@
       "remove": "Remove position {number}",
       "add": "Add position",
       "submit": "Switch"
+    },
+    "plans": {
+      "new": "New plan",
+      "title": "Purchase plans",
+      "emptyTitle": "No purchase plan yet",
+      "emptyDescription": "A plan buys one instrument at each due date: proposed for you to confirm, or recorded by itself.",
+      "toConfirm": "{count, plural, one {# to confirm} other {# to confirm}}",
+      "waitingPrice": "{count, plural, one {# with no price} other {# with no price}}",
+      "columns": {
+        "plan": "Plan",
+        "instalment": "Instalment",
+        "mode": "Mode",
+        "next": "Next instalment",
+        "state": "State",
+        "actions": "Commands",
+        "due": "Due date",
+        "purchase": "Purchase",
+        "debit": "Bank transaction"
+      },
+      "modes": {
+        "propose": "To confirm",
+        "auto": "Automatic"
+      },
+      "states": {
+        "active": "Active",
+        "paused": "Paused",
+        "ended": "Ended"
+      },
+      "sizeAmount": "{amount} each time",
+      "sizeQuantity": "{quantity} units each time",
+      "every": {
+        "week": "{interval, plural, one {every week on {day}} other {every # weeks on {day}}}",
+        "month": "{interval, plural, one {every month on day {day}} other {every # months on day {day}}}",
+        "quarter": "{interval, plural, one {every quarter on day {day}} other {every # quarters on day {day}}}"
+      },
+      "weekdays": {
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday",
+        "7": "Sunday"
+      },
+      "frequencies": {
+        "week": "Weekly",
+        "month": "Monthly",
+        "quarter": "Quarterly"
+      },
+      "actions": "Commands of {name}",
+      "edit": "Edit",
+      "pause": "Pause",
+      "resume": "Start again",
+      "end": "End plan",
+      "endTitle": "End {name}?",
+      "endDescription": "No new instalment is made. The purchases already recorded stay as they are.",
+      "paused": "Plan paused",
+      "resumed": "Plan started again",
+      "ended": "Plan ended",
+      "created": "Plan created",
+      "saved": "Plan saved",
+      "confirmed": "Purchase recorded",
+      "skipped": "Instalment skipped",
+      "linked": "Transaction linked",
+      "runsTitle": "Instalments · {name}",
+      "noRuns": "No instalment yet: the first comes on its due date.",
+      "automatic": "Automatic",
+      "waitingSince": "No price since {date}",
+      "reasons": {
+        "negative_cash": "Not enough cash. Record a deposit, then confirm it.",
+        "quantity_exceeded": "The quantity is more than you can buy: check it, then confirm.",
+        "wrong_mode": "The position is kept by value: confirm it by hand.",
+        "before_period": "The day is before the period you can change: correct the day, then confirm."
+      },
+      "runStates": {
+        "pending": "Due",
+        "waiting_price": "No price yet",
+        "proposed": "To confirm",
+        "recorded": "Recorded",
+        "skipped": "Skipped"
+      },
+      "proposal": "{quantity} × {price} = {amount} · fee {fee}",
+      "priceOnly": "Price {price}",
+      "debitFound": "Found: {date} · {amount} · {payee}",
+      "debitLinked": "Linked: {date} · {amount} · {payee}",
+      "confirm": {
+        "title": "Confirm the instalment of {date} · {name}",
+        "description": "The purchase as proposed at the close found. Correct what your broker executed, then confirm.",
+        "descriptionNoPrice": "No price was found for this instalment. Type the price of the purchase, then confirm.",
+        "submit": "Confirm",
+        "on": "Day of the purchase",
+        "quantity": "Quantity",
+        "unitPrice": "Unit price",
+        "fee": "Fee"
+      },
+      "noCash": "The portfolio has not enough cash for this purchase. Record a deposit, then confirm it.",
+      "recordDeposit": "Record a deposit",
+      "skip": {
+        "title": "Skip the instalment of {date}?",
+        "description": "It stays in the list as skipped. Nothing brings it back by itself.",
+        "submit": "Skip"
+      },
+      "link": {
+        "title": "Link the bank transaction?",
+        "description": "The transaction of {date} of {amount} documents this purchase. Subscriptions no longer shows it.",
+        "submit": "Link"
+      },
+      "confirmRun": "Confirm",
+      "skipRun": "Skip",
+      "linkRun": "Link the transaction",
+      "confirmOf": "Confirm the instalment of {date}",
+      "skipOf": "Skip the instalment of {date}",
+      "linkOf": "Link the transaction of the instalment of {date}",
+      "backfill": {
+        "open": "Record the past instalments",
+        "title": "Record the past instalments · {name}",
+        "description": "The past due dates with nothing recorded, oldest first, at most {max}, each with the purchase at its close when known. Correct them, then record them all together.",
+        "submit": "{count, plural, one {Record # instalment} other {Record # instalments}}",
+        "row": "Due date {date}",
+        "remove": "Remove the due date {date}",
+        "on": "Day of the purchase",
+        "quantity": "Quantity",
+        "unitPrice": "Unit price",
+        "fee": "Fee",
+        "done": "{count, plural, one {# instalment recorded} other {# instalments recorded}}",
+        "noPrice": "No close found for this date: type the price.",
+        "none": "No past due date to record.",
+        "more": "More past due dates follow: they come once these {max} are recorded."
+      },
+      "form": {
+        "newTitle": "New purchase plan · {name}",
+        "editTitle": "Edit {name}",
+        "newDescription": "Each instalment buys the instrument at the first close on or after its due date. A plan never records a deposit.",
+        "editDescription": "The instalments already recorded stay as they are.",
+        "create": "Create",
+        "save": "Save",
+        "cancel": "Cancel",
+        "name": "Name",
+        "size": "Each instalment buys",
+        "byAmount": "An amount",
+        "byQuantity": "A quantity",
+        "amount": "Amount",
+        "fractions": "Buy fractions of a unit",
+        "quantity": "Quantity",
+        "weekday": "Day of the week",
+        "monthDay": "Day of the month",
+        "monthDayHint": "1-31: a shorter month uses its last day.",
+        "frequency": "Frequency",
+        "interval": "Every how many",
+        "startOn": "Start",
+        "startOnHint": "A start in the past: record its instalments from the plan's commands.",
+        "end": "End",
+        "ends": {
+          "never": "Never",
+          "date": "On a day",
+          "count": "After a number of instalments"
+        },
+        "endOn": "Last day",
+        "runsLimit": "Number of instalments",
+        "fee": "Fee",
+        "fees": {
+          "none": "None",
+          "amount": "An amount",
+          "rate": "A percentage"
+        },
+        "feeAmount": "Fee per instalment",
+        "feeRate": "Fee, as a percentage",
+        "debit": "Debit account",
+        "debitHint": "Only to find the bank transaction of each instalment: the plan records no deposit.",
+        "noDebit": "No debit account",
+        "mode": "Mode",
+        "modeHints": {
+          "propose": "Each instalment waits for you in «To do», filled in.",
+          "auto": "Each instalment is recorded at the close, marked as automatic."
+        }
+      }
     }
   },
   "payroll": {

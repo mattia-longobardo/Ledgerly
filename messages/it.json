@@ -4634,7 +4634,8 @@
       "sync_failed": "La sincronizzazione non è riuscita: guarda l'ultimo errore del collegamento.",
       "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato del collegamento.",
       "not_a_transfer": "Queste due operazioni non si possono collegare come giroconto.",
-      "quantity_exceeded": "Non puoi vendere più di quanto possiedi di quell'asset: controlla la quantità."
+      "quantity_exceeded": "Non puoi vendere più di quanto possiedi di quell'asset: controlla la quantità.",
+      "before_positions": "Prima di quella data il portafoglio aveva solo il valore, senza posizioni: scegli un giorno successivo."
     },
     "connect": {
       "open": "Collega",
@@ -4875,6 +4876,7 @@
       "label": "Sezioni del servizio",
       "overview": "Panoramica",
       "positions": "Posizioni",
+      "plans": "Piani",
       "activity": "Movimenti",
       "connection": "Collegamento",
       "settings": "Impostazioni",
@@ -5230,6 +5232,182 @@
       "remove": "Rimuovi la posizione {number}",
       "add": "Aggiungi posizione",
       "submit": "Passa"
+    },
+    "plans": {
+      "new": "Nuovo piano",
+      "title": "Piani di acquisto",
+      "emptyTitle": "Nessun piano di acquisto",
+      "emptyDescription": "Un piano compra uno strumento a ogni scadenza: lo propone da confermare, oppure lo registra da solo.",
+      "toConfirm": "{count, plural, one {# da confermare} other {# da confermare}}",
+      "waitingPrice": "{count, plural, one {# senza prezzo} other {# senza prezzo}}",
+      "columns": {
+        "plan": "Piano",
+        "instalment": "Rata",
+        "mode": "Modo",
+        "next": "Prossima rata",
+        "state": "Stato",
+        "actions": "Comandi",
+        "due": "Scadenza",
+        "purchase": "Acquisto",
+        "debit": "Movimento bancario"
+      },
+      "modes": {
+        "propose": "Da confermare",
+        "auto": "Automatico"
+      },
+      "states": {
+        "active": "Attivo",
+        "paused": "In pausa",
+        "ended": "Concluso"
+      },
+      "sizeAmount": "{amount} ogni volta",
+      "sizeQuantity": "{quantity} quote ogni volta",
+      "every": {
+        "week": "{interval, plural, one {ogni settimana di {day}} other {ogni # settimane di {day}}}",
+        "month": "{interval, plural, one {ogni mese il giorno {day}} other {ogni # mesi il giorno {day}}}",
+        "quarter": "{interval, plural, one {ogni trimestre il giorno {day}} other {ogni # trimestri il giorno {day}}}"
+      },
+      "weekdays": {
+        "1": "lunedì",
+        "2": "martedì",
+        "3": "mercoledì",
+        "4": "giovedì",
+        "5": "venerdì",
+        "6": "sabato",
+        "7": "domenica"
+      },
+      "frequencies": {
+        "week": "Settimanale",
+        "month": "Mensile",
+        "quarter": "Trimestrale"
+      },
+      "actions": "Comandi di {name}",
+      "edit": "Modifica",
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
+      "end": "Concludi il piano",
+      "endTitle": "Concludere {name}?",
+      "endDescription": "Non si crea più nessuna rata. Gli acquisti già registrati restano come sono.",
+      "paused": "Piano in pausa",
+      "resumed": "Piano ripreso",
+      "ended": "Piano concluso",
+      "created": "Piano creato",
+      "saved": "Piano salvato",
+      "confirmed": "Acquisto registrato",
+      "skipped": "Rata saltata",
+      "linked": "Movimento collegato",
+      "runsTitle": "Rate · {name}",
+      "noRuns": "Nessuna rata per ora: la prima arriva alla sua scadenza.",
+      "automatic": "Automatica",
+      "waitingSince": "Senza prezzo dal {date}",
+      "reasons": {
+        "negative_cash": "Liquidità insufficiente. Registra un versamento, poi confermala.",
+        "quantity_exceeded": "La quantità supera quella che puoi comprare: controllala, poi conferma.",
+        "wrong_mode": "La posizione è tenuta per valore: confermala a mano.",
+        "before_period": "Il giorno è prima del periodo che puoi modificare: correggi il giorno, poi conferma."
+      },
+      "runStates": {
+        "pending": "In scadenza",
+        "waiting_price": "Senza prezzo",
+        "proposed": "Da confermare",
+        "recorded": "Registrata",
+        "skipped": "Saltata"
+      },
+      "proposal": "{quantity} × {price} = {amount} · commissione {fee}",
+      "priceOnly": "Prezzo {price}",
+      "debitFound": "Trovato: {date} · {amount} · {payee}",
+      "debitLinked": "Collegato: {date} · {amount} · {payee}",
+      "confirm": {
+        "title": "Conferma la rata del {date} · {name}",
+        "description": "L'acquisto proposto alla chiusura trovata. Correggi quello che il broker ha eseguito, poi conferma.",
+        "descriptionNoPrice": "Per questa rata non c'è un prezzo. Scrivi il prezzo dell'acquisto, poi conferma.",
+        "submit": "Conferma",
+        "on": "Giorno dell'acquisto",
+        "quantity": "Quantità",
+        "unitPrice": "Prezzo unitario",
+        "fee": "Commissione"
+      },
+      "noCash": "Il portafoglio non ha liquidità sufficiente per questo acquisto. Registra un versamento, poi confermala.",
+      "recordDeposit": "Registra un versamento",
+      "skip": {
+        "title": "Saltare la rata del {date}?",
+        "description": "Resta nella lista come saltata. Niente la recupera da solo.",
+        "submit": "Salta"
+      },
+      "link": {
+        "title": "Collegare il movimento bancario?",
+        "description": "Il movimento del {date} di {amount} documenta questo acquisto. Abbonamenti non lo mostra più.",
+        "submit": "Collega"
+      },
+      "confirmRun": "Conferma",
+      "skipRun": "Salta",
+      "linkRun": "Collega il movimento",
+      "confirmOf": "Conferma la rata del {date}",
+      "skipOf": "Salta la rata del {date}",
+      "linkOf": "Collega il movimento della rata del {date}",
+      "backfill": {
+        "open": "Registra le rate passate",
+        "title": "Registra le rate passate · {name}",
+        "description": "Le scadenze passate senza nulla di registrato, dalla più vecchia, al massimo {max}, ognuna con l'acquisto alla chiusura quando c'è. Correggile, poi registrale tutte insieme.",
+        "submit": "{count, plural, one {Registra # rata} other {Registra # rate}}",
+        "row": "Scadenza del {date}",
+        "remove": "Togli la scadenza del {date}",
+        "on": "Giorno dell'acquisto",
+        "quantity": "Quantità",
+        "unitPrice": "Prezzo unitario",
+        "fee": "Commissione",
+        "done": "{count, plural, one {# rata registrata} other {# rate registrate}}",
+        "noPrice": "Per questa data non c'è una chiusura: scrivi il prezzo.",
+        "none": "Nessuna scadenza passata da registrare.",
+        "more": "Seguono altre scadenze passate: compaiono dopo che avrai registrato queste {max}."
+      },
+      "form": {
+        "newTitle": "Nuovo piano di acquisto · {name}",
+        "editTitle": "Modifica {name}",
+        "newDescription": "Ogni rata compra lo strumento alla prima chiusura alla scadenza o dopo. Un piano non registra mai un versamento.",
+        "editDescription": "Le rate già registrate restano come sono.",
+        "create": "Crea",
+        "save": "Salva",
+        "cancel": "Annulla",
+        "name": "Nome",
+        "size": "Ogni rata compra",
+        "byAmount": "Un importo",
+        "byQuantity": "Una quantità",
+        "amount": "Importo",
+        "fractions": "Compra frazioni di quota",
+        "quantity": "Quantità",
+        "weekday": "Giorno della settimana",
+        "monthDay": "Giorno del mese",
+        "monthDayHint": "1-31: un mese più corto usa il suo ultimo giorno.",
+        "frequency": "Frequenza",
+        "interval": "Ogni quanti",
+        "startOn": "Inizio",
+        "startOnHint": "Un inizio nel passato: registra le sue rate dai comandi del piano.",
+        "end": "Fine",
+        "ends": {
+          "never": "Mai",
+          "date": "In un giorno",
+          "count": "Dopo un numero di rate"
+        },
+        "endOn": "Ultimo giorno",
+        "runsLimit": "Numero di rate",
+        "fee": "Commissione",
+        "fees": {
+          "none": "Nessuna",
+          "amount": "Un importo",
+          "rate": "Una percentuale"
+        },
+        "feeAmount": "Commissione per rata",
+        "feeRate": "Commissione in percentuale",
+        "debit": "Conto di addebito",
+        "debitHint": "Serve solo a trovare il movimento bancario di ogni rata: il piano non registra versamenti.",
+        "noDebit": "Nessun conto di addebito",
+        "mode": "Modo",
+        "modeHints": {
+          "propose": "Ogni rata ti aspetta in «Da fare», già compilata.",
+          "auto": "Ogni rata si registra alla chiusura, con il segno «automatica»."
+        }
+      }
     }
   },
   "payroll": {

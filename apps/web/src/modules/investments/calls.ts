@@ -12,7 +12,7 @@ import { invalidate, read } from "@ledgerly/ui/data";
 import { refusal, type WriteResult } from "@/platform/writes";
 
 export type ActionResult = WriteResult;
-type Failure = Extract<ActionResult, { ok: false }>;
+export type Failure = Extract<ActionResult, { ok: false }>;
 
 function failed(error: unknown): Failure {
   // A field the client cannot read: `invalid`, as the Server Action answered.
@@ -26,7 +26,9 @@ function changed(): void {
 }
 
 /** Runs a write: its answer (`{ accountId }`…) beside `ok`, or the refusal; a success drops what is stale. */
-async function attempt<T extends object>(work: () => Promise<T>): Promise<({ ok: true } & T) | Failure> {
+export async function attempt<T extends object>(
+  work: () => Promise<T>,
+): Promise<({ ok: true } & T) | Failure> {
   try {
     const answer = await work();
     changed();
@@ -37,24 +39,24 @@ async function attempt<T extends object>(work: () => Promise<T>): Promise<({ ok:
 }
 
 /** A write whose route answers nothing (`204`, `202`). */
-async function done(pending: Promise<unknown>): Promise<object> {
+export async function done(pending: Promise<unknown>): Promise<object> {
   await pending;
   return {};
 }
 
 /** The person's number format, as the forms are typed in. */
-async function formatOf(): Promise<NumberFormat> {
+export async function formatOf(): Promise<NumberFormat> {
   return numberStyle(await read(profile.getPreferences, {}));
 }
 
 /** An amount as typed, or null when the field is empty. */
-function amountOf(typed: string | null | undefined, format: NumberFormat): string | null {
+export function amountOf(typed: string | null | undefined, format: NumberFormat): string | null {
   const field = typed ?? "";
   return field.trim() === "" ? null : centsToDecimal(parseAmount(field, format));
 }
 
 /** A quantity or a price as typed, or null when the field is empty. */
-function decimalOf(typed: string | null | undefined, format: NumberFormat): string | null {
+export function decimalOf(typed: string | null | undefined, format: NumberFormat): string | null {
   const field = typed ?? "";
   return field.trim() === "" ? null : plainDecimalOf(field, format);
 }

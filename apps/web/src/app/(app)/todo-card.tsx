@@ -24,8 +24,8 @@ const PAGES: Record<(typeof NOTIFICATION_PAGES)[number], (id: string | null) => 
   payroll_review: () => "/payroll",
   investments_transfers: () => "/investments",
   fund: (id) => (id ? `/investments/${id}` : "/investments"),
-  // A plan's instalment: its portfolio (R5d).
-  investment_plan: (id) => (id ? `/investments/${id}` : "/investments"),
+  // A plan's instalment: the plans of its portfolio (R5d).
+  investment_plan: (id) => (id ? `/investments/${id}/plans` : "/investments"),
   overview: () => "/",
 };
 

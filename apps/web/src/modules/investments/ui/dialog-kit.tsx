@@ -44,6 +44,7 @@ const KNOWN_ERRORS = [
   "already_linked",
   "not_editable",
   "before_period",
+  "before_positions",
   "managed_locked",
   "unknown_provider",
   "invalid_credentials",

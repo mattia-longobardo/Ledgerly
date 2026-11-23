@@ -5,15 +5,15 @@
 // all of them closing on the Overview's P&L to the cent (PERS-113). A past period shows its positions
 // on its last day; today's are a link. Read from `GET /investments/{accountId}/positions`.
 import { useTranslations } from "next-intl";
-import { useEffect } from "react";
 import { investments } from "@ledgerly/api-contract/investments";
 import { formatDate } from "@ledgerly/format/format";
 import { useApi, useLatest } from "@ledgerly/ui/data";
 import { LinkTabs } from "@ledgerly/ui/link-controls";
 import { Loaded } from "@ledgerly/ui/loaded";
-import { Link, useRouter } from "@ledgerly/ui/router";
+import { Link } from "@ledgerly/ui/router";
 import { withParams } from "@ledgerly/ui/url";
 import type { ServicePage } from "../service/service-view";
+import { ToOverview } from "../service/to-overview";
 import { ClosedPositions } from "./closed-positions";
 import { ContributionsCard } from "./contributions-card";
 import { OpenPositions } from "./open-positions";
@@ -84,13 +84,6 @@ function PositionsRead({ page }: { page: ServicePage }) {
 }
 
 /** A service kept by value has no positions (PERS-335): its value and P&L are on the Overview. */
-function ToOverview({ page }: { page: ServicePage }) {
-  const router = useRouter();
-  const overview = page.href("overview");
-  useEffect(() => router.replace(overview), [router, overview]);
-  return null;
-}
-
 export function PositionsTab({ page }: { page: ServicePage }) {
   if (page.overview.service.origin === "manual" && !page.context.portfolio) return <ToOverview page={page} />;
   return <PositionsRead page={page} />;

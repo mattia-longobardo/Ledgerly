@@ -33,6 +33,7 @@ const OverviewTab = lazy(() =>
 const PositionsTab = lazy(() =>
   import("../positions/positions-tab").then((tab) => ({ default: tab.PositionsTab })),
 );
+const PlansTab = lazy(() => import("../plans/plans-tab").then((tab) => ({ default: tab.PlansTab })));
 const ActivityTab = lazy(() =>
   import("../activity/activity-tab").then((tab) => ({ default: tab.ActivityTab })),
 );
@@ -59,6 +60,8 @@ function useTabs(page: ServicePage): Tab[] {
     ...(service.origin === "synced" || page.context.portfolio
       ? [{ key: "positions" as const, label: text("tabs.positions") }]
       : []),
+    // The purchase plans live in a manual portfolio only (§11.3.3).
+    ...(page.context.portfolio ? [{ key: "plans" as const, label: text("tabs.plans") }] : []),
     { key: "activity", label: text("tabs.activity") },
     {
       key: "connection",
@@ -118,6 +121,7 @@ function ServicePeriod({ page }: { page: ServicePage }) {
 
 function Tab({ page }: { page: ServicePage }) {
   if (page.tab === "positions") return <PositionsTab page={page} />;
+  if (page.tab === "plans") return <PlansTab page={page} />;
   if (page.tab === "activity") return <ActivityTab page={page} />;
   if (page.tab === "connection") return <ConnectionTab page={page} />;
   return <OverviewTab page={page} />;

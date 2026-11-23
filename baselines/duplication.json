@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 111330,
-    "duplicatedLines": 16000,
-    "percent": 14.37,
-    "blocks": 1254
+    "lines": 112715,
+    "duplicatedLines": 16172,
+    "percent": 14.35,
+    "blocks": 1270
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 116
     },
     "app": {
-      "lines": 20886,
-      "duplicatedLines": 2483,
-      "percent": 11.89,
-      "blocks": 206
+      "lines": 20899,
+      "duplicatedLines": 2489,
+      "percent": 11.91,
+      "blocks": 207
     },
     "global.d": {
       "lines": 12,
@@ -48,9 +48,9 @@
     },
     "modules/funds": {
       "lines": 12767,
-      "duplicatedLines": 1833,
-      "percent": 14.36,
-      "blocks": 145
+      "duplicatedLines": 1843,
+      "percent": 14.44,
+      "blocks": 146
     },
     "modules/imports": {
       "lines": 951,
@@ -71,10 +71,10 @@
       "blocks": 29
     },
     "modules/investments": {
-      "lines": 16870,
-      "duplicatedLines": 2636,
-      "percent": 15.63,
-      "blocks": 209
+      "lines": 18241,
+      "duplicatedLines": 2792,
+      "percent": 15.31,
+      "blocks": 223
     },
     "modules/payroll": {
       "lines": 3799,
@@ -107,7 +107,7 @@
       "blocks": 29
     },
     "modules/transactions": {
-      "lines": 13674,
+      "lines": 13675,
       "duplicatedLines": 1686,
       "percent": 12.33,
       "blocks": 135
@@ -565,7 +565,7 @@
     "app/(auth)/reset-password/reset-form.tsx": 18,
     "app/(auth)/sign-in/sign-in-form.tsx": 8,
     "app/(auth)/sign-in/two-factor/challenge-form.tsx": 6,
-    "app/(start)/welcome/region-fields.tsx": 55,
+    "app/(start)/welcome/region-fields.tsx": 61,
     "app/not-found.tsx": 12,
     "modules/accounts/calls.ts": 42,
     "modules/accounts/csv-calls.ts": 13,
@@ -621,7 +621,7 @@
     "modules/funds/service/valuations.ts": 15,
     "modules/funds/sources.ts": 13,
     "modules/funds/ui/contribution-dialog.tsx": 14,
-    "modules/funds/ui/contribution-fields.tsx": 60,
+    "modules/funds/ui/contribution-fields.tsx": 70,
     "modules/funds/ui/contribution-sections.tsx": 9,
     "modules/funds/ui/fee-dialog.tsx": 104,
     "modules/funds/ui/fee-list.tsx": 35,
@@ -711,7 +711,7 @@
     "modules/investments/ui/connection/corrections-card.tsx": 12,
     "modules/investments/ui/connection/key-card.tsx": 23,
     "modules/investments/ui/connection/received-card.tsx": 24,
-    "modules/investments/ui/dialog-kit.tsx": 45,
+    "modules/investments/ui/dialog-kit.tsx": 46,
     "modules/investments/ui/holding-dialogs.tsx": 82,
     "modules/investments/ui/home/home-chart.tsx": 68,
     "modules/investments/ui/home/home-composition.tsx": 9,
@@ -724,14 +724,18 @@
     "modules/investments/ui/overview/overview-kpis.tsx": 19,
     "modules/investments/ui/overview/overview-lists.tsx": 35,
     "modules/investments/ui/parts-kpis.tsx": 19,
-    "modules/investments/ui/portfolio/convert.tsx": 21,
+    "modules/investments/ui/plans/confirm-run.tsx": 8,
+    "modules/investments/ui/plans/plan-fields.tsx": 140,
+    "modules/investments/ui/plans/plan-runs.tsx": 7,
+    "modules/investments/ui/plans/run-actions.tsx": 7,
+    "modules/investments/ui/portfolio/convert.tsx": 19,
     "modules/investments/ui/portfolio/instrument-field.tsx": 7,
-    "modules/investments/ui/portfolio/record-operation.tsx": 84,
+    "modules/investments/ui/portfolio/record-operation.tsx": 78,
     "modules/investments/ui/positions/closed-positions.tsx": 7,
     "modules/investments/ui/positions/contributions-card.tsx": 23,
     "modules/investments/ui/positions/open-positions.tsx": 12,
     "modules/investments/ui/service-actions.tsx": 37,
-    "modules/investments/ui/service/service-screen.tsx": 23,
+    "modules/investments/ui/service/service-screen.tsx": 24,
     "modules/investments/ui/settings-forms.tsx": 17,
     "modules/investments/ui/skeletons.tsx": 14,
     "modules/investments/ui/sync.tsx": 61,

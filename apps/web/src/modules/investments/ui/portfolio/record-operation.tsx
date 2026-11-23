@@ -24,10 +24,16 @@ import { FxRateField, InstrumentField, type PickedInstrument } from "./instrumen
 const KINDS = ["buy", "sell", "deposit", "withdrawal", "income"] as const;
 type Kind = (typeof KINDS)[number];
 
+/** The kind and the day the form opens on: a purchase today, or the deposit an instalment asks for (P2). */
+export interface OperationStart {
+  kind: Kind;
+  day?: string;
+}
+
 /** What the dialog holds while it is typed: one field each, read by the kind chosen. */
-function useOperationForm(context: ServiceContext) {
-  const [kind, setKind] = useState<Kind>("buy");
-  const [day, setDay] = useState(context.today);
+function useOperationForm(context: ServiceContext, start: OperationStart) {
+  const [kind, setKind] = useState<Kind>(start.kind);
+  const [day, setDay] = useState(start.day ?? context.today);
   const [instrument, setInstrument] = useState<PickedInstrument | null>(null);
   const [holdingId, setHoldingId] = useState("");
   const [how, setHow] = useState<"price" | "amount">("price");
@@ -312,15 +318,17 @@ export function RecordOperationDialog({
   onClose,
   context,
   opener,
+  start = { kind: "buy" },
 }: {
   onClose: () => void;
   context: ServiceContext;
-  opener: RefObject<HTMLButtonElement | null>;
+  opener?: RefObject<HTMLButtonElement | null>;
+  start?: OperationStart;
 }) {
   const text = useTranslations("investments");
   const errorText = useErrorText();
   const id = useId();
-  const form = useOperationForm(context);
+  const form = useOperationForm(context, start);
   const record = useRecord(context, form, onClose);
   const { kind, typed, set } = form;
   return (
