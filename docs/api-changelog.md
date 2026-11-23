@@ -15,6 +15,13 @@ written before it keeps working.
   `instrumentId`, `mic`, `on`, `quantity`, `unitPrice` or `amount`, `fee`, `fxRate`, `note`. A sale
   of more than the quantity held: `409` with the reason `quantity_exceeded`.
 - `PUT /investments/{accountId}/holdings/{holdingId}/price-mode` `{ mode: "auto" | "manual" }`.
+- A manual portfolio keeps cash (D2): `deposit` and `withdrawal` on `POST /investments/{accountId}/operations`
+  take `on`, `amount`, `transactionId` and `note`; on another service they stay `not_editable`.
+  `GET /investments/{accountId}/holdings` (and `get_investment_holdings`) answer `cash`, null for
+  another service.
+- `POST /investments/{accountId}/conversion` («Switch to positions», D4): `on`, `positions`
+  (`instrumentId`, `mic`, `quantity`, `unitPrice`, `fxRate`) and `note`. The value of that day stays:
+  the cash is the value less the positions; positions worth more answer `409` `negative_cash`.
 - Every asset (`GET /investments/{accountId}/holdings`, MCP `get_investment_holdings`, the assets of
   the pages) has `instrumentId`, `mic` and `price` (`mode`, `on`, `source`, `stale`).
 ## Unreleased · Funds: one read for a fund's page, the gain of an archived fund (R5b)

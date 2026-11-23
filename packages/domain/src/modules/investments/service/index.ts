@@ -33,6 +33,8 @@ export {
   updateServiceValue,
 } from "./services";
 export type { ManualServiceInput, ServiceValueInput } from "./services";
+export { createPortfolio, createPortfolioWithAccount, isPortfolio } from "./portfolio";
+export type { PortfolioInput } from "./portfolio";
 export { assetInputSchema, createAsset, ensureAssetSeed } from "./assets";
 export type { AssetInput } from "./assets";
 export { addAsset, buyInputSchema, insertEvent, periodOn } from "./events";

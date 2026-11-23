@@ -31198,6 +31198,183 @@
         "x-addon": "investments"
       }
     },
+    "/investments/{accountId}/conversion": {
+      "post": {
+        "operationId": "convert_investment_to_portfolio",
+        "summary": "«Switch to positions» (R5d): a manual service kept by value becomes a manual portfolio from `on`. The value before stays in its history; the positions open at their price and the cash is the value of that day less the positions. `409` `negative_cash` when the positions are worth more, `not_eligible` on a service that is not a manual one kept by value.",
+        "tags": [
+          "investments"
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "on": {
+                    "type": "string"
+                  },
+                  "positions": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "instrumentId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "mic": {
+                          "default": null,
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^[A-Z0-9]{4}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "quantity": {
+                          "type": "string",
+                          "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                        },
+                        "unitPrice": {
+                          "type": "string",
+                          "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                        },
+                        "fxRate": {
+                          "default": null,
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "instrumentId",
+                        "quantity",
+                        "unitPrice"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "note": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "on",
+                  "positions"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
+        "x-addon": "investments"
+      }
+    },
     "/investments/{accountId}/holdings": {
       "get": {
         "operationId": "get_investment_holdings",
@@ -31238,6 +31415,17 @@
                     },
                     "on": {
                       "type": "string"
+                    },
+                    "cash": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "holdings": {
                       "type": "array",
@@ -31429,6 +31617,7 @@
                     "name",
                     "currency",
                     "on",
+                    "cash",
                     "holdings"
                   ]
                 }
@@ -32108,7 +32297,7 @@
     "/investments/{accountId}/operations": {
       "post": {
         "operationId": "record_investment_operation",
-        "summary": "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual portfolio also a purchase of an instrument (R5d). A sale of more than the quantity held that day, or a change that leaves a later sale short: `409` `quantity_exceeded`. A deposit, a withdrawal, an account valuation or a correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
+        "summary": "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual portfolio also a purchase of an instrument, a deposit and a withdrawal (R5d). A sale of more than the quantity held that day, or a change that leaves a later sale short: `409` `quantity_exceeded`. A deposit or a withdrawal of another service, an account valuation or a correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
         "tags": [
           "investments"
         ],
@@ -32436,7 +32625,51 @@
                         "type": "string",
                         "enum": [
                           "deposit",
-                          "withdrawal",
+                          "withdrawal"
+                        ]
+                      },
+                      "on": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                      },
+                      "transactionId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "note": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": {}
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
                           "account_valuation",
                           "adjustment"
                         ]

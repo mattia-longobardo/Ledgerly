@@ -47,11 +47,13 @@ export interface Holders {
 }
 
 /**
- * A service a provider or a bank reads is a `service`; one whose value is typed by hand is a
- * `manual_portfolio`, the row R5d turns into the manual portfolio (decision Q1 of R5b).
+ * A service a provider or a bank reads is a `service`; one whose value is typed by hand — kept by
+ * value (decision Q1 of R5b) or as positions and cash (R5d) — is a `manual_portfolio`.
  */
 export const serviceKind = (service: ServiceOrigin): "service" | "manual_portfolio" =>
-  service.provider !== "manual" || service.accountOrigin === "synced" ? "service" : "manual_portfolio";
+  (service.provider === "manual" || service.provider === "portfolio") && service.accountOrigin !== "synced"
+    ? "manual_portfolio"
+    : "service";
 
 export interface PortfolioRow extends HeldAccount {
   kind: PortfolioKind;

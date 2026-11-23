@@ -98,6 +98,7 @@ describe("the kind of a service", () => {
   it("is `service` for a provider or an account a bank reads, `manual_portfolio` for a value by hand", () => {
     expect(serviceKind({ provider: "ccxt:binance", accountOrigin: "manual" })).toBe("service");
     expect(serviceKind({ provider: "manual", accountOrigin: "synced" })).toBe("service");
+    expect(serviceKind({ provider: "portfolio", accountOrigin: "manual" })).toBe("manual_portfolio");
     expect(serviceKind({ provider: "manual", accountOrigin: "manual" })).toBe("manual_portfolio");
   });
 });

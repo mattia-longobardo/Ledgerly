@@ -55,6 +55,8 @@ export {
   confirmZeroReading,
   createManualService,
   createManualServiceWithAccount,
+  createPortfolio,
+  createPortfolioWithAccount,
   deleteOperation,
   ensureAssetSeed,
   linkTransfer,

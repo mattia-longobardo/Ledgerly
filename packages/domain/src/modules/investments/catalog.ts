@@ -61,6 +61,11 @@ const exchange = (id: string, name: string, url: string, revokeUrl: string) =>
   }) as const satisfies InvestmentProvider;
 
 export const MANUAL_PROVIDER = "manual";
+/**
+ * A manual portfolio (R5d): positions and cash typed by hand, the account's only writer as a synced
+ * service is. Not in the catalog: «Add» makes one, a provider never does.
+ */
+export const PORTFOLIO_PROVIDER = "portfolio";
 
 export const INVESTMENT_PROVIDERS: readonly InvestmentProvider[] = [
   {

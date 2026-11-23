@@ -241,6 +241,8 @@ export const holdingsList = z.object({
   name: z.string(),
   currency: z.string(),
   on: civilDate(),
+  /** The cash of a manual portfolio today (R5d): its value is the cash plus the holdings. Null for another service. */
+  cash: money().nullable(),
   holdings: z.array(
     z.object({
       asset: assetRef,

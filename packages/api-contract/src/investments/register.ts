@@ -5,6 +5,7 @@ import { z } from "zod";
 import { id } from "../primitives";
 import { defineRoute } from "../route";
 import {
+  conversionBody,
   manualServiceBody,
   newManualServiceBody,
   newPortfolioBody,
@@ -22,6 +23,7 @@ import {
   DEPOSIT_ID,
   EVENT_ID,
   HOLDING_ID,
+  INSTRUMENT_ID,
   INVESTMENT_ERRORS,
   READING_ID,
 } from "./shared";
@@ -97,10 +99,10 @@ export const recordOperation = defineRoute({
   capability: "investments",
   summary:
     "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual " +
-    "portfolio also a purchase of an instrument (R5d). A sale of more than the quantity held that " +
-    "day, or a change that leaves a later sale short: `409` `quantity_exceeded`. A deposit, a " +
-    "withdrawal, an account valuation or a correction comes from Accounts or the provider: `409` " +
-    "`not_editable`. Answers the event's id.",
+    "portfolio also a purchase of an instrument, a deposit and a withdrawal (R5d). A sale of more " +
+    "than the quantity held that day, or a change that leaves a later sale short: `409` " +
+    "`quantity_exceeded`. A deposit or a withdrawal of another service, an account valuation or a " +
+    "correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
   actions: [],
   params: byService,
   body: operationBody,
@@ -140,6 +142,35 @@ export const setPriceMode = defineRoute({
   status: 204,
   errors: INVESTMENT_ERRORS,
   example: { params: { accountId: ACCOUNT_ID, holdingId: HOLDING_ID }, body: { mode: "manual" } },
+});
+
+export const convertToPortfolio = defineRoute({
+  id: "convert_investment_to_portfolio",
+  method: "POST",
+  path: "/investments/{accountId}/conversion",
+  scope: "write",
+  capability: "investments",
+  summary:
+    "«Switch to positions» (R5d): a manual service kept by value becomes a manual portfolio from `on`. " +
+    "The value before stays in its history; the positions open at their price and the cash is the " +
+    "value of that day less the positions. `409` `negative_cash` when the positions are worth more, " +
+    "`not_eligible` on a service that is not a manual one kept by value.",
+  actions: [],
+  params: byService,
+  body: conversionBody,
+  response: null,
+  status: 204,
+  errors: INVESTMENT_ERRORS,
+  example: {
+    params: { accountId: ACCOUNT_ID },
+    body: {
+      on: "2026-11-20",
+      positions: [
+        { instrumentId: INSTRUMENT_ID, mic: "XMIL", quantity: "100", unitPrice: "60", fxRate: null },
+      ],
+      note: null,
+    },
+  },
 });
 
 export const deleteOperation = defineRoute({

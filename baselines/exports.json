@@ -610,6 +610,8 @@
     "contributionsOf",
     "createManualService",
     "createManualServiceWithAccount",
+    "createPortfolio",
+    "createPortfolioWithAccount",
     "deleteOperation",
     "describeEvent",
     "disconnectProvider",
