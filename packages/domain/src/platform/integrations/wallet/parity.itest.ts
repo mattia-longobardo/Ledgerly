@@ -184,6 +184,20 @@ async function snapshot(userId: string, started: number): Promise<Record<string,
   );
 }
 
+/**
+ * Every table's rows in one order whatever order the database gave them: two rows of a table with
+ * no id of its own (`transaction_labels`) are equal once their ids are blanked, so their positions
+ * depend on the physical order of the table and the golden is held to the set, not to the order.
+ */
+function canonical(snapshotted: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(snapshotted).map(([table, rows]) => [
+      table,
+      Array.isArray(rows) ? rows.map((row) => JSON.stringify(row)).sort() : rows,
+    ]),
+  );
+}
+
 function contextFor(userId: string): Ctx {
   return {
     userId,
@@ -225,6 +239,6 @@ describe("a pass of the source on the fixtures", () => {
       writeFileSync(GOLDEN, text);
       throw new Error(`no golden: written to ${GOLDEN}, check it and commit it`);
     }
-    expect(JSON.parse(text)).toEqual(JSON.parse(readFileSync(GOLDEN, "utf8")));
+    expect(canonical(JSON.parse(text))).toEqual(canonical(JSON.parse(readFileSync(GOLDEN, "utf8"))));
   });
 });
