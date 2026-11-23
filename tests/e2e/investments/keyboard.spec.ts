@@ -1,7 +1,7 @@
 // tests/e2e/investments/keyboard.spec.ts — the keyboard checks of the flow `investments`; what the
 // keyboard checks of every flow share is in tests/e2e/_shared/keyboard.ts.
 import { expect, test } from "@playwright/test";
-import { focusIsVisible, focusOn } from "../_shared/keyboard";
+import { dialogHasFocus, focusIsVisible, focusOn } from "../_shared/keyboard";
 import { sessionState } from "../_shared/env";
 
 test.use({ storageState: sessionState("layout") });
@@ -49,4 +49,36 @@ test("Positions: the open, closed and all-closed views are links walked from the
   expect(await focusIsVisible(page), "the asset link draws no ring").toBe(true);
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/activity\?preset=all&asset=/);
+});
+
+test.describe("a manual portfolio (R5d)", () => {
+  test.use({ storageState: sessionState("portfolio") });
+
+  test("«Record operation» opens from the keyboard, its search answers, and Escape gives the focus back", async ({
+    page,
+  }) => {
+    await page.goto("/investments");
+    const service = page.getByRole("link", { name: "Broker", exact: true }).filter({ visible: true }).first();
+    await page.goto((await service.getAttribute("href"))!);
+    const record = page.getByRole("button", { name: "Record operation" });
+    await focusOn(record);
+    expect(await focusIsVisible(page), "the button draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "Record operation · Broker" });
+    await expect(dialog).toBeVisible();
+    await dialogHasFocus(page);
+    const search = dialog.getByRole("searchbox", { name: "Instrument" });
+    await focusOn(search);
+    await page.keyboard.type("IE00BK5BQT80");
+    const hit = dialog.getByRole("radio").first();
+    await expect(hit).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(hit).toBeFocused();
+    expect(await focusIsVisible(page), "the instrument draws no ring").toBe(true);
+    await page.keyboard.press("Space");
+    await expect(hit).toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(record).toBeFocused();
+  });
 });

@@ -42,7 +42,7 @@ import {
   seedFundsSetup,
 } from "./seed-e2e/funds";
 import { seedInterests } from "./seed-e2e/interests";
-import { seedInvestments } from "./seed-e2e/investments";
+import { seedInvestments, seedPortfolio } from "./seed-e2e/investments";
 import { seedLayout } from "./seed-e2e/layout";
 import { seedPockets } from "./seed-e2e/pockets";
 import { seedSubscriptions } from "./seed-e2e/subscriptions";
@@ -237,6 +237,8 @@ await seedFundsNew();
 await seedFundsSetup();
 
 await seedInvestments();
+
+await seedPortfolio();
 
 await seedTimeOff(USERS.timeoff.email);
 

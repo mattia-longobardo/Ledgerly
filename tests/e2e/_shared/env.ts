@@ -63,6 +63,14 @@ export const USERS = {
     password: "investments-password-123",
     name: "Investments",
   },
+  // R5d: a manual portfolio with cash and one purchase, and a service kept by value, for the screen
+  // check; `portfolioJourney` starts with a service kept by value only, and the journey writes on it.
+  portfolio: { email: "portfolio@example.test", password: "portfolio-password-123", name: "Portfolio" },
+  portfolioJourney: {
+    email: "portfolio-journey@example.test",
+    password: "portfolio-journey-password-123",
+    name: "Portfolio Journey",
+  },
   payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
   // Release N6: the journey of a fund fed by the payslip, with no document. It starts with no fund.
   fundsPayslip: {
@@ -234,6 +242,8 @@ export const SESSIONS = {
   fundsDetail: { user: "fundsDetail", file: "funds-detail-session.json" },
   fundsCopy: { user: "fundsCopy", file: "funds-copy-session.json" },
   investments: { user: "investments", file: "investments-session.json" },
+  portfolio: { user: "portfolio", file: "portfolio-session.json" },
+  portfolioJourney: { user: "portfolioJourney", file: "portfolio-journey-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
   fundsPayslip: { user: "fundsPayslip", file: "funds-payslip-session.json" },
   fundsNew: { user: "fundsNew", file: "funds-new-session.json" },

@@ -39,6 +39,12 @@ const PAGES: Screen[] = [
       open: (page: Page) => serviceTab(page, service, tab),
     })),
   ),
+  // A manual portfolio (R5d): its positions with their price mode, and its cash.
+  ...(["", "positions", "activity"] as const).map((tab) => ({
+    name: `/investments/[accountId]${tab ? `/${tab}` : ""}, a manual portfolio`,
+    session: "portfolio" as const,
+    open: (page: Page) => serviceTab(page, "Broker", tab),
+  })),
   // The closed positions of Positions (§3.4, U4): in the period and ever, of a synced service.
   ...(["closed", "all"] as const).map((status) => ({
     name: `/investments/[accountId]/positions?status=${status}, synced with eToro`,
@@ -98,6 +104,45 @@ const OVERLAYS: Screen[] = [
     session: "layout",
     roots: ['[role="dialog"]'],
     open: async (page) => addInvestment(page, /^Account with value only/),
+  },
+  {
+    name: "the manual portfolio dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => addInvestment(page, /^Manual portfolio/),
+  },
+  {
+    name: "the record operation dialog, a purchase with its instrument found",
+    session: "portfolio",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^Broker$/);
+      await page.getByRole("button", { name: "Record operation" }).click();
+      await page.getByRole("searchbox", { name: "Instrument" }).fill("IE00BK5BQT80");
+      await page.getByTestId("instrument-hit").first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the record operation dialog, a sale",
+    session: "portfolio",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^Broker$/);
+      await page.getByRole("button", { name: "Record operation" }).click();
+      await page.getByRole("dialog").getByLabel("Type").selectOption("sell");
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the switch to positions dialog",
+    session: "portfolio",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await follow(page, "/investments", /^Titoli$/);
+      await headerCommand(page, "More actions", "Switch to positions");
+      await settledDialog(page);
+    },
   },
   {
     name: "the connect a service dialog",

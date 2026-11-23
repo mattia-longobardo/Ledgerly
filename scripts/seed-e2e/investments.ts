@@ -1,5 +1,16 @@
 // scripts/seed-e2e/investments.ts — the users and the data of the flow `investments` (tests/e2e/investments/).
 import { createAccount, saveBalanceEntry, saveProviderBalance } from "@domain/modules/accounts/service";
+import { searchInstruments } from "@domain/modules/instruments";
+import {
+  addAsset,
+  createManualService,
+  createPortfolioWithAccount,
+  PRICE_SCALE,
+  QUANTITY_SCALE,
+  recordOperation,
+} from "@domain/modules/investments";
+import { pricesPlugin } from "@domain/platform/plugins";
+import { parseDecimal } from "@domain/shared/money";
 import { connectInvestmentProvider, setSourcesForTests } from "@domain/modules/investments/sync";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { type Ctx } from "@domain/platform/context";
@@ -390,4 +401,84 @@ export async function seedBinance(ctx: Ctx, on: string): Promise<void> {
   const binance = (await listConnections(ctx)).find((one) => one.provider === "ccxt:binance");
   if (!binance) throw new Error("e2e: the Binance connection is missing");
   await saveSchedule(ctx, binance.id, { rules: [] });
+}
+
+/**
+ * The instrument the portfolio's journeys buy (R5d): Vanguard FTSE All-World, as OpenFIGI and ESMA
+ * FIRDS describe it. The registry is the instance's: it is kept the way a person's search keeps it,
+ * with the instance's prices plugin, and the registers are answered here so the seed asks nobody.
+ * An instrument the registry already knows is left as it is.
+ */
+export const PORTFOLIO_ISIN = "IE00BK5BQT80";
+const REGISTERS = (async (input: string | URL | Request) => {
+  const figi = [
+    {
+      data: [
+        {
+          name: "VANGUARD FTSE ALL-WORLD UCITS",
+          ticker: "VWCE",
+          exchCode: "IM",
+          shareClassFIGI: "BBG00RHP3JF9",
+          securityType: "ETP",
+        },
+        {
+          name: "VANGUARD FTSE ALL-WORLD UCITS",
+          ticker: "VWCE",
+          exchCode: "GY",
+          shareClassFIGI: "BBG00RHP3JF9",
+          securityType: "ETP",
+        },
+      ],
+    },
+  ];
+  const firds = {
+    response: {
+      docs: [
+        {
+          gnr_full_name: "Vanguard FTSE All-World UCITS ETF USD Accumulating",
+          gnr_cfi_code: "CEOJLS",
+          gnr_notional_curr_code: "USD",
+        },
+      ],
+    },
+  };
+  return new Response(JSON.stringify(new URL(String(input)).host === "api.openfigi.com" ? figi : firds));
+}) as typeof globalThis.fetch;
+
+async function portfolioInstrument(): Promise<string> {
+  const plugin = await pricesPlugin();
+  const found = await searchInstruments(PORTFOLIO_ISIN, {
+    fetch: REGISTERS,
+    priceSourceId: plugin?.config.id ?? null,
+  });
+  return found.items[0].instrumentId;
+}
+
+/** A service kept by value: an investment account typed by hand, worth 3.000 € since a month ago. */
+async function valueService(email: string): Promise<void> {
+  const ctx = await contextOf(email);
+  const on = addDays(today(ctx.timeZone), -30);
+  const account = await createAccount(ctx, { name: "Titoli", type: "investment", currency: "EUR" });
+  await saveBalanceEntry(ctx, account.id, { on, cents: 300_000n });
+  await createManualService(ctx, { accountId: account.id, category: "broker", url: null });
+}
+
+/**
+ * The manual portfolio (R5d): `portfolio` has «Broker» with a deposit of 5.000 € and 10 shares bought
+ * at 100 € on Borsa Italiana, and «Titoli» kept by value; `portfolioJourney` has «Titoli» only.
+ */
+export async function seedPortfolio(): Promise<void> {
+  const instrumentId = await portfolioInstrument();
+  const ctx = await contextOf(USERS.portfolio.email);
+  const on = today(ctx.timeZone);
+  const { accountId } = await createPortfolioWithAccount(ctx, { name: "Broker", currency: "EUR", url: null });
+  await recordOperation(ctx, accountId, { kind: "deposit", on: addDays(on, -10), amountCents: 500_000n });
+  await addAsset(ctx, accountId, {
+    asset: { instrument: { instrumentId, mic: "XMIL" } },
+    on: addDays(on, -5),
+    quantity: parseDecimal("10", QUANTITY_SCALE),
+    unitPrice: parseDecimal("100", PRICE_SCALE),
+  });
+  await valueService(USERS.portfolio.email);
+  await valueService(USERS.portfolioJourney.email);
 }
