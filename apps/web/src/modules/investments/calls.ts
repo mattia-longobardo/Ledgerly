@@ -93,7 +93,9 @@ export async function createValueAccount(input: {
 export function createPortfolio(
   input: { accountId: string; url: string } | { name: string; currency: string; url: string },
 ): Promise<{ ok: true; accountId: string } | Failure> {
-  return attempt(() => call(register.createManualService, { body: { kind: "portfolio", ...input } }));
+  // An empty address is no address: the portfolio's route takes null, not "".
+  const url = input.url.trim() === "" ? null : input.url;
+  return attempt(() => call(register.createManualService, { body: { kind: "portfolio", ...input, url } }));
 }
 
 export function updateServiceUrl(accountId: string, url: string): Promise<ActionResult> {

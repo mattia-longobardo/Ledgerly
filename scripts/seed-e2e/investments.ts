@@ -464,18 +464,18 @@ async function valueService(email: string): Promise<void> {
 }
 
 /**
- * The manual portfolio (R5d): `portfolio` has «Broker» with a deposit of 5.000 € and 10 shares bought
- * at 100 € on Borsa Italiana, and «Titoli» kept by value; `portfolioJourney` has «Titoli» only.
+ * The manual portfolio (R5d): `portfolio` has «Broker», made today, with a deposit of 5.000 € and 10
+ * shares bought at 100 € on Borsa Italiana, and «Titoli» kept by value; `portfolioJourney` has «Titoli» only.
  */
 export async function seedPortfolio(): Promise<void> {
   const instrumentId = await portfolioInstrument();
   const ctx = await contextOf(USERS.portfolio.email);
   const on = today(ctx.timeZone);
   const { accountId } = await createPortfolioWithAccount(ctx, { name: "Broker", currency: "EUR", url: null });
-  await recordOperation(ctx, accountId, { kind: "deposit", on: addDays(on, -10), amountCents: 500_000n });
+  await recordOperation(ctx, accountId, { kind: "deposit", on, amountCents: 500_000n });
   await addAsset(ctx, accountId, {
     asset: { instrument: { instrumentId, mic: "XMIL" } },
-    on: addDays(on, -5),
+    on,
     quantity: parseDecimal("10", QUANTITY_SCALE),
     unitPrice: parseDecimal("100", PRICE_SCALE),
   });
