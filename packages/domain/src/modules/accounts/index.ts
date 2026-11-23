@@ -59,6 +59,7 @@ export {
   saveSourceIbans,
   snapshotMonthFor,
   takeOverEntries,
+  renameAccount,
   updateAccountSettings,
   updateBalanceEntry,
   updateConnection,

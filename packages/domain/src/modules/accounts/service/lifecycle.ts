@@ -76,6 +76,19 @@ export async function createAccount(ctx: Ctx, input: unknown, outer?: Tx): Promi
 }
 
 /**
+ * A new name for an account another module keeps in step with its own record — a fund's name
+ * (PERS-589). Only the name: a rename here stops following the provider's, as in the form.
+ */
+export async function renameAccount(ctx: Pick<Ctx, "userId">, id: string, name: string): Promise<void> {
+  const current = await requireAccount(ctx, id);
+  if (current.name === name) return;
+  await getDb()
+    .update(accounts)
+    .set({ name, renamedLocally: true })
+    .where(and(eq(accounts.id, id), userScoped(ctx).owns(accounts)));
+}
+
+/**
  * The Settings tab. A synced account keeps the provider's currency (spec §7.1); its type may be
  * changed here, and from then on the sync stops following the provider's (`retyped_locally`).
  *

@@ -5,7 +5,7 @@ import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { isDisplayCurrency } from "../../../platform/fx/rules";
 import { isCivilDate, today } from "../../../shared/dates";
-import { createAccount, isFutureDate, removeAccount } from "../../accounts";
+import { createAccount, isFutureDate, removeAccount, renameAccount } from "../../accounts";
 import { fundContributionSources, fundFees, funds } from "../schema";
 import { matchDebits } from "./debits";
 import {
@@ -136,6 +136,8 @@ export async function updateFund(ctx: Pick<Ctx, "userId">, id: string, input: Fu
       .where(and(eq(funds.id, id), userScoped(ctx).owns(funds)))
       .returning(),
   );
+  // The fund's page and its account's row show the account's name: it follows the fund's (PERS-589).
+  await renameAccount(ctx, row.valuationAccountId, row.name);
   return row;
 }
 

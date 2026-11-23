@@ -2,6 +2,7 @@ export { AccountError } from "./guards";
 export type { AccountErrorCode } from "./guards";
 export {
   createAccount,
+  renameAccount,
   updateAccountSettings,
   archiveAccount,
   restoreAccount,

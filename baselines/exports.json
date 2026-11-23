@@ -250,6 +250,7 @@
     "releaseSourceAccounts",
     "removeAccount",
     "removeConnection",
+    "renameAccount",
     "replacePortfolioPoints",
     "requireOpenAccount",
     "restoreAccount",

@@ -281,6 +281,12 @@ describe("a PAC (spec §7.7)", () => {
     await updateFund(ctx, fund.id, input({ name: "Renamed" }));
     expect((await fundDetail(ctx, fund.id)).fund.name).toBe("Renamed");
   });
+
+  it("renames its account with it: the fund's page shows the account's name (PERS-589)", async () => {
+    const fund = await debitFund(ctx, input());
+    await updateFund(ctx, fund.id, input({ name: "Renamed" }));
+    expect((await getAccount(ctx, fund.valuationAccountId))?.name).toBe("Renamed");
+  });
 });
 
 describe("deposits from movements (spec §7.7)", () => {
