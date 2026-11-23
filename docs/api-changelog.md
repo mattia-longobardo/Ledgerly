@@ -3,6 +3,13 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Investments: what the client asked of the manual portfolio (PERS-591)
+
+- `POST /investments` with `kind: "portfolio"`: `url: ""` is no address (it answered 500), a bare host is
+  `https://`, as for a manual service.
+- `@ledgerly/api-contract/investments` exports `instruments` (the search of the registry).
+- `GET /investments/{accountId}`: `service.portfolio`, true for a manual portfolio.
+
 ## Unreleased · Investments: the manual portfolio (R5d, step 1)
 
 - `GET /instruments/search?q=` (scope `investments:read`, no MCP tool): instruments by ISIN, name or

@@ -28103,6 +28103,9 @@
                         "valueEditable": {
                           "type": "boolean"
                         },
+                        "portfolio": {
+                          "type": "boolean"
+                        },
                         "manualPnl": {
                           "anyOf": [
                             {
@@ -28455,6 +28458,7 @@
                         "managedSince",
                         "firstOn",
                         "valueEditable",
+                        "portfolio",
                         "manualPnl",
                         "sync",
                         "assets",

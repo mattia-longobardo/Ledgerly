@@ -249,6 +249,7 @@ export const getInvestment = defineRoute({
         managedSince: "2025-03-01",
         firstOn: "2025-03-01",
         valueEditable: true,
+        portfolio: false,
         manualPnl: {
           value: "12650.00",
           invested: "12000.00",

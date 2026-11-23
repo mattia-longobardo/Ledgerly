@@ -3,6 +3,7 @@ export { ACTIVITY_FAMILIES, describeEvent, priceText, quantityText } from "./act
 export type { ActivityFamily } from "./activity";
 export {
   MANUAL_PROVIDER,
+  PORTFOLIO_PROVIDER,
   PROVIDER_SCHEDULE,
   accountTypeOf,
   connectableProvider,

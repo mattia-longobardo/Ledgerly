@@ -13,6 +13,7 @@ import {
   serviceMovements,
   STALE_VALUE_DAYS,
   type AssetPrice,
+  PORTFOLIO_PROVIDER,
 } from "@ledgerly/domain/investments";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { type Cents, sumCents } from "@ledgerly/domain/shared/money";
@@ -221,6 +222,7 @@ function serviceHeaderOut(
     firstOn,
     // A manual service writes its value only on an account typed by hand, not one a provider reads.
     valueEditable: summary.investment.provider === "manual" && summary.account.origin === "manual",
+    portfolio: summary.investment.provider === PORTFOLIO_PROVIDER,
     manualPnl:
       manual === null
         ? null

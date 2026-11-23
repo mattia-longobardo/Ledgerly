@@ -281,6 +281,8 @@ const serviceHeader = legacyService.extend({
   firstOn: civilDate().nullable(),
   /** A manual service whose value is written here («Update value»), not on an account Wallet reads. */
   valueEditable: z.boolean(),
+  /** A manual portfolio (R5d): positions and cash typed by hand, its value written by the module. */
+  portfolio: z.boolean(),
   /** A manual service's P&L since it started; null for a synced one. */
   manualPnl: z
     .object({

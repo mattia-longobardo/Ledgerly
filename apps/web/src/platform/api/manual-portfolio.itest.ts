@@ -146,6 +146,8 @@ describe("a manual portfolio on /api/v1", () => {
     expect((await send(alice, "POST", ops, buy("1", "1"))).status).toBe(409);
     const holdings = await send(alice, "GET", `/investments/${made.body.accountId}/holdings`);
     expect(holdings.body.cash).toBeNull();
+    const detail = await send(alice, "GET", `/investments/${made.body.accountId}?period=all`);
+    expect(detail.body.service.portfolio).toBe(false);
   });
 
   it("switches a service kept by value to positions, its value unchanged", async () => {
@@ -196,6 +198,7 @@ describe("a manual portfolio on /api/v1", () => {
       send(alice, "GET", `/investments/${bare.body.accountId}?period=all`),
     ]);
     expect(one.body.service.url).toBeNull();
+    expect(one.body.service.portfolio).toBe(true);
     expect(two.body.service.url).toBe("https://broker.example.com");
   });
 
