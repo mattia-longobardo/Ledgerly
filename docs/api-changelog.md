@@ -17,6 +17,8 @@ written before it keeps working.
 - `PUT /investments/{accountId}/holdings/{holdingId}/price-mode` `{ mode: "auto" | "manual" }`.
 - A manual portfolio keeps cash (D2): `deposit` and `withdrawal` on `POST /investments/{accountId}/operations`
   take `on`, `amount`, `transactionId` and `note`; on another service they stay `not_editable`.
+  A purchase, a fee or a withdrawal that leaves the cash below zero at the end of a day — or a change
+  or a deletion that leaves a later day so — answers `409` with the reason `negative_cash`.
   `GET /investments/{accountId}/holdings` (and `get_investment_holdings`) answer `cash`, null for
   another service.
 - `POST /investments/{accountId}/conversion` («Switch to positions», D4): `on`, `positions`

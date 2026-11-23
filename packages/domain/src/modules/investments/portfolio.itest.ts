@@ -173,6 +173,43 @@ async function closeAt(listingId: string, close: string) {
   await revalueAfterPrices(ctx, run);
 }
 
+describe("a portfolio's cash (D2: refused below zero)", () => {
+  it("refuses a purchase with no money for it, and takes one with its deposit of the same day", async () => {
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    const order = { asset: ETF, on: todayOn, quantity: qty("10"), unitPrice: price("100"), feeCents: 5_00n };
+    await expect(addAsset(ctx, accountId, order)).rejects.toMatchObject({ code: "negative_cash" });
+    // Both on the same day, the purchase typed first: the end of the day counts, not the order.
+    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 500_00n });
+    await expect(addAsset(ctx, accountId, order)).rejects.toMatchObject({ code: "negative_cash" });
+    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 505_00n });
+    await addAsset(ctx, accountId, order);
+    expect(await valueOf(accountId)).toBe(1_000_00n);
+    await expect(
+      recordOperation(ctx, accountId, { kind: "withdrawal", on: todayOn, amountCents: 1n }),
+    ).rejects.toMatchObject({ code: "negative_cash" });
+  });
+
+  it("refuses to delete a deposit a purchase spends", async () => {
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    const { eventId } = await recordOperation(ctx, accountId, {
+      kind: "deposit",
+      on: todayOn,
+      amountCents: 1_000_00n,
+    });
+    await addAsset(ctx, accountId, { asset: ETF, on: todayOn, quantity: qty("10"), unitPrice: price("100") });
+    await expect(deleteOperation(ctx, eventId, accountId)).rejects.toMatchObject({ code: "negative_cash" });
+    expect(await valueOf(accountId)).toBe(1_000_00n);
+  });
+});
+
 describe("a portfolio's prices", () => {
   it("values an automatic asset at the close of its market, and by hand once switched", async () => {
     const { instrumentId, listingId } = await instrument();

@@ -7,15 +7,11 @@ import { loadBook } from "./book";
 import { type InvestmentAccount, InvestmentError, type WriteCtx } from "./types";
 
 /**
- * What a manual portfolio does with cash below zero at the end of a day: the one switch of the rule.
- * shortcut: `allow` until Mattia chooses between `refuse` (409 `negative_cash`) and a warning (D2);
- * the day is already found by `negativeCash`.
- */
-const CASH_RULE: { belowZero: "allow" | "refuse" } = { belowZero: "allow" };
-
-/**
- * A manual portfolio never holds less than nothing: a position below zero at the end of a day — a sale
- * of more than is held, or a purchase changed or deleted under a later sale — refuses the write.
+ * A manual portfolio never holds less than nothing, at the end of any day: a position below zero — a
+ * sale of more than is held, or a purchase changed or deleted under a later sale — refuses the write
+ * with `quantity_exceeded`; cash below zero — a purchase, a fee or a withdrawal with no money for it,
+ * or a deposit changed or deleted under a later one — with `negative_cash` (D2, Mattia 23/11/2026).
+ * The order of a day's operations does not count.
  */
 export async function checkPortfolio(
   ctx: WriteCtx,
@@ -26,6 +22,5 @@ export async function checkPortfolio(
   if (investment.provider !== PORTFOLIO_PROVIDER) return;
   const book = await loadBook(ctx, investment, currency, transaction);
   if (shortPosition(book) !== null) throw new InvestmentError("quantity_exceeded");
-  if (CASH_RULE.belowZero === "refuse" && negativeCash(book) !== null)
-    throw new InvestmentError("negative_cash");
+  if (negativeCash(book) !== null) throw new InvestmentError("negative_cash");
 }

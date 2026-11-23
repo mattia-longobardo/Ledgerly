@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 109022,
+    "lines": 109019,
     "duplicatedLines": 16288,
     "percent": 14.94,
     "blocks": 1255
@@ -71,7 +71,7 @@
       "blocks": 32
     },
     "modules/investments": {
-      "lines": 14925,
+      "lines": 14922,
       "duplicatedLines": 2415,
       "percent": 16.18,
       "blocks": 185

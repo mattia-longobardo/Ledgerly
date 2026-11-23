@@ -90,6 +90,11 @@ describe("a manual portfolio on /api/v1", () => {
   it("keeps cash and positions, and never sells more than it holds", async () => {
     const accountId = await portfolio();
     const ops = `/investments/${accountId}/operations`;
+    // No money yet: a purchase is refused, and the client offers a deposit (D2).
+    expect(await send(alice, "POST", ops, buy("10", "100"))).toMatchObject({
+      status: 409,
+      body: { error: "conflict", reason: "negative_cash" },
+    });
     expect((await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1500.00" })).status).toBe(
       201,
     );
