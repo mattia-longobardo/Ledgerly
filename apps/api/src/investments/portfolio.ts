@@ -7,7 +7,7 @@ import { type accountsView, bucketOf, listAccounts } from "@ledgerly/domain/acco
 import {
   aggregateCapital,
   fundsByAccount,
-  fundsExport,
+  fundsList,
   fundsHomeView,
   viewPeriod,
 } from "@ledgerly/domain/funds";
@@ -172,16 +172,13 @@ export async function portfolioOut(
 }
 
 /**
- * `GET /investments/funds` and `list_funds`: the funds as the export has them (`fundsExport`, the
- * engine of the Funds pages), each on its account, in its currency and in the display one at today's
+ * `GET /investments/funds` and `list_funds`: the funds with the numbers of «All» of their pages
+ * (`fundsList`), an archived one too, each on its account, in its currency and in the display one at today's
  * rate. No type: every fund is a pension fund (decision H12).
  */
 export async function fundsListOut(ctx: Pick<Ctx, "userId" | "timeZone" | "displayCurrency">) {
   const todayOn = today(ctx.timeZone);
-  const [funds, accounts] = await Promise.all([
-    fundsExport(ctx),
-    listAccounts(ctx, { includeArchived: true }),
-  ]);
+  const [funds, accounts] = await Promise.all([fundsList(ctx), listAccounts(ctx, { includeArchived: true })]);
   const currencyOf = new Map(accounts.map((account) => [account.id, account.currency]));
   const currencies = new Set([...currencyOf.values()].filter((one) => one !== ctx.displayCurrency));
   const rates = await ratesOn(

@@ -131,7 +131,7 @@ export const fundsList = z.object({
       value: money().nullable(),
       displayValue: money().nullable(),
       lastValuation: civilDate().nullable(),
-      /** The money paid in and the gain since the fund started («All»), as the export has them. */
+      /** The money paid in and the gain since the fund started («All»), as its page has them, archived too. */
       paidIn: money().nullable(),
       gain: money().nullable(),
       state: z.enum(FUND_STATES),

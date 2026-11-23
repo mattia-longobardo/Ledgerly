@@ -19,7 +19,7 @@ export {
   yearRows,
 } from "./home";
 export type { FundLine, GainGrain } from "./home";
-export { fundsConfiguration, fundsExport, fundValues } from "./overview";
+export { fundsConfiguration, fundsExport, fundsList, fundValues } from "./overview";
 export type { Operation, ValuationRow } from "./pension/operations";
 export { MAIN_COMPONENTS } from "./pension/reconcile";
 export type { ComponentStatus, QuarterStatus, Status } from "./pension/reconcile";

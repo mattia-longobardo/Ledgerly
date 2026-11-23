@@ -191,6 +191,29 @@ describe("the one list of Investments", () => {
     expect(JSON.stringify(listed.body)).not.toMatch(/"pac"|"kind"/);
   });
 
+  it("gives an archived fund the paid-in money and the gain of its page, and no value", async () => {
+    await funds.setFundState(alice, fundId, "archived");
+    const page = await send(alice, "GET", `/funds/${fundId}?period=all`);
+    expect(page.status).toBe(200);
+    const listed = await send(alice, "GET", "/investments/funds");
+    const [archived] = listed.body.funds;
+    expect(archived).toMatchObject({
+      state: "archived",
+      value: null,
+      displayValue: null,
+      lastValuation: null,
+    });
+    expect(archived.gain).not.toBeNull();
+    expect({ paidIn: archived.paidIn, gain: archived.gain }).toEqual({
+      paidIn: page.body.line.paidIn,
+      gain: page.body.line.gain,
+    });
+    expect(await tool("list_funds").run(alice, {})).toEqual(listed.body);
+    // The export keeps its rule: an archived fund has no number there.
+    const [exported] = await funds.fundsExport(alice);
+    expect(exported).toMatchObject({ paidInCents: null, gainCents: null, valueCents: null });
+  });
+
   it("makes a manual service on a new account from four fields, in its own currency", async () => {
     const made = await send(alice, "POST", "/investments", {
       name: "Interactive",

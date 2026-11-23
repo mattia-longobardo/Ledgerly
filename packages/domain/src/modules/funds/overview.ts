@@ -95,11 +95,10 @@ export async function fundValues(
 }
 
 /**
- * The funds as the export prints them, open and archived (decision D8): the paid-in money and the
- * gain of «All» on the Funds pages, the same engine, and the value of today. An archived fund has
- * no number: it is not money held today.
+ * Every fund, open and archived, with the paid-in money and the gain of «All» its page shows (the
+ * same engine), and the value of today for an open one: an archived fund holds no money today.
  */
-export async function fundsExport(
+export async function fundsList(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   now: Date = new Date(),
 ): Promise<FundExportRow[]> {
@@ -111,11 +110,8 @@ export async function fundsExport(
     ...rows.filter((row) => row.fund.state !== "active"),
   ];
   return ordered.map(({ fund, home }) => {
-    if (fund.state !== "active") {
-      return { fund, paidInCents: null, valueCents: null, gainCents: null, lastValuation: null };
-    }
     const { measure } = fundSummary({ fund: home, period: allPeriod(todayOn), todayOn }).line;
-    const value = shownValue(home.points, todayOn);
+    const value = fund.state === "active" ? shownValue(home.points, todayOn) : null;
     return {
       fund,
       paidInCents: measure.paidInCents,
@@ -124,6 +120,19 @@ export async function fundsExport(
       lastValuation: value?.on ?? null,
     };
   });
+}
+
+/**
+ * The funds as the export prints them, open and archived (decision D8): the numbers of {@link
+ * fundsList}. An archived fund has no number there: it is not money held today.
+ */
+export async function fundsExport(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  now: Date = new Date(),
+): Promise<FundExportRow[]> {
+  return (await fundsList(ctx, now)).map((row) =>
+    row.fund.state === "active" ? row : { ...row, paidInCents: null, gainCents: null },
+  );
 }
 
 /** A fund's sources and fees with the names an export needs: the fund's, the account's, the source's kind. */
