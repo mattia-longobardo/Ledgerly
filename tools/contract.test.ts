@@ -35,6 +35,7 @@ import * as pocketsDomain from "@domain/modules/pockets/rules";
 import * as subscriptionsWire from "../packages/api-contract/src/subscriptions/shared";
 import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
 import { MAX_EVERY as ENTRY_MAX_EVERY } from "@ledgerly/api-contract/subscriptions";
+import { instruments as entryInstruments } from "@ledgerly/api-contract/investments";
 import * as interestsWire from "../packages/api-contract/src/interests/shared";
 import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
@@ -544,6 +545,10 @@ describe("the Server Actions of investments", () => {
     expect(portfolioWire.PORTFOLIO_KINDS).toEqual(portfolioRules.PORTFOLIO_KINDS);
     expect(portfolioWire.PORTFOLIO_GROUPS).toEqual(portfolioRules.PORTFOLIO_GROUPS);
     expect(portfolioWire.RATE_REASONS).toEqual(portfolioRules.RATE_REASONS);
+  });
+
+  it("give the pages the search of the registry from their entry (PERS-591)", () => {
+    expect(INVESTMENTS_ROUTES).toContain(entryInstruments.searchInstruments);
   });
 
   it("have no value `pac` in any schema or example of the API and the MCP (R5b, decision H12)", () => {
