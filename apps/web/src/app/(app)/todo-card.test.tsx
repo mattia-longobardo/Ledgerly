@@ -70,7 +70,9 @@ describe("«To do» of Overview", () => {
   });
 
   it("opens the record a target names", () => {
-    expect(hrefOf({ page: "fund", id: "f1" })).toBe("/funds/f1");
+    // A fund opens at the account that holds it (R5b): no redirect through /funds.
+    expect(hrefOf({ page: "fund", id: "f1", pageId: "a9" })).toBe("/investments/a9");
+    expect(hrefOf({ page: "fund", id: "f1" })).toBe("/investments");
     expect(hrefOf({ page: "budget", id: "b1" })).toBe("/budgets/b1");
     expect(hrefOf({ page: "account", id: "a1" })).toBe("/accounts/a1");
     expect(hrefOf({ page: "payroll_review", id: null })).toBe("/payroll");

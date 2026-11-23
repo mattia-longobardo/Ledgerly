@@ -137,4 +137,34 @@ test("subscriptions are checked against the movements, projected and suggested",
     expect(text).toContain("Netflix");
     expect(text).toContain("12,99");
   });
+
+  // R5a (D4, D5): «every N weeks or months» and no vote. Last, so the totals above stay as they are.
+  await test.step("a subscription every 6 weeks with no vote is saved and read back", async () => {
+    await page.getByRole("button", { name: "Add subscription" }).first().click();
+    const dialog = page.getByRole("dialog", { name: "New subscription" });
+    await dialog.getByLabel("Name").fill("Barber");
+    await dialog.getByLabel("Price (€)").fill("18");
+    await dialog.getByLabel("Billing").selectOption("custom");
+    // Beyond 12 weeks the form refuses before the server does.
+    await dialog.getByLabel("Every", { exact: true }).fill("13");
+    await dialog.getByLabel("Unit").selectOption("week");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog.getByRole("alert")).toContainText("1 to 12 weeks");
+    await dialog.getByLabel("Every", { exact: true }).fill("6");
+    await dialog.getByRole("switch", { name: "No vote" }).click();
+    await expect(dialog.getByRole("radio", { name: "7" })).toBeDisabled();
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(dialog).toBeHidden();
+
+    await expect(row(page, "Barber")).toContainText("Every 6 weeks");
+    await expect(row(page, "Barber")).toContainText("No vote");
+    await row(page, "Barber").getByRole("button", { name: "Edit" }).click();
+    const edit = page.getByRole("dialog", { name: "Edit subscription" });
+    await expect(edit.getByLabel("Billing")).toHaveValue("custom");
+    await expect(edit.getByLabel("Every", { exact: true })).toHaveValue("6");
+    await expect(edit.getByLabel("Unit")).toHaveValue("week");
+    await expect(edit.getByRole("switch", { name: "No vote" })).toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(edit).toBeHidden();
+  });
 });

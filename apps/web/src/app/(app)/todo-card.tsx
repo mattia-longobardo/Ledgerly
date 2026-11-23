@@ -15,7 +15,7 @@ import { Link } from "@ledgerly/ui/router";
 type TodoItem = RouteOutput<typeof listTodo>["items"][number];
 type Target = TodoItem["target"];
 
-/** The page of each target; the ones with an id open that record. */
+/** The page of each target; the ones with an id open that record (a fund: its account's, `pageId`). */
 const PAGES: Record<(typeof NOTIFICATION_PAGES)[number], (id: string | null) => string> = {
   connection: () => "/settings/plugins",
   account: (id) => (id ? `/accounts/${id}` : "/accounts"),
@@ -23,11 +23,12 @@ const PAGES: Record<(typeof NOTIFICATION_PAGES)[number], (id: string | null) => 
   expenses_review: () => "/expenses/review",
   payroll_review: () => "/payroll",
   investments_transfers: () => "/investments",
-  fund: (id) => (id ? `/funds/${id}` : "/funds"),
+  fund: (id) => (id ? `/investments/${id}` : "/investments"),
   overview: () => "/",
 };
 
-export const hrefOf = (target: Target): string => PAGES[target.page](target.id);
+export const hrefOf = (target: Target): string =>
+  PAGES[target.page](target.page === "fund" ? (target.pageId ?? null) : target.id);
 
 /** The catalogue's values for the sentence: every parameter a sentence may name, never absent. */
 function valuesOf(item: TodoItem, locale: UiLocale) {

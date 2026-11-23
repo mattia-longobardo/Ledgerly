@@ -15,7 +15,10 @@ import { notify } from "@ledgerly/ui/toast";
 import { createPocket, type PocketForm, updatePocket } from "../calls";
 import { type DialogContext, type PocketDetail, usePocketError } from "./dialog-context";
 
-/** The two amounts of the dialog: a target, and what it accrues on the 1st unless filled by hand. */
+/**
+ * The amounts of the dialog: a target, and what it accrues each month on its day (R5a, D6: 1 to 31,
+ * the last day of a shorter month) unless filled by hand.
+ */
 function AmountFields({
   id,
   pocket,
@@ -53,7 +56,7 @@ function AmountFields({
           value={manual ? "manual" : "first"}
           onChange={(event) => onManual(event.target.value === "manual")}
         >
-          <option value="first">{text("form.firstOfMonth")}</option>
+          <option value="first">{text("form.everyMonth")}</option>
           <option value="manual">{text("form.manually")}</option>
         </Select>
       </Field>
@@ -70,6 +73,33 @@ function AmountFields({
         </InputGroup>
       </Field>
     </>
+  );
+}
+
+/** The day of the month the accrual lands on (R5a, D6); off for a pocket filled by hand. */
+function AccrualDayField({
+  id,
+  pocket,
+  manual,
+}: {
+  id: string;
+  pocket: PocketDetail | null;
+  manual: boolean;
+}) {
+  const text = useTranslations("pockets");
+  return (
+    <Field label={text("form.accrualDay")} htmlFor={`${id}-day`} hint={text("form.accrualDayHint")}>
+      <Input
+        id={`${id}-day`}
+        name="day"
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={31}
+        disabled={manual}
+        defaultValue={pocket?.accrualDay ?? 1}
+      />
+    </Field>
   );
 }
 
@@ -119,6 +149,8 @@ function formOf(event: FormEvent<HTMLFormElement>, manual: boolean): PocketForm 
     accountId: value("account") || null,
     target: value("target"),
     monthly: manual ? "" : value("monthly"),
+    // A pocket filled by hand keeps the day it has: the field is off and not sent.
+    accrualDay: manual ? undefined : Number(value("day")),
     startMonth: `${value("start")}-01`,
   };
 }
@@ -171,6 +203,7 @@ export function PocketDialog({
     >
       <NameFields id={id} pocket={pocket} accounts={accounts} />
       <AmountFields id={id} pocket={pocket} context={context} manual={manual} onManual={setManual} />
+      <AccrualDayField id={id} pocket={pocket} manual={manual} />
       <Field label={text("form.startMonth")} htmlFor={`${id}-start`}>
         <Input
           id={`${id}-start`}

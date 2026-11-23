@@ -24,10 +24,14 @@ export interface SubscriptionView {
   due: string;
   /** The exact next charge, for the cell's title: the column says the unit, not the date. */
   dueOn: string;
-  utility: number;
+  /** Null: no vote (R5a). */
+  utility: number | null;
   price: string;
   priceCents: bigint;
+  /** The sort key of «Billing»: «every N» sorts as the cycle nearest to it. */
   cycle: Cycle;
+  /** The cycle, or «Every 6 weeks», in words. */
+  frequency: string;
   accountName: string;
   monthly: string;
   monthlyCents: bigint;
@@ -57,7 +61,8 @@ function compare(a: SubscriptionView, b: SubscriptionView, key: SortKey): number
     case "name":
       return text(a.name, b.name);
     case "utility":
-      return a.utility - b.utility;
+      // No vote sorts below 1.
+      return (a.utility ?? 0) - (b.utility ?? 0);
     case "price":
       return big(a.priceCents, b.priceCents);
     case "billing":
@@ -97,6 +102,8 @@ export function SubscriptionsTable({
   totals: { count: string; monthly: string; yearly: string };
 }) {
   const t = useTranslations("subscriptions");
+  const utilityText = (row: SubscriptionView) =>
+    row.utility === null ? t("form.noVote") : t("utilityOf", { value: row.utility });
   const [sort, setSort] = useState<{ key: SortKey; direction: "asc" | "desc" }>({
     key: "yearly",
     direction: "desc",
@@ -166,15 +173,17 @@ export function SubscriptionsTable({
       width: "w-[120px]",
       cell: (row) => (
         <div className="flex items-center gap-2">
-          <UtilityBar value={row.utility} label={`${t("columns.utility")}: ${row.name}`} />
+          {row.utility !== null && (
+            <UtilityBar value={row.utility} label={`${t("columns.utility")}: ${row.name}`} />
+          )}
           <button
             type="button"
             title={t("setUtility")}
-            aria-label={`${t("setUtility")}: ${row.name}, ${t("utilityOf", { value: row.utility })}`}
+            aria-label={`${t("setUtility")}: ${row.name}, ${utilityText(row)}`}
             onClick={() => setEditing(row.draft)}
             className="focus-ring inline-flex min-h-6 items-center rounded-sm px-1 text-sm tabular-nums hover:bg-hover"
           >
-            {t("utilityOf", { value: row.utility })}
+            {utilityText(row)}
           </button>
         </div>
       ),
@@ -199,7 +208,7 @@ export function SubscriptionsTable({
             row.cycle === "monthly" ? "bg-soft text-accent" : "bg-hover text-muted",
           )}
         >
-          {t(`cycles.${row.cycle}`)}
+          {row.frequency}
         </span>
       ),
     },
@@ -269,7 +278,7 @@ export function SubscriptionsTable({
             </div>
             <div className="flex items-center justify-between gap-2 text-sm text-muted">
               <span className="truncate">
-                {t(`cycles.${row.cycle}`)} · {row.accountName}
+                {row.frequency} · {row.accountName}
               </span>
               {pill(row)}
             </div>

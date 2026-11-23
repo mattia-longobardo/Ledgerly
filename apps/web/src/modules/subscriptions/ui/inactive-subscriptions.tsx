@@ -128,7 +128,7 @@ function InactiveTable({
                 <NameCell row={row} />
               </Td>
               <Td muted className="text-sm">
-                {text(`cycles.${row.cycle}`)}
+                {row.frequency}
               </Td>
               <Td align="right">{row.price}</Td>
               <Td muted className="truncate text-sm">

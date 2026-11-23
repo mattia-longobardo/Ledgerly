@@ -101,7 +101,15 @@ test("pockets are budgets that the expenses come off, each on its own page", asy
     await detail.getByRole("button", { name: "Edit pocket" }).click();
     const edit = page.getByRole("dialog", { name: "Edit pocket" });
     await edit.getByLabel("Name").fill("Laptop");
+    // R5a, D6: the accrual lands on day 31, the last day of a shorter month. This month's accrual is
+    // already in, so no figure below moves.
+    await expect(edit.getByLabel("Day of the month")).toHaveValue("1");
+    await edit.getByLabel("Day of the month").fill("31");
     await edit.getByRole("button", { name: "Save pocket" }).click();
+    await expect(edit).toBeHidden();
+    await detail.getByRole("button", { name: "Edit pocket" }).click();
+    await expect(edit.getByLabel("Day of the month")).toHaveValue("31");
+    await edit.getByRole("button", { name: "Cancel" }).click();
     await expect(edit).toBeHidden();
     await page.goto("/pockets");
     await expect(page.getByTestId("pocket-card").filter({ hasText: "Laptop" })).toHaveCount(1);

@@ -17,6 +17,8 @@ export interface PocketForm {
   monthly: string;
   /** `YYYY-MM-01`. */
   startMonth: string;
+  /** The day of the month it accrues on, 1 to 31 (R5a); absent, the server's. */
+  accrualDay?: number;
 }
 
 /** What a pocket's write changes: the Pockets page, Overview's tile, a pocket's page, the candidates. */
@@ -41,6 +43,7 @@ async function bodyOf(form: PocketForm) {
     target: await optionalDecimal(form.target),
     monthly: await optionalDecimal(form.monthly),
     startMonth: form.startMonth,
+    accrualDay: form.accrualDay,
   };
 }
 

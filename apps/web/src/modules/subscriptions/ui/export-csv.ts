@@ -8,6 +8,7 @@ import type { RouteOutput } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
 import { formatAmountInput, type NumberFormat } from "@ledgerly/format/format";
 import { csvDocument } from "@ledgerly/format/csv";
+import { frequencyText } from "./present";
 
 type T = ReturnType<typeof useTranslations<"subscriptions">>;
 type View = RouteOutput<typeof subscriptions.listSubscriptions>;
@@ -30,9 +31,9 @@ export function subscriptionsCsv(view: View, text: T, numberFormat: NumberFormat
   const rows = [...view.subscriptions, ...view.inactive].map((row) => [
     row.name,
     row.category ?? "",
-    row.utility,
+    row.noVote ? "" : row.utility,
     amount(row.price),
-    text(`cycles.${row.cycle}`),
+    frequencyText(row, text),
     row.account ?? "",
     amount(row.monthly),
     amount(row.yearly),

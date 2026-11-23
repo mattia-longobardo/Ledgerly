@@ -2961,8 +2961,10 @@
       "target": "Obiettivo (€) · facoltativo",
       "targetPlaceholder": "Lascia vuoto per nessun obiettivo",
       "monthly": "Accantonamento mensile (€)",
+      "accrualDay": "Giorno del mese",
+      "accrualDayHint": "Da 1 a 31. In un mese più corto arriva l'ultimo giorno, alle 12:00.",
       "accrues": "Accantona",
-      "firstOfMonth": "Il 1° del mese",
+      "everyMonth": "In un giorno del mese",
       "manually": "A mano",
       "startMonth": "A partire da",
       "note": "I pocket autonomi tengono solo un importo virtuale; quelli su un conto mostrano anche il saldo libero (non accantonato).",
@@ -3176,7 +3178,15 @@
       "resume": "Riprendi",
       "reactivate": "Riattiva",
       "close": "Chiudi",
-      "save": "Salva"
+      "save": "Salva",
+      "everyCount": "Ogni",
+      "everyUnit": "Unità",
+      "everyHint": "Da 1 a 12 settimane, o da 1 a 24 mesi.",
+      "units": {
+        "week": "settimane",
+        "month": "mesi"
+      },
+      "noVote": "Nessun voto"
     },
     "suggestions": {
       "title": "Suggeriti dai pagamenti ricorrenti",
@@ -3198,7 +3208,8 @@
       "invalid_account": "Scegli uno dei tuoi conti aperti.",
       "invalid_category": "Scegli una delle tue categorie di spesa.",
       "failed": "Salvataggio non riuscito. Riprova.",
-      "not_cancelled": "Non è annullato: prima annullalo, poi si può eliminare."
+      "not_cancelled": "Non è annullato: prima annullalo, poi si può eliminare.",
+      "every": "Scegli da 1 a 12 settimane, o da 1 a 24 mesi."
     },
     "empty": {
       "title": "Nessun abbonamento",
@@ -3222,6 +3233,10 @@
       "nextCharge": "Prossimo addebito",
       "state": "Stato",
       "status": "Pagato nel periodo"
+    },
+    "every": {
+      "week": "{count, plural, one {Ogni settimana} other {Ogni # settimane}}",
+      "month": "{count, plural, one {Ogni mese} other {Ogni # mesi}}"
     }
   },
   "interests": {
@@ -4585,7 +4600,8 @@
       "different_account": "Questa chiave è di un altro conto della sorgente. Usa una chiave del conto già collegato.",
       "sync_failed": "La sincronizzazione non è riuscita: guarda l'ultimo errore del collegamento.",
       "sync_refused": "La sincronizzazione è stata rifiutata: guarda lo stato del collegamento.",
-      "not_a_transfer": "Queste due operazioni non si possono collegare come giroconto."
+      "not_a_transfer": "Queste due operazioni non si possono collegare come giroconto.",
+      "quantity_exceeded": "Non puoi vendere più di quanto possiedi di quell'asset: controlla la quantità."
     },
     "connect": {
       "open": "Collega",

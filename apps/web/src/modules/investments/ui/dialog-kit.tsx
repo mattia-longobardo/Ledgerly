@@ -55,6 +55,7 @@ const KNOWN_ERRORS = [
   "sync_failed",
   "sync_refused",
   "not_a_transfer",
+  "quantity_exceeded",
 ] as const;
 
 /** A refusal's code in the person's words. */

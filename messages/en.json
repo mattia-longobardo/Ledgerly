@@ -2961,8 +2961,10 @@
       "target": "Target (€) · optional",
       "targetPlaceholder": "Leave empty for no target",
       "monthly": "Monthly accrual (€)",
+      "accrualDay": "Day of the month",
+      "accrualDayHint": "1 to 31. In a shorter month it lands on the last day, at 12:00.",
       "accrues": "Accrues on",
-      "firstOfMonth": "1st of month",
+      "everyMonth": "On a day of the month",
       "manually": "Manually",
       "startMonth": "Starting from",
       "note": "Standalone pockets track a virtual amount only; pockets on an account also show the free (not earmarked) balance.",
@@ -3176,7 +3178,15 @@
       "resume": "Resume",
       "reactivate": "Reactivate",
       "close": "Close",
-      "save": "Save"
+      "save": "Save",
+      "everyCount": "Every",
+      "everyUnit": "Unit",
+      "everyHint": "1 to 12 weeks, or 1 to 24 months.",
+      "units": {
+        "week": "weeks",
+        "month": "months"
+      },
+      "noVote": "No vote"
     },
     "suggestions": {
       "title": "Suggested from recurring payments",
@@ -3198,7 +3208,8 @@
       "invalid_account": "Pick one of your open accounts.",
       "invalid_category": "Pick one of your spending categories.",
       "failed": "Couldn't save. Try again.",
-      "not_cancelled": "It is not cancelled: cancel it first, then it can be deleted."
+      "not_cancelled": "It is not cancelled: cancel it first, then it can be deleted.",
+      "every": "Choose 1 to 12 weeks, or 1 to 24 months."
     },
     "empty": {
       "title": "No subscriptions",
@@ -3222,6 +3233,10 @@
       "nextCharge": "Next charge",
       "state": "State",
       "status": "Paid this period"
+    },
+    "every": {
+      "week": "{count, plural, one {Every week} other {Every # weeks}}",
+      "month": "{count, plural, one {Every month} other {Every # months}}"
     }
   },
   "interests": {
@@ -4585,7 +4600,8 @@
       "different_account": "That key belongs to another account on the source. Use a key of the account already connected.",
       "sync_failed": "The sync failed: see the connection's last error.",
       "sync_refused": "The sync was refused: see the connection's state.",
-      "not_a_transfer": "Those two operations cannot be linked as a transfer."
+      "not_a_transfer": "Those two operations cannot be linked as a transfer.",
+      "quantity_exceeded": "You cannot sell more than you hold of that asset: check the quantity."
     },
     "connect": {
       "open": "Connect",

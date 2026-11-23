@@ -5,7 +5,7 @@
 import { subscriptions } from "@ledgerly/api-contract/subscriptions";
 import { call } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
-import type { Cycle } from "@ledgerly/domain/subscriptions/client";
+import { type Cycle, nearestCycle } from "@ledgerly/domain/subscriptions/client";
 import { decimalOf, writing, type WriteResult } from "@/platform/writes";
 
 export type ActionResult = WriteResult;
@@ -16,13 +16,17 @@ interface SubscriptionForm {
   categoryId: string | null;
   paymentAccountId: string | null;
   price: string;
-  cycle: Cycle;
+  /** One of the 4 cycles, or null for «every N weeks or months» (`every`, R5a). */
+  cycle: Cycle | null;
+  every: { unit: "week" | "month"; count: number } | null;
   /** The date of one charge: the anchor of the calendar. */
   nextChargeOn: string;
   payeeMatch: string;
   /** Percent, as typed: "5" or "2,5"; empty is the default 5 %. */
   tolerance: string;
   utility: number;
+  /** No vote (R5a, D5): the server keeps no utility. */
+  noVote: boolean;
 }
 
 /** What a write changes: the page and the suggestions it offers. */
@@ -39,11 +43,15 @@ async function bodyOf(form: SubscriptionForm) {
     categoryId: form.categoryId || null,
     accountId: form.paymentAccountId || null,
     price: await decimalOf(form.price),
-    cycle: form.cycle,
+    // `cycle` stays on the wire for the contract; with `every` the server ignores it. A null `every`
+    // clears a saved «every N» when the person picks one of the 4 cycles.
+    cycle: form.cycle ?? (form.every ? nearestCycle(form.every) : "monthly"),
+    every: form.cycle === null ? form.every : null,
     chargeOn: form.nextChargeOn,
     payeeMatch: match === "" ? null : match,
     tolerance: form.tolerance.trim() === "" ? undefined : await decimalOf(form.tolerance),
     utility: form.utility,
+    noVote: form.noVote,
   };
 }
 

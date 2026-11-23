@@ -14,7 +14,7 @@ import {
   type UiLocale,
 } from "@ledgerly/format/format";
 import { type Cycle, dueMoment, type Frequency, nearestCycle } from "@ledgerly/domain/subscriptions/client";
-import type { SubscriptionDraft } from "./subscription-dialog";
+import type { EveryDraft, SubscriptionDraft } from "./subscription-dialog";
 import type { SubscriptionView } from "./subscriptions-table";
 import type { SuggestionView } from "./suggestions-dialog";
 
@@ -38,13 +38,19 @@ const defaultTolerance = (format: Format) => typed("5", format);
 const frequencyOf = (row: Row): Frequency =>
   row.cycle === "custom" && row.every ? row.every : nearestOf(row);
 
-/**
- * The cycle the screens of today show and edit.
- * shortcut: «every N» shows as the nearest cycle until the screens of R5a show it; the server keeps
- * an «every» a save does not change.
- */
-const nearestOf = (row: Row): Cycle =>
+/** The cycle a row sorts by in the column «Billing»: «every N» among the cycle nearest to it. */
+const nearestOf = (row: Pick<Row, "cycle" | "every">): Cycle =>
   row.cycle === "custom" ? (row.every ? nearestCycle(row.every) : "monthly") : row.cycle;
+
+/** What «every N» starts from in the form when the row has none: every 2 weeks. */
+const DEFAULT_EVERY: EveryDraft = { unit: "week", count: 2 };
+
+/** A row's frequency in words: its cycle, or «Every 6 weeks» (R5a). */
+export function frequencyText(row: Pick<Row, "cycle" | "every">, text: T): string {
+  return row.cycle === "custom" && row.every
+    ? text(`every.${row.every.unit}`, { count: row.every.count })
+    : text(`cycles.${nearestOf(row)}`);
+}
 
 function draftOf(row: Row, text: T, format: Format): SubscriptionDraft & { id: string } {
   return {
@@ -54,12 +60,14 @@ function draftOf(row: Row, text: T, format: Format): SubscriptionDraft & { id: s
     categoryId: row.categoryId,
     paymentAccountId: row.accountId,
     priceInput: typed(row.price, format),
-    cycle: nearestOf(row),
+    cycle: row.cycle === "custom" && row.every ? "custom" : nearestOf(row),
+    every: row.every ?? DEFAULT_EVERY,
     // The dialog edits the anchor of the calendar, the date the person entered.
     nextChargeOn: row.chargeOn,
     payeeMatch: row.payeeMatch ?? "",
     toleranceInput: typed(row.tolerance, format),
     utility: row.utility,
+    noVote: row.noVote === true,
     lastMatch: row.lastMatch
       ? text("form.lastMatch", {
           date: formatDate(row.lastMatch.on, "long", format.locale),
@@ -149,10 +157,11 @@ export function presentRow(row: Row, text: T, format: Format): SubscriptionView 
     categoryColor: row.categoryColor,
     due: presentDue(row, text, format),
     dueOn: formatDate(row.nextChargeOn, "long", format.locale),
-    utility: row.utility,
+    utility: row.noVote ? null : row.utility,
     price: money(row.price),
     priceCents: parseCents(row.price),
     cycle: nearestOf(row),
+    frequency: frequencyText(row, text),
     accountName: row.account ?? text("anyAccount"),
     monthly: money(row.monthly),
     monthlyCents: parseCents(row.monthly),
@@ -180,10 +189,12 @@ export function presentSuggestion(suggestion: Suggestion, text: T, format: Forma
       paymentAccountId: suggestion.accountId,
       priceInput: typed(suggestion.price, format),
       cycle: suggestion.cycle,
+      every: DEFAULT_EVERY,
       nextChargeOn: suggestion.nextChargeOn,
       payeeMatch: suggestion.name,
       toleranceInput: defaultTolerance(format),
       utility: 5,
+      noVote: false,
       lastMatch: null,
     },
   };
@@ -199,10 +210,12 @@ export function newDraft(today: string, format: Format): SubscriptionDraft {
     paymentAccountId: null,
     priceInput: "",
     cycle: "monthly",
+    every: DEFAULT_EVERY,
     nextChargeOn: today,
     payeeMatch: "",
     toleranceInput: defaultTolerance(format),
     utility: 5,
+    noVote: false,
     lastMatch: null,
   };
 }

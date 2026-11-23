@@ -107,5 +107,13 @@ test("a fund with a debit is created, fed by its debits, valued and measured", a
     await page.getByRole("button", { name: /Search or jump to/ }).click();
     await page.getByRole("combobox", { name: /Search or jump to/ }).fill("fideur");
     await expect(page.getByRole("option", { name: /Fideuram Piano Accumulo/ })).toBeVisible();
+    // The option opens the fund at its account (R5b), with no request to the redirect of /funds.
+    const viaFunds: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname.startsWith("/funds/")) viaFunds.push(request.url());
+    });
+    await page.getByRole("option", { name: /Fideuram Piano Accumulo/ }).click();
+    await expect(page).toHaveURL(/\/investments\/[0-9a-f-]{36}$/);
+    expect(viaFunds).toEqual([]);
   });
 });

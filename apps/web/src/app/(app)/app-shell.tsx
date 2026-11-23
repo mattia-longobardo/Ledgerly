@@ -27,10 +27,12 @@ import { AddonsProvider } from "./addons-context";
 
 type PaletteProps = ComponentProps<typeof CommandPalette>;
 
-/** Where a record of the palette leads: a pocket's and a fund's own page, the list of subscriptions. */
+type SearchRecord = { id: string; accountId: string | null };
+
+/** Where a record of the palette leads: a pocket's own page, a fund's account (R5b), the subscriptions. */
 const RECORD_PAGES = {
-  pocket: (id: string) => `/pockets/${id}`,
-  fund: (id: string) => `/funds/${id}`,
+  pocket: (record: SearchRecord) => `/pockets/${record.id}`,
+  fund: (record: SearchRecord) => (record.accountId ? `/investments/${record.accountId}` : "/investments"),
   subscription: () => "/subscriptions",
 } as const;
 
@@ -62,7 +64,7 @@ export function AppShell({
       id: `${record.kind}:${record.id}`,
       label: record.name,
       hint: text(`shell.palette.${record.kind}`),
-      href: RECORD_PAGES[record.kind](record.id),
+      href: RECORD_PAGES[record.kind](record),
     }));
   const person = useApi(profile.getProfile, {});
   const saveTheme = useSaveTheme();
