@@ -3,6 +3,18 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · The plugins say what reads them (R5c, P3b)
+
+- `GET /plugins`: every plugin has `kind` — `bank` (a bank's plugin), `source` (a source read with
+  the person's own credential) or `calendar` (a calendar of days off) — and `fields`, the fields of
+  the credential of a connection as its manifest describes them, in the person's language (name,
+  type, required, label, help): never a value. A source or a calendar is listed like any plugin of the
+  instance, from its manifest.
+- `POST /connections`: the credential is checked against the plugin's `fields` (a required field
+  empty: `invalid` with reason `empty`; a secret that no HTTP header can carry: `invalid` with reason
+  `rejected`); a field the manifest does not name is dropped. The plugin checks the rest (a Trek
+  address that is not `https://`, for one) at «Test the connection».
+
 ## Unreleased · Wallet and Trek are plugins (R5c)
 
 - Every answer that names a provider (`GET /connections`, `GET /accounts`, `GET /source-categories`,

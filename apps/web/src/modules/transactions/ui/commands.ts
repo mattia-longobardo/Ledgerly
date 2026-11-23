@@ -94,7 +94,7 @@ export function setLabels(id: string, labelIds: readonly string[]): Promise<Fiel
   );
 }
 
-export interface WalletEditInput {
+export interface SourceEditInput {
   type: RouteInput<typeof movements.editAtSource>["body"]["type"];
   /** As typed, in the person's number format. */
   amount: string;
@@ -103,10 +103,10 @@ export interface WalletEditInput {
 }
 
 /**
- * `error` is a message key under `expenses.wallet.errors`; `reason` is the source's own words when it
+ * `error` is a message key under `expenses.atSource.errors`; `reason` is the source's own words when it
  * refused or could not be reached, shown under the key because it is the only thing that says why.
  */
-export type WalletEditResult =
+export type SourceEditResult =
   { ok: true; state: "saved" | "unchanged" } | { ok: false; error: string; reason?: string };
 
 /** A typed amount the person's format cannot read, or zero, is no amount. */
@@ -122,7 +122,7 @@ async function decimalOf(text: string): Promise<string | null> {
 }
 
 /** The route's refusals, under the keys the details panel already shows. */
-function walletRefusal(error: unknown): WalletEditResult {
+function sourceRefusal(error: unknown): SourceEditResult {
   // The source could not be reached (503): its words say why.
   if (error instanceof ApiError && error.code === "unavailable")
     return error.reason === null
@@ -138,10 +138,10 @@ function walletRefusal(error: unknown): WalletEditResult {
 }
 
 /**
- * A Wallet movement's type, amount, payee and note, saved to Wallet first and then here (owner,
- * 2026-09-24). Only offered when the row carries `wallet`, i.e. the integration is connected.
+ * A movement's type, amount, payee and note, saved to its source first and then here (owner,
+ * 2026-09-24). Only offered when the row carries `atSource`, i.e. the integration is connected.
  */
-export async function editInWallet(id: string, input: WalletEditInput): Promise<WalletEditResult> {
+export async function editInSource(id: string, input: SourceEditInput): Promise<SourceEditResult> {
   const amount = await decimalOf(input.amount);
   if (amount === null) return { ok: false, error: "amount" };
   try {
@@ -149,6 +149,6 @@ export async function editInWallet(id: string, input: WalletEditInput): Promise<
     if (state === "saved") changedMovements();
     return { ok: true, state };
   } catch (error) {
-    return walletRefusal(error);
+    return sourceRefusal(error);
   }
 }

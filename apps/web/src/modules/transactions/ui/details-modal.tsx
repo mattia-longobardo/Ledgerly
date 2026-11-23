@@ -9,7 +9,7 @@ import { Checkbox, Input, Select, Textarea } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { notify } from "@ledgerly/ui/toast";
 import { TRANSACTION_TYPES } from "@ledgerly/domain/transactions/client";
-import { editInWallet, setLabels, setNote } from "./commands";
+import { editInSource, setLabels, setNote } from "./commands";
 import type { LabelOption, RowView } from "./view";
 
 const FORM_ID = "transaction-details";
@@ -28,11 +28,11 @@ function sameLabels(current: readonly string[], next: readonly string[]): boolea
  * Payee, amount and date are shown as context and nothing else: they belong to the provider, and
  * `updateTransaction` refuses a patch that carries them (`provider_owned`). A field the person
  * did not touch is not submitted at all, so an unchanged panel claims nothing in
- * `locally_edited` — the movement keeps following Wallet until they really disagree with it.
+ * `locally_edited` — the movement keeps following its source until they really disagree with it.
  *
- * A movement that came from Wallet, with the integration connected (`row.wallet`), is the
+ * A movement that came from a source that takes changes, with the integration connected (`row.atSource`), is the
  * exception (owner, 2026-09-24): type, amount, payee and note become fields, and saving writes
- * them **to Wallet** first — nothing changes here unless Wallet accepts them. Labels stay local.
+ * them **to the source** first — nothing changes here unless the source accepts them. Labels stay local.
  */
 export function TransactionDetails({
   row,
@@ -50,8 +50,8 @@ export function TransactionDetails({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const wallet = row.wallet ?? null;
-  const [type, setType] = useState(wallet?.type ?? "expense");
+  const atSource = row.atSource ?? null;
+  const [type, setType] = useState(atSource?.type ?? "expense");
 
   function messageFor(code: string): string {
     if (code === "not_found") return t("errors.notFound");
@@ -59,12 +59,12 @@ export function TransactionDetails({
     return t("errors.failed");
   }
 
-  function walletMessage(code: string, reason?: string): string {
+  function sourceMessage(code: string, reason?: string): string {
     const key = ["invalid", "amount", "notLinked", "noTransferCategory", "refused", "failed"].includes(code)
       ? code
       : "failed";
-    const message = t(`wallet.errors.${key}` as "wallet.errors.failed");
-    return reason ? `${message} ${t("wallet.said", { reason })}` : message;
+    const message = t(`atSource.errors.${key}` as "atSource.errors.failed");
+    return reason ? `${message} ${t("atSource.said", { reason })}` : message;
   }
 
   function toggle(id: string) {
@@ -79,23 +79,23 @@ export function TransactionDetails({
     const labelsChanged = !sameLabels(row.labelIds, chosen);
     const amount = String(data.get("amount") ?? "").trim();
     const payee = String(data.get("payee") ?? "").trim();
-    const walletChanged =
-      wallet !== null &&
-      (noteChanged || type !== wallet.type || amount !== wallet.amount || payee !== (row.payee ?? ""));
-    if (!noteChanged && !labelsChanged && !walletChanged) {
+    const sourceChanged =
+      atSource !== null &&
+      (noteChanged || type !== atSource.type || amount !== atSource.amount || payee !== (row.payee ?? ""));
+    if (!noteChanged && !labelsChanged && !sourceChanged) {
       onOpenChange(false);
       return;
     }
 
     startTransition(async () => {
       try {
-        if (walletChanged) {
-          const result = await editInWallet(row.id, { type, amount, payee, note });
+        if (sourceChanged) {
+          const result = await editInSource(row.id, { type, amount, payee, note });
           if (!result.ok) {
-            setError(walletMessage(result.error, result.reason));
+            setError(sourceMessage(result.error, result.reason));
             return;
           }
-          notify(t(result.state === "saved" ? "wallet.saved" : "wallet.unchanged"));
+          notify(t(result.state === "saved" ? "atSource.saved" : "atSource.unchanged"));
         } else if (noteChanged) {
           const result = await setNote(row.id, note);
           if (!result.ok) {
@@ -120,7 +120,7 @@ export function TransactionDetails({
     });
   }
 
-  const context: { term: string; value: string }[] = wallet
+  const context: { term: string; value: string }[] = atSource
     ? [
         { term: t("columns.date"), value: row.date },
         { term: t("columns.account"), value: row.account },
@@ -166,11 +166,11 @@ export function TransactionDetails({
           ))}
         </dl>
 
-        {wallet && (
+        {atSource && (
           <>
-            <p className="text-sm text-muted">{t("wallet.hint")}</p>
+            <p className="text-sm text-muted">{t("atSource.hint")}</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label={t("wallet.type")} htmlFor="transaction-type">
+              <Field label={t("atSource.type")} htmlFor="transaction-type">
                 <Select
                   id="transaction-type"
                   name="type"
@@ -180,16 +180,16 @@ export function TransactionDetails({
                 >
                   {TRANSACTION_TYPES.map((one) => (
                     <option key={one} value={one}>
-                      {t(`wallet.types.${one}`)}
+                      {t(`atSource.types.${one}`)}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label={t("columns.amount")} htmlFor="transaction-amount" hint={t("wallet.amountHint")}>
+              <Field label={t("columns.amount")} htmlFor="transaction-amount" hint={t("atSource.amountHint")}>
                 <Input
                   id="transaction-amount"
                   name="amount"
-                  defaultValue={wallet.amount}
+                  defaultValue={atSource.amount}
                   inputMode="decimal"
                   autoComplete="off"
                   required
@@ -215,9 +215,9 @@ export function TransactionDetails({
             id="transaction-note"
             name="note"
             defaultValue={row.note ?? ""}
-            rows={wallet ? 4 : 6}
-            maxLength={wallet ? 255 : undefined}
-            autoFocus={!wallet}
+            rows={atSource ? 4 : 6}
+            maxLength={atSource ? 255 : undefined}
+            autoFocus={!atSource}
           />
         </Field>
 

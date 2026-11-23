@@ -43812,6 +43812,53 @@
                             "items": {
                               "type": "string"
                             }
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "bank",
+                              "source",
+                              "calendar"
+                            ]
+                          },
+                          "fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "text",
+                                    "secret",
+                                    "multiline",
+                                    "choice"
+                                  ]
+                                },
+                                "required": {
+                                  "type": "boolean"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "help": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "name",
+                                "type",
+                                "required",
+                                "label",
+                                "help"
+                              ]
+                            }
                           }
                         },
                         "required": [
@@ -43823,7 +43870,9 @@
                           "connections",
                           "credentials",
                           "returnAddress",
-                          "countries"
+                          "countries",
+                          "kind",
+                          "fields"
                         ]
                       }
                     }

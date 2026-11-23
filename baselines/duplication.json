@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 108967,
-    "duplicatedLines": 16044,
-    "percent": 14.72,
-    "blocks": 1237
+    "lines": 108870,
+    "duplicatedLines": 15728,
+    "percent": 14.45,
+    "blocks": 1225
   },
   "units": {
     "api": {
-      "lines": 6103,
+      "lines": 6105,
       "duplicatedLines": 1212,
-      "percent": 19.86,
+      "percent": 19.85,
       "blocks": 113
     },
     "app": {
-      "lines": 20997,
-      "duplicatedLines": 2790,
-      "percent": 13.29,
-      "blocks": 217
+      "lines": 20878,
+      "duplicatedLines": 2491,
+      "percent": 11.93,
+      "blocks": 207
     },
     "global.d": {
       "lines": 12,
@@ -36,9 +36,9 @@
     },
     "modules/accounts": {
       "lines": 4975,
-      "duplicatedLines": 957,
-      "percent": 19.24,
-      "blocks": 70
+      "duplicatedLines": 949,
+      "percent": 19.08,
+      "blocks": 69
     },
     "modules/budgets": {
       "lines": 1544,
@@ -78,9 +78,9 @@
     },
     "modules/payroll": {
       "lines": 3799,
-      "duplicatedLines": 765,
-      "percent": 20.14,
-      "blocks": 43
+      "duplicatedLines": 759,
+      "percent": 19.98,
+      "blocks": 42
     },
     "modules/pockets": {
       "lines": 1760,
@@ -108,8 +108,8 @@
     },
     "modules/transactions": {
       "lines": 13058,
-      "duplicatedLines": 1667,
-      "percent": 12.77,
+      "duplicatedLines": 1664,
+      "percent": 12.74,
       "blocks": 133
     },
     "modules/users": {
@@ -293,9 +293,9 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 4712,
+      "lines": 4732,
       "duplicatedLines": 220,
-      "percent": 4.67,
+      "percent": 4.65,
       "blocks": 16
     },
     "platform/ranges": {
@@ -463,7 +463,7 @@
     "api/transactions/rules.ts": 24,
     "app/(app)/accounts/[id]/account-screen.tsx": 20,
     "app/(app)/accounts/[id]/connection-status.tsx": 14,
-    "app/(app)/accounts/[id]/delete-account.tsx": 16,
+    "app/(app)/accounts/[id]/delete-account.tsx": 15,
     "app/(app)/accounts/[id]/delete-actions.ts": 8,
     "app/(app)/accounts/[id]/delete.ts": 14,
     "app/(app)/accounts/[id]/overview-tab.tsx": 11,
@@ -524,15 +524,15 @@
     "app/(app)/settings/notifications/notifications-screen.tsx": 13,
     "app/(app)/settings/notifications/page.tsx": 8,
     "app/(app)/settings/plugins/advanced/page.tsx": 25,
-    "app/(app)/settings/plugins/banks-card.tsx": 72,
+    "app/(app)/settings/plugins/banks-card.tsx": 56,
     "app/(app)/settings/plugins/connection-codes.ts": 17,
     "app/(app)/settings/plugins/connection-list.ts": 13,
     "app/(app)/settings/plugins/connection-view.ts": 28,
     "app/(app)/settings/plugins/deactivate.ts": 10,
-    "app/(app)/settings/plugins/page.tsx": 54,
+    "app/(app)/settings/plugins/page.tsx": 24,
     "app/(app)/settings/plugins/plugin-row.tsx": 15,
-    "app/(app)/settings/plugins/trek-card.tsx": 119,
-    "app/(app)/settings/plugins/wallet-card.tsx": 166,
+    "app/(app)/settings/plugins/source-accounts.tsx": 6,
+    "app/(app)/settings/plugins/source-card.tsx": 27,
     "app/(app)/settings/profile/country-form.tsx": 10,
     "app/(app)/settings/profile/name-form.tsx": 21,
     "app/(app)/settings/profile/page.tsx": 8,
@@ -581,7 +581,7 @@
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 46,
     "modules/accounts/ui/balance-entries.tsx": 135,
-    "modules/accounts/ui/settings-form.tsx": 67,
+    "modules/accounts/ui/settings-form.tsx": 59,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
     "modules/accounts/ui/switch/undo-switch.tsx": 13,
     "modules/budgets/jobs.ts": 11,
@@ -742,7 +742,7 @@
     "modules/payroll/ui/present.ts": 20,
     "modules/payroll/ui/register-sections.tsx": 8,
     "modules/payroll/ui/register-table.tsx": 15,
-    "modules/payroll/ui/review-actions.tsx": 94,
+    "modules/payroll/ui/review-actions.tsx": 88,
     "modules/payroll/ui/review-lines.tsx": 8,
     "modules/payroll/ui/review-sections.tsx": 10,
     "modules/payroll/ui/review-workspace.tsx": 15,
@@ -818,7 +818,7 @@
     "modules/transactions/ui/breakdown-card.tsx": 6,
     "modules/transactions/ui/category-cell.tsx": 9,
     "modules/transactions/ui/default-groups-form.tsx": 17,
-    "modules/transactions/ui/details-modal.tsx": 51,
+    "modules/transactions/ui/details-modal.tsx": 48,
     "modules/transactions/ui/filter-bar.tsx": 26,
     "modules/transactions/ui/manual-dialog.tsx": 47,
     "modules/transactions/ui/manual-movement.tsx": 6,

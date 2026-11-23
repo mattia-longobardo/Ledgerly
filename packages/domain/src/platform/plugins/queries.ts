@@ -173,6 +173,19 @@ interface UserPlugin {
   connections: number;
   /** The ISO codes of the manifest's `country` connection field, in its order; empty without it. */
   countries: string[];
+  /** What reads it (rewrite plan R5c): the plugins' bank pass, or an engine of a source or of a calendar. */
+  kind: "bank" | "source" | "calendar";
+  /** The credential of a connection, as the manifest's `userSettings` describe it, in the person's language. */
+  fields: (Pick<PluginManifest["userSettings"][number], "name" | "type" | "required"> & {
+    label: string;
+    help: string | null;
+  })[];
+}
+
+/** What reads a plugin, from its manifest's capabilities: never its id (rule M12). */
+function kindOf(capabilities: readonly string[]): UserPlugin["kind"] {
+  if (capabilities.includes("leaveCalendar")) return "calendar";
+  return capabilities.includes("source.read") ? "source" : "bank";
 }
 
 /**
@@ -219,6 +232,14 @@ export async function listUserPlugins(ctx: Pick<Ctx, "userId" | "locale">): Prom
         manifest.connectionFields
           .find((field) => field.name === "country")
           ?.options?.map((option) => option.value) ?? [],
+      kind: kindOf(manifest.capabilities),
+      fields: manifest.userSettings.map((field) => ({
+        name: field.name,
+        type: field.type,
+        required: field.required,
+        label: field.label[ctx.locale],
+        help: field.help?.[ctx.locale] ?? null,
+      })),
     };
   });
 }

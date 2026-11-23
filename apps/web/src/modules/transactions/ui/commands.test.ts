@@ -10,7 +10,7 @@ vi.mock("@ledgerly/ui/data", () => ({
   invalidate,
 }));
 
-const { changeVisibility, editInWallet, setCategory, setLabels, setNote } = await import("./commands");
+const { changeVisibility, editInSource, setCategory, setLabels, setNote } = await import("./commands");
 const ID = "00000000-0000-4000-8000-000000000001";
 const READS = [
   movements.getTransactionsView,
@@ -78,7 +78,7 @@ describe("the edit at the source", () => {
 
   it("sends the amount typed in the person's format as a decimal", async () => {
     call.mockResolvedValue({ state: "saved" });
-    expect(await editInWallet(ID, input)).toEqual({ ok: true, state: "saved" });
+    expect(await editInSource(ID, input)).toEqual({ ok: true, state: "saved" });
     expect(call).toHaveBeenCalledWith(movements.editAtSource, {
       params: { id: ID },
       body: { ...input, amount: "1234.50" },
@@ -87,8 +87,8 @@ describe("the edit at the source", () => {
   });
 
   it("refuses an unreadable or zero amount without a call", async () => {
-    expect(await editInWallet(ID, { ...input, amount: "abc" })).toEqual({ ok: false, error: "amount" });
-    expect(await editInWallet(ID, { ...input, amount: "0" })).toEqual({ ok: false, error: "amount" });
+    expect(await editInSource(ID, { ...input, amount: "abc" })).toEqual({ ok: false, error: "amount" });
+    expect(await editInSource(ID, { ...input, amount: "0" })).toEqual({ ok: false, error: "amount" });
     expect(call).not.toHaveBeenCalled();
   });
 
@@ -105,7 +105,7 @@ describe("the edit at the source", () => {
     ];
     for (const [refusal, result] of cases) {
       call.mockRejectedValueOnce(refusal);
-      expect(await editInWallet(ID, input)).toEqual(result);
+      expect(await editInSource(ID, input)).toEqual(result);
     }
   });
 });

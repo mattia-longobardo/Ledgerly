@@ -275,6 +275,9 @@ describe("a plugin, for one person", () => {
         hasCredentials: false,
         connections: 0,
         countries: [],
+        // A bank's plugin (neither `source.read` nor `leaveCalendar`), with no credential of its own.
+        kind: "bank",
+        fields: [],
       },
     ]);
     expect(await isPluginActive(ctx, PLUGIN)).toBe(false);

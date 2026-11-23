@@ -180,6 +180,21 @@ export const listPlugins = defineRoute({
         returnAddress: z.string(),
         /** The ISO codes a connection can be for (the manifest's `country` field); empty without one. */
         countries: z.array(z.string()),
+        /**
+         * What reads the plugin, from its manifest: a bank's plugin (`bank`), a source read with the
+         * person's own credential (`source`), a calendar of days off (`calendar`).
+         */
+        kind: z.enum(["bank", "source", "calendar"]),
+        /** The fields of the credential of a connection, in the person's language: never a value. */
+        fields: z.array(
+          z.object({
+            name: z.string(),
+            type: z.enum(["text", "secret", "multiline", "choice"]),
+            required: z.boolean(),
+            label: z.string(),
+            help: z.string().nullable(),
+          }),
+        ),
       }),
     ),
   }),
@@ -197,6 +212,8 @@ export const listPlugins = defineRoute({
           credentials: { saved: true, savedAt: "2026-11-15T10:00:00.000Z", invalid: false },
           returnAddress: "https://ledgerly.example/api/v1/plugins/examplebank/callback",
           countries: ["DE", "IT"],
+          kind: "bank",
+          fields: [],
         },
       ],
     },

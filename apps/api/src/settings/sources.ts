@@ -87,6 +87,8 @@ function servePlugins(app: Hono<ApiEnv>, guard: Guard): void {
             credentials: { ...credentials, savedAt: credentials.savedAt?.toISOString() ?? null },
             returnAddress: returnAddress(plugin.id),
             countries: plugin.countries,
+            kind: plugin.kind,
+            fields: plugin.fields,
           };
         }),
       ),

@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../../messages/en.json";
 import type { IntegrationActionResult } from "./core-calls";
 import type { ConnectionRowProps } from "./connection-row";
-import { WalletAccounts, WalletCard, type WalletCardProps } from "./wallet-card";
+import { SourceAccounts } from "./source-accounts";
+import { type CredentialField, SourceCard, type SourceCardProps } from "./source-card";
 
 const connect = vi.fn();
 const disconnect = vi.fn();
@@ -29,8 +30,14 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: 
 const T = messages.settings.integrations;
 const P = messages.settings.plugin;
 const C = messages.settings.connections;
-const TOKEN = "wallet-secret-token-9f3a";
-const NAME = T.providers.wallet.name;
+const TOKEN = "source-secret-token-9f3a";
+/** The source's name and its credential, as its plugin's manifest gives them (`GET /plugins`). */
+const NAME = "Example Source";
+const ROLE = "Accounts, balances and transactions";
+const TOKEN_LABEL = "API token";
+const FIELDS: CredentialField[] = [
+  { name: "token", type: "secret", required: true, label: TOKEN_LABEL, help: "Paste the API token." },
+];
 
 /**
  * The compile-time half of "the token never comes back": neither the card's props nor a Server
@@ -42,7 +49,7 @@ type SecretKeys<T> = T extends unknown
   : never;
 type CarriesNoSecret<T> = [SecretKeys<T>] extends [never] ? true : false;
 
-const PROPS_CARRY_NO_SECRET: CarriesNoSecret<WalletCardProps> = true;
+const PROPS_CARRY_NO_SECRET: CarriesNoSecret<SourceCardProps> = true;
 const ROW_CARRIES_NO_SECRET: CarriesNoSecret<ConnectionRowProps> = true;
 const RESULT_CARRIES_NO_SECRET: CarriesNoSecret<IntegrationActionResult> = true;
 
@@ -50,7 +57,7 @@ const RESULT_CARRIES_NO_SECRET: CarriesNoSecret<IntegrationActionResult> = true;
 const LIVE: ConnectionRowProps = {
   id: "c1",
   name: NAME,
-  detail: T.providers.wallet.role,
+  detail: ROLE,
   status: {
     value: "ok",
     text: "Updated 2 hours ago",
@@ -70,9 +77,9 @@ const LIVE: ConnectionRowProps = {
   ],
 };
 const ABSENT: ConnectionRowProps = {
-  id: "wallet",
+  id: "plugin:example",
   name: NAME,
-  detail: T.providers.wallet.role,
+  detail: ROLE,
   status: {
     value: "absent",
     text: "",
@@ -89,12 +96,15 @@ const ABSENT: ConnectionRowProps = {
 function renderCard(connected = true) {
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-      <WalletCard
+      <SourceCard
         row={connected ? LIVE : ABSENT}
-        provider="wallet"
+        provider="plugin:example"
         connected={connected}
+        fields={FIELDS}
+        calendar={false}
         leave={{ accounts: 2, excluded: 1 }}
-        deactivateHref="/settings/plugins/wallet#deactivate"
+        pendingDays={0}
+        deactivateHref="/settings/plugins/example#deactivate"
       />
     </NextIntlClientProvider>,
   );
@@ -109,7 +119,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("WalletCard", () => {
+describe("SourceCard", () => {
   it("offers only the token dialog while nothing is connected", () => {
     renderCard(false);
     expect(screen.getByText(C.status.absent)).toBeInTheDocument();
@@ -130,7 +140,7 @@ describe("WalletCard", () => {
     connect.mockResolvedValueOnce({ ok: true, token: TOKEN });
     renderCard(false);
     await userEvent.click(screen.getByRole("button", { name: C.actions.connect }));
-    const field = screen.getByLabelText(T.connect.token) as HTMLInputElement;
+    const field = screen.getByLabelText(TOKEN_LABEL) as HTMLInputElement;
     expect(field).toHaveValue("");
     expect(field.type).toBe("password");
     expect(field).not.toHaveAttribute("value");
@@ -148,18 +158,18 @@ describe("WalletCard", () => {
     connect.mockResolvedValueOnce({ ok: true });
     renderCard();
     await fromMenu(C.actions.replaceKey);
-    const field = screen.getByLabelText(T.connect.token) as HTMLInputElement;
+    const field = screen.getByLabelText(TOKEN_LABEL) as HTMLInputElement;
     await userEvent.type(field, TOKEN);
     await userEvent.click(screen.getByRole("button", { name: T.connect.replace }));
     expect(connect).toHaveBeenCalledWith(TOKEN);
 
     await fromMenu(C.actions.replaceKey);
-    expect(screen.getByLabelText(T.connect.token)).toHaveValue("");
+    expect(screen.getByLabelText(TOKEN_LABEL)).toHaveValue("");
     expect(document.body.innerHTML).not.toContain(TOKEN);
   });
 
   it("leaves the update and the test of the link to the row's one action", async () => {
-    rowAction.mockResolvedValue({ ok: true, names: { name: "Wallet", provider: "Wallet" } });
+    rowAction.mockResolvedValue({ ok: true, names: { name: NAME, provider: NAME } });
     renderCard();
     await fromMenu(C.actions.test);
     expect(rowAction).toHaveBeenLastCalledWith("c1", "test");
@@ -182,7 +192,7 @@ describe("WalletCard", () => {
     // The way to stop for good is on the source's page (plugin-settings.md §4.2).
     expect(screen.getByRole("link", { name: `Want to stop using ${NAME}? Turn it off` })).toHaveAttribute(
       "href",
-      "/settings/plugins/wallet#deactivate",
+      "/settings/plugins/example#deactivate",
     );
     await userEvent.click(screen.getByRole("button", { name: T.disconnect.cancel }));
     expect(disconnect).not.toHaveBeenCalled();
@@ -201,7 +211,7 @@ describe("WalletCard", () => {
     connect.mockRejectedValueOnce(new Error("network down"));
     renderCard();
     await fromMenu(C.actions.replaceKey);
-    await userEvent.type(screen.getByLabelText(T.connect.token), TOKEN);
+    await userEvent.type(screen.getByLabelText(TOKEN_LABEL), TOKEN);
     await userEvent.click(screen.getByRole("button", { name: T.connect.replace }));
     expect(await screen.findByRole("alert")).toHaveTextContent(T.errors.failed);
   });
@@ -219,8 +229,8 @@ describe("WalletCard", () => {
   });
 });
 
-describe("WalletAccounts", () => {
-  // PERS-419: which Wallet accounts arrive here, as for a bank; on the source's page from N7.2.
+describe("SourceAccounts", () => {
+  // PERS-419: which accounts of the source arrive here, as for a bank; on the source's page from N7.2.
   it("chooses the accounts: one here stays chosen, one left out can be chosen again", async () => {
     listChoice.mockResolvedValueOnce({
       ok: true,
@@ -233,7 +243,7 @@ describe("WalletAccounts", () => {
     saveChoice.mockResolvedValueOnce({ ok: true });
     render(
       <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-        <WalletAccounts connectionId="c1" />
+        <SourceAccounts connectionId="c1" />
       </NextIntlClientProvider>,
     );
     // The list is read only when asked for: the page never calls the source by itself.

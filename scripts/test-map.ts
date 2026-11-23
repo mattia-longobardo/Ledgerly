@@ -413,6 +413,7 @@ export const MODULES: Module[] = [
       "test/fixtures/plugins/**",
       "test/fixtures/wallet/**",
       "test/fixtures/trek/**",
+      "test/fixtures/providers.ts",
     ],
     integration: [
       "apps/web/src/platform/integrations",

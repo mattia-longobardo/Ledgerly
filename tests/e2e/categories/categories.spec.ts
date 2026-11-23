@@ -157,7 +157,7 @@ test("a person builds groups, moves, merges and archives with Undo, opens a cate
       await act(page, name, "Delete");
       const dialog = page.getByRole("dialog", { name: "Delete this category?" });
       await expect(dialog).toContainText("cannot be undone");
-      await expect(dialog).toContainText("It is deleted in Wallet too, if it came from there.");
+      await expect(dialog).toContainText("It is deleted at its source too, if it came from one.");
       if (name === first) await expect(dialog).toContainText("Its sub-categories are deleted with it.");
       await dialog.getByRole("button", { name: "Delete" }).click();
       await expect(page.getByRole("button", { name, exact: true })).toHaveCount(0);

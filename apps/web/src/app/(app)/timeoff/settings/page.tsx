@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { sources } from "@ledgerly/api-contract/settings";
+import { apiRead } from "@/platform/api-read";
 import { TimeOffSettingsScreen } from "./settings-screen";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -9,14 +11,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Time off › Settings reads everything it shows from `/api/v1` (rewrite plan R3); the way to the
- * calendar's page and its name are the page's own.
+ * page of the leave calendar is the plugin's that is one (`kind` of `GET /plugins`): none, no link.
  */
 export default async function TimeOffSettingsPage() {
-  const integrations = await getTranslations("settings.integrations");
-  const link = {
-    name: integrations("providers.trek.name"),
-    // The page of the leave calendar's source (`source` of `GET /connections`).
-    href: "/settings/plugins/trek",
-  };
+  const calendar = (await apiRead(sources.listPlugins, {}))?.plugins.find((one) => one.kind === "calendar");
+  const link = calendar ? { name: calendar.name, href: `/settings/plugins/${calendar.id}` } : null;
   return <TimeOffSettingsScreen calendarLink={link} />;
 }

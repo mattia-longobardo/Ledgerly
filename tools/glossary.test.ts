@@ -42,8 +42,7 @@ const OTHER_IDEAS: readonly string[] = [
   "funds.wizard.fund.provider",
   "legal.", // the legal pages keep their own wording
   "investments.providers.", // Binance's own names of its permissions
-  "settings.integrations.trek.connectDescription", // Trek's own menu
-  "expenses.wallet.errors.noTransferCategory", // Wallet's own category
+  "expenses.atSource.errors.noTransferCategory", // the source's own category
   "settings.connections.codes.network", // the network connection
   "banks.connect.errors.network",
   "settings.llm.test.action",
