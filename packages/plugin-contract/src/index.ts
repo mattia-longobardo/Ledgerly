@@ -72,3 +72,4 @@ export {
   leaveWriteResponseSchema,
 } from "./calls-calendar";
 export type { LeaveFigures } from "./calls-calendar";
+export { DOCUMENT_PATHS, documentReadRequestSchema, documentReadResponseSchema } from "./calls-documents";
