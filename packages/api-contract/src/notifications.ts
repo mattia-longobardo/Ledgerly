@@ -82,6 +82,11 @@ const target = z.object({
   page: z.enum(NOTIFICATION_PAGES),
   /** The connection, account, budget or fund; `null` for a page without one. */
   id: z.string().nullable(),
+  /**
+   * The id of the page to open, when it is not `id`: for a fund, the account that holds its value,
+   * whose page in Investments is the fund's (R5b). Left out for every other target.
+   */
+  pageId: id().nullable().optional(),
 });
 
 const todoItem = z.object({

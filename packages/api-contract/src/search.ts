@@ -17,11 +17,23 @@ export const searchRecords = defineRoute({
   actions: [],
   query: z.object({ q: z.string().max(200) }),
   response: z.object({
-    records: z.array(z.object({ kind: z.enum(RECORD_KINDS), id: id(), name: z.string() })),
+    records: z.array(
+      z.object({
+        kind: z.enum(RECORD_KINDS),
+        id: id(),
+        name: z.string(),
+        /** A fund's account: its page is `/investments/{accountId}` (R5b). Null for the other kinds. */
+        accountId: id().nullable(),
+      }),
+    ),
   }),
   errors: ["invalid"],
   example: {
     query: { q: "holiday" },
-    response: { records: [{ kind: "pocket", id: "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d", name: "Holiday" }] },
+    response: {
+      records: [
+        { kind: "pocket", id: "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d", name: "Holiday", accountId: null },
+      ],
+    },
   },
 });

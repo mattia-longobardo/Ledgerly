@@ -14,6 +14,12 @@ vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 vi.mock("@/platform/auth/session", () => ({ requireSession: async () => signedIn }));
+// The funds «to verify» need a year of payslips: the test names them, the rest of the module is real.
+const verify = vi.hoisted(() => ({ ids: [] as string[] }));
+vi.mock("@ledgerly/domain/funds", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@ledgerly/domain/funds")>()),
+  fundsToVerify: async () => verify.ids,
+}));
 
 const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition");
 const { apiRoutes } = await import("@ledgerly/api");
@@ -196,6 +202,24 @@ describe("the one list of Investments", () => {
     const fundAccount = await send(alice, "GET", `/accounts/${exported.fund.valuationAccountId}`);
     expect(fundAccount.body.fundId).toBe(fundId);
     expect((await send(alice, "GET", `/accounts/${directa}`)).body.fundId).toBeNull();
+  });
+
+  it("links a fund of «Da fare» and of the search to its account in Investments", async () => {
+    const [exported] = await funds.fundsExport(alice);
+    const accountId = exported.fund.valuationAccountId;
+    verify.ids = [fundId];
+    try {
+      const todo = await send(alice, "GET", "/todo");
+      const item = todo.body.items.find((one: Json) => one.event === "fund_to_verify");
+      expect(item.target).toEqual({ page: "fund", id: fundId, pageId: accountId });
+      const feed = await send(alice, "GET", "/notifications");
+      const notified = feed.body.items.find((one: Json) => one.event === "fund_to_verify");
+      expect(notified.target).toEqual({ page: "fund", id: fundId, pageId: accountId });
+    } finally {
+      verify.ids = [];
+    }
+    const found = await send(alice, "GET", "/search?q=pensione");
+    expect(found.body.records).toEqual([{ kind: "fund", id: fundId, name: "Fondo Pensione", accountId }]);
   });
 
   it("gives an archived fund the paid-in money and the gain of its page, and no value", async () => {

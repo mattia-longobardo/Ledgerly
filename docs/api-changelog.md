@@ -9,6 +9,10 @@ written before it keeps working.
   pension fund whose value the account holds; null for any other account.
 - `GET /investments/funds` and MCP `list_funds`: an archived fund has the paid-in money and the gain
   since it started that its page shows (before: null). Its value stays null.
+- `GET /todo` and `GET /notifications`: the target of a fund (`page: "fund"`) has `pageId`, the account
+  that holds its value: the fund's page is `/investments/{pageId}`. Left out for the other targets.
+- `GET /search`: every record has `accountId`, the account of a fund; null for a pocket or a
+  subscription.
 
 ## Unreleased · Addons: the pension funds are part of Investments (R5b)
 

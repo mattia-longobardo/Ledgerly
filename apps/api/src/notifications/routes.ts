@@ -20,7 +20,7 @@ import {
   syncFacts,
   todoOf,
 } from "@ledgerly/domain/platform/notifications";
-import { fundsToVerify } from "@ledgerly/domain/funds";
+import { fundsByAccount, fundsToVerify } from "@ledgerly/domain/funds";
 import { transfersToConfirm } from "@ledgerly/domain/investments";
 import { payslipsAwaitingReview } from "@ledgerly/domain/payroll";
 import type { Ctx } from "@ledgerly/domain/platform/context";
@@ -60,14 +60,33 @@ async function refreshFacts(ctx: Ctx): Promise<void> {
   await resolve(ctx, "connection_expiring", { keepPrefixes: connections.map((id) => `${id}:`) });
 }
 
+/**
+ * A fund's target with the id of its page (R5b): the account that holds its value, whose page in
+ * Investments is the fund's. One read of the funds, and only when a fund is among the targets.
+ */
+async function withFundAccounts<T extends { target: { page: string; id: string | null } }>(
+  ctx: Ctx,
+  items: readonly T[],
+) {
+  const accountOf = items.some((item) => item.target.page === "fund")
+    ? new Map([...(await fundsByAccount(ctx))].map(([accountId, fund]) => [fund.id, accountId]))
+    : new Map<string, string>();
+  return items.map((item) =>
+    item.target.page === "fund"
+      ? { ...item, target: { ...item.target, pageId: accountOf.get(item.target.id ?? "") ?? null } }
+      : item,
+  );
+}
+
 export function serveNotifications(app: Hono<ApiEnv>, guard: Guard): readonly RouteContract[] {
   serve(app, guard, listTodo, async ({ ctx }) => {
     await refreshFacts(ctx);
-    return { items: await todoOf(ctx) };
+    return { items: await withFundAccounts(ctx, await todoOf(ctx)) };
   });
   serve(app, guard, listNotifications, async ({ ctx, query }) => {
     await refreshFacts(ctx);
-    return refusing(() => deviceFeed(ctx, query));
+    const feed = await refusing(() => deviceFeed(ctx, query));
+    return { ...feed, items: await withFundAccounts(ctx, feed.items) };
   });
   serve(app, guard, markNotificationRead, ({ ctx, params }) => refusing(() => markRead(ctx, params.id)));
   serve(app, guard, getNotificationPreferences, async ({ ctx }) =>

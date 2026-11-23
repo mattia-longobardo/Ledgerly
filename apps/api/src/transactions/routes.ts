@@ -141,9 +141,9 @@ function serveSearch(app: Hono<ApiEnv>, guard: Guard): void {
     ]);
     return {
       records: [
-        ...pockets.map((one) => ({ kind: "pocket" as const, ...one })),
+        ...pockets.map((one) => ({ kind: "pocket" as const, ...one, accountId: null })),
         ...funds.map((one) => ({ kind: "fund" as const, ...one })),
-        ...subscriptions.map((one) => ({ kind: "subscription" as const, ...one })),
+        ...subscriptions.map((one) => ({ kind: "subscription" as const, ...one, accountId: null })),
       ],
     };
   });

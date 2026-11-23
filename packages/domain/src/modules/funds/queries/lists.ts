@@ -51,15 +51,15 @@ export async function fundsByAccount(
   return new Map(rows.map((row) => [row.accountId, { id: row.id, name: row.name }]));
 }
 
-/** Funds by name, for the ⌘K palette (spec §8.2). */
+/** Funds by name, for the ⌘K palette (spec §8.2), with the account their page is on (R5b). */
 export async function searchFunds(
   ctx: Pick<Ctx, "userId">,
   term: string,
-): Promise<{ id: string; name: string }[]> {
+): Promise<{ id: string; name: string; accountId: string }[]> {
   const needle = term.trim().toLocaleLowerCase();
   if (needle === "") return [];
   const rows = await getDb()
-    .select({ id: funds.id, name: funds.name })
+    .select({ id: funds.id, name: funds.name, accountId: funds.valuationAccountId })
     .from(funds)
     .where(and(userScoped(ctx).owns(funds), eq(funds.state, "active")))
     .orderBy(asc(funds.name), asc(funds.id));
