@@ -50,6 +50,7 @@ import { createTestUser } from "../../../../../../../test/users";
 import { deleteAccount } from "../../accounts/[id]/delete";
 import { bankSink } from "../../banks/sink";
 import { DeactivateError, deactivateSource, deactivationCounts, type Source, sourceOf } from "./deactivate";
+import { bringBackAccount } from "./deactivate-cases";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../../../test/fixtures/providers";
 
 /** One failure of the conversion on demand, in the middle of its transaction (criterion 3). */
@@ -64,6 +65,17 @@ vi.mock("@domain/modules/transactions/source-categories", async (importOriginal)
     },
   };
 });
+
+/** The plugin's part of "Turn off" and the bank's sharing, watched: each still does its work. */
+const host = vi.hoisted(() => ({}) as { [name: string]: ReturnType<typeof vi.fn> });
+vi.mock("@ledgerly/plugin-host", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@ledgerly/plugin-host")>();
+  host.prepareAccessClosing = vi.fn(original.prepareAccessClosing);
+  host.forgetPlugin = vi.fn(original.forgetPlugin);
+  host.connectionSharing = vi.fn(original.connectionSharing);
+  return { ...original, ...host };
+});
+vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
 function contextFor(userId: string): Ctx {
   return {
@@ -81,6 +93,7 @@ let ctx: Ctx;
 beforeEach(async () => {
   await resetDatabase();
   failure.next = false;
+  vi.clearAllMocks();
   ctx = contextFor((await createTestUser()).id);
 });
 afterAll(closeDatabase);
@@ -191,6 +204,11 @@ describe("Turn off Wallet", () => {
     reads.length = 0;
     expect(await deactivateSource(ctx, wallet(), deps, later(1))).toEqual({ accounts: 1 });
     expect(reads).toHaveLength(1);
+    // The plugin's own part, as for every other plugin: the accesses closed and the plugin forgotten.
+    expect(host.prepareAccessClosing).toHaveBeenCalledOnce();
+    expect(host.prepareAccessClosing.mock.calls[0]?.[1]).toBe("wallet");
+    expect(host.forgetPlugin).toHaveBeenCalledOnce();
+    expect(host.forgetPlugin.mock.calls[0]?.[2]).toBe("wallet");
 
     // Criterion 1: the same numbers.
     expect(differences(before, await numbers())).toEqual([]);
@@ -295,6 +313,31 @@ describe("Turn off Wallet", () => {
     expect(await deactivateSource(ctx, wallet(), failing, later(1))).toEqual({ accounts: 2 });
   });
 
+  it("Bring back brings a deleted account back on the next reading, with no bank's sharing", async () => {
+    const { connection } = await walletInUse();
+    const cash = (await listAccounts(ctx)).find((one) => one.providerAccountId === "wa-cash")!;
+    await deleteAccount(ctx, cash.id);
+    expect(await deletedSourceAccounts(ctx, WALLET_PROVIDER)).toEqual([
+      { externalId: "wa-cash", name: cash.name },
+    ]);
+    const core = vi.fn(async () => ({ ok: true as const }));
+
+    expect(await bringBackAccount(ctx, "wallet", "wa-cash", { presence: null, core })).toEqual({
+      ok: true,
+      reconnect: null,
+    });
+    expect(await deletedSourceAccounts(ctx, WALLET_PROVIDER)).toEqual([]);
+    expect((await skippedAccounts(ctx, connection.id)).has("wa-cash")).toBe(false);
+    // A source read with a token: its history read again, never a bank's sharing.
+    expect(host.connectionSharing).not.toHaveBeenCalled();
+    expect(core).toHaveBeenCalledWith(WALLET_PROVIDER, "history", expect.any(Number));
+
+    // An id that is not among the deleted ones is refused.
+    expect(await bringBackAccount(ctx, "wallet", "wa-unknown", { presence: null, core })).toEqual({
+      ok: false,
+    });
+  });
+
   it("disconnected first: the accounts are converted all the same", async () => {
     const { connection, general } = await walletInUse();
     await deleteConnection(ctx, connection.id);
@@ -389,6 +432,8 @@ describe("Turn off a bank's plugin", () => {
       accounts: 1,
     });
 
+    expect(host.prepareAccessClosing.mock.calls.map((call) => call[1])).toEqual([PLUGIN]);
+    expect(host.forgetPlugin.mock.calls.map((call) => call[2])).toEqual([PLUGIN]);
     // Criterion 8: the access is closed at the bank, after the conversion.
     expect(plugin.calls.filter((call) => call.path === PLUGIN_PATHS.authRevoke)).toHaveLength(1);
     expect(differences(await before, await numbersSnapshot(ctx, new Date("2026-11-20T10:00:00Z")))).toEqual(
