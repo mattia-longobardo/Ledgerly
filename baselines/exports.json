@@ -591,6 +591,7 @@
     "MANUAL_PROVIDER",
     "ManualServiceInput",
     "OperationInput",
+    "PORTFOLIO_PROVIDER",
     "PRICE_SCALE",
     "PRODUCTS",
     "PROVIDER_SCHEDULE",

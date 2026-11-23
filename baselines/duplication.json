@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 110008,
+    "lines": 110036,
     "duplicatedLines": 16414,
     "percent": 14.92,
     "blocks": 1265
   },
   "units": {
     "api": {
-      "lines": 6061,
+      "lines": 6071,
       "duplicatedLines": 1217,
-      "percent": 20.08,
+      "percent": 20.05,
       "blocks": 112
     },
     "app": {
@@ -71,9 +71,9 @@
       "blocks": 32
     },
     "modules/investments": {
-      "lines": 15911,
+      "lines": 15919,
       "duplicatedLines": 2550,
-      "percent": 16.03,
+      "percent": 16.02,
       "blocks": 197
     },
     "modules/payroll": {
@@ -89,7 +89,7 @@
       "blocks": 37
     },
     "modules/portfolio": {
-      "lines": 143,
+      "lines": 153,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -446,12 +446,12 @@
     "api/funds/dto/home.ts": 57,
     "api/funds/dto/tabs.ts": 68,
     "api/funds/routes.ts": 81,
-    "api/interests/dto.ts": 32,
+    "api/interests/dto.ts": 31,
     "api/interests/routes.ts": 32,
     "api/investments/dto.ts": 92,
     "api/investments/pages.ts": 39,
     "api/investments/portfolio-routes.ts": 8,
-    "api/investments/portfolio.ts": 19,
+    "api/investments/portfolio.ts": 20,
     "api/investments/refusals.ts": 6,
     "api/investments/routes.ts": 49,
     "api/investments/tabs.ts": 55,
