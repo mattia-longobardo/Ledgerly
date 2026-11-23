@@ -166,6 +166,7 @@ export async function portfolioOut(
         value: maybe(row.valueCents),
         displayValue: maybe(row.displayCents),
         inTotal: row.counted,
+        valueOnly: row.valueOnly,
       })),
     })),
   };

@@ -9,6 +9,9 @@ written before it keeps working.
   `https://`, as for a manual service.
 - `@ledgerly/api-contract/investments` exports `instruments` (the search of the registry).
 - `GET /investments/{accountId}`: `service.portfolio`, true for a manual portfolio.
+- `GET /investments/home` (and `include=funds`): each row has `valueOnly`, true for a `manual_portfolio` kept
+  by its value alone («Value only»), false for a manual portfolio with positions and cash and for every other
+  kind. `kind` does not change.
 
 ## Unreleased · Investments: the manual portfolio (R5d, step 1)
 

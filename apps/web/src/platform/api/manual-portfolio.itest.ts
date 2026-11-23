@@ -148,6 +148,18 @@ describe("a manual portfolio on /api/v1", () => {
     expect(holdings.body.cash).toBeNull();
     const detail = await send(alice, "GET", `/investments/${made.body.accountId}?period=all`);
     expect(detail.body.service.portfolio).toBe(false);
+    // The home tells a manual portfolio from a service kept by value alone (PERS-591).
+    const portfolioId = await portfolio();
+    const home = await send(alice, "GET", "/investments/home?period=all");
+    const rows = home.body.groups.flatMap((group: Json) => group.rows);
+    expect(rows.find((row: Json) => row.accountId === made.body.accountId)).toMatchObject({
+      kind: "manual_portfolio",
+      valueOnly: true,
+    });
+    expect(rows.find((row: Json) => row.accountId === portfolioId)).toMatchObject({
+      kind: "manual_portfolio",
+      valueOnly: false,
+    });
   });
 
   it("switches a service kept by value to positions, its value unchanged", async () => {

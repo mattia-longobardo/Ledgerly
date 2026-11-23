@@ -27326,6 +27326,9 @@
                                 },
                                 "inTotal": {
                                   "type": "boolean"
+                                },
+                                "valueOnly": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -27336,7 +27339,8 @@
                                 "currency",
                                 "value",
                                 "displayValue",
-                                "inTotal"
+                                "inTotal",
+                                "valueOnly"
                               ]
                             }
                           }
@@ -36613,6 +36617,9 @@
                                 },
                                 "inTotal": {
                                   "type": "boolean"
+                                },
+                                "valueOnly": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -36623,7 +36630,8 @@
                                 "currency",
                                 "value",
                                 "displayValue",
-                                "inTotal"
+                                "inTotal",
+                                "valueOnly"
                               ]
                             }
                           }

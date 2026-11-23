@@ -40,6 +40,8 @@ const portfolioRow = z.object({
   displayValue: money().nullable(),
   /** False for a row Overview does not count (out of the net worth, or liquid): shown, not summed. */
   inTotal: z.boolean(),
+  /** A `manual_portfolio` kept by its value alone («Value only»); false for one with positions and cash (R5d). */
+  valueOnly: z.boolean(),
 });
 
 /** A group: «Azioni e crypto» or «Fondi pensione». A group with no row is not in the list. */
@@ -92,6 +94,7 @@ export const PORTFOLIO_EXAMPLE = {
           value: "12650.00",
           displayValue: "12650.00",
           inTotal: true,
+          valueOnly: true,
         },
       ],
     },
@@ -108,6 +111,7 @@ export const PORTFOLIO_EXAMPLE = {
           value: "12450.00",
           displayValue: "12450.00",
           inTotal: true,
+          valueOnly: false,
         },
       ],
     },

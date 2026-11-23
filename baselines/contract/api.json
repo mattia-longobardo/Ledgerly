@@ -2425,7 +2425,8 @@
        "currency": "EUR",
        "value": "12650.00",
        "displayValue": "12650.00",
-       "inTotal": true
+       "inTotal": true,
+       "valueOnly": true
       }
      ]
     },
@@ -2448,7 +2449,8 @@
        "currency": "EUR",
        "value": "7719.00",
        "displayValue": "7719.00",
-       "inTotal": true
+       "inTotal": true,
+       "valueOnly": false
       }
      ]
     }

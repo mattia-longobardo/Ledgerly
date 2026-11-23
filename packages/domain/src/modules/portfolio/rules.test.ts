@@ -42,10 +42,15 @@ describe("the rows of the portfolio", () => {
     held("fund-account", 300_00n),
     held("cash", 70_00n, false),
     held("off-total", 10_00n, false),
+    held("positions", 0n, false),
   ];
   const rows = portfolioRows(accounts, {
     ...holders,
-    services: new Map([...holders.services, ["off-total", { provider: "manual", accountOrigin: "manual" }]]),
+    services: new Map([
+      ...holders.services,
+      ["off-total", { provider: "manual", accountOrigin: "manual" }],
+      ["positions", { provider: "portfolio", accountOrigin: "manual" }],
+    ]),
   });
 
   it("give each account its kind and its group, and leave out what is neither counted nor held", () => {
@@ -55,8 +60,21 @@ describe("the rows of the portfolio", () => {
       ["value-only", "manual_portfolio", "stocks_crypto"],
       ["fund-account", "pension_fund", "pension_funds"],
       ["off-total", "manual_portfolio", "stocks_crypto"],
+      ["positions", "manual_portfolio", "stocks_crypto"],
     ]);
     expect(rows.find((row) => row.kind === "pension_fund")).toMatchObject({ name: "Fondo", fundId: "fund" });
+  });
+
+  it("tell a manual portfolio of positions from one kept by value alone (PERS-591)", () => {
+    expect(
+      rows.filter((row) => row.kind === "manual_portfolio").map((row) => [row.accountId, row.valueOnly]),
+    ).toEqual([
+      ["manual", true],
+      ["value-only", true],
+      ["off-total", true],
+      ["positions", false],
+    ]);
+    expect(rows.filter((row) => row.kind !== "manual_portfolio").every((row) => !row.valueOnly)).toBe(true);
   });
 
   it("add up only the counted rows, group by group, as Overview sums its bucket", () => {

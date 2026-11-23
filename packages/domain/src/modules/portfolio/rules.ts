@@ -59,6 +59,8 @@ export interface PortfolioRow extends HeldAccount {
   kind: PortfolioKind;
   group: PortfolioGroup;
   fundId: string | null;
+  /** A `manual_portfolio` kept by its value alone, with no positions (R5b): not a manual portfolio of R5d. */
+  valueOnly: boolean;
 }
 
 /**
@@ -82,7 +84,15 @@ export function portfolioRows(accounts: readonly HeldAccount[], holders: Holders
       const service = holders.services.get(one.accountId);
       const kind: PortfolioKind =
         fund !== null ? "pension_fund" : service ? serviceKind(service) : "manual_portfolio";
-      return { ...one, name: fund?.name ?? one.name, kind, group: groupOf(one), fundId: fund?.id ?? null };
+      const valueOnly = kind === "manual_portfolio" && service?.provider !== "portfolio";
+      return {
+        ...one,
+        name: fund?.name ?? one.name,
+        kind,
+        group: groupOf(one),
+        fundId: fund?.id ?? null,
+        valueOnly,
+      };
     });
 }
 
