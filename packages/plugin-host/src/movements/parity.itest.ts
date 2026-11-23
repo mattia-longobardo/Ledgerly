@@ -135,8 +135,11 @@ const TABLES: Record<string, string> = {
   sync_jobs: "connection_id in (select id from integration_connections where user_id = $USER)",
   sync_runs: "connection_id in (select id from integration_connections where user_id = $USER)",
 };
-/** What only the run itself decides: sealed credentials, and the stamps of the database's clock. */
-const DROPPED = new Set(["credentials", "credentials_iv", "credentials_tag", "key_version"]);
+/**
+ * What only the run itself decides: sealed credentials, and the version of the app, which every
+ * release changes (the stamps of the database's clock are left out below).
+ */
+const DROPPED = new Set(["credentials", "credentials_iv", "credentials_tag", "key_version", "app_version"]);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A `timestamptz` as the driver gives it in a raw query: text. */
 const STAMP = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d+)?\+00$/;

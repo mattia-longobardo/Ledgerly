@@ -1736,8 +1736,7 @@
       "updated_at": "<now>",
       "origin": "manual",
       "error_code": null,
-      "http_status": null,
-      "app_version": "0.62.0"
+      "http_status": null
     },
     {
       "id": "sync_runs#1",
@@ -1764,8 +1763,7 @@
       "updated_at": "<now>",
       "origin": "manual",
       "error_code": null,
-      "http_status": null,
-      "app_version": "0.62.0"
+      "http_status": null
     }
   ]
 }
