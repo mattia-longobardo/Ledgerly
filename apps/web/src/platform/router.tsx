@@ -35,3 +35,18 @@ const NEXT_ROUTER: RouterAdapter = { Link, useRouter: useAppRouter, usePathname 
 export function NextRouter({ children }: { children: ReactNode }) {
   return <RouterProvider adapter={NEXT_ROUTER}>{children}</RouterProvider>;
 }
+
+/** A link that loads its page on the click only. */
+function LinkOnClick(props: LinkProps) {
+  return <Link {...props} prefetch={false} />;
+}
+
+const ON_CLICK_ROUTER: RouterAdapter = { ...NEXT_ROUTER, Link: LinkOnClick };
+
+/**
+ * The links of a part of the app whose every render reads `/api/v1` on the server (an account's pages
+ * of Investments): no prefetch of each tab and each period, each of which would be such a render.
+ */
+export function OnClickRouter({ children }: { children: ReactNode }) {
+  return <RouterProvider adapter={ON_CLICK_ROUTER}>{children}</RouterProvider>;
+}
