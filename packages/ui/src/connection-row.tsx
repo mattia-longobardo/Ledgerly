@@ -15,7 +15,7 @@ import { notify } from "./toast";
 import { type Tone, TONE_TEXT } from "./tone";
 
 /** The five values of a connection's state, and `absent` for a connection that does not exist. */
-export type RowStatusValue = "ok" | "running" | "late" | "action" | "paused" | "absent";
+export type RowStatusValue = "ok" | "running" | "late" | "readOnly" | "action" | "paused" | "absent";
 
 /** What a person can do with a connection: the row knows the kind, never the provider. */
 export type ActionKind =
@@ -91,6 +91,8 @@ const DOT: Record<RowStatusValue, string> = {
   ok: "bg-pos",
   running: "bg-accent",
   late: "bg-warn",
+  // Reading works; only the writes wait for a key that may write: a warning, not a fault.
+  readOnly: "bg-warn",
   action: "bg-neg",
   paused: "bg-faint",
   absent: "bg-faint",
@@ -100,6 +102,7 @@ const WORD_TONE: Record<RowStatusValue, Tone> = {
   ok: "pos",
   running: "accent",
   late: "warn",
+  readOnly: "warn",
   action: "neg",
   paused: "muted",
   absent: "muted",
@@ -273,7 +276,10 @@ function ActionsCell({ props, actions }: { props: ConnectionRowProps; actions: A
   const label = useActionLabel(actions);
   const primary = props.status.action;
   const prominent =
-    props.status.value === "action" || primary?.kind === "enable" || primary?.kind === "connect";
+    props.status.value === "action" ||
+    props.status.value === "readOnly" ||
+    primary?.kind === "enable" ||
+    primary?.kind === "connect";
   const variant = prominent ? "primary" : "secondary";
   const items = props.menu.map((item) => ({
     label: item.label,

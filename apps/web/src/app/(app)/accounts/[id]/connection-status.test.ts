@@ -63,6 +63,7 @@ const CASES: Record<string, Case> = {
   "a plugin turned off": { provider: BANK, providerActive: false },
   "a plugin turned off, its key refused": { provider: BANK, providerActive: false, keyRefused: true },
   "a reading running": { running: true },
+  "a calendar's key may only read": { connection: { errorCode: "read_only" } },
 };
 
 function connectionOf(one: Case): Connection {
@@ -209,6 +210,7 @@ describe("the state of an account's connection", () => {
         "lateLimit",
         "consentExpired",
         "keyInvalid",
+        "readOnly",
         "pending",
         "pausedSchedule",
         "pausedProvider",

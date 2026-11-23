@@ -62,7 +62,8 @@ export function connectionStatus(
   const kind = (said === "ok" || said === "late") && lastOk === null ? "lateNever" : said;
   const instant = kind === "ok" || kind === "late" ? lastOk : null;
   return {
-    value: connection.status.value,
+    // A key that may only read is a state of its own: amber, not «Action needed».
+    value: said === "readOnly" ? "readOnly" : connection.status.value,
     text: text(`text.${kind}`, {
       when: lastOk === null ? "" : words.past(lastOk),
       next: words.next(connection.nextAttempt ?? connection.nextSyncAt),

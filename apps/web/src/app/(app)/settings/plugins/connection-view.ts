@@ -238,7 +238,8 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
       name: label.name,
       detail: facts.detail,
       status: {
-        value: status.value,
+        // A key that may only read is a state of its own (UX review, point 4): amber, not «Action needed».
+        value: status.text === "readOnly" ? "readOnly" : status.value,
         text,
         at: at === null ? null : at.toISOString(),
         title: at === null ? null : formatInstant(at, ctx),

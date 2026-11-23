@@ -38,6 +38,14 @@ export async function seedConnections(email: string = USERS.connections.email): 
     credentials: { baseUrl: "https://trek.invalid", token: "e2e-not-a-token" },
   });
   await saveSchedule(ctx, trek.id, { rules: [] });
+  // UX review, point 4: a calendar whose key may only read is «Read only», on the user whose screens
+  // are measured. The journey's user keeps its Trek paused, as its steps expect.
+  if (email === USERS.connections.email) {
+    await db
+      .update(integrationConnections)
+      .set({ state: "error", errorCode: "read_only" })
+      .where(eq(integrationConnections.id, trek.id));
+  }
   // Release N7.2: the page of a source of the core with every section. Paused too: never read.
   const wallet = await saveConnection(ctx, {
     provider: WALLET_PROVIDER,

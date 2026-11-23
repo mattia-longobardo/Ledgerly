@@ -9,7 +9,7 @@ type Rows = Awaited<ReturnType<typeof connectionRows>>;
 type Translator = Awaited<ReturnType<typeof getTranslations<"settings.connections">>>;
 
 /** The state a list row shows for a source with several connections: the one that needs most. */
-const WORST: readonly RowStatusValue[] = ["action", "late", "running", "paused", "ok", "absent"];
+const WORST: readonly RowStatusValue[] = ["action", "late", "readOnly", "running", "paused", "ok", "absent"];
 
 /** The state that needs the person most, of a source with several connections. */
 export function worst(values: readonly RowStatusValue[]): RowStatusValue {
