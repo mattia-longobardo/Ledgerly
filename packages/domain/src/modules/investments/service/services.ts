@@ -25,7 +25,7 @@ import { InvestmentError, notFuture } from "./types";
 
 // ——— Services —————————————————————————————————————————————————————————————————————————————
 
-const url = z
+export const serviceUrl = z
   .string()
   .trim()
   .max(500)
@@ -44,7 +44,7 @@ const url = z
 export const manualServiceSchema = z.object({
   accountId: z.uuid(),
   category: z.enum(INVESTMENT_CATEGORIES),
-  url: url.nullable().default(null),
+  url: serviceUrl.nullable().default(null),
 });
 export type ManualServiceInput = z.input<typeof manualServiceSchema>;
 
@@ -229,7 +229,7 @@ export async function updateServiceUrl(
   accountId: string,
   value: string,
 ): Promise<void> {
-  const parsed = url.parse(value);
+  const parsed = serviceUrl.parse(value);
   const investment = await requireInvestmentAccount(ctx, accountId);
   await getDb()
     .update(investmentAccounts)

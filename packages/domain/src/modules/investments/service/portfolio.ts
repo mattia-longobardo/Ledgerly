@@ -15,12 +15,13 @@ import { investmentAccountPeriods, investmentAccounts } from "../schema";
 import { assetOfInstrument, holdingFor } from "./assets";
 import { lockInvestmentAccount, rebuild, requireInvestmentAccount } from "./book";
 import { insertEvent, type LegInput, optionalNote, positive, rateOf } from "./events";
-import { openService, withNewAccount } from "./services";
+import { openService, serviceUrl, withNewAccount } from "./services";
 import { InvestmentError, notFuture, type WriteCtx } from "./types";
 
 const portfolioSchema = z.object({
   accountId: z.uuid(),
-  url: z.string().max(500).nullable().default(null),
+  // The same address rule as a manual service: "" is none, a bare host is https (PERS-591).
+  url: serviceUrl.nullable().default(null),
 });
 export type PortfolioInput = z.input<typeof portfolioSchema>;
 

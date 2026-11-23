@@ -176,6 +176,29 @@ describe("a manual portfolio on /api/v1", () => {
     expect(again).toMatchObject({ status: 409, body: { error: "conflict", reason: "not_eligible" } });
   });
 
+  it("takes an empty address as none, and a bare host as https (PERS-591)", async () => {
+    const empty = await send(alice, "POST", "/investments", {
+      kind: "portfolio",
+      name: "Broker",
+      currency: "EUR",
+      url: "",
+    });
+    expect(empty.status).toBe(201);
+    const bare = await send(alice, "POST", "/investments", {
+      kind: "portfolio",
+      name: "Other",
+      currency: "EUR",
+      url: "broker.example.com",
+    });
+    expect(bare.status).toBe(201);
+    const [one, two] = await Promise.all([
+      send(alice, "GET", `/investments/${empty.body.accountId}?period=all`),
+      send(alice, "GET", `/investments/${bare.body.accountId}?period=all`),
+    ]);
+    expect(one.body.service.url).toBeNull();
+    expect(two.body.service.url).toBe("https://broker.example.com");
+  });
+
   it("finds an instrument of the registry by ISIN, with its markets", async () => {
     const found = await send(alice, "GET", `/instruments/search?q=${ISIN}`);
     expect(found).toMatchObject({
