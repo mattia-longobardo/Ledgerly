@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Book, type EventLike, QUANTITY_SCALE, shortPosition } from "./rules";
+import { type Book, type EventLike, negativeCash, QUANTITY_SCALE, shortPosition } from "./rules";
 import { parseDecimal } from "../../shared/money";
 
 const qty = (value: string) => parseDecimal(value, QUANTITY_SCALE);
@@ -82,5 +82,29 @@ describe("a sale of more than is held", () => {
 
   it("counts only the positions kept by hand: a provider's are its own", () => {
     expect(shortPosition(book([move("2026-03-01", "sell", "h1", "1")], "provider"))).toBeNull();
+  });
+});
+
+describe("cash below zero", () => {
+  const cash = (on: string, kind: "deposit" | "withdrawal" | "buy", cents: bigint): EventLike => {
+    const one = move(on, "buy", "h1", null);
+    return {
+      ...one,
+      operations: [
+        { ...one.operations[0], kind, holdingId: kind === "buy" ? "h1" : null, amountCents: cents },
+      ],
+    };
+  };
+
+  it("is the end of the first day whose cash is below zero, whatever the order of its operations", () => {
+    expect(
+      negativeCash(book([cash("2026-02-01", "buy", -100n), cash("2026-02-01", "deposit", 100n)])),
+    ).toBeNull();
+    expect(negativeCash(book([cash("2026-02-01", "deposit", 100n), cash("2026-02-03", "buy", -150n)]))).toBe(
+      "2026-02-03",
+    );
+    expect(
+      negativeCash(book([cash("2026-02-01", "deposit", 100n), cash("2026-02-02", "withdrawal", -100n)])),
+    ).toBeNull();
   });
 });

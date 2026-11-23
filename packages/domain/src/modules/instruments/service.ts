@@ -147,3 +147,8 @@ export async function searchInstruments(
   });
   return { items: await hits([...new Set([...local, ...kept])].slice(0, MAX_HITS)), complete: true };
 }
+
+/** One instrument of the registry with its markets, or null: what a purchase names. */
+export async function instrumentById(id: string): Promise<InstrumentHit | null> {
+  return (await hits([id]))[0] ?? null;
+}

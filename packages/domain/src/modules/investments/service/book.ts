@@ -8,7 +8,8 @@ import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { type RateTable } from "../../../platform/fx/rules";
 import { ratesOn } from "../../../platform/fx/service";
-import { MANUAL_PROVIDER } from "../catalog";
+import { MANUAL_PROVIDER, PORTFOLIO_PROVIDER } from "../catalog";
+import { marketEvents } from "./market";
 import {
   type AccountBalanceLike,
   type Book,
@@ -194,11 +195,17 @@ export async function loadBook(
     operations: opsByEvent.get(event.id) ?? [],
   }));
   const holdingRows = holdingJoin.map((row) => ({ ...row.holding, asset: row.asset }));
+  const portfolio = await portfolioParts(ctx, investment, periodRows, holdingRows);
+  if (portfolio.events.length > 0) {
+    events.push(...portfolio.events);
+    events.sort(compareEvents);
+  }
   const view =
     investment.provider === MANUAL_PROVIDER ? await accountView(ctx, investment, periodRows) : null;
   return {
     currency,
     ...(view ? { accountBalances: view.balances } : {}),
+    ...portfolio.balances,
     periods: periodRows.map((period) => ({
       fromOn: period.fromOn,
       startsAt: period.startsAt,
@@ -249,6 +256,39 @@ export async function loadBook(
     holdingRows,
     readingRows,
   };
+}
+
+/**
+ * What a manual portfolio adds to its book (R5d): the closes of its automatic assets; and, for one
+ * kept by value before (D4), its account's balances and movements up to the switch.
+ */
+async function portfolioParts(
+  ctx: Pick<Ctx, "userId" | "timeZone">,
+  investment: InvestmentAccount,
+  periodRows: readonly InvestmentPeriod[],
+  holdingRows: Parameters<typeof marketEvents>[0],
+): Promise<{ events: EventLike[]; balances: Pick<Book, "accountBalances" | "balancesUntil"> }> {
+  if (investment.provider !== PORTFOLIO_PROVIDER) return { events: [], balances: {} };
+  const events = await marketEvents(holdingRows);
+  const switchedOn = switchDay(periodRows);
+  if (switchedOn === null) return { events, balances: {} };
+  const before = await accountView(ctx, investment, periodRows);
+  return {
+    events: [...events, ...before.events.filter((event) => event.on < switchedOn)],
+    balances: { accountBalances: before.balances, balancesUntil: switchedOn },
+  };
+}
+
+/**
+ * The day a portfolio switched from a value to positions (D4): the first `assets` period after a
+ * manual `total` one, or null for a portfolio that started with positions or any other service.
+ */
+function switchDay(periodRows: readonly InvestmentPeriod[]): CivilDate | null {
+  const total = periodRows.some((period) => period.mode === "total" && period.origin === "manual");
+  if (!total) return null;
+  return (
+    periodRows.find((period) => period.mode === "assets" && period.reason === "conversion")?.fromOn ?? null
+  );
 }
 
 /**
@@ -334,10 +374,15 @@ export async function rebuild(
 ): Promise<void> {
   // A manual service writes no balance (§1.3, PERS-342): Accounts holds its value.
   if (investment.provider === MANUAL_PROVIDER) return;
+  // A portfolio switched from a value (D4) writes from its switch on: the days before are Accounts'.
+  const start =
+    investment.provider === PORTFOLIO_PROVIDER && from < investment.managedSince
+      ? investment.managedSince
+      : from;
   const todayOn = today(ctx.timeZone);
   const { book, rates } = await valuedBook(ctx, investment, { currency, todayOn, transaction: tx });
-  const points = computePoints(book, rates, todayOn, from);
-  await replacePortfolioPoints(ctx, { accountId: investment.accountId, from, points }, tx);
+  const points = computePoints(book, rates, todayOn, start);
+  await replacePortfolioPoints(ctx, { accountId: investment.accountId, from: start, points }, tx);
 }
 
 export async function currencyOf(ctx: Pick<Ctx, "userId">, accountId: string): Promise<string> {

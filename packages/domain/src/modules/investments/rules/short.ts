@@ -1,7 +1,8 @@
-// A sale of more than is held (rewrite plan R5d): the quantity of a position kept by hand, day by
-// day. Pure, as the rest of the engine.
+// What a manual portfolio may not hold (rewrite plan R5d): a position below zero, and cash below
+// zero, at the end of a day. Pure, as the rest of the engine.
 import type { CivilDate } from "../../../shared/dates";
 import { type Book, eventsOn, type OperationLike } from "./book";
+import { cashEffect } from "./value";
 
 /** Every day of the book: the period in force at the end of the last one holds the positions. */
 const LAST_DAY = "9999-12-31";
@@ -43,6 +44,20 @@ export function shortPosition(book: Book): { holdingId: string; on: CivilDate } 
     const day = events[index].on;
     if (events[index + 1]?.on === day) continue;
     for (const [holdingId, quantity] of held) if (quantity < 0n) return { holdingId, on: day };
+  }
+  return null;
+}
+
+/**
+ * The first day whose cash is below zero at its end, or null (D2: a purchase, a fee or a withdrawal
+ * with no money for it). As for the positions, the day counts, not the order of its operations.
+ */
+export function negativeCash(book: Book): CivilDate | null {
+  const { events } = eventsOn(book, LAST_DAY);
+  let cash = 0n;
+  for (let index = 0; index < events.length; index += 1) {
+    for (const operation of events[index].operations) cash += cashEffect(operation);
+    if (events[index + 1]?.on !== events[index].on && cash < 0n) return events[index].on;
   }
   return null;
 }

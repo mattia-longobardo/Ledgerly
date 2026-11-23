@@ -48,7 +48,7 @@ export type {
 export { compareEvents, eventsOn, periodIndexOf, sortedPeriods } from "./book";
 export type { AccountBalanceLike, Book, EventLike, HoldingLike, OperationLike, ReadingLike } from "./book";
 export { holdingStates } from "./positions";
-export { shortPosition } from "./short";
+export { negativeCash, shortPosition } from "./short";
 export type { HoldingState } from "./positions";
 export {
   computePoints,

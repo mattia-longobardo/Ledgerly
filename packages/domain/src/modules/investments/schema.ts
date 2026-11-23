@@ -19,6 +19,7 @@ import { users } from "../../platform/auth/schema";
 import { integrationConnections } from "../../platform/integrations/schema";
 import { accounts } from "../accounts/schema";
 import { transactions } from "../transactions/schema";
+import { instruments } from "../instruments/schema";
 import {
   ADJUSTMENT_CLASSES,
   ASSET_CLASSES,
@@ -138,6 +139,8 @@ export const investmentAssets = pgTable(
     mic: text("mic"),
     currency: text("currency").notNull(),
     priceSource: text("price_source", { enum: PRICE_SOURCES }).notNull().default("manual"),
+    /** The instrument of the registry (R5d); null for an asset typed by hand outside it. */
+    instrumentId: uuid("instrument_id").references(() => instruments.id, { onDelete: "set null" }),
     archivedAt: moment("archived_at"),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
@@ -146,6 +149,7 @@ export const investmentAssets = pgTable(
     uniqueIndex("investment_assets_isin_uq")
       .on(table.userId, table.isin)
       .where(sql`${table.isin} is not null`),
+    index("investment_assets_instrument_idx").on(table.instrumentId),
     uniqueIndex("investment_assets_symbol_uq")
       .on(table.userId, table.class, table.symbol, sql`coalesce(${table.mic}, '')`)
       .where(sql`${table.symbol} is not null`),

@@ -7,8 +7,8 @@ import type { Ctx } from "../../../platform/context";
 import { type CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { MANUAL_PROVIDER, PORTFOLIO_PROVIDER } from "../catalog";
-import { ADJUSTMENT_CLASSES, oldestDay, positionCents, shortPosition } from "../rules";
+import { MANUAL_PROVIDER } from "../catalog";
+import { ADJUSTMENT_CLASSES, oldestDay, positionCents } from "../rules";
 import {
   investmentAccounts,
   investmentEvents,
@@ -19,6 +19,7 @@ import {
 import { civilDate } from "../../../shared/inputs";
 import { currencyOf, loadBook, type LoadedBook, lockInvestmentAccount, rebuild } from "./book";
 import { insertEvent, insertLegs, type LegInput, optionalNote, periodOn, positive, rateOf } from "./events";
+import { checkPortfolio } from "./guards";
 import { clearTransferGroup } from "./transfers";
 import {
   type InvestmentAccount,
@@ -203,23 +204,6 @@ function refuseValueChange(investment: InvestmentAccount): void {
 }
 
 /**
- * A manual portfolio never holds less than nothing (R5d): after a write, a position below zero at the
- * end of a day — a sale of more than is held, or a purchase changed or deleted under a later sale —
- * is refused, and the transaction with it.
- */
-async function refuseShort(
-  ctx: WriteCtx,
-  investment: InvestmentAccount,
-  currency: string,
-  tx: Tx,
-): Promise<void> {
-  if (investment.provider !== PORTFOLIO_PROVIDER) return;
-  if (shortPosition(await loadBook(ctx, investment, currency, tx)) !== null) {
-    throw new InvestmentError("quantity_exceeded");
-  }
-}
-
-/**
  * An operation on a service the module writes: one event with its legs, and the points rewritten
  * from its day. The app offers only what does not move a synced value by hand (`actions.ts`); the
  * engine takes every kind, as a provider's events and the tests deliver them.
@@ -246,7 +230,7 @@ export async function recordOperation(
       transactionId,
       legs,
     });
-    await refuseShort(ctx, investment, account.currency, tx);
+    await checkPortfolio(ctx, investment, account.currency, tx);
     await rebuild(ctx, investment, account.currency, parsed.on, tx);
     return { eventId: event.id };
   });
@@ -336,7 +320,7 @@ export async function updateOperation(ctx: WriteCtx, eventId: string, input: Ope
         .where(and(eq(investmentEvents.id, eventId), userScoped(ctx).owns(investmentEvents))),
     );
     await insertLegs(ctx, tx, eventId, legs);
-    await refuseShort(ctx, investment, account.currency, tx);
+    await checkPortfolio(ctx, investment, account.currency, tx);
     await rebuild(ctx, investment, account.currency, oldestDay(event.on, parsed.on) as CivilDate, tx);
   });
 }
@@ -375,7 +359,7 @@ export async function deleteOperation(ctx: WriteCtx, eventId: string, ofAccount?
       }
     }
     const currency = await currencyOf(ctx, accountId);
-    await refuseShort(ctx, investment, currency, tx);
+    await checkPortfolio(ctx, investment, currency, tx);
     await rebuild(ctx, investment, currency, event.on, tx);
   });
 }

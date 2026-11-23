@@ -198,3 +198,52 @@ export async function pricedListings(instrumentId: string): Promise<{ listingId:
     .where(and(eq(instrumentListings.instrumentId, instrumentId), isNotNull(instrumentListings.priceSource)));
   return orderListings(rows);
 }
+
+/** A market of an instrument, as an asset names it: the instrument and the MIC of the order. */
+export interface MarketKey {
+  instrumentId: string;
+  mic: string;
+}
+
+export const marketKey = (market: MarketKey) => `${market.instrumentId}:${market.mic}`;
+
+/** The markets the registry knows among `markets`, by {@link marketKey}: their listing and source. */
+export async function listingsOf(
+  markets: readonly MarketKey[],
+): Promise<
+  Map<string, { listingId: string; priceSource: string | null; currency: string; ticker: string | null }>
+> {
+  const ids = [...new Set(markets.map((one) => one.instrumentId))];
+  if (ids.length === 0) return new Map();
+  const rows = await getDb()
+    .select()
+    .from(instrumentListings)
+    .where(inArray(instrumentListings.instrumentId, ids));
+  const wanted = new Set(markets.map(marketKey));
+  return new Map(
+    rows
+      .filter((row) => wanted.has(marketKey(row)))
+      .map((row) => [
+        marketKey(row),
+        { listingId: row.id, priceSource: row.priceSource, currency: row.currency, ticker: row.ticker },
+      ]),
+  );
+}
+
+/** The last close of each market on or before `day`, by {@link marketKey}. */
+export async function lastClosesOf(
+  markets: readonly MarketKey[],
+  day: CivilDate,
+): Promise<Map<string, Close>> {
+  const listings = await listingsOf(markets);
+  const closes = await lastCloses(
+    [...listings.values()].map((one) => one.listingId),
+    day,
+  );
+  return new Map(
+    [...listings].flatMap(([key, listing]) => {
+      const close = closes.get(listing.listingId);
+      return close ? [[key, close] as const] : [];
+    }),
+  );
+}
