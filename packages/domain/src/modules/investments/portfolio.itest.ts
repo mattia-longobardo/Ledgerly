@@ -193,6 +193,22 @@ describe("a portfolio's cash (D2: refused below zero)", () => {
     ).rejects.toMatchObject({ code: "negative_cash" });
   });
 
+  it("pays a fee of its own from the cash, and refuses one with no money for it (PERS-591)", async () => {
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 10_00n });
+    await recordOperation(ctx, accountId, { kind: "fee", on: todayOn, amountCents: 3_00n });
+    expect(await valueOf(accountId)).toBe(7_00n);
+    await expect(
+      recordOperation(ctx, accountId, { kind: "fee", on: todayOn, amountCents: 8_00n }),
+    ).rejects.toMatchObject({
+      code: "negative_cash",
+    });
+  });
+
   it("refuses to delete a deposit a purchase spends", async () => {
     const { accountId } = await createPortfolioWithAccount(ctx, {
       name: "Broker",

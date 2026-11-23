@@ -116,6 +116,15 @@ describe("a manual portfolio on /api/v1", () => {
       value: "1498.00",
     });
 
+    // A fee of its own, from the cash: 498 → 496.
+    const fee = await send(alice, "POST", ops, {
+      kind: "fee",
+      on: todayOn,
+      amount: "2.00",
+      note: "Stamp duty",
+    });
+    expect(fee.status).toBe(201);
+    expect((await send(alice, "GET", `/investments/${accountId}/holdings`)).body.cash).toBe("496.00");
     const holdingId = await holdingIdOf(accountId);
     const short = await send(alice, "POST", ops, {
       kind: "sell",
@@ -144,6 +153,9 @@ describe("a manual portfolio on /api/v1", () => {
       body: { error: "conflict", reason: "not_editable" },
     });
     expect((await send(alice, "POST", ops, buy("1", "1"))).status).toBe(409);
+    expect(
+      (await send(alice, "POST", ops, { kind: "fee", on: todayOn, amount: "1.00", note: null })).status,
+    ).toBe(409);
     const holdings = await send(alice, "GET", `/investments/${made.body.accountId}/holdings`);
     expect(holdings.body.cash).toBeNull();
     const detail = await send(alice, "GET", `/investments/${made.body.accountId}?period=all`);

@@ -28,7 +28,7 @@ type MoneyBody = Extract<OperationBody, { kind: "deposit" | "withdrawal" }>;
 
 /** The money in and out of the account a service reads or a provider writes: not the person's to type. */
 const NOT_TYPED = new Set(["account_valuation", "adjustment"]);
-const PORTFOLIO_ONLY = new Set(["buy", "deposit", "withdrawal"]);
+const PORTFOLIO_ONLY = new Set(["buy", "deposit", "withdrawal", "fee"]);
 
 function buyOf(body: BuyBody) {
   const quantity = decimal(body.quantity, QUANTITY_SCALE);
@@ -72,6 +72,14 @@ export async function writeOperation(
   if (body.kind === "buy") return addAsset(ctx, accountId, buyOf(body));
   if (body.kind === "deposit" || body.kind === "withdrawal")
     return recordOperation(ctx, accountId, moneyOf(body));
+  if (body.kind === "fee") {
+    return recordOperation(ctx, accountId, {
+      kind: "fee",
+      on: body.on,
+      amountCents: parseCents(body.amount),
+      note: body.note,
+    });
+  }
   return other(body);
 }
 

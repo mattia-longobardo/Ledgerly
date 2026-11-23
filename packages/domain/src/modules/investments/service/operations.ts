@@ -64,6 +64,13 @@ export const operationInputSchema = z.discriminatedUnion("kind", [
     note: optionalNote,
   }),
   z.object({
+    // A fee of its own, from the cash (R5d): a manual portfolio's custody or stamp duty.
+    kind: z.literal("fee"),
+    on: civilDate(),
+    amountCents: positive,
+    note: optionalNote,
+  }),
+  z.object({
     kind: z.literal("income"),
     holdingId: z.uuid().nullable().default(null),
     on: civilDate(),
@@ -145,6 +152,8 @@ async function legsOf(
         legs: [{ leg: "main", kind: "income", holdingId: input.holdingId, amountCents: input.amountCents }],
         transactionId: null,
       };
+    case "fee":
+      return { legs: [{ leg: "main", kind: "fee", amountCents: -input.amountCents }], transactionId: null };
     default: {
       if (period.mode !== "assets") throw new InvestmentError("wrong_mode");
       const holding = book.holdingRows.find((one) => one.id === input.holdingId && one.origin === "manual");

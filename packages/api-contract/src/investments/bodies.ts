@@ -123,6 +123,18 @@ export const operationBody = z.discriminatedUnion("kind", [
     })
     .strict(),
   /**
+   * A fee of its own on a manual portfolio (R5d, PERS-591): a custody or a stamp duty paid from the
+   * cash. Its cash rule is a purchase's: below zero at the end of a day, `negative_cash`.
+   */
+  z
+    .object({
+      kind: z.literal("fee"),
+      on: civilDate(),
+      amount: amountInput(),
+      note,
+    })
+    .strict(),
+  /**
    * Money in and out of a manual portfolio (R5d): its day, its amount and, when one documents it,
    * the bank movement. On any other service they come from Accounts or the provider: `not_editable`.
    */

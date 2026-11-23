@@ -12,6 +12,9 @@ written before it keeps working.
 - `GET /investments/home` (and `include=funds`): each row has `valueOnly`, true for a `manual_portfolio` kept
   by its value alone («Value only»), false for a manual portfolio with positions and cash and for every other
   kind. `kind` does not change.
+- `POST /investments/{accountId}/operations` takes `kind: "fee"` on a manual portfolio (`on`, `amount`,
+  `note`): a fee of its own, paid from the cash, refused with `negative_cash` as a purchase. On another
+  service: `not_editable`.
 
 ## Unreleased · Investments: the manual portfolio (R5d, step 1)
 

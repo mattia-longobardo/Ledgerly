@@ -32631,6 +32631,40 @@
                     "properties": {
                       "kind": {
                         "type": "string",
+                        "const": "fee"
+                      },
+                      "on": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                      },
+                      "note": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "on",
+                      "amount"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
                         "enum": [
                           "deposit",
                           "withdrawal"
