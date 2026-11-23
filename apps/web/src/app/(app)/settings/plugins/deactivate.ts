@@ -25,6 +25,8 @@ export interface Source {
   pluginId: string | null;
   /** Whether the source keeps the days of Time Off: its changes waiting are counted and dropped. */
   days: boolean;
+  /** A bank: the person chooses which of its accounts are read here; a source keeps them all. */
+  bank: boolean;
 }
 
 export class DeactivateError extends Error {
@@ -44,9 +46,9 @@ export async function sourceOf(ctx: Pick<Ctx, "userId">, slug: string): Promise<
   const provider = pluginProvider(slug);
   const capabilities = (await pluginManifest(slug))?.capabilities ?? [];
   if (!isBankPlugin(capabilities))
-    return { provider, pluginId: slug, days: capabilities.includes("leaveCalendar") };
+    return { provider, pluginId: slug, days: capabilities.includes("leaveCalendar"), bank: false };
   if (!(await isPluginActive(ctx, slug))) return null;
-  return { provider, pluginId: slug, days: false };
+  return { provider, pluginId: slug, days: false, bank: true };
 }
 
 /** What the dialog says before it opens (§3.3): only the lines above 0 are shown. */

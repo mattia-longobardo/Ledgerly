@@ -137,7 +137,7 @@ function walletStub(): SourceCalls {
   });
 }
 
-const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: "wallet", days: false });
+const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: "wallet", days: false, bank: false });
 const walletAccounts = () => listAccounts(ctx, { includeArchived: true });
 
 /** Wallet read once, with one account left out, one interest rule (none publishes since R5c) and one movement waiting. */
@@ -315,6 +315,7 @@ describe("the sources a page may turn off", () => {
       provider: TREK_PROVIDER,
       pluginId: "trek",
       days: true,
+      bank: false,
     });
     expect(await sourceOf(ctx, WALLET_PROVIDER)).toBeNull();
     expect(await sourceOf(ctx, "etoro")).toBeNull();
@@ -339,7 +340,7 @@ describe("Turn off Trek", () => {
     const before = await numbers();
     const allowance = await allowanceOf(ctx, 2026);
 
-    const trek: Source = { provider: TREK_PROVIDER, pluginId: "trek", days: true };
+    const trek: Source = { provider: TREK_PROVIDER, pluginId: "trek", days: true, bank: false };
     expect((await deactivationCounts(ctx, trek)).pendingDays).toBe(pending);
     await deactivateSource(ctx, trek, deps, later(1));
 
@@ -383,7 +384,7 @@ describe("Turn off a bank's plugin", () => {
     const before = numbersSnapshot(ctx, new Date("2026-11-20T10:00:00Z"));
 
     const source = await sourceOf(ctx, PLUGIN);
-    expect(source).toEqual({ provider: PROVIDER, pluginId: PLUGIN, days: false });
+    expect(source).toEqual({ provider: PROVIDER, pluginId: PLUGIN, days: false, bank: true });
     expect(await deactivateSource(ctx, source!, { ...deps, plugin: plugin.deps }, BANK_NOW)).toEqual({
       accounts: 1,
     });

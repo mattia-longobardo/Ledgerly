@@ -84,7 +84,7 @@ export async function bringBackAccount(
   try {
     await changeSourceSkippedIds(ctx, source.provider, { remove: [externalId] });
     revalidate();
-    if (source.pluginId !== null) {
+    if (source.bank && source.pluginId !== null) {
       const shared = await connectionSharing(ctx, source.pluginId, externalId);
       return { ok: true, reconnect: shared ? shared.connection.id : null };
     }
