@@ -11,14 +11,6 @@ import { type ServiceTabKey, tabPath } from "./service-tabs";
 
 type Overview = RouteOutput<typeof investments.getInvestment>;
 
-/**
- * A manual portfolio (R5d): its cash and positions are typed by hand. The header names no provider
- * id, so it is read from what it gives: a `manual_portfolio` (typed by hand, on an account no source
- * reads) by positions (`assets`) whose value is not «Update value» — the provider `manual` always is.
- */
-const isPortfolio = (service: Overview["service"]) =>
-  service.kind === "manual_portfolio" && service.mode === "assets" && !service.valueEditable;
-
 export interface ServicePage {
   id: string;
   tab: ServiceTabKey;
@@ -59,7 +51,8 @@ export function servicePage(
       mode: service.mode,
       synced: service.origin === "synced",
       valueEditable: service.valueEditable,
-      portfolio: isPortfolio(service),
+      // The server says it (R5d): a period before a «Switch to positions» is kept by value.
+      portfolio: service.portfolio,
     },
   };
 }
