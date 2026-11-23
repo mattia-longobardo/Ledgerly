@@ -44,6 +44,8 @@ const accountDetail = z.object({
   betweenEntries: z.enum(TRENDS),
   lastSyncedAt: instant().nullable(),
   archivedAt: instant().nullable(),
+  /** The pension fund whose value the account holds (R5b): its page opens with one read. */
+  fundId: id().nullable(),
 });
 
 const ACCOUNT_DETAIL_EXAMPLE = {
@@ -70,6 +72,7 @@ const ACCOUNT_DETAIL_EXAMPLE = {
   betweenEntries: "hold",
   lastSyncedAt: null,
   archivedAt: null,
+  fundId: null,
 };
 
 const name = z.string().trim().min(1).max(80);

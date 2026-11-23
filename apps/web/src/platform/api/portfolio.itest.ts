@@ -191,6 +191,13 @@ describe("the one list of Investments", () => {
     expect(JSON.stringify(listed.body)).not.toMatch(/"pac"|"kind"/);
   });
 
+  it("names the fund of its account in GET /accounts/{id}, and no fund for another account", async () => {
+    const [exported] = await funds.fundsExport(alice);
+    const fundAccount = await send(alice, "GET", `/accounts/${exported.fund.valuationAccountId}`);
+    expect(fundAccount.body.fundId).toBe(fundId);
+    expect((await send(alice, "GET", `/accounts/${directa}`)).body.fundId).toBeNull();
+  });
+
   it("gives an archived fund the paid-in money and the gain of its page, and no value", async () => {
     await funds.setFundState(alice, fundId, "archived");
     const page = await send(alice, "GET", `/funds/${fundId}?period=all`);

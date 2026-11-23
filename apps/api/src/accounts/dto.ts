@@ -34,7 +34,8 @@ export function accountRow(account: Account, balance: Cents | null): Row {
   };
 }
 
-export function accountDetail(account: Account): Detail {
+/** One account with its settings, and the pension fund whose value it holds (null for any other). */
+export function accountDetail(account: Account, fundId: string | null): Detail {
   return {
     id: account.id,
     name: account.name,
@@ -59,6 +60,7 @@ export function accountDetail(account: Account): Detail {
     betweenEntries: account.betweenEntries,
     lastSyncedAt: instant(account.lastSyncedAt),
     archivedAt: instant(account.archivedAt),
+    fundId,
   };
 }
 

@@ -26,9 +26,11 @@ import {
   updateAccountSettings,
   updateBalanceEntry,
   updateConnection,
+  type Account,
 } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { incomeLessExpense } from "@ledgerly/domain/transactions";
+import { fundsByAccount } from "@ledgerly/domain/funds";
 import { groupIban } from "@ledgerly/domain/platform/iban";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
@@ -110,6 +112,11 @@ function settled<T>(outcome: Outcome<T>): T {
 
 const cents = (amount: string): Cents => parseCents(amount);
 
+/** The account as `GET /accounts/{id}` answers it: with the fund whose value it holds (R5b). */
+async function detailOf(ctx: Ctx, account: Account) {
+  return accountDetail(account, (await fundsByAccount(ctx)).get(account.id)?.id ?? null);
+}
+
 async function requireOwn(ctx: Ctx, id: string) {
   const account = await getAccount(ctx, id);
   if (!account) throw new ApiRefusal("not_found");
@@ -133,7 +140,7 @@ function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
     return { accounts: rows.map((account) => accountRow(account, latest.get(account.id) ?? null)) };
   });
   serve(app, guard, accounts.getAccount, async ({ ctx, params }) =>
-    accountDetail(await requireOwn(ctx, params.id)),
+    detailOf(ctx, await requireOwn(ctx, params.id)),
   );
   // Scope `session` (H45): only the web's own session reaches this handler.
   serve(app, guard, accounts.getAccountIban, async ({ ctx, params }) => {
@@ -150,7 +157,7 @@ function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
           : null,
       }),
     );
-    return accountDetail(account);
+    return detailOf(ctx, account);
   });
   serve(app, guard, accounts.updateAccount, async ({ ctx, params, body }) => {
     const current = await requireOwn(ctx, params.id);
@@ -179,7 +186,7 @@ function serveAccountsProper(app: Hono<ApiEnv>, guard: Guard): void {
         ...rest,
       }),
     );
-    return accountDetail(await requireOwn(ctx, params.id));
+    return detailOf(ctx, await requireOwn(ctx, params.id));
   });
   serve(app, guard, accounts.archiveAccount, ({ ctx, params }) => refusing(archiveAccount(ctx, params.id)));
   serve(app, guard, accounts.restoreAccount, ({ ctx, params }) => refusing(restoreAccount(ctx, params.id)));

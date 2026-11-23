@@ -3,6 +3,13 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Funds: one read for a fund's page, the gain of an archived fund (R5b)
+
+- `GET /accounts/{id}` (and the answers of `POST /accounts` and `PATCH /accounts/{id}`): `fundId`, the
+  pension fund whose value the account holds; null for any other account.
+- `GET /investments/funds` and MCP `list_funds`: an archived fund has the paid-in money and the gain
+  since it started that its page shows (before: null). Its value stays null.
+
 ## Unreleased · Addons: the pension funds are part of Investments (R5b)
 
 - `GET /addons` no longer lists `funds`, and `PUT /addons/funds` answers `invalid`: the pension funds
