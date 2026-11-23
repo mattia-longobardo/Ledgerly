@@ -5,6 +5,7 @@
 // A table from `md`, a card each below it (DataTable). Every figure is a field of the API. A manual
 // portfolio's position names where its price comes from (R5d), and its cash shows even at zero.
 import { useTranslations } from "next-intl";
+import { lazy, Suspense } from "react";
 import { priceText, quantityText } from "@ledgerly/domain/investments/client";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/format/format";
 import { Badge } from "@ledgerly/ui/badge";
@@ -15,13 +16,44 @@ import { Link } from "@ledgerly/ui/router";
 import { Td, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { HoldingMenu, type HoldingSummary, ReconcileButton } from "../holdings";
-import { PriceMode } from "../portfolio/price-mode";
 import { useProductLabel } from "../labels";
 import { centsOf } from "../present";
 import { PositionName } from "./position-name";
 import type { OpenRow, PositionsPage } from "./positions-view";
 
 type Text = ReturnType<typeof useTranslations<"investments.positions">>;
+
+// Only a manual portfolio's rows have a price mode: a synced service's page does not load it.
+const PriceMode = lazy(() => import("../portfolio/price-mode").then((one) => ({ default: one.PriceMode })));
+
+/** A row's asset, with its inferred cost and, in a manual portfolio, its price mode. */
+function RowName({ view, row }: { view: PositionsPage; row: OpenRow }) {
+  const text = useTranslations("investments.positions");
+  const { page } = view;
+  const asset = view.assetOf(row.assetId);
+  const inferred = row.at.costSource === "inferred";
+  const priced = page.context.portfolio ? asset : undefined;
+  return (
+    <PositionName
+      view={view}
+      assetId={row.assetId}
+      product={row.product}
+      manual={row.origin === "manual"}
+      badge={
+        inferred || priced ? (
+          <>
+            {inferred && <Badge tone="neutral">{text("inferredCost")}</Badge>}
+            {priced && (
+              <Suspense fallback={null}>
+                <PriceMode view={view} holdingId={row.holdingId} name={priced.name} price={priced.price} />
+              </Suspense>
+            )}
+          </>
+        ) : null
+      }
+    />
+  );
+}
 
 function useCells(view: PositionsPage) {
   const text = useTranslations("investments.positions");
@@ -58,29 +90,7 @@ function useCells(view: PositionsPage) {
         )}
       </span>
     ),
-    name: (row: OpenRow) => {
-      const asset = view.assetOf(row.assetId);
-      const inferred = row.at.costSource === "inferred";
-      const priced = page.context.portfolio ? asset : undefined;
-      return (
-        <PositionName
-          view={view}
-          assetId={row.assetId}
-          product={row.product}
-          manual={row.origin === "manual"}
-          badge={
-            inferred || priced ? (
-              <>
-                {inferred && <Badge tone="neutral">{text("inferredCost")}</Badge>}
-                {priced && (
-                  <PriceMode view={view} holdingId={row.holdingId} name={priced.name} price={priced.price} />
-                )}
-              </>
-            ) : null
-          }
-        />
-      );
-    },
+    name: (row: OpenRow) => <RowName view={view} row={row} />,
   };
 }
 
