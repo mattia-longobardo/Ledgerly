@@ -32,6 +32,7 @@ import {
   OPERATION_KINDS,
   ORIGINS,
   PLAN_FREQUENCIES,
+  PLAN_RUN_REASONS,
   PLAN_MODES,
   PLAN_RECORDERS,
   PLAN_RUN_STATES,
@@ -648,7 +649,7 @@ export const investmentPlanRuns = pgTable(
     priceOn: date("price_on"),
     waitingSince: date("waiting_since"),
     /** Why the job did not write an `auto` instalment (P2): a refusal of the purchase. */
-    reason: text("reason"),
+    reason: text("reason", { enum: PLAN_RUN_REASONS }),
     recordedBy: text("recorded_by", { enum: PLAN_RECORDERS }),
     /** The movement of the debit account the matcher proposed (E7), and whether the person linked it. */
     debitTransactionId: uuid("debit_transaction_id").references(() => transactions.id, {

@@ -62,6 +62,36 @@ describe("«To do» of Overview", () => {
     ]);
   });
 
+  it("tells a plan's instalment with no cash to record a deposit first (R5d, P2)", async () => {
+    serve([
+      {
+        ...ITEM,
+        addon: "investments",
+        id: "0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f73",
+        event: "plan_run_no_cash",
+        params: { date: "2026-12-05" },
+        target: { page: "investment_plan", id: "0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74" },
+      },
+      {
+        ...ITEM,
+        addon: "investments",
+        id: "0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f75",
+        event: "plan_run_to_confirm",
+        params: { date: "2026-12-05" },
+        target: { page: "investment_plan", id: "0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74" },
+      },
+    ]);
+    renderCard();
+    const links = await screen.findAllByRole("link");
+    expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([
+      [
+        "A plan instalment of 5 Dec 2026 has no cash. Record a deposit, then confirm it.Open",
+        "/investments/0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74",
+      ],
+      ["A plan instalment of 5 Dec 2026 to confirmOpen", "/investments/0190c3c2-7a3e-7c1a-9f4e-2b3c4d5e6f74"],
+    ]);
+  });
+
   it("draws nothing when there is nothing to do", async () => {
     serve([]);
     renderCard();

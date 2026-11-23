@@ -3392,7 +3392,7 @@
       "checkConstraints": {
         "notification_preferences_event_ck": {
           "name": "notification_preferences_event_ck",
-          "value": "\"notification_preferences\".\"event\" in ('connection_failed', 'connection_stale', 'connection_expiring', 'account_low_balance', 'budget_threshold', 'monthly_summary', 'transactions_to_categorize', 'payslips_to_review', 'transfers_to_confirm', 'fund_to_verify', 'plan_run_to_confirm', 'plan_run_price_missing')"
+          "value": "\"notification_preferences\".\"event\" in ('connection_failed', 'connection_stale', 'connection_expiring', 'account_low_balance', 'budget_threshold', 'monthly_summary', 'transactions_to_categorize', 'payslips_to_review', 'transfers_to_confirm', 'fund_to_verify', 'plan_run_to_confirm', 'plan_run_no_cash', 'plan_run_price_missing')"
         }
       },
       "isRLSEnabled": false
@@ -3552,7 +3552,7 @@
       "checkConstraints": {
         "notifications_event_ck": {
           "name": "notifications_event_ck",
-          "value": "\"notifications\".\"event\" in ('connection_failed', 'connection_stale', 'connection_expiring', 'account_low_balance', 'budget_threshold', 'monthly_summary', 'transactions_to_categorize', 'payslips_to_review', 'transfers_to_confirm', 'fund_to_verify', 'plan_run_to_confirm', 'plan_run_price_missing')"
+          "value": "\"notifications\".\"event\" in ('connection_failed', 'connection_stale', 'connection_expiring', 'account_low_balance', 'budget_threshold', 'monthly_summary', 'transactions_to_categorize', 'payslips_to_review', 'transfers_to_confirm', 'fund_to_verify', 'plan_run_to_confirm', 'plan_run_no_cash', 'plan_run_price_missing')"
         }
       },
       "isRLSEnabled": false

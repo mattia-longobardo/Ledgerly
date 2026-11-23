@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 77,
+    "crossModuleImports": 78,
     "moduleIndexFiles": 14,
     "reciprocalModulePairs": 0,
     "reciprocalUnitPairs": 40,
@@ -12,7 +12,7 @@
     "forbiddenNameKeys": 4,
     "packageDependencies": 16,
     "packageEscapes": 14,
-    "deepImports": 51,
+    "deepImports": 52,
     "tableAccess": 10
   },
   "crossModuleImports": [
@@ -53,6 +53,7 @@
     "modules/investments/schema.ts → modules/transactions/schema",
     "modules/investments/service.ts → modules/accounts/index",
     "modules/investments/service.ts → modules/transactions/queries",
+    "modules/investments/service.ts → modules/transactions/rules",
     "modules/investments/sync.ts → modules/accounts/index",
     "modules/investments/sync.ts → modules/users/jobs",
     "modules/payroll/fields.ts → modules/imports/rules",
@@ -256,6 +257,7 @@
     "modules/interests/service.ts → modules/transactions/taxonomy",
     "modules/investments/queries.ts → modules/transactions/queries",
     "modules/investments/service.ts → modules/transactions/queries",
+    "modules/investments/service.ts → modules/transactions/rules",
     "modules/investments/sync.ts → modules/users/jobs",
     "modules/payroll/fields.ts → modules/imports/rules",
     "modules/payroll/llm.ts → modules/imports/pdf/text",

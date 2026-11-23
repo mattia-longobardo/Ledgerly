@@ -15,8 +15,9 @@ written before it keeps working.
   `POST …/runs/{runId}/debit` (links the movement the matcher proposed),
   `POST …/plans/{planId}/backfill` (at most 60 past due dates, all or none).
 - Activity rows: `plan` (`planId`, `runId`, `name`, `automatic`), null for any other operation.
-- «Da fare» and the notifications: the events `plan_run_to_confirm` and `plan_run_price_missing`, on the page
-  `investment_plan` (dates and counts only).
+- «Da fare» and the notifications: the events `plan_run_to_confirm`, `plan_run_no_cash` (an `auto` instalment
+  the portfolio's cash could not pay: record a deposit, then confirm) and `plan_run_price_missing`, on the page
+  `investment_plan` (target: the plan's portfolio), with `params.date`, the due date. No amount, no name.
 
 ## Unreleased · Import a CSV file of movements (R5c, P5, decision ST-8)
 

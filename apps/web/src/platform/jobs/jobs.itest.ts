@@ -96,6 +96,8 @@ describe("jobs", () => {
         { job: "fx-rates-refresh", status: "success" },
         // No prices plugin configured here: it reads nothing (R5d).
         { job: "instrument-prices", status: "success" },
+        // No plan here: nothing comes due (R5d).
+        { job: "investment-plans", status: "success" },
         // The real daily backup, which genuinely fails here: `pg_dump` is in the *application*
         // image (Dockerfile) and not in the bare `node:26-bookworm-slim` this suite runs in. That
         // it is recorded as failed rather than stopping the tier is the point of the assertion.

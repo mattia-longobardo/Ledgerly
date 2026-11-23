@@ -26,8 +26,10 @@ export const NOTIFICATION_EVENT_NAMES = [
   "payslips_to_review",
   "transfers_to_confirm",
   "fund_to_verify",
-  // R5d, step 2: an instalment of a purchase plan to confirm, or still with no price after 5 working days.
+  // R5d, step 2: an instalment of a purchase plan to confirm, one the job could not buy with the cash of
+  // the portfolio (P2: record a deposit, then confirm), or one still with no price after 5 working days.
   "plan_run_to_confirm",
+  "plan_run_no_cash",
   "plan_run_price_missing",
 ] as const;
 
@@ -59,6 +61,7 @@ export const NOTIFICATION_EVENTS = {
   transfers_to_confirm: { category: "action", addon: "investments", page: "investments_transfers" },
   fund_to_verify: { category: "action", addon: "investments", page: "fund" },
   plan_run_to_confirm: { category: "action", addon: "investments", page: "investment_plan" },
+  plan_run_no_cash: { category: "action", addon: "investments", page: "investment_plan" },
   plan_run_price_missing: { category: "action", addon: "investments", page: "investment_plan" },
 } as const satisfies Record<
   NotificationEvent,
@@ -86,7 +89,7 @@ export type NotificationParams = z.infer<typeof params>;
 
 const target = z.object({
   page: z.enum(NOTIFICATION_PAGES),
-  /** The connection, account, budget, fund or plan; `null` for a page without one. */
+  /** The connection, account, budget or fund; a plan's portfolio; `null` for a page without one. */
   id: z.string().nullable(),
   /**
    * The id of the page to open, when it is not `id`: for a fund, the account that holds its value,

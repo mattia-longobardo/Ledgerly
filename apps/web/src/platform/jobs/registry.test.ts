@@ -33,6 +33,7 @@ describe("JOBS", () => {
       ["holidays-refresh", "daily"],
       ["fx-rates-refresh", "daily"],
       ["instrument-prices", "daily"],
+      ["investment-plans", "daily"],
       ["database-backup", "daily"],
       ["monthly-summary", "monthly"],
       // No tick ever asks for `manual`: this one runs only from "Export all data" (spec §10.3).

@@ -774,7 +774,6 @@
     "packages/domain/src/modules/investments/queries/home.ts": 1,
     "packages/domain/src/modules/investments/queries/summary.ts": 1,
     "packages/domain/src/modules/investments/service/book.ts": 1,
-    "packages/domain/src/modules/investments/service/events.ts": 1,
     "packages/domain/src/modules/investments/service/operations.ts": 1,
     "packages/domain/src/modules/investments/service/transfers.ts": 2,
     "packages/domain/src/modules/investments/sync/connect.ts": 1,

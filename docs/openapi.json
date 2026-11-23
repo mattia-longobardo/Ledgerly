@@ -34310,7 +34310,7 @@
     "/investments/{accountId}/plans": {
       "get": {
         "operationId": "list_investment_plans",
-        "summary": "The purchase plans of a manual portfolio, with their next due date and the instalments waiting.",
+        "summary": "The purchase plans of a manual portfolio, with their next due date and the instalments waiting. Any other service has none.",
         "tags": [
           "investments"
         ],
@@ -35375,9 +35375,19 @@
                             ]
                           },
                           "reason": {
-                            "type": [
-                              "string",
-                              "null"
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "negative_cash",
+                                  "quantity_exceeded",
+                                  "wrong_mode",
+                                  "before_period"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
                             ]
                           },
                           "proposal": {
@@ -41395,6 +41405,7 @@
                               "transfers_to_confirm",
                               "fund_to_verify",
                               "plan_run_to_confirm",
+                              "plan_run_no_cash",
                               "plan_run_price_missing"
                             ]
                           },
@@ -41542,6 +41553,7 @@
                 "transfers_to_confirm",
                 "fund_to_verify",
                 "plan_run_to_confirm",
+                "plan_run_no_cash",
                 "plan_run_price_missing"
               ]
             }
@@ -41596,6 +41608,7 @@
                               "transfers_to_confirm",
                               "fund_to_verify",
                               "plan_run_to_confirm",
+                              "plan_run_no_cash",
                               "plan_run_price_missing"
                             ]
                           },
@@ -41798,6 +41811,7 @@
                               "transfers_to_confirm",
                               "fund_to_verify",
                               "plan_run_to_confirm",
+                              "plan_run_no_cash",
                               "plan_run_price_missing"
                             ]
                           },
@@ -61291,6 +61305,7 @@
                               "transfers_to_confirm",
                               "fund_to_verify",
                               "plan_run_to_confirm",
+                              "plan_run_no_cash",
                               "plan_run_price_missing"
                             ]
                           },

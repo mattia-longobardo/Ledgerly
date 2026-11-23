@@ -13,6 +13,13 @@ export const PLAN_FREQUENCIES = ["week", "month", "quarter"] as const;
 export const PLAN_MODES = ["propose", "auto"] as const;
 export const PLAN_STATES = ["active", "paused", "ended"] as const;
 export const PLAN_RUN_STATES = ["pending", "waiting_price", "proposed", "recorded", "skipped"] as const;
+/** Why the job left an `auto` instalment to the person (P2): the refusal of the purchase. */
+export const PLAN_RUN_REASONS = [
+  "negative_cash",
+  "quantity_exceeded",
+  "wrong_mode",
+  "before_period",
+] as const;
 /** The past due dates «Record the past instalments» takes at once (P4). */
 export const MAX_BACKFILL_RUNS = 60;
 
@@ -149,7 +156,7 @@ export const runOut = z.object({
   /** Since when no price was found: after 5 working days the person types it. */
   waitingSince: civilDate().nullable(),
   /** Why the job did not write it in `auto` (P2): `negative_cash`, `quantity_exceeded`; null otherwise. */
-  reason: z.string().nullable(),
+  reason: z.enum(PLAN_RUN_REASONS).nullable(),
   proposal: proposal.nullable(),
   /** The movement of the debit account the matcher found for it (E7): proposed, linked only when the person says. */
   debit: z
@@ -203,7 +210,9 @@ export const listPlans = defineRoute({
   path: "/investments/{accountId}/plans",
   scope: "investments:read",
   capability: "investments",
-  summary: "The purchase plans of a manual portfolio, with their next due date and the instalments waiting.",
+  summary:
+    "The purchase plans of a manual portfolio, with their next due date and the instalments waiting. " +
+    "Any other service has none.",
   actions: [],
   params: byService,
   response: plansList,

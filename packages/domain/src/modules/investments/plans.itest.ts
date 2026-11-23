@@ -125,7 +125,9 @@ describe("a purchase plan", () => {
       run: { state: "proposed" },
       proposal: { quantity: qty("2.5"), spentCents: 100_00n, feeCents: 1_00n },
     });
-    expect((await plansToDo(ctx)).toConfirm).toEqual([{ runId: run.run.id, accountId, dueOn: todayOn }]);
+    expect((await plansToDo(ctx)).toConfirm).toEqual([
+      { runId: run.run.id, accountId, dueOn: todayOn, reason: null },
+    ]);
     const { eventId } = await confirmRun(ctx, { accountId, planId, runId: run.run.id }, {});
     await expect(confirmRun(ctx, { accountId, planId, runId: run.run.id }, {})).rejects.toMatchObject({
       code: "not_editable",
@@ -206,6 +208,7 @@ describe("a purchase plan", () => {
       currency: "EUR",
     });
     await expect(createPlan(ctx, manual, dueToday())).rejects.toMatchObject({ code: "not_eligible" });
+    expect(await listPlans(ctx, manual)).toEqual([]);
     await updatePlan(ctx, accountId, planId, { state: "paused" });
     expect((await listPlans(ctx, accountId))[0]).toMatchObject({
       plan: { state: "paused" },

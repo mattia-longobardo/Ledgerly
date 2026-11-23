@@ -14,6 +14,7 @@ import {
   STALE_VALUE_DAYS,
   type AssetPrice,
   PORTFOLIO_PROVIDER,
+  type plansOfEvents,
 } from "@ledgerly/domain/investments";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { type Cents, sumCents } from "@ledgerly/domain/shared/money";
@@ -43,7 +44,10 @@ type Home = z.input<Reads["getInvestmentsHome"]["response"]>;
 type HomeData = Awaited<ReturnType<typeof investmentsHome>>;
 /** The open funds with their value today, read only (`fundValues` of funds). */
 type FundValues = readonly { fund: { id: string; name: string }; valueCents: Cents | null }[];
-type ActivityData = NonNullable<Awaited<ReturnType<typeof serviceActivity>>>;
+/** A page of events, with the plan of each purchase a plan wrote (`plansOfEvents`, R5d). */
+type ActivityData = NonNullable<Awaited<ReturnType<typeof serviceActivity>>> & {
+  plans: Awaited<ReturnType<typeof plansOfEvents>>;
+};
 type Movements = NonNullable<Awaited<ReturnType<typeof serviceMovements>>>;
 
 function realizedByEvent(service: ServicePnl): Map<string, Cents> {
@@ -55,7 +59,11 @@ function realizedByEvent(service: ServicePnl): Map<string, Cents> {
   return realized;
 }
 
-function activityRowOut(row: ActivityData["rows"][number], realized: Map<string, Cents>): ActivityRowOut {
+function activityRowOut(
+  row: ActivityData["rows"][number],
+  realized: Map<string, Cents>,
+  plans: ActivityData["plans"],
+): ActivityRowOut {
   return {
     id: row.id,
     on: row.on,
@@ -79,6 +87,7 @@ function activityRowOut(row: ActivityData["rows"][number], realized: Map<string,
     linked: row.linked === null ? null : { payee: row.linked.payee, amount: money(row.linked.cents) },
     transfer: row.transfer,
     realized: maybe(realized.get(row.id) ?? null),
+    plan: plans.get(row.id) ?? null,
   };
 }
 
@@ -278,7 +287,10 @@ export function overviewOut(
       markers,
     },
     contributions: contributionsOut(contributionsOf(service)),
-    recent: (activity?.rows ?? []).slice(0, 5).map((row) => activityRowOut(row, realized)),
+    recent:
+      activity === null
+        ? []
+        : activity.rows.slice(0, 5).map((row) => activityRowOut(row, realized, activity.plans)),
   };
 }
 
@@ -311,7 +323,7 @@ export function activityOut(detail: ServiceDetail, pnl: View, activity: Activity
     },
     first: activity.total === 0 ? 0 : (activity.page - 1) * ACTIVITY_PAGE_SIZE + 1,
     last: Math.min(activity.page * ACTIVITY_PAGE_SIZE, activity.total),
-    rows: activity.rows.map((row) => activityRowOut(row, realized)),
+    rows: activity.rows.map((row) => activityRowOut(row, realized, activity.plans)),
     transferProposals: detail.transferProposals.map((row) => ({
       withdrawalId: row.withdrawalId,
       depositId: row.depositId,

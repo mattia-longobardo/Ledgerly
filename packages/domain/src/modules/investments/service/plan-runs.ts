@@ -11,7 +11,15 @@ import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { civilDate } from "../../../shared/inputs";
 import { PORTFOLIO_PROVIDER } from "../catalog";
-import { dueDates, endedBy, instalment, MAX_CATCH_UP, PRICE_SCALE } from "../rules";
+import {
+  dueDates,
+  endedBy,
+  instalment,
+  MAX_CATCH_UP,
+  PLAN_RUN_REASONS,
+  type PlanRunReason,
+  PRICE_SCALE,
+} from "../rules";
 import { investmentAccounts, investmentEvents, investmentPlanRuns, investmentPlans } from "../schema";
 import { buyWithin, positive } from "./events";
 import { pricedListingOf } from "./market";
@@ -23,9 +31,9 @@ import { investmentAssets } from "../schema";
 /** The days after its due date a bank movement may document an instalment (E7). */
 const DEBIT_WINDOW_DAYS = 5;
 /** What a purchase refusal of the job becomes (P2): a proposal that says why. */
-const REFUSALS = new Set(["negative_cash", "quantity_exceeded", "wrong_mode", "before_period"]);
+const reasonOf = (code: string) => PLAN_RUN_REASONS.find((reason) => reason === code);
 
-export const confirmSchema = z.object({
+const confirmSchema = z.object({
   on: civilDate().optional(),
   quantity: positive.optional(),
   unitPrice: positive.optional(),
@@ -135,7 +143,7 @@ export async function skipRun(
   });
 }
 
-export const backfillSchema = z.object({
+const backfillSchema = z.object({
   runs: z
     .array(
       z.object({
@@ -233,7 +241,7 @@ async function advance(
     }
     const price = { price: priced.price, priceCurrency: priced.currency, priceOn: priced.on };
     await transaction.update(investmentPlanRuns).set(price).where(eq(investmentPlanRuns.id, run.id));
-    let reason: string | null = null;
+    let reason: PlanRunReason | null = null;
     if (plan.mode === "auto") {
       const unitPrice = fromNumeric(priced.price, PRICE_SCALE) ?? 0n;
       try {
@@ -243,8 +251,9 @@ async function advance(
         );
         return;
       } catch (error) {
-        if (!(error instanceof InvestmentError) || !REFUSALS.has(error.code)) throw error;
-        reason = error.code;
+        const refusal = error instanceof InvestmentError ? reasonOf(error.code) : undefined;
+        if (refusal === undefined) throw error;
+        reason = refusal;
       }
     }
     await transaction
@@ -363,6 +372,7 @@ export async function plansToDo(
     runId: row.run.id,
     accountId: row.accountId,
     dueOn: row.run.dueOn,
+    reason: row.run.reason,
   });
   const late = (row: (typeof rows)[number]) =>
     row.run.waitingSince !== null && marketPrices().isStale(row.run.waitingSince, todayOn);
@@ -376,4 +386,6 @@ export interface PlanFact {
   runId: string;
   accountId: string;
   dueOn: CivilDate;
+  /** Why the job did not write it (P2), or null. */
+  reason: PlanRunReason | null;
 }

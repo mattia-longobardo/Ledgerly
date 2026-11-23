@@ -49,6 +49,7 @@ import * as fundsPension from "@domain/modules/funds/pension/rules";
 import { FEE_BASES, FEE_PERIODS } from "@domain/shared/fees";
 import * as investmentsWire from "../packages/api-contract/src/investments/shared";
 import * as investmentsRules from "@domain/modules/investments/rules";
+import * as plansWire from "../packages/api-contract/src/investments/plans";
 import * as portfolioWire from "../packages/api-contract/src/investments/portfolio";
 import * as portfolioRules from "@domain/modules/portfolio/rules";
 import { ACTIVITY_FAMILIES } from "@domain/modules/investments/activity";
@@ -548,6 +549,11 @@ describe("the Server Actions of investments", () => {
     expect(portfolioWire.PORTFOLIO_KINDS).toEqual(portfolioRules.PORTFOLIO_KINDS);
     expect(portfolioWire.PORTFOLIO_GROUPS).toEqual(portfolioRules.PORTFOLIO_GROUPS);
     expect(portfolioWire.RATE_REASONS).toEqual(portfolioRules.RATE_REASONS);
+    expect(plansWire.PLAN_FREQUENCIES).toEqual(investmentsRules.PLAN_FREQUENCIES);
+    expect(plansWire.PLAN_MODES).toEqual(investmentsRules.PLAN_MODES);
+    expect(plansWire.PLAN_STATES).toEqual(investmentsRules.PLAN_STATES);
+    expect(plansWire.PLAN_RUN_STATES).toEqual(investmentsRules.PLAN_RUN_STATES);
+    expect(plansWire.PLAN_RUN_REASONS).toEqual(investmentsRules.PLAN_RUN_REASONS);
   });
 
   it("give the pages the search of the registry from their entry (PERS-591)", () => {

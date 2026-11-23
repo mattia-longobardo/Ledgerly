@@ -135,4 +135,12 @@ export const PLAN_STATES = ["active", "paused", "ended"] as const;
 export type PlanState = (typeof PLAN_STATES)[number];
 export const PLAN_RUN_STATES = ["pending", "waiting_price", "proposed", "recorded", "skipped"] as const;
 export type PlanRunState = (typeof PLAN_RUN_STATES)[number];
+/** Why the job left an `auto` instalment to the person (P2): a refusal of the purchase. */
+export const PLAN_RUN_REASONS = [
+  "negative_cash",
+  "quantity_exceeded",
+  "wrong_mode",
+  "before_period",
+] as const;
+export type PlanRunReason = (typeof PLAN_RUN_REASONS)[number];
 export const PLAN_RECORDERS = ["person", "job"] as const;

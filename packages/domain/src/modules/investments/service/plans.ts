@@ -36,7 +36,7 @@ import { fromNumeric, InvestmentError, translated, type WriteCtx } from "./types
 export type InvestmentPlan = typeof investmentPlans.$inferSelect;
 export type InvestmentPlanRun = typeof investmentPlanRuns.$inferSelect;
 
-export const planInputSchema = z
+const planInputSchema = z
   .object({
     name: z.string().trim().min(1).max(80),
     instrument: z.object({
@@ -67,7 +67,7 @@ export const planInputSchema = z
   .refine((plan) => plan.feeCents === null || plan.feeRate === null, "A fee amount or a rate");
 export type PlanInput = z.input<typeof planInputSchema>;
 
-export const planUpdateSchema = z.object({
+const planUpdateSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   mode: z.enum(PLAN_MODES).optional(),
   state: z.enum(PLAN_STATES).optional(),
@@ -213,7 +213,9 @@ export async function listPlans(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountId: string,
 ): Promise<PlanView[]> {
-  const investment = await requirePortfolio(ctx, accountId);
+  const investment = await requireInvestmentAccount(ctx, accountId);
+  // A synced service, or one by value, has no plan: none to list (§11.3).
+  if (investment.provider !== PORTFOLIO_PROVIDER) return [];
   const rows = await getDb()
     .select({ plan: investmentPlans, asset: investmentAssets })
     .from(investmentPlans)

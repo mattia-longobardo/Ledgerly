@@ -27,6 +27,7 @@ import {
   investmentsPortfolio,
   investmentsSnapshot,
   type InvestmentsSnapshot,
+  plansOfEvents,
   linkTransfer,
   type PeriodParams,
   PRICE_SCALE,
@@ -54,6 +55,7 @@ import { holdingsOut, listOut } from "./dto";
 import { activityOut, homeOut, movementsOut, overviewOut } from "./pages";
 import { catalogOut, connectionOut, positionsOut } from "./tabs";
 import { fundsListOut, portfolioOut } from "./portfolio";
+import { servePlans } from "./plan-routes";
 import { servePortfolio, writeOperation } from "./portfolio-routes";
 import { cents, decimal, notFound, refusing } from "./refusals";
 
@@ -68,6 +70,18 @@ export interface InvestmentCases {
   queueSync(ctx: Ctx, connectionId: string): Promise<void>;
   /** The first flows of a new connection, read after the answer (`tasks.firstFlows`). */
   queueFirstFlows(ctx: Ctx, connectionId: string, accountId: string): Promise<void>;
+}
+
+/** A page of events, with the plan of each purchase a plan wrote (R5d). */
+async function withPlans<T extends { rows: readonly { id: string }[] }>(ctx: Ctx, activity: T | null) {
+  if (activity === null) return null;
+  return {
+    ...activity,
+    plans: await plansOfEvents(
+      ctx,
+      activity.rows.map((row) => row.id),
+    ),
+  };
 }
 
 const found = <T>(value: T | null): T => {
@@ -153,7 +167,7 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
       assetId: null,
       page: 1,
     });
-    return overviewOut(detail, pnl, activity, prices);
+    return overviewOut(detail, pnl, await withPlans(ctx, activity), prices);
   });
 }
 
@@ -176,7 +190,7 @@ function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
       assetId: known ? query.assetId! : null,
       page: query.page ?? 1,
     });
-    return activityOut(detail, pnl, found(activity));
+    return activityOut(detail, pnl, found(await withPlans(ctx, activity)));
   });
   serve(app, guard, investments.getInvestmentPositions, async ({ ctx, params, query }) => {
     const period = periodOf(ctx, query);
@@ -341,5 +355,6 @@ export function serveInvestments(
   serveRegister(app, guard);
   serveConnection(app, guard, cases);
   servePortfolio(app, guard);
+  servePlans(app, guard);
   return INVESTMENTS_ROUTES;
 }
