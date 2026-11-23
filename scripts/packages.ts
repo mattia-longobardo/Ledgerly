@@ -78,6 +78,7 @@ export const ALLOWED: Record<string, { only?: string[]; never?: string[]; typesO
   },
   "@ledgerly/web": { never: ["@ledgerly/domain", "drizzle-orm", "@ledgerly/plugin-host"] },
   "@ledgerly/plugin-enablebanking": { only: ["@ledgerly/plugin-contract", "zod"] },
+  "@ledgerly/plugin-wallet": { only: ["@ledgerly/plugin-contract", "zod"] },
 };
 
 /** M6: what a layer never imports, whatever its known lists say. */
