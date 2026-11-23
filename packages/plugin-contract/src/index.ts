@@ -59,3 +59,10 @@ export { PLUGIN_ERROR_STATUS, errorBodySchema } from "./errors";
 export type { PluginErrorBody, PluginErrorCode } from "./errors";
 export { PLUGIN_ID, acceptsContract, hasCapability, manifestSchema } from "./manifest";
 export type { PluginManifest } from "./manifest";
+export {
+  CALENDAR_PATHS,
+  leaveFiguresRequestSchema,
+  leaveReadRequestSchema,
+  leaveWriteRequestSchema,
+} from "./calls-calendar";
+export type { LeaveDay, LeaveOutcome, LeaveWriteResponse } from "./calls-calendar";

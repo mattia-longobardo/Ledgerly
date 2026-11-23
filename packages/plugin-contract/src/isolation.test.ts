@@ -34,7 +34,7 @@ function importsOf(file: string): string[] {
  * Plugins whose container is not in `docker-compose.yml` yet: written and tested, wired to the core
  * by a later step of R5c. The name leaves this list in the commit that adds its service.
  */
-const NOT_DEPLOYED_YET = ["wallet"];
+const NOT_DEPLOYED_YET = ["wallet", "trek"];
 
 const isTest = (file: string) => /\.test\.ts$/.test(file);
 

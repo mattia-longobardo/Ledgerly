@@ -4,9 +4,9 @@
     "minLines": 6
   },
   "total": {
-    "lines": 109486,
+    "lines": 109553,
     "duplicatedLines": 16224,
-    "percent": 14.82,
+    "percent": 14.81,
     "blocks": 1250
   },
   "units": {
@@ -305,9 +305,9 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 2327,
+      "lines": 2394,
       "duplicatedLines": 220,
-      "percent": 9.45,
+      "percent": 9.19,
       "blocks": 16
     },
     "platform/ranges": {

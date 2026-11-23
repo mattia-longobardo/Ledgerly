@@ -9,6 +9,7 @@
  */
 import { PLUGIN_PATHS, SECRET_HEADER } from "./calls";
 import { SOURCE_PATHS } from "./calls-source";
+import { CALENDAR_PATHS } from "./calls-calendar";
 import { errorBodySchema, PLUGIN_ERROR_STATUS } from "./errors";
 import { acceptsContract, manifestSchema, type PluginManifest } from "./manifest";
 
@@ -103,6 +104,7 @@ export async function checkPlugin(target: KitTarget): Promise<string[]> {
   }
 
   if (parsed.success) failures.push(...(await checkSource(parsed.data, post)));
+  if (parsed.success) failures.push(...(await checkCalendar(parsed.data, post)));
 
   const unknown = await post("/not-in-the-contract", "{}");
   if (!isContractError(unknown.status, await json(unknown), "invalid_request")) {
@@ -142,4 +144,18 @@ async function checkSource(manifest: PluginManifest, post: Post): Promise<string
     failures.push(`POST ${SOURCE_PATHS.push} without an idempotency key must answer 400 invalid_request`);
   }
   return failures;
+}
+
+/** Contract 2: the calls of an external calendar of days off, for a plugin that declares them. */
+async function checkCalendar(manifest: PluginManifest, post: Post): Promise<string[]> {
+  if (!manifest.capabilities.includes("leaveCalendar")) return [];
+  const answers = await Promise.all(
+    Object.values(CALENDAR_PATHS).map(async (path) => {
+      const answer = await post(path, "{}");
+      return { path, kept: isContractError(answer.status, await json(answer), "invalid_request") };
+    }),
+  );
+  return answers
+    .filter((one) => !one.kept)
+    .map((one) => `POST ${one.path} with an empty object must answer 400 invalid_request`);
 }
