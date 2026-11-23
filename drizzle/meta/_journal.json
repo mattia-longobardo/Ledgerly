@@ -477,6 +477,13 @@
       "when": 1795550000000,
       "tag": "0067_first_start",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1795560000000,
+      "tag": "0068_subscriptions_pockets",
+      "breakpoints": true
     }
   ]
 }

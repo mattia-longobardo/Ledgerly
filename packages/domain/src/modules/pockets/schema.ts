@@ -1,5 +1,16 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, date, index, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  check,
+  date,
+  index,
+  pgTable,
+  smallint,
+  text,
+  unique,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
@@ -28,6 +39,8 @@ export const pockets = pgTable(
     targetCents: bigint("target_cents", { mode: "bigint" }),
     monthlyCents: bigint("monthly_cents", { mode: "bigint" }),
     startMonth: date("start_month").notNull(),
+    // The day of the month the accrual lands on (R5a, D6): 1 to 31, the last day of a shorter month.
+    accrualDay: smallint("accrual_day").notNull().default(1),
     state: text("state", { enum: POCKET_STATES }).notNull().default("active"),
     archivedAt: moment("archived_at"),
     createdAt: createdAtColumn(),
@@ -41,6 +54,7 @@ export const pockets = pgTable(
     check("pockets_target_ck", sql`${table.targetCents} is null or ${table.targetCents} > 0`),
     check("pockets_monthly_ck", sql`${table.monthlyCents} is null or ${table.monthlyCents} > 0`),
     check("pockets_start_ck", sql`extract(day from ${table.startMonth}) = 1`),
+    check("pockets_accrual_day_ck", sql`${table.accrualDay} between 1 and 31`),
     check("pockets_archived_ck", sql`(${table.state} = 'archived') = (${table.archivedAt} is not null)`),
   ],
 );
@@ -70,17 +84,23 @@ export const pocketMovements = pgTable(
   (table) => [
     index("pocket_movements_pocket_on_idx").on(table.pocketId, table.on),
     index("pocket_movements_user_idx").on(table.userId),
+    // Kept for the image before R5a, which names it in its `ON CONFLICT`.
     uniqueIndex("pocket_movements_accrual_uq")
       .on(table.pocketId, table.on)
+      .where(sql`${table.kind} = 'accrual'`),
+    // One accrual per pocket and month, on the pocket's day (R5a, D6).
+    uniqueIndex("pocket_movements_accrual_month_uq")
+      .on(table.pocketId, sql`date_trunc('month', ${table.on}::timestamp)`)
       .where(sql`${table.kind} = 'accrual'`),
     check("pocket_movements_kind_ck", sql`${table.kind} in (${sql.raw(inList(MOVEMENT_KINDS))})`),
     check(
       "pocket_movements_sign_ck",
       sql`case ${table.kind} when 'accrual' then ${table.amountCents} > 0 when 'deposit' then ${table.amountCents} > 0 when 'withdrawal' then ${table.amountCents} < 0 else ${table.amountCents} <> 0 end`,
     ),
+    // Wider since R5a (D6): an accrual lands on the pocket's day, any day of its month.
     check(
       "pocket_movements_accrual_day_ck",
-      sql`${table.kind} <> 'accrual' or extract(day from ${table.on}) = 1`,
+      sql`${table.kind} <> 'accrual' or extract(day from ${table.on}) between 1 and 31`,
     ),
     check(
       "pocket_movements_reason_ck",

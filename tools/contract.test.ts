@@ -337,8 +337,8 @@ describe("the Server Actions of subscriptions", () => {
     expect(subscriptionsWire.CHARGE_STATES).toEqual(subscriptionsDomain.CHARGE_STATES);
     const fields = subscriptionsDomain.subscriptionInputSchema.shape;
     expect(fields.name.maxLength).toBe(subscriptionsWire.MAX_NAME);
-    expect(fields.utility.unwrap().minValue).toBe(subscriptionsWire.MIN_UTILITY);
-    expect(fields.utility.unwrap().maxValue).toBe(subscriptionsWire.MAX_UTILITY);
+    expect(fields.utility.unwrap().unwrap().minValue).toBe(subscriptionsWire.MIN_UTILITY);
+    expect(fields.utility.unwrap().unwrap().maxValue).toBe(subscriptionsWire.MAX_UTILITY);
   });
 });
 

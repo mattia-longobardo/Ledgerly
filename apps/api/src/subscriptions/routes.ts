@@ -43,17 +43,26 @@ function subscriptionInput(body: z.infer<typeof subscriptions.createSubscription
     paymentAccountId: body.accountId,
     priceCents: parseCents(body.price),
     cycle: body.cycle,
+    every: body.every,
     nextChargeOn: body.chargeOn,
     payeeMatch: body.payeeMatch,
     tolerance: toleranceOf(body.tolerance),
-    utility: body.utility,
+    utility: body.noVote ? null : body.utility,
   };
 }
 
 function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, subscriptions.listSubscriptions, async ({ ctx }) =>
-    subscriptionsList(await subscriptionsView(ctx)),
-  );
+  serve(app, guard, subscriptions.listSubscriptions, async ({ ctx, query }) => {
+    const list = subscriptionsList(await subscriptionsView(ctx));
+    if (!query.account) return list;
+    // The subscriptions one account pays (R5a, ST-13): the two lists, the rest as for every one.
+    const paidBy = (row: { accountId: string | null }) => row.accountId === query.account;
+    return {
+      ...list,
+      subscriptions: list.subscriptions.filter(paidBy),
+      inactive: list.inactive.filter(paidBy),
+    };
+  });
   serve(app, guard, subscriptions.listSubscriptionSuggestions, async ({ ctx }) => ({
     suggestions: (await suggestions(ctx)).map((one) => ({
       key: one.payeeKey,

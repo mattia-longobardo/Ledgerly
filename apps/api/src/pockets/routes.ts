@@ -108,6 +108,7 @@ function pocketInput(body: {
   target: string | null;
   monthly: string | null;
   startMonth: string;
+  accrualDay?: number;
 }) {
   return {
     name: body.name,
@@ -116,6 +117,7 @@ function pocketInput(body: {
     targetCents: optionalCents(body.target),
     monthlyCents: optionalCents(body.monthly),
     startMonth: body.startMonth,
+    accrualDay: body.accrualDay,
   };
 }
 

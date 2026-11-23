@@ -88,6 +88,8 @@ describe("jobs", () => {
         { job: "accounts-alerts", status: "success" },
         { job: "subscriptions-check", status: "success" },
         { job: "interests-rematch", status: "success" },
+        // Daily since R5a (D6): each pocket on its own day of the month.
+        { job: "pockets-accrual", status: "success" },
         { job: "pockets-planned-cleanup", status: "success" },
         { job: "documents-retention", status: "success" },
         { job: "holidays-refresh", status: "success" },

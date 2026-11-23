@@ -3,6 +3,12 @@ import { dueMoment as clientDueMoment, type DueMoment } from "@ledgerly/domain/s
 import {
   dueMoment,
   addCycles,
+  cycleOf,
+  everyOf,
+  frequencyColumns,
+  frequencyOf,
+  nearestCycle,
+  subscriptionInputSchema,
   commitPercent,
   cadenceOf,
   type CheckedSubscription,
@@ -446,5 +452,83 @@ describe("the client entry", () => {
   it("exports dueMoment and its type", () => {
     const moment: DueMoment = clientDueMoment("quarterly", "2026-08-15");
     expect(moment).toEqual({ kind: "quarter", quarter: 3 });
+  });
+});
+
+describe("every N weeks or months (R5a, ST-15, D4)", () => {
+  it("is one of the 4 cycles when it can be, and the nearest one otherwise", () => {
+    expect(cycleOf({ unit: "month", count: 3 })).toBe("quarterly");
+    expect(cycleOf("weekly")).toBe("weekly");
+    expect(cycleOf({ unit: "week", count: 2 })).toBeNull();
+    expect(nearestCycle({ unit: "week", count: 2 })).toBe("weekly");
+    expect(nearestCycle({ unit: "month", count: 2 })).toBe("monthly");
+    expect(nearestCycle({ unit: "month", count: 6 })).toBe("quarterly");
+    expect(nearestCycle({ unit: "month", count: 24 })).toBe("yearly");
+    expect(everyOf("yearly")).toEqual({ unit: "month", count: 12 });
+  });
+
+  it("costs the same as before for the 4 cycles, and its share for every N", () => {
+    for (const cycle of ["weekly", "monthly", "quarterly", "yearly"] as const) {
+      expect(monthlyEquivalent(1299n, everyOf(cycle))).toBe(monthlyEquivalent(1299n, cycle));
+      expect(yearlyEquivalent(1299n, everyOf(cycle))).toBe(yearlyEquivalent(1299n, cycle));
+    }
+    expect(yearlyEquivalent(1299n, "quarterly")).toBe(5196n);
+    // Every 2 months: 6 a year; every 2 weeks: 26 a year.
+    expect(yearlyEquivalent(1000n, { unit: "month", count: 2 })).toBe(6000n);
+    expect(monthlyEquivalent(1000n, { unit: "month", count: 2 })).toBe(500n);
+    expect(yearlyEquivalent(1000n, { unit: "week", count: 2 })).toBe(26000n);
+  });
+
+  it("falls due every N months on the anchor's day, the last day of a shorter month", () => {
+    const every = { unit: "month", count: 2 } as const;
+    expect(dueDates("2026-01-31", every, "2026-01-01", "2026-08-31")).toEqual([
+      "2026-01-31",
+      "2026-03-31",
+      "2026-05-31",
+      "2026-07-31",
+    ]);
+    expect(addCycles("2026-12-31", every, 1)).toBe("2027-02-28");
+    expect(dueDates("2026-11-02", { unit: "week", count: 3 }, "2026-11-01", "2026-12-15")).toEqual([
+      "2026-11-02",
+      "2026-11-23",
+      "2026-12-14",
+    ]);
+  });
+
+  it("says when it falls due in the unit that fits it", () => {
+    expect(dueMoment({ unit: "week", count: 2 }, "2026-11-23").kind).toBe("weekday");
+    expect(dueMoment({ unit: "month", count: 2 }, "2026-11-23")).toEqual({ kind: "day", day: 23 });
+    expect(dueMoment({ unit: "month", count: 6 }, "2026-11-23")).toEqual({ kind: "month", month: 11 });
+  });
+
+  it("keeps a cycle of the list in `cycle` alone, and the nearest one beside any other «every»", () => {
+    expect(frequencyColumns("monthly", null)).toEqual({
+      cycle: "monthly",
+      everyUnit: null,
+      everyCount: null,
+    });
+    expect(frequencyColumns("weekly", { unit: "month", count: 12 })).toEqual({
+      cycle: "yearly",
+      everyUnit: null,
+      everyCount: null,
+    });
+    const columns = frequencyColumns("monthly", { unit: "month", count: 2 });
+    expect(columns).toEqual({ cycle: "monthly", everyUnit: "month", everyCount: 2 });
+    expect(frequencyOf(columns)).toEqual({ unit: "month", count: 2 });
+  });
+
+  it("refuses more than 12 weeks or 24 months, and takes a missing vote", () => {
+    const base = { name: "Gym", priceCents: 1000n, cycle: "monthly", nextChargeOn: "2026-11-01" } as const;
+    expect(subscriptionInputSchema.safeParse({ ...base, every: { unit: "week", count: 13 } }).success).toBe(
+      false,
+    );
+    expect(subscriptionInputSchema.safeParse({ ...base, every: { unit: "month", count: 25 } }).success).toBe(
+      false,
+    );
+    expect(subscriptionInputSchema.safeParse({ ...base, every: { unit: "month", count: 24 } }).success).toBe(
+      true,
+    );
+    expect(subscriptionInputSchema.parse({ ...base, utility: null }).utility).toBeNull();
+    expect(subscriptionInputSchema.parse(base).utility).toBe(5);
   });
 });

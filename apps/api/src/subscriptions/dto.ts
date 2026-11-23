@@ -3,7 +3,15 @@
 // decimal string, the tolerance as a percentage with two decimals.
 import type { z } from "zod";
 import type { SUBSCRIPTIONS } from "@ledgerly/api-contract";
-import { type SubscriptionRow, subscriptionsView, toleranceParts } from "@ledgerly/domain/subscriptions";
+import {
+  cycleOf,
+  everyOf,
+  type Frequency,
+  frequencyOf,
+  type SubscriptionRow,
+  subscriptionsView,
+  toleranceParts,
+} from "@ledgerly/domain/subscriptions";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
 type List = z.input<typeof SUBSCRIPTIONS.subscriptions.listSubscriptions.response>;
@@ -24,6 +32,12 @@ function chargeCheck(charge: Check): NonNullable<Row["current"]> {
   };
 }
 
+/** A frequency on the wire: one of the 4 cycles, or `custom` with its «every» (R5a). */
+function wireFrequency(frequency: Frequency) {
+  const cycle = cycleOf(frequency);
+  return cycle !== null ? { cycle } : { cycle: "custom" as const, every: everyOf(frequency) };
+}
+
 /** The row of the page, of the export and of `list_subscriptions`. */
 function subscriptionRow(row: SubscriptionRow): Row {
   const { subscription } = row;
@@ -37,10 +51,11 @@ function subscriptionRow(row: SubscriptionRow): Row {
     accountId: subscription.paymentAccountId,
     account: row.accountName,
     price: money(subscription.priceCents),
-    cycle: subscription.cycle,
+    ...wireFrequency(frequencyOf(subscription)),
     chargeOn: subscription.nextChargeOn,
     nextChargeOn: row.nextChargeOn,
-    utility: subscription.utility,
+    utility: subscription.utility ?? 5,
+    ...(subscription.utility === null ? { noVote: true as const } : {}),
     payeeMatch: subscription.payeeMatch,
     // Millionths of one as hundredths of a percent: "0.05" is "5.00".
     tolerance: money(toleranceParts(subscription.tolerance) / 100n),

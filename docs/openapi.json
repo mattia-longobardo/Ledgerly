@@ -43307,6 +43307,11 @@
                             "type": "string",
                             "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
                           },
+                          "accrualDay": {
+                            "type": "integer",
+                            "minimum": 2,
+                            "maximum": 31
+                          },
                           "target": {
                             "anyOf": [
                               {
@@ -43665,6 +43670,11 @@
                   "startMonth": {
                     "type": "string",
                     "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                  },
+                  "accrualDay": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 31
                   }
                 },
                 "required": [
@@ -43849,6 +43859,11 @@
                         "startMonth": {
                           "type": "string",
                           "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                        },
+                        "accrualDay": {
+                          "type": "integer",
+                          "minimum": 2,
+                          "maximum": 31
                         },
                         "target": {
                           "anyOf": [
@@ -44274,6 +44289,11 @@
                   "startMonth": {
                     "type": "string",
                     "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                  },
+                  "accrualDay": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 31
                   }
                 },
                 "required": [
@@ -52049,9 +52069,21 @@
     "/subscriptions": {
       "get": {
         "operationId": "list_subscriptions",
-        "summary": "The subscriptions (the active ones, then the paused and the cancelled), the totals of the Subscriptions page, the payment alerts, the yearly cost by category group, what the active ones commit on each paying account within 30 and 365 days, and the accounts a subscription can be paid from.",
+        "summary": "The subscriptions (the active ones, then the paused and the cancelled), the totals of the Subscriptions page, the payment alerts, the yearly cost by category group, what the active ones commit on each paying account within 30 and 365 days, and the accounts a subscription can be paid from. With `account`, the two lists hold only the subscriptions that account pays (R5a: the list of an account, which replaces its «Connections»); the totals stay those of every subscription.",
         "tags": [
           "subscriptions"
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -52139,7 +52171,29 @@
                               "weekly",
                               "monthly",
                               "quarterly",
-                              "yearly"
+                              "yearly",
+                              "custom"
+                            ]
+                          },
+                          "every": {
+                            "type": "object",
+                            "properties": {
+                              "unit": {
+                                "type": "string",
+                                "enum": [
+                                  "week",
+                                  "month"
+                                ]
+                              },
+                              "count": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "unit",
+                              "count"
                             ]
                           },
                           "chargeOn": {
@@ -52152,6 +52206,10 @@
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 10
+                          },
+                          "noVote": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "payeeMatch": {
                             "type": [
@@ -52347,7 +52405,29 @@
                               "weekly",
                               "monthly",
                               "quarterly",
-                              "yearly"
+                              "yearly",
+                              "custom"
+                            ]
+                          },
+                          "every": {
+                            "type": "object",
+                            "properties": {
+                              "unit": {
+                                "type": "string",
+                                "enum": [
+                                  "week",
+                                  "month"
+                                ]
+                              },
+                              "count": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "unit",
+                              "count"
                             ]
                           },
                           "chargeOn": {
@@ -52360,6 +52440,10 @@
                             "type": "integer",
                             "minimum": 1,
                             "maximum": 10
+                          },
+                          "noVote": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "payeeMatch": {
                             "type": [
@@ -52947,6 +53031,34 @@
                       "yearly"
                     ]
                   },
+                  "every": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "week",
+                              "month"
+                            ]
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "unit",
+                          "count"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "chargeOn": {
                     "type": "string"
                   },
@@ -52969,6 +53081,9 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 10
+                  },
+                  "noVote": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -53236,6 +53351,34 @@
                       "yearly"
                     ]
                   },
+                  "every": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "week",
+                              "month"
+                            ]
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "unit",
+                          "count"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "chargeOn": {
                     "type": "string"
                   },
@@ -53258,6 +53401,9 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 10
+                  },
+                  "noVote": {
+                    "type": "boolean"
                   }
                 },
                 "required": [

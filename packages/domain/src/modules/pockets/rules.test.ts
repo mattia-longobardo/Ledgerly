@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  accrualOn,
   etaMonths,
   freeBalance,
   monthEndBalances,
@@ -132,5 +133,20 @@ describe("targetPercent", () => {
     expect(targetPercent(62_000n, 150_000n)).toBe(41);
     expect(targetPercent(180_000n, 150_000n)).toBe(120);
     expect(targetPercent(62_000n, null)).toBeNull();
+  });
+});
+
+describe("accrualOn (R5a, D6)", () => {
+  it("is the chosen day, or the last day of a month that does not have it", () => {
+    expect(accrualOn("2026-03-01", 1)).toBe("2026-03-01");
+    expect(accrualOn("2026-03-01", 15)).toBe("2026-03-15");
+    expect(accrualOn("2026-03-01", 31)).toBe("2026-03-31");
+    // February: the 28th, the 29th in a leap year.
+    expect(accrualOn("2026-02-01", 31)).toBe("2026-02-28");
+    expect(accrualOn("2026-02-01", 29)).toBe("2026-02-28");
+    expect(accrualOn("2028-02-01", 30)).toBe("2028-02-29");
+    // A month of 30 days.
+    expect(accrualOn("2026-04-01", 31)).toBe("2026-04-30");
+    expect(accrualOn("2026-11-01", 30)).toBe("2026-11-30");
   });
 });

@@ -27,7 +27,7 @@ describe("JOBS", () => {
       ["interests-accrual", "hourly"],
       ["interests-rematch", "daily"],
       ["funds-deposits", "afterSync"],
-      ["pockets-accrual", "monthly"],
+      ["pockets-accrual", "daily"],
       ["pockets-planned-cleanup", "daily"],
       ["documents-retention", "daily"],
       ["documents-sweep", "hourly"],

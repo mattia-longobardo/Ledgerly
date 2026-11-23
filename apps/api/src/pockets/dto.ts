@@ -24,6 +24,7 @@ export function pocketRow(view: PocketView): Row {
     accountId: pocket.backingAccountId,
     account: view.accountName,
     startMonth: pocket.startMonth,
+    ...(pocket.accrualDay === 1 ? {} : { accrualDay: pocket.accrualDay }),
     target: maybe(pocket.targetCents),
     monthly: maybe(pocket.monthlyCents),
     balance: money(view.balanceCents),

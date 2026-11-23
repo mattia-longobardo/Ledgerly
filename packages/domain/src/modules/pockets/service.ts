@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, lt, lte, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, lt, lte, ne } from "drizzle-orm";
 import { requireOpenAccount, isFutureDate } from "../accounts";
 import { transactionsByIds } from "../transactions";
 import type { Ctx } from "../../platform/context";
@@ -7,7 +7,14 @@ import { getDb } from "../../platform/db/client";
 import { hasPgError, UNIQUE_VIOLATION } from "../../platform/db/errors";
 import { userScoped } from "../../platform/db/scope";
 import type { Cents } from "../../shared/money";
-import { moveSchema, PLANNED_GRACE_DAYS, type PocketInput, pocketInputSchema, plannedSchema } from "./rules";
+import {
+  accrualOn,
+  moveSchema,
+  PLANNED_GRACE_DAYS,
+  type PocketInput,
+  pocketInputSchema,
+  plannedSchema,
+} from "./rules";
 import { pocketExpenseLinks, pocketMovements, pocketPlannedExpenses, pockets } from "./schema";
 
 export type Pocket = typeof pockets.$inferSelect;
@@ -59,14 +66,19 @@ function duplicateName<T>(write: Promise<T>): Promise<T> {
  * per pocket and month (`pocket_movements_accrual_uq`), and a second call finds the slot taken.
  * No arrears: a start month in the past does not write the months before `month`, and a paused
  * pocket gets nothing for the months it was paused (plan F3 §3.4.9).
+ *
+ * The accrual lands on the pocket's day of the month (R5a, D6); with `upTo`, only the pockets whose
+ * day has come by then. One accrual per pocket and month, whatever its day
+ * (`pocket_movements_accrual_month_uq`): a day changed after the month's accrual writes no second.
  */
 export async function accrueMonth(
   ctx: Pick<Ctx, "userId">,
   month: MonthKey,
   pocketIds?: readonly string[],
+  upTo?: CivilDate,
 ): Promise<{ written: number }> {
-  const due = await getDb()
-    .select({ id: pockets.id, monthlyCents: pockets.monthlyCents })
+  const found = await getDb()
+    .select({ id: pockets.id, monthlyCents: pockets.monthlyCents, accrualDay: pockets.accrualDay })
     .from(pockets)
     .where(
       and(
@@ -77,6 +89,9 @@ export async function accrueMonth(
         pocketIds === undefined ? undefined : inArray(pockets.id, [...pocketIds]),
       ),
     );
+  const due = found
+    .map((pocket) => ({ ...pocket, on: accrualOn(month, pocket.accrualDay) }))
+    .filter((pocket) => upTo === undefined || pocket.on <= upTo);
   if (due.length === 0) return { written: 0 };
   const written = await getDb()
     .insert(pocketMovements)
@@ -86,14 +101,12 @@ export async function accrueMonth(
           pocketId: pocket.id,
           kind: "accrual" as const,
           amountCents: pocket.monthlyCents as Cents,
-          on: month,
+          on: pocket.on,
         }),
       ),
     )
-    .onConflictDoNothing({
-      target: [pocketMovements.pocketId, pocketMovements.on],
-      where: sql`${pocketMovements.kind} = 'accrual'`,
-    })
+    // The month's accrual already there, on whatever day: nothing (the indexes of `schema.ts`).
+    .onConflictDoNothing()
     .returning({ id: pocketMovements.id });
   return { written: written.length };
 }
@@ -111,7 +124,7 @@ export async function createPocket(
   const [row] = await duplicateName(
     getDb().insert(pockets).values(userScoped(ctx).stamp(parsed)).returning(),
   );
-  await accrueMonth(ctx, monthKey(today(ctx.timeZone)), [row.id]);
+  await accrueMonth(ctx, monthKey(today(ctx.timeZone)), [row.id], today(ctx.timeZone));
   return row;
 }
 
@@ -133,7 +146,7 @@ export async function updatePocket(
       .returning(),
   );
   // A monthly amount set, or a start month moved to now, on an active pocket: this month too.
-  await accrueMonth(ctx, monthKey(today(ctx.timeZone)), [row.id]);
+  await accrueMonth(ctx, monthKey(today(ctx.timeZone)), [row.id], today(ctx.timeZone));
   return row;
 }
 
@@ -151,7 +164,7 @@ export async function setPocketState(
     .update(pockets)
     .set({ state, archivedAt: state === "archived" ? new Date() : null })
     .where(and(eq(pockets.id, id), userScoped(ctx).owns(pockets)));
-  if (state === "active") await accrueMonth(ctx, monthKey(today(ctx.timeZone)), [id]);
+  if (state === "active") await accrueMonth(ctx, monthKey(today(ctx.timeZone)), [id], today(ctx.timeZone));
 }
 
 /** "Add to pocket" (spec §7.4): a positive `deposit`. No money moves. */

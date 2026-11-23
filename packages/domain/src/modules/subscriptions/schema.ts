@@ -15,7 +15,7 @@ import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platfo
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories, transactions } from "../transactions/schema";
-import { CHARGE_STATES, CYCLES, SUBSCRIPTION_STATES } from "./rules";
+import { CHARGE_STATES, CYCLES, EVERY_UNITS, MAX_EVERY, SUBSCRIPTION_STATES } from "./rules";
 import { inList } from "../../platform/db/checks";
 
 /**
@@ -34,10 +34,15 @@ export const subscriptions = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
-    utility: smallint("utility").notNull().default(5),
+    // Null since R5a: no vote (ST-15); the votes of before stay as they are.
+    utility: smallint("utility").default(5),
     priceCents: bigint("price_cents", { mode: "bigint" }).notNull(),
     currency: text("currency").notNull().default("EUR"),
     cycle: text("cycle", { enum: CYCLES }).notNull(),
+    // «Every N weeks or months» (R5a, ST-15, D4): set only for a frequency that is none of the 4
+    // cycles; `cycle` then holds the nearest one, so an image before R5a still reads a cycle it knows.
+    everyUnit: text("every_unit", { enum: EVERY_UNITS }),
+    everyCount: smallint("every_count"),
     nextChargeOn: date("next_charge_on").notNull(),
     paymentAccountId: uuid("payment_account_id").references(() => accounts.id, { onDelete: "no action" }),
     payeeMatch: text("payee_match"),
@@ -53,7 +58,11 @@ export const subscriptions = pgTable(
     check("subscriptions_cycle_ck", sql`${table.cycle} in (${sql.raw(inList(CYCLES))})`),
     check("subscriptions_state_ck", sql`${table.state} in (${sql.raw(inList(SUBSCRIPTION_STATES))})`),
     check("subscriptions_name_ck", sql`length(btrim(${table.name})) between 1 and 80`),
-    check("subscriptions_utility_ck", sql`${table.utility} between 1 and 10`),
+    check("subscriptions_utility_ck", sql`${table.utility} is null or ${table.utility} between 1 and 10`),
+    check(
+      "subscriptions_every_ck",
+      sql`(${table.everyUnit} is null and ${table.everyCount} is null) or (${table.everyUnit} = 'week' and ${table.everyCount} between 1 and ${sql.raw(String(MAX_EVERY.week))}) or (${table.everyUnit} = 'month' and ${table.everyCount} between 1 and ${sql.raw(String(MAX_EVERY.month))})`,
+    ),
     check("subscriptions_price_ck", sql`${table.priceCents} > 0`),
     check("subscriptions_currency_ck", sql`${table.currency} = 'EUR'`),
     check("subscriptions_tolerance_ck", sql`${table.tolerance} between 0 and 1`),

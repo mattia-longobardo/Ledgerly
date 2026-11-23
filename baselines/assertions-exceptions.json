@@ -898,5 +898,20 @@
     "file": "tests/e2e/_shared/funds.ts",
     "decision": "R5b client (PERS-586)",
     "reason": "R5b, decisione B1b: gli helper degli spec dei fondi (nati in questo lavoro come tests/e2e/funds/place.ts) passano in _shared, la cartella di un flusso ha solo spec"
+  },
+  {
+    "file": "apps/web/src/platform/jobs/registry.test.ts",
+    "decision": "R5a (PERS-567, D6)",
+    "reason": "R5a passo c: pockets-accrual passa da monthly a daily, perché ogni pocket ha il suo giorno di accredito (D6 = B, risposta di Mattia del 22/11)"
+  },
+  {
+    "file": "apps/web/src/platform/jobs/jobs.itest.ts",
+    "decision": "R5a (PERS-567, D6)",
+    "reason": "R5a passo c: pockets-accrual entra nel tier giornaliero (D6 = B)"
+  },
+  {
+    "file": "tools/contract.test.ts",
+    "decision": "R5a (PERS-567, D5)",
+    "reason": "R5a passo c: il voto «utilità» del dominio diventa nullable (D5 = A); il test legge min e max un livello più dentro, con gli stessi valori"
   }
 ]
