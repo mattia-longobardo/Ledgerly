@@ -2712,6 +2712,84 @@
         "toSend": "To send",
         "then": "Send each transaction again from Expenses, or delete it. Then run the check again."
       }
+    },
+    "csv": {
+      "open": "Import CSV",
+      "title": "Import a CSV file",
+      "description": "The rows of the file become transactions of {account}, as transactions written by hand. A row already imported is not written again.",
+      "file": "File",
+      "fileHint": "A CSV file of at most 5 MB and 20,000 rows.",
+      "read": "Read the file",
+      "cancel": "Cancel",
+      "summary": "{name} · {rows, plural, one {# row} other {# rows}} · separator «{delimiter}»",
+      "mapSaved": "Columns saved for this account.",
+      "mapProposed": "Columns proposed for this file: check them.",
+      "mapNone": "Choose the columns of the file.",
+      "mapTitle": "Columns",
+      "roles": {
+        "date": "Date",
+        "amount": "Amount",
+        "debit": "Debit",
+        "credit": "Credit",
+        "payee": "Payee",
+        "note": "Note",
+        "category": "Category"
+      },
+      "amountMode": "Amount in the file",
+      "amountModes": {
+        "signed": "One column with the sign",
+        "split": "A debit and a credit column"
+      },
+      "none": "Not in the file",
+      "column": "Column {number}",
+      "dateFormat": "Date format",
+      "decimal": "Decimal separator",
+      "decimals": {
+        "comma": "Comma (1.234,56)",
+        "point": "Point (1,234.56)"
+      },
+      "skipRows": "Rows to skip at the top",
+      "header": "The first row is the header",
+      "save": "Save these columns for the next file of this account",
+      "previewTitle": "First rows",
+      "previewNote": "Read with the columns the file had when you chose it. The import uses the columns above.",
+      "table": {
+        "row": "Row",
+        "date": "Date",
+        "amount": "Amount",
+        "payee": "Payee",
+        "outcome": "Outcome"
+      },
+      "ok": "Ready",
+      "import": "Import",
+      "back": "Choose another file",
+      "close": "Close",
+      "done": "{count, plural, =0 {No transaction imported} one {# transaction imported} other {# transactions imported}}",
+      "duplicates": "{count, plural, =0 {No row was already imported.} one {# row was already imported: it was not written again.} other {# rows were already imported: they were not written again.}}",
+      "refusedTitle": "{count, plural, one {# row not imported} other {# rows not imported}}",
+      "refusedRow": "Row {row}: {reason}",
+      "more": "and {count} more",
+      "reasons": {
+        "bad_date": "the date does not match the format",
+        "bad_amount": "the amount is not a number",
+        "no_amount": "there is no amount",
+        "zero_amount": "the amount is zero",
+        "future_date": "the date is in the future",
+        "missing_column": "a column is missing in the row",
+        "other": "the row cannot be read ({code})"
+      },
+      "errors": {
+        "noFile": "Choose a file.",
+        "map": "Choose the date column and the amount: one column with the sign, or a debit and/or a credit column.",
+        "account_not_manual": "Only a manual account takes a CSV file: this account has a source.",
+        "account_unavailable": "The account is archived. Restore it to import.",
+        "too_large": "The file is larger than 5 MB.",
+        "too_many_rows": "The file has more than 20,000 rows.",
+        "empty": "The file is empty.",
+        "unreadable": "Ledgerly cannot read the file. Check that it is a CSV text file.",
+        "invalid": "Check the file and the columns.",
+        "failed": "The import did not succeed. Try again."
+      }
     }
   },
   "budgets": {

@@ -25,3 +25,18 @@ test("a sortable table sorts from the keyboard, and the column says which way", 
     )
     .not.toBe(before);
 });
+
+test("«Import CSV» opens from the keyboard, and Escape gives the focus back", async ({ page }) => {
+  await page.goto("/accounts");
+  await page.getByRole("link", { name: "Revolut Saving" }).first().click();
+  await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
+  const button = page.getByRole("button", { name: "Import CSV" });
+  await focusOn(button);
+  expect(await focusIsVisible(page), "the button draws no ring").toBe(true);
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "Import a CSV file" });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(button).toBeFocused();
+});

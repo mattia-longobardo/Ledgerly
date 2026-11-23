@@ -79,7 +79,37 @@ const OVERLAYS: Screen[] = [
       await settledDialog(page);
     },
   },
+  // Release R5c (decision ST-8): «Import CSV» of an account «a mano», its file and its columns. The
+  // preview writes nothing, so the shared `layout` user is left as it was.
+  {
+    name: "the CSV import dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: openCsvImport,
+  },
+  {
+    name: "the CSV import dialog, columns",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await openCsvImport(page);
+      await page.getByLabel("File").setInputFiles({
+        name: "movements.csv",
+        mimeType: "text/csv",
+        buffer: Buffer.from("Date;Payee;Amount\n14/10/2026;Shop;-12,50\n15/10/2026;Bakery;-3,20\n"),
+      });
+      await page.getByRole("button", { name: "Read the file" }).click();
+      await page.getByRole("table", { name: "First rows" }).waitFor();
+      await settledDialog(page);
+    },
+  },
 ];
+
+async function openCsvImport(page: Page) {
+  await follow(page, "/accounts", "Revolut Saving");
+  await page.getByRole("button", { name: "Import CSV" }).click();
+  await settledDialog(page);
+}
 
 test.describe("every screen", () => audit(PAGES));
 test.describe("every overlay", () => audit(OVERLAYS));

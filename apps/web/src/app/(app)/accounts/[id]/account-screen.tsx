@@ -20,7 +20,7 @@ import { EmptyState } from "@ledgerly/ui/states";
 import { SyncStatus } from "@ledgerly/ui/sync-status";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { type CardFormat, centsOf, colorFor, counterValue } from "@/modules/accounts/client";
+import { type CardFormat, centsOf, colorFor, CsvImportButton, counterValue } from "@/modules/accounts/client";
 import { AccountConnection } from "./connection-status";
 import { EntriesTab } from "./entries-tab";
 import { OverviewTab } from "./overview-tab";
@@ -191,9 +191,24 @@ function Header({ page, view, disconnected }: { page: AccountPage; view: NetWort
         )
       }
       title={account.name}
+      actions={<CsvImport page={page} />}
     >
       <Figures page={page} view={view} />
     </DetailHeader>
+  );
+}
+
+/** «Import CSV», only on an open account «a mano»: the route refuses any other (R5c). */
+function CsvImport({ page }: { page: AccountPage }) {
+  const { account, row } = page;
+  if (account.origin !== "manual" || account.state !== "active" || row.service !== null) return null;
+  return (
+    <CsvImportButton
+      accountId={account.id}
+      accountName={account.name}
+      currency={account.currency}
+      format={page.format}
+    />
   );
 }
 

@@ -2712,6 +2712,84 @@
         "toSend": "Da inviare",
         "then": "Invia di nuovo ogni movimento da Spese, oppure eliminalo. Poi rifai la prova."
       }
+    },
+    "csv": {
+      "open": "Importa CSV",
+      "title": "Importa un file CSV",
+      "description": "Le righe del file diventano movimenti di {account}, come movimenti scritti a mano. Una riga già importata non viene scritta di nuovo.",
+      "file": "File",
+      "fileHint": "Un file CSV di al massimo 5 MB e 20.000 righe.",
+      "read": "Leggi il file",
+      "cancel": "Annulla",
+      "summary": "{name} · {rows, plural, one {# riga} other {# righe}} · separatore «{delimiter}»",
+      "mapSaved": "Colonne salvate per questo conto.",
+      "mapProposed": "Colonne proposte per questo file: controllale.",
+      "mapNone": "Scegli le colonne del file.",
+      "mapTitle": "Colonne",
+      "roles": {
+        "date": "Data",
+        "amount": "Importo",
+        "debit": "Addebito",
+        "credit": "Accredito",
+        "payee": "Beneficiario",
+        "note": "Nota",
+        "category": "Categoria"
+      },
+      "amountMode": "Importo nel file",
+      "amountModes": {
+        "signed": "Una colonna con il segno",
+        "split": "Una colonna di addebito e una di accredito"
+      },
+      "none": "Non c'è nel file",
+      "column": "Colonna {number}",
+      "dateFormat": "Formato della data",
+      "decimal": "Separatore decimale",
+      "decimals": {
+        "comma": "Virgola (1.234,56)",
+        "point": "Punto (1,234.56)"
+      },
+      "skipRows": "Righe da saltare all'inizio",
+      "header": "La prima riga è l'intestazione",
+      "save": "Salva queste colonne per il prossimo file di questo conto",
+      "previewTitle": "Prime righe",
+      "previewNote": "Lette con le colonne che il file aveva quando l'hai scelto. L'import usa le colonne qui sopra.",
+      "table": {
+        "row": "Riga",
+        "date": "Data",
+        "amount": "Importo",
+        "payee": "Beneficiario",
+        "outcome": "Esito"
+      },
+      "ok": "Pronta",
+      "import": "Importa",
+      "back": "Scegli un altro file",
+      "close": "Chiudi",
+      "done": "{count, plural, =0 {Nessun movimento importato} one {# movimento importato} other {# movimenti importati}}",
+      "duplicates": "{count, plural, =0 {Nessuna riga era già importata.} one {# riga era già importata: non è stata scritta di nuovo.} other {# righe erano già importate: non sono state scritte di nuovo.}}",
+      "refusedTitle": "{count, plural, one {# riga non importata} other {# righe non importate}}",
+      "refusedRow": "Riga {row}: {reason}",
+      "more": "e altre {count}",
+      "reasons": {
+        "bad_date": "la data non segue il formato",
+        "bad_amount": "l'importo non è un numero",
+        "no_amount": "manca l'importo",
+        "zero_amount": "l'importo è zero",
+        "future_date": "la data è nel futuro",
+        "missing_column": "nella riga manca una colonna",
+        "other": "la riga non si legge ({code})"
+      },
+      "errors": {
+        "noFile": "Scegli un file.",
+        "map": "Scegli la colonna della data e l'importo: una colonna con il segno, o una colonna di addebito e/o di accredito.",
+        "account_not_manual": "Solo un conto manuale accetta un file CSV: questo conto ha una sorgente.",
+        "account_unavailable": "Il conto è archiviato. Ripristinalo per importare.",
+        "too_large": "Il file è più grande di 5 MB.",
+        "too_many_rows": "Il file ha più di 20.000 righe.",
+        "empty": "Il file è vuoto.",
+        "unreadable": "Ledgerly non riesce a leggere il file. Controlla che sia un file di testo CSV.",
+        "invalid": "Controlla il file e le colonne.",
+        "failed": "L'import non è riuscito. Riprova."
+      }
     }
   },
   "budgets": {

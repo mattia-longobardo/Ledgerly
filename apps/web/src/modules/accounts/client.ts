@@ -5,6 +5,7 @@ export { BalanceEntries } from "./ui/balance-entries";
 export { AccountSettingsForm } from "./ui/settings-form";
 export { UndoSwitch } from "./ui/switch/undo-switch";
 export { SnapshotButton } from "./ui/snapshot-button";
+export { CsvImportButton } from "./ui/csv-import";
 export { NewAccountForm } from "./ui/account-form";
 export { centsOf, colorFor, counterValue } from "./ui/display";
 export type { CardFormat } from "./ui/net-worth-card";
