@@ -74,6 +74,10 @@ prints that number, so it has to be the one in production. Since R0 the root and
 carry the same version (`tools/architecture.test.ts` holds them to it): `npm version <x.y.z>
 --workspaces --include-workspace-root --no-git-tag-version` sets them all, and `npm run test:select`
 reads a change of the version alone, in any `package.json` and in the lockfile, as no change.
+A plugin's bundle carries the version (its manifest says it), so the same commit runs
+`npm run plugins:catalog`: the digests of `packages/domain/src/platform/plugins/catalog.json` follow
+the new bundles, `tools/plugin-catalog.test.ts` holds them to it, and `scripts/plugins-check.sh`
+compares them with the running containers after the deploy.
 
 ## 2. Keep the way back: image, dump, numbers
 
