@@ -17,7 +17,12 @@
 #      application is not built again when the image of the preview was built from the same commit
 #      (`preview-on-test.sh build`);
 #   6. the health of the site, the numbers "after" at the same instant, and their comparison;
-#   7. the `@smoke` tests on the site (docs/testing.md).
+#   7. the `@smoke` tests on the site (docs/testing.md);
+#   8. the running plugins against the catalog of the official plugins (`scripts/plugins-check.sh`).
+#
+# The official plugins of the catalog and the egress proxy are services of every release: a
+# plugin's bundle carries the release's version, so its digest in the catalog changes with each
+# release and the container that runs the one before fails step 8.
 #
 # The tests of the release run before this script, once, on the final SHA: `npm run test:select`
 # prints them from the release diff, with the E2E on the local preview. The site gets `@smoke` here
@@ -70,6 +75,17 @@ while [ $# -gt 0 ]; do
     *) echo "unknown option: $1" >&2; exit 1 ;;
   esac
   shift
+done
+
+# The services of the catalog (packages/domain/src/platform/plugins/catalog.json): each plugin's
+# container, then the egress proxy they go out through. `--plugin <id>` adds a plugin outside it;
+# naming one of the catalog changes nothing (each service is taken once).
+catalog_services=$(node -e '
+  const { plugins } = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+  console.log([...plugins.map((entry) => entry.image), "ledgerly-egress"].join(" "));
+' packages/domain/src/platform/plugins/catalog.json 2> /dev/null || true)
+for service in $catalog_services; do
+  case " $services " in *" $service "*) ;; *) services="$services $service" ;; esac
 done
 
 stop() {
@@ -129,6 +145,10 @@ echo "before: numbers-before.json, as of $instant"
 failed() {
   echo "release $release FAILED after the build started: $1" >&2
   echo "Rollback: docker tag ledgerly:pre-$release ledgerly:latest && docker tag ledgerly-web:pre-$release ledgerly-web:latest && docker compose up -d --no-build ledgerly ledgerly-web ledgerly-worker" >&2
+  others=${services#ledgerly ledgerly-web}
+  if [ -n "${others# }" ]; then
+    echo "and for each of$others: docker tag <service>:pre-$release <service>:latest && docker compose up -d --no-build <service>" >&2
+  fi
   exit 1
 }
 # The image of the preview, when it was built from this commit and from a clean tree
@@ -184,6 +204,9 @@ npm run --silent numbers -- --diff "$folder/numbers-before.json" "$folder/number
 # with its cookies (tests/e2e/_shared/origin.ts). The `@site` tests of the caller go there too.
 echo "smoke:"
 E2E_ORIGIN=127.0.0.1 npx playwright test --grep @smoke || failed "the @smoke tests are red on the site"
+
+# ——— 8. The plugins against the catalog ————————————————————————————————————————————————————————
+sh scripts/plugins-check.sh || failed "a plugin does not run the bundle of the catalog"
 
 echo "release $release deployed: $sha"
 echo "$folder"

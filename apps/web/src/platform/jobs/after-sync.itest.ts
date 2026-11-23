@@ -10,7 +10,6 @@ import type { Ctx } from "@domain/platform/context";
 import { monthKey, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { dispatchDueConnections } from "@/platform/integrations/jobs";
-import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
 import { integrationConnections } from "@domain/platform/integrations/schema";
 import {
   finishRun,
@@ -26,13 +25,16 @@ import { AFTER_SYNC_JOBS, runAfterSync } from "./after-sync";
 import { withJobLock } from "@domain/platform/jobs/lock";
 import type { JobDefinition } from "./registry";
 import { jobRuns } from "@domain/platform/jobs/schema";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
+import { pluginActivations } from "@domain/platform/plugins/schema";
+// The pass of a plugin's connection is the application's (`plugin-wiring.ts`), as in the worker.
+import "@/app/plugin-wiring";
 
 // Each test reads "today", and the code under it reads it again: one day for both (S-8).
 dayClock();
 
 // A Trek pass that answers without calling Trek: the dispatch is real, the pass beside the point.
-vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn(async () => "answered") }));
+vi.mock("@/modules/timeoff/jobs", () => ({ runCalendarPass: vi.fn(async () => "answered") }));
 
 let ctx: Ctx;
 let walletId: string;
@@ -87,7 +89,7 @@ async function makeDue() {
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
-  const wallet = await saveConnection(ctx, { provider: "wallet", credentials: { token: "t" } });
+  const wallet = await saveConnection(ctx, { provider: "plugin:wallet", credentials: { token: "t" } });
   walletId = wallet.id;
   // Wallet stays out of the dispatch, which would call the provider: its runs are written by hand.
   await getDb()
@@ -98,6 +100,8 @@ beforeEach(async () => {
     provider: TREK_PROVIDER,
     credentials: { baseUrl: "https://trek.example", token: "t" },
   });
+  // A plugin's pass reads only for a person who has the plugin on (H25).
+  await getDb().insert(pluginActivations).values({ userId: ctx.userId, pluginId: "trek", active: true });
 });
 
 afterAll(closeDatabase);

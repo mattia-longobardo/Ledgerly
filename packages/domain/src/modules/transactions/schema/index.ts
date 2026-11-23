@@ -12,4 +12,6 @@ export {
 export type { CategoryUndoRow, RuleUndoRow } from "./learning";
 export { switchTransferPairs, switchMergedMovements } from "./switches";
 export { duplicateAccounts } from "./duplicates";
+export { csvColumnMaps } from "./csv-maps";
+export type { CsvColumns } from "./csv-maps";
 export type { SwitchLegBefore, MergedMovementBefore } from "./switches";

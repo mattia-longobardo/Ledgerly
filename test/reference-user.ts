@@ -26,7 +26,7 @@ import { twinPdf } from "./fixtures/payroll/twin";
 import { anAccount, movement } from "./fixtures";
 import { addDeposit, debitFund } from "./funds";
 import { accountMovement, manualService } from "./investments";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "./fixtures/providers";
 
 export const REFERENCE_NOW = new Date("2031-10-15T10:00:00Z");
 

@@ -11,8 +11,7 @@ import {
   listConnections,
   readSyncJob,
 } from "@ledgerly/domain/platform/integrations";
-import { connectionSharing, type Presence } from "@ledgerly/plugin-host";
-import { passFor } from "@/platform/integrations/registry";
+import { connectionSharing, historyOf, type Presence } from "@ledgerly/plugin-host";
 import { type CoreConnection, runConnection } from "./connection-cases";
 import {
   DeactivateError,
@@ -85,12 +84,12 @@ export async function bringBackAccount(
   try {
     await changeSourceSkippedIds(ctx, source.provider, { remove: [externalId] });
     revalidate();
-    if (source.pluginId !== null) {
+    if (source.bank && source.pluginId !== null) {
       const shared = await connectionSharing(ctx, source.pluginId, externalId);
       return { ok: true, reconnect: shared ? shared.connection.id : null };
     }
     const connection = (await listConnections(ctx)).find((one) => one.provider === source.provider);
-    const history = passFor(source.provider)?.history;
+    const history = await historyOf(source.provider);
     if (connection && history) {
       const job = await readSyncJob(ctx, connection.id, "transactions");
       // A reading that fails now is not a failure of "Bring back": the next one brings it.

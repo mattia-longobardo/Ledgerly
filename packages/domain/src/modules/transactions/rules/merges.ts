@@ -176,8 +176,8 @@ export function markLocallyEdited(
 
 /**
  * What `categories.locally_edited` may hold. `name` is the one the two-way sync acts on — it makes
- * the local name win and be written to Wallet — and it is dropped again once Wallet has been told,
- * because from then on the two agree. `type` is never dropped: Wallet has no income/expense/
+ * the local name win and be written to the source — and it is dropped again once the source has been told,
+ * because from then on the two agree. `type` is never dropped: the source has no income/expense/
  * transfer of its own to disagree with, so a type chosen here is local for good (spec §9.1).
  */
 type CategoryEditableField = "name" | "type";
@@ -222,7 +222,7 @@ interface UpstreamRemovalPlan {
 /**
  * What the re-read window says about rows the provider did not return (spec §7.2, §9.1).
  *
- * The window is the whole argument: Wallet is read back over a few days, not listed in full, so a
+ * The window is the whole argument: the source is read back over a few days, not listed in full, so a
  * row outside it is simply not covered by this answer and is never touched — the only rows that
  * can be declared gone are those the provider was asked about and did not send. A row that comes
  * back has the stamp cleared and counts again. Nothing is ever deleted, and a row already stamped

@@ -1,45 +1,54 @@
-// src/app/(app)/settings/plugins/core-cases.ts — what the card of a provider of the core does, for
-// the person of `ctx` and by the provider's id (rewrite plan R5c anticipated): the Server Actions of
-// the cards and `/api/v1/connections` call the same steps. Each provider's part is its card, in its own
-// folder of the domain (`CoreCard`); what joins modules — the accounts kept by hand that come back, the
-// removals of days that go with the link, the checks after a reading — is here, by the kinds the
-// provider reads (`KINDS_OF`), so no provider is named (rule M12).
+// src/app/(app)/settings/plugins/core-cases.ts — what the card of a plugin read by an engine of the
+// core does (a source read with a token, a leave calendar), for the person of `ctx` and by the
+// provider's id (rewrite plan R5c): `/api/v1/connections` calls these steps. The card is plugin-host's
+// (`cardOf`, chosen by the manifest's capabilities); what joins modules — the accounts kept by hand
+// that come back, the removals of days that go with the link, the checks after a reading — is here,
+// by what the card reads, so no provider is named (rule M12).
 import "server-only";
 import { restoreSourceAccounts } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
+  type Connection,
+  deleteConnection,
+  IntegrationError,
+  listConnections,
+  pluginProvider,
+} from "@ledgerly/domain/platform/integrations";
+import { enqueue } from "@ledgerly/domain/platform/jobs";
+import { closePendingDeletes } from "@ledgerly/domain/timeoff";
+import {
   type CardAccount,
   type CardError,
   type CardResult,
-  type Connection,
-  type CoreCard,
-  deleteConnection,
-  IntegrationError,
-  isKnownProvider,
-  KINDS_OF,
-  listConnections,
-  type SyncKind,
-} from "@ledgerly/domain/platform/integrations";
-import { calendarCard } from "@ledgerly/domain/platform/integrations/calendar";
-import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { sourceCard } from "@ledgerly/domain/platform/integrations/source";
-import { closePendingDeletes } from "@ledgerly/domain/timeoff";
+  cardOf,
+  PluginActionError,
+  type PluginCard,
+  setPluginActive,
+} from "@ledgerly/plugin-host";
 import { tasks } from "@/platform/jobs/queue";
 
-const CARDS: readonly CoreCard[] = [sourceCard, calendarCard];
-
-/** The card of a provider of the core; `null` for a plugin, an investment service or nobody. */
-export const coreCardOf = (provider: string): CoreCard | null =>
-  CARDS.find((card) => card.provider === provider) ?? null;
-
-const reads = (provider: string, kind: SyncKind): boolean =>
-  isKnownProvider(provider) && KINDS_OF[provider].some((one: SyncKind) => one === kind);
+/** The card of a plugin read by an engine of the core; `null` for a bank, an investment service or nobody. */
+export const coreCardOf = (provider: string): Promise<PluginCard | null> => cardOf(provider);
 
 const NOT_CONNECTED = { ok: false, error: "notConnected" } as const;
 
 /** The person's connection of `provider`, or `null` when nothing has ever been saved. */
 async function connectionOf(ctx: Ctx, provider: string): Promise<Connection | null> {
   return (await listConnections(ctx)).find((connection) => connection.provider === provider) ?? null;
+}
+
+/**
+ * A plugin's source is turned on for the person who connects it (H25; H30 for those already connected
+ * at R5c): its readings ask for that. False when the instance has no such plugin.
+ */
+async function turnOn(ctx: Ctx, provider: string): Promise<boolean> {
+  try {
+    await setPluginActive(ctx, { pluginId: provider.slice(pluginProvider("").length), active: true });
+    return true;
+  } catch (error) {
+    if (error instanceof PluginActionError) return false;
+    throw error;
+  }
 }
 
 /**
@@ -52,11 +61,12 @@ export async function connectCore(
   provider: string,
   input: Readonly<Record<string, string>>,
 ): Promise<{ ok: true; id: string; back: number } | { ok: false; error: CardError; input: boolean }> {
-  const card = coreCardOf(provider);
-  // Nobody's card: a plugin or a service of Investments connects another way.
+  const card = await coreCardOf(provider);
+  // Nobody's card: a bank's plugin or a service of Investments connects another way.
   if (!card) return { ...NOT_CONNECTED, input: false };
   const checked = card.credentials(input);
   if (!checked.ok) return { ...checked, input: true };
+  if (!(await turnOn(ctx, provider))) return { ok: false, error: "unreachable", input: false };
   const back = await restoreSourceAccounts(ctx, provider);
   try {
     const saved = await card.save(ctx, checked.credentials);
@@ -69,9 +79,9 @@ export async function connectCore(
 }
 
 /** «Sync now»: a reading that brings movements is followed by the checks of a sync (docs/scheduler.md). */
-async function syncNow(ctx: Ctx, card: CoreCard, connection: Connection): Promise<CardResult> {
+async function syncNow(ctx: Ctx, card: PluginCard, connection: Connection): Promise<CardResult> {
   const outcome = await card.sync(ctx, connection);
-  if (outcome.ok && reads(card.provider, "transactions")) await enqueue(tasks.afterSync("manual"));
+  if (outcome.ok && card.reads === "movements") await enqueue(tasks.afterSync("manual"));
   return outcome;
 }
 
@@ -82,7 +92,7 @@ export async function runCore(
   kind: "update" | "test" | "history",
   months?: number,
 ): Promise<CardResult> {
-  const card = coreCardOf(provider);
+  const card = await coreCardOf(provider);
   const connection = card && (await connectionOf(ctx, provider));
   if (!card || !connection) return NOT_CONNECTED;
   if (kind === "test") return card.test(ctx, connection);
@@ -99,7 +109,7 @@ export async function coreAccounts(
   ctx: Ctx,
   provider: string,
 ): Promise<{ ok: true; accounts: CardAccount[] } | { ok: false; error: CardError }> {
-  const card = coreCardOf(provider);
+  const card = await coreCardOf(provider);
   const connection = card?.accounts && (await connectionOf(ctx, provider));
   if (!card?.accounts || !connection) return NOT_CONNECTED;
   return card.accounts(ctx, connection);
@@ -114,7 +124,7 @@ export async function chooseCoreAccounts(
   provider: string,
   chosen: readonly string[],
 ): Promise<{ ok: true; added: number } | { ok: false; error: CardError }> {
-  const card = coreCardOf(provider);
+  const card = await coreCardOf(provider);
   const connection = card?.choose && (await connectionOf(ctx, provider));
   if (!card?.choose || !connection) return NOT_CONNECTED;
   const outcome = await card.choose(ctx, connection, chosen);
@@ -128,11 +138,12 @@ export async function chooseCoreAccounts(
  * days takes with it every removal still waiting to be sent: nobody is left to tell (plan F7 §3.4.10).
  */
 export async function disconnectCore(ctx: Ctx, provider: string): Promise<CardResult> {
-  const connection = coreCardOf(provider) && (await connectionOf(ctx, provider));
-  if (!connection) return NOT_CONNECTED;
+  const card = await coreCardOf(provider);
+  const connection = card && (await connectionOf(ctx, provider));
+  if (!card || !connection) return NOT_CONNECTED;
   try {
     await deleteConnection(ctx, connection.id);
-    if (reads(provider, "leave")) await closePendingDeletes(ctx);
+    if (card.reads === "leave") await closePendingDeletes(ctx);
   } catch (error) {
     if (error instanceof IntegrationError) {
       return { ok: false, error: error.code === "not_found" ? "notConnected" : "failed" };

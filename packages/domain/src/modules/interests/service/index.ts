@@ -1,5 +1,5 @@
 // The writes of interests (spec §7.6): the rules and what rests on an account. The ledger of the days
-// is `accruals.ts`, the publication on the source `posting.ts`.
+// is `accruals.ts`, what is left of the publication on the source `posting.ts`.
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { requireOpenAccount } from "../../accounts";
 import { listCategories } from "../../transactions/taxonomy";
@@ -17,14 +17,12 @@ export { InterestError, tiersOf } from "./records";
 export type { InterestAccrual, InterestEntry, InterestRule } from "./records";
 
 /**
- * The account a rule is on: one of this user's, not archived; and a synced one when the rule
- * publishes to Wallet, because the posting needs the provider's id of the account (spec §7.6).
+ * The account a rule is on: one of this user's, not archived. A rule no longer publishes on its
+ * source (decision H37, ST-14): `post_to_provider` is refused, for a new rule and a changed one.
  */
 async function checkAccount(ctx: Pick<Ctx, "userId">, accountId: string, mode: string): Promise<void> {
-  const account = await requireOpenAccount(ctx, accountId, () => new InterestError("invalid_account"));
-  if (mode === "post_to_provider" && (account.origin !== "synced" || account.providerAccountId === null)) {
-    throw new InterestError("not_synced");
-  }
+  if (mode === "post_to_provider") throw new InterestError("mode_retired");
+  await requireOpenAccount(ctx, accountId, () => new InterestError("invalid_account"));
 }
 
 /**
@@ -62,7 +60,7 @@ export async function createRule(
 }
 
 /**
- * A changed rule. What has been settled stays as it was — a settlement may already be on Wallet —
+ * A changed rule. What has been settled stays as it was — a settlement may already be on the source —
  * and every day after the last settled period is accrued again with the new terms (plan F4
  * §3.4.3, §3.6.9).
  */
@@ -73,7 +71,7 @@ export async function updateRule(
 ): Promise<InterestRule> {
   const current = await requireRule(ctx, id);
   const { tiers, ...rule } = parse(input);
-  if (rule.accountId !== current.accountId || rule.mode !== current.mode) {
+  if (rule.accountId !== current.accountId || rule.mode !== "analyze_only") {
     await checkAccount(ctx, rule.accountId, rule.mode);
   }
   if (rule.postingCategoryId !== current.postingCategoryId) {
@@ -131,7 +129,7 @@ export async function rulesToMove(
     .orderBy(asc(interestRules.validFrom), asc(interestRules.id));
 }
 
-/** A rule on another account: the same check as the rule's own form (`not_synced` included). */
+/** A rule on another account: the same check as the rule's own form. */
 export async function moveRuleAccount(
   ctx: Pick<Ctx, "userId">,
   id: string,

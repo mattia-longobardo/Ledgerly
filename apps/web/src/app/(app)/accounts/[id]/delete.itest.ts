@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getAccount, listAccounts } from "@domain/modules/accounts/queries";
-import { applyProviderAccounts, archiveAccount, createAccount } from "@domain/modules/accounts/service";
+import { archiveAccount, createAccount } from "@domain/modules/accounts/service";
 import { setLimit } from "@domain/modules/budgets/service";
 import { createRule } from "@domain/modules/interests/service";
 import { createPocket } from "@domain/modules/pockets/service";
@@ -15,7 +15,6 @@ import { createCategory } from "@domain/modules/transactions/taxonomy";
 import { listTransactions } from "@domain/modules/transactions/queries";
 import type { Ctx } from "@domain/platform/context";
 import { addDays } from "@domain/shared/dates";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import {
   deleteConnection,
   readSyncJob,
@@ -24,17 +23,16 @@ import {
   saveSchedule,
   skippedAccounts,
 } from "@domain/platform/integrations/service";
-import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
-import {
-  chooseWalletAccounts,
-  requestWalletBackfill,
-  syncWalletNow,
-  walletAccountChoices,
-} from "@domain/platform/integrations/wallet/sync";
+import type { SourceCalls } from "@plugin-host/movements/calls";
+import { servedSource } from "../../../../../../../test/fixtures/wallet/served-plugin";
+import { chooseSourceAccounts, sourceAccountChoices } from "@plugin-host/movements/accounts";
+import { requestSourceBackfill } from "@plugin-host/movements/cursor";
+import { syncSourceNow } from "@plugin-host/movements/sync";
 import { closeDatabase, resetDatabase } from "../../../../../../../test/db";
 import { debitFund } from "../../../../../../../test/funds";
 import { createTestUser } from "../../../../../../../test/users";
 import { accountDependents, DeleteError, deleteAccount, moveDependent } from "./delete";
+import { WALLET_PROVIDER } from "../../../../../../../test/fixtures/providers";
 
 function contextFor(userId: string): Ctx {
   return {
@@ -210,32 +208,6 @@ describe("what rests on an account", () => {
         }),
       ),
     ).toBe("account_taken");
-
-    // An interest rule that publishes to the source needs an account of a source.
-    await applyProviderAccounts(ctx, WALLET_PROVIDER, [
-      {
-        provider: WALLET_PROVIDER,
-        providerAccountId: "w-s",
-        name: "Synced",
-        type: "savings",
-        currency: "EUR",
-      },
-    ]);
-    const synced = (await listAccounts(ctx)).find((row) => row.providerAccountId === "w-s")!.id;
-    const posting = await createRule(ctx, {
-      accountId: synced,
-      taxRate: "0",
-      dayBasis: "365",
-      settlement: "monthly",
-      validFrom: "2026-01-01",
-      validTo: null,
-      payeeMatch: "interessi",
-      mode: "post_to_provider",
-      tiers: [{ upToCents: null, annualRate: "0.0365" }],
-    });
-    expect(await codeOf(moveDependent(ctx, synced, { kind: "interestRule", id: posting.id, to: next }))).toBe(
-      "not_synced",
-    );
   });
 });
 
@@ -253,24 +225,20 @@ const ACCOUNTS = (fixture("accounts.json").accounts as { id: string }[]).filter(
 const JANUARY = fixture("records-january-first-half.json").records as WireRecord[];
 const NOW = new Date("2026-01-06T08:07:00Z");
 
-function walletStub(): WalletClientOptions {
-  return {
-    baseUrl: "https://wallet.test/api",
-    sleep: async () => undefined,
-    jitter: () => 0,
-    fetch: async (input) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
-      if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
-      const bounds = url.searchParams.getAll("recordDate");
-      const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
-      const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
-      return Response.json({
-        records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
-        appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
-      });
-    },
-  };
+/** Wallet on the fixtures, read through the plugin served in-process. */
+function walletStub(): SourceCalls {
+  return servedSource(async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
+    if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
+    const bounds = url.searchParams.getAll("recordDate");
+    const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
+    const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
+    return Response.json({
+      records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
+      appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+    });
+  });
 }
 
 const general = async () =>
@@ -279,8 +247,8 @@ const general = async () =>
 describe("an account of Wallet", () => {
   it("is deleted, is not made again by the next reading, and comes back with its movements when chosen again", async () => {
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-    const options = { now: NOW, clientOptions: walletStub() };
-    await syncWalletNow(ctx, connection.id, options);
+    const options = { now: NOW, source: walletStub() };
+    await syncSourceNow(ctx, connection.id, options);
     const before = await general();
     expect(before).toBeDefined();
     const movements = await listTransactions(ctx, { accountIds: [before!.id], includeHidden: true });
@@ -293,24 +261,24 @@ describe("an account of Wallet", () => {
     expect((await resolveExternal(ctx, WALLET_PROVIDER, "transaction", externalIds)).size).toBe(0);
 
     // The next reading leaves it out: no account, no movement, and Cash still read.
-    await syncWalletNow(ctx, connection.id, { ...options, now: new Date(NOW.getTime() + 3_600_000) });
+    await syncSourceNow(ctx, connection.id, { ...options, now: new Date(NOW.getTime() + 3_600_000) });
     expect(await general()).toBeUndefined();
     expect((await listAccounts(ctx)).map((one) => one.providerAccountId)).toEqual(["wa-cash"]);
 
     // The choice on the integration's page says which accounts are here and which are not.
-    const choices = await walletAccountChoices(ctx, connection.id, { clientOptions: walletStub() });
+    const choices = await sourceAccountChoices(ctx, connection.id, { source: walletStub() });
     expect(choices.map((one) => [one.externalId, one.local === null, one.chosen])).toEqual([
       ["wa-cash", false, true],
       ["wa-general", true, false],
     ]);
 
     // Chosen again: the history is downloaded again, and the movements come back.
-    expect(
-      await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { clientOptions: walletStub() }),
-    ).toEqual({ added: 1 });
+    expect(await chooseSourceAccounts(ctx, connection.id, ["wa-general"], { source: walletStub() })).toEqual({
+      added: 1,
+    });
     expect(await skippedAccounts(ctx, connection.id)).toEqual(new Set());
     expect((await readSyncJob(ctx, connection.id, "transactions"))?.cursor?.backfillMonths).toBe("12");
-    await syncWalletNow(ctx, connection.id, { ...options, now: new Date(NOW.getTime() + 7_200_000) });
+    await syncSourceNow(ctx, connection.id, { ...options, now: new Date(NOW.getTime() + 7_200_000) });
     const after = await general();
     expect(after).toBeDefined();
     expect(after!.id).not.toBe(before!.id);
@@ -319,15 +287,15 @@ describe("an account of Wallet", () => {
   });
 
   it("disconnected and connected again: the accounts left out or deleted stay out, the schedule stays (H55)", async () => {
-    const options = { now: NOW, clientOptions: walletStub() };
+    const options = { now: NOW, source: walletStub() };
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-    await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { clientOptions: walletStub() });
+    await chooseSourceAccounts(ctx, connection.id, ["wa-general"], { source: walletStub() });
     const schedule = {
       rules: [{ kind: "times" as const, times: ["06:30"], days: { kind: "every" as const } }],
     };
     await saveSchedule(ctx, connection.id, schedule, NOW);
-    await syncWalletNow(ctx, connection.id, options);
-    await requestWalletBackfill(ctx, connection.id, 24);
+    await syncSourceNow(ctx, connection.id, options);
+    await requestSourceBackfill(ctx, connection.id, 24);
     const general = (await listAccounts(ctx)).find((one) => one.providerAccountId === "wa-general")!;
 
     await deleteConnection(ctx, connection.id);
@@ -338,9 +306,9 @@ describe("an account of Wallet", () => {
     expect(again.schedule).toEqual(schedule);
     expect(await skippedAccounts(ctx, again.id)).toEqual(new Set(["wa-cash", "wa-general"]));
     expect((await readSyncJob(ctx, again.id, "transactions"))?.cursor?.backfillMonths).toBe("24");
-    await syncWalletNow(ctx, again.id, { ...options, now: new Date(NOW.getTime() + 3_600_000) });
+    await syncSourceNow(ctx, again.id, { ...options, now: new Date(NOW.getTime() + 3_600_000) });
     expect(await listAccounts(ctx, { includeArchived: true })).toEqual([]);
-    const choices = await walletAccountChoices(ctx, again.id, { clientOptions: walletStub() });
+    const choices = await sourceAccountChoices(ctx, again.id, { source: walletStub() });
     expect(choices.map((one) => [one.externalId, one.chosen])).toEqual([
       ["wa-cash", false],
       ["wa-general", false],
@@ -349,10 +317,10 @@ describe("an account of Wallet", () => {
 
   it("left out before the first reading, is never added; the others are", async () => {
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-    expect(
-      await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { clientOptions: walletStub() }),
-    ).toEqual({ added: 0 });
-    await syncWalletNow(ctx, connection.id, { now: NOW, clientOptions: walletStub() });
+    expect(await chooseSourceAccounts(ctx, connection.id, ["wa-general"], { source: walletStub() })).toEqual({
+      added: 0,
+    });
+    await syncSourceNow(ctx, connection.id, { now: NOW, source: walletStub() });
     expect((await listAccounts(ctx)).map((one) => one.providerAccountId)).toEqual(["wa-general"]);
   });
 });

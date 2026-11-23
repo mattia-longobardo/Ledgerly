@@ -173,9 +173,9 @@ describe("leave_days", () => {
   });
 
   it("only ever records a kind Trek knows as the observed one", async () => {
-    await expect(insertDay(ctx, { trekKind: "rol" as never })).rejects.toThrow();
-    const [seen] = await insertDay(ctx, { trekKind: "comp", trekFraction: "0.5" });
-    expect(seen.trekKind).toBe("comp");
+    await expect(insertDay(ctx, { observedKind: "rol" as never })).rejects.toThrow();
+    const [seen] = await insertDay(ctx, { observedKind: "comp", observedFraction: "0.5" });
+    expect(seen.observedKind).toBe("comp");
   });
 
   it("keeps one user's days out of another's", async () => {

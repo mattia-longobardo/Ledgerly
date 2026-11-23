@@ -127,7 +127,7 @@ export const getDiagnostics = defineRoute({
       z.object({
         id: z.string(),
         name: z.string(),
-        state: z.enum(["up", "down", "never", "incompatible"]),
+        state: z.enum(["up", "down", "never", "incompatible", "uncatalogued"]),
         version: z.string().nullable(),
         contract: z.string().nullable(),
         /** The last good check (`up`) or the first failed one of the current series (`down`). */

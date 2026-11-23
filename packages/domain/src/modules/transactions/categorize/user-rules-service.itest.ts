@@ -43,7 +43,7 @@ function contextFor(userId: string): Ctx {
 const newContext = async () => contextFor((await createTestUser()).id);
 
 /** A source that gives a category with each movement, and one that only reads (a bank). */
-const GIVES = "wallet";
+const GIVES = "plugin:wallet";
 const BANK = "plugin:testbank";
 
 /**

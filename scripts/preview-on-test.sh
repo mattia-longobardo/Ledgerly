@@ -29,6 +29,20 @@ E2E_BASE_URL="http://localhost:$port"
 BETTER_AUTH_URL="$E2E_BASE_URL"
 export DATABASE_URL S3_KEY_PREFIX E2E_BASE_URL BETTER_AUTH_URL
 
+# Every plugin of the catalog is a plugin of the preview, as after the deploy of the checkout: one the
+# instance does not run yet gets the address of its container and a secret of this run only. Nothing
+# answers there; the seed registers the manifest its source serves (scripts/seed-e2e/common.ts).
+value() { sed -n "s/^$1=//p" "$env_file" | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
+PLUGIN_URLS=$(value PLUGIN_URLS | tr -d " ")
+PLUGIN_SECRETS=$(value PLUGIN_SECRETS | tr -d " ")
+catalog=packages/domain/src/platform/plugins/catalog.json
+for id in $(sed -n 's/^ *"id": "\([a-z0-9-]*\)".*/\1/p' "$catalog"); do
+  case ",$PLUGIN_URLS," in *",$id="*) continue ;; esac
+  PLUGIN_URLS="${PLUGIN_URLS:+$PLUGIN_URLS,}$id=http://ledgerly-plugin-$id:8787"
+  PLUGIN_SECRETS="${PLUGIN_SECRETS:+$PLUGIN_SECRETS,}$id=$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')"
+done
+export PLUGIN_URLS PLUGIN_SECRETS
+
 case "$DATABASE_URL" in
   */ledgerly_test | */ledgerly_test_2 | */ledgerly_[1-4]_test) ;;
   *) echo "refusing to run: the database is not ledgerly_test, ledgerly_test_2 or ledgerly_<1-4>_test" >&2; exit 1 ;;
@@ -44,12 +58,12 @@ esac
 # `docker run --env-file` keeps the quotes around a quoted value, which Compose drops: the file is
 # passed on stdin with one pair of quotes removed (as in `scripts/on-homelab.sh`).
 environment() {
-  sed -E "s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" "$env_file"
+  sed -E "/^PLUGIN_(URLS|SECRETS)=/d; s/^([A-Za-z_][A-Za-z0-9_]*)='(.*)'\$/\\1=\\2/; s/^([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"\$/\\1=\\2/" "$env_file"
 }
 
 script() {
   environment | docker run --rm -i --network db_internal --user "$(id -u):$(id -g)" -e HOME=/tmp \
-    --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e E2E_BASE_URL -e BETTER_AUTH_URL \
+    --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e E2E_BASE_URL -e BETTER_AUTH_URL -e PLUGIN_URLS -e PLUGIN_SECRETS \
     -v "$PWD":/app -w /app node:26-bookworm-slim node --conditions=react-server --import tsx "$@"
 }
 
@@ -65,7 +79,7 @@ case "${1:-}" in
     ;;
   up)
     environment | docker run -d --name "$name" --network db_internal --user 1000:1000 \
-      --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL \
+      --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL -e PLUGIN_URLS -e PLUGIN_SECRETS \
       -p "127.0.0.1:$port:3000" "$2"
     # The plugin's manifest is on `ledgerly_plugins` (PLUGIN_URLS): without it the bank plugin is
     # missing and its pages answer 404, whatever the database. A host with no plugin has no network.
@@ -76,7 +90,7 @@ case "${1:-}" in
     # database. No scheduler: as before R1, no tier runs by itself in a preview. It restarts until
     # the app has applied the migrations of the queue.
     environment | docker run -d --name "$name-worker" --restart unless-stopped --network db_internal --user 1000:1000 \
-      --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL \
+      --env-file /dev/stdin -e DATABASE_URL -e S3_KEY_PREFIX -e BETTER_AUTH_URL -e PLUGIN_URLS -e PLUGIN_SECRETS \
       "$2" node /app/worker.mjs --no-schedule
     ;;
   seed)

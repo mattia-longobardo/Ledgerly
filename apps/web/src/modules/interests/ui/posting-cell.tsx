@@ -16,7 +16,7 @@ const TONE: Record<PostingState, string> = {
 };
 
 /**
- * Where a settlement's Wallet posting stands (spec §7.6), and the only ways to move it by hand:
+ * Where a settlement's posting at the source stands (spec §7.6), and the only ways to move it by hand:
  * "Post now" from not posted, "Retry" or "Mark as posted" from unsure. Nothing here repeats a
  * posting by itself.
  */
@@ -33,8 +33,8 @@ export function PostingCell({
 }) {
   const t = useTranslations("interests.detail.posting");
   const [pending, startTransition] = useTransition();
-  // The one "error" that is not a failure: the record is in Wallet, filed under no category
-  // because the rule's category has no Wallet counterpart (spec §7.6).
+  // The one "error" that is not a failure: the record is at the source, filed under no category
+  // because the rule's category has no counterpart at the source (spec §7.6).
   const uncategorised = posting === "posted" && error === CATEGORY_NOT_LINKED;
 
   function run(

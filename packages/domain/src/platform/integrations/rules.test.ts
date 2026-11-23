@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  addonOf,
+  isBankPlugin,
+  pluginKinds,
   connectionStateAfter,
   credentialsSchema,
   isKnownProvider,
@@ -9,17 +12,19 @@ import {
   providerLinkSchema,
   syncErrorText,
   syncsTransactions,
-  TREK_PROVIDER,
-  WALLET_PROVIDER,
 } from "./rules";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 const ENTITY = "01930000-0000-7000-8000-000000000001";
 const NOW = new Date("2026-03-10T08:00:00Z");
 
 describe("isKnownProvider", () => {
   it("accepts the providers the app speaks to and nothing else", () => {
-    expect(isKnownProvider(WALLET_PROVIDER)).toBe(true);
-    expect(isKnownProvider(TREK_PROVIDER)).toBe(true);
+    expect(isKnownProvider("etoro")).toBe(true);
+    expect(isKnownProvider("ccxt:binance")).toBe(true);
+    // A plugin is no provider of the core: what it can do is its manifest's (R5c P3b).
+    expect(isKnownProvider(WALLET_PROVIDER)).toBe(false);
+    expect(isKnownProvider(TREK_PROVIDER)).toBe(false);
     expect(isKnownProvider("monzo")).toBe(false);
     expect(isKnownProvider("")).toBe(false);
   });
@@ -126,8 +131,36 @@ describe("normalizeCounts", () => {
 describe("syncsTransactions", () => {
   it("is true only for a known provider that brings in movements", () => {
     expect(syncsTransactions(WALLET_PROVIDER)).toBe(true);
-    expect(syncsTransactions(TREK_PROVIDER)).toBe(false);
+    // Any plugin's accounts take their movements from it; a leave calendar has no account at all.
+    expect(syncsTransactions(TREK_PROVIDER)).toBe(true);
     expect(syncsTransactions("ccxt:binance")).toBe(false);
     expect(syncsTransactions(null)).toBe(false);
+  });
+});
+
+describe("what a plugin does, from its manifest's capabilities (R5c P3b)", () => {
+  const SOURCE = ["source.read", "createRecord", "editRecord", "categories", "deleteCategory"];
+  const CALENDAR = ["leaveCalendar", "provider.write"];
+  const BANK = ["windowedHistory"];
+
+  it("reads the days of a leave calendar, and the accounts then the movements of any other", () => {
+    expect(pluginKinds(CALENDAR)).toEqual(["leave"]);
+    expect(pluginKinds(SOURCE)).toEqual(["accounts", "transactions"]);
+    expect(pluginKinds(BANK)).toEqual(["accounts", "transactions"]);
+  });
+
+  it("belongs to time off for a leave calendar and to nothing for any other plugin", () => {
+    expect(addonOf(TREK_PROVIDER, CALENDAR)).toBe("timeoff");
+    expect(addonOf(WALLET_PROVIDER, SOURCE)).toBeUndefined();
+    expect(addonOf("plugin:enablebanking", BANK)).toBeUndefined();
+    // A provider of the core keeps its own: no manifest.
+    expect(addonOf("etoro", null)).toBe("investments");
+  });
+
+  it("is a bank's plugin only when no engine of the core reads it", () => {
+    expect(isBankPlugin(BANK)).toBe(true);
+    expect(isBankPlugin([])).toBe(true);
+    expect(isBankPlugin(SOURCE)).toBe(false);
+    expect(isBankPlugin(CALENDAR)).toBe(false);
   });
 });

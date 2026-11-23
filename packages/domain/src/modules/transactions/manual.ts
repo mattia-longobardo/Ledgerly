@@ -24,14 +24,50 @@ import {
 
 type ManualCtx = Pick<Ctx, "userId" | "timeZone">;
 
-async function parsed(ctx: ManualCtx, input: unknown) {
+type AccountCheck = ReturnType<typeof requireMovementAccount>;
+
+/** The checks of the account and of the category, each asked once per id over many movements. */
+function checksOnce(ctx: ManualCtx) {
+  const accounts = new Map<string, AccountCheck>();
+  const categories = new Map<string, Promise<void>>();
+  return {
+    account(id: string): AccountCheck {
+      const check = accounts.get(id) ?? requireMovementAccount(ctx, id);
+      accounts.set(id, check);
+      return check;
+    },
+    category(id: string | null): Promise<void> {
+      if (id === null) return Promise.resolve();
+      const check = categories.get(id) ?? requireOwnCategory(ctx, id);
+      categories.set(id, check);
+      return check;
+    },
+  };
+}
+
+async function parsed(ctx: ManualCtx, input: unknown, checks = checksOnce(ctx)) {
   const movement = manualMovementSchema.parse(input);
   if (isAfterToday(movement.on, today(ctx.timeZone))) throw new TransactionError("future_date");
-  const account = await requireMovementAccount(ctx, movement.accountId);
-  await requireOwnCategory(ctx, movement.categoryId);
+  const account = await checks.account(movement.accountId);
+  await checks.category(movement.categoryId);
   const columns = manualColumns(movement, account.currency, ctx.timeZone);
   // A category the person left in the dialog is their choice, a suggestion they saw included.
   return { ...columns, ...chosenBy(columns.categoryId === null ? null : "user") };
+}
+
+/** The row of a manual movement, from its columns. */
+function manualRow(
+  ctx: ManualCtx,
+  columns: Awaited<ReturnType<typeof parsed>>,
+  idempotencyKey: string | null,
+  toSend: boolean,
+) {
+  return userScoped(ctx).stamp({
+    ...columns,
+    origin: "manual" as const,
+    idempotencyKey,
+    sendState: toSend ? ("to_send" as const) : null,
+  });
 }
 
 async function byKey(ctx: ManualCtx, idempotencyKey: string): Promise<Transaction | null> {
@@ -66,14 +102,7 @@ export async function createManualTransaction(
   const columns = await parsed(ctx, input);
   const [row] = await getDb()
     .insert(transactions)
-    .values(
-      userScoped(ctx).stamp({
-        ...columns,
-        origin: "manual" as const,
-        idempotencyKey: idempotencyKey ?? null,
-        sendState: options.toSend ? ("to_send" as const) : null,
-      }),
-    )
+    .values(manualRow(ctx, columns, idempotencyKey ?? null, options.toSend === true))
     // Two requests with one key that passed the read above together: the second writes nothing.
     .onConflictDoNothing()
     .returning({ id: transactions.id });
@@ -84,6 +113,41 @@ export async function createManualTransaction(
   const sent = idempotencyKey === undefined ? null : await byKey(ctx, idempotencyKey);
   if (!sent) throw new TransactionError("invalid");
   return { transaction: sent, created: false };
+}
+
+/** How many rows one insert of a batch writes. */
+const BATCH_CHUNK = 1000;
+
+/** The rows in the pieces one insert takes. */
+function* piecesOf<T>(rows: readonly T[]): Generator<T[]> {
+  for (let start = 0; start < rows.length; start += BATCH_CHUNK) yield rows.slice(start, start + BATCH_CHUNK);
+}
+
+/**
+ * Writes many manual movements at once, each with its own key (an import: decision ST-8), on the
+ * path of `createManualTransaction`: the same checks and the same row, in one transaction. A key
+ * already written is a movement already there: it writes nothing and is not counted. The caller
+ * rebuilds the balance, as for one movement.
+ */
+export async function createManualTransactions(
+  ctx: ManualCtx,
+  movements: readonly { input: unknown; key: string }[],
+): Promise<{ created: number }> {
+  const checks = checksOnce(ctx);
+  const rows: ReturnType<typeof manualRow>[] = [];
+  for (const movement of movements) {
+    rows.push(manualRow(ctx, await parsed(ctx, movement.input, checks), movement.key, false));
+  }
+  if (rows.length === 0) return { created: 0 };
+  return getDb().transaction(async (transaction) => {
+    let created = 0;
+    for (const piece of piecesOf(rows)) {
+      const insert = transaction.insert(transactions).values(piece).onConflictDoNothing();
+      created += (await insert.returning({ id: transactions.id })).length;
+    }
+    if (created > 0) await retypeMovements(transaction, ctx);
+    return { created };
+  });
 }
 
 async function requireManual(ctx: ManualCtx, id: string): Promise<Transaction> {

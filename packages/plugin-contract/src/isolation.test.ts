@@ -86,7 +86,9 @@ describe("a plugin is isolated (M9)", () => {
     for (const plugin of plugins) {
       const start = compose.indexOf(`\n  ledgerly-plugin-${plugin}:`);
       expect(start).toBeGreaterThan(0);
-      const service = compose.slice(start, compose.indexOf("\nnetworks:", start));
+      // The service runs to the banner of the next one, or to the networks of the file.
+      const rest = compose.slice(start + 1);
+      const service = rest.slice(0, rest.search(/\n(# |networks:)/));
       expect(service).not.toContain(".env.homelab");
       expect(service).not.toContain("volumes:");
       expect(service).not.toContain("ports:");
@@ -95,5 +97,7 @@ describe("a plugin is isolated (M9)", () => {
       const networks = service.slice(service.lastIndexOf("networks:")).match(/- (\S+)/g);
       expect(networks).toEqual(["- ledgerly_plugins"]);
     }
+    // A plugin goes out through the egress proxy only (decision I8).
+    expect(compose).toContain("\n  ledgerly_plugins:\n    name: ledgerly_plugins\n    internal: true\n");
   });
 });

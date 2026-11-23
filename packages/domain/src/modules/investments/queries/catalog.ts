@@ -18,7 +18,7 @@ export interface CatalogView {
     type: Account["type"];
     balanceCents: Cents | null;
     reason: "fund" | "type" | "managed" | null;
-    /** Its account is read by Wallet. */
+    /** Its account is read by a source. */
     synced: boolean;
     /** A manual service a provider can be connected to (manual → synced, §2.5). */
     manualService: boolean;

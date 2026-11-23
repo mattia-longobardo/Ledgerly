@@ -430,7 +430,7 @@ describe("POST /connections/{id}/schedule/preview", () => {
   it("answers the domain's next times and problems, and saves nothing", async () => {
     const { id } = await saveConnection(
       { userId: alice.userId },
-      { provider: "wallet", credentials: { token: "test-token" } },
+      { provider: "plugin:wallet", credentials: { token: "test-token" } },
     );
     const before = await (await call("/connections", alice)).json();
     const timeZone: string = (await (await call("/preferences", alice)).json()).timeZone;
@@ -463,7 +463,7 @@ describe("POST /connections/{id}/schedule/preview", () => {
   it("refuses an interval under the minimum gap, another person's connection and a cross-site call", async () => {
     const { id } = await saveConnection(
       { userId: alice.userId },
-      { provider: "wallet", credentials: { token: "test-token" } },
+      { provider: "plugin:wallet", credentials: { token: "test-token" } },
     );
     const tooOften = {
       rules: [{ kind: "interval", everyMinutes: 5, from: "00:00", until: "23:59", days: { kind: "every" } }],

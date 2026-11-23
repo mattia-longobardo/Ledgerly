@@ -4,7 +4,7 @@
 // in `platform/integrations`), and the queue of the categorisation is the web's. The Server Actions call the same functions.
 import "server-only";
 import type { TransactionCases } from "@ledgerly/api";
-import { editableAtSource, editAtSource, syncSourceNow } from "@ledgerly/domain/platform/integrations/source";
+import { editableAtSource, editAtSource, syncSourceFor } from "@ledgerly/plugin-host";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
 import { tasks } from "@/platform/jobs/queue";
@@ -44,7 +44,7 @@ export const transactionCases: TransactionCases = {
   retrySend: (ctx, id) =>
     retrySend(ctx, id, async (provider) => {
       try {
-        if (await syncSourceNow(ctx, provider)) await enqueue(tasks.afterSync("manual"));
+        if (await syncSourceFor(ctx, provider)) await enqueue(tasks.afterSync("manual"));
       } catch (error) {
         console.error("[transactions] a source's pass failed", redactForLog(error));
       }

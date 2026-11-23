@@ -17,7 +17,7 @@ import {
 } from "../../test/funds";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * Funds (F4): a synced current account with two Fideuram direct debits of 251,00 €, on the 5th of

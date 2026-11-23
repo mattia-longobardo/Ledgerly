@@ -6,7 +6,7 @@ import { createTestUser } from "../../../../../test/users";
 import { matchMovements, type MovementRule } from "./index";
 import type { IncomingTransaction } from "./rules";
 import { hideTransactions, upsertFromProvider } from "./service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 // The movement matcher (rewrite plan §10.11, E7) against the database: the account, the way, the
 // types and the window go to the query; the text, the identifier and the amount to the rule.

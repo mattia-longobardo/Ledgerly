@@ -30,7 +30,7 @@ export interface RuleDraft {
   settlement: "daily" | "monthly" | "quarterly" | "annual";
   payeeMatch: string;
   publish: boolean;
-  /** The category a published settlement is filed under in Wallet; `null` is none. */
+  /** The category a published settlement is filed under at the source; `null` is none. */
   categoryId: string | null;
   active: boolean;
 }
@@ -40,7 +40,7 @@ const KNOWN = ["invalid", "not_found", "invalid_account", "invalid_tiers", "not_
 /**
  * The design's interest rule dialog, with what spec §7.6 adds (plan F4 §3.6.2): an end date, the
  * day basis, the hour of the person's own day the rule accrues at, the text that recognises the
- * bank's payment, and publishing to Wallet. The last tier is always "above": only the tiers before
+ * bank's payment, and publishing to the source. The last tier is always "above": only the tiers before
  * it have a threshold.
  */
 export function RuleDialog({
@@ -247,8 +247,8 @@ export function RuleDialog({
         {publishable && (
           <>
             {/*
-          The category the published record is filed under in Wallet (spec §7.6): a local category
-          of this user's, which the posting resolves to Wallet's own id through the `category`
+          The category the published record is filed under at the source (spec §7.6): a local category
+          of this user's, which the posting resolves to the source's own id through the `category`
           links. A category that has never been linked publishes the record uncategorised and the
           payout says so — the posting is never failed and no category is ever invented.
         */}

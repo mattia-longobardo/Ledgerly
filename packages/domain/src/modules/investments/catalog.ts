@@ -135,7 +135,7 @@ export const INVESTMENT_PROVIDERS: readonly InvestmentProvider[] = [
     status: "available",
     // D18 · B1: `GET /sapi/v1/account/apiRestrictions`, an allowlist checked on every pass.
     readOnlyCheck: "api",
-    // B4: Spot, Funding and Simple Earn; any other wallet with a value makes a reading partial.
+    // B4: Spot, Funding and Simple Earn; any other balance of the exchange with a value makes a reading partial.
     products: ["spot", "funding", "earn"],
     // The pairs the prices go through (§1.8): EUR on the exchange, USD through USDT/USD.
     currencies: ["EUR", "USD"],

@@ -20,8 +20,8 @@ import {
   listAllowances,
   listLeaveDays,
   markSynced,
-  pendingForTrek,
-  recordFromTrek,
+  pendingForCalendar,
+  recordFromCalendar,
   saveAllowance,
   clearDay,
   saveLeaveDay,
@@ -219,7 +219,7 @@ describe("saving a day", () => {
     expect([sick.pending, other_.pending]).toEqual(["none", "none"]);
 
     // …and neither of those two is ever offered to a pass.
-    expect((await pendingForTrek(ctx, WINDOW)).map((one) => one.kind)).toEqual(["rol", "comp"]);
+    expect((await pendingForCalendar(ctx, WINDOW)).map((one) => one.kind)).toEqual(["rol", "comp"]);
   });
 
   it("refuses a size that is neither half a day nor a whole one", async () => {
@@ -245,20 +245,20 @@ describe("the life of a pending state (plan §3.4.7)", () => {
     expect(day.pending).toBe("upsert");
 
     // The pass offered it, sent it, re-read the year and saw Trek holding a whole day.
-    expect((await pendingForTrek(ctx, WINDOW)).map((one) => one.id)).toEqual([day.id]);
+    expect((await pendingForCalendar(ctx, WINDOW)).map((one) => one.id)).toEqual([day.id]);
     await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
     const synced = await rowOf(day.id);
-    expect(synced).toMatchObject({ pending: "none", trekFraction: "1.0", trekKind: "vacation" });
+    expect(synced).toMatchObject({ pending: "none", observedFraction: "1.0", observedKind: "vacation" });
     expect(synced.syncedAt).not.toBeNull();
-    expect(await pendingForTrek(ctx, WINDOW)).toHaveLength(0);
+    expect(await pendingForCalendar(ctx, WINDOW)).toHaveLength(0);
 
     // Removing it does not remove it yet: Trek has to be told first.
     expect(await deleteLeaveDay(ctx, day.id)).toBe("pending");
     expect((await rowOf(day.id)).pending).toBe("delete");
-    expect((await pendingForTrek(ctx, WINDOW))[0]).toMatchObject({
+    expect((await pendingForCalendar(ctx, WINDOW))[0]).toMatchObject({
       pending: "delete",
-      trekFraction: 1,
-      trekKind: "vacation",
+      observedFraction: 1,
+      observedKind: "vacation",
     });
 
     // The pass re-read the year and Trek no longer has the day: now it really goes.
@@ -286,7 +286,7 @@ describe("the life of a pending state (plan §3.4.7)", () => {
     expect(edited.pending).toBe("upsert");
     expect(edited.fraction).toBe("0.5");
     // The observed pair is untouched: the pass still has to send the whole day to remove it.
-    expect(edited.trekFraction).toBe("1.0");
+    expect(edited.observedFraction).toBe("1.0");
     expect(edited.syncedAt).not.toBeNull();
   });
 
@@ -299,20 +299,20 @@ describe("the life of a pending state (plan §3.4.7)", () => {
 
 describe("what a pass brings back", () => {
   it("records a day Trek had and we did not", async () => {
-    const recorded = await recordFromTrek(ctx, { on: TUESDAY, kind: "vacation", fraction: 0.5 });
+    const recorded = await recordFromCalendar(ctx, { on: TUESDAY, kind: "vacation", fraction: 0.5 });
     expect(recorded).toMatchObject({
-      origin: "trek",
+      origin: "external",
       pending: "none",
       fraction: "0.5",
-      trekFraction: "0.5",
-      trekKind: "vacation",
+      observedFraction: "0.5",
+      observedKind: "vacation",
     });
     expect(recorded?.syncedAt).not.toBeNull();
   });
 
   it("reconciles a day we already held, without duplicating it", async () => {
     const [day] = await saveLeaveDay(ctx, { from: TUESDAY, kind: "vacation", fraction: 1 });
-    const recorded = await recordFromTrek(ctx, { on: TUESDAY, kind: "vacation", fraction: 1 });
+    const recorded = await recordFromCalendar(ctx, { on: TUESDAY, kind: "vacation", fraction: 1 });
     expect(recorded?.id).toBe(day.id);
     expect(await listLeaveDays(ctx, WINDOW)).toHaveLength(1);
     expect(recorded?.pending).toBe("none");
@@ -321,7 +321,7 @@ describe("what a pass brings back", () => {
   it("leaves a day we classify differently alone", async () => {
     // We hold the day as ROL; Trek shows a `comp`. Two rows, and ours is untouched.
     const [rol] = await saveLeaveDay(ctx, { from: TUESDAY, kind: "rol", fraction: 0.5 });
-    await recordFromTrek(ctx, { on: TUESDAY, kind: "comp", fraction: 0.5 });
+    await recordFromCalendar(ctx, { on: TUESDAY, kind: "comp", fraction: 0.5 });
     const days = await listLeaveDays(ctx, WINDOW);
     expect(days).toHaveLength(2);
     expect(await rowOf(rol.id)).toMatchObject({ kind: "rol", fraction: "0.5", origin: "manual" });

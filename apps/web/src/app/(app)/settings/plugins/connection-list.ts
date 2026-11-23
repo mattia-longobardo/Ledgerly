@@ -1,6 +1,6 @@
 // src/app/(app)/settings/plugins/connection-list.ts — the person's connections as data, for
 // `GET /api/v1/connections` (rewrite plan R2): what the rows of the page show, without sentences.
-// The capabilities are what a client of the API can ask for: a provider of the core offers what its
+// The capabilities are what a client of the API can ask for: a plugin read by the core offers what its
 // card does (`core-cases.ts`), a bank what its plugin does, an investment service "Update now".
 import "server-only";
 import { coreCardOf } from "./core-cases";
@@ -9,16 +9,15 @@ import { listInvestmentAccounts, providerOf } from "@ledgerly/domain/investments
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type Connection,
-  isPluginProvider,
   listConnections,
   readSyncJob,
   type RecentRun,
   recentRuns,
   SYNC_RUN_RETENTION_DAYS,
 } from "@ledgerly/domain/platform/integrations";
-import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
-import { connectionSummary } from "@ledgerly/plugin-host";
-import { labelOf, passFor } from "@/platform/integrations/registry";
+import { credentialsStatus, isBankPluginProvider, listUserPlugins } from "@ledgerly/domain/platform/plugins";
+import { connectionSummary, historyOf } from "@ledgerly/plugin-host";
+import { labelOf } from "@/platform/integrations/registry";
 import { sourceSlugOf, statusOf } from "./connection-state";
 
 const DAY_MS = 86_400_000;
@@ -93,9 +92,9 @@ async function bankFacts(
   };
 }
 
-/** What the card of a provider of the core does through the API; "Update now" only for anybody else. */
-function coreCapabilities(provider: string): Capabilities {
-  const card = coreCardOf(provider);
+/** What the card of a plugin read by the core does through the API; "Update now" only for anybody else. */
+async function coreCapabilities(provider: string): Promise<Capabilities> {
+  const card = await coreCardOf(provider);
   if (!card) return { ...NONE, sync: true };
   return {
     ...NONE,
@@ -103,7 +102,7 @@ function coreCapabilities(provider: string): Capabilities {
     test: true,
     disconnect: true,
     chooseAccounts: card.accounts !== undefined,
-    historyMonths: card.history ? [...(passFor(provider)?.history?.choices ?? [])] : [],
+    historyMonths: card.history ? [...((await historyOf(provider))?.choices ?? [])] : [],
   };
 }
 
@@ -123,7 +122,7 @@ async function rowOf(
 ) {
   const label = await labelOf(connection, ctx.locale);
   // The depth read today, as «History» of the source's page says it: one query, for a provider with one.
-  const history = passFor(connection.provider)?.history;
+  const history = await historyOf(connection.provider);
   const historyDepth = history
     ? history.depthOf((await readSyncJob(ctx, connection.id, "transactions"))?.cursor)
     : null;
@@ -187,9 +186,9 @@ export async function connectionList(ctx: Ctx, now: Date = new Date(), runsShown
       accountsChosen: true,
       keyRefused: false,
       nextAttempt: null,
-      capabilities: coreCapabilities(connection.provider),
+      capabilities: await coreCapabilities(connection.provider),
     };
-    if (isPluginProvider(connection.provider)) {
+    if (await isBankPluginProvider(connection.provider)) {
       const pluginId = connection.provider.slice("plugin:".length);
       const active = plugins.some((one) => one.id === pluginId && one.state === "active");
       facts = await bankFacts(ctx, connection, { active, keyRefused: await keyRefused(pluginId) }, now);

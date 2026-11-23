@@ -254,23 +254,11 @@
     "integrations": {
       "title": "Sorgenti dei dati",
       "description": "Da dove arrivano saldi e movimenti. Le credenziali sono cifrate a riposo e non vengono più mostrate.",
-      "providers": {
-        "wallet": {
-          "name": "Budget Makers Wallet",
-          "role": "Conti, saldi e movimenti"
-        },
-        "trek": {
-          "name": "Trek",
-          "role": "Giorni di ferie"
-        }
-      },
       "connect": {
-        "title": "Collega Wallet",
-        "description": "Incolla il token API del tuo account Wallet. Viene sigillato con la chiave di cifratura dell'app e non torna mai al browser.",
-        "token": "Token API",
-        "tokenHint": "Salvato cifrato. Se lo rigeneri, sostituiscilo qui.",
+        "title": "Collega {provider}",
+        "description": "La credenziale viene sigillata con la chiave di cifratura dell'app e non torna mai al browser.",
         "submit": "Collega",
-        "replace": "Sostituisci il token",
+        "replace": "Sostituisci la credenziale",
         "cancel": "Annulla"
       },
       "disconnect": {
@@ -279,7 +267,8 @@
         "noSwitch": "{count, plural, =0 {} one {Non passa da solo a una banca: per tenerlo aggiornato, aprilo e scegli «Passa alla banca».} other {Non passano da soli a una banca: per tenerne uno aggiornato, aprilo e scegli «Passa alla banca».}}",
         "confirm": "Scollega",
         "cancel": "Resta collegato",
-        "excluded": "{count, plural, one {# conto escluso resta escluso.} other {# conti esclusi restano esclusi.}}"
+        "excluded": "{count, plural, one {# conto escluso resta escluso.} other {# conti esclusi restano esclusi.}}",
+        "calendar": "Le giornate già prenotate restano qui. Le rimozioni ancora da inviare a {provider} vengono chiuse subito, perché dopo non ci sarebbe più nessuno a cui chiederle. La pianificazione resta: se ricolleghi, {provider} si aggiorna come prima."
       },
       "kinds": {
         "accounts": "Conti e saldi",
@@ -304,8 +293,8 @@
         "categoriesRetyped": "{count} categorie con il tipo corretto"
       },
       "toasts": {
-        "connected": "Wallet collegato",
-        "replaced": "Token sostituito",
+        "connected": "{provider} collegato",
+        "replaced": "Credenziale sostituita",
         "disconnected": "{provider} scollegato",
         "chosen": "Conti salvati."
       },
@@ -319,18 +308,8 @@
         "failed": "Non è stato possibile salvare. Riprova.",
         "schedule": "Questo orario non è valido."
       },
-      "trek": {
-        "notLinked": "Non collegato. Le giornate restano in Ledgerly finché Trek non è collegato.",
-        "pending": "{count, plural, one {# giornata da inviare a Trek} other {# giornate da inviare a Trek}}",
-        "connectTitle": "Collega Trek",
-        "connectDescription": "Un machine client (senza login nel browser) con gli scope vacay:read e vacay:write: Trek → Impostazioni → Integrazioni → MCP → Client OAuth 2.1 → Nuovo client.",
-        "baseUrl": "Indirizzo di Trek",
-        "baseUrlHint": "L'indirizzo del sito, senza /mcp: viene aggiunto da solo.",
-        "disconnectDescription": "Le giornate già prenotate restano qui. Le rimozioni ancora in sospeso vengono chiuse subito, perché dopo non ci sarebbe più nessuno a cui chiederle. La pianificazione resta: se ricolleghi, Trek si aggiorna come prima.",
-        "clientId": "ID del client",
-        "clientIdHint": "Quello del machine client creato su Trek.",
-        "clientSecret": "Segreto del client",
-        "clientSecretHint": "Il segreto trekcs_…, mostrato una volta sola. Conservato sigillato e mai più mostrato."
+      "calendar": {
+        "pending": "{count, plural, one {# giornata da inviare a {provider}} other {# giornate da inviare a {provider}}}"
       },
       "scheduleControl": {
         "title": "Orario di sincronizzazione",
@@ -493,12 +472,12 @@
       "deleteMovements": "{count, plural, =0 {Nessun movimento la usa.} one {# movimento resta senza categoria.} other {# movimenti restano senza categoria.}}",
       "deleteBudgets": "I budget impostati su di lei vengono cancellati; abbonamenti e regole di interesse la perdono.",
       "deleteChildren": "Le sue sottocategorie vengono eliminate con lei.",
-      "deleteWallet": "Viene eliminata anche su Wallet, se viene da lì.",
+      "deleteAtSource": "Viene eliminata anche nella sua fonte, se viene da una.",
       "deletedToast": "{name} eliminata · {count, plural, =0 {nessun movimento toccato} one {# movimento senza categoria} other {# movimenti senza categoria}}",
-      "wallet": {
-        "deleted": "{count, plural, one {# categoria eliminata anche su Wallet} other {# categorie eliminate anche su Wallet}}",
-        "refused": "Wallet non l'ha eliminata: {reason}",
-        "failed": "Non si raggiunge Wallet: {reason}"
+      "atSource": {
+        "deleted": "{count, plural, one {# categoria eliminata anche nella sua fonte} other {# categorie eliminate anche nella loro fonte}}",
+        "refused": "La fonte non l'ha eliminata: {reason}",
+        "failed": "Non si raggiunge la fonte: {reason}"
       },
       "merge": {
         "title": "Categorie doppie",
@@ -1304,7 +1283,8 @@
         "keyInvalid": "La chiave di {provider} non è più valida.",
         "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
         "pausedSchedule": "Aggiornamento automatico spento.",
-        "pausedProvider": "{provider} non è attivo."
+        "pausedProvider": "{provider} non è attivo.",
+        "readOnly": "{provider} permette a Ledgerly solo di leggere: le giornate scritte qui restano da inviare finché la chiave non può anche scrivere."
       },
       "when": {
         "now": "ora",
@@ -1346,6 +1326,7 @@
         "rateLimited": "{name} ha raggiunto il limite di letture automatiche.",
         "providerDown": "{name} non risponde.",
         "invalidData": "{name} ha risposto con dati che Ledgerly non sa leggere. Niente è stato cambiato.",
+        "readOnly": "{provider} permette a Ledgerly solo di leggere: le giornate scritte qui restano da inviare.",
         "busy": "Un aggiornamento è già in corso. Riprova tra poco.",
         "network": "Connessione assente. Controlla la rete e riprova.",
         "unavailable": "Il collegamento non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",
@@ -1458,10 +1439,12 @@
       "down": "Non risponde",
       "never": "Mai raggiunto",
       "incompatible": "Contratto non compatibile",
+      "uncatalogued": "Plugin non ufficiale",
       "checked": "Ultimo controllo {time}",
       "since": "dalle {time}",
       "neverDetail": "Il manifest non è mai stato letto.",
       "incompatibleDetail": "Il plugin usa il contratto {version}.",
+      "uncataloguedDetail": "Non è nel catalogo di questa versione: Ledgerly non lo chiama mai.",
       "version": "v{version} · contratto v{contract}",
       "empty": "Nessun plugin in questa istanza.",
       "unavailable": "Stato non disponibile. Ricarica la pagina."
@@ -1833,8 +1816,8 @@
       "description": "Viene rimosso definitivamente, e se arriva dalla sincronizzazione non viene più importato.",
       "cancel": "Annulla"
     },
-    "wallet": {
-      "hint": "Arriva da Wallet: tipo, importo, beneficiario e nota si salvano anche su Wallet. Le etichette restano qui.",
+    "atSource": {
+      "hint": "Arriva dalla sua fonte: tipo, importo, beneficiario e nota si salvano anche lì. Le etichette restano qui.",
       "type": "Tipo",
       "types": {
         "expense": "Spesa",
@@ -1842,16 +1825,16 @@
         "transfer": "Giroconto"
       },
       "amountHint": "Senza segno: lo decide il tipo.",
-      "saved": "Salvato qui e su Wallet",
-      "unchanged": "Wallet aveva già questi valori",
-      "said": "Wallet: «{reason}»",
+      "saved": "Salvato qui e nella fonte",
+      "unchanged": "La fonte aveva già questi valori",
+      "said": "La fonte: «{reason}»",
       "errors": {
         "invalid": "Controlla i campi: qualcosa non è valido.",
         "amount": "Scrivi un importo diverso da zero.",
-        "notLinked": "Questo movimento non è collegato a Wallet, o Wallet non è più collegato.",
-        "noTransferCategory": "Wallet non ha restituito la sua categoria Trasferimento: il giroconto non si può impostare da qui.",
-        "refused": "Wallet ha rifiutato la modifica: qui non è cambiato niente.",
-        "failed": "Wallet non ha risposto: qui non è cambiato niente. Riprova tra un minuto."
+        "notLinked": "Questo movimento non è collegato a una fonte che accetta modifiche, o la fonte non è più collegata.",
+        "noTransferCategory": "La fonte non ha restituito la sua categoria Trasferimento: il giroconto non si può impostare da qui.",
+        "refused": "La fonte ha rifiutato la modifica: qui non è cambiato niente.",
+        "failed": "La fonte non ha risposto: qui non è cambiato niente. Riprova tra un minuto."
       }
     },
     "manual": {
@@ -5728,7 +5711,7 @@
         "hint": "Un giorno festivo solo nella tua città. Una data già nel calendario conta una volta sola.",
         "saved": "Santo patrono salvato"
       },
-      "trek": {
+      "calendar": {
         "description": "Dove vivono anche i giorni di ferie.",
         "manage": "Gestisci in Plugin",
         "connect": "Collega in Plugin"

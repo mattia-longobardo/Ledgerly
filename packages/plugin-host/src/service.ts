@@ -45,6 +45,7 @@ import {
   type InstancePlugin,
   isPluginActive,
   listPluginConnections,
+  rememberManifest,
 } from "@ledgerly/domain/platform/plugins";
 import {
   AUTH_STATE_MINUTES,
@@ -135,6 +136,7 @@ export async function refreshManifests(now: Date = new Date(), deps: Deps = {}):
         .insert(plugins)
         .values({ id: plugin.id, ...values })
         .onConflictDoUpdate({ target: plugins.id, set: { ...values, updatedAt: now } });
+      rememberManifest(manifest);
     } catch (error) {
       if (!(error instanceof PluginCallError)) throw error;
       // The start of the series of failed checks is kept: a later failure does not move it.
@@ -329,7 +331,9 @@ async function actionFailure(
     return new PluginActionError("auth");
   }
   if (error.code === "institution_unavailable") return new PluginActionError("bank_unavailable");
-  if (error.code === "key_format" || error.code === "invalid_request") return new PluginActionError("failed");
+  // `refused` answers a write of contract 2 (`POST /push`), never an action of this file.
+  if (error.code === "key_format" || error.code === "invalid_request" || error.code === "refused")
+    return new PluginActionError("failed");
   return new PluginActionError(error.code);
 }
 

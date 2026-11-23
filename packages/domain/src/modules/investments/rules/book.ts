@@ -96,7 +96,7 @@ export interface Book {
   reconciliations: readonly ReconciliationLike[];
   /**
    * The account's own balance, one row per day in date order, for a manual service (§1.3,
-   * PERS-342): Accounts holds its value — typed there, or read by Wallet — and in its manual
+   * PERS-342): Accounts holds its value — typed there, or read by a source — and in its manual
    * periods V is that balance, never a value of the module's own. `undefined` for a service the
    * module writes.
    */

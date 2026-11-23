@@ -11,9 +11,7 @@ import { interestRules } from "@ledgerly/domain/interests";
 import { type Account, isStale, listAccounts } from "@ledgerly/domain/accounts";
 import { ACCRUAL_READING_MAX_AGE_HOURS } from "@ledgerly/domain/interests";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
-import { listConnections, WALLET_PROVIDER } from "@ledgerly/domain/platform/integrations";
-import { isSyncBusy, syncWalletNow } from "@ledgerly/domain/platform/integrations/wallet";
-import { lookUpUnsure, postPending } from "@ledgerly/domain/interests";
+import { connectionsThatCan, isSyncBusy, syncSourceNow } from "@ledgerly/plugin-host";
 import { runsAt } from "@ledgerly/domain/interests";
 import { bringUpToDate } from "@ledgerly/domain/interests";
 
@@ -28,7 +26,7 @@ import { bringUpToDate } from "@ledgerly/domain/interests";
  * plausible, wrong number, in silence, and settles it, and publishes it.
  *
  * This part of the job runs first: for every synced account its rules touch, it runs
- * one Wallet pass on the connection — one per connection per job pass, through `syncWalletNow`,
+ * one pass of the source on the connection — one per connection per job pass, through `syncSourceNow`,
  * which holds the advisory lock the hourly sync and "Sync now" already share — waits for it, and
  * then reports, per account, whether the reading in hand is recent enough to accrue on. A manual
  * account has nothing to synchronise and is always ready.
@@ -37,17 +35,17 @@ import { bringUpToDate } from "@ledgerly/domain/interests";
  * Nothing here writes to the interest tables, and nothing here accrues.
  */
 
-type WalletSyncResult = Awaited<ReturnType<typeof syncWalletNow>>;
+type SourceSyncResult = Awaited<ReturnType<typeof syncSourceNow>>;
 
 /**
  * Why an account's balance is not one to accrue on. Each is a fact about this pass, not a verdict
  * on the account: the next pass asks again.
  *
- * - `no_connection` — the account says it is synced and no Wallet connection can refresh it;
+ * - `no_connection` — the account says it is synced and no connection to a source can refresh it;
  * - `revoked` — the token is refused, so the pass attempted nothing at all;
  * - `sync_failed` — the pass ran and failed (unreachable, truncated window, refused removal…);
  * - `sync_busy` — another pass held the connection's lock and had not landed a reading in time;
- * - `not_read` — the pass succeeded but brought no reading for *this* account (Wallet no longer
+ * - `not_read` — the pass succeeded but brought no reading for *this* account (the source no longer
  *   returns it, or it is not linked), which is exactly the case a shared "the sync went fine"
  *   would hide.
  */
@@ -63,8 +61,8 @@ interface BalanceReading {
 
 interface FreshnessOptions {
   now?: Date;
-  /** Injected in tests, so no Wallet is ever called: one pass on one connection. */
-  sync?: (connectionId: string) => Promise<WalletSyncResult>;
+  /** Injected in tests, so no source is ever called: one pass on one connection. */
+  sync?: (connectionId: string) => Promise<SourceSyncResult>;
   /** Injected in tests so the wait for a concurrent pass is not actually waited through. */
   sleep?: (ms: number) => Promise<void>;
   /** How long to wait for a pass that already held the lock. */
@@ -77,7 +75,7 @@ interface FreshnessOptions {
  *
  * Waiting is the whole point of the lock here: the other pass is reading exactly what this one
  * would have read, so the reading it is about to write is the reading we want. A second
- * `syncWalletNow` would be a second pass on the same connection in the same tick, which is what
+ * `syncSourceNow` would be a second pass on the same connection in the same tick, which is what
  * the lock exists to prevent — so this watches `last_synced_at` instead of calling again.
  */
 const BUSY_WAIT_MS = 60_000;
@@ -98,14 +96,12 @@ async function accountsById(ctx: Pick<Ctx, "userId">, wanted: ReadonlySet<string
   return new Map(rows.filter((account) => wanted.has(account.id)).map((account) => [account.id, account]));
 }
 
-/** What one round of passes on the person's Wallet connections leaves: a reason, and a pass already running. */
+/** What one round of passes on the person's connections to a source leaves: a reason, and a pass already running. */
 async function syncConnections(
   ctx: Ctx,
-  runSync: (connectionId: string) => Promise<WalletSyncResult>,
+  runSync: (connectionId: string) => Promise<SourceSyncResult>,
 ): Promise<{ reason: StaleReason | null; busy: boolean }> {
-  const connections = (await listConnections(ctx)).filter(
-    (connection) => connection.provider === WALLET_PROVIDER,
-  );
+  const connections = await connectionsThatCan(ctx, "source.read");
   // One reason for the whole connection set: every synced account of this user hangs off it, and
   // the second look is what tells them apart anyway.
   let reason: StaleReason | null = connections.length === 0 ? "no_connection" : null;
@@ -125,7 +121,7 @@ async function syncConnections(
       }
       // Logged here and not re-thrown: Settings › Integrations already has the failure in
       // `sync_runs`; what this pass owes the caller is the verdict, not the exception.
-      console.error("[interests] the Wallet pass before accrual failed", redactForLog(error));
+      console.error("[interests] the pass of the source before accrual failed", redactForLog(error));
       reason ??= "sync_failed";
     }
   }
@@ -161,7 +157,7 @@ async function waitForReadings(
  * Makes sure every synced account among `accountIds` has a reading no older than {@link ACCRUAL_READING_MAX_AGE_HOURS}, and
  * says for each one whether it has.
  *
- * The order is: look at what is in hand, run **one** pass per Wallet connection, look again. The
+ * The order is: look at what is in hand, run **one** pass per connection to a source, look again. The
  * second look is what decides — a pass that answered "fine" while bringing nothing for an account
  * leaves it stale, and a pass that failed leaves fresh whatever another pass had just brought.
  *
@@ -182,7 +178,7 @@ async function ensureFreshBalances(
   if (synced.length === 0) return readings;
 
   const runSync =
-    options.sync ?? ((connectionId: string) => syncWalletNow(ctx, connectionId, { now: wait.now }));
+    options.sync ?? ((connectionId: string) => syncSourceNow(ctx, connectionId, { now: wait.now }));
   const passes = await syncConnections(ctx, runSync);
   const waited = passes.busy
     ? await waitForReadings(ctx, synced, wanted, wait)
@@ -234,16 +230,15 @@ function manualReadings(wanted: ReadonlySet<string>, before: ReadonlyMap<string,
  * What it does for a rule is unchanged: accrued up to yesterday — the day whose balance is closed
  * — and the periods that have ended settled, a missed day caught up on the next pass, in order.
  * One row per rule and day, so a second pass in the same hour (or the same day) writes nothing
- * twice. Then the settlements of the rules that publish are posted to Wallet (spec §7.6), with no
- * transaction open while Wallet is called; that too only in a pass that had a rule to accrue.
+ * twice. Nothing is published on the source any more (decision H37, release R5c).
  *
  * The hourly tick is Europe/Rome (`SCHEDULE` of the jobs registry): the hour a zone skips when it springs forward has
  * no pass of its own, and the hour it repeats when it falls back has two — harmless, being
  * idempotent.
  *
- * **Before a rule accrues, its balance is made fresh** (spec §7.6): the Wallet connection of every
+ * **Before a rule accrues, its balance is made fresh** (spec §7.6): the connection to a source of every
  * synced account the due rules touch is synchronised once — `ensureFreshBalances`, one pass per
- * connection per tick, through the lock `syncWalletNow` already holds — and the pass is waited
+ * connection per tick, through the lock `syncSourceNow` already holds — and the pass is waited
  * for. A rule whose account came back with a reading too old to trust is **not** accrued: it is
  * counted in `stale` with the reason, and the rule's own page says the accrual is on hold, rather
  * than a wrong number being produced, settled and published in silence. A manual account has
@@ -253,8 +248,6 @@ function manualReadings(wanted: ReadonlySet<string>, before: ReadonlyMap<string,
 interface AccrualPass {
   /** Rules brought up to date. */
   rules: number;
-  /** Settlements published to Wallet. */
-  posted: number;
   /** Rules left alone because their balance was not one to accrue on. */
   stale: number;
   reasons: StaleReason[];
@@ -277,7 +270,7 @@ async function dueRules(ctx: Pick<Ctx, "userId" | "timeZone">, now: Date) {
 /**
  * One user's due rules, accrued on a balance that has just been made fresh (spec §7.6).
  *
- * Exported so an integration test can drive a pass with a fake Wallet (`options.sync`) instead of
+ * Exported so an integration test can drive a pass with a fake source (`options.sync`) instead of
  * the real one: the job itself takes no arguments, and a seam is cheaper than a job that reads a
  * global to know whether it is being tested.
  */
@@ -286,11 +279,11 @@ export async function accrueDueRules(
   now: Date,
   options: FreshnessOptions = {},
 ): Promise<AccrualPass> {
-  const pass: AccrualPass = { rules: 0, posted: 0, stale: 0, reasons: [] };
+  const pass: AccrualPass = { rules: 0, stale: 0, reasons: [] };
   const due = await dueRules(ctx, now);
   if (due.length === 0) return pass;
 
-  // One Wallet pass per connection, however many rules of this user are due on it.
+  // One pass of the source per connection, however many rules of this user are due on it.
   const readings = await ensureFreshBalances(
     ctx,
     due.map((rule) => rule.accountId),
@@ -308,8 +301,6 @@ export async function accrueDueRules(
     await bringUpToDate(ctx, rule.id, now);
     pass.rules += 1;
   }
-  // Publishing comes after, outside every transaction; an unsure posting is left as it is.
-  pass.posted += await postPending(ctx);
   return pass;
 }
 
@@ -332,7 +323,6 @@ export const interestsAccrualJob: JobDefinition = {
   async run(): Promise<JobDetail> {
     const now = new Date();
     let rules = 0;
-    let posted = 0;
     let stale = 0;
     const reasons = new Set<StaleReason>();
     const counts = await forEachUser(
@@ -340,43 +330,20 @@ export const interestsAccrualJob: JobDefinition = {
       async (_person, ctx) => {
         const pass = await accrueDueRules(ctx, now);
         rules += pass.rules;
-        posted += pass.posted;
         stale += pass.stale;
         for (const reason of pass.reasons) reasons.add(reason);
       },
       { addon: "interests" },
     );
-    // The Wallet pass before the accrual is a sync too: what it brought in gets the same checks.
+    // The pass of the source before the accrual is a sync too: what it brought in gets the same checks.
     await runAfterSync("hourly");
     return {
       ...counts,
       rules,
-      posted,
       stale,
       // Why the skipped ones were skipped, once each: the run's own account of a pass that found
       // nothing fresh to accrue on, without a row per rule in a job detail.
       staleReasons: reasons.size === 0 ? null : [...reasons].sort().join(", "),
     };
-  },
-};
-
-/**
- * Every day (spec §10.2): a second look for the Wallet record of every settlement left unsure. It
- * only looks and never posts again — a repeat could be a second record of the same money — so what
- * it does not find stays unsure, with "Retry" on its page.
- */
-export const interestsRematchJob: JobDefinition = {
-  name: "interests-rematch",
-  tier: "daily",
-  async run(): Promise<JobDetail> {
-    let matched = 0;
-    const counts = await forEachUser(
-      "interests-rematch",
-      async (_person, ctx) => {
-        matched += await lookUpUnsure(ctx);
-      },
-      { addon: "interests" },
-    );
-    return { ...counts, matched };
   },
 };

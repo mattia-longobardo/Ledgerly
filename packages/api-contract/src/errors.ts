@@ -17,6 +17,7 @@ const API_ERROR_CODES = [
   "server_error",
   "unavailable",
   "module_inactive",
+  "mode_retired",
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
@@ -38,6 +39,8 @@ export const API_ERRORS: Record<ApiErrorCode, number> = {
   unavailable: 503,
   // The route belongs to an addon the person turned off (H52, PA10); `reason` names the addon.
   module_inactive: 409,
+  // A value the route still reads but no longer takes (an interest rule that publishes, H37).
+  mode_retired: 422,
 };
 
 /** The body of every answer that is not a 2xx. */

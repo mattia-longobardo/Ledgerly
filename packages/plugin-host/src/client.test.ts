@@ -117,6 +117,7 @@ describe("the manifest of the contract", () => {
 
   it("accepts the contract this core speaks, and no other", () => {
     expect(acceptsContract("1")).toBe(true);
-    expect(acceptsContract("2")).toBe(false);
+    expect(acceptsContract("2")).toBe(true);
+    expect(acceptsContract("3")).toBe(false);
   });
 });

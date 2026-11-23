@@ -5,7 +5,7 @@ import type { Ctx } from "../context";
 import { getDb } from "../db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
-import { type ProviderLink, TREK_PROVIDER, WALLET_PROVIDER } from "./rules";
+import { type ProviderLink } from "./rules";
 import { integrationConnections, providerLinks } from "./schema";
 import {
   type Connection,
@@ -26,6 +26,7 @@ import {
   skipRun,
   unlinkEntities,
 } from "./service";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 function contextFor(userId: string): Ctx {
   return {

@@ -16,7 +16,6 @@ import {
   SYNC_STALE,
 } from "../../../../../apps/web/src/platform/integrations/alerts";
 import { asAutomatic } from "./origin";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "./rules";
 import { integrationConnections, syncRuns } from "./schema";
 import {
   clearErrorCode,
@@ -33,6 +32,7 @@ import {
   savePluginConnection,
   saveSchedule,
 } from "./service";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 const NOW = new Date("2026-11-15T12:00:00Z");
 const minutes = (count: number) => new Date(NOW.getTime() + count * 60_000);

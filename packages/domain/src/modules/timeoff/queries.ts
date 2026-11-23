@@ -2,6 +2,7 @@ import { holidaysFor } from "../../platform/holidays/service";
 import { type BalanceKind, leaveBalances } from "./ports";
 import { getPreferences } from "../users/service";
 import type { Ctx } from "../../platform/context";
+import type { leaveDays } from "./schema";
 import { type CivilDate, type MonthKey, addMonths, monthKey, today } from "../../shared/dates";
 import {
   type AccrualKind,
@@ -51,9 +52,10 @@ export type LeaveRow =
       /** Half a day or a whole one, every kind alike (N0). */
       fraction: number;
       note: string | null;
-      origin: "manual" | "trek";
+      /** The old origin until the rename of R5c P3, `external` after it: the API says `external` for both. */
+      origin: (typeof leaveDays.$inferSelect)["origin"];
       status: "taken" | "planned";
-      /** What the next Trek pass still owes this row, for the badge that says so. */
+      /** What the next pass of the calendar still owes this row, for the badge that says so. */
       pending: "none" | "upsert" | "delete";
     }
   | {
@@ -162,7 +164,7 @@ export async function timeOffView(ctx: Pick<Ctx, "userId" | "timeZone">, year: n
 
   const todayOn = today(preferences.timeZone);
   const minutesPerDay = preferences.minutesPerDay;
-  // A removal Trek has not confirmed yet is a removal all the same: no balance counts it (N5 fix).
+  // A removal the calendar has not confirmed yet is a removal all the same: no balance counts it (N5 fix).
   const views = days.filter(stillBooked).map(asView);
 
   // The last applied payslip that printed a balance for this kind: the latest month wins, and the

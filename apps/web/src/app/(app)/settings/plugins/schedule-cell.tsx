@@ -1,13 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import { PROVIDER_SCHEDULE } from "@ledgerly/domain/investments/client";
-import { DEFAULT_SYNC_SCHEDULE, isPluginProvider } from "@ledgerly/domain/platform/integrations/client";
+import { DEFAULT_SYNC_SCHEDULE } from "@ledgerly/domain/platform/integrations/client";
 import { formatInstant, type UiLocale } from "@ledgerly/format/format";
 import type { WireConnection } from "./connection-view";
 import { ConnectionSchedule } from "@/ui/connection-schedule";
 
 /**
  * When one connection is read by itself (ux/n2-connection-status.md §8): the control for a source
- * of the core, the provider's fixed times for a plugin, and nothing to change while the person has
+ * read by the core, the provider's fixed times for a bank's plugin, and nothing to change while the person has
  * the plugin off. On the page of a source and, for the services, on "Advanced".
  */
 export async function ScheduleCell({
@@ -17,7 +17,7 @@ export async function ScheduleCell({
   active,
   ctx,
 }: {
-  connection: Pick<WireConnection, "id" | "provider" | "schedule" | "nextSyncAt" | "service">;
+  connection: Pick<WireConnection, "id" | "provider" | "schedule" | "nextSyncAt" | "service" | "shared">;
   /** The connection's name and its provider's, as the person reads them. */
   name: string;
   provider: string;
@@ -31,8 +31,8 @@ export async function ScheduleCell({
   );
   const next = connection.nextSyncAt ? formatInstant(new Date(connection.nextSyncAt), ctx) : null;
   if (!active) return <span className="text-muted">{t("text.pausedProvider", { provider })}</span>;
-  if (isPluginProvider(connection.provider)) {
-    // The schedule of a plugin's connection is the provider's own: no control.
+  if (connection.shared !== null) {
+    // The schedule of a bank's connection (the accounts its access shares) is the provider's own: no control.
     return (
       <span className={times === 0 ? "text-muted" : undefined}>
         {times === 0

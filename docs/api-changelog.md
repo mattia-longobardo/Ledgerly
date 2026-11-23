@@ -3,6 +3,62 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Import a CSV file of movements (R5c, P5, decision ST-8)
+
+Four new routes, for an account «a mano» only (no source): an account with a source answers `409`
+`conflict` with reason `account_not_manual`, an archived one `account_unavailable`, another person's
+`404`. A file is at most 5 MiB and 20,000 rows (`413` `too_large`, reason `too_many_rows` for the
+rows); an empty one is `400` `invalid` with reason `empty`.
+
+- `POST /accounts/{id}/csv/preview` (scope `read`, `multipart/form-data`: `file`): writes nothing.
+  The delimiter found, the header's names, the number of rows, the map saved for the account
+  (`savedMap`) and the one the file proposes (`proposedMap`), and the first 20 rows read with the
+  saved map, or the proposed one: `row` (from 1, as a spreadsheet numbers it), `outcome` `ok` or
+  `refused`, `reason`, `on`, `amount`, `payee`.
+- `POST /accounts/{id}/csv/import` (scope `write`, `multipart/form-data`: `file`, `map` as JSON,
+  `saveMap` `true` to keep the map): each row becomes a manual movement and changes the balance as a
+  movement written by hand. Answers `created`, `duplicates` (rows already imported: the same file
+  sent twice writes once) and `refused` (`row`, `reason`: an open code such as `bad_date`,
+  `bad_amount`, `no_amount`, `zero_amount`, `future_date`, `missing_column`).
+- `GET /accounts/{id}/csv-map` and `PUT /accounts/{id}/csv-map` (scopes `read` and `write`): the map
+  of the columns saved for the account (`{ "map": … }`, null when none). A column is its place in the
+  row, from 0; the amount is one signed column or a debit and/or a credit column.
+- No MCP tool: the routes write, or read a file.
+
+## Unreleased · The plugins say what reads them (R5c, P3b)
+
+- `GET /plugins`: every plugin has `kind` — `bank` (a bank's plugin), `source` (a source read with
+  the person's own credential) or `calendar` (a calendar of days off) — and `fields`, the fields of
+  the credential of a connection as its manifest describes them, in the person's language (name,
+  type, required, label, help): never a value. A source or a calendar is listed like any plugin of the
+  instance, from its manifest.
+- `POST /connections`: the credential is checked against the plugin's `fields` (a required field
+  empty: `invalid` with reason `empty`; a secret that no HTTP header can carry: `invalid` with reason
+  `rejected`); a field the manifest does not name is dropped. The plugin checks the rest (a Trek
+  address that is not `https://`, for one) at «Test the connection».
+
+## Unreleased · Wallet and Trek are plugins (R5c)
+
+- Every answer that names a provider (`GET /connections`, `GET /accounts`, `GET /source-categories`,
+  the runs, …): the connections and accounts of Wallet and Trek have the provider `plugin:wallet` and
+  `plugin:trek`, no longer `wallet` and `trek`. The source's page keeps its slug (`wallet`, `trek`).
+  `POST /connections` takes `plugin:wallet` and `plugin:trek`, and turns the plugin on for the person.
+- `GET /timeoff/…`: unchanged, a day of the calendar was already `external`.
+
+## Unreleased · Interests: no rule publishes on its source (R5c, decision H37)
+
+- `POST /interests` and `PUT /interests/{id}`: `mode: "post_to_provider"` answers `422` with the new error code `mode_retired`. The mode stays in
+  the schema and in the answers; the release turns every rule that had it to `analyze_only`.
+- `POST /interests/{id}/settlements/{entryId}/posting` publishes nothing: it answers the posting state
+  the settlement has. `PUT …/posted` is unchanged.
+
+## Unreleased · Time off: a calendar that may only read (R5c)
+
+- `GET /connections` (and every answer that carries a connection's `status`): `status.text` can be
+  `readOnly`, with `value: "action"` and `action: "replaceKey"`: the external calendar of time off
+  takes no writes with the saved key, and the days written in Ledgerly stay to be sent. The
+  connection's `errorCode` is then `read_only`.
+
 ## Unreleased · Investments: what the client asked of the manual portfolio (PERS-591)
 
 - `POST /investments` with `kind: "portfolio"`: `url: ""` is no address (it answered 500), a bare host is

@@ -18,7 +18,7 @@ export const SYNC_STATES = ["running", "success", "failed", "skipped"] as const;
 export const SKIP_REASONS = ["excluded", "deleted"] as const;
 export type SkipReason = (typeof SKIP_REASONS)[number];
 /**
- * `category_group` is a Wallet category group, filed as the local parent category (F2.5);
+ * `category_group` is the group of a source's category, filed as the local parent category (F2.5);
  * `investment_event` and `investment_holding` are the provider ids of Investments (docs/design/
  * investments.md §1.2): the link sits on the event, never on one of its legs (A6).
  */
@@ -37,26 +37,20 @@ export type SyncKind = (typeof SYNC_KINDS)[number];
 export type SyncState = (typeof SYNC_STATES)[number];
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
-/** The provider F2 speaks to: accounts and movements. */
-export const WALLET_PROVIDER = "wallet";
-/** The provider F7 speaks to (spec §9.2): the leave calendar, over MCP. */
-export const TREK_PROVIDER = "trek";
-
 /** eToro, the first online broker of Investments (docs/design/investments.md §3.3). */
 export const ETORO_PROVIDER = "etoro";
 /** Binance through ccxt (§3.2): one provider per exchange (D2). */
 export const BINANCE_PROVIDER = "ccxt:binance";
 
 /** The providers a connection may be created for: one entry per provider the app can speak to. */
-export const PROVIDERS = [WALLET_PROVIDER, TREK_PROVIDER, ETORO_PROVIDER, BINANCE_PROVIDER] as const;
+export const PROVIDERS = [ETORO_PROVIDER, BINANCE_PROVIDER] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
 /**
- * The addon whose data a provider reads (H52, PA10): its scheduled reads stop for a person who has
- * that addon off. A provider not listed (Wallet, the bank plugins) reads the accounts: base.
+ * The addon whose data a provider of the core reads (H52, PA10): its scheduled reads stop for a
+ * person who has that addon off. A plugin's is its manifest's ({@link pluginAddon}).
  */
-export const PROVIDER_ADDONS: Readonly<Record<string, AddonId>> = {
-  [TREK_PROVIDER]: "timeoff",
+const PROVIDER_ADDONS: Readonly<Record<string, AddonId>> = {
   [ETORO_PROVIDER]: "investments",
   [BINANCE_PROVIDER]: "investments",
 };
@@ -71,8 +65,6 @@ export function isKnownProvider(provider: string): provider is Provider {
  * provider record a run for a pass it never makes.
  */
 export const KINDS_OF = {
-  [WALLET_PROVIDER]: ["accounts", "transactions"],
-  [TREK_PROVIDER]: ["leave"],
   // Holdings and flows have outcomes of their own (A8): a failed history never stops the value.
   [ETORO_PROVIDER]: ["holdings", "flows"],
   [BINANCE_PROVIDER]: ["holdings", "flows"],
@@ -85,22 +77,9 @@ export const KINDS_OF = {
  */
 export function syncsTransactions(provider: string | null): boolean {
   if (provider === null) return false;
+  if (isKnownProvider(provider)) return (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions");
   // A plugin's accounts take their movements from the plugin: the kinds of a plugin's pass.
-  if (isPluginProvider(provider)) return (PLUGIN_KINDS as readonly SyncKind[]).includes("transactions");
-  return isKnownProvider(provider) && (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions");
-}
-
-/**
- * The providers of the core that take a movement written here and create it on their side: what
- * makes their accounts "read and write" (rewrite plan, 12-account-modes.md §12.1). A plugin says
- * the same with the capability `createRecord` of its manifest. The rule that reads this
- * (`accountMode`) never sees a provider's name.
- */
-const CREATES_RECORDS: readonly Provider[] = [WALLET_PROVIDER];
-
-/** Whether a provider of the core creates on its side the movements written here. */
-export function coreCreatesRecords(provider: string): boolean {
-  return (CREATES_RECORDS as readonly string[]).includes(provider);
+  return isPluginProvider(provider) && (PLUGIN_KINDS as readonly SyncKind[]).includes("transactions");
 }
 
 /**
@@ -130,6 +109,36 @@ export function pluginProvider(pluginId: string): string {
 
 export function isPluginProvider(provider: string): boolean {
   return PLUGIN_PROVIDER.test(provider);
+}
+
+/** What a leave calendar's pass syncs: its days. */
+const LEAVE_KINDS = ["leave"] as const satisfies readonly SyncKind[];
+
+/**
+ * What a plugin's pass syncs, in order, from the capabilities of its manifest (rewrite plan R5c,
+ * mechanism E5): a leave calendar (`leaveCalendar`) its days; any other plugin — a source read with a
+ * token (`source.read`), a bank — the accounts' balances, then the movements.
+ */
+export function pluginKinds(capabilities: readonly string[]): readonly SyncKind[] {
+  return capabilities.includes("leaveCalendar") ? LEAVE_KINDS : PLUGIN_KINDS;
+}
+
+/**
+ * The addon whose data a provider reads (H52, PA10): its scheduled reads stop for a person who has
+ * that addon off. A plugin's comes from its manifest: a leave calendar's days are time off's; any
+ * other plugin reads the accounts, which are base. `capabilities` is `null` for a provider of the core.
+ */
+export function addonOf(provider: string, capabilities: readonly string[] | null): AddonId | undefined {
+  if (capabilities === null) return PROVIDER_ADDONS[provider];
+  return capabilities.includes("leaveCalendar") ? "timeoff" : undefined;
+}
+
+/**
+ * Whether a plugin is read by the plugins' own bank pass (`runBankPass`): not a source read with a
+ * token nor a leave calendar, which the engines of plugin-host read with their own passes.
+ */
+export function isBankPlugin(capabilities: readonly string[]): boolean {
+  return !capabilities.includes("source.read") && !capabilities.includes("leaveCalendar");
 }
 
 export const entityTypeSchema = z.enum(ENTITY_TYPES);

@@ -37,6 +37,7 @@ import {
   transactionLine,
   transactionRow,
 } from "./dto";
+import { serveCsv } from "./csv";
 import { serveManual } from "./manual";
 import { serveReview } from "./review";
 import { serveRules } from "./rules";
@@ -209,6 +210,7 @@ export function serveTransactions(
   serveSearch(app, guard);
   serveWrites(app, guard, cases);
   serveManual(app, guard, cases);
+  serveCsv(app, guard, cases);
   serveReview(app, guard, cases);
   serveOne(app, guard, cases);
   serveRules(app, guard);

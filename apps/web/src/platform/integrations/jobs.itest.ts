@@ -9,9 +9,11 @@ import { newContext } from "../../../../../test/fixtures";
 import { jobRuns } from "@domain/platform/jobs/schema";
 import { runTier } from "@/platform/jobs/tick";
 import { dispatchDueConnections, integrationsSyncJob } from "./jobs";
-import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
+// Joins the activation of a plugin to the passes, as every entry that starts one does.
+import "@/app/plugin-wiring";
 import { nextSyncTimes, type SyncSchedule } from "@domain/platform/integrations/schedule";
 import { integrationConnections } from "@domain/platform/integrations/schema";
+import { pluginActivations } from "@domain/platform/plugins/schema";
 import {
   anyConnectionDue,
   dueConnections,
@@ -22,10 +24,11 @@ import {
   saveConnection,
   saveSchedule,
 } from "@domain/platform/integrations/service";
+import { TREK_PROVIDER } from "../../../../../test/fixtures/providers";
 
 // A Trek pass that answers without calling Trek: the pass is real to the dispatcher, its content
 // beside the point.
-vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn(async () => "answered") }));
+vi.mock("@/modules/timeoff/jobs", () => ({ runCalendarPass: vi.fn(async () => "answered") }));
 
 // The integrations dispatcher of docs/scheduler.md against a real database: a connection is passed
 // when its own rules say so, to the minute, its next pass moves on, and `manual` is never due.
@@ -39,6 +42,8 @@ beforeEach(async () => {
     provider: TREK_PROVIDER,
     credentials: { baseUrl: "https://trek.example", token: "t" },
   });
+  // A plugin's pass reads only for a person who has the plugin on (H30).
+  await getDb().insert(pluginActivations).values({ userId: ctx.userId, pluginId: "trek", active: true });
 });
 
 afterAll(closeDatabase);
@@ -50,13 +55,19 @@ describe("integrations-sync", () => {
       due: 1,
       passes: 1,
       failures: 0,
-      provider_trek: 1,
+      "provider_plugin:trek": 1,
     });
     const [connection] = await listConnections(ctx);
     expect(connection.nextSyncAt).not.toBeNull();
     expect(connection.nextSyncAt!.getTime()).toBeGreaterThan(Date.now());
     expect(connection.nextSyncAt!.getUTCMinutes()).toBe(0);
     expect(await integrationsSyncJob.run()).toMatchObject({ due: 0, passes: 0 });
+  });
+
+  it("reads nothing for a person who has the plugin off, and moves the schedule on (H30)", async () => {
+    await getDb().update(pluginActivations).set({ active: false });
+    expect(await integrationsSyncJob.run()).toMatchObject({ due: 1, passes: 0, failures: 0 });
+    expect(await dueConnections()).toHaveLength(0);
   });
 
   it("never passes a manual connection, and a saved schedule sets the next pass", async () => {
@@ -174,7 +185,7 @@ describe("integrations-sync", () => {
 
   it("migration 0034 keeps every D7 choice and the instants it ran at", async () => {
     const connections = [(await listConnections(ctx))[0]];
-    for (const provider of ["wallet", "etoro"]) {
+    for (const provider of ["plugin:wallet", "etoro"]) {
       connections.push(await saveConnection(ctx, { provider, credentials: { token: "t" } }));
     }
     const legacy = [

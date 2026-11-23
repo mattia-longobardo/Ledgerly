@@ -349,7 +349,7 @@ describe("the badges of a row (client R3)", () => {
   it("are the ones badgesOf gives the page, where hidden and edited say something else", async () => {
     const domain = await import("@ledgerly/domain/transactions");
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
-    const { WALLET_PROVIDER } = await import("@domain/platform/integrations/rules");
+    const { WALLET_PROVIDER } = await import("../../../../../test/fixtures/providers");
     const { getDb } = await import("@domain/platform/db/client");
     const { eq } = await import("drizzle-orm");
     const account = await newAccount(alice);
@@ -482,7 +482,7 @@ describe("the sign, the series' shares, the groups' counts and the macros (clien
 
     // 4. The macros a category may be chosen in: by the sign, and `transfer` only for a pair.
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
-    const { WALLET_PROVIDER } = await import("@domain/platform/integrations/rules");
+    const { WALLET_PROVIDER } = await import("../../../../../test/fixtures/providers");
     const other = await newAccount(alice, "Revolut");
     const leg = (accountId: string, externalId: string, counterpart: string, amountCents: bigint) =>
       upsertFromProvider(
@@ -602,8 +602,14 @@ describe("the figures of a category's page (client R3)", () => {
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
     const { sourceNotes } = await import("@/app/(app)/settings/finance/source");
     const domain = await import("@ledgerly/domain/transactions");
-    await applyProviderAccounts(alice, "wallet", [
-      { provider: "wallet", providerAccountId: "acc-1", name: "Current", type: "checking", currency: "EUR" },
+    await applyProviderAccounts(alice, "plugin:wallet", [
+      {
+        provider: "plugin:wallet",
+        providerAccountId: "acc-1",
+        name: "Current",
+        type: "checking",
+        currency: "EUR",
+      },
     ]);
     const [account] = await listAccounts(alice);
     const incoming = (externalId: string, name: string) => ({
@@ -627,7 +633,7 @@ describe("the figures of a category's page (client R3)", () => {
       account.id,
       [incoming("e-1", "Tobacco"), incoming("e-2", "Alcohol, tobacco")],
       {
-        provider: "wallet",
+        provider: "plugin:wallet",
       },
     );
     const alcohol = (await domain.listCategories(alice)).find((one) => one.name === "Alcohol, tobacco")!;

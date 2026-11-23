@@ -8,7 +8,8 @@ import { z } from "zod";
 import { readFirstFlows } from "@ledgerly/domain/investments";
 import { readDocument } from "@ledgerly/domain/imports";
 import { addonOn, type Ctx } from "@ledgerly/domain/platform/context";
-import { findConnection, isPluginProvider, PROVIDER_ADDONS } from "@ledgerly/domain/platform/integrations";
+import { addonOf, findConnection } from "@ledgerly/domain/platform/integrations";
+import { capabilitiesOf, isBankPluginProvider } from "@ledgerly/domain/platform/plugins";
 import type { Task } from "@ledgerly/domain/platform/jobs";
 import { categorisableAccountIds, categorise } from "@ledgerly/domain/transactions";
 import { contextFor, type Person, personById } from "@ledgerly/domain/users";
@@ -64,7 +65,7 @@ async function updateConnection(
 ): Promise<void> {
   const connection = await findConnection(ctx, connectionId);
   if (!connection) return;
-  if (isPluginProvider(connection.provider)) {
+  if (await isBankPluginProvider(connection.provider)) {
     const outcome = await readBank(
       ctx,
       {
@@ -77,7 +78,7 @@ async function updateConnection(
     if (!outcome.ok || outcome.created + outcome.updated === 0) return;
   } else {
     // Queued before the person turned the provider's addon off (risk R-41): it reads nothing.
-    const addon = PROVIDER_ADDONS[connection.provider];
+    const addon = addonOf(connection.provider, await capabilitiesOf(connection.provider));
     if (addon && !addonOn(ctx, addon)) return;
     await passFor(connection.provider)?.run(person, ctx, { ...connection, userId: ctx.userId }, new Date());
   }

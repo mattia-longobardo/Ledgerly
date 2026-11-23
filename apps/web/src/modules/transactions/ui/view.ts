@@ -57,10 +57,10 @@ export interface RowView {
   /** The ids, for the details panel: what it prefills and what it submits. */
   labelIds: readonly string[];
   /**
-   * Present when the movement came from Wallet and the integration is connected: the panel then
-   * edits type, amount, payee and note, and saves them to Wallet (owner, 2026-09-24).
+   * Present when the movement came from a source that takes changes and the integration is connected: the panel then
+   * edits type, amount, payee and note, and saves them to the source (owner, 2026-09-24).
    */
-  wallet?: WalletFieldsView | null;
+  atSource?: SourceFieldsView | null;
   /**
    * Present when the person wrote the movement by hand: every field is theirs, so the row opens
    * the manual movement's dialog and can be deleted without being hidden first.
@@ -73,8 +73,8 @@ export interface RowView {
   send?: { state: "to_send" | "not_sent"; source: string } | null;
 }
 
-/** What the panel prefills for a Wallet movement. */
-interface WalletFieldsView {
+/** What the panel prefills for a movement of a source. */
+interface SourceFieldsView {
   type: TransactionType;
   /** The size of the amount, in the user's number format, ready to be typed over. */
   amount: string;
@@ -178,10 +178,10 @@ function categoryOf(
 }
 
 /** What the panel may change, and where: at the source, in the manual dialog; and the sending. */
-function editableOf(line: TransactionLine, size: string): Pick<RowView, "wallet" | "manual" | "send"> {
+function editableOf(line: TransactionLine, size: string): Pick<RowView, "atSource" | "manual" | "send"> {
   const manual = line.origin === "manual";
   return {
-    wallet: line.editableAtSource ? { type: line.type, amount: size } : null,
+    atSource: line.editableAtSource ? { type: line.type, amount: size } : null,
     manual:
       manual && line.type !== "transfer"
         ? { kind: line.type, amount: size, on: line.on, accountId: line.accountId, payee: line.payee ?? "" }

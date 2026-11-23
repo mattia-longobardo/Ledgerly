@@ -4,10 +4,10 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { contextFor } from "@domain/modules/users/jobs";
 import { getPreferences, setAddon } from "@domain/modules/users/service";
 import { raise } from "@domain/platform/notifications/service";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { saveConnection } from "@domain/platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));

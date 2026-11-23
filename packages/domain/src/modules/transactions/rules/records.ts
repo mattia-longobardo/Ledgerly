@@ -5,8 +5,8 @@ import { type TransactionState, type TransactionType } from "./vocabulary";
 /* Provider input */
 
 /**
- * One movement as the transactions module receives it, whatever provider it came from. The Wallet
- * client's own shape stops at its adapter (spec §9.1): nothing below this line knows a Wallet
+ * One movement as the transactions module receives it, whatever provider it came from. The source's
+ * own shape stops at its adapter (spec §9.1): nothing below this line knows a source's
  * field name.
  *
  * `counterpartExternalId` is the other leg of a transfer as the provider names it — the only thing
@@ -27,7 +27,7 @@ export interface IncomingTransaction {
   categoryExternalId: string | null;
   categoryName: string | null;
   /**
-   * The provider's group of that category (F2.5), which becomes its parent here. Wallet sends it
+   * The provider's group of that category (F2.5), which becomes its parent here. The source sends it
    * as `{ id, name }`; either may be missing, and without a name there is nothing to adopt.
    */
   categoryGroupExternalId: string | null;
@@ -133,7 +133,7 @@ interface Visibility {
 
 /**
  * Whether a row is out of every total, budget, subscription check and recurrence detection: the
- * user hid it, or Wallet stopped returning it inside the re-read window, which is treated exactly
+ * user hid it, or the source stopped returning it inside the re-read window, which is treated exactly
  * like hidden (spec §7.2). Never a deletion — the row stays, and "Show hidden" brings it back.
  */
 export function isHidden(row: Visibility): boolean {

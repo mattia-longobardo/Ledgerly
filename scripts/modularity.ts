@@ -55,12 +55,15 @@ export const FORBIDDEN_NAMES = [
   "authentik",
 ] as const;
 
-/** Where a name may be written: the provider's own folder (eToro and Binance: their adapter, C1b). */
+/**
+ * Where a name may be written: the provider's own folder (eToro and Binance: their adapter, C1b).
+ * `wallet` is also a word of Binance's own API (its Spot, Funding and Earn wallets,
+ * `/sapi/v1/asset/wallet/balance`, `walletName`): its adapter writes it, and names no provider so.
+ */
 const OWN_FOLDER: Partial<Record<(typeof FORBIDDEN_NAMES)[number], string>> = {
   etoro: "platform/integrations/etoro/",
   binance: "platform/integrations/ccxt/",
-  wallet: "platform/integrations/wallet/",
-  trek: "platform/integrations/trek/",
+  wallet: "platform/integrations/ccxt/",
 };
 
 /** Rule M12 over the product files: which file writes which name, outside the name's own folder. */

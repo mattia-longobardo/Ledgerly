@@ -3,13 +3,13 @@
 // (`modules/transactions/jobs.ts`), not one email per account of the same dead link.
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "@domain/platform/context";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { accountAlertsJob } from "./jobs";
 import { accountsView } from "@domain/modules/accounts/queries";
 import type { RemoteAccount } from "@domain/modules/accounts/rules";
 import { applyProviderAccounts } from "@domain/modules/accounts/service";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 const REMOTE: RemoteAccount = {
   provider: WALLET_PROVIDER,

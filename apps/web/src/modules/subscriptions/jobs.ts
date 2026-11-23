@@ -5,7 +5,7 @@ import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { checkSubscriptions } from "@ledgerly/domain/subscriptions";
 
 /**
- * After a sync that changed the movements (`runAfterSync`; spec §10.2: "Wallet transactions, then
+ * After a sync that changed the movements (`runAfterSync`; spec §10.2: "transactions, then
  * recurrences and the subscription check"): each user's payment check against the movements the
  * pass just stored. Daily too, because the date alone moves a charge: a period that ends unpaid
  * becomes `not_found` and a new period comes into view. No network: it only reads what is here.

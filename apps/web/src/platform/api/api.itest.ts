@@ -10,8 +10,8 @@ import { getDb } from "@domain/platform/db/client";
 import { deleteFolder, listFolder } from "@domain/platform/storage";
 import { saveConnection } from "@domain/platform/integrations/service/connections";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
-import { BACKFILL_CHOICES } from "@domain/platform/integrations/wallet/depth";
+import { BACKFILL_CHOICES } from "@plugin-host/movements/depth";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
 // about — the upload's ownership is — so it is a no-op here, deterministically.
@@ -469,11 +469,14 @@ describe("users and settings: connections", () => {
 
   it("lists a connection of the core with what its card does, and keeps it to its person", async () => {
     expect(await (await call("/connections", aliceToken)).json()).toEqual({ connections: [] });
-    const { id } = await saveConnection(alice, { provider: "wallet", credentials: { token: "test-token" } });
+    const { id } = await saveConnection(alice, {
+      provider: "plugin:wallet",
+      credentials: { token: "test-token" },
+    });
     const [row] = (await (await call("/connections", aliceToken)).json()).connections;
     expect(row).toMatchObject({
       id,
-      provider: "wallet",
+      provider: "plugin:wallet",
       providerName: expect.stringMatching(/./),
       state: "active",
       providerActive: true,
@@ -490,7 +493,7 @@ describe("users and settings: connections", () => {
     const empty = await call(
       "/connections",
       aliceToken,
-      send("POST", { provider: "wallet", credentials: {} }),
+      send("POST", { provider: "plugin:wallet", credentials: {} }),
     );
     expect(empty.status).toBe(400);
     expect(await empty.json()).toEqual({ error: "invalid", reason: "empty" });
@@ -529,7 +532,7 @@ describe("users and settings: connections", () => {
 
 describe("parity of users and settings: route = MCP tool", () => {
   it("answers each read tool with what its route answers", async () => {
-    await saveConnection(alice, { provider: "wallet", credentials: { token: "test-token" } });
+    await saveConnection(alice, { provider: "plugin:wallet", credentials: { token: "test-token" } });
     await call("/labels", aliceToken, {
       method: "POST",
       headers: { "content-type": "application/json" },

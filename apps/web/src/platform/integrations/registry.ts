@@ -5,8 +5,8 @@
  */
 import "server-only";
 import { investmentProviderName, runInvestmentPass } from "@ledgerly/domain/investments";
-import { runTrekPass } from "@/modules/timeoff/jobs";
-import { runWalletPass, WALLET_HISTORY } from "@/modules/transactions/jobs";
+import { runCalendarPass } from "@/modules/timeoff/jobs";
+import { runSourcePass } from "@/modules/transactions/jobs";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import type { Person } from "@ledgerly/domain/users";
 import type { UiLocale } from "@ledgerly/format/format";
@@ -17,10 +17,9 @@ import {
   ETORO_PROVIDER,
   KINDS_OF,
   type SyncKind,
-  TREK_PROVIDER,
-  WALLET_PROVIDER,
 } from "@ledgerly/domain/platform/integrations";
-import { type Connection, type DueConnection, listConnections } from "@ledgerly/domain/platform/integrations";
+import type { DueConnection } from "@ledgerly/domain/platform/integrations";
+import type { AddonId } from "@ledgerly/api-contract";
 
 export type PassOutcome = "answered" | "failed" | "refused" | "busy" | "absent";
 
@@ -37,22 +36,22 @@ export interface ProviderPass {
   kinds: readonly SyncKind[];
   run(person: Person, ctx: Ctx, due: DueConnection, now: Date): Promise<PassOutcome>;
   /**
-   * The names of one of the provider's connections. Until the providers of the core are plugins
-   * with a manifest (R5c), this is where each says its name: no screen and no mail names one.
+   * The names of one of the provider's connections: a provider of the core says its own, a plugin
+   * the name of its manifest. No screen and no mail names one.
    */
   label?(
     connection: { provider: string; instanceKey: string },
     locale: UiLocale,
   ): ConnectionLabel | Promise<ConnectionLabel>;
-  /**
-   * For a provider whose first reading goes back a chosen number of months: the choices, and the
-   * depth a cursor of the movements asks for. "Advanced" offers to read that far again.
-   */
-  history?: {
-    choices: readonly number[];
-    depthOf(cursor: Record<string, string> | null | undefined): number;
-  };
+  /** The addon whose data a connection reads, for a family of providers that say it for each one. */
+  addon?(provider: string): Promise<AddonId | undefined>;
 }
+
+/**
+ * The passes of the engines of plugin-host, by what a plugin is: a source read with a token, a leave
+ * calendar. The application chooses one by the plugin's manifest (`plugin-wiring.ts`).
+ */
+export const ENGINE_PASSES = { source: runSourcePass, calendar: runCalendarPass };
 
 const CATALOGUES = { en, it } as const;
 
@@ -72,25 +71,6 @@ export function unnamedBankAccount(locale: UiLocale): string {
 const named = (name: string): ConnectionLabel => ({ name, provider: name });
 
 export const PASSES: readonly ProviderPass[] = [
-  {
-    provider: WALLET_PROVIDER,
-    kinds: KINDS_OF[WALLET_PROVIDER],
-    label: (_connection, locale) => named(CATALOGUES[locale].settings.integrations.providers.wallet.name),
-    // Read when asked for: the owner of the pass says it, and nothing needs it to list the passes.
-    get history() {
-      return WALLET_HISTORY;
-    },
-    async run(person, ctx, due, now) {
-      const connection = (await listConnections(ctx)).find((one) => one.id === due.id);
-      return connection ? await runWalletPass(person, ctx, connection as Connection, now) : "absent";
-    },
-  },
-  {
-    provider: TREK_PROVIDER,
-    kinds: KINDS_OF[TREK_PROVIDER],
-    run: (_person, ctx) => runTrekPass(ctx),
-    label: (_connection, locale) => named(CATALOGUES[locale].settings.integrations.providers.trek.name),
-  },
   // Investments (docs/design/investments.md §3.1): the module's own pass, lock and outcomes.
   {
     provider: ETORO_PROVIDER,

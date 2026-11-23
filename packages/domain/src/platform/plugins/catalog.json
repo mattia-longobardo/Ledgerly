@@ -1,0 +1,29 @@
+{
+  "plugins": [
+    {
+      "id": "enablebanking",
+      "image": "ledgerly-plugin-enablebanking",
+      "digest": "sha256:5c3884301e4f3e7a3b01cf55bdc081c79fed0ceafb5392596ab1bf985832809b",
+      "egress": ["api.enablebanking.com"]
+    },
+    {
+      "id": "prices",
+      "image": "ledgerly-plugin-prices",
+      "digest": "sha256:78a2c21ebcdb748d63ea7312e088185b9abce0ff536fbc390c4f95513bca9a86",
+      "egress": ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]
+    },
+    {
+      "id": "trek",
+      "image": "ledgerly-plugin-trek",
+      "digest": "sha256:0dc1a10fb299de6d61968e5cbc6850fe9354853b7fc98bca7379ffe4c72d9a0d",
+      "egress": [],
+      "dynamicHost": { "credential": "baseUrl" }
+    },
+    {
+      "id": "wallet",
+      "image": "ledgerly-plugin-wallet",
+      "digest": "sha256:ecdcd87543707b2ce7fe25a69f473df68fa94d39728c6377fc9df7b04d6205b5",
+      "egress": ["rest.budgetbakers.com"]
+    }
+  ]
+}

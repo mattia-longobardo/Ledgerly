@@ -25,7 +25,6 @@ describe("JOBS", () => {
       ["subscriptions-check", "daily"],
       ["budgets-alerts", "afterSync"],
       ["interests-accrual", "hourly"],
-      ["interests-rematch", "daily"],
       ["funds-deposits", "afterSync"],
       ["pockets-accrual", "daily"],
       ["pockets-planned-cleanup", "daily"],

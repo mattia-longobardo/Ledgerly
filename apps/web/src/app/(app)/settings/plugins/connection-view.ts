@@ -145,6 +145,7 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
       return { text: t("text.lateLimit", { ...names, next: attempt }), at: null };
     if (status.text === "consentExpired") return { text: t("text.consentExpired", names), at: null };
     if (status.text === "keyInvalid") return { text: t("text.keyInvalid", names), at: null };
+    if (status.text === "readOnly") return { text: t("text.readOnly", names), at: null };
     if (status.text === "pending") return { text: t("text.pending"), at: null };
     if (status.text === "pausedSchedule") return { text: t("text.pausedSchedule"), at: null };
     if (status.text === "pausedProvider") return { text: t("text.pausedProvider", names), at: null };

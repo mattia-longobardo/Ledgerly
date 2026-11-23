@@ -28,7 +28,8 @@ async function refusing<T>(work: () => Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof InterestError) {
       if (error.code === "not_found") throw new ApiRefusal("not_found");
-      throw new ApiRefusal(error.code === "not_synced" ? "conflict" : "invalid", error.code);
+      if (error.code === "mode_retired") throw new ApiRefusal("mode_retired");
+      throw new ApiRefusal("invalid", error.code);
     }
     // The domain's own schema and conversions (a rate past 100 %, bands out of order).
     if (error instanceof z.ZodError || error instanceof RangeError)
@@ -58,8 +59,8 @@ function serveWrites(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, interests.setInterestRuleState, async ({ ctx, params, body }) => {
     await refusing(() => setRuleState(ctx, params.id, body.state));
   });
-  serve(app, guard, interests.postInterestSettlement, async ({ ctx, params, body }) => ({
-    posting: await refusing(() => postEntry(ctx, params.entryId, { retry: body.retry, ruleId: params.id })),
+  serve(app, guard, interests.postInterestSettlement, async ({ ctx, params }) => ({
+    posting: await refusing(() => postEntry(ctx, params.entryId, { ruleId: params.id })),
   }));
   serve(app, guard, interests.markInterestSettlementPosted, async ({ ctx, params }) => {
     await refusing(() => markPosted(ctx, params.id, params.entryId));

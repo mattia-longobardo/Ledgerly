@@ -12,19 +12,21 @@ import { forgetSends, pendingSends } from "@ledgerly/domain/transactions";
 import { forgetSourceCategories, sourceCategoryCount } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { getDb } from "@ledgerly/domain/platform/db";
-import { isKnownProvider, KINDS_OF, pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { isBankPlugin, pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { forgetSource, listConnections, runningReadings } from "@ledgerly/domain/platform/integrations";
 import { PLUGIN_ID } from "@ledgerly/plugin-contract";
-import { isPluginActive } from "@ledgerly/domain/platform/plugins";
+import { isPluginActive, pluginManifest } from "@ledgerly/domain/platform/plugins";
 import { type Deps as PluginDeps, forgetPlugin, prepareAccessClosing } from "@ledgerly/plugin-host";
 
 /** A source the person can turn off: a provider of the core with a page, or a plugin they have on. */
 export interface Source {
   provider: string;
-  /** The plugin's id; `null` for a provider of the core. */
+  /** The plugin's id; `null` for a provider of the core that is no plugin. */
   pluginId: string | null;
   /** Whether the source keeps the days of Time Off: its changes waiting are counted and dropped. */
   days: boolean;
+  /** A bank: the person chooses which of its accounts are read here; a source keeps them all. */
+  bank: boolean;
 }
 
 export class DeactivateError extends Error {
@@ -34,16 +36,19 @@ export class DeactivateError extends Error {
   }
 }
 
-/** The source of a page's slug, or `null` when the person has no such source to turn off. */
+/**
+ * The source of a page's slug, or `null` when the person has no such source to turn off. A plugin
+ * read by an engine of the core (a source read with a token, a leave calendar: its manifest says)
+ * has its page whether it is on or not, and turning it off turns the plugin off too.
+ */
 export async function sourceOf(ctx: Pick<Ctx, "userId">, slug: string): Promise<Source | null> {
-  if (isKnownProvider(slug)) {
-    const kinds: readonly string[] = KINDS_OF[slug];
-    // The investment services are not sources with a page: their key lives on the service (§1.1).
-    if (!kinds.includes("accounts") && !kinds.includes("leave")) return null;
-    return { provider: slug, pluginId: null, days: kinds.includes("leave") };
-  }
-  if (!PLUGIN_ID.test(slug) || !(await isPluginActive(ctx, slug))) return null;
-  return { provider: pluginProvider(slug), pluginId: slug, days: false };
+  if (!PLUGIN_ID.test(slug)) return null;
+  const provider = pluginProvider(slug);
+  const capabilities = (await pluginManifest(slug))?.capabilities ?? [];
+  if (!isBankPlugin(capabilities))
+    return { provider, pluginId: slug, days: capabilities.includes("leaveCalendar"), bank: false };
+  if (!(await isPluginActive(ctx, slug))) return null;
+  return { provider, pluginId: slug, days: false, bank: true };
 }
 
 /** What the dialog says before it opens (§3.3): only the lines above 0 are shown. */

@@ -126,8 +126,14 @@ describe("the labels, old action = new call", () => {
 
 /** A source that gave two categories to the person's movements. */
 async function sourceFor(ctx: Ctx) {
-  await applyProviderAccounts(ctx, "wallet", [
-    { provider: "wallet", providerAccountId: "acc-1", name: "Current", type: "checking", currency: "EUR" },
+  await applyProviderAccounts(ctx, "plugin:wallet", [
+    {
+      provider: "plugin:wallet",
+      providerAccountId: "acc-1",
+      name: "Current",
+      type: "checking",
+      currency: "EUR",
+    },
   ]);
   const [account] = await listAccounts(ctx);
   const incoming = (serial: number, id: string, name: string) => ({
@@ -150,7 +156,7 @@ async function sourceFor(ctx: Ctx) {
     ctx,
     account.id,
     [incoming(1, "sc-tobacco", "Tobacco"), incoming(2, "sc-alcohol", "Alcohol, tobacco")],
-    { provider: "wallet" },
+    { provider: "plugin:wallet" },
   );
   const rows = await transactions.listSourceCategories(ctx);
   const category = (await transactions.listCategories(ctx, { includeArchived: true })).find(

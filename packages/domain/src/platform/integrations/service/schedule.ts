@@ -162,7 +162,7 @@ export async function anyConnectionDue(now: Date = new Date()): Promise<boolean>
 /**
  * The keys of a cursor that are the person's settings rather than where a reading stands: they
  * outlive "Disconnect" (H55, point 4). How deep the history goes (`BACKFILL_MONTHS` of
- * `wallet/depth.ts`, a string here so the core imports no source) is the only one.
+ * `movements/depth.ts` of plugin-host, a string here so the core imports no source) is the only one.
  */
 export const SETTING_KEYS: Partial<Record<SyncKind, readonly string[]>> = {
   transactions: ["backfillMonths"],

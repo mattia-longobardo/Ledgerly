@@ -1,14 +1,19 @@
 // The public interface of this unit (docs/design/rewrite-plan/10-modularity.md §10.3, rule M7).
+export { catalogEntry } from "./catalog";
 export {
+  capabilitiesOf,
   configuredPlugins,
   credentialsStatus,
   findInstancePlugin,
+  isBankPluginProvider,
   isPluginActive,
   listInstancePlugins,
   listPluginConnections,
   listUserPlugins,
   pluginDiagnostics,
+  pluginManifest,
   pricesPlugin,
+  rememberManifest,
 } from "./queries";
 export type { InstancePlugin, PluginDiagnostic } from "./queries";
 export {

@@ -8,7 +8,7 @@ import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { interestsAccrualJob } from "../../../../../apps/web/src/modules/interests/jobs";
 import { interestsView, ruleDetail, rulesOnAccount } from "./queries";
 import { accruedInterest, createRule, InterestError, setRuleState, updateRule } from "./service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 let ctx: Ctx;
 let accountId: string;
@@ -207,14 +207,19 @@ describe("the rest of the page", () => {
     expect(row.grossYtdCents >= row.accruedYtdCents).toBe(true);
   });
 
-  it("refuses bad tiers, publishing from a manual account, and archives the account it is on", async () => {
+  it("refuses bad tiers, a rule that publishes, and archives the account it is on", async () => {
     await expect(
       createRule(ctx, rule({ tiers: [{ upToCents: 100n, annualRate: "0.01" }] })),
     ).rejects.toMatchObject({
       code: "invalid_tiers",
     });
+    // No rule publishes on its source since R5c (H37): the mode is refused, on any account.
     await expect(createRule(ctx, rule({ mode: "post_to_provider" }))).rejects.toMatchObject({
-      code: "not_synced",
+      code: "mode_retired",
+    });
+    const kept = await createRule(ctx, rule({ validTo: "2026-01-31" }));
+    await expect(updateRule(ctx, kept.id, rule({ mode: "post_to_provider" }))).rejects.toMatchObject({
+      code: "mode_retired",
     });
     await expect(createRule(ctx, rule({ validTo: "2025-01-01" }))).rejects.toThrow();
     // A category to publish under has to be one of this user's (spec §7.6): another user's, or one

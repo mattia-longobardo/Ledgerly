@@ -2,7 +2,6 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "../../platform/context";
 import { upsertFromProvider } from "../transactions/service";
 import { addDays, today } from "../../shared/dates";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { resolveExternal } from "../../platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
@@ -39,6 +38,7 @@ import {
   updateBalanceEntry,
   updateConnection,
 } from "./service";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 function contextFor(userId: string): Ctx {
   return {
@@ -305,7 +305,7 @@ describe("accountsView", () => {
 
   it("lets a manual correction win over the provider's reading for the same day", async () => {
     const account = await createAccount(ctx, { ...CHECKING, openingBalance: null });
-    await applyProviderAccounts(ctx, "wallet", []);
+    await applyProviderAccounts(ctx, "plugin:wallet", []);
     await saveBalanceEntry(ctx, account.id, { on: "2026-02-10", cents: 999_00n, note: "" });
     const view = await accountsView(ctx, { months: 1, now: new Date("2026-02-15T10:00:00Z") });
     expect(view.rows[0].balance).toBe(999_00n);
@@ -406,13 +406,13 @@ describe("runSnapshot", () => {
 
   it("warns about a synced account whose last reading was already stale", async () => {
     const remote: RemoteAccount = {
-      provider: "wallet",
+      provider: "plugin:wallet",
       providerAccountId: "r1",
       name: "Revolut",
       type: "checking",
       currency: "EUR",
     };
-    await applyProviderAccounts(ctx, "wallet", [remote], new Date("2026-01-05T00:00:00Z"));
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote], new Date("2026-01-05T00:00:00Z"));
     const [row] = (await accountsView(ctx, { now: new Date("2026-01-10T00:00:00Z") })).rows;
     await saveBalanceEntry(ctx, row.account.id, { on: "2026-01-10", cents: 10n, note: "" });
 
@@ -451,13 +451,13 @@ describe("updateAccountSettings", () => {
 
   it("keeps a synced account's currency, takes a new type and stops following the provider's", async () => {
     const remote: RemoteAccount = {
-      provider: "wallet",
+      provider: "plugin:wallet",
       providerAccountId: "r1",
       name: "Fideuram",
       type: "investment",
       currency: "EUR",
     };
-    await applyProviderAccounts(ctx, "wallet", [remote]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote]);
     const [row] = (await accountsView(ctx)).rows;
 
     const saved = await updateAccountSettings(ctx, row.account.id, {
@@ -469,20 +469,20 @@ describe("updateAccountSettings", () => {
     expect(saved).toMatchObject({ type: "cash", currency: "EUR", retypedLocally: true });
 
     // Wallet's type changes afterwards: the one chosen here stays.
-    await applyProviderAccounts(ctx, "wallet", [{ ...remote, type: "savings" }]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [{ ...remote, type: "savings" }]);
     expect((await accountsView(ctx)).rows[0].account.type).toBe("cash");
   });
 
   it("follows the provider's type while it has not been changed here", async () => {
     const remote: RemoteAccount = {
-      provider: "wallet",
+      provider: "plugin:wallet",
       providerAccountId: "r1",
       name: "Conto",
       type: "other",
       currency: "EUR",
     };
-    await applyProviderAccounts(ctx, "wallet", [remote]);
-    await applyProviderAccounts(ctx, "wallet", [{ ...remote, type: "checking" }]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [{ ...remote, type: "checking" }]);
     expect((await accountsView(ctx)).rows[0].account.type).toBe("checking");
   });
 
@@ -542,16 +542,16 @@ describe("removeAccount", () => {
   // PERS-419: the button deletes, whatever the source, and says which source the account came from.
   it("deletes a synced account too, and gives back its source's id", async () => {
     const remote: RemoteAccount = {
-      provider: "wallet",
+      provider: "plugin:wallet",
       providerAccountId: "r1",
       name: "Revolut",
       type: "checking",
       currency: "EUR",
     };
-    await applyProviderAccounts(ctx, "wallet", [remote]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote]);
     const [row] = (await accountsView(ctx)).rows;
     expect(await removeAccount(ctx, row.account.id)).toEqual({
-      sources: [{ provider: "wallet", providerAccountId: "r1" }],
+      sources: [{ provider: "plugin:wallet", providerAccountId: "r1" }],
       name: "Revolut",
     });
     expect(await getAccount(ctx, row.account.id)).toBeNull();
@@ -561,7 +561,7 @@ describe("removeAccount", () => {
 
 describe("applyProviderAccounts", () => {
   const remote = (over: Partial<RemoteAccount> = {}): RemoteAccount => ({
-    provider: "wallet",
+    provider: "plugin:wallet",
     providerAccountId: "r1",
     name: "Revolut Main",
     type: "checking",
@@ -570,12 +570,12 @@ describe("applyProviderAccounts", () => {
   });
 
   it("creates the provider's accounts on the first run", async () => {
-    await applyProviderAccounts(ctx, "wallet", [remote()]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote()]);
     const [row] = (await accountsView(ctx)).rows;
     expect(row.account).toMatchObject({
       name: "Revolut Main",
       origin: "synced",
-      provider: "wallet",
+      provider: "plugin:wallet",
       providerAccountId: "r1",
     });
   });
@@ -586,7 +586,7 @@ describe("applyProviderAccounts", () => {
       name: "revolut  main",
       openingBalance: { on: "2026-01-10", cents: 42n },
     });
-    await applyProviderAccounts(ctx, "wallet", [remote()]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote()]);
 
     const rows = (await accountsView(ctx)).rows;
     expect(rows).toHaveLength(1);
@@ -595,31 +595,31 @@ describe("applyProviderAccounts", () => {
   });
 
   it("follows a provider rename, then stops once the name is chosen here", async () => {
-    await applyProviderAccounts(ctx, "wallet", [remote()]);
-    await applyProviderAccounts(ctx, "wallet", [remote({ name: "Revolut Personal" })]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote()]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote({ name: "Revolut Personal" })]);
     let [row] = (await accountsView(ctx)).rows;
     expect(row.account.name).toBe("Revolut Personal");
 
     await updateAccountSettings(ctx, row.account.id, { ...SETTINGS, name: "Spending" });
-    await applyProviderAccounts(ctx, "wallet", [remote({ name: "Revolut Business" })]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote({ name: "Revolut Business" })]);
     [row] = (await accountsView(ctx)).rows;
     expect(row.account.name).toBe("Spending");
   });
 
   it("marks an account the provider stopped sending as unavailable, and brings it back", async () => {
-    await applyProviderAccounts(ctx, "wallet", [remote()]);
-    await applyProviderAccounts(ctx, "wallet", []);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote()]);
+    await applyProviderAccounts(ctx, "plugin:wallet", []);
     let [row] = (await accountsView(ctx)).rows;
     expect(row.account.state).toBe("unavailable");
 
-    await applyProviderAccounts(ctx, "wallet", [remote()]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote()]);
     [row] = (await accountsView(ctx)).rows;
     expect(row.account.state).toBe("active");
   });
 
   it("touches only the user it is given", async () => {
     const other = await newContext();
-    await applyProviderAccounts(ctx, "wallet", [remote()]);
+    await applyProviderAccounts(ctx, "plugin:wallet", [remote()]);
     expect((await accountsView(other)).rows).toEqual([]);
   });
 });
@@ -645,8 +645,14 @@ describe("rebuildDerivedBalances", () => {
 
   /** A Wallet account read once, on 16 September, with a summer of movements behind it. */
   async function aSyncedAccount(): Promise<string> {
-    await applyProviderAccounts(ctx, "wallet", [
-      { provider: "wallet", providerAccountId: "r1", name: "Revolut", type: "checking", currency: "EUR" },
+    await applyProviderAccounts(ctx, "plugin:wallet", [
+      {
+        provider: "plugin:wallet",
+        providerAccountId: "r1",
+        name: "Revolut",
+        type: "checking",
+        currency: "EUR",
+      },
     ]);
     const [row] = (await accountsView(ctx)).rows;
     await saveProviderBalance(ctx, row.account.id, { on: "2026-09-16", cents: 500_000n });

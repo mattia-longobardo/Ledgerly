@@ -298,7 +298,7 @@ function switchDay(periodRows: readonly InvestmentPeriod[]): CivilDate | null {
 /**
  * What a manual service reads from Accounts (docs/design/investments.md §1.3, PERS-342): it is a
  * view on its account, not a writer. Its value is the account's balance (typed in Accounts or read
- * by Wallet), and its deposits and withdrawals are the account's movements from the service's first
+ * by the source), and its deposits and withdrawals are the account's movements from the service's first
  * day: money in is a deposit, money out a withdrawal. The operations typed in the module before
  * (origin `manual`) no longer count; the history of a past connection and the openings do.
  */

@@ -36,6 +36,7 @@ export {
   accountsOfProvider,
   accountsOpenToProvider,
   addConnection,
+  applyProviderAccounts,
   archiveAccount,
   connectionsOf,
   createAccount,

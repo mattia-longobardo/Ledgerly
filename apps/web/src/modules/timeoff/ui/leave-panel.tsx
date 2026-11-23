@@ -35,7 +35,7 @@ export interface BookedLeave {
   note: string | null;
   /** Typed here, or read off the external calendar. */
   origin: "manual" | "external";
-  /** What the next Trek pass still owes this row. */
+  /** What the next pass of the calendar still owes this row. */
   pending: "none" | "upsert" | "delete";
 }
 

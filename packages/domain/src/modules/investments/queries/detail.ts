@@ -158,7 +158,7 @@ export async function serviceDetail(
           scopeRows.filter((row) => row.readingId === reading.id && row.complete).map((row) => row.product),
         ),
       ].sort(),
-      // A wallet or account type the provider reports but the adapter does not read (B4, E2).
+      // A product or account type the provider reports but the adapter does not read (B4, E2).
       unread: [
         ...new Set(
           scopeRows.filter((row) => row.readingId === reading.id && !row.complete).map((row) => row.product),

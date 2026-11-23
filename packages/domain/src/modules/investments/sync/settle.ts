@@ -74,7 +74,7 @@ export interface Settled {
 
 /**
  * The 12 months of a synced service (PERS-145, rules 1, 2, 4), for a service connected new only —
- * a Wallet manager account, a handover or a manual service is never touched: nothing before its
+ * an account a source reads, a handover or a manual service is never touched: nothing before its
  * cut-off (the provider's events and readings, the holdings left with no leg), its cash opened at
  * the cut-off when the provider booked none, and every difference of its cash an entry with a name
  * and a day (`cashGaps`). One transaction; idempotent: a second run finds nothing to do.

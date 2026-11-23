@@ -28,7 +28,48 @@ export type {
   SyncResponse,
   VerifyResponse,
 } from "./calls";
+export {
+  SOURCE_PATHS,
+  editRequestSchema,
+  editResponseSchema,
+  pushRequestSchema,
+  pushResponseSchema,
+  sourceAccountsRequestSchema,
+  sourceAccountsResponseSchema,
+  sourceCategoriesRequestSchema,
+  sourceCategoriesResponseSchema,
+  sourceMovementsRequestSchema,
+  sourceMovementsResponseSchema,
+  sourceRecordRequestSchema,
+  sourceRecordResponseSchema,
+  writeCategoriesRequestSchema,
+  writeCategoriesResponseSchema,
+} from "./calls-source";
+export type {
+  EditResponse,
+  PushResponse,
+  SourceAccountsResponse,
+  SourceCategoriesResponse,
+  SourceMovement,
+  SourceMovementsResponse,
+  SourceRecordResponse,
+  WriteCategoriesResponse,
+} from "./calls-source";
 export { PLUGIN_ERROR_STATUS, errorBodySchema } from "./errors";
 export type { PluginErrorBody, PluginErrorCode } from "./errors";
 export { PLUGIN_ID, acceptsContract, hasCapability, manifestSchema } from "./manifest";
 export type { PluginManifest } from "./manifest";
+export {
+  CALENDAR_PATHS,
+  leaveFiguresRequestSchema,
+  leaveReadRequestSchema,
+  leaveWriteRequestSchema,
+} from "./calls-calendar";
+export type { LeaveDay, LeaveOutcome, LeaveWriteResponse } from "./calls-calendar";
+export {
+  leaveFiguresResponseSchema,
+  leaveReadResponseSchema,
+  leaveWriteResponseSchema,
+} from "./calls-calendar";
+export type { LeaveFigures } from "./calls-calendar";
+export { DOCUMENT_PATHS, documentReadRequestSchema, documentReadResponseSchema } from "./calls-documents";

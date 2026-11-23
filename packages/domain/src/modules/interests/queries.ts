@@ -4,7 +4,8 @@ import { findMovements } from "../transactions/queries";
 import { listCategories } from "../transactions/taxonomy";
 import { payeeKeyOf } from "../transactions/rules";
 import type { Ctx } from "../../platform/context";
-import { coreCreatesRecords, listConnections } from "../../platform/integrations";
+import { listConnections } from "../../platform/integrations";
+import { capabilitiesOf } from "../../platform/plugins";
 import { addDays, type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
 import { userScoped } from "../../platform/db/scope";
@@ -359,10 +360,13 @@ export async function ruleAccounts(
 ): Promise<{ id: string; name: string; publishable: boolean }[]> {
   const [accounts, connections] = await Promise.all([listAccounts(ctx), listConnections(ctx)]);
   const connected = new Set(connections.map((connection) => connection.provider));
+  const writes = new Set<string>();
+  for (const provider of connected) {
+    if ((await capabilitiesOf(provider))?.includes("createRecord") === true) writes.add(provider);
+  }
   return accounts.map((account) => ({
     id: account.id,
     name: account.name,
-    publishable:
-      account.provider !== null && coreCreatesRecords(account.provider) && connected.has(account.provider),
+    publishable: account.provider !== null && writes.has(account.provider),
   }));
 }

@@ -31,7 +31,7 @@ export const sourceRead: SourceReads["source"] = async (ctx, slug) => {
   const [waiting, pendingDays, skipped] = await Promise.all([
     connected ? pendingSends(ctx, ids, 1000) : [],
     connected && source.days ? pendingCount(ctx) : 0,
-    connected && source.pluginId === null ? sourceSkippedIds(ctx, source.provider) : new Set<string>(),
+    connected && !source.bank ? sourceSkippedIds(ctx, source.provider) : new Set<string>(),
   ]);
   const answer = {
     provider: source.provider,
@@ -40,8 +40,8 @@ export const sourceRead: SourceReads["source"] = async (ctx, slug) => {
     pendingDays,
     connections: await Promise.all(
       own.map(async (connection) => {
-        // A source of the core keeps all its accounts here, and the ones left out (H55, point 4).
-        if (source.pluginId === null) {
+        // A source keeps all its accounts here, and the ones left out (H55, point 4).
+        if (!source.bank) {
           return { id: connection.id, shared: null, leave: { accounts: ids.length, excluded: skipped.size } };
         }
         // A bank: the accounts here that its access reads; one deleted here is not one (N7.1 review).

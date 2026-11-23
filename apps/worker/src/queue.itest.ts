@@ -4,7 +4,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@domain/platform/db/client";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { closeOrphanRuns, recordRun, saveConnection } from "@domain/platform/integrations/service";
 import { syncRuns } from "@domain/platform/integrations/schema";
 import {
@@ -17,6 +16,7 @@ import {
 import { jobQueue, jobRuns } from "@domain/platform/jobs/schema";
 import { closeDatabase, resetDatabase } from "../../../test/db";
 import { newContext } from "../../../test/fixtures";
+import { WALLET_PROVIDER } from "../../../test/fixtures/providers";
 
 const task = (key: string) => ({ kind: "tier", key, payload: { tier: "minute" } });
 

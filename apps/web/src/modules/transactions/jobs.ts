@@ -1,8 +1,8 @@
 /**
- * The Wallet pass (docs/scheduler.md) and what follows it: "Wallet accounts + balances; Wallet
+ * The pass of a source read with a token (docs/scheduler.md) and what follows it: "accounts + balances;
  * transactions (then recurrences)".
  *
- * The job is the scheduler, not the engine. The engine is `platform/integrations/wallet/sync.ts`,
+ * The job is the scheduler, not the engine. The engine is `movements/sync.ts` of plugin-host,
  * which coordinates the two modules and writes `sync_runs`; this file iterates over the users,
  * keeps one user's failure to that user (§10.1) and stores the recurrences `rules.ts` detected.
  *
@@ -18,8 +18,7 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { getDb } from "@ledgerly/domain/platform/db";
 import { userScoped } from "@ledgerly/domain/platform/db";
 import type { Connection } from "@ledgerly/domain/platform/integrations";
-import { BACKFILL_CHOICES, backfillDepth } from "@ledgerly/domain/platform/integrations/wallet";
-import { isSyncBusy, syncWalletNow } from "@ledgerly/domain/platform/integrations/wallet";
+import { isSyncBusy, syncSourceNow } from "@ledgerly/plugin-host";
 import type { JobDefinition } from "@/platform/jobs/registry";
 import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { type RecurrenceInput, detectRecurrences } from "@ledgerly/domain/transactions";
@@ -134,14 +133,11 @@ type SyncOutcome =
   /** Nothing was attempted: the credential is already refused, so no call was made. */
   | "refused";
 
-/** What became of one Wallet pass, as the integrations dispatcher counts it. */
-type WalletPassOutcome = SyncOutcome | "busy";
-
-/** How far back the Wallet history is read: the depths a person can ask for, and the one a cursor holds. */
-export const WALLET_HISTORY = { choices: BACKFILL_CHOICES, depthOf: backfillDepth };
+/** What became of one pass of a source, as the integrations dispatcher counts it. */
+type SourcePassOutcome = SyncOutcome | "busy";
 
 /**
- * One Wallet pass for one person. Called by the integrations dispatcher
+ * One pass of a source for one person. Called by the integrations dispatcher
  * (`platform/integrations/jobs.ts`) when the connection's own schedule says it is due
  * (docs/auth-design.md D7); the dispatcher sends the warnings that follow a pass, for every
  * provider alike (`platform/integrations/alerts.ts`).
@@ -151,27 +147,27 @@ export const WALLET_HISTORY = { choices: BACKFILL_CHOICES, depthOf: backfillDept
  * pressed "Sync now" as the tick came round — is `busy`: nothing was attempted, and the
  * dispatcher leaves the schedule where it was.
  */
-export async function runWalletPass(
+export async function runSourcePass(
   _person: Person,
   ctx: Ctx,
   connection: Connection,
   now: Date = new Date(),
-): Promise<WalletPassOutcome> {
+): Promise<SourcePassOutcome> {
   try {
-    const pass = await syncWalletNow(ctx, connection.id, { now });
+    const pass = await syncSourceNow(ctx, connection.id, { now });
     // A refused credential attempts no call at all: counting it as a pass would put a connection
     // that was never contacted among the answered ones.
     return pass.refused !== null ? "refused" : "answered";
   } catch (error) {
     if (isSyncBusy(error)) return "busy";
-    console.error("[integrations-sync] the Wallet pass failed", redactForLog(error));
+    console.error("[integrations-sync] the pass of the source failed", redactForLog(error));
     return "failed";
   }
 }
 
 /**
  * For every user: own transfers linked, then the recurrences recomputed from what is stored. This
- * is what was left of `wallet-sync` once the Wallet pass itself moved to the integrations dispatcher
+ * is what was left of the old job of the source once the pass of the source itself moved to the integrations dispatcher
  * (D7): it runs first after a sync that changed the movements (`runAfterSync`), so the jobs behind
  * it see them.
  */

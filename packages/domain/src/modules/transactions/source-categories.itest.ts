@@ -26,10 +26,10 @@ import {
   undoSourceCategory,
 } from "./source-categories";
 import { createCategory, deleteCategory, listCategories } from "./taxonomy";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 /** A provider of the core that gives a category with each movement. */
-const SOURCE = "wallet";
+const SOURCE = "plugin:wallet";
 
 function contextFor(userId: string): Ctx {
   return {

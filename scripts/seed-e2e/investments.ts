@@ -18,7 +18,7 @@ import { addDays, today } from "@domain/shared/dates";
 import { listConnections, saveSchedule } from "@domain/platform/integrations/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * Investments (PERS-342): no service yet — the journey adds two from Accounts — a manual investment

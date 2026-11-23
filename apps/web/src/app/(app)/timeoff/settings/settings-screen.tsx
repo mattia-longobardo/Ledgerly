@@ -67,7 +67,7 @@ interface Place {
 
 const hrefFor = (year: number) => `/timeoff/settings?year=${year}`;
 
-export function TimeOffSettingsScreen({ calendarLink }: { calendarLink: CalendarLink }) {
+export function TimeOffSettingsScreen({ calendarLink }: { calendarLink: CalendarLink | null }) {
   const asked = useSearchParams().get("year");
   const prefs = useApi(profile.getPreferences, {});
   if (prefs.data === undefined && !prefs.error) return <TimeOffLoading />;
@@ -89,7 +89,7 @@ function SettingsPage({
 }: {
   place: Place;
   preferences: Preferences;
-  calendarLink: CalendarLink;
+  calendarLink: CalendarLink | null;
 }) {
   const text = useTranslations("timeoff");
   const settings = useTranslations("settings");
@@ -135,7 +135,7 @@ function SettingsPage({
               <PatronSaintForm patronSaint={preferences.patronSaint} />
             </div>
           </SettingsSection>
-          <CalendarLinkSection link={calendarLink} />
+          {calendarLink && <CalendarLinkSection link={calendarLink} />}
         </SettingsGrid>
       </UnsavedChangesProvider>
     </Page>

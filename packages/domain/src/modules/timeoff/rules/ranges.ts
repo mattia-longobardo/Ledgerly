@@ -1,5 +1,5 @@
 import { type CivilDate } from "../../../shared/dates";
-import { LEAVE_DAY_KINDS, bookable, goesToTrek, type LeaveDayKind, type LeaveDayView } from "./days";
+import { LEAVE_DAY_KINDS, bookable, goesToCalendar, type LeaveDayKind, type LeaveDayView } from "./days";
 import { datesBetween } from "./inputs";
 import { byDeclaredOrder, residual, type ResidualInput } from "./residual";
 
@@ -22,7 +22,7 @@ export interface LeaveType {
   selectable: boolean;
   /** Whether the kind spends an allowance. */
   hasBalance: boolean;
-  /** Whether the kind stays here and is never told to Trek. */
+  /** Whether the kind stays here and is never told to the calendar. */
   local: boolean;
 }
 
@@ -30,7 +30,7 @@ export const LEAVE_TYPES: readonly LeaveType[] = LEAVE_DAY_KINDS.map((id) => ({
   id,
   selectable: id !== "sick",
   hasBalance: (BALANCE_KINDS as readonly string[]).includes(id),
-  local: !goesToTrek(id),
+  local: !goesToCalendar(id),
 }));
 
 /** The kind "Add the other half" proposes beside a half day: ROL beside vacation, vacation otherwise. */

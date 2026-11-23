@@ -26,7 +26,7 @@ const { chargeCandidates } = await import("@ledgerly/domain/transactions");
 const { upsertFromProvider } = await import("@domain/modules/transactions/service");
 const { centsToDecimal } = await import("@ledgerly/domain/shared/money");
 const { asReturns, bestAndWorst, returnScale, runningTotal } = await import("@ledgerly/ui/chart-data");
-const { WALLET_PROVIDER } = await import("@domain/platform/integrations/rules");
+const { WALLET_PROVIDER } = await import("../../../../../test/fixtures/providers");
 
 type Cents = bigint;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the answers are read as JSON

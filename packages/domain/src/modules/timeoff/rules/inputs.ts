@@ -104,7 +104,7 @@ export const leaveRemovalRangeSchema = z
 
 /**
  * What some days held before a write, as "Undo" hands it back: the dates that were touched and the
- * rows they carried. Only what a person stated — kind, size, note — and nothing of what Trek was
+ * rows they carried. Only what a person stated — kind, size, note — and nothing of what the calendar was
  * observed holding: that stays in the database, where a caller cannot restate it.
  */
 export const leaveUndoSchema = z

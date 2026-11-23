@@ -5,6 +5,7 @@ import "server-only";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { isPluginProvider } from "@ledgerly/domain/platform/integrations";
 import { findInstancePlugin } from "@ledgerly/domain/platform/plugins";
+import { sourceNameOf } from "@/platform/integrations/registry";
 
 export async function providerName(
   ctx: Pick<Ctx, "locale">,
@@ -12,5 +13,6 @@ export async function providerName(
 ): Promise<string | null> {
   if (provider === null || !isPluginProvider(provider)) return provider;
   const plugin = await findInstancePlugin(provider.slice("plugin:".length));
-  return plugin?.manifest.labels.name[ctx.locale] ?? provider;
+  // A plugin still read by an engine of the core (until R5c P3b) has its name there.
+  return plugin?.manifest.labels.name[ctx.locale] ?? (await sourceNameOf(provider, ctx.locale));
 }

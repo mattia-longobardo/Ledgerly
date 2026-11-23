@@ -16,7 +16,7 @@ import {
   recordSwitch,
 } from "@ledgerly/domain/accounts";
 import { publishingRulesOn } from "@ledgerly/domain/interests";
-import { restorePublishing, stopPublishing } from "@ledgerly/domain/interests";
+import { stopPublishing } from "@ledgerly/domain/interests";
 import { pendingSends } from "@ledgerly/domain/transactions";
 import {
   compareSources,
@@ -613,7 +613,6 @@ export async function undoSwitch(
         { accountId, bankProvider: closed.toProvider, sourceProvider: closed.fromProvider },
         now,
       );
-      await restorePublishing(tx, ctx, closed.interestModes);
     });
     await rebuildDerivedBalances(
       ctx,

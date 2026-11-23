@@ -7,7 +7,7 @@ import { parseKeyRing, sealJson } from "@domain/platform/crypto";
 import { today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { readEnv } from "@domain/platform/env";
-import { pluginProvider, TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { pluginProvider } from "@domain/platform/integrations/rules";
 import { integrationConnections, syncRuns } from "@domain/platform/integrations/schema";
 import { saveConnection, savePluginConnection, saveSchedule } from "@domain/platform/integrations/service";
 import { findInstancePlugin } from "@domain/platform/plugins/queries";
@@ -17,6 +17,7 @@ import { connectionBag, setPluginActive } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf } from "./common";
 import { seedBinance, seedEtoro } from "./investments";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * Release N2 (ux/n2-connection-status.md): a connection in each of the five states, so the row,

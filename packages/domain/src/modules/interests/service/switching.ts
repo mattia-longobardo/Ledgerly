@@ -1,14 +1,13 @@
 /**
  * The interests' side of moving an account to another source (rewrite plan N4, specification §9.4):
- * the settlements are not published on the source of before any more — the bank brings the credit —
- * and "Undo switch" gives each rule its mode back. Settlements closed in between are not published
- * by themselves. Every write takes the caller's transaction.
+ * the settlements are not published on the source of before any more — the bank brings the credit.
+ * "Undo switch" gives no rule its publishing back: no rule publishes since R5c (decision H37). Every
+ * write takes the caller's transaction.
  */
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import type { Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { RULE_MODES, type RuleMode } from "../rules";
 import { interestRules } from "../schema";
 
 type Who = Pick<Ctx, "userId">;
@@ -44,20 +43,4 @@ export async function stopPublishing(
       ),
     );
   return rules.map((rule) => ({ ruleId: rule.id, mode: rule.mode }));
-}
-
-/** "Undo switch": each rule gets back the mode it had. An unknown mode is left as it is. */
-export async function restorePublishing(
-  tx: Tx,
-  ctx: Who,
-  modes: readonly { ruleId: string; mode: string }[],
-): Promise<void> {
-  for (const { ruleId, mode } of modes) {
-    const known = RULE_MODES.find((one): one is RuleMode => one === mode);
-    if (known === undefined) continue;
-    await tx
-      .update(interestRules)
-      .set({ mode: known })
-      .where(and(eq(interestRules.id, ruleId), userScoped(ctx).owns(interestRules)));
-  }
 }

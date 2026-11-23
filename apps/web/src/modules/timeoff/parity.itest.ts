@@ -8,7 +8,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { Ctx } from "@domain/platform/context";
-import { goesToTrek, LEAVE_DAY_KINDS } from "@domain/modules/timeoff/rules";
+import { goesToCalendar, LEAVE_DAY_KINDS } from "@domain/modules/timeoff/rules";
 import {
   HOLIDAY_SOURCES,
   HolidayError,
@@ -252,7 +252,7 @@ describe("parity of the leave panel's writes: Server Action = call of the route"
         ok: true,
         days: 1,
       });
-      expect(requestPass).toHaveBeenCalledTimes(goesToTrek(kind) ? 1 : 0);
+      expect(requestPass).toHaveBeenCalledTimes(goesToCalendar(kind) ? 1 : 0);
     },
   );
 

@@ -1,6 +1,6 @@
 // modules/transactions/taxonomy.ts — the categories and labels of spec §7.2, kept apart from
 // `service.ts` because they are their own use case: Settings › Data edits them by hand, while the
-// Wallet sync adopts them by name (§9.1). Both entry points come through here.
+// sync of a source adopts them by name (§9.1). Both entry points come through here.
 export {
   TaxonomyError,
   listCategories,

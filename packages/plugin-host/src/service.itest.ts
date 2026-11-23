@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "@domain/platform/context";
 import { getDb } from "@domain/platform/db/client";
-import { pluginProvider, TREK_PROVIDER } from "@domain/platform/integrations/rules";
+import { pluginProvider } from "@domain/platform/integrations/rules";
 import { integrationConnections } from "@domain/platform/integrations/schema";
 import {
   type Connection,
@@ -44,6 +44,7 @@ import {
   setPluginActive,
   startAccess,
 } from "./service";
+import { TREK_PROVIDER } from "../../../test/fixtures/providers";
 
 const PLUGIN = "enablebanking";
 const SECRET = "integration-plugin-secret-integration-1";
@@ -274,6 +275,9 @@ describe("a plugin, for one person", () => {
         hasCredentials: false,
         connections: 0,
         countries: [],
+        // A bank's plugin (neither `source.read` nor `leaveCalendar`), with no credential of its own.
+        kind: "bank",
+        fields: [],
       },
     ]);
     expect(await isPluginActive(ctx, PLUGIN)).toBe(false);
@@ -891,7 +895,7 @@ describe("the connections of the providers there were before", () => {
       .orderBy(integrationConnections.provider);
     expect(rows).toEqual([
       { provider: "plugin:enablebanking", instanceKey: "IT:Zeta Bank" },
-      { provider: "trek", instanceKey: "" },
+      { provider: "plugin:trek", instanceKey: "" },
     ]);
   });
 });

@@ -8,9 +8,9 @@ import { notify } from "@ledgerly/ui/toast";
 import { deleteCategory } from "@/modules/transactions";
 
 /**
- * "Delete" of a category for good, here and on Wallet (owner, 2026-09-21), from the page of the
+ * "Delete" of a category for good, here and at its source (owner, 2026-09-21), from the page of the
  * categories: the dialog says everything it takes before it takes it, and each of the two
- * stories — here and on Wallet — ends in a toast of its own.
+ * stories — here and at its source — ends in a toast of its own.
  */
 export function DeleteCategoryDialog({
   category,
@@ -34,10 +34,11 @@ export function DeleteCategoryDialog({
         return;
       }
       notify(t("deletedToast", { name, count: result.uncategorised }));
-      const wallet = result.external;
-      if (wallet.state === "deleted") notify(t("wallet.deleted", { count: wallet.count }));
-      if (wallet.state === "refused") notify(t("wallet.refused", { reason: wallet.reasons[0] }), "error");
-      if (wallet.state === "failed") notify(t("wallet.failed", { reason: wallet.reason }), "error");
+      const external = result.external;
+      if (external.state === "deleted") notify(t("atSource.deleted", { count: external.count }));
+      if (external.state === "refused")
+        notify(t("atSource.refused", { reason: external.reasons[0] }), "error");
+      if (external.state === "failed") notify(t("atSource.failed", { reason: external.reason }), "error");
     });
   }
 
@@ -70,7 +71,7 @@ export function DeleteCategoryDialog({
           <li>{t("deleteMovements", { count: category.usage })}</li>
           <li>{t("deleteBudgets")}</li>
           {subCategories > 0 && <li>{t("deleteChildren")}</li>}
-          <li className="font-medium text-neg">{t("deleteWallet")}</li>
+          <li className="font-medium text-neg">{t("deleteAtSource")}</li>
         </ul>
       )}
     </Modal>

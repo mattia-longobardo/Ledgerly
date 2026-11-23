@@ -913,5 +913,190 @@
     "file": "tools/contract.test.ts",
     "decision": "R5a (PERS-567, D5)",
     "reason": "R5a passo c: il voto «utilità» del dominio diventa nullable (D5 = A); il test legge min e max un livello più dentro, con gli stessi valori"
+  },
+  {
+    "file": "apps/web/src/app/(app)/accounts/[id]/delete.itest.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): Wallet is stubbed behind the real plugin served in-process (test/fixtures/wallet/served-plugin.ts) instead of the core's Wallet client, which the release removes; same accounts, records and expected numbers"
+  },
+  {
+    "file": "apps/web/src/app/(app)/expenses/send.itest.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): Wallet is stubbed behind the real plugin served in-process (test/fixtures/wallet/served-plugin.ts) instead of the core's Wallet client, which the release removes; same accounts, records and expected numbers; a refused movement carries a contract code, not Wallet's text"
+  },
+  {
+    "file": "apps/web/src/app/(app)/settings/plugins/deactivate.itest.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): Wallet is stubbed behind the real plugin served in-process (test/fixtures/wallet/served-plugin.ts) instead of the core's Wallet client, which the release removes; same accounts, records and expected numbers; Wallet and Trek are plugin sources (pluginId set)"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/categories-delete.test.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): a refused category carries a contract code: Wallet's own reason no longer crosses the contract"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/categories.test.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): the core's Wallet client and mapping moved to plugins/wallet, whose plugin.test.ts holds their cases; what stays tests the engine over contract 2, with the provider's errors as contract codes"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/client-write.test.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): the core's Wallet client and mapping moved to plugins/wallet, whose plugin.test.ts holds their cases; what stays tests the engine over contract 2, with the provider's errors as contract codes"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/client.test.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): the core's Wallet client and mapping moved to plugins/wallet, whose plugin.test.ts holds their cases; what stays tests the engine over contract 2, with the provider's errors as contract codes"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/mapping.test.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): the core's Wallet client and mapping moved to plugins/wallet, whose plugin.test.ts holds their cases; what stays tests the engine over contract 2, with the provider's errors as contract codes; the core keeps only the interest posting's amount and the read windows (H37: no interest is published on Wallet)"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/parity.itest.ts",
+    "decision": "R5c (parity proof)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): the golden written before the change (98f18319) is unchanged; the same pass now reads through the plugin served in-process, wired as wireDomain wires it"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/send.test.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): the manual movements go through the plugin served in-process; the send marker is the plugin's and plugins/wallet/src/plugin.test.ts holds it"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/sync.itest.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): Wallet is stubbed behind the real plugin served in-process (test/fixtures/wallet/served-plugin.ts) instead of the core's Wallet client, which the release removes; same accounts, records and expected numbers; errors are contract codes"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/wallet/sync.test.ts",
+    "decision": "R5c (H32, H37, ST-14)",
+    "reason": "871fa96 (R5c, Wallet engine over contract 2): the core's Wallet client and mapping moved to plugins/wallet, whose plugin.test.ts holds their cases; what stays tests the engine over contract 2, with the provider's errors as contract codes"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/status.test.ts",
+    "decision": "R5c (D5)",
+    "reason": "4e29dee (R5c, leave engine over contract 2): the closed list of contract codes gains read_only (a key that may read and not write): one case added and the count of combinations updated"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/trek/client.test.ts",
+    "decision": "R5c (H16, M12)",
+    "reason": "4e29dee (R5c, leave engine over contract 2): the core's Trek client moved to plugins/trek; its cases are in plugins/trek/src/client.test.ts and plugin.test.ts"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/trek/parity.itest.ts",
+    "decision": "R5c (parity proof)",
+    "reason": "4e29dee (R5c, leave engine over contract 2): the golden written before the change (8a90f24d) is unchanged; the same passes read through the plugin served in-process, and contract 2's observed columns carry the same pair as the trek_* ones"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/trek/sync.itest.ts",
+    "decision": "R5c (H16, M12)",
+    "reason": "4e29dee (R5c, leave engine over contract 2): Trek is reached through the plugin served in-process (test/fixtures/trek/served-plugin.ts); the days are read from the fake's tool calls, and errors are contract codes"
+  },
+  {
+    "file": "test/fixtures/trek/fake-trek.ts",
+    "decision": "R5c (H16, M12)",
+    "reason": "4e29dee (R5c, leave engine over contract 2): the fake Trek serves the plugin's tests and the core's through the served plugin, with the same toggle semantics"
+  },
+  {
+    "file": "apps/web/src/app/(app)/accounts/[id]/delete.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "apps/web/src/app/(app)/expenses/send.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "apps/web/src/app/(app)/settings/plugins/deactivate.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "apps/web/src/modules/timeoff/parity.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "apps/web/src/platform/api/timeoff.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "apps/web/src/platform/integrations/registry.test.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "packages/domain/src/modules/interests/freshness.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "packages/domain/src/modules/timeoff/rules.test.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "packages/domain/src/platform/integrations/client.test.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "packages/plugin-host/src/leave/parity.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "packages/plugin-host/src/movements/parity.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "packages/plugin-host/src/movements/sync.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): names without a provider (rule M12: Wallet, Trek become source, calendar); same assertions"
+  },
+  {
+    "file": "packages/domain/src/modules/timeoff/schema.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): the leave day's trek_* columns are the calendar's observed_* ones; same checks"
+  },
+  {
+    "file": "packages/domain/src/modules/timeoff/service.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): pendingForTrek and the trek_* fields are pendingForCalendar and observed_*; same expected days"
+  },
+  {
+    "file": "packages/plugin-host/src/leave/sync.itest.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): moved from the domain; syncTrekNow and the trek_* fields are syncCalendarNow and observed_*; same expected days"
+  },
+  {
+    "file": "packages/plugin-host/src/leave/sync.test.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): moved from the domain; the leave port is wired by the test as the application wires it, splitForTrek is splitForCalendar; same expected days"
+  },
+  {
+    "file": "packages/plugin-host/src/movements/categories-delete.test.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): moved from the domain; the mocks follow the new module paths and the names are the source's; same expected results"
+  },
+  {
+    "file": "packages/plugin-host/src/movements/categories.test.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): moved from the domain; the names are the source's, the category plan takes the length of a name here as a parameter (60, the value it had built in) and link takes one object; same expected plans"
+  },
+  {
+    "file": "packages/plugin-host/src/movements/sync.test.ts",
+    "decision": "R5c (M12)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): moved from the domain; the mocks follow the new module paths and the names are the source's; same expected results"
+  },
+  {
+    "file": "test/wiring.ts",
+    "decision": "R5c (P3b)",
+    "reason": "eb193ef (R5c, engines moved to plugin-host): every test process remembers the Wallet and Trek manifests, as the core reads them from the plugins, because what a plugin can do is read from its manifest"
   }
 ]

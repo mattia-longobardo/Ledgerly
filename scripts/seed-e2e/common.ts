@@ -1,6 +1,6 @@
 // scripts/seed-e2e/common.ts — the builders every flow's seed uses: a person's context, an account a provider
 // syncs, a movement as Wallet sends it, this month and the last one, a working day, and the
-// exchange rates of a local preview.
+// exchange rates and the plugins of a local preview.
 import { eq } from "drizzle-orm";
 import { accounts } from "@domain/modules/accounts/schema";
 import { applyProviderAccounts } from "@domain/modules/accounts/service";
@@ -12,7 +12,10 @@ import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
 import { saveRates, storedRange } from "@domain/platform/fx/service";
 import { isBookable } from "@domain/platform/holidays/rules";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { configuredPlugins } from "@domain/platform/plugins/queries";
+import { plugins } from "@domain/platform/plugins/schema";
+import type { PluginManifest } from "@ledgerly/plugin-contract";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * The Expenses journey needs movements that arrived the way real ones do: a synced account adopted
@@ -129,4 +132,23 @@ export async function seedPreviewRates(): Promise<void> {
   if (!process.env.E2E_BASE_URL) return;
   if ((await storedRange()).latest !== null) return;
   await saveRates([{ on: "2020-01-02", currency: "USD", eurPerUnit: "0.9000000000" }]);
+}
+
+/**
+ * The plugins of a local preview: every plugin of the catalog is configured there
+ * (scripts/preview-on-test.sh), and one the instance does not run yet — the plugins of the checkout
+ * before their deploy — has no container to answer for its manifest. The seed keeps, for each one
+ * whose manifest the preview has not read, the manifest its source serves, as `refreshManifests`
+ * keeps one it read; a manifest read from a running plugin is never replaced. Never on the site.
+ */
+export async function seedPreviewPlugins(): Promise<void> {
+  if (!process.env.E2E_BASE_URL) return;
+  for (const plugin of configuredPlugins()) {
+    const source = (await import(`../../plugins/${plugin.id}/src/manifest`)) as { MANIFEST: PluginManifest };
+    const manifest = source.MANIFEST;
+    await getDb()
+      .insert(plugins)
+      .values({ id: plugin.id, url: plugin.url, manifest, contract: manifest.contract })
+      .onConflictDoNothing();
+  }
 }

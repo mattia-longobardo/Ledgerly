@@ -16,7 +16,7 @@ import { pluginUserCredentials } from "@domain/platform/plugins/schema";
 import { connectionBag, setPluginActive } from "@plugin-host/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * The display-currency journey (docs/design/investments.md §1.8): one account in EUR and one in

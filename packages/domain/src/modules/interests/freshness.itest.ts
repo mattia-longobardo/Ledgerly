@@ -8,14 +8,14 @@ import { applyProviderAccounts, saveBalanceEntry, saveProviderBalance } from "..
 import type { Ctx } from "../../platform/context";
 import { addDays, type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../../platform/db/client";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { deleteConnection, saveConnection } from "../../platform/integrations/service";
-import { SyncBusyError, type WalletSyncResult } from "../../platform/integrations/wallet/sync";
+import { SyncBusyError, type SourceSyncResult } from "@plugin-host/movements/sync";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, newContext } from "../../../../../test/fixtures";
 import { accrueDueRules } from "../../../../../apps/web/src/modules/interests/jobs";
 import { interestAccruals } from "./schema";
 import { createRule } from "./service";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 /** 12:00 in Rome, which is the hour a rule with no hour of its own accrues at. */
 const NOW = new Date("2026-09-15T10:00:00Z");
@@ -33,7 +33,7 @@ let yesterday: CivilDate;
 
 /** A pass that landed: the readings of the day being accrued and of today, stamped now. */
 function landing(cents: bigint, calls: string[]) {
-  return async (connection: string): Promise<WalletSyncResult> => {
+  return async (connection: string): Promise<SourceSyncResult> => {
     calls.push(connection);
     for (const on of [yesterday, todayOn]) {
       await saveProviderBalance(ctx, syncedId, { on, cents }, NOW);

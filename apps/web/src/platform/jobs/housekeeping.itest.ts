@@ -5,11 +5,11 @@ import { createTestUser } from "../../../../../test/users";
 import { hashToken } from "@/platform/auth/invitations";
 import { invitations } from "@domain/platform/auth/schema";
 import { getDb } from "@domain/platform/db/client";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { integrationConnections, syncRuns } from "@domain/platform/integrations/schema";
 import { saveConnection } from "@domain/platform/integrations/service";
 import { housekeepingJob } from "./housekeeping";
 import { jobRuns } from "@domain/platform/jobs/schema";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 const daysAgo = (n: number) => new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 

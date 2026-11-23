@@ -17,6 +17,9 @@ export const SYNC_ERROR_CODES = [
   "rate_limited",
   "provider_down",
   "invalid_data",
+  // R5c (decision D5): the calendar takes no writes with this credential; what was written here
+  // stays pending until it does.
+  "read_only",
 ] as const;
 type SyncErrorCode = (typeof SYNC_ERROR_CODES)[number];
 
@@ -27,12 +30,13 @@ export function isSyncErrorCode(value: unknown): value is SyncErrorCode {
 /** The key of a code's sentence in the catalogue; `failed` for no code, or one the app does not know. */
 export function codeKey(
   code: string | null | undefined,
-): "auth" | "consentExpired" | "rateLimited" | "providerDown" | "invalidData" | "failed" {
+): "auth" | "consentExpired" | "rateLimited" | "providerDown" | "invalidData" | "readOnly" | "failed" {
   if (code === "auth") return "auth";
   if (code === "consent_expired") return "consentExpired";
   if (code === "rate_limited") return "rateLimited";
   if (code === "provider_down") return "providerDown";
   if (code === "invalid_data") return "invalidData";
+  if (code === "read_only") return "readOnly";
   return "failed";
 }
 
@@ -126,7 +130,9 @@ export function failureStreak(runs: readonly StreakRun[]): { failures: number; e
       open.delete(run.kind);
       continue;
     }
-    if (run.errorCode === "rate_limited") continue;
+    // Neither a provider that asked to wait (Q2) nor a calendar that may only read (D5) is a failure
+    // to tell: the state stays on the connection.
+    if (run.errorCode === "rate_limited" || run.errorCode === "read_only") continue;
     open.set(run.kind, count + 1);
     failures = Math.max(failures, count + 1);
   }
@@ -148,7 +154,8 @@ export type StatusText =
   | "keyInvalid"
   | "pending"
   | "pausedSchedule"
-  | "pausedProvider";
+  | "pausedProvider"
+  | "readOnly";
 
 /** The one thing a person can do about a state. */
 type StatusAction = "update" | "renew" | "replaceKey" | "chooseAccounts" | "resume" | "enable";
@@ -202,6 +209,8 @@ export function syncStatus(facts: StatusFacts, now: Date): SyncStatus {
   if (facts.errorCode === "auth" || facts.state === "revoked") {
     return { value: "action", text: "keyInvalid", action: "replaceKey" };
   }
+  // A credential that may read and not write: the days written here wait for one that may (D5).
+  if (facts.errorCode === "read_only") return { value: "action", text: "readOnly", action: "replaceKey" };
   if (!facts.accountsChosen) return { value: "action", text: "pending", action: "chooseAccounts" };
 
   if (!facts.scheduled) return { value: "paused", text: "pausedSchedule", action: "resume" };
@@ -249,6 +258,8 @@ type Warning = { kind: "failed"; todo: "renew" | "replaceKey" | null } | { kind:
 export function warningFor(status: SyncStatus, facts: StatusFacts, now: Date): Warning {
   // A plugin turned off, a schedule turned off, accounts not chosen: the person already knows.
   if (status.value === "paused" || status.text === "pending") return null;
+  // A calendar that may only read (D5): the connection says so, and no mail is sent.
+  if (status.text === "readOnly") return null;
   if (status.value === "action") {
     return { kind: "failed", todo: status.action === "renew" ? "renew" : "replaceKey" };
   }

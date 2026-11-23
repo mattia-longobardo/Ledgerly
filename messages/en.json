@@ -254,23 +254,11 @@
     "integrations": {
       "title": "Data sources",
       "description": "Where balances and transactions come from. Credentials are encrypted at rest and never shown again.",
-      "providers": {
-        "wallet": {
-          "name": "Budget Makers Wallet",
-          "role": "Accounts, balances and transactions"
-        },
-        "trek": {
-          "name": "Trek",
-          "role": "Leave days"
-        }
-      },
       "connect": {
-        "title": "Connect Wallet",
-        "description": "Paste the API token from your Wallet account. It is sealed with the app's encryption key and never returned to the browser.",
-        "token": "API token",
-        "tokenHint": "Stored encrypted. Replace it here if it is ever rotated.",
+        "title": "Connect {provider}",
+        "description": "The credential is sealed with the app's encryption key and never returned to the browser.",
         "submit": "Connect",
-        "replace": "Replace token",
+        "replace": "Replace the credential",
         "cancel": "Cancel"
       },
       "disconnect": {
@@ -279,7 +267,8 @@
         "noSwitch": "{count, plural, =0 {} one {It does not move to a bank by itself: to keep it up to date, open it and choose “Move to the bank”.} other {They do not move to a bank by themselves: to keep one up to date, open it and choose “Move to the bank”.}}",
         "confirm": "Disconnect",
         "cancel": "Keep connected",
-        "excluded": "{count, plural, one {# excluded account stays excluded.} other {# excluded accounts stay excluded.}}"
+        "excluded": "{count, plural, one {# excluded account stays excluded.} other {# excluded accounts stay excluded.}}",
+        "calendar": "The days already booked stay here. Any removal still waiting to reach {provider} is completed straight away, because afterwards there is nobody left to ask. The schedule stays: if you connect again, {provider} updates as before."
       },
       "kinds": {
         "accounts": "Accounts and balances",
@@ -304,8 +293,8 @@
         "categoriesRetyped": "{count} categories given their type"
       },
       "toasts": {
-        "connected": "Wallet connected",
-        "replaced": "Token replaced",
+        "connected": "{provider} connected",
+        "replaced": "Credential replaced",
         "disconnected": "{provider} disconnected",
         "chosen": "Accounts saved."
       },
@@ -319,18 +308,8 @@
         "failed": "Couldn't save. Try again.",
         "schedule": "That schedule is not valid."
       },
-      "trek": {
-        "notLinked": "Not linked. Leave days stay in Ledgerly until Trek is connected.",
-        "pending": "{count, plural, one {# day waiting to reach Trek} other {# days waiting to reach Trek}}",
-        "connectTitle": "Connect Trek",
-        "connectDescription": "A machine client (no browser login) with the vacay:read and vacay:write scopes: Trek → Settings → Integrations → MCP → OAuth 2.1 Clients → New Client.",
-        "baseUrl": "Trek address",
-        "baseUrlHint": "The site's address, without /mcp — that is added for you.",
-        "disconnectDescription": "The days already booked stay here. Any removal still waiting to reach Trek is completed straight away, because afterwards there is nobody left to ask. The schedule stays: if you connect again, Trek updates as before.",
-        "clientId": "Client ID",
-        "clientIdHint": "From the machine client you created in Trek.",
-        "clientSecret": "Client secret",
-        "clientSecretHint": "The trekcs_… secret, shown only once. Stored sealed and never shown again."
+      "calendar": {
+        "pending": "{count, plural, one {# day waiting to reach {provider}} other {# days waiting to reach {provider}}}"
       },
       "scheduleControl": {
         "title": "Sync schedule",
@@ -493,12 +472,12 @@
       "deleteMovements": "{count, plural, =0 {No transaction uses it.} one {# transaction loses its category.} other {# transactions lose their category.}}",
       "deleteBudgets": "Budgets set on it are deleted; subscriptions and interest rules lose it.",
       "deleteChildren": "Its sub-categories are deleted with it.",
-      "deleteWallet": "It is deleted in Wallet too, if it came from there.",
+      "deleteAtSource": "It is deleted at its source too, if it came from one.",
       "deletedToast": "{name} deleted · {count, plural, =0 {no transaction touched} one {# transaction uncategorised} other {# transactions uncategorised}}",
-      "wallet": {
-        "deleted": "{count, plural, one {# category deleted in Wallet too} other {# categories deleted in Wallet too}}",
-        "refused": "Wallet did not delete it: {reason}",
-        "failed": "Wallet could not be reached: {reason}"
+      "atSource": {
+        "deleted": "{count, plural, one {# category deleted at its source too} other {# categories deleted at their source too}}",
+        "refused": "The source did not delete it: {reason}",
+        "failed": "The source could not be reached: {reason}"
       },
       "merge": {
         "title": "Duplicate categories",
@@ -1304,7 +1283,8 @@
         "keyInvalid": "The {provider} key is no longer valid.",
         "pending": "You gave access, but you have not chosen the accounts yet.",
         "pausedSchedule": "Automatic update is off.",
-        "pausedProvider": "{provider} is not active."
+        "pausedProvider": "{provider} is not active.",
+        "readOnly": "{provider} only lets Ledgerly read: the days written here stay to be sent until the key may also write."
       },
       "when": {
         "now": "just now",
@@ -1346,6 +1326,7 @@
         "rateLimited": "{name} reached its limit of automatic readings.",
         "providerDown": "{name} is not responding.",
         "invalidData": "{name} answered with data that Ledgerly cannot read. Nothing was changed.",
+        "readOnly": "{provider} only lets Ledgerly read: the days written here stay to be sent.",
         "busy": "An update is already running. Try again shortly.",
         "network": "No connection. Check the network and try again.",
         "unavailable": "The connection is not available now. Try again later or tell the administrator.",
@@ -1458,10 +1439,12 @@
       "down": "Not responding",
       "never": "Never reached",
       "incompatible": "Incompatible contract",
+      "uncatalogued": "Not an official plugin",
       "checked": "Last check {time}",
       "since": "since {time}",
       "neverDetail": "The manifest was never read.",
       "incompatibleDetail": "The plugin uses contract {version}.",
+      "uncataloguedDetail": "Not in the catalog of this release: Ledgerly never calls it.",
       "version": "v{version} · contract v{contract}",
       "empty": "No plugins in this instance.",
       "unavailable": "State not available. Reload the page."
@@ -1833,8 +1816,8 @@
       "description": "It is removed for good, and a synced one is not imported again.",
       "cancel": "Cancel"
     },
-    "wallet": {
-      "hint": "From Wallet: type, amount, payee and note are saved to Wallet too. Labels stay here.",
+    "atSource": {
+      "hint": "From its source: type, amount, payee and note are saved there too. Labels stay here.",
       "type": "Type",
       "types": {
         "expense": "Expense",
@@ -1842,16 +1825,16 @@
         "transfer": "Transfer"
       },
       "amountHint": "No sign: the type decides it.",
-      "saved": "Saved here and in Wallet",
-      "unchanged": "Wallet already had these values",
-      "said": "Wallet: “{reason}”",
+      "saved": "Saved here and at the source",
+      "unchanged": "The source already had these values",
+      "said": "The source: “{reason}”",
       "errors": {
         "invalid": "Check the fields: something is not valid.",
         "amount": "Enter an amount other than zero.",
-        "notLinked": "This transaction is not linked to Wallet, or Wallet is no longer connected.",
-        "noTransferCategory": "Wallet did not return its Transfer category, so the transfer cannot be set from here.",
-        "refused": "Wallet refused the change: nothing changed here.",
-        "failed": "Wallet did not answer: nothing changed here. Try again in a minute."
+        "notLinked": "This transaction is not linked to a source that takes changes, or the source is no longer connected.",
+        "noTransferCategory": "The source did not return its Transfer category, so the transfer cannot be set from here.",
+        "refused": "The source refused the change: nothing changed here.",
+        "failed": "The source did not answer: nothing changed here. Try again in a minute."
       }
     },
     "manual": {
@@ -5728,7 +5711,7 @@
         "hint": "A day off only in your town. A date already in a calendar counts once.",
         "saved": "Patron saint saved"
       },
-      "trek": {
+      "calendar": {
         "description": "Where leave days also live.",
         "manage": "Manage in Plugins",
         "connect": "Connect in Plugins"

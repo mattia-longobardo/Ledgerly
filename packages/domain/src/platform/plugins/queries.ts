@@ -8,20 +8,29 @@ import type { Ctx } from "../context";
 import { getDb } from "../db/client";
 import { userScoped } from "../db/scope";
 import { readEnv } from "../env";
-import { pluginProvider } from "../integrations/rules";
+import { isBankPlugin, isPluginProvider, pluginProvider } from "../integrations/rules";
 import { type Connection, listConnections } from "../integrations/service";
 import { type ConfiguredPlugin, parsePluginConfig } from "../plugin-config";
 import { acceptsContract, hasCapability, type PluginManifest } from "@ledgerly/plugin-contract";
 import { type UserPluginState, userPluginState } from "./rules";
+import { catalogEntry } from "./catalog";
 import { pluginActivations, plugins, pluginUserCredentials } from "./schema";
 
 let configured: ConfiguredPlugin[] | undefined;
 
-/** The plugins of the server's configuration, parsed once. */
-export function configuredPlugins(): ConfiguredPlugin[] {
+/** Every plugin of the server's configuration, parsed once: official or not. */
+function everyConfiguredPlugin(): ConfiguredPlugin[] {
   const env = readEnv();
   configured ??= parsePluginConfig(env.PLUGIN_URLS, env.PLUGIN_SECRETS);
   return configured;
+}
+
+/**
+ * The plugins of the server's configuration that the core calls: the ones of the catalog (H27).
+ * Any other is never called, not even for its manifest, and only the diagnostics name it.
+ */
+export function configuredPlugins(): ConfiguredPlugin[] {
+  return everyConfiguredPlugin().filter((plugin) => catalogEntry(plugin.id) !== null);
 }
 
 export function configuredPlugin(pluginId: string): ConfiguredPlugin | null {
@@ -77,7 +86,8 @@ export interface PluginDiagnostic {
   name: string;
   version: string | null;
   contract: string | null;
-  state: "up" | "down" | "never" | "incompatible";
+  /** `uncatalogued`: configured, not in the catalog of the official plugins, never called. */
+  state: "up" | "down" | "never" | "incompatible" | "uncatalogued";
   /** The last good check (`up`) or the first failed one of the current series (`down`). */
   at: Date | null;
 }
@@ -87,7 +97,7 @@ export interface PluginDiagnostic {
  * no connection, no reading, no error of a connection (decision H29).
  */
 export async function pluginDiagnostics(locale: "en" | "it"): Promise<PluginDiagnostic[]> {
-  const known = configuredPlugins();
+  const known = everyConfiguredPlugin();
   if (known.length === 0) return [];
   const rows = await getDb()
     .select({
@@ -108,8 +118,9 @@ export async function pluginDiagnostics(locale: "en" | "it"): Promise<PluginDiag
     .orderBy(asc(plugins.id));
   return known.map((plugin) => {
     const row = rows.find((one) => one.id === plugin.id);
-    if (!row)
-      return { id: plugin.id, name: plugin.id, version: null, contract: null, state: "never", at: null };
+    const unread = { id: plugin.id, name: plugin.id, version: null, contract: null, at: null };
+    if (catalogEntry(plugin.id) === null) return { ...unread, state: "uncatalogued" };
+    if (!row) return { ...unread, state: "never" };
     const facts = {
       id: plugin.id,
       name: row.manifest.labels.name[locale],
@@ -125,6 +136,31 @@ export async function pluginDiagnostics(locale: "en" | "it"): Promise<PluginDiag
 
 export async function findInstancePlugin(pluginId: string): Promise<InstancePlugin | null> {
   return (await listInstancePlugins()).find((plugin) => plugin.config.id === pluginId) ?? null;
+}
+
+// On `globalThis`, as the ports: one process may load this file in more than one bundle.
+declare global {
+  var ledgerlyReadManifests: Map<string, PluginManifest> | undefined;
+}
+
+/**
+ * Keeps a manifest this process has read (`refreshManifests` of plugin-host), or was handed (a
+ * plugin served in-process by the tests): what {@link pluginManifest} answers while the database
+ * has no row of the plugin yet.
+ */
+export function rememberManifest(manifest: PluginManifest): void {
+  globalThis.ledgerlyReadManifests ??= new Map();
+  globalThis.ledgerlyReadManifests.set(manifest.id, manifest);
+}
+
+/**
+ * The manifest of a plugin (rewrite plan R5c, P3b): the one the database keeps, else the one this
+ * process read last; `null` while it was never read. What a plugin can do — its kinds, its addon,
+ * whether its accounts take the movements written here — is read from it, never from its id.
+ */
+export async function pluginManifest(pluginId: string): Promise<PluginManifest | null> {
+  const plugin = await findInstancePlugin(pluginId);
+  return plugin?.manifest ?? globalThis.ledgerlyReadManifests?.get(pluginId) ?? null;
 }
 
 /** The connections one person has through one plugin: one per bank. */
@@ -148,6 +184,19 @@ interface UserPlugin {
   connections: number;
   /** The ISO codes of the manifest's `country` connection field, in its order; empty without it. */
   countries: string[];
+  /** What reads it (rewrite plan R5c): the plugins' bank pass, or an engine of a source or of a calendar. */
+  kind: "bank" | "source" | "calendar";
+  /** The credential of a connection, as the manifest's `userSettings` describe it, in the person's language. */
+  fields: (Pick<PluginManifest["userSettings"][number], "name" | "type" | "required"> & {
+    label: string;
+    help: string | null;
+  })[];
+}
+
+/** What reads a plugin, from its manifest's capabilities: never its id (rule M12). */
+function kindOf(capabilities: readonly string[]): UserPlugin["kind"] {
+  if (capabilities.includes("leaveCalendar")) return "calendar";
+  return capabilities.includes("source.read") ? "source" : "bank";
 }
 
 /**
@@ -194,6 +243,14 @@ export async function listUserPlugins(ctx: Pick<Ctx, "userId" | "locale">): Prom
         manifest.connectionFields
           .find((field) => field.name === "country")
           ?.options?.map((option) => option.value) ?? [],
+      kind: kindOf(manifest.capabilities),
+      fields: manifest.userSettings.map((field) => ({
+        name: field.name,
+        type: field.type,
+        required: field.required,
+        label: field.label[ctx.locale],
+        help: field.help?.[ctx.locale] ?? null,
+      })),
     };
   });
 }
@@ -225,4 +282,24 @@ export async function credentialsStatus(
   return row
     ? { saved: true, savedAt: row.savedAt, invalid: row.invalidAt !== null }
     : { saved: false, savedAt: null, invalid: false };
+}
+
+/**
+ * The capabilities of a connection's provider: its plugin's manifest's, none while it was never read;
+ * `null` for a provider of the core, which has no manifest.
+ */
+export async function capabilitiesOf(provider: string): Promise<readonly string[] | null> {
+  if (!isPluginProvider(provider)) return null;
+  return (await pluginManifest(provider.slice("plugin:".length)))?.capabilities ?? [];
+}
+
+/**
+ * Whether a connection's provider is a bank's plugin, read by the plugins' own pass: a plugin whose
+ * manifest is neither a source read with a token nor a leave calendar. A plugin never read is taken
+ * as a bank's: the plugins the engines of plugin-host read have their manifest read before any
+ * connection of theirs is made.
+ */
+export async function isBankPluginProvider(provider: string): Promise<boolean> {
+  const capabilities = await capabilitiesOf(provider);
+  return capabilities !== null && isBankPlugin(capabilities);
 }

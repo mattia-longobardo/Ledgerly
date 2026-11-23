@@ -63,6 +63,13 @@ describe("the state of a connection (ux §2.2)", () => {
       "replaceKey",
     ],
     ["a revoked connection with no code", { state: "revoked" }, "action", "keyInvalid", "replaceKey"],
+    [
+      "a key that may read and not write (D5)",
+      { errorCode: "read_only", state: "error", consecutiveFailures: 1 },
+      "action",
+      "readOnly",
+      "replaceKey",
+    ],
     ["accounts not chosen yet", { accountsChosen: false }, "action", "pending", "chooseAccounts"],
     ["no schedule", { scheduled: false, nextSyncAt: null }, "paused", "pausedSchedule", "resume"],
     [
@@ -128,6 +135,7 @@ describe("the state of a connection (ux §2.2)", () => {
                                 errorCode === "consent_expired" ||
                                 errorCode === "auth" ||
                                 state === "revoked" ||
+                                errorCode === "read_only" ||
                                 !accountsChosen
                               ? "action"
                               : !scheduled
@@ -145,7 +153,7 @@ describe("the state of a connection (ux §2.2)", () => {
                         expect(status.action === null).toBe(expected === "ok" || expected === "running");
                         checked += 1;
                       }
-    expect(checked).toBe(3 * 7 * 3 * 2 * 3 * 3 * 16);
+    expect(checked).toBe(3 * 8 * 3 * 2 * 3 * 3 * 16);
   });
 });
 
@@ -290,6 +298,31 @@ describe("the streak of failures", () => {
       failures: 0,
       errorCode: "rate_limited",
     });
+  });
+
+  it("never counts a pass that ended read-only, and sends no mail for it: the state stays on the connection (D5)", () => {
+    const runs = [
+      run("leave", "failed", "read_only"),
+      run("leave", "failed", "read_only"),
+      run("leave", "failed", "read_only"),
+    ];
+    const streak = failureStreak(runs);
+    expect(streak).toEqual({ failures: 0, errorCode: "read_only" });
+    const facts = {
+      ...HEALTHY,
+      state: "error" as const,
+      consecutiveFailures: streak.failures,
+      errorCode: streak.errorCode,
+    };
+    expect(syncStatus(facts, NOW).text).toBe("readOnly");
+    expect(warningFor(syncStatus(facts, NOW), facts, NOW)).toBeNull();
+    expect(
+      warningFor(
+        syncStatus({ ...facts, lastOkAt: ago(72 * 60) }, NOW),
+        { ...facts, lastOkAt: ago(72 * 60) },
+        NOW,
+      ),
+    ).toBeNull();
   });
 
   it("ignores the runs that attempted nothing or have not ended", () => {

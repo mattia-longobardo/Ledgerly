@@ -5,51 +5,50 @@ import { isWeekend } from "../../../platform/holidays/rules";
 export const LEAVE_DAY_KINDS = ["vacation", "rol", "comp", "sick", "other"] as const;
 export type LeaveDayKind = (typeof LEAVE_DAY_KINDS)[number];
 
-/** The kinds Trek's own rows can be in, and therefore the only ones a toggle may ever name. */
-export const TREK_KINDS = ["vacation", "comp"] as const;
-type TrekKind = (typeof TREK_KINDS)[number];
+/** The kinds the calendar's own rows can be in, and therefore the only ones a toggle may ever name. */
+export const CALENDAR_KINDS = ["vacation", "comp"] as const;
+type CalendarKind = (typeof CALENDAR_KINDS)[number];
 
 /**
- * The kinds that reach Trek at all — the leave that spends the year's allowance.
+ * The kinds that reach the calendar at all — the leave that spends the year's allowance.
  *
- * ROL is among them since N4 even though Trek has no such thing: it goes across as `vacation`,
+ * ROL is among them since N4 even though the calendar has no such thing: it goes across as `vacation`,
  * which is the owner's own instruction and the only honest option, since a day that is not on
- * Trek reads to a colleague as a day at work. Sickness and "other" stay here: they are absences
+ * the calendar reads to a colleague as a day at work. Sickness and "other" stay here: they are absences
  * of a different kind, not leave anybody books.
  */
-const KINDS_FOR_TREK = ["vacation", "rol", "comp"] as const;
+const KINDS_FOR_CALENDAR = ["vacation", "rol", "comp"] as const;
 
-export function goesToTrek(kind: LeaveDayKind): boolean {
-  return (KINDS_FOR_TREK as readonly string[]).includes(kind);
+export function goesToCalendar(kind: LeaveDayKind): boolean {
+  return (KINDS_FOR_CALENDAR as readonly string[]).includes(kind);
 }
 
 /**
- * What a kind becomes on Trek: everything that goes there goes as a holiday (N4).
+ * What a kind becomes on the calendar: everything that goes there goes as a holiday (N4).
  *
  * The argument is taken and ignored on purpose — the call site reads as a mapping, and the day
  * the answer stops being the same for every kind this is the one place that has to change.
  */
-export function asTrekKind(kind: LeaveDayKind): TrekKind {
+export function asCalendarKind(kind: LeaveDayKind): CalendarKind {
   void kind;
   return "vacation";
 }
 
 /**
- * Where a row came from. There is no `payroll`: leave read off a payslip is monthly (hours per
- * usage month), not daily, and inventing a date for it would make up a fact the payslip does not
- * state (plan F7 §3.6.1). Those appear in the table as month rows, read-only, from their own read.
+ * What the external calendar last said of a row's day (rewrite plan R5c): `synced` once it was
+ * observed holding it, `refused` when it does not take that day. `null`: never told.
  */
-export const LEAVE_ORIGINS = ["manual", "trek"] as const;
+export const EXTERNAL_STATES = ["synced", "refused"] as const;
 
-/** What the next Trek pass owes this row. `none` means the two agendas agree. */
+/** What the next pass of the calendar owes this row. `none` means the two agendas agree. */
 export const PENDING_STATES = ["none", "upsert", "delete"] as const;
 type PendingState = (typeof PENDING_STATES)[number];
 
 /**
- * Whether a stored row is still leave its owner means to take. A row removed here that Trek holds
+ * Whether a stored row is still leave its owner means to take. A row removed here that the calendar holds
  * stays stored as `pending = 'delete'` until a pass lets it go: for its owner it is already gone,
  * so the calendar, the panel and every balance leave it out. Only the table still lists it, with
- * the badge that says Trek has not been told yet.
+ * the badge that says the calendar has not been told yet.
  */
 export function stillBooked(row: { pending: PendingState }): boolean {
   return row.pending !== "delete";

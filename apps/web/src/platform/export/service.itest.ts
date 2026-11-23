@@ -17,7 +17,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { debitFund, payrollFund } from "../../../../../test/funds";
 import { createTestUser } from "../../../../../test/users";
 import { readZip } from "../../../../../test/zip";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 

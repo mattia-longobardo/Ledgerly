@@ -21,7 +21,7 @@ import {
   undoSourceCategoryChange,
 } from "./source";
 
-const SOURCE = "wallet";
+const SOURCE = "plugin:wallet";
 const MONTH = monthKey(today("Europe/Rome"));
 
 function contextFor(userId: string): Ctx {

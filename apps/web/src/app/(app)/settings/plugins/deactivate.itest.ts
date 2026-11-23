@@ -23,8 +23,8 @@ import { sourceCategoryCount } from "@domain/modules/transactions/source-categor
 import type { Ctx } from "@domain/platform/context";
 import { addDays } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { sourceSettings, sourceSkippedAccounts } from "@domain/platform/integrations/schema";
+import { pluginActivations } from "@domain/platform/plugins/schema";
 import {
   deletedSourceAccounts,
   deleteConnection,
@@ -33,8 +33,10 @@ import {
   saveConnection,
   skippedAccounts,
 } from "@domain/platform/integrations/service";
-import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
-import { chooseWalletAccounts, syncWalletNow } from "@domain/platform/integrations/wallet/sync";
+import type { SourceCalls } from "@plugin-host/movements/calls";
+import { servedSource } from "../../../../../../../test/fixtures/wallet/served-plugin";
+import { chooseSourceAccounts } from "@plugin-host/movements/accounts";
+import { syncSourceNow } from "@plugin-host/movements/sync";
 import { PLUGIN_PATHS } from "@plugin-contract/calls";
 import { credentialsStatus, isPluginActive } from "@domain/platform/plugins/queries";
 import { refreshManifests } from "@plugin-host/service";
@@ -48,6 +50,7 @@ import { createTestUser } from "../../../../../../../test/users";
 import { deleteAccount } from "../../accounts/[id]/delete";
 import { bankSink } from "../../banks/sink";
 import { DeactivateError, deactivateSource, deactivationCounts, type Source, sourceOf } from "./deactivate";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../../../test/fixtures/providers";
 
 /** One failure of the conversion on demand, in the middle of its transaction (criterion 3). */
 const failure = vi.hoisted(() => ({ next: false }));
@@ -118,35 +121,31 @@ const ACCOUNTS = (fixture("accounts.json").accounts as { id: string }[]).filter(
 );
 const JANUARY = fixture("records-january-first-half.json").records as WireRecord[];
 
-function walletStub(): WalletClientOptions {
-  return {
-    baseUrl: "https://wallet.test/api",
-    sleep: async () => undefined,
-    jitter: () => 0,
-    fetch: async (input) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
-      if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
-      const bounds = url.searchParams.getAll("recordDate");
-      const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
-      const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
-      return Response.json({
-        records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
-        appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
-      });
-    },
-  };
+/** Wallet on the fixtures, read through the plugin served in-process. */
+function walletStub(): SourceCalls {
+  return servedSource(async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
+    if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
+    const bounds = url.searchParams.getAll("recordDate");
+    const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
+    const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
+    return Response.json({
+      records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
+      appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+    });
+  });
 }
 
-const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: null, days: false });
+const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: "wallet", days: false, bank: false });
 const walletAccounts = () => listAccounts(ctx, { includeArchived: true });
 
-/** Wallet read once, with one account left out, one rule that publishes and one movement waiting. */
+/** Wallet read once, with one account left out, one interest rule (none publishes since R5c) and one movement waiting. */
 async function walletInUse() {
   const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-  const options = { now: NOW, clientOptions: walletStub() };
-  await chooseWalletAccounts(ctx, connection.id, ["wa-general", "wa-cash"], { clientOptions: walletStub() });
-  await syncWalletNow(ctx, connection.id, options);
+  const options = { now: NOW, source: walletStub() };
+  await chooseSourceAccounts(ctx, connection.id, ["wa-general", "wa-cash"], { source: walletStub() });
+  await syncSourceNow(ctx, connection.id, options);
   const general = (await listAccounts(ctx)).find((one) => one.providerAccountId === "wa-general")!;
   await createRule(ctx, {
     accountId: general.id,
@@ -156,7 +155,7 @@ async function walletInUse() {
     validFrom: "2026-01-01",
     validTo: null,
     payeeMatch: "interessi",
-    mode: "post_to_provider",
+    mode: "analyze_only",
     tiers: [{ upToCents: null, annualRate: "0.0365" }],
   });
   await createManualTransaction(
@@ -186,7 +185,7 @@ describe("Turn off Wallet", () => {
     const movements = await movementCount();
 
     const counts = await deactivationCounts(ctx, wallet());
-    expect(counts).toMatchObject({ accounts: 1, rules: 1, unsent: 1, pendingDays: 0 });
+    expect(counts).toMatchObject({ accounts: 1, rules: 0, unsent: 1, pendingDays: 0 });
     expect(counts.categories).toBeGreaterThan(0);
 
     reads.length = 0;
@@ -205,6 +204,9 @@ describe("Turn off Wallet", () => {
       providerAccountId: null,
     });
     expect(await listConnections(ctx)).toEqual([]);
+    // A plugin since R5c: turning the source off turns the plugin off for the person.
+    const activations = await getDb().select().from(pluginActivations);
+    expect(activations.map((row) => [row.pluginId, row.active])).toEqual([["wallet", false]]);
     expect(await sourceCategoryCount(ctx, WALLET_PROVIDER)).toBe(0);
     expect(await pendingSends(ctx, [general.id], 10)).toEqual([]);
     expect(await deactivationCounts(ctx, wallet())).toEqual({
@@ -242,7 +244,7 @@ describe("Turn off Wallet", () => {
     expect(await restoreSourceAccounts(ctx, WALLET_PROVIDER)).toBe(1);
     // The accounts deleted here stay out; the ones left out are asked again (§3.4).
     expect(await skippedAccounts(ctx, again.id)).toEqual(new Set(["wa-cash"]));
-    await syncWalletNow(ctx, again.id, { now: later(2), clientOptions: walletStub() });
+    await syncSourceNow(ctx, again.id, { now: later(2), source: walletStub() });
 
     const accounts = await walletAccounts();
     expect(accounts.map((one) => [one.id, one.provider, one.providerAccountId, one.origin]).sort()).toEqual(
@@ -268,7 +270,7 @@ describe("Turn off Wallet", () => {
     await expect(deactivateSource(ctx, wallet(), deps, later(1))).rejects.toThrow("the conversion failed");
     expect(await walletAccounts()).toEqual(accounts);
     expect(await listConnections(ctx)).toHaveLength(1);
-    expect(await deactivationCounts(ctx, wallet())).toMatchObject({ accounts: 2, rules: 1, unsent: 1 });
+    expect(await deactivationCounts(ctx, wallet())).toMatchObject({ accounts: 2, rules: 0, unsent: 1 });
     expect(differences(before, await numbers())).toEqual([]);
   });
 
@@ -306,13 +308,16 @@ describe("Turn off Wallet", () => {
 });
 
 describe("the sources a page may turn off", () => {
-  it("are the providers of the core with a page and the plugins the person has on", async () => {
-    expect(await sourceOf(ctx, WALLET_PROVIDER)).toEqual(wallet());
-    expect(await sourceOf(ctx, TREK_PROVIDER)).toEqual({
+  it("are the plugins read by the core with a page, on or not, and the plugins the person has on", async () => {
+    // By the page's slug; Wallet and Trek are plugins read by the engines of plugin-host (R5c P3b).
+    expect(await sourceOf(ctx, "wallet")).toEqual(wallet());
+    expect(await sourceOf(ctx, "trek")).toEqual({
       provider: TREK_PROVIDER,
-      pluginId: null,
+      pluginId: "trek",
       days: true,
+      bank: false,
     });
+    expect(await sourceOf(ctx, WALLET_PROVIDER)).toBeNull();
     expect(await sourceOf(ctx, "etoro")).toBeNull();
     expect(await sourceOf(ctx, "enablebanking")).toBeNull();
     expect(await sourceOf(ctx, "../x")).toBeNull();
@@ -335,7 +340,7 @@ describe("Turn off Trek", () => {
     const before = await numbers();
     const allowance = await allowanceOf(ctx, 2026);
 
-    const trek: Source = { provider: TREK_PROVIDER, pluginId: null, days: true };
+    const trek: Source = { provider: TREK_PROVIDER, pluginId: "trek", days: true, bank: false };
     expect((await deactivationCounts(ctx, trek)).pendingDays).toBe(pending);
     await deactivateSource(ctx, trek, deps, later(1));
 
@@ -379,7 +384,7 @@ describe("Turn off a bank's plugin", () => {
     const before = numbersSnapshot(ctx, new Date("2026-11-20T10:00:00Z"));
 
     const source = await sourceOf(ctx, PLUGIN);
-    expect(source).toEqual({ provider: PROVIDER, pluginId: PLUGIN, days: false });
+    expect(source).toEqual({ provider: PROVIDER, pluginId: PLUGIN, days: false, bank: true });
     expect(await deactivateSource(ctx, source!, { ...deps, plugin: plugin.deps }, BANK_NOW)).toEqual({
       accounts: 1,
     });
