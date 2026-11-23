@@ -13,6 +13,7 @@ export {
   goesToTrek,
   asTrekKind,
   LEAVE_ORIGINS,
+  EXTERNAL_STATES,
   PENDING_STATES,
   stillBooked,
   minutesToDays,

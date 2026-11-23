@@ -2,42 +2,46 @@
 // Action, for the person of `ctx`. `/api/v1` and the actions reach it by the provider's id (`CoreCard`).
 import type { Ctx } from "../../context";
 import type { CardError, CoreCard } from "../card";
-import { markConnection, readCredentials, saveConnection } from "../service";
+import { IntegrationError, markConnection, saveConnection } from "../service";
 import type { Connection } from "../service";
 import { TREK_PROVIDER } from "../rules";
 import { isUsableToken } from "../credentials";
-import { createTrekClient, isTokenRejected, TrekError } from "./client";
+import { failureCode, isClientRefused, trekCalls } from "./calls";
 import { isTrekBusy, syncTrekNow } from "./sync";
 
-/** A Trek failure as the card names it: the credential refused, the network, or what Trek answered. */
+/** The codes of a call that did not reach Trek, or Trek that did not answer (contract 2). */
+const UNREACHABLE = new Set(["provider_down", "plugin_down", "rate_limited"]);
+
+/**
+ * A failure as the card names it, and as the connection records it: a refused machine client is a
+ * fact about the credential (`revoked`), anything else is a bad afternoon (`error`). The detail is
+ * the call's code: the plugin never passes Trek's own words on.
+ */
 function trekFailure(error: unknown): { code: CardError; detail: string } {
-  if (error instanceof TrekError) {
-    const code: CardError = isTokenRejected(error)
-      ? "rejected"
-      : error.kind === "network" || error.kind === "timeout"
-        ? "unreachable"
-        : "provider";
-    return { code, detail: error.message };
+  const code = failureCode(error);
+  if (isClientRefused(error)) return { code: "rejected", detail: code ?? "auth" };
+  if (code === null || error instanceof IntegrationError) {
+    return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
   }
-  return { code: "failed", detail: error instanceof Error ? error.message : "unknown error" };
+  return { code: UNREACHABLE.has(code) ? "unreachable" : "provider", detail: code };
 }
 
-/** Asks Trek for this year, which proves the token without writing anything. */
+/**
+ * Asks Trek for this year through the plugin, which proves the machine client without writing
+ * anything, and what it may do. A client that may only read is kept: its connection says
+ * `read_only`, and the days written here stay pending until it may write (decision D5).
+ */
 async function test(ctx: Ctx, connection: Connection) {
+  let access: "read-only" | "write" | "unverifiable";
   try {
-    const bag = await readCredentials(ctx, connection.id);
-    const client = createTrekClient({
-      baseUrl: bag.baseUrl ?? "",
-      clientId: bag.clientId ?? "",
-      clientSecret: bag.clientSecret ?? "",
-    });
-    await client.getEntries(new Date().getUTCFullYear());
+    access = await (await trekCalls(ctx, connection.id)).verify();
   } catch (error) {
     const { code, detail } = trekFailure(error);
     await markConnection(ctx, connection.id, code === "rejected" ? "revoked" : "error", detail);
     return { ok: false as const, error: code };
   }
-  await markConnection(ctx, connection.id, "active");
+  if (access === "read-only") await markConnection(ctx, connection.id, "error", "read_only");
+  else await markConnection(ctx, connection.id, "active");
   return { ok: true as const };
 }
 

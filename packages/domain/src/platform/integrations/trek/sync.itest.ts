@@ -20,9 +20,11 @@ import {
 import type { Ctx } from "../../context";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { newContext } from "../../../../../../test/fixtures";
+import { fakeTrek } from "../../../../../../test/fixtures/trek/fake-trek";
+import { servedCalendar } from "../../../../../../test/fixtures/trek/served-plugin";
 import { TREK_PROVIDER } from "../rules";
 import { listConnections, listRuns, markConnection, saveConnection } from "../service";
-import type { TogglePlanStep, TrekClient, TrekEntry, TrekYearStats } from "./client";
+import type { CalendarCalls } from "./calls";
 import { isTrekBusy, syncTrekNow, trekStatsOf } from "./sync";
 
 let ctx: Ctx;
@@ -38,77 +40,24 @@ beforeEach(async () => {
   ctx = await newContext();
   await saveConnection(ctx, {
     provider: TREK_PROVIDER,
-    credentials: { baseUrl: "https://trek.example", token: "trek_test_token" },
+    credentials: { baseUrl: "https://trek.example", clientId: "trekci_test", clientSecret: "trekcs_test" },
   });
 });
 
 afterAll(closeDatabase);
 
+type Trek = ReturnType<typeof fakeTrek>;
+
 /**
- * A Trek that really holds a year: the toggle behaves exactly as the real one does, so a test can
- * make the mistake the whole design guards against and see the day disappear.
+ * A pass through the real plugin, served in-process, on a Trek that really holds a year: the toggle
+ * behaves exactly as the real one does, so a test can make the mistake the whole design guards
+ * against and see the day disappear.
  */
-function fakeTrek(initial: TrekEntry[] = []) {
-  const byDate = new Map<string, TrekEntry>();
-  for (const entry of initial) byDate.set(entry.date, entry);
-  let nextId = initial.length + 1;
-  const toggles: TogglePlanStep[] = [];
-  let failNext = 0;
-  let reads = 0;
+const pass = (trek: Trek, calls: CalendarCalls = servedCalendar(trek.fetch)) =>
+  syncTrekNow(ctx, { calls, years: [YEAR] });
 
-  const client: TrekClient = {
-    async getEntries(): Promise<TrekEntry[]> {
-      reads += 1;
-      return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
-    },
-    async getStats(): Promise<TrekYearStats | null> {
-      return null;
-    },
-    async toggleEntry(step: TogglePlanStep) {
-      toggles.push(step);
-      if (failNext > 0) {
-        failNext -= 1;
-        return { date: step.date, op: step.op, outcome: "failed" as const, action: null, error: "boom" };
-      }
-      const has = byDate.get(step.date);
-      // The real semantics, verbatim: same pair removes, different pair updates, absent inserts.
-      if (has === undefined) {
-        byDate.set(step.date, {
-          id: (nextId += 1),
-          userId: null,
-          date: step.date,
-          note: "",
-          fraction: step.fraction,
-          kind: step.kind,
-        });
-        return { date: step.date, op: step.op, outcome: "applied" as const, action: "added" as const };
-      }
-      if (has.fraction === step.fraction && has.kind === step.kind) {
-        byDate.delete(step.date);
-        return { date: step.date, op: step.op, outcome: "applied" as const, action: "removed" as const };
-      }
-      byDate.set(step.date, { ...has, fraction: step.fraction, kind: step.kind });
-      return { date: step.date, op: step.op, outcome: "applied" as const, action: "updated" as const };
-    },
-  };
-
-  return {
-    client,
-    toggles,
-    get dates() {
-      return [...byDate.keys()].sort();
-    },
-    entryOn: (date: string) => byDate.get(date) ?? null,
-    failNextToggles(count: number) {
-      failNext = count;
-    },
-    get reads() {
-      return reads;
-    },
-  };
-}
-
-const pass = (trek: ReturnType<typeof fakeTrek>) => syncTrekNow(ctx, { client: trek.client, years: [YEAR] });
+/** The dates Trek holds for the person now. */
+const dates = (trek: Trek) => trek.held().map((one) => one.split(" ")[0]);
 
 /** The id of this user's Trek connection. */
 async function connectionId(): Promise<string> {
@@ -129,7 +78,7 @@ describe("a pass", () => {
 
     const result = await pass(trek);
     expect(result?.counts.applied).toBe(1);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
 
     const after = await rowOn(TUE);
     expect(after).toMatchObject({ pending: "none", trekFraction: "1.0", trekKind: "vacation" });
@@ -148,11 +97,11 @@ describe("a pass", () => {
     expect(trek.toggles).toHaveLength(togglesAfterFirst);
     expect(second?.counts.applied).toBe(0);
     expect(second?.counts.unchanged).toBe(1);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
 
     // And a third, for good measure.
     await pass(trek);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
   });
 
   it("removes a day by sending back the pair Trek was observed holding", async () => {
@@ -164,7 +113,7 @@ describe("a pass", () => {
     expect(await deleteLeaveDay(ctx, day.id)).toBe("pending");
     await pass(trek);
 
-    expect(trek.dates).toEqual([]);
+    expect(dates(trek)).toEqual([]);
     // Only once Trek has really let go does the row go.
     expect(await rowOn(TUE)).toBeNull();
     expect(await pendingCount(ctx)).toBe(0);
@@ -181,7 +130,7 @@ describe("a pass", () => {
     // Nothing is pending any more, and the second pass must not recreate the day by toggling it.
     await pass(trek);
     expect(trek.toggles).toHaveLength(togglesAfter);
-    expect(trek.dates).toEqual([]);
+    expect(dates(trek)).toEqual([]);
   });
 
   it("changes a day's fraction with an update, not a remove-and-add", async () => {
@@ -192,7 +141,7 @@ describe("a pass", () => {
     await pass(trek);
 
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 0.5 });
-    expect(trek.toggles.at(-1)?.op).toBe("update");
+    expect(trek.toggles.at(-1)?.action).toBe("updated");
     expect(await rowOn(TUE)).toMatchObject({ pending: "none", trekFraction: "0.5" });
   });
 
@@ -203,7 +152,7 @@ describe("a pass", () => {
 
     const first = await pass(trek);
     expect(first?.counts.failed).toBe(1);
-    expect(trek.dates).toEqual([]);
+    expect(dates(trek)).toEqual([]);
     // Still ours to send: the row did not quietly become "done".
     expect(await rowOn(TUE)).toMatchObject({ pending: "upsert" });
     expect(await pendingCount(ctx)).toBe(1);
@@ -214,7 +163,7 @@ describe("a pass", () => {
 
     const second = await pass(trek);
     expect(second?.counts.applied).toBe(1);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
     expect(await rowOn(TUE)).toMatchObject({ pending: "none" });
   });
 
@@ -231,18 +180,20 @@ describe("a pass", () => {
     expect(result?.counts.adopted).toBe(0);
     // The row is still ours, still asking to go, and Trek still has the day.
     expect(await rowOn(TUE)).toMatchObject({ pending: "delete" });
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
     // And no second row was invented beside it.
     expect(await listLeaveDays(ctx, WINDOW)).toHaveLength(1);
 
     // Next pass settles it, as it should.
     await pass(trek);
-    expect(trek.dates).toEqual([]);
+    expect(dates(trek)).toEqual([]);
     expect(await rowOn(TUE)).toBeNull();
   });
 
   it("adopts a day Trek has that we do not", async () => {
-    const trek = fakeTrek([{ id: 1, userId: null, date: WED, note: "", fraction: 1, kind: "vacation" }]);
+    const trek = fakeTrek({
+      entries: [{ id: 1, user_id: null, date: WED, note: "", fraction: 1, kind: "vacation" }],
+    });
     const result = await pass(trek);
 
     expect(result?.counts.adopted).toBe(1);
@@ -258,10 +209,22 @@ describe("a pass", () => {
     expect(trek.toggles).toHaveLength(0);
   });
 
+  it("marks a day Trek does not take as refused, and keeps it owed", async () => {
+    const trek = fakeTrek({ weekend: [TUE] });
+    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+
+    const result = await pass(trek);
+    expect(result?.counts).toMatchObject({ refused: 1, applied: 0, failed: 0 });
+    expect(await rowOn(TUE)).toMatchObject({ pending: "upsert", externalState: "refused" });
+    expect((await listRuns(ctx, { limit: 1 }))[0]).toMatchObject({ state: "success" });
+  });
+
   it("does not rewrite a day we classify differently — it reports it", async () => {
     // We hold the day as sick leave, which never goes to Trek; Trek shows a day on the same date.
     await saveLeaveDay(ctx, { from: WED, kind: "sick", fraction: 1 });
-    const trek = fakeTrek([{ id: 1, userId: null, date: WED, note: "", fraction: 1, kind: "comp" }]);
+    const trek = fakeTrek({
+      entries: [{ id: 1, user_id: null, date: WED, note: "", fraction: 1, kind: "comp" }],
+    });
 
     const result = await pass(trek);
     expect(result?.conflicts).toContain(WED);
@@ -289,7 +252,7 @@ describe("a pass", () => {
 
     // And the day survives the next pass, exactly as a vacation day does.
     await pass(trek);
-    expect(trek.dates).toEqual([WED]);
+    expect(dates(trek)).toEqual([WED]);
   });
 
   it("never names a kind Trek does not know", async () => {
@@ -338,7 +301,7 @@ describe("a pass", () => {
     // And nothing is sent a second time: a toggle on an agreed day would delete it.
     await pass(trek);
     expect(trek.toggles).toHaveLength(1);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
   });
 
   it("shrinks the day upstream when one of its two halves goes, rather than removing it", async () => {
@@ -352,7 +315,7 @@ describe("a pass", () => {
 
     // Trek still holds the date, now for half a day, and the deleted row is really gone.
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 0.5, kind: "vacation" });
-    expect(trek.toggles.at(-1)?.op).toBe("update");
+    expect(trek.toggles.at(-1)?.action).toBe("updated");
     const rows = await listLeaveDays(ctx, WINDOW);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ kind: "vacation", pending: "none", trekFraction: "0.5" });
@@ -361,41 +324,16 @@ describe("a pass", () => {
 });
 
 describe("Trek's own figures (plan §3.6.4)", () => {
-  const stats = {
-    year: YEAR,
-    personName: "Test Person",
-    vacationDays: 26,
-    carriedOver: 3,
-    totalAvailable: 29,
-    used: 11,
-    remaining: 18,
-    compUsed: 1,
-    windowStart: `${YEAR}-01-01`,
-    windowEnd: `${YEAR}-12-31`,
-  };
+  /** The row of `get_vacay_stats`, in Trek's own words. */
+  const stats = { year: YEAR, total_available: 29, used: 11, remaining: 18 };
 
   it("keeps what Trek said, so the screen can show it beside ours", async () => {
-    const trek = fakeTrek();
-    const withStats: TrekClient = {
-      ...trek.client,
-      async getStats() {
-        return stats;
-      },
-    };
-
-    await syncTrekNow(ctx, { client: withStats, years: [YEAR] });
+    await pass(fakeTrek({ stats }));
     expect(await trekStatsOf(ctx, YEAR)).toEqual({ used: 11, remaining: 18, totalAvailable: 29 });
   });
 
   it("offers nothing for a year the last pass did not cover", async () => {
-    const trek = fakeTrek();
-    const withStats: TrekClient = {
-      ...trek.client,
-      async getStats() {
-        return stats;
-      },
-    };
-    await syncTrekNow(ctx, { client: withStats, years: [YEAR] });
+    await pass(fakeTrek({ stats }));
     expect(await trekStatsOf(ctx, YEAR - 1)).toBeNull();
   });
 
@@ -406,20 +344,12 @@ describe("Trek's own figures (plan §3.6.4)", () => {
   });
 
   it("asks for the figures once per pass, never in a loop", async () => {
-    const trek = fakeTrek();
-    let asked = 0;
-    const counted: TrekClient = {
-      ...trek.client,
-      async getStats() {
-        asked += 1;
-        return stats;
-      },
-    };
+    const trek = fakeTrek({ stats });
     await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
     await saveLeaveDay(ctx, { from: WED, kind: "vacation", fraction: 1 });
-    await syncTrekNow(ctx, { client: counted, years: [YEAR] });
+    await pass(trek);
     // Reading them persists carry-over upstream, so twice is once too many.
-    expect(asked).toBe(1);
+    expect(trek.calls.filter((call) => call.tool === "get_vacay_stats")).toHaveLength(1);
   });
 });
 
@@ -447,10 +377,21 @@ describe("the pass and the connection", () => {
     expect(await pendingCount(ctx)).toBe(1);
   });
 
+  it("marks the connection revoked when Trek refuses the machine client", async () => {
+    const refusing: typeof fetch = async (input, init) =>
+      String(input).endsWith("/oauth/token")
+        ? new Response('{"error":"invalid_client"}', { status: 401 })
+        : fakeTrek().fetch(input, init);
+    await expect(pass(fakeTrek(), servedCalendar(refusing))).rejects.toMatchObject({ code: "auth" });
+    const [connection] = await listConnections(ctx);
+    expect(connection).toMatchObject({ state: "revoked", errorCode: "auth" });
+    expect((await listRuns(ctx, { limit: 1 }))[0]).toMatchObject({ state: "failed", errorCode: "auth" });
+  });
+
   it("does nothing, and writes nothing, for a user with no Trek link", async () => {
     const other = await newContext();
     const trek = fakeTrek();
-    expect(await syncTrekNow(other, { client: trek.client, years: [YEAR] })).toBeNull();
+    expect(await syncTrekNow(other, { calls: servedCalendar(trek.fetch), years: [YEAR] })).toBeNull();
     expect(await listRuns(other, { limit: 5 })).toEqual([]);
   });
 
@@ -459,24 +400,63 @@ describe("the pass and the connection", () => {
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    const slow = fakeTrek();
-    const blocking: TrekClient = {
-      ...slow.client,
-      async getEntries() {
-        await held;
-        return [];
-      },
-    };
+    const slow = fakeTrek({}, { hold: held });
 
-    const first = syncTrekNow(ctx, { client: blocking, years: [YEAR] });
+    const first = pass(slow);
     // Give the first pass time to take the lock before the second one asks for it.
     await vi.waitFor(async () => {
       expect((await listRuns(ctx, { limit: 1 })).length).toBe(1);
     });
-    await expect(syncTrekNow(ctx, { client: slow.client, years: [YEAR] })).rejects.toSatisfy(isTrekBusy);
+    await expect(pass(fakeTrek())).rejects.toSatisfy(isTrekBusy);
 
     release?.();
     await first;
+  });
+});
+
+/**
+ * A calendar that takes no writes (decision D5): the days written here stay pending ("Da inviare"),
+ * the engine stops trying to write, and the connection says why.
+ */
+describe("a Trek that may only read", () => {
+  const spied = (trek: Trek) => {
+    const calls = servedCalendar(trek.fetch);
+    return { ...calls, write: vi.fn(calls.write) };
+  };
+
+  it("keeps the day pending, sends Trek nothing, and records read_only on the run and the connection", async () => {
+    const trek = fakeTrek({}, { scope: "vacay:read" });
+    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+
+    const result = await pass(trek, spied(trek));
+    expect(trek.toggles).toHaveLength(0);
+    expect(result?.counts).toMatchObject({ applied: 0, failed: 0, readOnly: 1, unsettled: 1 });
+    expect(await rowOn(TUE)).toMatchObject({ pending: "upsert", trekKind: null });
+    expect((await listRuns(ctx, { limit: 1 }))[0]).toMatchObject({ state: "failed", errorCode: "read_only" });
+    const [connection] = await listConnections(ctx);
+    expect(connection).toMatchObject({ state: "error", errorCode: "read_only" });
+  });
+
+  it("does not try to write again while the connection says read_only, and still adopts Trek's days", async () => {
+    await markConnection(ctx, await connectionId(), "error", "read_only");
+    const trek = fakeTrek({
+      entries: [{ id: 1, user_id: 7, date: WED, note: null, fraction: 1, kind: "vacation" }],
+    });
+    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const calls = spied(trek);
+
+    const result = await pass(trek, calls);
+    expect(calls.write).not.toHaveBeenCalled();
+    expect(result?.counts).toMatchObject({ adopted: 1, readOnly: 1 });
+    expect(await pendingCount(ctx)).toBe(1);
+  });
+
+  it("is a good pass when nothing is waiting, and the connection leaves read_only", async () => {
+    await markConnection(ctx, await connectionId(), "error", "read_only");
+    await pass(fakeTrek({}, { scope: "vacay:read" }));
+    expect((await listRuns(ctx, { limit: 1 }))[0]).toMatchObject({ state: "success" });
+    const [connection] = await listConnections(ctx);
+    expect(connection).toMatchObject({ state: "active", errorCode: null });
   });
 });
 
@@ -491,7 +471,7 @@ describe("a pass after the leave panel", () => {
 
     const result = await pass(trek);
     expect(result?.counts.applied).toBe(3);
-    expect(trek.dates).toEqual([TUE, WED, THU]);
+    expect(dates(trek)).toEqual([TUE, WED, THU]);
     expect(await pendingCount(ctx)).toBe(0);
     // And a second pass has nothing left to say.
     await pass(trek);
@@ -506,7 +486,7 @@ describe("a pass after the leave panel", () => {
 
     await saveLeaveRange(ctx, { from: TUE, to: WED, kind: "vacation", fraction: 1 });
     await pass(trek);
-    expect(trek.dates).toEqual([TUE, WED]);
+    expect(dates(trek)).toEqual([TUE, WED]);
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 1, kind: "vacation" });
     // The replaced ROL row is gone for good, and nothing is left pending.
     expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.on, row.kind, row.pending])).toEqual([
@@ -519,11 +499,11 @@ describe("a pass after the leave panel", () => {
     const trek = fakeTrek();
     await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
     await pass(trek);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
 
     await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 1 });
     await pass(trek);
-    expect(trek.dates).toEqual([]);
+    expect(dates(trek)).toEqual([]);
     expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.pending])).toEqual([
       ["other", "none"],
     ]);
@@ -543,7 +523,7 @@ describe("a pass after the leave panel", () => {
     // The pass reads first, finds Trek holding exactly what is wanted, and sends nothing.
     await pass(trek);
     expect(trek.toggles).toHaveLength(sent);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
     expect(await rowOn(TUE)).toMatchObject({ id: day.id, pending: "none", trekFraction: "1.0" });
   });
 
@@ -553,7 +533,7 @@ describe("a pass after the leave panel", () => {
     await pass(trek);
     const removed = await removeLeave(ctx, { id: day.id });
     await pass(trek);
-    expect(trek.dates).toEqual([]);
+    expect(dates(trek)).toEqual([]);
     expect(await rowOn(TUE)).toBeNull();
 
     await restoreLeave(ctx, removed.undo);
@@ -569,7 +549,7 @@ describe("a pass after the leave panel", () => {
 
     await pass(trek);
     expect(trek.toggles).toHaveLength(0);
-    expect(trek.dates).toEqual([]);
+    expect(dates(trek)).toEqual([]);
     expect(await listLeaveDays(ctx, WINDOW)).toEqual([]);
   });
 
@@ -584,7 +564,7 @@ describe("a pass after the leave panel", () => {
     await restoreLeave(ctx, result.undo);
     await pass(trek);
     expect(trek.toggles).toHaveLength(sent);
-    expect(trek.dates).toEqual([TUE]);
+    expect(dates(trek)).toEqual([TUE]);
     expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.pending])).toEqual([
       ["rol", "none"],
     ]);

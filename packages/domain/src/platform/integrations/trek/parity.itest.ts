@@ -2,12 +2,16 @@
 // plugin"): two whole passes of the engine on the year of `test/fixtures/trek/`, and every row they
 // leave, the runs, the connection, the figures and the calls Trek received, held to
 // `parity-golden.json`. The golden was written by the engine on its own Trek client, before the
-// engine spoke to Trek through the plugin.
+// engine spoke to Trek through the plugin; the same passes, through the real plugin served
+// in-process and reached by the port as the application wires it, leave exactly it — and the
+// columns of contract 2 carry the same observed pair as the `trek_*` ones on every row.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { fakeTrek } from "../../../../../../test/fixtures/trek/fake-trek";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { calendarCalls, openCalendar } from "@plugin-host/calendar";
+import { fakeTrek, fixtureYear } from "../../../../../../test/fixtures/trek/fake-trek";
+import { PLUGIN, stubTrek, toPlugin } from "../../../../../../test/fixtures/trek/served-plugin";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { newContext } from "../../../../../../test/fixtures";
 import { deleteLeaveDay, markSynced, saveLeaveDay } from "../../../modules/timeoff/service";
@@ -15,6 +19,7 @@ import type { Ctx } from "../../context";
 import { getDb } from "../../db/client";
 import { TREK_PROVIDER } from "../rules";
 import { saveConnection } from "../service";
+import { wireCalendar } from "./calls";
 import { syncTrekNow, trekStatsOf } from "./sync";
 
 const GOLDEN = join(process.cwd(), "test/fixtures/trek/parity-golden.json");
@@ -68,26 +73,34 @@ async function snapshot(ctx: Ctx) {
 }
 
 describe("a leave pass on the fixtures", () => {
+  // The port as `wireDomain` wires it, with the configured plugin pointing at the served one.
+  beforeAll(() => {
+    wireCalendar({
+      open: (pluginId, credentials) => calendarCalls({ ...PLUGIN, id: pluginId }, credentials, toPlugin),
+    });
+  });
   beforeEach(resetDatabase);
-  afterAll(closeDatabase);
+  afterAll(async () => {
+    wireCalendar({ open: openCalendar });
+    await closeDatabase();
+  });
 
   it("leaves exactly the rows of the golden", async () => {
     const ctx = await newContext();
+    const trek = fakeTrek(fixtureYear());
     await saveConnection(ctx, {
       provider: TREK_PROVIDER,
       credentials: {
-        baseUrl: "https://trek.example",
+        baseUrl: stubTrek(trek.fetch),
         clientId: "trekci_fixture",
         clientSecret: "trekcs_fixture",
       },
     });
     await seed(ctx);
-    const trek = fakeTrek();
-    const clientOptions = { fetch: trek.fetch, sleep: async () => undefined, jitter: () => 0 };
 
     const passes = [];
     for (const now of [NOW, LATER]) {
-      const result = await syncTrekNow(ctx, { now, clientOptions });
+      const result = await syncTrekNow(ctx, { now });
       passes.push(
         result && {
           years: result.years,
@@ -105,5 +118,18 @@ describe("a leave pass on the fixtures", () => {
       throw new Error(`no golden: written to ${GOLDEN}, check it and commit it`);
     }
     expect(JSON.parse(text)).toEqual(JSON.parse(readFileSync(GOLDEN, "utf8")));
+
+    // Dual write (P2): every row's pair of contract 2 is its `trek_*` pair, and a day the calendar
+    // does not take says so.
+    const pairs = await rows(
+      `select "on"::text, trek_kind, external_kind, trek_fraction::text, external_fraction::text,
+        external_state from leave_days where user_id = '${ctx.userId}' order by "on", kind`,
+    );
+    for (const row of pairs) {
+      expect([row.external_kind, row.external_fraction]).toEqual([row.trek_kind, row.trek_fraction]);
+      expect(row.external_state).toBe(
+        row.on === "2026-06-19" ? "refused" : row.trek_kind === null ? null : "synced",
+      );
+    }
   });
 });

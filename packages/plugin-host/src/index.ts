@@ -22,3 +22,4 @@ export { pluginPriceSource } from "./prices";
 export { chooseAccounts, exposedAccounts, previewBankAccount, readBank, runBankPass, tieBack } from "./sync";
 export type { AccountDecision } from "./sync";
 export { openSource } from "./source";
+export { openCalendar } from "./calendar";

@@ -66,3 +66,9 @@ export {
   leaveWriteRequestSchema,
 } from "./calls-calendar";
 export type { LeaveDay, LeaveOutcome, LeaveWriteResponse } from "./calls-calendar";
+export {
+  leaveFiguresResponseSchema,
+  leaveReadResponseSchema,
+  leaveWriteResponseSchema,
+} from "./calls-calendar";
+export type { LeaveFigures } from "./calls-calendar";

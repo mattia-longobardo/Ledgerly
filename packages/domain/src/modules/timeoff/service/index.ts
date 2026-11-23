@@ -28,6 +28,7 @@ export {
   closePendingDeletes,
   datesHeld,
   forgetPendingDays,
+  markRefused,
   markSynced,
   pendingCount,
   pendingForTrek,

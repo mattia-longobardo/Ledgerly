@@ -1272,7 +1272,8 @@
   "packages/domain/src/platform/integrations/trek/index.ts": [
     "calendarCard",
     "leaveCalendar",
-    "trekStatsOf"
+    "trekStatsOf",
+    "wireCalendar"
   ],
   "packages/domain/src/platform/integrations/wallet/index.ts": [
     "BACKFILL_CHOICES",
@@ -1401,6 +1402,7 @@
     "EditResponse",
     "InstitutionsResponse",
     "LeaveDay",
+    "LeaveFigures",
     "LeaveOutcome",
     "LeaveWriteResponse",
     "PLUGIN_ERROR_STATUS",
@@ -1438,8 +1440,11 @@
     "institutionsRequestSchema",
     "institutionsResponseSchema",
     "leaveFiguresRequestSchema",
+    "leaveFiguresResponseSchema",
     "leaveReadRequestSchema",
+    "leaveReadResponseSchema",
     "leaveWriteRequestSchema",
+    "leaveWriteResponseSchema",
     "manifestSchema",
     "pricesRequestSchema",
     "pricesResponseSchema",
@@ -1479,6 +1484,7 @@
     "forgetPlugin",
     "keepManifestsFresh",
     "listInstitutions",
+    "openCalendar",
     "openSource",
     "pluginPriceSource",
     "prepareAccessClosing",

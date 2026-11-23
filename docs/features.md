@@ -273,7 +273,8 @@ each number comes from.
   then subtracts the days booked here. The screen says which payslip it used.
 - **Trek** is the leave calendar that Ledgerly syncs with. Ledgerly never deletes a day in Trek by
   mistake: a day it does not know is imported, and only a removal you make in Ledgerly removes a
-  day.
+  day. With a Trek client that may only read, the days booked here stay "to be sent" and the
+  connection says so, until the client may also write.
 
 ## Settings
 

@@ -76,7 +76,7 @@ async function takeAway(
   row: LeaveDay,
 ): Promise<"deleted" | "pending"> {
   const mine = and(eq(leaveDays.id, row.id), userScoped(ctx).owns(leaveDays));
-  if (row.origin !== "trek" && row.syncedAt === null) {
+  if (row.origin === "manual" && row.syncedAt === null) {
     await tx.delete(leaveDays).where(mine);
     return "deleted";
   }

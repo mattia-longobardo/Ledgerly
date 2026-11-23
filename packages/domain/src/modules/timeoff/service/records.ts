@@ -195,7 +195,7 @@ export async function deleteLeaveDay(ctx: Pick<Ctx, "userId">, id: string): Prom
     .where(and(eq(leaveDays.id, id), userScoped(ctx).owns(leaveDays)));
   if (!row) throw new TimeOffError("not_found");
 
-  const knownToTrek = row.origin === "trek" || row.syncedAt !== null;
+  const knownToTrek = row.origin !== "manual" || row.syncedAt !== null;
   if (!knownToTrek) {
     await getDb()
       .delete(leaveDays)

@@ -51,7 +51,8 @@ export type LeaveRow =
       /** Half a day or a whole one, every kind alike (N0). */
       fraction: number;
       note: string | null;
-      origin: "manual" | "trek";
+      /** `trek` until the rename of R5c P3, `external` after it: the API says `external` for both. */
+      origin: "manual" | "trek" | "external";
       status: "taken" | "planned";
       /** What the next Trek pass still owes this row, for the badge that says so. */
       pending: "none" | "upsert" | "delete";

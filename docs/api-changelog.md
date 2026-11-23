@@ -3,6 +3,13 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Time off: a calendar that may only read (R5c)
+
+- `GET /connections` (and every answer that carries a connection's `status`): `status.text` can be
+  `readOnly`, with `value: "action"` and `action: "replaceKey"`: the external calendar of time off
+  takes no writes with the saved key, and the days written in Ledgerly stay to be sent. The
+  connection's `errorCode` is then `read_only`.
+
 ## Unreleased · Investments: what the client asked of the manual portfolio (PERS-591)
 
 - `POST /investments` with `kind: "portfolio"`: `url: ""` is no address (it answered 500), a bare host is

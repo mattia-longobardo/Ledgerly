@@ -1304,7 +1304,8 @@
         "keyInvalid": "La chiave di {provider} non è più valida.",
         "pending": "Hai dato l'accesso, ma non hai ancora scelto i conti.",
         "pausedSchedule": "Aggiornamento automatico spento.",
-        "pausedProvider": "{provider} non è attivo."
+        "pausedProvider": "{provider} non è attivo.",
+        "readOnly": "{provider} permette a Ledgerly solo di leggere: le giornate scritte qui restano da inviare finché la chiave non può anche scrivere."
       },
       "when": {
         "now": "ora",
@@ -1346,6 +1347,7 @@
         "rateLimited": "{name} ha raggiunto il limite di letture automatiche.",
         "providerDown": "{name} non risponde.",
         "invalidData": "{name} ha risposto con dati che Ledgerly non sa leggere. Niente è stato cambiato.",
+        "readOnly": "{provider} permette a Ledgerly solo di leggere: le giornate scritte qui restano da inviare.",
         "busy": "Un aggiornamento è già in corso. Riprova tra poco.",
         "network": "Connessione assente. Controlla la rete e riprova.",
         "unavailable": "Il collegamento non è disponibile ora. Riprova più tardi o avvisa l'amministratore.",

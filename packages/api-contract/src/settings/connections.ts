@@ -109,6 +109,7 @@ const connection = z.object({
       "pending",
       "pausedSchedule",
       "pausedProvider",
+      "readOnly",
     ]),
     action: z.enum(["update", "renew", "replaceKey", "chooseAccounts", "resume", "enable"]).nullable(),
   }),

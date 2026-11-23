@@ -39,7 +39,13 @@ export function asTrekKind(kind: LeaveDayKind): TrekKind {
  * usage month), not daily, and inventing a date for it would make up a fact the payslip does not
  * state (plan F7 §3.6.1). Those appear in the table as month rows, read-only, from their own read.
  */
-export const LEAVE_ORIGINS = ["manual", "trek"] as const;
+export const LEAVE_ORIGINS = ["manual", "trek", "external"] as const;
+
+/**
+ * What the external calendar last said of a row's day (rewrite plan R5c): `synced` once it was
+ * observed holding it, `refused` when it does not take that day. `null`: never told.
+ */
+export const EXTERNAL_STATES = ["synced", "refused"] as const;
 
 /** What the next Trek pass owes this row. `none` means the two agendas agree. */
 export const PENDING_STATES = ["none", "upsert", "delete"] as const;

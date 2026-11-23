@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, date, index, numeric, pgTable, smallint, text, unique, uuid } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
-import { LEAVE_DAY_KINDS, LEAVE_ORIGINS, PENDING_STATES, TREK_KINDS } from "./rules";
+import { EXTERNAL_STATES, LEAVE_DAY_KINDS, LEAVE_ORIGINS, PENDING_STATES, TREK_KINDS } from "./rules";
 import { inList } from "../../platform/db/checks";
 
 /**
@@ -81,6 +81,14 @@ export const leaveDays = pgTable(
     syncedAt: moment("synced_at"),
     trekFraction: numeric("trek_fraction", { precision: 2, scale: 1 }),
     trekKind: text("trek_kind", { enum: TREK_KINDS }),
+    /**
+     * The same observed pair in the words of contract 2 (rewrite plan R5c): written with `trek_*`
+     * on every write, read from a later release, when `trek_*` goes. The kind is the calendar's own
+     * word, an open vocabulary: its check is a format, not a list (rule M13).
+     */
+    externalKind: text("external_kind"),
+    externalFraction: numeric("external_fraction", { precision: 2, scale: 1 }),
+    externalState: text("external_state", { enum: EXTERNAL_STATES }),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
@@ -104,7 +112,15 @@ export const leaveDays = pgTable(
     // gave us or has already been told about (plan F7 §3.2).
     check(
       "leave_days_pending_delete_ck",
-      sql`${table.pending} <> 'delete' or ${table.origin} = 'trek' or ${table.syncedAt} is not null`,
+      sql`${table.pending} <> 'delete' or ${table.origin} in ('trek', 'external') or ${table.syncedAt} is not null`,
+    ),
+    // The pair of contract 2 and its state, in one check: the kind by its format (M13), the
+    // fraction one of the two sizes, the state one of the core's own words.
+    check(
+      "leave_days_external_ck",
+      sql`coalesce(${table.externalKind} ~ '^[a-z][a-z0-9_-]{0,39}$', true)
+        and coalesce(${table.externalFraction} in (0.5, 1.0), true)
+        and coalesce(${table.externalState} in (${sql.raw(inList(EXTERNAL_STATES))}), true)`,
     ),
   ],
 );

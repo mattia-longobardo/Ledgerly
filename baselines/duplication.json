@@ -4,20 +4,20 @@
     "minLines": 6
   },
   "total": {
-    "lines": 109553,
-    "duplicatedLines": 16224,
-    "percent": 14.81,
-    "blocks": 1250
+    "lines": 109003,
+    "duplicatedLines": 16137,
+    "percent": 14.8,
+    "blocks": 1244
   },
   "units": {
     "api": {
-      "lines": 6072,
+      "lines": 6073,
       "duplicatedLines": 1217,
       "percent": 20.04,
       "blocks": 112
     },
     "app": {
-      "lines": 20977,
+      "lines": 20978,
       "duplicatedLines": 2799,
       "percent": 13.34,
       "blocks": 218
@@ -101,9 +101,9 @@
       "blocks": 31
     },
     "modules/timeoff": {
-      "lines": 4251,
+      "lines": 4282,
       "duplicatedLines": 317,
-      "percent": 7.46,
+      "percent": 7.4,
       "blocks": 29
     },
     "modules/transactions": {
@@ -221,9 +221,9 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 2300,
+      "lines": 2304,
       "duplicatedLines": 470,
-      "percent": 20.43,
+      "percent": 20.4,
       "blocks": 38
     },
     "platform/integrations/ccxt": {
@@ -245,16 +245,16 @@
       "blocks": 0
     },
     "platform/integrations/trek": {
-      "lines": 1028,
-      "duplicatedLines": 91,
-      "percent": 8.85,
-      "blocks": 7
+      "lines": 402,
+      "duplicatedLines": 16,
+      "percent": 3.98,
+      "blocks": 2
     },
     "platform/integrations/wallet": {
       "lines": 1633,
-      "duplicatedLines": 28,
-      "percent": 1.71,
-      "blocks": 3
+      "duplicatedLines": 16,
+      "percent": 0.98,
+      "blocks": 2
     },
     "platform/jobs": {
       "lines": 504,
@@ -305,9 +305,9 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 2394,
+      "lines": 2433,
       "duplicatedLines": 220,
-      "percent": 9.19,
+      "percent": 9.04,
       "blocks": 16
     },
     "platform/ranges": {
@@ -873,11 +873,9 @@
     "platform/integrations/service/schedule.ts": 31,
     "platform/integrations/service/sources.ts": 74,
     "platform/integrations/status.ts": 19,
-    "platform/integrations/trek/card.ts": 9,
-    "platform/integrations/trek/client.ts": 63,
-    "platform/integrations/trek/sync.ts": 19,
-    "platform/integrations/wallet/card.ts": 9,
-    "platform/integrations/wallet/client.ts": 9,
+    "platform/integrations/trek/card.ts": 6,
+    "platform/integrations/trek/sync.ts": 10,
+    "platform/integrations/wallet/card.ts": 6,
     "platform/integrations/wallet/sync.ts": 10,
     "platform/jobs/schema.ts": 28,
     "platform/notifications/reads.ts": 34,

@@ -108,6 +108,21 @@ export async function yearsWithPending(ctx: Pick<Ctx, "userId">): Promise<number
   return [...new Set(rows.map((row) => Number(row.on.slice(0, 4))))].sort((a, b) => a - b);
 }
 
+/**
+ * The pair the calendar was observed holding, written twice (rewrite plan R5c, P2): the `trek_*`
+ * columns every read still uses, and the `external_*` ones that replace them in a later release.
+ * Both always carry the same values; an observed pair is a settled one.
+ */
+function observedPair(fraction: string | null, kind: "vacation" | "comp") {
+  return {
+    trekFraction: fraction,
+    trekKind: kind,
+    externalFraction: fraction,
+    externalKind: kind,
+    externalState: "synced" as const,
+  };
+}
+
 /** What a pass observed about one day once it had re-read the year. */
 export interface Observed {
   id: string;
@@ -140,8 +155,10 @@ export async function markSynced(
         .set({
           pending: "none",
           syncedAt: now,
-          trekFraction: one.fraction === null ? null : one.fraction.toFixed(1),
-          trekKind: one.kind as "vacation" | "comp",
+          ...observedPair(
+            one.fraction === null ? null : one.fraction.toFixed(1),
+            one.kind as "vacation" | "comp",
+          ),
           updatedAt: now,
         })
         .where(and(eq(leaveDays.id, one.id), userScoped(ctx).owns(leaveDays)));
@@ -150,6 +167,18 @@ export async function markSynced(
       await tx.delete(leaveDays).where(and(inArray(leaveDays.id, gone), userScoped(ctx).owns(leaveDays)));
     }
   });
+}
+
+/**
+ * Marks the days the calendar does not take (a weekend, say): they stay owed, exactly as they were,
+ * and say they were refused. The observed pair is not touched — nothing landed.
+ */
+export async function markRefused(ctx: Pick<Ctx, "userId">, ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await getDb()
+    .update(leaveDays)
+    .set({ externalState: "refused" })
+    .where(and(inArray(leaveDays.id, [...ids]), userScoped(ctx).owns(leaveDays)));
 }
 
 /**
@@ -175,8 +204,7 @@ export async function recordFromTrek(
         origin: "trek" as const,
         pending: "none" as const,
         syncedAt: now,
-        trekFraction: day.fraction.toFixed(1),
-        trekKind: day.kind,
+        ...observedPair(day.fraction.toFixed(1), day.kind),
       }),
     )
     .onConflictDoUpdate({
@@ -185,8 +213,7 @@ export async function recordFromTrek(
         fraction: day.fraction.toFixed(1),
         pending: "none",
         syncedAt: now,
-        trekFraction: day.fraction.toFixed(1),
-        trekKind: day.kind,
+        ...observedPair(day.fraction.toFixed(1), day.kind),
         updatedAt: now,
       },
     })

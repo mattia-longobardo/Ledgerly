@@ -1,28 +1,26 @@
 /**
- * One pass of the Trek leave sync (spec §9.2, plan F7 §3.4.7): **write, then re-read, then
- * reconcile**.
- *
- *   1. read the year, to know what Trek holds *now*;
- *   2. `planToggles` — pure — reduces that to the fewest toggles;
- *   3. each toggle goes out once, never blind: a send that failed or whose outcome is unknown
- *      leaves `pending` exactly as it was, and the next pass tries again **after reading again**;
- *   4. read the year once more and reconcile: what Trek has and we do not becomes a row of ours,
- *      what we have and Trek does not stays `pending`;
- *   5. `get_vacay_stats` once, and only to show beside our own figures — reading it persists
- *      carry-over upstream, so it is not a read to make in a loop.
+ * One pass of the leave sync with the external calendar (spec §9.2, plan F7 §3.4.7), through the
+ * plugin `trek` (rewrite plan R5c): **write, then re-read, then reconcile**, one year at a time,
+ * then the calendar's own figures once — reading them persists carry-over upstream. The plugin
+ * speaks to the calendar; everything decided here — the desired days, what settles, what is
+ * adopted, what is a conflict, the runs and the lock — is the core's.
  *
  * A pass whose read worked but whose send did not is recorded `failed` and sends no mail: at an
- * hourly cadence that would be noise, and the staleness badge in Settings › Integrations is the
- * right signal (plan F7 §3.4.11). A user with no Trek connection writes no `sync_runs` row at all.
+ * hourly cadence that would be noise, and the staleness badge is the right signal (§3.4.11). A
+ * calendar that takes no writes (decision D5) is read and never written: what Ledgerly wrote stays
+ * pending ("Da inviare"), and the run says `read_only` so the connection shows it. A user with no
+ * Trek connection writes no `sync_runs` row at all.
  */
-import { asTrekKind } from "../../../modules/timeoff/rules";
+import type { LeaveDay, LeaveFigures, LeaveOutcome } from "@ledgerly/plugin-contract";
+import { asTrekKind, TREK_KINDS } from "../../../modules/timeoff/rules";
 import {
   datesHeld,
+  markRefused,
   markSynced,
   recordFromTrek,
   trekDaysOf,
-  yearWindow,
   yearsWithPending,
+  yearWindow,
   type Observed,
   type TrekDay,
 } from "../../../modules/timeoff/service";
@@ -35,29 +33,18 @@ import {
   finishRun,
   listConnections,
   markConnection,
-  readCredentials,
   readSyncJob,
   recordRun,
   saveSyncJob,
   skipRun,
   type Connection,
 } from "../service";
-import {
-  createTrekClient,
-  isTokenRejected,
-  planToggles,
-  type DesiredDay,
-  type TrekClient,
-  type TrekConfig,
-  type TrekClientOptions,
-  type TrekEntry,
-  type TrekFraction,
-  type TrekYearStats,
-  type ToggleResult,
-} from "./client";
+import { type CalendarCalls, isClientRefused, trekCalls } from "./calls";
 
 const SYNC_LOCK_PREFIX = "trek-sync:";
 const REVOKED_REASON = "the Trek token has been rejected; reconnect Trek in Settings › Integrations";
+/** The code of a pass whose days could not be sent because the calendar takes no writes. */
+const READ_ONLY = "read_only";
 
 /**
  * A pass that did not happen because one was already running for this user. Not a failure and not
@@ -82,51 +69,202 @@ interface TrekSyncResult {
   /** The years the pass covered. */
   years: number[];
   counts: Record<string, number>;
-  /** Trek's own figures for the current year, as a cross-check; never our numbers (§3.6.4). */
-  stats: TrekYearStats | null;
+  /** The calendar's own figures for the last year covered, as a cross-check; never our numbers. */
+  figures: LeaveFigures | null;
   /** `"revoked"` when nothing was attempted because the token is already refused. */
   refused: "revoked" | null;
-  /**
-   * Dates Trek holds a day on that we keep under a kind which never goes upstream — a `sick` day
-   * against a Trek `vacation`, say. Reported, never resolved by guessing: our classification
-   * wins, so the day is neither adopted nor overwritten (plan F7 §3.6.3).
-   */
+  /** Dates the calendar holds a day on that we keep under a kind which never goes there (§3.6.3). */
   conflicts: CivilDate[];
 }
 
 interface TrekSyncOptions {
   now?: Date;
-  /** Injected in tests, so a pass can run against the fake MCP server. */
-  client?: TrekClient;
-  clientOptions?: TrekClientOptions;
+  /** Injected in tests, so a pass can run against a plugin of the test. */
+  calls?: CalendarCalls;
   /** Override the years covered; by default this year plus any year with something pending. */
   years?: readonly number[];
 }
 
-/** Trek's own figures, flattened into the string map `sync_jobs.cursor` stores. */
-function statsAsCursor(stats: TrekYearStats, year: number): Record<string, string> {
+/* One year: which days the calendar should hold, one exchange, and what is true afterwards */
+
+type Fraction = 0.5 | 1;
+type CalendarKind = (typeof TREK_KINDS)[number];
+
+interface DesiredDay {
+  date: CivilDate;
+  fraction: Fraction;
+  kind: CalendarKind;
+}
+
+/** What one year's exchange produced. */
+interface YearOutcome {
+  /** What became of each day the write named; empty when nothing was written. */
+  outcomes: LeaveOutcome[];
+  /** The days asked to go: an `unchanged` among them was already absent. */
+  removals: CivilDate[];
+  adopted: number;
+  settled: number;
+  /**
+   * Days where our state and the calendar's still do not agree once the pass is over. A day we had
+   * settled and the calendar has since lost counts here too: the next pass has work to do on it.
+   */
+  unsettled: number;
+  conflicts: CivilDate[];
+}
+
+/** What one row is worth: half a day or a whole one, the only two a day off comes in (N0). */
+function dayShare(day: TrekDay): Fraction {
+  return day.fraction === 0.5 ? 0.5 : 1;
+}
+
+/**
+ * The desired state of one year, and what must be taken back.
+ *
+ * The calendar keeps one row per **date**; we keep one per date *and kind*. The two are reconciled
+ * by **adding up**: half a day of ferie and half a day of ROL is one whole day away from the
+ * office. The sum is capped at a whole day because that is the most a calendar row can hold.
+ *
+ * A date is a `removal` only once **nothing** of ours is left on it: while one half is still
+ * wanted, the calendar keeps its row and the desired day simply shrinks it. The list stays explicit
+ * and is never "whatever is missing from `desired`" (plan F7 §3.6.8).
+ */
+export function splitForTrek(days: readonly TrekDay[]): { desired: DesiredDay[]; removals: CivilDate[] } {
+  const perDate = new Map<CivilDate, TrekDay[]>();
+  for (const day of days) {
+    if (day.pending === "delete") continue;
+    perDate.set(day.on, [...(perDate.get(day.on) ?? []), day]);
+  }
+  const desired: DesiredDay[] = [];
+  for (const [date, group] of perDate) {
+    const share = group.reduce((sum, day) => sum + dayShare(day), 0);
+    // Every kind that reaches the calendar lands on the same one (N4): the first row answers.
+    desired.push({ date, fraction: share > 0.5 ? 1 : 0.5, kind: asTrekKind(group[0].kind) });
+  }
+  const removals = days
+    .filter((day) => day.pending === "delete" && !perDate.has(day.on))
+    .map((day) => day.on);
   return {
-    year: String(year),
-    vacationDays: String(stats.vacationDays),
-    carriedOver: String(stats.carriedOver),
-    totalAvailable: String(stats.totalAvailable),
-    used: String(stats.used),
-    remaining: String(stats.remaining),
-    compUsed: String(stats.compUsed),
-    windowStart: stats.windowStart,
-    windowEnd: stats.windowEnd,
+    desired: desired.sort((left, right) => (left.date < right.date ? -1 : 1)),
+    removals: [...new Set(removals)].sort(),
   };
 }
 
-/** What a pass last heard Trek say about a year, or `null` if it has never been told. */
-export async function trekStatsOf(
-  ctx: Pick<Ctx, "userId">,
+function isCalendarKind(kind: string | null): kind is CalendarKind {
+  return TREK_KINDS.some((one) => one === kind);
+}
+
+/**
+ * Which rows the calendar now holds as we meant them, and which still differ. Everything is decided
+ * from the year read after the writes: a write that said "done" and one whose answer was lost are
+ * treated the same way, by looking.
+ */
+function settle(
+  days: readonly TrekDay[],
+  wanted: ReadonlyMap<CivilDate, DesiredDay>,
+  after: readonly LeaveDay[],
+) {
+  const upstream = new Map(after.map((entry) => [entry.day, entry]));
+  const observed: Observed[] = [];
+  let unsettled = 0;
+  for (const day of days) {
+    const entry = upstream.get(day.on);
+    const want = wanted.get(day.on);
+    // Compared against the **desired** day and not the row's own kind and fraction: a date
+    // carrying two halves of ours is one row of 1.0 upstream, and that sighting settles both.
+    const agreed = want !== undefined && entry?.kind === want.kind && entry.fraction === want.fraction;
+    if (day.pending === "delete") {
+      // The row may go once the calendar stopped counting it: the date is gone upstream, or what is
+      // left of it is exactly the rest of the day, which this row is no longer part of.
+      if (want === undefined ? entry === undefined : agreed)
+        observed.push({ id: day.id, fraction: null, kind: null });
+      else unsettled += 1;
+    } else if (agreed) {
+      observed.push({ id: day.id, fraction: want.fraction, kind: want.kind });
+    } else {
+      unsettled += 1;
+    }
+  }
+  return { observed, unsettled };
+}
+
+interface AdoptInput {
+  after: readonly LeaveDay[];
+  wanted: ReadonlyMap<CivilDate, DesiredDay>;
+  removals: readonly CivilDate[];
+  now: Date;
+}
+
+/**
+ * What the calendar holds and we do not becomes a row of ours. A date we already hold under another
+ * kind is **not** adopted: our classification wins, and the date is reported (plan F7 §3.6.3).
+ */
+async function adopt(ctx: Pick<Ctx, "userId">, year: number, input: AdoptInput) {
+  const held = await datesHeld(ctx, yearWindow(year));
+  const asked = new Set(input.removals);
+  const conflicts = new Set<CivilDate>();
+  let adopted = 0;
+  for (const entry of input.after) {
+    // A day we asked to drop and that is still there is a removal that did not land, already
+    // counted as unsettled: adopting it would undo the person's own deletion at the next pass.
+    if (input.wanted.has(entry.day) || asked.has(entry.day)) continue;
+    if (held.has(entry.day)) conflicts.add(entry.day);
+    // A kind this app cannot hold a day under is left upstream rather than guessed.
+    else if (isCalendarKind(entry.kind)) {
+      await recordFromTrek(ctx, { on: entry.day, kind: entry.kind, fraction: entry.fraction }, input.now);
+      adopted += 1;
+    }
+  }
+  return { adopted, conflicts: [...conflicts].sort() };
+}
+
+/** One exchange: a write when there is something to say and the calendar takes writes, a read otherwise. */
+async function exchange(
+  calls: CalendarCalls,
   year: number,
-): Promise<{ used: number; remaining: number; totalAvailable: number } | null> {
+  split: ReturnType<typeof splitForTrek>,
+  readOnly: boolean,
+) {
+  if (readOnly || (split.desired.length === 0 && split.removals.length === 0)) {
+    return { outcomes: [], days: await calls.read(year) };
+  }
+  const desired = split.desired.map((one) => ({ day: one.date, fraction: one.fraction, kind: one.kind }));
+  return calls.write({ year, desired, remove: split.removals });
+}
+
+/** One year: the desired days, one exchange, and what is now true written down. */
+async function passYear(
+  ctx: Pick<Ctx, "userId">,
+  calls: CalendarCalls,
+  year: number,
+  options: { now: Date; readOnly: boolean },
+): Promise<YearOutcome> {
+  const days = await trekDaysOf(ctx, yearWindow(year));
+  const split = splitForTrek(days);
+  const wanted = new Map(split.desired.map((one) => [one.date, one]));
+  const { outcomes, days: after } = await exchange(calls, year, split, options.readOnly);
+
+  const { observed, unsettled } = settle(days, wanted, after);
+  await markSynced(ctx, observed, options.now);
+  // A day the calendar does not take (a weekend) stays owed, and says it was refused.
+  const notBookable = new Set(outcomes.filter((one) => one.reason === "not_bookable").map((one) => one.day));
+  await markRefused(
+    ctx,
+    days.filter((day) => notBookable.has(day.on)).map((day) => day.id),
+  );
+  const { adopted, conflicts } = await adopt(ctx, year, {
+    after,
+    wanted,
+    removals: split.removals,
+    now: options.now,
+  });
+  return { outcomes, removals: split.removals, adopted, settled: observed.length, unsettled, conflicts };
+}
+
+/** What a pass last heard the calendar say about a year, or `null` if it has never been told. */
+export async function trekStatsOf(ctx: Pick<Ctx, "userId">, year: number): Promise<LeaveFigures | null> {
   const connection = await trekConnection(ctx);
   if (connection === null) return null;
-  const job = await readSyncJob(ctx, connection.id, "leave");
-  const cursor = job?.cursor ?? null;
+  const cursor = (await readSyncJob(ctx, connection.id, "leave"))?.cursor ?? null;
   if (cursor === null || cursor.year !== String(year)) return null;
   const numbers = {
     used: Number(cursor.used),
@@ -136,176 +274,92 @@ export async function trekStatsOf(
   return Object.values(numbers).every((value) => Number.isFinite(value)) ? numbers : null;
 }
 
-/** The machine client as Settings sealed it (plan M0: OAuth 2.1, not the deprecated static token). */
-function configOf(bag: Record<string, string>): TrekConfig {
-  return {
-    baseUrl: bag.baseUrl ?? "",
-    clientId: bag.clientId ?? "",
-    clientSecret: bag.clientSecret ?? "",
-  };
-}
-
 export async function trekConnection(ctx: Pick<Ctx, "userId">): Promise<Connection | null> {
   return (await listConnections(ctx)).find((one) => one.provider === TREK_PROVIDER) ?? null;
-}
-
-/** What one year's reconciliation produced. */
-interface YearOutcome {
-  toggles: ToggleResult[];
-  adopted: number;
-  settled: number;
-  /**
-   * Days where our state and Trek's still do not agree once the pass is over. Not the same as the
-   * `pending` column: a day we had settled and Trek has since lost counts here too, because the
-   * next pass has work to do on it, and its column says `none`.
-   */
-  unsettled: number;
-  conflicts: CivilDate[];
-  unchanged: number;
-  alreadyAbsent: number;
-}
-
-/** What one row is worth: half a day or a whole one, the only two a day off comes in (N0). */
-function dayShare(day: TrekDay): TrekFraction {
-  return day.fraction === 0.5 ? 0.5 : 1;
-}
-
-/**
- * The desired state of one year, and what must be taken back.
- *
- * Trek keeps one row per **date**; we keep one per date *and kind*. The two are reconciled by
- * **adding up**: half a day of ferie and half a day of ROL is one whole day away from the office,
- * and that is the one row Trek gets. The sum is capped at a whole day because that is the most a
- * Trek row can hold — a date booked past a full day is already odd, and sending 1.0 says the
- * truest thing Trek can be told about it rather than stalling the year over it.
- *
- * A date is a `removal` only once **nothing** of ours is left on it: while one half is still
- * wanted, Trek keeps its row and the desired day above simply shrinks it. The list stays explicit
- * and is never "whatever is missing from `desired`" (plan F7 §3.6.8).
- */
-export function splitForTrek(days: readonly TrekDay[]): {
-  desired: DesiredDay[];
-  removals: CivilDate[];
-} {
-  const perDate = new Map<CivilDate, TrekDay[]>();
-  for (const day of days) {
-    if (day.pending === "delete") continue;
-    perDate.set(day.on, [...(perDate.get(day.on) ?? []), day]);
-  }
-
-  const desired: DesiredDay[] = [];
-  for (const [date, group] of perDate) {
-    const share = group.reduce((sum, day) => sum + dayShare(day), 0);
-    // Every kind that reaches Trek lands on the same one (N4), so the group's first row answers
-    // for the whole of it: there is no kind left to choose between.
-    desired.push({ date, fraction: share > 0.5 ? 1 : 0.5, kind: asTrekKind(group[0].kind) });
-  }
-
-  const removals = days
-    .filter((day) => day.pending === "delete" && !perDate.has(day.on))
-    .map((day) => day.on);
-  return {
-    desired: desired.sort((a, b) => (a.date < b.date ? -1 : 1)),
-    removals: [...new Set(removals)].sort(),
-  };
-}
-
-/** One year: read, plan, send, read again, write down what is now true. */
-async function passYear(
-  ctx: Pick<Ctx, "userId">,
-  client: TrekClient,
-  year: number,
-  now: Date,
-): Promise<YearOutcome> {
-  const window = yearWindow(year);
-  const days = await trekDaysOf(ctx, window);
-  const { desired, removals } = splitForTrek(days);
-  const wantedOn = new Map(desired.map((one) => [one.date, one]));
-  const conflicts: CivilDate[] = [];
-
-  const before = await client.getEntries(year);
-  const plan = planToggles(before, desired, removals);
-
-  const toggles: ToggleResult[] = [];
-  for (const step of plan.steps) {
-    // One attempt each, and the loop keeps going: a day Trek refuses is no reason to abandon the
-    // rest of the year. What each one did is settled by the re-read below, not by its own answer.
-    toggles.push(await client.toggleEntry(step));
-  }
-
-  // The truth, after the writes. Everything below is written from this and nothing else: a toggle
-  // that said "added" and a toggle whose answer was lost are treated the same way, by looking.
-  const after = toggles.length > 0 ? await client.getEntries(year) : before;
-  const upstream = new Map<CivilDate, TrekEntry>();
-  for (const entry of after) upstream.set(entry.date, entry);
-
-  const observed: Observed[] = [];
-  let unsettled = 0;
-  for (const day of days) {
-    const entry = upstream.get(day.on);
-    const want = wantedOn.get(day.on);
-    // Trek's row for this date, when it says exactly what this pass meant it to say. It is
-    // compared against the **desired** day and not against the row's own kind and fraction: a
-    // date carrying two halves of ours is one row of 1.0 upstream, and that single sighting is
-    // what settles both of them.
-    const agreed =
-      want !== undefined &&
-      entry !== undefined &&
-      entry.kind === want.kind &&
-      entry.fraction === want.fraction
-        ? entry
-        : null;
-
-    if (day.pending === "delete") {
-      // The row may finally go once Trek has stopped counting it: either the date is gone
-      // upstream, or what is left of it is exactly the rest of the day, which this row is no
-      // longer part of. Anything else and it stays pending for next time.
-      const letGo = want === undefined ? entry === undefined : agreed !== null;
-      if (letGo) observed.push({ id: day.id, fraction: null, kind: null });
-      else unsettled += 1;
-      continue;
-    }
-
-    if (agreed !== null) observed.push({ id: day.id, fraction: agreed.fraction, kind: agreed.kind });
-    else unsettled += 1;
-  }
-  await markSynced(ctx, observed, now);
-
-  // What Trek holds and we do not. A date we already hold under another kind is **not** adopted:
-  // our classification wins and the day is left alone (plan F7 §3.6.3).
-  const held = await datesHeld(ctx, window);
-  const asked = new Set(removals);
-  let adopted = 0;
-  for (const entry of after) {
-    if (wantedOn.has(entry.date)) continue;
-    // A day we asked Trek to drop and it has not dropped yet is neither a conflict nor something
-    // to adopt back: it is a removal that did not land, already counted in `unsettled`. Adopting
-    // it would undo the person's own deletion at the next pass.
-    if (asked.has(entry.date)) continue;
-    if (held.has(entry.date)) {
-      if (!conflicts.includes(entry.date)) conflicts.push(entry.date);
-      continue;
-    }
-    await recordFromTrek(ctx, { on: entry.date, kind: entry.kind, fraction: entry.fraction }, now);
-    adopted += 1;
-  }
-
-  return {
-    toggles,
-    adopted,
-    settled: observed.length,
-    unsettled,
-    conflicts: conflicts.sort(),
-    unchanged: plan.unchanged.length,
-    alreadyAbsent: plan.alreadyAbsent.length,
-  };
 }
 
 /** Which years a pass covers: the one we are in, plus any year with something still pending. */
 async function yearsToCover(ctx: Pick<Ctx, "userId" | "timeZone">, now: Date): Promise<number[]> {
   const current = Number(today(ctx.timeZone, now).slice(0, 4));
   const pending = await yearsWithPending(ctx);
-  return [...new Set([current, ...pending])].sort((a, b) => a - b);
+  return [...new Set([current, ...pending])].sort((left, right) => left - right);
+}
+
+/** The counts of a pass, added up over its years. */
+function countsOf(outcomes: readonly YearOutcome[], readOnly: boolean): Record<string, number> {
+  const sum = (pick: (one: YearOutcome) => number) => outcomes.reduce((total, one) => total + pick(one), 0);
+  const days = outcomes.flatMap((one) =>
+    one.outcomes.map((outcome) => ({ outcome, removals: one.removals })),
+  );
+  const count = (test: (one: (typeof days)[number]) => boolean) => days.filter(test).length;
+  const unsettled = sum((one) => one.unsettled);
+  return {
+    applied: count(({ outcome }) => outcome.state === "done"),
+    adopted: sum((one) => one.adopted),
+    settled: sum((one) => one.settled),
+    unchanged: count(
+      ({ outcome, removals }) => outcome.state === "unchanged" && !removals.includes(outcome.day),
+    ),
+    alreadyAbsent: count(
+      ({ outcome, removals }) => outcome.state === "unchanged" && removals.includes(outcome.day),
+    ),
+    unsettled,
+    refused: count(({ outcome }) => outcome.reason === "not_bookable"),
+    unexpected: count(({ outcome }) => outcome.reason === "changed"),
+    failed: count(({ outcome }) => outcome.reason === "unknown"),
+    conflicts: new Set(outcomes.flatMap((one) => one.conflicts)).size,
+    // Only for a calendar that takes no writes: the days left waiting for it.
+    ...(readOnly ? { readOnly: unsettled } : {}),
+  };
+}
+
+/**
+ * Why the pass is a failure, or nothing. A calendar that takes no writes, with days waiting for it,
+ * is `read_only`; a pass whose reads worked but whose sends did not has gone apart from it.
+ */
+function runError(counts: Record<string, number>, readOnly: boolean): string | undefined {
+  if (readOnly && counts.unsettled > 0) return READ_ONLY;
+  const lost = counts.failed + counts.unexpected;
+  if (lost === 0) return undefined;
+  return `${lost} of ${lost + counts.applied} changes did not reach Trek; they stay pending`;
+}
+
+/**
+ * The calendar's figures, once per pass and for one year only — reading them persists carry-over
+ * upstream — kept on the sync job's cursor so the Time off screen can show them beside our own.
+ */
+async function readFigures(
+  ctx: Ctx,
+  connection: Connection,
+  calls: CalendarCalls,
+  input: { year: number; now: Date },
+) {
+  const figures = await calls.figures(input.year).catch(() => null);
+  if (figures !== null) {
+    const cursor = {
+      year: String(input.year),
+      ...Object.fromEntries(Object.entries(figures).map(([key, value]) => [key, String(value)])),
+    };
+    await saveSyncJob(ctx, connection.id, "leave", { cursor, lastRunAt: input.now }, input.now);
+  }
+  return figures;
+}
+
+/** The years of a pass, one after the other; a write refused for permission makes the rest read-only. */
+async function passYears(
+  ctx: Ctx,
+  calls: CalendarCalls,
+  years: readonly number[],
+  options: { now: Date; readOnly: boolean },
+) {
+  const outcomes: YearOutcome[] = [];
+  let readOnly = options.readOnly;
+  for (const year of years) {
+    const outcome = await passYear(ctx, calls, year, { now: options.now, readOnly });
+    outcomes.push(outcome);
+    readOnly ||= outcome.outcomes.some((one) => one.reason === "permission");
+  }
+  return { outcomes, readOnly };
 }
 
 /**
@@ -315,94 +369,29 @@ async function yearsToCover(ctx: Pick<Ctx, "userId" | "timeZone">, now: Date): P
 async function trekPass(ctx: Ctx, connection: Connection, options: TrekSyncOptions): Promise<TrekSyncResult> {
   const now = options.now ?? new Date();
   const years = [...(options.years ?? (await yearsToCover(ctx, now)))];
-
   if (connection.state === "revoked") {
     // Recorded and skipped rather than silently not done: Settings › Integrations shows why the
     // calendar has stopped moving, and the message names the thing the owner can fix.
     const skipped = await recordRun(ctx, { connectionId: connection.id, kind: "leave" });
     await skipRun(ctx, skipped.id, REVOKED_REASON, now);
-    return { years, counts: {}, stats: null, refused: "revoked", conflicts: [] };
+    return { years, counts: {}, figures: null, refused: "revoked", conflicts: [] };
   }
 
-  const client =
-    options.client ??
-    createTrekClient(configOf(await readCredentials(ctx, connection.id)), options.clientOptions);
-
   const run = await recordRun(ctx, { connectionId: connection.id, kind: "leave" });
-  let applied = 0;
-  let refusedByTrek = 0;
-  let failed = 0;
-  let unexpected = 0;
-  let adopted = 0;
-  let settled = 0;
-  let unsettled = 0;
-  let unchanged = 0;
-  let alreadyAbsent = 0;
-  const conflicts: CivilDate[] = [];
-
   try {
-    for (const year of years) {
-      const outcome = await passYear(ctx, client, year, now);
-      for (const toggle of outcome.toggles) {
-        if (toggle.outcome === "applied") applied += 1;
-        else if (toggle.outcome === "weekend_blocked") refusedByTrek += 1;
-        else if (toggle.outcome === "unexpected_action") unexpected += 1;
-        else failed += 1;
-      }
-      adopted += outcome.adopted;
-      settled += outcome.settled;
-      unsettled += outcome.unsettled;
-      unchanged += outcome.unchanged;
-      alreadyAbsent += outcome.alreadyAbsent;
-      for (const date of outcome.conflicts) if (!conflicts.includes(date)) conflicts.push(date);
-    }
-
-    // Once per pass, and for one year only: reading it persists carry-over upstream.
-    const statsYear = years.at(-1) ?? years[0];
-    const stats = await client.getStats(statsYear).catch(() => null);
-    // Kept on the sync job's cursor so the Time off screen can show them beside our own figures
-    // without opening a connection of its own. They are Trek's numbers and stay labelled as such:
-    // they honour a leave-year window this app does not model (§3.6.4).
-    if (stats !== null) {
-      await saveSyncJob(
-        ctx,
-        connection.id,
-        "leave",
-        { cursor: statsAsCursor(stats, statsYear), lastRunAt: now },
-        now,
-      );
-    }
-
-    const counts = {
-      applied,
-      adopted,
-      settled,
-      unchanged,
-      alreadyAbsent,
-      unsettled,
-      refused: refusedByTrek,
-      unexpected,
-      failed,
-      conflicts: conflicts.length,
-    };
-
-    // A pass whose reads worked but whose sends did not is a failure: the two calendars have gone
-    // apart, and the log has to say so even though nobody is mailed about it (§3.4.11).
-    const error =
-      failed + unexpected > 0
-        ? `${failed + unexpected} of ${failed + unexpected + applied} changes did not reach Trek; they stay pending`
-        : undefined;
+    const calls = options.calls ?? (await trekCalls(ctx, connection.id));
+    // What `/verify` or an earlier pass found: a calendar that takes no writes is only read.
+    const pass = await passYears(ctx, calls, years, { now, readOnly: connection.errorCode === READ_ONLY });
+    const figures = await readFigures(ctx, connection, calls, { year: years.at(-1) ?? years[0], now });
+    const counts = countsOf(pass.outcomes, pass.readOnly);
+    const error = runError(counts, pass.readOnly);
     await finishRun(ctx, run.id, error === undefined ? { counts } : { counts, error }, now);
-    return { years, counts, stats, refused: null, conflicts };
+    const conflicts = [...new Set(pass.outcomes.flatMap((one) => one.conflicts))];
+    return { years, counts, figures, refused: null, conflicts };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await finishRun(
-      ctx,
-      run.id,
-      { counts: { applied, adopted, settled }, error: message, cause: error },
-      now,
-    );
-    if (isTokenRejected(error)) await markConnection(ctx, connection.id, "revoked", message, now);
+    await finishRun(ctx, run.id, { counts: {}, error: message, cause: error }, now);
+    if (isClientRefused(error)) await markConnection(ctx, connection.id, "revoked", message, now);
     throw error;
   }
 }
@@ -410,10 +399,9 @@ async function trekPass(ctx: Ctx, connection: Connection, options: TrekSyncOptio
 /**
  * A pass for this user, if they have a Trek connection at all.
  *
- * One pass per user at a time (an advisory lock, like `wallet-sync`): "Sync now" pressed while the
- * hourly tick is running does not open a second one, it reports the one in flight. Without the
- * lock two passes would read the same year, plan the same toggles, and the second would undo what
- * the first had just done — the toggle being its own inverse.
+ * One pass per user at a time (an advisory lock): "Sync now" pressed while the hourly tick is
+ * running does not open a second one, it reports the one in flight. Without the lock two passes
+ * would read the same year, plan the same toggles, and the second would undo the first.
  */
 export async function syncTrekNow(ctx: Ctx, options: TrekSyncOptions = {}): Promise<TrekSyncResult | null> {
   const connection = await trekConnection(ctx);

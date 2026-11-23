@@ -82,3 +82,4 @@ export const leaveFiguresResponseSchema = z.object({
     })
     .nullable(),
 });
+export type LeaveFigures = NonNullable<z.infer<typeof leaveFiguresResponseSchema>["figures"]>;

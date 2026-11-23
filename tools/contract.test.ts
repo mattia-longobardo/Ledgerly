@@ -405,7 +405,9 @@ describe("the Server Actions of time off", () => {
     expect(timeoffWire.LEAVE_KINDS).toEqual(timeoffDomain.LEAVE_DAY_KINDS);
     expect(timeoffWire.RESIDUAL_BASES).toEqual(timeoffDomain.RESIDUAL_BASES);
     expect(timeoffWire.SYNC_STATES).toEqual(timeoffDomain.PENDING_STATES);
-    expect(timeoffWire.LEAVE_ORIGINS.length).toBe(timeoffDomain.LEAVE_ORIGINS.length);
+    // The wire says `external` for every origin that is not `manual` (`trek` until R5c P3).
+    const wireOrigin = (origin: string) => (origin === "manual" ? "manual" : "external");
+    expect([...new Set(timeoffDomain.LEAVE_ORIGINS.map(wireOrigin))]).toEqual(timeoffWire.LEAVE_ORIGINS);
     expect(timeoffWire.MAX_RANGE_DAYS).toBe(timeoffDomain.MAX_RANGE_DAYS);
     expect(timeoffWire.HOLIDAY_SOURCES).toEqual(HOLIDAY_SOURCES);
   });
