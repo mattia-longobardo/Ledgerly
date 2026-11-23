@@ -15,16 +15,13 @@ vi.mock("../calls", () => ({
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
 const T = messages.interests.form;
-const ACCOUNTS = [
-  { id: "a-source", name: "Conto della sorgente", publishable: true },
-  { id: "a-manual", name: "Conto a mano", publishable: false },
-];
+const ACCOUNTS = [{ id: "a-one", name: "Conto uno" }];
 
-function renderDialog(accountId: string, publish: boolean) {
-  const draft = { ...newDraft(ACCOUNTS, "2026-11-18", "26"), id: "r1", accountId, publish };
+function renderDialog(retiredMode: boolean) {
+  const draft = { ...newDraft(ACCOUNTS, "2026-11-18", "26"), id: "r1", retiredMode };
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-      <RuleDialog draft={draft} accounts={ACCOUNTS} categories={[]} onClose={() => {}} />
+      <RuleDialog draft={draft} accounts={ACCOUNTS} onClose={() => {}} />
     </NextIntlClientProvider>,
   );
 }
@@ -34,23 +31,25 @@ beforeEach(() => {
   update.mockResolvedValue({ ok: true });
 });
 
-// plugin-settings.md §2.2: "Publish to {source}" is drawn only where the source can take it.
-describe("RuleDialog, publishing", () => {
-  it("offers the option on an account whose source is connected and writes", () => {
-    renderDialog("a-source", false);
-    expect(screen.getByRole("checkbox", { name: T.publish })).toBeInTheDocument();
+// Decision H37: no rule publishes on its source; the dialog no longer offers it.
+describe("RuleDialog, the retired «Publish to {source}»", () => {
+  it("draws no option to publish and no category of the source", () => {
+    renderDialog(false);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
-  it("does not draw the option on another account, and follows the account chosen", async () => {
-    renderDialog("a-manual", false);
-    expect(screen.queryByRole("checkbox", { name: T.publish })).not.toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText(T.account), "a-source");
-    expect(screen.getByRole("checkbox", { name: T.publish })).toBeInTheDocument();
-  });
-
-  it("keeps the choice of a rule that publishes when the option is not drawn", async () => {
-    renderDialog("a-manual", true);
+  it("tells a rule that still has the mode that it is gone, and saves it as analysis only", async () => {
+    renderDialog(true);
+    expect(screen.getByRole("note")).toHaveTextContent(T.retiredMode);
     await userEvent.click(screen.getByRole("button", { name: T.save }));
-    expect(update).toHaveBeenCalledWith("r1", expect.objectContaining({ publish: true }));
+    expect(update).toHaveBeenCalledWith("r1", expect.not.objectContaining({ publish: expect.anything() }));
+  });
+
+  it("shows the route's refusal of the mode in words", async () => {
+    update.mockResolvedValue({ ok: false, error: "mode_retired" });
+    renderDialog(false);
+    await userEvent.click(screen.getByRole("button", { name: T.save }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(messages.interests.errors.mode_retired);
   });
 });

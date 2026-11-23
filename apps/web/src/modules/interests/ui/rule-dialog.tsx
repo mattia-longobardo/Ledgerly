@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button, LinkButton } from "@ledgerly/ui/button";
-import { type CategoryOption, CategoryPicker } from "@ledgerly/ui/category-picker";
 import { Field } from "@ledgerly/ui/field";
 import { AccountSelect } from "@ledgerly/ui/account-select";
 import { Checkbox, Input, InputGroup, Select } from "@ledgerly/ui/input";
@@ -29,31 +28,36 @@ export interface RuleDraft {
   dayBasis: "365" | "360";
   settlement: "daily" | "monthly" | "quarterly" | "annual";
   payeeMatch: string;
-  publish: boolean;
-  /** The category a published settlement is filed under at the source; `null` is none. */
+  /** The rule still has the retired mode «Publish to {source}» (decision H37); saving drops it. */
+  retiredMode: boolean;
+  /** The category the rule has; kept as it is, the dialog no longer chooses it. */
   categoryId: string | null;
   active: boolean;
 }
 
-const KNOWN = ["invalid", "not_found", "invalid_account", "invalid_tiers", "not_synced", "invalid_category"];
+const KNOWN = [
+  "invalid",
+  "not_found",
+  "invalid_account",
+  "invalid_tiers",
+  "not_synced",
+  "invalid_category",
+  "mode_retired",
+];
 
 /**
  * The design's interest rule dialog, with what spec §7.6 adds (plan F4 §3.6.2): an end date, the
- * day basis, the hour of the person's own day the rule accrues at, the text that recognises the
- * bank's payment, and publishing to the source. The last tier is always "above": only the tiers before
+ * day basis, the hour of the person's own day the rule accrues at and the text that recognises the
+ * bank's payment. The last tier is always "above": only the tiers before
  * it have a threshold.
  */
 export function RuleDialog({
   draft,
   accounts,
-  categories,
   onClose,
 }: {
   draft: RuleDraft;
-  /** `publishable`: the account's source is connected and takes a record written here. */
-  accounts: readonly { id: string; name: string; publishable?: boolean }[];
-  /** The income categories a published settlement may be filed under (spec §7.6). */
-  categories: readonly CategoryOption[];
+  accounts: readonly { id: string; name: string }[];
   onClose: () => void;
 }) {
   const t = useTranslations("interests");
@@ -62,13 +66,6 @@ export function RuleDialog({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [tiers, setTiers] = useState(draft.tiers);
-  const [categoryId, setCategoryId] = useState<string | null>(draft.categoryId);
-  const [picking, setPicking] = useState(false);
-  const chosen = categories.find((option) => option.id === categoryId) ?? null;
-  const [accountId, setAccountId] = useState(draft.accountId);
-  // The option is drawn only where it can work (plugin-settings.md §2.2); a rule that already
-  // publishes keeps its choice when it is saved.
-  const publishable = accounts.find((account) => account.id === accountId)?.publishable === true;
 
   function setTier(index: number, field: "upTo" | "rate", value: string) {
     setTiers((current) => current.map((tier, i) => (i === index ? { ...tier, [field]: value } : tier)));
@@ -88,8 +85,7 @@ export function RuleDialog({
       dayBasis: text("basis"),
       settlement: text("settlement"),
       payeeMatch: text("match"),
-      publish: data.get("publish") === "on",
-      categoryId: categoryId ?? "",
+      categoryId: draft.categoryId ?? "",
       active: data.get("active") === "on",
     };
     startTransition(async () => {
@@ -121,7 +117,6 @@ export function RuleDialog({
               id={`${id}-account`}
               name="account"
               defaultValue={draft.accountId}
-              onChange={(event) => setAccountId(event.target.value)}
               accounts={accounts}
             />
           </Field>
@@ -244,50 +239,12 @@ export function RuleDialog({
             <Input id={`${id}-match`} name="match" maxLength={80} defaultValue={draft.payeeMatch} />
           </Field>
         </div>
-        {publishable && (
-          <>
-            {/*
-          The category the published record is filed under at the source (spec §7.6): a local category
-          of this user's, which the posting resolves to the source's own id through the `category`
-          links. A category that has never been linked publishes the record uncategorised and the
-          payout says so — the posting is never failed and no category is ever invented.
-        */}
-            <div className="col-span-full">
-              <Field label={t("form.category")} htmlFor={`${id}-category`} hint={t("form.categoryHint")}>
-                <CategoryPicker
-                  categories={categories}
-                  currentId={categoryId}
-                  open={picking}
-                  onOpenChange={setPicking}
-                  onPick={setCategoryId}
-                  uncategorisedLabel={t("form.noCategory")}
-                  searchLabel={t("form.categorySearch")}
-                  noMatchLabel={t("form.categoryNoMatch")}
-                  triggerLabel={t("form.category")}
-                  triggerId={`${id}-category`}
-                  triggerClassName="focus-ring flex h-8 w-full items-center gap-2 rounded-ctl border border-border bg-card px-2.5 text-left text-base"
-                >
-                  {chosen ? (
-                    <>
-                      <span aria-hidden className="size-2 rounded-xs" style={{ background: chosen.color }} />
-                      <span className="truncate">{chosen.name}</span>
-                    </>
-                  ) : (
-                    <span className="text-muted">{t("form.noCategory")}</span>
-                  )}
-                </CategoryPicker>
-              </Field>
-            </div>
-          </>
-        )}
         <div className="col-span-full flex flex-col gap-2">
-          {publishable ? (
-            <>
-              <Checkbox name="publish" defaultChecked={draft.publish} label={t("form.publish")} />
-              <p className="text-xs text-faint">{t("form.publishHint")}</p>
-            </>
-          ) : (
-            draft.publish && <input type="hidden" name="publish" value="on" />
+          {/* «Publish to {source}» is gone (decision H37): a rule saved with it keeps only the analysis. */}
+          {draft.retiredMode && (
+            <p role="note" className="text-sm text-muted">
+              {t("form.retiredMode")}
+            </p>
           )}
           <Checkbox name="active" defaultChecked={draft.active} label={t("form.active")} />
         </div>
@@ -311,14 +268,12 @@ export function RuleDialog({
 export function RuleButton({
   draft,
   accounts,
-  categories,
   label,
   variant = "primary",
   size = "sm",
 }: {
   draft: RuleDraft;
-  accounts: readonly { id: string; name: string; publishable?: boolean }[];
-  categories: readonly CategoryOption[];
+  accounts: readonly { id: string; name: string }[];
   label: string;
   variant?: "primary" | "secondary" | "ghost";
   size?: "xs" | "sm" | "md";
@@ -329,14 +284,7 @@ export function RuleButton({
       <Button variant={variant} size={size} onClick={() => setOpen(true)}>
         {label}
       </Button>
-      {open && (
-        <RuleDialog
-          draft={draft}
-          accounts={accounts}
-          categories={categories}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      {open && <RuleDialog draft={draft} accounts={accounts} onClose={() => setOpen(false)} />}
     </>
   );
 }

@@ -3259,13 +3259,7 @@
       "runHourHint": "Ogni giorno a quest'ora, nel tuo fuso orario.",
       "match": "L'interesse pagato si riconosce da",
       "matchHint": "Testo nel beneficiario, nella categoria o nella nota del pagamento degli interessi della banca, es. \"interessi\". Vuoto per non controllare.",
-      "publish": "Pubblica ogni liquidazione su Wallet",
-      "publishHint": "Solo per un conto sincronizzato. Spenta, la regola analizza soltanto.",
-      "category": "Categoria su Wallet",
-      "categoryHint": "La categoria con cui la liquidazione viene registrata su Wallet. Deve essere una categoria che Wallet conosce: una che non conosce viene pubblicata senza categoria, e la liquidazione lo dice.",
-      "noCategory": "Nessuna categoria",
-      "categorySearch": "Cerca una categoria",
-      "categoryNoMatch": "Nessuna categoria trovata",
+      "retiredMode": "Questa regola pubblicava ogni liquidazione sulla sua sorgente. Questa opzione non esiste più: ora Ledgerly calcola soltanto gli interessi. Salva la regola per tenerla in sola analisi e registra tu ogni liquidazione sulla sorgente.",
       "active": "Regola attiva",
       "cancel": "Annulla",
       "save": "Salva regola"
@@ -3282,7 +3276,8 @@
       "invalid_tiers": "Le soglie devono crescere e solo l'ultimo scaglione è aperto.",
       "not_synced": "Si pubblica su Wallet solo da un conto sincronizzato.",
       "invalid_category": "Scegli una delle tue categorie attive.",
-      "failed": "Salvataggio non riuscito. Riprova."
+      "failed": "Salvataggio non riuscito. Riprova.",
+      "mode_retired": "La pubblicazione sulla sorgente non esiste più. Salva la regola in sola analisi."
     },
     "detail": {
       "back": "Interessi",

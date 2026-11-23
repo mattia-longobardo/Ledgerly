@@ -9,7 +9,6 @@ import type { RouteOutput } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
-import type { CategoryOption } from "@ledgerly/ui/category-picker";
 import { cn } from "@ledgerly/ui/cn";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
@@ -27,7 +26,6 @@ import {
   useFormat,
   useTierChips,
 } from "@/modules/interests/client";
-import { useCategoryOptions } from "@/platform/category-options";
 import { useCountryPack } from "@/platform/country";
 
 type View = RouteOutput<typeof interests.listInterestRules>;
@@ -35,12 +33,11 @@ type View = RouteOutput<typeof interests.listInterestRules>;
 interface Props {
   view: View;
   format: Format;
-  categories: readonly CategoryOption[];
 }
 
 const accrued = (rule: Rule) => parseCents(rule.accruedYtd) > 0n;
 
-function RuleRow({ rule, view, format, categories }: Props & { rule: Rule }) {
+function RuleRow({ rule, view, format }: Props & { rule: Rule }) {
   const text = useTranslations("interests");
   const chips = useTierChips(rule.tiers, format.numberFormat);
   return (
@@ -80,7 +77,6 @@ function RuleRow({ rule, view, format, categories }: Props & { rule: Rule }) {
         <RuleButton
           draft={draftOf(rule, format.numberFormat)}
           accounts={view.accounts}
-          categories={categories}
           label={text("columns.edit")}
           variant="ghost"
           size="xs"
@@ -151,19 +147,15 @@ export function InterestsScreen() {
   const text = useTranslations("interests");
   const read = useApi(interests.listInterestRules, {});
   const format = useFormat();
-  // An interest payout is income: those are the categories a published settlement is filed under.
-  const categories = useCategoryOptions("income");
   const pack = useCountryPack();
   const view = read.data;
   const add = (label: string) =>
     view &&
     format &&
-    categories &&
     pack !== undefined && (
       <RuleButton
         draft={newDraft(view.accounts, format.today, pack?.interestTaxPercent ?? "")}
         accounts={view.accounts}
-        categories={categories}
         label={label}
       />
     );
@@ -184,14 +176,14 @@ export function InterestsScreen() {
       </div>
       <Loaded state={read}>
         {(loaded) =>
-          !format || !categories ? null : loaded.rules.length === 0 ? (
+          !format ? null : loaded.rules.length === 0 ? (
             <EmptyState
               title={text("empty.title")}
               description={text("empty.description")}
               actions={add(text("empty.cta"))}
             />
           ) : (
-            <Rules view={loaded} format={format} categories={categories} />
+            <Rules view={loaded} format={format} />
           )
         }
       </Loaded>

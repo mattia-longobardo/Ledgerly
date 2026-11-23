@@ -3259,13 +3259,7 @@
       "runHourHint": "Each day at this hour, in your timezone.",
       "match": "Paid interest is recognised by",
       "matchHint": "Text in the payee, category or note of the bank's interest payment, e.g. \"interessi\". Leave empty to skip the check.",
-      "publish": "Post each payout to Wallet",
-      "publishHint": "Only for a synced account. Off, the rule only analyses.",
-      "category": "Wallet category",
-      "categoryHint": "The category the payout is filed under in Wallet. It has to be a category Wallet knows: one it doesn't is posted without a category, and the payout says so.",
-      "noCategory": "No category",
-      "categorySearch": "Search a category",
-      "categoryNoMatch": "No category matches",
+      "retiredMode": "This rule posted each payout to its source. That option no longer exists: Ledgerly now only calculates the interest. Save the rule to keep it as analysis only, and record each payout at the source yourself.",
       "active": "Rule is active",
       "cancel": "Cancel",
       "save": "Save rule"
@@ -3282,7 +3276,8 @@
       "invalid_tiers": "Thresholds must increase and only the last tier is open.",
       "not_synced": "Only a synced Wallet account can be posted to.",
       "invalid_category": "Pick one of your open categories.",
-      "failed": "Couldn't save. Try again."
+      "failed": "Couldn't save. Try again.",
+      "mode_retired": "Posting to the source no longer exists. Save the rule as analysis only."
     },
     "detail": {
       "back": "Interests",

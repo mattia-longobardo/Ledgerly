@@ -27,7 +27,6 @@ import {
   useFormat,
   useTierChips,
 } from "@/modules/interests/client";
-import { useCategoryOptions } from "@/platform/category-options";
 
 type Detail = RouteOutput<typeof interests.getInterestRule>;
 type Settlement = Detail["settlements"][number];
@@ -310,14 +309,12 @@ function Days({ detail, format }: Props) {
 export function RuleScreen({ id }: { id: string }) {
   const text = useTranslations("interests");
   const read = useApi(interests.getInterestRule, { params: { id } });
-  // The accounts a rule can move to, each saying whether it can publish: the dialog's list.
+  // The accounts a rule can move to: the dialog's list.
   const accounts = useApi(interests.listInterestRules, {}).data?.accounts;
   const format = useFormat();
-  // An interest payout is income: those are the categories a published settlement is filed under.
-  const categories = useCategoryOptions("income");
   const detail = read.data;
   const rule = detail?.rule;
-  const actions = rule && format && accounts && categories && (
+  const actions = rule && format && accounts && (
     <>
       <RuleStateButton
         id={rule.id}
@@ -328,7 +325,6 @@ export function RuleScreen({ id }: { id: string }) {
       <RuleButton
         draft={draftOf(rule, format.numberFormat)}
         accounts={accounts}
-        categories={categories}
         label={text("detail.edit")}
       />
     </>

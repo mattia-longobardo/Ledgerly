@@ -27,8 +27,7 @@ interface RuleFormInput {
   dayBasis: string;
   settlement: string;
   payeeMatch: string;
-  publish: boolean;
-  /** The category a published settlement is filed under on the source; empty is none. */
+  /** The category the rule has, sent back as it is; empty is none. */
   categoryId: string;
   active: boolean;
 }
@@ -63,7 +62,8 @@ async function bodyOf(input: RuleFormInput) {
     dayBasis: DAY_BASES.find((basis) => basis === input.dayBasis) ?? "365",
     settlement: SETTLEMENTS.find((settlement) => settlement === input.settlement) ?? "monthly",
     payeeMatch: input.payeeMatch,
-    mode: input.publish ? ("post_to_provider" as const) : ("analyze_only" as const),
+    // No rule publishes on its source any more (decision H37): the route refuses that mode.
+    mode: "analyze_only" as const,
     categoryId: input.categoryId === "" ? null : input.categoryId,
     state: input.active ? ("active" as const) : ("paused" as const),
   };

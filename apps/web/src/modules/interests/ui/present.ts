@@ -67,7 +67,7 @@ export function draftOf(rule: Rule, format: NumberFormat): RuleDraft {
     dayBasis: rule.dayBasis,
     settlement: rule.settlement,
     payeeMatch: rule.payeeMatch ?? "",
-    publish: rule.mode === "post_to_provider",
+    retiredMode: rule.mode === "post_to_provider",
     categoryId: rule.categoryId,
     active: rule.state === "active",
   };
@@ -94,7 +94,7 @@ export function newDraft(
     dayBasis: "365",
     settlement: "monthly",
     payeeMatch: "",
-    publish: false,
+    retiredMode: false,
     categoryId: null,
     active: true,
   };
