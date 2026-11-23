@@ -893,5 +893,10 @@
     "file": "tests/e2e/funds/mobile.spec.ts",
     "decision": "R5b client (PERS-586)",
     "reason": "R5b, decisione B1b: il fondo si trova dalla riga di «Fondi pensione» in Investments"
+  },
+  {
+    "file": "tests/e2e/_shared/funds.ts",
+    "decision": "R5b client (PERS-586)",
+    "reason": "R5b, decisione B1b: gli helper degli spec dei fondi (nati in questo lavoro come tests/e2e/funds/place.ts) passano in _shared, la cartella di un flusso ha solo spec"
   }
 ]

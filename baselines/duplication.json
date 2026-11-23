@@ -4,9 +4,9 @@
     "minLines": 6
   },
   "total": {
-    "lines": 107307,
-    "duplicatedLines": 16212,
-    "percent": 15.11,
+    "lines": 107325,
+    "duplicatedLines": 16210,
+    "percent": 15.1,
     "blocks": 1244
   },
   "units": {
@@ -17,9 +17,9 @@
       "blocks": 110
     },
     "app": {
-      "lines": 20973,
-      "duplicatedLines": 2812,
-      "percent": 13.41,
+      "lines": 20980,
+      "duplicatedLines": 2810,
+      "percent": 13.39,
       "blocks": 219
     },
     "global.d": {
@@ -65,7 +65,7 @@
       "blocks": 33
     },
     "modules/investments": {
-      "lines": 14298,
+      "lines": 14300,
       "duplicatedLines": 2388,
       "percent": 16.7,
       "blocks": 180
@@ -323,7 +323,7 @@
       "blocks": 0
     },
     "platform/router": {
-      "lines": 25,
+      "lines": 34,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -501,8 +501,8 @@
     "app/(app)/interests/[id]/page.tsx": 8,
     "app/(app)/interests/[id]/rule-screen.tsx": 47,
     "app/(app)/interests/interests-screen.tsx": 18,
-    "app/(app)/investments/[accountId]/activity/page.tsx": 13,
-    "app/(app)/investments/[accountId]/positions/page.tsx": 13,
+    "app/(app)/investments/[accountId]/activity/page.tsx": 12,
+    "app/(app)/investments/[accountId]/positions/page.tsx": 12,
     "app/(app)/investments/new-fund/page.tsx": 9,
     "app/(app)/overview-screen.tsx": 60,
     "app/(app)/payroll/register-screen.tsx": 9,
