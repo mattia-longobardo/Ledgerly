@@ -1,0 +1,386 @@
+{
+  "passes": [
+    {
+      "years": [2025, 2026],
+      "counts": {
+        "applied": 6,
+        "adopted": 3,
+        "settled": 9,
+        "unchanged": 1,
+        "alreadyAbsent": 1,
+        "unsettled": 2,
+        "refused": 1,
+        "unexpected": 0,
+        "failed": 1,
+        "conflicts": 1
+      },
+      "refused": null,
+      "conflicts": ["2026-04-01"]
+    },
+    {
+      "years": [2026],
+      "counts": {
+        "applied": 2,
+        "adopted": 0,
+        "settled": 10,
+        "unchanged": 7,
+        "alreadyAbsent": 0,
+        "unsettled": 1,
+        "refused": 1,
+        "unexpected": 0,
+        "failed": 0,
+        "conflicts": 1
+      },
+      "refused": null,
+      "conflicts": ["2026-04-01"]
+    }
+  ],
+  "leaveDays": [
+    {
+      "on": "2025-12-15",
+      "kind": "vacation",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 08:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-03-10",
+      "kind": "vacation",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-04-01",
+      "kind": "sick",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": null,
+      "trek_fraction": null,
+      "trek_kind": null
+    },
+    {
+      "on": "2026-05-05",
+      "kind": "vacation",
+      "fraction": "0.5",
+      "note": null,
+      "origin": "trek",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "0.5",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-05-06",
+      "kind": "comp",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "trek",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-06-16",
+      "kind": "vacation",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-06-17",
+      "kind": "rol",
+      "fraction": "0.5",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-06-17",
+      "kind": "vacation",
+      "fraction": "0.5",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-06-18",
+      "kind": "comp",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-06-19",
+      "kind": "vacation",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "manual",
+      "pending": "upsert",
+      "synced_at": null,
+      "trek_fraction": null,
+      "trek_kind": null
+    },
+    {
+      "on": "2026-06-22",
+      "kind": "vacation",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-07-01",
+      "kind": "vacation",
+      "fraction": "0.5",
+      "note": null,
+      "origin": "manual",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "0.5",
+      "trek_kind": "vacation"
+    },
+    {
+      "on": "2026-08-03",
+      "kind": "vacation",
+      "fraction": "1.0",
+      "note": null,
+      "origin": "trek",
+      "pending": "none",
+      "synced_at": "2026-06-10 09:07:00+00",
+      "trek_fraction": "1.0",
+      "trek_kind": "vacation"
+    }
+  ],
+  "runs": [
+    {
+      "kind": "leave",
+      "state": "failed",
+      "counts": {
+        "failed": 1,
+        "adopted": 3,
+        "applied": 6,
+        "refused": 1,
+        "settled": 9,
+        "conflicts": 1,
+        "unchanged": 1,
+        "unsettled": 2,
+        "unexpected": 0,
+        "alreadyAbsent": 1
+      },
+      "error": "1 of 7 changes did not reach Trek; they stay pending",
+      "error_code": null
+    },
+    {
+      "kind": "leave",
+      "state": "success",
+      "counts": {
+        "failed": 0,
+        "adopted": 0,
+        "applied": 2,
+        "refused": 1,
+        "settled": 10,
+        "conflicts": 1,
+        "unchanged": 7,
+        "unsettled": 1,
+        "unexpected": 0,
+        "alreadyAbsent": 0
+      },
+      "error": null,
+      "error_code": null
+    }
+  ],
+  "connection": [
+    {
+      "state": "active",
+      "error_code": null,
+      "consecutive_failures": 0,
+      "last_error": null
+    }
+  ],
+  "figures": {
+    "used": 9,
+    "remaining": 19,
+    "totalAvailable": 28
+  },
+  "held": [
+    "2025-12-15 1 vacation",
+    "2026-03-10 1 vacation",
+    "2026-04-01 1 comp",
+    "2026-05-05 0.5 vacation",
+    "2026-05-06 1 vacation",
+    "2026-06-16 1 vacation",
+    "2026-06-17 1 vacation",
+    "2026-06-18 1 vacation",
+    "2026-06-22 1 vacation",
+    "2026-07-01 0.5 vacation",
+    "2026-08-03 0.25 vacation",
+    "2027-01-04 1 vacation"
+  ],
+  "calls": [
+    {
+      "tool": "get_vacay_entries",
+      "args": {
+        "year": 2025
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2025-12-15",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "get_vacay_entries",
+      "args": {
+        "year": 2025
+      }
+    },
+    {
+      "tool": "get_vacay_entries",
+      "args": {
+        "year": 2026
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-06-16",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-06-17",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-06-18",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-06-19",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-06-22",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-07-01",
+        "fraction": 0.5,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-03-11",
+        "fraction": 0.5,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "get_vacay_entries",
+      "args": {
+        "year": 2026
+      }
+    },
+    {
+      "tool": "get_vacay_stats",
+      "args": {
+        "year": 2026
+      }
+    },
+    {
+      "tool": "get_vacay_entries",
+      "args": {
+        "year": 2026
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-05-06",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-06-19",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "toggle_vacay_entry",
+      "args": {
+        "date": "2026-06-22",
+        "fraction": 1,
+        "kind": "vacation"
+      }
+    },
+    {
+      "tool": "get_vacay_entries",
+      "args": {
+        "year": 2026
+      }
+    },
+    {
+      "tool": "get_vacay_stats",
+      "args": {
+        "year": 2026
+      }
+    }
+  ]
+}

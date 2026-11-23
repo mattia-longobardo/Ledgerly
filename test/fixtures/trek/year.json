@@ -1,0 +1,28 @@
+{
+  "ownUser": 7,
+  "entries": [
+    { "id": 1, "user_id": 7, "date": "2026-03-10", "note": null, "fraction": 1, "kind": "vacation" },
+    { "id": 2, "user_id": 7, "date": "2026-03-11", "note": "", "fraction": 0.5, "kind": "vacation" },
+    { "id": 3, "user_id": 7, "date": "2026-04-01", "note": null, "fraction": 1, "kind": "comp" },
+    { "id": 4, "user_id": 7, "date": "2026-05-05", "note": "afternoon", "fraction": 0.5, "kind": "vacation" },
+    { "id": 5, "user_id": 7, "date": "2026-05-06", "note": null, "fraction": 1, "kind": "comp" },
+    { "id": 6, "user_id": 99, "date": "2026-05-07", "note": null, "fraction": 1, "kind": "vacation" },
+    { "id": 7, "user_id": 7, "date": "2027-01-04", "note": null, "fraction": 1, "kind": "vacation" },
+    { "id": 8, "user_id": 7, "date": "2026-07-01", "note": null, "fraction": 1, "kind": "vacation" },
+    { "id": 9, "user_id": 7, "date": "2026-08-03", "note": null, "fraction": 0.25, "kind": "vacation" }
+  ],
+  "stats": {
+    "year": 2026,
+    "person_name": "Synthetic Person",
+    "vacation_days": 26,
+    "carried_over": 2,
+    "total_available": 28,
+    "used": 9,
+    "remaining": 19,
+    "comp_used": 1,
+    "window_start": "2026-01-01",
+    "window_end": "2026-12-31"
+  },
+  "weekend": ["2026-06-19"],
+  "failOnce": ["2026-06-22"]
+}

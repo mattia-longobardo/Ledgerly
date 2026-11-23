@@ -414,6 +414,7 @@ export const MODULES: Module[] = [
       "apps/web/src/app/api/v1/plugins/**",
       "test/fixtures/plugins/**",
       "test/fixtures/wallet/**",
+      "test/fixtures/trek/**",
     ],
     integration: [
       "apps/web/src/platform/integrations",
