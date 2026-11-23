@@ -121,6 +121,18 @@ async function decimalOf(text: string): Promise<string | null> {
   }
 }
 
+/**
+ * The codes of the route and of the plugins (plugin contract 2: a code, never the source's words),
+ * each under the key of the sentence the details panel shows.
+ */
+const SOURCE_CODES: Partial<Record<string, string>> = {
+  not_linked: "notLinked",
+  no_transfer_category: "noTransferCategory",
+  provider_refused: "refused",
+  zero_amount: "amount",
+  gone: "notLinked",
+};
+
 /** The route's refusals, under the keys the details panel already shows. */
 function sourceRefusal(error: unknown): SourceEditResult {
   // The source could not be reached (503): its words say why.
@@ -129,8 +141,8 @@ function sourceRefusal(error: unknown): SourceEditResult {
       ? { ok: false, error: "failed" }
       : { ok: false, error: "failed", reason: error.reason };
   const code = codeOf(error);
-  if (code === "not_linked") return { ok: false, error: "notLinked" };
-  if (code === "no_transfer_category") return { ok: false, error: "noTransferCategory" };
+  const key = SOURCE_CODES[code];
+  if (key !== undefined) return { ok: false, error: key };
   // Any other reason of a conflict is the source's refusal, in its own words.
   if (error instanceof ApiError && error.code === "conflict" && error.reason !== null)
     return { ok: false, error: "refused", reason: error.reason };

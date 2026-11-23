@@ -37,7 +37,13 @@ export function DeleteCategoryDialog({
       const external = result.external;
       if (external.state === "deleted") notify(t("atSource.deleted", { count: external.count }));
       if (external.state === "refused")
-        notify(t("atSource.refused", { reason: external.reasons[0] }), "error");
+        notify(
+          // A plugin's refusal is the code `provider_refused`, never the source's words.
+          external.reasons[0] === "provider_refused"
+            ? t("atSource.providerRefused")
+            : t("atSource.refused", { reason: external.reasons[0] }),
+          "error",
+        );
       if (external.state === "failed") notify(t("atSource.failed", { reason: external.reason }), "error");
     });
   }

@@ -477,6 +477,7 @@
       "atSource": {
         "deleted": "{count, plural, one {# category deleted at its source too} other {# categories deleted at their source too}}",
         "refused": "The source did not delete it: {reason}",
+        "providerRefused": "The source refused to delete it, probably because it still uses it. Delete it at the source.",
         "failed": "The source could not be reached: {reason}"
       },
       "merge": {

@@ -5,6 +5,7 @@
 // sentences the row shows.
 import { useTranslations } from "next-intl";
 import type { ComponentProps } from "react";
+import { codeKey } from "@ledgerly/domain/platform/integrations/client";
 import { ConnectionRow as Row } from "@ledgerly/ui/connection-row";
 import { isConnectionKind, runConnectionCall } from "./connection-calls";
 
@@ -28,17 +29,6 @@ const TOAST = {
   history: "toasts.historyRead",
 } as const;
 
-/** The catalogue key of a refusal that names the connection; any other code is `failed`. */
-const CODE_KEY: Partial<
-  Record<string, "auth" | "consentExpired" | "rateLimited" | "providerDown" | "invalidData">
-> = {
-  auth: "auth",
-  consent_expired: "consentExpired",
-  rate_limited: "rateLimited",
-  provider_down: "providerDown",
-  invalid_data: "invalidData",
-};
-
 /**
  * Does one thing to one of the person's connections — "Update now", "Turn on again", "Turn on",
  * "Test the connection", "Download the history again" — and answers the sentence to show.
@@ -58,7 +48,7 @@ export function useRunConnection() {
     if (code === "unavailable") return { ok: false, message: text("codes.unavailable") };
     if (code === "not_active") return { ok: false, message: text("text.pausedProvider", names) };
     if (code === "pending") return { ok: false, message: text("text.pending") };
-    return { ok: false, message: text(`codes.${CODE_KEY[code] ?? "failed"}`, names) };
+    return { ok: false, message: text(`codes.${codeKey(code)}`, names) };
   };
 }
 

@@ -477,6 +477,7 @@
       "atSource": {
         "deleted": "{count, plural, one {# categoria eliminata anche nella sua fonte} other {# categorie eliminate anche nella loro fonte}}",
         "refused": "La fonte non l'ha eliminata: {reason}",
+        "providerRefused": "La sorgente non l'ha eliminata, probabilmente perché la usa ancora. Eliminala dalla sorgente.",
         "failed": "Non si raggiunge la fonte: {reason}"
       },
       "merge": {

@@ -96,6 +96,9 @@ describe("the edit at the source", () => {
     const cases: [ApiError, unknown][] = [
       [new ApiError(409, "conflict", "not_linked"), { ok: false, error: "notLinked" }],
       [new ApiError(409, "conflict", "no_transfer_category"), { ok: false, error: "noTransferCategory" }],
+      [new ApiError(409, "conflict", "provider_refused"), { ok: false, error: "refused" }],
+      [new ApiError(409, "conflict", "zero_amount"), { ok: false, error: "amount" }],
+      [new ApiError(409, "conflict", "gone"), { ok: false, error: "notLinked" }],
       [
         new ApiError(409, "conflict", "Record locked"),
         { ok: false, error: "refused", reason: "Record locked" },
