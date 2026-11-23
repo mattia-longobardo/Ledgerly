@@ -34,6 +34,7 @@ import {
   translated,
   type WriteCtx,
 } from "./types";
+import { startPortfolioBy } from "./periods";
 
 // ——— Events ———————————————————————————————————————————————————————————————————————————————
 
@@ -243,7 +244,8 @@ export async function buyWithin(
   if (parsed.quantity === null ? parsed.totalCents === null : parsed.unitPrice === null) {
     throw new RangeError("A buy needs a quantity and a price, or a total");
   }
-  const investment = await lockInvestmentAccount(ctx, account.id, transaction);
+  const locked = await lockInvestmentAccount(ctx, account.id, transaction);
+  const investment = await startPortfolioBy(ctx, locked, parsed.on, transaction);
   const book = await loadBook(ctx, investment, account.currency, transaction);
   const period = periodOn(book, parsed.on);
   if (period === null) throw new InvestmentError("before_period");

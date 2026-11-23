@@ -15,6 +15,7 @@ import {
   dueDates,
   endedBy,
   instalment,
+  MAX_BACKFILL_RUNS,
   MAX_CATCH_UP,
   PLAN_RUN_REASONS,
   type PlanRunReason,
@@ -22,7 +23,6 @@ import {
 } from "../rules";
 import { investmentAccounts, investmentEvents, investmentPlanRuns, investmentPlans } from "../schema";
 import { buyWithin, positive } from "./events";
-import { pricedListingOf } from "./market";
 import { marketPrices } from "../ports";
 import {
   type InvestmentPlan,
@@ -33,7 +33,7 @@ import {
   sizeOf,
 } from "./plans";
 import { fromNumeric, InvestmentError, type WriteCtx } from "./types";
-import { investmentAssets } from "../schema";
+import { closesOfPlan } from "./plan-views";
 
 /** The days after its due date a bank movement may document an instalment (E7). */
 const DEBIT_WINDOW_DAYS = 5;
@@ -151,7 +151,7 @@ const backfillSchema = z.object({
       }),
     )
     .min(1)
-    .max(60),
+    .max(MAX_BACKFILL_RUNS),
 });
 export type Backfill = z.input<typeof backfillSchema>;
 
@@ -206,10 +206,7 @@ async function runOn(ctx: Pick<Ctx, "userId">, transaction: Tx, plan: Investment
 
 /** The first close of the plan's market on or after the due date, and its day; null with none yet. */
 async function priceOf(plan: InvestmentPlan, dueOn: CivilDate, todayOn: CivilDate) {
-  const [asset] = await getDb().select().from(investmentAssets).where(eq(investmentAssets.id, plan.assetId));
-  const listingId = (await pricedListingOf([asset])).get(asset.id);
-  if (listingId === undefined) return null;
-  const close = (await marketPrices().closesUpTo([listingId], todayOn)).find((one) => one.on >= dueOn);
+  const close = (await closesOfPlan(plan, todayOn)).find((one) => one.on >= dueOn);
   return close ? { price: close.close, currency: close.currency, on: close.on } : null;
 }
 

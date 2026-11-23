@@ -143,6 +143,7 @@
     "connection",
     "instruments",
     "investments",
+    "plans",
     "register"
   ],
   "packages/api-contract/src/payroll/index.ts": [
@@ -599,6 +600,7 @@
     "PRICE_SCALE",
     "PRODUCTS",
     "PROVIDER_SCHEDULE",
+    "PastRuns",
     "PeriodParams",
     "PlanFact",
     "PlanInput",
@@ -656,6 +658,7 @@
     "linkTransfer",
     "linkedPayeeKeys",
     "listInvestmentAccounts",
+    "listPastRuns",
     "listPlans",
     "listRuns",
     "managedAccountsOfInvestments",

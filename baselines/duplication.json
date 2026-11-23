@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 110679,
-    "duplicatedLines": 15888,
+    "lines": 110829,
+    "duplicatedLines": 15920,
     "percent": 14.36,
-    "blocks": 1246
+    "blocks": 1248
   },
   "units": {
     "api": {
-      "lines": 6329,
+      "lines": 6354,
       "duplicatedLines": 1244,
-      "percent": 19.66,
+      "percent": 19.58,
       "blocks": 116
     },
     "app": {
@@ -71,10 +71,10 @@
       "blocks": 30
     },
     "modules/investments": {
-      "lines": 16745,
-      "duplicatedLines": 2613,
-      "percent": 15.6,
-      "blocks": 208
+      "lines": 16870,
+      "duplicatedLines": 2644,
+      "percent": 15.67,
+      "blocks": 210
     },
     "modules/payroll": {
       "lines": 3799,
@@ -294,8 +294,8 @@
     },
     "platform/plugins": {
       "lines": 4848,
-      "duplicatedLines": 220,
-      "percent": 4.54,
+      "duplicatedLines": 221,
+      "percent": 4.56,
       "blocks": 16
     },
     "platform/ranges": {
@@ -677,22 +677,24 @@
     "modules/investments/rules/vocabulary.ts": 36,
     "modules/investments/schema.ts": 412,
     "modules/investments/service/assets.ts": 18,
-    "modules/investments/service/book.ts": 95,
+    "modules/investments/service/book.ts": 100,
     "modules/investments/service/operations.ts": 29,
+    "modules/investments/service/periods.ts": 24,
     "modules/investments/service/plan-runs.ts": 28,
-    "modules/investments/service/plans.ts": 30,
+    "modules/investments/service/plan-views.ts": 7,
+    "modules/investments/service/plans.ts": 23,
     "modules/investments/service/portfolio.ts": 8,
     "modules/investments/service/prices.ts": 17,
     "modules/investments/service/readings.ts": 49,
     "modules/investments/service/reads.ts": 8,
     "modules/investments/service/services.ts": 21,
     "modules/investments/service/transfers.ts": 23,
-    "modules/investments/service/types.ts": 20,
+    "modules/investments/service/types.ts": 21,
     "modules/investments/sync/connect.ts": 70,
     "modules/investments/sync/history.ts": 78,
     "modules/investments/sync/pass.ts": 53,
     "modules/investments/sync/quantities.ts": 91,
-    "modules/investments/sync/readings.ts": 82,
+    "modules/investments/sync/readings.ts": 83,
     "modules/investments/sync/settle.ts": 51,
     "modules/investments/sync/sources.ts": 18,
     "modules/investments/sync/status.ts": 21,
@@ -873,7 +875,7 @@
     "platform/plugins/contract/errors.ts": 13,
     "platform/plugins/queries.ts": 56,
     "platform/plugins/schema.ts": 63,
-    "platform/plugins/service.ts": 55,
+    "platform/plugins/service.ts": 56,
     "platform/plugins/sync.ts": 24,
     "platform/settings/schema.ts": 10,
     "platform/settings/service.ts": 20,

@@ -14,6 +14,8 @@ import type { PlanFrequency } from "./vocabulary";
 
 /** At most this many due dates the job adds after a stop (§11.3.2): the oldest are left to the person. */
 export const MAX_CATCH_UP = 12;
+/** The past due dates «Record the past instalments» takes at once (P4). */
+export const MAX_BACKFILL_RUNS = 60;
 /** The decimals a plan for an amount buys when it buys fractions (P3). */
 export const FRACTION_DECIMALS = 6;
 

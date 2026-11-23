@@ -65,6 +65,7 @@ export {
   endedBy,
   FRACTION_DECIMALS,
   instalment,
+  MAX_BACKFILL_RUNS,
   MAX_CATCH_UP,
   planFee,
   quantityFor,

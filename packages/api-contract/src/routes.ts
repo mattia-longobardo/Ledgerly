@@ -188,6 +188,7 @@ export const INVESTMENTS_ROUTES: readonly RouteContract[] = [
   investmentsPlans.confirmPlanRun,
   investmentsPlans.linkPlanRunDebit,
   investmentsPlans.skipPlanRun,
+  investmentsPlans.listPastRuns,
   investmentsPlans.backfillPlan,
 ];
 

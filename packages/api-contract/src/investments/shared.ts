@@ -75,7 +75,7 @@ export const PRICE_MODES = ["auto", "manual", "provider"] as const;
 
 /**
  * The `reason` of a refusal (`InvestmentError`, `SyncError`). `invalid`: `future_date`,
- * `before_period`, `invalid_transaction`, `unknown_provider`, `invalid_credentials`,
+ * `before_period`, `before_positions`, `invalid_transaction`, `unknown_provider`, `invalid_credentials`,
  * `unsupported_currency`. Every other one is `conflict`. A missing service, holding, event or reading
  * is `not_found`, with no reason.
  */
@@ -91,6 +91,7 @@ export const INVESTMENT_REFUSALS = [
   "already_linked",
   "not_editable",
   "before_period",
+  "before_positions",
   "not_a_transfer",
   "quantity_exceeded",
   "unknown_provider",

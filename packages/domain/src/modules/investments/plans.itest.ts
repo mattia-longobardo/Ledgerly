@@ -21,8 +21,10 @@ import {
   backfillPlan,
   confirmRun,
   createPlan,
+  convertToPortfolio,
   createPortfolioWithAccount,
   linkRunDebit,
+  listPastRuns,
   listPlans,
   listRuns,
   plansToDo,
@@ -266,5 +268,70 @@ describe("a purchase plan", () => {
     await confirmRun(ctx, { accountId, planId, runId: run.run.id }, {});
     await linkRunDebit(ctx, accountId, planId, run.run.id);
     expect(await suggestions(ctx)).toEqual([]);
+  });
+
+  it("records the past instalments of a plan older than its portfolio, priced at their closes (P4)", async () => {
+    const days = [-21, -14, -7].map((shift) => addDays(todayOn, shift));
+    await refreshPrices({
+      source: {
+        id: "prices",
+        closes: async (request) => ({
+          bars: request.listings.flatMap((one) =>
+            days.map((on) => ({ key: one.key, on, close: "40", currency: "EUR" })),
+          ),
+          errors: [],
+        }),
+      },
+      markets: [{ listingId, neededFrom: days[0] }],
+      today: todayOn,
+      cap: 10,
+    });
+    const accountId = await portfolio();
+    const weekday = dayOfWeek(days[0]) === 0 ? 7 : dayOfWeek(days[0]);
+    const { id: planId } = await createPlan(ctx, accountId, dueToday({ startOn: days[0], day: weekday }));
+    const past = await listPastRuns(ctx, accountId, planId);
+    expect(past).toMatchObject({ currency: "EUR", more: false });
+    expect(past.runs.map((run) => run.dueOn)).toEqual(days);
+    expect(past.runs[0].proposal).toMatchObject({
+      quantity: qty("2.5"),
+      spentCents: 100_00n,
+      feeCents: 1_00n,
+    });
+    // The deposit that paid them, before the portfolio was made, moves its start back (all or nothing).
+    await recordOperation(ctx, accountId, { kind: "deposit", on: days[0], amountCents: 1_000_00n });
+    const { eventIds } = await backfillPlan(
+      ctx,
+      { accountId, planId },
+      {
+        runs: past.runs.map((run) => ({
+          dueOn: run.dueOn,
+          on: run.proposal!.on,
+          quantity: run.proposal!.quantity,
+          unitPrice: run.proposal!.unitPrice,
+        })),
+      },
+    );
+    expect(eventIds).toHaveLength(3);
+    expect((await listPastRuns(ctx, accountId, planId)).runs).toEqual([]);
+    // 1,000 in, 303 out; 7.5 units at 40.
+    expect((await readingsAt(ctx, [accountId], days[2])).get(accountId)).toBe(997_00n);
+  });
+
+  it("refuses the past of a portfolio that was a value before (before_positions)", async () => {
+    await closeToday("40");
+    const { accountId } = await manualService(ctx, { name: "Bank", category: "broker", currency: "EUR" });
+    await convertToPortfolio(ctx, accountId, { on: todayOn, positions: [] });
+    const startOn = addDays(todayOn, -7);
+    const { id: planId } = await createPlan(ctx, accountId, dueToday({ startOn }));
+    await expect(
+      backfillPlan(
+        ctx,
+        { accountId, planId },
+        { runs: [{ dueOn: startOn, on: startOn, quantity: qty("1"), unitPrice: price("40") }] },
+      ),
+    ).rejects.toMatchObject({ code: "before_positions" });
+    await expect(
+      recordOperation(ctx, accountId, { kind: "deposit", on: startOn, amountCents: 1_00n }),
+    ).rejects.toMatchObject({ code: "before_positions" });
   });
 });

@@ -29,6 +29,7 @@ import {
   translated,
   type WriteCtx,
 } from "./types";
+import { startPortfolioBy } from "./periods";
 
 export const operationInputSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -227,8 +228,9 @@ export async function recordOperation(
   const account = await getAccount(ctx, accountId);
   if (!account) throw new InvestmentError("not_found");
   return getDb().transaction(async (tx) => {
-    const investment = await lockInvestmentAccount(ctx, accountId, tx);
-    refuseValueChange(investment);
+    const locked = await lockInvestmentAccount(ctx, accountId, tx);
+    refuseValueChange(locked);
+    const investment = await startPortfolioBy(ctx, locked, parsed.on, tx);
     const book = await loadBook(ctx, investment, account.currency, tx);
     const { legs, transactionId } = await legsOf(ctx, book, parsed, account);
     const event = await insertEvent(ctx, tx, investment.id, {

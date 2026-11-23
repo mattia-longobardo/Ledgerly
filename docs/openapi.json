@@ -33691,7 +33691,7 @@
     "/investments/{accountId}/operations": {
       "post": {
         "operationId": "record_investment_operation",
-        "summary": "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual portfolio also a purchase of an instrument, a deposit and a withdrawal (R5d). A sale of more than the quantity held that day, or a change that leaves a later sale short: `409` `quantity_exceeded`. A deposit or a withdrawal of another service, an account valuation or a correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
+        "summary": "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual portfolio also a purchase of an instrument, a deposit and a withdrawal (R5d). A sale of more than the quantity held that day, or a change that leaves a later sale short: `409` `quantity_exceeded`. A deposit or a withdrawal of another service, an account valuation or a correction comes from Accounts or the provider: `409` `not_editable`. On a manual portfolio, a day before it was made moves its start back to that day (a plan's past instalments, P4); `400` `before_positions` when its days before were a value only. Answers the event's id.",
         "tags": [
           "investments"
         ],
@@ -34389,6 +34389,9 @@
                               "mic"
                             ]
                           },
+                          "currency": {
+                            "type": "string"
+                          },
                           "amount": {
                             "anyOf": [
                               {
@@ -34529,6 +34532,7 @@
                           "id",
                           "name",
                           "asset",
+                          "currency",
                           "amount",
                           "quantity",
                           "fractions",
@@ -34779,7 +34783,7 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                "pattern": "^\\d{1,3}(\\.\\d{1,4})?$"
                               },
                               {
                                 "type": "null"
@@ -35014,7 +35018,7 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                                "pattern": "^\\d{1,3}(\\.\\d{1,4})?$"
                               },
                               {
                                 "type": "null"
@@ -35110,9 +35114,201 @@
       }
     },
     "/investments/{accountId}/plans/{planId}/backfill": {
+      "get": {
+        "operationId": "list_investment_plan_past_runs",
+        "summary": "The past due dates of a plan «Record the past instalments» offers: those before the plan was made, with nothing recorded or skipped, at most 60, oldest first; each with the first close on or after it and the proposal at that close, when the registry has one.",
+        "tags": [
+          "investments"
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "planId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "currency": {
+                      "type": "string"
+                    },
+                    "runs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "dueOn": {
+                            "type": "string"
+                          },
+                          "price": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "priceOn": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "proposal": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "on": {
+                                    "type": "string"
+                                  },
+                                  "quantity": {
+                                    "type": "string"
+                                  },
+                                  "unitPrice": {
+                                    "type": "string"
+                                  },
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  "fee": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  }
+                                },
+                                "required": [
+                                  "on",
+                                  "quantity",
+                                  "unitPrice",
+                                  "amount",
+                                  "fee"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "dueOn",
+                          "price",
+                          "priceOn",
+                          "proposal"
+                        ]
+                      }
+                    },
+                    "more": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "planId",
+                    "currency",
+                    "runs",
+                    "more"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "investments:read",
+        "x-addon": "investments"
+      },
       "post": {
         "operationId": "backfill_investment_plan",
-        "summary": "«Record the past instalments» of a plan that started in the past: one purchase for each due date given, at most 60, all of them or none. A due date already recorded: `not_editable`.",
+        "summary": "«Record the past instalments» of a plan that started in the past: one purchase for each due date given, at most 60, all of them or none. A due date already recorded: `not_editable`. A date before the portfolio was made moves its start back to that date (with the deposits before it); `before_positions` when the portfolio's days before were a value only («Switch to positions», or an account that had a balance).",
         "tags": [
           "investments"
         ],
@@ -35356,6 +35552,9 @@
                               "skipped"
                             ]
                           },
+                          "currency": {
+                            "type": "string"
+                          },
                           "price": {
                             "type": [
                               "string",
@@ -35443,6 +35642,9 @@
                                     "type": "string",
                                     "pattern": "^-?\\d+\\.\\d{2}$"
                                   },
+                                  "currency": {
+                                    "type": "string"
+                                  },
                                   "payee": {
                                     "type": [
                                       "string",
@@ -35457,6 +35659,7 @@
                                   "transactionId",
                                   "on",
                                   "amount",
+                                  "currency",
                                   "payee",
                                   "linked"
                                 ]
@@ -35486,6 +35689,7 @@
                           "id",
                           "dueOn",
                           "state",
+                          "currency",
                           "price",
                           "priceOn",
                           "waitingSince",

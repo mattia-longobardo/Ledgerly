@@ -3,6 +3,7 @@
 import * as connection from "./connection";
 import * as instruments from "./instruments";
 import * as investments from "./investments";
+import * as plans from "./plans";
 import * as register from "./register";
 
-export { connection, instruments, investments, register };
+export { connection, instruments, investments, plans, register };

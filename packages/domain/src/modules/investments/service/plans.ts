@@ -1,33 +1,16 @@
 // The purchase plans of a manual portfolio (rewrite plan R5d, step 2; 11-standardization.md §11.3): a
-// plan, its instalments and what the pages read of them. A plan writes purchases only (P1 B).
-import { and, desc, eq, inArray } from "drizzle-orm";
+// plan, its instalments, and the purchases plans wrote. A plan writes purchases only (P1 B).
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { getAccount } from "../../accounts";
-import { getTransaction } from "../../transactions/queries";
 import type { Ctx } from "../../../platform/context";
-import { addDays, type CivilDate, civilDateIn, today } from "../../../shared/dates";
+import { today } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import type { Cents } from "../../../shared/money";
 import { civilDate } from "../../../shared/inputs";
 import { PORTFOLIO_PROVIDER } from "../catalog";
-import {
-  dueDates,
-  instalment,
-  PLAN_FREQUENCIES,
-  PLAN_MODES,
-  PLAN_STATES,
-  PRICE_SCALE,
-  QUANTITY_SCALE,
-  RATE_SCALE,
-} from "../rules";
-import {
-  investmentAssets,
-  investmentEvents,
-  investmentOperations,
-  investmentPlanRuns,
-  investmentPlans,
-} from "../schema";
+import { PLAN_FREQUENCIES, PLAN_MODES, PLAN_STATES, QUANTITY_SCALE, RATE_SCALE } from "../rules";
+import { investmentEvents, investmentOperations, investmentPlanRuns, investmentPlans } from "../schema";
 import { assetOfInstrument } from "./assets";
 import { lockInvestmentAccount, requireInvestmentAccount } from "./book";
 import { optionalNote, positive } from "./events";
@@ -200,109 +183,6 @@ export function sizeOf(plan: InvestmentPlan) {
   };
 }
 
-/** A plan as the pages list it: its asset, its next due date and the instalments waiting. */
-export interface PlanView {
-  plan: InvestmentPlan;
-  asset: { id: string; name: string; instrumentId: string | null; mic: string | null };
-  nextDueOn: CivilDate | null;
-  toConfirm: number;
-  waitingPrice: number;
-}
-
-export async function listPlans(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  accountId: string,
-): Promise<PlanView[]> {
-  const investment = await requireInvestmentAccount(ctx, accountId);
-  // A synced service, or one by value, has no plan: none to list (§11.3).
-  if (investment.provider !== PORTFOLIO_PROVIDER) return [];
-  const rows = await getDb()
-    .select({ plan: investmentPlans, asset: investmentAssets })
-    .from(investmentPlans)
-    .innerJoin(investmentAssets, eq(investmentAssets.id, investmentPlans.assetId))
-    .where(and(userScoped(ctx).owns(investmentPlans), eq(investmentPlans.investmentAccountId, investment.id)))
-    .orderBy(investmentPlans.name, investmentPlans.id);
-  const runs = await runsOf(
-    ctx,
-    rows.map((row) => row.plan.id),
-  );
-  const todayOn = today(ctx.timeZone);
-  return rows.map(({ plan, asset }) => {
-    const own = runs.filter((run) => run.planId === plan.id);
-    const known = new Set(own.map((run) => run.dueOn));
-    const next =
-      plan.state === "active"
-        ? (dueDates(scheduleOf(plan), addDays(todayOn, 400)).find(
-            (day) => day >= todayOn && !known.has(day),
-          ) ?? null)
-        : null;
-    return {
-      plan,
-      asset: { id: asset.id, name: asset.name, instrumentId: asset.instrumentId, mic: asset.mic },
-      nextDueOn: next,
-      toConfirm: own.filter((run) => run.state === "proposed").length,
-      waitingPrice: own.filter((run) => run.state === "waiting_price").length,
-    };
-  });
-}
-
-async function runsOf(ctx: Pick<Ctx, "userId">, planIds: readonly string[]): Promise<InvestmentPlanRun[]> {
-  if (planIds.length === 0) return [];
-  return getDb()
-    .select()
-    .from(investmentPlanRuns)
-    .where(and(userScoped(ctx).owns(investmentPlanRuns), inArray(investmentPlanRuns.planId, [...planIds])))
-    .orderBy(desc(investmentPlanRuns.dueOn));
-}
-
-/** An instalment as the pages read it: the proposal at its price, its purchase and its bank movement. */
-export interface RunView {
-  run: InvestmentPlanRun;
-  proposal: { on: CivilDate; quantity: bigint; unitPrice: bigint; spentCents: Cents; feeCents: Cents } | null;
-  eventId: string | null;
-  debit: { transactionId: string; on: CivilDate; cents: Cents; payee: string | null; linked: boolean } | null;
-}
-
-export async function listRuns(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  accountId: string,
-  planId: string,
-): Promise<RunView[]> {
-  const plan = await requirePlan(ctx, accountId, planId);
-  const runs = await runsOf(ctx, [plan.id]);
-  const events = await eventsOfRuns(
-    ctx,
-    runs.map((run) => run.id),
-  );
-  return Promise.all(
-    runs.map(async (run) => {
-      const unitPrice = fromNumeric(run.price, PRICE_SCALE);
-      const open = run.state === "proposed" || run.state === "waiting_price" || run.state === "pending";
-      const proposal =
-        open && unitPrice !== null
-          ? { on: run.priceOn ?? run.dueOn, unitPrice, ...instalment(sizeOf(plan), unitPrice) }
-          : null;
-      return { run, proposal, eventId: events.get(run.id) ?? null, debit: await debitOf(ctx, run) };
-    }),
-  );
-}
-
-async function debitOf(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  run: InvestmentPlanRun,
-): Promise<RunView["debit"]> {
-  if (run.debitTransactionId === null) return null;
-  const movement = await getTransaction(ctx, run.debitTransactionId);
-  if (!movement) return null;
-  return {
-    transactionId: movement.id,
-    on: civilDateIn(movement.occurredAt, ctx.timeZone),
-    cents: -movement.amountCents,
-    payee: movement.payee,
-    linked: run.debitLinked,
-  };
-}
-
 /** The purchases plans wrote, of some events or of some instalments, with their plan and instalment. */
 async function planPurchases(ctx: Pick<Ctx, "userId">, among: { eventIds?: string[]; runIds?: string[] }) {
   if (among.eventIds?.length === 0 || among.runIds?.length === 0) return [];
@@ -324,7 +204,7 @@ async function planPurchases(ctx: Pick<Ctx, "userId">, among: { eventIds?: strin
 }
 
 /** The purchase each instalment wrote, by instalment. */
-async function eventsOfRuns(
+export async function eventsOfRuns(
   ctx: Pick<Ctx, "userId">,
   runIds: readonly string[],
 ): Promise<Map<string, string>> {

@@ -9,8 +9,10 @@ import {
   confirmRun,
   createPlan,
   linkRunDebit,
+  listPastRuns,
   listPlans,
   listRuns,
+  type PastRuns,
   type PlanView,
   PRICE_SCALE,
   QUANTITY_SCALE,
@@ -19,7 +21,12 @@ import {
   skipRun,
   updatePlan,
 } from "@ledgerly/domain/investments";
-import { centsToDecimal, formatDecimal, parseDecimal } from "@ledgerly/domain/shared/money";
+import {
+  centsToDecimal,
+  formatDecimal,
+  parseDecimal,
+  percentToFraction,
+} from "@ledgerly/domain/shared/money";
 import { type ApiEnv, type Guard, serve } from "../serve";
 import { maybe } from "./dto";
 import { cents, decimal, refusing } from "./refusals";
@@ -32,17 +39,33 @@ type FeeBody = z.output<typeof plans.createPlan.body>["fee"];
 const plain = (value: string | null, scale: number) =>
   value === null ? null : formatDecimal(parseDecimal(value, scale), scale);
 
+/** A fee's rate is a percentage on the wire, as the funds' ("0.19" is 0,19 %), a fraction in the domain. */
 const feeOf = (fee: FeeBody) => ({
   feeCents: fee === null ? null : cents(fee.amount),
-  feeRate: fee === null ? null : decimal(fee.rate, RATE_SCALE),
+  feeRate: fee?.rate == null ? null : decimal(percentToFraction(fee.rate), RATE_SCALE),
 });
+const percentOf = (fraction: string | null) =>
+  fraction === null ? null : formatDecimal(parseDecimal(fraction, RATE_SCALE) * 100n, RATE_SCALE);
+
+type Proposal = NonNullable<RunView["proposal"]>;
+const proposalOut = (proposal: Proposal | null) =>
+  proposal === null
+    ? null
+    : {
+        on: proposal.on,
+        quantity: formatDecimal(proposal.quantity, QUANTITY_SCALE),
+        unitPrice: formatDecimal(proposal.unitPrice, PRICE_SCALE),
+        amount: centsToDecimal(proposal.spentCents),
+        fee: centsToDecimal(proposal.feeCents),
+      };
 
 function planOut({ plan, asset, nextDueOn, toConfirm, waitingPrice }: PlanView) {
   const noFee = plan.feeCents === null && plan.feeRate === null;
   return {
     id: plan.id,
     name: plan.name,
-    asset,
+    asset: { id: asset.id, name: asset.name, instrumentId: asset.instrumentId, mic: asset.mic },
+    currency: asset.currency,
     amount: maybe(plan.amountCents),
     quantity: plain(plan.quantity, QUANTITY_SCALE),
     fractions: plan.fractions,
@@ -53,7 +76,7 @@ function planOut({ plan, asset, nextDueOn, toConfirm, waitingPrice }: PlanView) 
     endOn: plan.endOn,
     runsLimit: plan.runsLimit,
     debitAccountId: plan.debitAccountId,
-    fee: noFee ? null : { amount: maybe(plan.feeCents), rate: plain(plan.feeRate, RATE_SCALE) },
+    fee: noFee ? null : { amount: maybe(plan.feeCents), rate: percentOf(plan.feeRate) },
     mode: plan.mode,
     state: plan.state,
     nextDueOn,
@@ -62,25 +85,17 @@ function planOut({ plan, asset, nextDueOn, toConfirm, waitingPrice }: PlanView) 
   };
 }
 
-function runOut({ run, proposal, eventId, debit }: RunView) {
+function runOut({ run, currency, proposal, eventId, debit }: RunView) {
   return {
     id: run.id,
     dueOn: run.dueOn,
     state: run.state,
+    currency,
     price: plain(run.price, PRICE_SCALE),
     priceOn: run.priceOn,
     waitingSince: run.waitingSince,
     reason: run.reason,
-    proposal:
-      proposal === null
-        ? null
-        : {
-            on: proposal.on,
-            quantity: formatDecimal(proposal.quantity, QUANTITY_SCALE),
-            unitPrice: formatDecimal(proposal.unitPrice, PRICE_SCALE),
-            amount: centsToDecimal(proposal.spentCents),
-            fee: centsToDecimal(proposal.feeCents),
-          },
+    proposal: proposalOut(proposal),
     debit:
       debit === null
         ? null
@@ -88,11 +103,26 @@ function runOut({ run, proposal, eventId, debit }: RunView) {
             transactionId: debit.transactionId,
             on: debit.on,
             amount: centsToDecimal(debit.cents),
+            currency: debit.currency,
             payee: debit.payee,
             linked: debit.linked,
           },
     eventId,
     automatic: run.recordedBy === "job",
+  };
+}
+
+function pastRunsOut(planId: string, past: PastRuns) {
+  return {
+    planId,
+    currency: past.currency,
+    runs: past.runs.map((run) => ({
+      dueOn: run.dueOn,
+      price: run.price === null ? null : formatDecimal(run.price.unitPrice, PRICE_SCALE),
+      priceOn: run.price?.on ?? null,
+      proposal: proposalOut(run.proposal),
+    })),
+    more: past.more,
   };
 }
 
@@ -115,6 +145,9 @@ function serveWrites(app: Hono<ApiEnv>, guard: Guard): void {
       updatePlan(ctx, params.accountId, params.planId, { ...rest, ...(fee === undefined ? {} : feeOf(fee)) }),
     );
   });
+  serve(app, guard, plans.listPastRuns, async ({ ctx, params }) =>
+    pastRunsOut(params.planId, await refusing(() => listPastRuns(ctx, params.accountId, params.planId))),
+  );
   serve(app, guard, plans.backfillPlan, async ({ ctx, params, body }) => {
     const { eventIds } = await refusing(() =>
       backfillPlan(ctx, params, {
