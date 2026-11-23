@@ -169,6 +169,7 @@
     "syncScheduleSchema"
   ],
   "packages/api-contract/src/subscriptions/index.ts": [
+    "MAX_EVERY",
     "subscriptions"
   ],
   "packages/api-contract/src/timeoff/index.ts": [

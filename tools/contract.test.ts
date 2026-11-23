@@ -34,6 +34,7 @@ import * as pocketsWire from "../packages/api-contract/src/pockets/shared";
 import * as pocketsDomain from "@domain/modules/pockets/rules";
 import * as subscriptionsWire from "../packages/api-contract/src/subscriptions/shared";
 import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
+import { MAX_EVERY as ENTRY_MAX_EVERY } from "@ledgerly/api-contract/subscriptions";
 import * as interestsWire from "../packages/api-contract/src/interests/shared";
 import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
@@ -339,6 +340,10 @@ describe("the Server Actions of subscriptions", () => {
     expect(fields.name.maxLength).toBe(subscriptionsWire.MAX_NAME);
     expect(fields.utility.unwrap().unwrap().minValue).toBe(subscriptionsWire.MIN_UTILITY);
     expect(fields.utility.unwrap().unwrap().maxValue).toBe(subscriptionsWire.MAX_UTILITY);
+  });
+
+  it("export from their entry the largest «every» of the domain, for the forms (PERS-589)", () => {
+    expect(ENTRY_MAX_EVERY).toEqual(subscriptionsDomain.MAX_EVERY);
   });
 });
 

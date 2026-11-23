@@ -3,3 +3,5 @@
 import * as subscriptions from "./subscriptions";
 
 export { subscriptions };
+/** The largest N of «every N weeks or months» (D4), for the forms that check it before they send. */
+export { MAX_EVERY } from "./shared";
