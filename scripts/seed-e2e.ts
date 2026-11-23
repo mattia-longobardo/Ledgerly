@@ -31,7 +31,7 @@ import { totpCode } from "../tests/e2e/_shared/totp";
 import { seedCurrency, seedSwitching } from "./seed-e2e/accounts";
 import { seedBudgets } from "./seed-e2e/budgets";
 import { seedReview, seedReviewNew, seedRules } from "./seed-e2e/categories";
-import { seedPreviewRates } from "./seed-e2e/common";
+import { seedPreviewPlugins, seedPreviewRates } from "./seed-e2e/common";
 import { seedConnections, seedSchedule } from "./seed-e2e/connections";
 import {
   seedFunds,
@@ -213,6 +213,7 @@ for (const name of Object.keys(SESSIONS) as (keyof typeof SESSIONS)[]) {
 }
 
 await seedPreviewRates();
+await seedPreviewPlugins();
 
 await seedExpenses();
 

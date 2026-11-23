@@ -167,8 +167,10 @@ A changed file of this list starts the full suite.
 
 The preview is the image of the final SHA against `ledgerly_test`, on `127.0.0.1:3999`; the client
 stream's runs against `ledgerly_test_2` with `LEDGERLY_TEST_DATABASE`, `LEDGERLY_PREVIEW_PORT` and
-`LEDGERLY_PREVIEW_NAME`. `up` puts either on `ledgerly_plugins`, where the bank plugin is. Prepare
-the browser first (`AGENTS.md`, "Deploy": `PLAYWRIGHT_BROWSERS_PATH`).
+`LEDGERLY_PREVIEW_NAME`. `up` puts either on `ledgerly_plugins`, where the bank plugin is. Every
+plugin of the catalog is configured on the preview: one the instance does not run yet (a plugin of
+the checkout before its deploy) gets its container's address and a secret of the run, and the seed
+registers the manifest of its source, so its pages exist. Prepare the browser first (`AGENTS.md`, "Deploy": `PLAYWRIGHT_BROWSERS_PATH`).
 
 ```bash
 sh scripts/preview-on-test.sh build                      # ledgerly:preview, with its commit on it
