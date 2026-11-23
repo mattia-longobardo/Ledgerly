@@ -17,7 +17,7 @@ import { callPlugin, type Fetch } from "./client";
 /** The plugin answers within its own budget of 40 seconds; the call waits a little more. */
 const PRICES_TIMEOUT_MS = 60_000;
 
-export interface PluginPriceSource {
+interface PluginPriceSource {
   id: string;
   closes(request: z.input<typeof pricesRequestSchema>): Promise<PricesResponse>;
 }

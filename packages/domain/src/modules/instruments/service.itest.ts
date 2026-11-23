@@ -3,8 +3,8 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import type { PriceAnswer, PriceRequest, PriceSource } from "./ports";
-import { lastClosesOf, refreshPrices } from "./prices";
-import { searchInstruments } from "./service";
+import { lastClosesOf, refreshPrices } from "./service/prices";
+import { searchInstruments } from "./service/search";
 
 // A public example ISIN (ISO 6166), no person's data.
 const ISIN = "US0378331005";

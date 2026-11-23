@@ -1,9 +1,9 @@
 // The registry of instruments (rewrite plan R5d): the search «Record operation» starts from. What a
 // source finds is kept, so the next search of the same instrument asks nobody.
 import { asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
-import { getDb, type Tx } from "../../platform/db/client";
-import { isIsin, orderListings } from "./rules";
-import { instrumentListings, instruments } from "./schema";
+import { getDb, type Tx } from "../../../platform/db/client";
+import { isIsin, orderListings } from "../rules";
+import { instrumentListings, instruments } from "../schema";
 import { type FoundInstrument, lookupIsin, searchText, type SourceOptions, SourceError } from "./sources";
 
 const MAX_HITS = 20;

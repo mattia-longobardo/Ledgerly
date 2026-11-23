@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lookupIsin, searchText, SourceError } from "./sources";
+import { lookupIsin, searchText, SourceError } from "./service/sources";
 
 // Public example ISIN (ISO 6166), no person's data.
 const ISIN = "US0378331005";

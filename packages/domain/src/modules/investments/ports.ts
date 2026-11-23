@@ -41,7 +41,7 @@ export interface RegistryInstrument {
  * The registry of instruments and its daily closes (R5d), as investments reads them: declared here
  * and realised by `instruments`, so this module never imports it (M2).
  */
-export interface MarketPrices {
+interface MarketPrices {
   /** The market Xetra: the price of an asset whose market has no source (S3). */
   fallbackMic: string;
   instrumentById(id: string): Promise<RegistryInstrument | null>;

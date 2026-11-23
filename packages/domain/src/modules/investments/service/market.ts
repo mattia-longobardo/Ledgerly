@@ -10,7 +10,7 @@ import type { InvestmentAsset, InvestmentHolding } from "./types";
 const LAST_DAY = "9999-12-31";
 
 /** The markets an asset may be priced on, the order's first: none for a price by hand. */
-export function marketsOf(asset: Pick<InvestmentAsset, "instrumentId" | "mic" | "priceSource">): MarketKey[] {
+function marketsOf(asset: Pick<InvestmentAsset, "instrumentId" | "mic" | "priceSource">): MarketKey[] {
   if (asset.priceSource !== "market" || asset.instrumentId === null) return [];
   const fallback = marketPrices().fallbackMic;
   const own = asset.mic === null ? [] : [{ instrumentId: asset.instrumentId, mic: asset.mic }];

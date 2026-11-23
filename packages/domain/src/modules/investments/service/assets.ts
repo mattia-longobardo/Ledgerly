@@ -108,7 +108,7 @@ export async function holdingFor(
 }
 
 /** An instrument of the registry on the market of the order (R5d); `mic` null for one with no market. */
-export interface InstrumentRef {
+interface InstrumentRef {
   instrumentId: string;
   mic: string | null;
 }

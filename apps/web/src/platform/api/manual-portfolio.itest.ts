@@ -1,0 +1,197 @@
+// The manual portfolio on /api/v1 (rewrite plan R5d): a portfolio, its cash, a purchase of the
+// registry, a sale of more than is held, the price mode, «Switch to positions», the MCP's holdings.
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Ctx } from "@domain/platform/context";
+import { today } from "@domain/shared/dates";
+import { closeDatabase, resetDatabase } from "../../../../../test/db";
+import { contextFor } from "../../../../../test/fixtures";
+import { createTestUser } from "../../../../../test/users";
+
+let signedIn: Ctx;
+vi.mock("next/server", () => ({ after: () => {} }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
+vi.mock("@/platform/auth/session", () => ({ requireSession: async () => signedIn }));
+
+const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition");
+const { apiRoutes } = await import("@ledgerly/api");
+const { searchInstruments } = await import("@ledgerly/domain/instruments");
+const { createAccount } = await import("@domain/modules/accounts/service");
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the answers are read as JSON
+type Json = any;
+
+async function send(ctx: Ctx, method: string, path: string, body?: unknown) {
+  const routes = apiRoutes({
+    ...adapters,
+    guard: () => async (context, next) => {
+      context.set("ctx", ctx);
+      await next();
+    },
+  });
+  const response = await routes.request(path, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await response.text();
+  return { status: response.status, body: text === "" ? null : (JSON.parse(text) as Json) };
+}
+
+// A public example ISIN (ISO 6166); the registers are fakes, the registry the instance's.
+const ISIN = "US0378331005";
+const REGISTERS = (async (input: string | URL | Request) => {
+  const figi = [
+    { data: [{ ticker: "EXA", exchCode: "IM", shareClassFIGI: "BBG000000001", securityType: "ETP" }] },
+  ];
+  const firds = {
+    response: {
+      docs: [{ gnr_full_name: "Example ETF", gnr_cfi_code: "CEOGLS", gnr_notional_curr_code: "EUR" }],
+    },
+  };
+  return new Response(JSON.stringify(new URL(String(input)).host === "api.openfigi.com" ? figi : firds));
+}) as typeof globalThis.fetch;
+
+let alice: Ctx;
+let todayOn: string;
+let instrumentId: string;
+
+beforeEach(async () => {
+  await resetDatabase();
+  alice = contextFor((await createTestUser()).id);
+  signedIn = alice;
+  todayOn = today(alice.timeZone);
+  instrumentId = (await searchInstruments(ISIN, { fetch: REGISTERS, priceSourceId: null })).items[0]
+    .instrumentId;
+});
+afterAll(closeDatabase);
+
+async function portfolio(): Promise<string> {
+  const made = await send(alice, "POST", "/investments", {
+    kind: "portfolio",
+    name: "Broker",
+    currency: "EUR",
+  });
+  expect(made.status).toBe(201);
+  return made.body.accountId;
+}
+
+const buy = (quantity: string, unitPrice: string) => ({
+  kind: "buy",
+  instrumentId,
+  mic: "XMIL",
+  on: todayOn,
+  quantity,
+  unitPrice,
+  fee: "2.00",
+});
+
+describe("a manual portfolio on /api/v1", () => {
+  it("keeps cash and positions, and never sells more than it holds", async () => {
+    const accountId = await portfolio();
+    const ops = `/investments/${accountId}/operations`;
+    expect((await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1500.00" })).status).toBe(
+      201,
+    );
+    expect((await send(alice, "POST", ops, buy("10", "100"))).status).toBe(201);
+    const holdings = await send(alice, "GET", `/investments/${accountId}/holdings`);
+    expect(holdings.body.cash).toBe("498.00");
+    expect(holdings.body.holdings).toHaveLength(1);
+    expect(holdings.body.holdings[0].asset).toMatchObject({
+      isin: ISIN,
+      instrumentId,
+      mic: "XMIL",
+      price: { mode: "manual", stale: false },
+    });
+    const tool = reads.find((one) => one.name === "get_investment_holdings")!;
+    expect(await tool.run(alice, { account_id: accountId })).toEqual(holdings.body);
+    const listed = await send(alice, "GET", "/investments?period=all");
+    expect(listed.body.services.find((one: Json) => one.accountId === accountId)).toMatchObject({
+      kind: "manual_portfolio",
+      value: "1498.00",
+    });
+
+    const holdingId = await holdingIdOf(accountId);
+    const short = await send(alice, "POST", ops, {
+      kind: "sell",
+      holdingId,
+      on: todayOn,
+      quantity: "11",
+      unitPrice: "100",
+    });
+    expect(short).toMatchObject({ status: 409, body: { error: "conflict", reason: "quantity_exceeded" } });
+    const auto = await send(alice, "PUT", `/investments/${accountId}/holdings/${holdingId}/price-mode`, {
+      mode: "auto",
+    });
+    expect(auto).toMatchObject({ status: 409, body: { error: "conflict", reason: "not_editable" } });
+  });
+
+  it("refuses the money in and out and a purchase on a service that is not a portfolio", async () => {
+    const made = await send(alice, "POST", "/investments", {
+      name: "Bank",
+      category: "broker",
+      currency: "EUR",
+      value: "100.00",
+    });
+    const ops = `/investments/${made.body.accountId}/operations`;
+    expect(await send(alice, "POST", ops, { kind: "deposit", on: todayOn, amount: "1.00" })).toMatchObject({
+      status: 409,
+      body: { error: "conflict", reason: "not_editable" },
+    });
+    expect((await send(alice, "POST", ops, buy("1", "1"))).status).toBe(409);
+    const holdings = await send(alice, "GET", `/investments/${made.body.accountId}/holdings`);
+    expect(holdings.body.cash).toBeNull();
+  });
+
+  it("switches a service kept by value to positions, its value unchanged", async () => {
+    const account = await createAccount(alice, {
+      name: "Titles",
+      type: "investment",
+      currency: "EUR",
+      openingBalance: { on: "2026-01-01", cents: 3_000_00n },
+    });
+    expect(
+      (await send(alice, "POST", "/investments", { accountId: account.id, category: "broker" })).status,
+    ).toBe(201);
+    const position = { instrumentId, mic: "XMIL", quantity: "10", unitPrice: "100", fxRate: null };
+    const switched = await send(alice, "POST", `/investments/${account.id}/conversion`, {
+      on: todayOn,
+      positions: [position],
+      note: null,
+    });
+    expect(switched.status).toBe(204);
+    const holdings = await send(alice, "GET", `/investments/${account.id}/holdings`);
+    expect(holdings.body.cash).toBe("2000.00");
+    expect(holdings.body.holdings[0].value).toBe("1000.00");
+    const again = await send(alice, "POST", `/investments/${account.id}/conversion`, {
+      on: todayOn,
+      positions: [],
+      note: null,
+    });
+    expect(again).toMatchObject({ status: 409, body: { error: "conflict", reason: "not_eligible" } });
+  });
+
+  it("finds an instrument of the registry by ISIN, with its markets", async () => {
+    const found = await send(alice, "GET", `/instruments/search?q=${ISIN}`);
+    expect(found).toMatchObject({
+      status: 200,
+      body: {
+        complete: true,
+        items: [
+          {
+            instrumentId,
+            isin: ISIN,
+            name: "Example ETF",
+            class: "etf",
+            listings: [{ mic: "XMIL", ticker: "EXA", priced: false }],
+          },
+        ],
+      },
+    });
+  });
+});
+
+async function holdingIdOf(accountId: string): Promise<string> {
+  const positions = await send(alice, "GET", `/investments/${accountId}/positions?period=all`);
+  return positions.body.open.rows[0].holdingId;
+}

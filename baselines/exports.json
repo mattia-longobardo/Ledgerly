@@ -136,7 +136,6 @@
   ],
   "packages/api-contract/src/investments/index.ts": [
     "connection",
-    "instruments",
     "investments",
     "register"
   ],

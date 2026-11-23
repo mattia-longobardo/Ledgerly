@@ -72,9 +72,9 @@ const chartSchema = z.object({
 export type Fetch = typeof globalThis.fetch;
 
 /** Why a market has no bar: the codes of the contract's `errors`. */
-export type BarsError = "unknown_symbol" | "no_data" | "rate_limited" | "provider_down";
+type BarsError = "unknown_symbol" | "no_data" | "rate_limited" | "provider_down";
 
-export interface Bar {
+interface Bar {
   on: string;
   close: string;
   currency: string;

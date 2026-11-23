@@ -9,7 +9,6 @@ export {
   marketKey,
   pricedListings,
   refreshPrices,
-} from "./prices";
-export type { Close, MarketKey, PricedMarket, PricesRun } from "./prices";
+} from "./service";
+export type { Close, InstrumentHit, MarketKey, PricedMarket, PricesRun, SearchDeps } from "./service";
 export { instrumentById, searchInstruments } from "./service";
-export type { InstrumentHit, SearchDeps } from "./service";

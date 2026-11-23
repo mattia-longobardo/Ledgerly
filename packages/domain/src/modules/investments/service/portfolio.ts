@@ -18,7 +18,7 @@ import { insertEvent, type LegInput, optionalNote, positive, rateOf } from "./ev
 import { eligibleAccounts } from "./services";
 import { InvestmentError, notFuture, type WriteCtx } from "./types";
 
-export const portfolioSchema = z.object({
+const portfolioSchema = z.object({
   accountId: z.uuid(),
   url: z.string().max(500).nullable().default(null),
 });
@@ -101,7 +101,7 @@ export async function isPortfolio(ctx: Pick<Ctx, "userId">, accountId: string): 
   return (await requireInvestmentAccount(ctx, accountId)).provider === PORTFOLIO_PROVIDER;
 }
 
-export const conversionSchema = z.object({
+const conversionSchema = z.object({
   on: civilDate(),
   positions: z
     .array(

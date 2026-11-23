@@ -352,7 +352,7 @@ export function contributionsOut(found: Contributions) {
 const NO_PRICE: AssetPrice = { mode: "manual", on: null, source: null, stale: false };
 
 /** An asset as a row names it, with its instrument, its market and the state of its price (R5d). */
-export function assetRefOut(
+function assetRefOut(
   asset: Pick<
     InvestmentAsset,
     "id" | "name" | "class" | "symbol" | "isin" | "currency" | "instrumentId" | "mic"

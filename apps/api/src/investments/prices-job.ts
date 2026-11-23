@@ -4,13 +4,15 @@
 import { DEFAULT_DAILY_CALLS, refreshPrices } from "@ledgerly/domain/instruments";
 import { pricedMarkets, revalueAfterPrices } from "@ledgerly/domain/investments";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import type { JobDetail } from "@ledgerly/domain/platform/jobs";
 import { pricesPlugin } from "@ledgerly/domain/platform/plugins";
 import { today } from "@ledgerly/domain/shared/dates";
 import { forEachUser } from "@ledgerly/domain/users";
 import { pluginPriceSource } from "@ledgerly/plugin-host";
 
-export async function refreshInstrumentPrices(now: Date = new Date()): Promise<JobDetail> {
+/** What the run says in `job_runs.detail`: the shape of a job detail, written here (no import of the jobs). */
+type RunDetail = Record<string, string | number | boolean | null>;
+
+export async function refreshInstrumentPrices(now: Date = new Date()): Promise<RunDetail> {
   const plugin = await pricesPlugin();
   if (!plugin) return { plugin: false };
   const people: { ctx: Ctx; markets: Awaited<ReturnType<typeof pricedMarkets>> }[] = [];

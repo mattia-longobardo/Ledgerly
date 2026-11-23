@@ -6,11 +6,11 @@ export const INSTRUMENT_CLASSES = ["stock", "etf", "fund", "bond", "other"] as c
 export type InstrumentClass = (typeof INSTRUMENT_CLASSES)[number];
 
 /** A price older than this many working days makes an asset «to update» (investments.md §6). */
-export const STALE_AFTER_WORKING_DAYS = 5;
+const STALE_AFTER_WORKING_DAYS = 5;
 /** The days every run reads again: a source corrects a recent close, a run may have been missed. */
-export const REREAD_DAYS = 10;
+const REREAD_DAYS = 10;
 /** The farthest back a market with no price is read: the history a P&L may need. */
-export const MAX_BACKFILL_DAYS = 730;
+const MAX_BACKFILL_DAYS = 730;
 /** The source calls a day for the whole instance, by default (`PRICES_DAILY_CALLS`). */
 export const DEFAULT_DAILY_CALLS = 200;
 
