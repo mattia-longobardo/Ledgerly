@@ -19,6 +19,7 @@ import * as interests from "./interests/interests";
 import * as investmentsConnection from "./investments/connection";
 import * as investmentsFunds from "./investments/funds";
 import * as investmentsInstruments from "./investments/instruments";
+import * as investmentsPlans from "./investments/plans";
 import * as investments from "./investments/investments";
 import * as investmentsRegister from "./investments/register";
 import { metaRoute } from "./meta";
@@ -170,6 +171,7 @@ export const INVESTMENTS = {
   register: investmentsRegister,
   connection: investmentsConnection,
   instruments: investmentsInstruments,
+  plans: investmentsPlans,
 } as const;
 
 /** Investments, the twelfth module of R2 (05-refactor.md §5.2): the pages' reads and their writes. */
@@ -179,6 +181,13 @@ export const INVESTMENTS_ROUTES: readonly RouteContract[] = [
   ...Object.values(investmentsRegister),
   ...Object.values(investmentsConnection),
   investmentsInstruments.searchInstruments,
+  investmentsPlans.listPlans,
+  investmentsPlans.createPlan,
+  investmentsPlans.updatePlan,
+  investmentsPlans.listPlanRuns,
+  investmentsPlans.confirmPlanRun,
+  investmentsPlans.skipPlanRun,
+  investmentsPlans.backfillPlan,
 ];
 
 /** The Addons of a person (R5a, H52): which modules are on. */

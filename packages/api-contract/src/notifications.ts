@@ -26,6 +26,9 @@ export const NOTIFICATION_EVENT_NAMES = [
   "payslips_to_review",
   "transfers_to_confirm",
   "fund_to_verify",
+  // R5d, step 2: an instalment of a purchase plan to confirm, or still with no price after 5 working days.
+  "plan_run_to_confirm",
+  "plan_run_price_missing",
 ] as const;
 
 export type NotificationEvent = (typeof NOTIFICATION_EVENT_NAMES)[number];
@@ -40,6 +43,7 @@ export const NOTIFICATION_PAGES = [
   "investments_transfers",
   "fund",
   "overview",
+  "investment_plan",
 ] as const;
 
 /** Every event of the service: its category, its addon (`null`: a base module) and the page it opens. */
@@ -54,6 +58,8 @@ export const NOTIFICATION_EVENTS = {
   payslips_to_review: { category: "action", addon: "payroll", page: "payroll_review" },
   transfers_to_confirm: { category: "action", addon: "investments", page: "investments_transfers" },
   fund_to_verify: { category: "action", addon: "investments", page: "fund" },
+  plan_run_to_confirm: { category: "action", addon: "investments", page: "investment_plan" },
+  plan_run_price_missing: { category: "action", addon: "investments", page: "investment_plan" },
 } as const satisfies Record<
   NotificationEvent,
   { category: NotificationCategory; addon: AddonId | null; page: (typeof NOTIFICATION_PAGES)[number] }
@@ -80,7 +86,7 @@ export type NotificationParams = z.infer<typeof params>;
 
 const target = z.object({
   page: z.enum(NOTIFICATION_PAGES),
-  /** The connection, account, budget or fund; `null` for a page without one. */
+  /** The connection, account, budget, fund or plan; `null` for a page without one. */
   id: z.string().nullable(),
   /**
    * The id of the page to open, when it is not `id`: for a fund, the account that holds its value,

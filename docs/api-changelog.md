@@ -3,6 +3,19 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Investments: the purchase plans of a manual portfolio (R5d, step 2)
+
+- `GET /investments/{accountId}/plans` (MCP `list_investment_plans`, read only), `POST` the same path,
+  `PATCH /investments/{accountId}/plans/{planId}`: a plan buys one instrument for an amount or a quantity
+  (fractions or whole units), every N weeks, months or quarters on a day, from a start to an end or a number
+  of instalments; an optional debit account (each purchase with its deposit), a fee per instalment, the mode
+  `propose` (default) or `auto`, the state `active`, `paused`, `ended`. Only on a manual portfolio.
+- `GET …/plans/{planId}/runs`, `POST …/runs/{runId}/confirm` (with corrections), `POST …/runs/{runId}/skip`,
+  `POST …/plans/{planId}/backfill` (at most 60 past due dates, all or none).
+- Activity rows: `plan` (`planId`, `runId`, `name`, `automatic`), null for any other operation.
+- «Da fare» and the notifications: the events `plan_run_to_confirm` and `plan_run_price_missing`, on the page
+  `investment_plan` (dates and counts only).
+
 ## Unreleased · Import a CSV file of movements (R5c, P5, decision ST-8)
 
 Four new routes, for an account «a mano» only (no source): an account with a source answers `409`
