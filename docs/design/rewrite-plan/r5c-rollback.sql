@@ -1,3 +1,14 @@
+-- Release R5c, step P5 "Import CSV" (decision ST-8): the way back for the database, before the one of
+-- step P3a below. Run this block first, alone, to go back to the image of P3a.
+--
+-- The step adds one table, `csv_column_maps`, which the image before it never reads. The movements
+-- an import wrote are manual movements (`origin = 'manual'`, `idempotency_key` `csv:<hash>`) that
+-- the image before reads as any other: they stay. Lost: the maps saved per account.
+BEGIN;
+DROP TABLE IF EXISTS csv_column_maps;
+DELETE FROM drizzle.__drizzle_migrations WHERE created_at = 1795600000000;
+COMMIT;
+
 -- Release R5c, step P3a "Wallet e Trek come plugin": the way back for the database, before the one of
 -- step P2 below (docs/design/rewrite-plan/03-releases.md "R5c"). Run this block first, alone, to go
 -- back to the image of P2; run the block of P2 after it only if P2 is not coming back either.

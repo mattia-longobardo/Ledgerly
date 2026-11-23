@@ -3,6 +3,28 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Import a CSV file of movements (R5c, P5, decision ST-8)
+
+Four new routes, for an account «a mano» only (no source): an account with a source answers `409`
+`conflict` with reason `account_not_manual`, an archived one `account_unavailable`, another person's
+`404`. A file is at most 5 MiB and 20,000 rows (`413` `too_large`, reason `too_many_rows` for the
+rows); an empty one is `400` `invalid` with reason `empty`.
+
+- `POST /accounts/{id}/csv/preview` (scope `read`, `multipart/form-data`: `file`): writes nothing.
+  The delimiter found, the header's names, the number of rows, the map saved for the account
+  (`savedMap`) and the one the file proposes (`proposedMap`), and the first 20 rows read with the
+  saved map, or the proposed one: `row` (from 1, as a spreadsheet numbers it), `outcome` `ok` or
+  `refused`, `reason`, `on`, `amount`, `payee`.
+- `POST /accounts/{id}/csv/import` (scope `write`, `multipart/form-data`: `file`, `map` as JSON,
+  `saveMap` `true` to keep the map): each row becomes a manual movement and changes the balance as a
+  movement written by hand. Answers `created`, `duplicates` (rows already imported: the same file
+  sent twice writes once) and `refused` (`row`, `reason`: an open code such as `bad_date`,
+  `bad_amount`, `no_amount`, `zero_amount`, `future_date`, `missing_column`).
+- `GET /accounts/{id}/csv-map` and `PUT /accounts/{id}/csv-map` (scopes `read` and `write`): the map
+  of the columns saved for the account (`{ "map": … }`, null when none). A column is its place in the
+  row, from 0; the amount is one signed column or a debit and/or a credit column.
+- No MCP tool: the routes write, or read a file.
+
 ## Unreleased · The plugins say what reads them (R5c, P3b)
 
 - `GET /plugins`: every plugin has `kind` — `bank` (a bank's plugin), `source` (a source read with

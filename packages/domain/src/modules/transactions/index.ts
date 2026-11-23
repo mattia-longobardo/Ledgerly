@@ -34,6 +34,7 @@ export {
 } from "./categorize/user-rules-service";
 export type { RulePreview } from "./categorize/user-rules-service";
 export type { RuleCondition } from "./categorize/user-rules";
+export { CsvError, csvMapOf, importCsv, previewCsv, saveCsvMap } from "./service/csv";
 export { MANUAL_KINDS, signedAmount } from "./manual-rules";
 export type { ManualKind } from "./manual-rules";
 export { createManualTransaction, deleteManualTransaction, updateManualTransaction } from "./manual";

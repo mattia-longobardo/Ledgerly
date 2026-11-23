@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 108936,
-    "duplicatedLines": 15728,
-    "percent": 14.44,
-    "blocks": 1225
+    "lines": 109589,
+    "duplicatedLines": 15750,
+    "percent": 14.37,
+    "blocks": 1226
   },
   "units": {
     "api": {
-      "lines": 6105,
+      "lines": 6150,
       "duplicatedLines": 1212,
-      "percent": 19.85,
+      "percent": 19.71,
       "blocks": 113
     },
     "app": {
@@ -50,7 +50,7 @@
       "lines": 12767,
       "duplicatedLines": 1808,
       "percent": 14.16,
-      "blocks": 143
+      "blocks": 142
     },
     "modules/imports": {
       "lines": 951,
@@ -107,10 +107,10 @@
       "blocks": 29
     },
     "modules/transactions": {
-      "lines": 13058,
-      "duplicatedLines": 1664,
-      "percent": 12.74,
-      "blocks": 133
+      "lines": 13666,
+      "duplicatedLines": 1686,
+      "percent": 12.34,
+      "blocks": 135
     },
     "modules/users": {
       "lines": 1004,
@@ -796,6 +796,7 @@
     "modules/transactions/queries/views.ts": 52,
     "modules/transactions/rules/vocabulary.ts": 7,
     "modules/transactions/schema/categories.ts": 105,
+    "modules/transactions/schema/csv-maps.ts": 22,
     "modules/transactions/schema/duplicates.ts": 19,
     "modules/transactions/schema/learning.ts": 92,
     "modules/transactions/schema/movements.ts": 100,

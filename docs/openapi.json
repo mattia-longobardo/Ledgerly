@@ -2423,6 +2423,1291 @@
         "x-scope": "read"
       }
     },
+    "/accounts/{id}/csv-map": {
+      "get": {
+        "operationId": "get_csv_map",
+        "summary": "The map of the columns saved for an account «a mano»; null when none is. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "map": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "columns": {
+                              "type": "object",
+                              "properties": {
+                                "date": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                "amount": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "debit": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "credit": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "payee": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "note": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "category": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "date",
+                                "amount",
+                                "debit",
+                                "credit",
+                                "payee",
+                                "note",
+                                "category"
+                              ]
+                            },
+                            "delimiter": {
+                              "type": "string",
+                              "pattern": "^[^\"\\r\\n\\w\\s.]$|^\\t$"
+                            },
+                            "decimalSeparator": {
+                              "type": "string",
+                              "enum": [
+                                ",",
+                                "."
+                              ]
+                            },
+                            "dateFormat": {
+                              "type": "string",
+                              "pattern": "^(DD|MM|YYYY)([./-])(DD|MM|YYYY)\\2(DD|MM|YYYY)$"
+                            },
+                            "skipRows": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "header": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "columns",
+                            "delimiter",
+                            "decimalSeparator",
+                            "dateFormat",
+                            "skipRows",
+                            "header"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "map"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "too_large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      },
+      "put": {
+        "operationId": "save_csv_map",
+        "summary": "Saves the map of the columns for an account «a mano», in place of the one it had. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "object",
+                    "properties": {
+                      "date": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 199
+                      },
+                      "amount": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 199
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "debit": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 199
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "credit": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 199
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "payee": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 199
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "note": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 199
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "category": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 199
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "date",
+                      "amount",
+                      "debit",
+                      "credit",
+                      "payee",
+                      "note",
+                      "category"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "delimiter": {
+                    "type": "string",
+                    "pattern": "^[^\"\\r\\n\\w\\s.]$|^\\t$"
+                  },
+                  "decimalSeparator": {
+                    "type": "string",
+                    "enum": [
+                      ",",
+                      "."
+                    ]
+                  },
+                  "dateFormat": {
+                    "type": "string",
+                    "pattern": "^(DD|MM|YYYY)([./-])(DD|MM|YYYY)\\2(DD|MM|YYYY)$"
+                  },
+                  "skipRows": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "header": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "columns",
+                  "delimiter",
+                  "decimalSeparator",
+                  "dateFormat",
+                  "skipRows",
+                  "header"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "map": {
+                      "type": "object",
+                      "properties": {
+                        "columns": {
+                          "type": "object",
+                          "properties": {
+                            "date": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 199
+                            },
+                            "amount": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "debit": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "credit": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "payee": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "note": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "category": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "date",
+                            "amount",
+                            "debit",
+                            "credit",
+                            "payee",
+                            "note",
+                            "category"
+                          ]
+                        },
+                        "delimiter": {
+                          "type": "string",
+                          "pattern": "^[^\"\\r\\n\\w\\s.]$|^\\t$"
+                        },
+                        "decimalSeparator": {
+                          "type": "string",
+                          "enum": [
+                            ",",
+                            "."
+                          ]
+                        },
+                        "dateFormat": {
+                          "type": "string",
+                          "pattern": "^(DD|MM|YYYY)([./-])(DD|MM|YYYY)\\2(DD|MM|YYYY)$"
+                        },
+                        "skipRows": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "header": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "columns",
+                        "delimiter",
+                        "decimalSeparator",
+                        "dateFormat",
+                        "skipRows",
+                        "header"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "map"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "too_large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/accounts/{id}/csv/import": {
+      "post": {
+        "operationId": "import_csv",
+        "summary": "Writes the rows of a CSV file (`multipart/form-data`: `file`, `map` as JSON, `saveMap` `true` to keep the map for the account) as manual movements of an account «a mano»: each changes the balance as a movement written by hand. A row already imported is a duplicate and is not written again, so the same file sent twice writes once. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "contentEncoding": "binary"
+                  },
+                  "map": {
+                    "type": "string",
+                    "description": "The map as JSON, the body of `PUT /accounts/{id}/csv-map`."
+                  },
+                  "saveMap": {
+                    "type": "string",
+                    "enum": [
+                      "true",
+                      "false"
+                    ]
+                  }
+                },
+                "required": [
+                  "file",
+                  "map"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "created": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "duplicates": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "refused": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "row": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "reason": {
+                            "type": "string",
+                            "pattern": "^[a-z_]+$"
+                          }
+                        },
+                        "required": [
+                          "row",
+                          "reason"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "created",
+                    "duplicates",
+                    "refused"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "too_large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write"
+      }
+    },
+    "/accounts/{id}/csv/preview": {
+      "post": {
+        "operationId": "preview_csv",
+        "summary": "Reads a CSV file of movements (`multipart/form-data`, `file`) for an account «a mano» and writes nothing: the delimiter found, the columns, the map saved for the account and a proposed one, and the first 20 rows parsed with the saved map, or the proposed one, each with its outcome. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
+        "tags": [
+          "transactions"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "contentEncoding": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "delimiter": {
+                      "type": "string"
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "rowCount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "savedMap": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "columns": {
+                              "type": "object",
+                              "properties": {
+                                "date": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                "amount": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "debit": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "credit": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "payee": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "note": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "category": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "date",
+                                "amount",
+                                "debit",
+                                "credit",
+                                "payee",
+                                "note",
+                                "category"
+                              ]
+                            },
+                            "delimiter": {
+                              "type": "string",
+                              "pattern": "^[^\"\\r\\n\\w\\s.]$|^\\t$"
+                            },
+                            "decimalSeparator": {
+                              "type": "string",
+                              "enum": [
+                                ",",
+                                "."
+                              ]
+                            },
+                            "dateFormat": {
+                              "type": "string",
+                              "pattern": "^(DD|MM|YYYY)([./-])(DD|MM|YYYY)\\2(DD|MM|YYYY)$"
+                            },
+                            "skipRows": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "header": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "columns",
+                            "delimiter",
+                            "decimalSeparator",
+                            "dateFormat",
+                            "skipRows",
+                            "header"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "proposedMap": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "columns": {
+                              "type": "object",
+                              "properties": {
+                                "date": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 199
+                                },
+                                "amount": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "debit": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "credit": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "payee": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "note": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "category": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 199
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "date",
+                                "amount",
+                                "debit",
+                                "credit",
+                                "payee",
+                                "note",
+                                "category"
+                              ]
+                            },
+                            "delimiter": {
+                              "type": "string",
+                              "pattern": "^[^\"\\r\\n\\w\\s.]$|^\\t$"
+                            },
+                            "decimalSeparator": {
+                              "type": "string",
+                              "enum": [
+                                ",",
+                                "."
+                              ]
+                            },
+                            "dateFormat": {
+                              "type": "string",
+                              "pattern": "^(DD|MM|YYYY)([./-])(DD|MM|YYYY)\\2(DD|MM|YYYY)$"
+                            },
+                            "skipRows": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "header": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "columns",
+                            "delimiter",
+                            "decimalSeparator",
+                            "dateFormat",
+                            "skipRows",
+                            "header"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "row": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "outcome": {
+                            "type": "string",
+                            "enum": [
+                              "ok",
+                              "refused"
+                            ]
+                          },
+                          "reason": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^[a-z_]+$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "on": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "amount": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "payee": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "row",
+                          "outcome",
+                          "reason",
+                          "on",
+                          "amount",
+                          "payee"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "delimiter",
+                    "columns",
+                    "rowCount",
+                    "savedMap",
+                    "proposedMap",
+                    "rows"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "too_large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read"
+      }
+    },
     "/accounts/{id}/daily-balances": {
       "get": {
         "operationId": "get_account_daily_balances",
