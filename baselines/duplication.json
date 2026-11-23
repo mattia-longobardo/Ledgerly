@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 110036,
-    "duplicatedLines": 16414,
-    "percent": 14.92,
-    "blocks": 1265
+    "lines": 109486,
+    "duplicatedLines": 16224,
+    "percent": 14.82,
+    "blocks": 1250
   },
   "units": {
     "api": {
-      "lines": 6071,
+      "lines": 6072,
       "duplicatedLines": 1217,
-      "percent": 20.05,
+      "percent": 20.04,
       "blocks": 112
     },
     "app": {
@@ -222,8 +222,8 @@
     },
     "platform/integrations": {
       "lines": 2300,
-      "duplicatedLines": 471,
-      "percent": 20.48,
+      "duplicatedLines": 470,
+      "percent": 20.43,
       "blocks": 38
     },
     "platform/integrations/ccxt": {
@@ -234,9 +234,9 @@
     },
     "platform/integrations/etoro": {
       "lines": 664,
-      "duplicatedLines": 28,
-      "percent": 4.22,
-      "blocks": 2
+      "duplicatedLines": 38,
+      "percent": 5.72,
+      "blocks": 3
     },
     "platform/integrations/investments": {
       "lines": 191,
@@ -246,15 +246,15 @@
     },
     "platform/integrations/trek": {
       "lines": 1028,
-      "duplicatedLines": 105,
-      "percent": 10.21,
-      "blocks": 8
+      "duplicatedLines": 91,
+      "percent": 8.85,
+      "blocks": 7
     },
     "platform/integrations/wallet": {
-      "lines": 2420,
-      "duplicatedLines": 235,
-      "percent": 9.71,
-      "blocks": 20
+      "lines": 1633,
+      "duplicatedLines": 28,
+      "percent": 1.71,
+      "blocks": 3
     },
     "platform/jobs": {
       "lines": 504,
@@ -305,10 +305,10 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 2091,
-      "duplicatedLines": 198,
-      "percent": 9.47,
-      "blocks": 14
+      "lines": 2327,
+      "duplicatedLines": 220,
+      "percent": 9.45,
+      "blocks": 16
     },
     "platform/ranges": {
       "lines": 0,
@@ -863,6 +863,7 @@
     "platform/integrations/ccxt/binance.ts": 250,
     "platform/integrations/ccxt/client.ts": 31,
     "platform/integrations/ccxt/source.ts": 25,
+    "platform/integrations/etoro/client.ts": 10,
     "platform/integrations/etoro/mapping.ts": 28,
     "platform/integrations/rules.ts": 24,
     "platform/integrations/schema.ts": 141,
@@ -871,20 +872,19 @@
     "platform/integrations/service/runs.ts": 47,
     "platform/integrations/service/schedule.ts": 31,
     "platform/integrations/service/sources.ts": 74,
-    "platform/integrations/status.ts": 20,
-    "platform/integrations/trek/card.ts": 22,
-    "platform/integrations/trek/client.ts": 64,
+    "platform/integrations/status.ts": 19,
+    "platform/integrations/trek/card.ts": 9,
+    "platform/integrations/trek/client.ts": 63,
     "platform/integrations/trek/sync.ts": 19,
-    "platform/integrations/wallet/card.ts": 22,
-    "platform/integrations/wallet/categories.ts": 84,
-    "platform/integrations/wallet/client.ts": 80,
-    "platform/integrations/wallet/mapping.ts": 33,
-    "platform/integrations/wallet/records.ts": 6,
+    "platform/integrations/wallet/card.ts": 9,
+    "platform/integrations/wallet/client.ts": 9,
     "platform/integrations/wallet/sync.ts": 10,
     "platform/jobs/schema.ts": 28,
     "platform/notifications/reads.ts": 34,
     "platform/notifications/schema.ts": 49,
     "platform/notifications/service.ts": 7,
+    "platform/plugins/contract/calls-source.ts": 9,
+    "platform/plugins/contract/errors.ts": 13,
     "platform/plugins/queries.ts": 56,
     "platform/plugins/schema.ts": 63,
     "platform/plugins/service.ts": 55,

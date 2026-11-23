@@ -10,14 +10,13 @@ import {
   type CategoryStore,
   type CategorySyncOutcome,
   type CategoryWriteResult,
-  createWalletCategoryWriter,
   MAX_RENAMES_PER_PASS,
   planCategorySync,
   RENAME_BATCH,
   syncWalletCategories,
   type WalletCategoryWriter,
 } from "./categories";
-import type { WalletCategory } from "./mapping";
+import type { SourceCategory } from "./calls";
 
 const CTX = { userId: "11111111-1111-4111-8111-111111111111" };
 
@@ -34,11 +33,11 @@ function local(over: Partial<ProviderCategory> & Pick<ProviderCategory, "id" | "
   };
 }
 
-function remote(over: Partial<WalletCategory> & Pick<WalletCategory, "externalId" | "name">): WalletCategory {
+function remote(over: Partial<SourceCategory> & Pick<SourceCategory, "externalId" | "name">): SourceCategory {
   return {
     groupExternalId: "wg-casa",
     groupName: "Casa",
-    systemId: null,
+    transfer: false,
     custom: false,
     parentExternalId: null,
     archived: false,
@@ -142,7 +141,7 @@ function fakeStore(rows: ProviderCategory[]): CategoryStore & { rows: ProviderCa
 }
 
 interface FakeWallet extends WalletCategoryWriter {
-  categories: WalletCategory[];
+  categories: SourceCategory[];
   renames: { externalId: string; name: string }[][];
   creates: { name: string; parentExternalId: string }[];
   /** Every id a caller asked to delete: a pass must never put anything in here. */
@@ -150,7 +149,7 @@ interface FakeWallet extends WalletCategoryWriter {
 }
 
 /** A Wallet that really changes: what the writer sends it is what the next pass reads back. */
-function fakeWallet(categories: WalletCategory[], refuse: ReadonlySet<string> = new Set()): FakeWallet {
+function fakeWallet(categories: SourceCategory[], refuse: ReadonlySet<string> = new Set()): FakeWallet {
   let made = 0;
   return {
     categories,
@@ -162,7 +161,7 @@ function fakeWallet(categories: WalletCategory[], refuse: ReadonlySet<string> = 
       return externalIds.map((externalId) => {
         const at = categories.findIndex((category) => category.externalId === externalId);
         if (at >= 0) categories.splice(at, 1);
-        return { externalId, ok: at >= 0, error: at >= 0 ? null : "not found" };
+        return { externalId, ok: at >= 0 };
       });
     },
     async rename(items) {
@@ -171,12 +170,12 @@ function fakeWallet(categories: WalletCategory[], refuse: ReadonlySet<string> = 
       const results: CategoryWriteResult[] = [];
       for (const item of items) {
         if (refuse.has(item.externalId)) {
-          results.push({ externalId: item.externalId, ok: false, error: "name already used" });
+          results.push({ externalId: item.externalId, ok: false });
           continue;
         }
         const row = categories.find((category) => category.externalId === item.externalId);
         if (row) row.name = item.name;
-        results.push({ externalId: item.externalId, ok: true, error: null });
+        results.push({ externalId: item.externalId, ok: true });
       }
       return results;
     },
@@ -299,7 +298,7 @@ describe("planCategorySync", () => {
           providerName: "Giroconto",
         }),
       ],
-      [remote({ externalId: "wc-1", name: "Giroconto", systemId: "system_categories__transfer" })],
+      [remote({ externalId: "wc-1", name: "Giroconto", transfer: true })],
     );
     expect(plan.cases).toEqual([
       {
@@ -593,116 +592,5 @@ describe("syncWalletCategories", () => {
 
     const third = await syncWalletCategories(CTX, { remote: wallet.categories, writer: wallet, store });
     expect(third.counts).toMatchObject({ categoriesPushed: 0, categoriesReported: 0 });
-  });
-});
-
-describe("createWalletCategoryWriter", () => {
-  function writerOn(handler: (url: string, init: RequestInit) => Response) {
-    const calls: { url: string; method: string; body: unknown }[] = [];
-    const fetcher = (async (url: string | URL | Request, init: RequestInit = {}) => {
-      calls.push({
-        url: String(url),
-        method: String(init.method),
-        body: init.body === undefined ? null : JSON.parse(String(init.body)),
-      });
-      return handler(String(url), init);
-    }) as unknown as typeof globalThis.fetch;
-    return {
-      calls,
-      writer: createWalletCategoryWriter("tok", { fetch: fetcher, baseUrl: "https://wallet.test/v1/api" }),
-    };
-  }
-
-  const answer = (body: unknown, status = 200) =>
-    new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-
-  it("sends a PATCH of {id, name} and reads the per-item results back by inputIndex", async () => {
-    const { calls, writer } = writerOn(() =>
-      answer({
-        results: [
-          { inputIndex: 1, id: "wc-2", success: true },
-          { inputIndex: 0, id: "wc-1", success: false, error: "name already used" },
-        ],
-      }),
-    );
-    const results = await writer.rename([
-      { externalId: "wc-1", name: "Uno" },
-      { externalId: "wc-2", name: "Due" },
-    ]);
-    expect(calls).toEqual([
-      {
-        url: "https://wallet.test/v1/api/categories",
-        method: "PATCH",
-        body: [
-          { id: "wc-1", name: "Uno" },
-          { id: "wc-2", name: "Due" },
-        ],
-      },
-    ]);
-    expect(results).toEqual([
-      { externalId: "wc-1", ok: false, error: "name already used" },
-      { externalId: "wc-2", ok: true, error: null },
-    ]);
-  });
-
-  it("treats 207 as an answer to read, not as a failure", async () => {
-    const { writer } = writerOn(() =>
-      answer({ results: [{ inputIndex: 0, id: "wc-1", success: true }] }, 207),
-    );
-    expect(await writer.rename([{ externalId: "wc-1", name: "Uno" }])).toEqual([
-      { externalId: "wc-1", ok: true, error: null },
-    ]);
-  });
-
-  it("refuses a batch bigger than Wallet's own limit before sending it", async () => {
-    const { calls, writer } = writerOn(() => answer({ results: [] }));
-    const items = Array.from({ length: RENAME_BATCH + 1 }, (_, index) => ({
-      externalId: `wc-${index}`,
-      name: `Nome ${index}`,
-    }));
-    await expect(writer.rename(items)).rejects.toThrow(/at most 10/);
-    expect(calls).toEqual([]);
-  });
-
-  it("posts a custom subcategory under a base category and returns its id", async () => {
-    const { calls, writer } = writerOn(() => answer({ category: { id: "wc-new" } }, 201));
-    expect(await writer.create({ name: "Cane", parentExternalId: "wc-base" })).toEqual({
-      externalId: "wc-new",
-    });
-    expect(calls).toEqual([
-      {
-        url: "https://wallet.test/v1/api/categories/custom",
-        method: "POST",
-        body: { name: "Cane", parentId: "wc-base" },
-      },
-    ]);
-  });
-
-  it("answers an unreadable creation as unsure rather than failing", async () => {
-    const { writer } = writerOn(() => answer({ ok: true }, 201));
-    expect(await writer.create({ name: "Cane", parentExternalId: "wc-base" })).toEqual({ externalId: null });
-  });
-
-  it("fails at once on a refused token, and never writes twice on a 500", async () => {
-    const { writer } = writerOn(() => answer({ error: "nope" }, 401));
-    await expect(writer.rename([{ externalId: "wc-1", name: "Uno" }])).rejects.toMatchObject({
-      kind: "token_rejected",
-    });
-
-    const server = writerOn(() => answer({ error: "boom" }, 500));
-    await expect(server.writer.rename([{ externalId: "wc-1", name: "Uno" }])).rejects.toMatchObject({
-      kind: "http",
-      status: 500,
-    });
-    expect(server.calls).toHaveLength(1);
-  });
-
-  it("never lets the token into a message", async () => {
-    const { writer } = writerOn(() => {
-      throw new Error("connect ECONNREFUSED with Bearer tok");
-    });
-    await expect(writer.rename([{ externalId: "wc-1", name: "Uno" }])).rejects.toMatchObject({
-      message: expect.not.stringContaining("Bearer tok"),
-    });
   });
 });

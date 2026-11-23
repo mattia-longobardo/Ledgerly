@@ -9,9 +9,10 @@
  * (`src/architecture.test.ts`): a platform file that wrote a module's tables would be a second
  * owner of them.
  *
- * The separation of §4.3 is kept in both directions. `client.ts` speaks HTTP and never touches the
- * database; the services write the database and never touch the network; this file fetches first
- * and applies afterwards, so no provider call ever happens inside a transaction.
+ * The separation of §4.3 is kept in both directions. The plugin `wallet` speaks to Wallet, reached
+ * through the port of `calls.ts` (rewrite plan R5c), and never touches the database; the services
+ * write the database and never touch the network; this file fetches first and applies afterwards,
+ * so no provider call ever happens inside a transaction.
  *
  * Every pass is recorded in `sync_runs`, one row per {@link SyncKind} — "Sync now" included, which
  * is the trace Settings › Integrations reads (spec §10.3).
@@ -23,10 +24,9 @@ import {
   rebuildDerivedBalances,
   saveProviderBalance,
 } from "../../../modules/accounts/service";
+import type { SourceMovement } from "@ledgerly/plugin-contract";
 import {
   type IncomingTransaction,
-  type TransactionState,
-  type TransactionType,
   alignCategoryTypesToMovements,
   markNotSent,
   pendingSends,
@@ -39,6 +39,8 @@ import {
 } from "../../../modules/transactions";
 import type { Ctx } from "../../context";
 import { civilDateIn, startOfDayIn, today } from "../../../shared/dates";
+import { parseCents } from "../../../shared/money";
+import { normalizeIban } from "../../iban";
 import { withJobLock } from "../../jobs/lock";
 import { KINDS_OF, type SyncKind, WALLET_PROVIDER } from "../rules";
 import {
@@ -47,7 +49,6 @@ import {
   finishRun,
   listConnections,
   markConnection,
-  readCredentials,
   readSyncJob,
   recordRun,
   saveIbanConflicts,
@@ -57,18 +58,16 @@ import {
   skipRun,
 } from "../service";
 import {
-  type WalletAccount,
-  type WalletCategory,
-  type WalletClient,
-  type WalletClientOptions,
-  type WalletTransaction,
-  createWalletClient,
-  isTokenRejected,
-} from "./client";
-import { type WalletCategoryWriter, createWalletCategoryWriter, syncWalletCategories } from "./categories";
+  isTokenRefused,
+  type SourceAccount,
+  type SourceCalls,
+  type SourceCategory,
+  walletCalls,
+} from "./calls";
+import { type WalletCategoryWriter, categoryWriterOf, syncWalletCategories } from "./categories";
 import { BACKFILL_MONTHS, backfillDepth, MAX_BACKFILL_MONTHS } from "./depth";
-import { type DateWindow, WALLET_TRANSFER_CATEGORY, firstLinkWindows, recentWindow } from "./mapping";
-import { type SendOutcome, sendManualMovements, splitSendMarker } from "./send";
+import { type DateWindow, firstLinkWindows, recentWindow } from "./mapping";
+import { type SendOutcome, sendManualMovements } from "./send";
 
 /** The counts of one pass, per kind, as `sync_runs.counts` stores them. */
 export interface WalletSyncResult {
@@ -88,13 +87,14 @@ export interface WalletSyncResult {
 
 interface WalletSyncOptions {
   now?: Date;
-  /** Injected in tests: there is no Wallet token to call the real API with (spec §10, owner's). */
-  client?: WalletClient;
-  /** Passed to {@link createWalletClient} when no client is injected. */
-  clientOptions?: WalletClientOptions;
   /**
-   * Who writes the categories back to Wallet. Injected in tests; built from the connection's own
-   * token otherwise. `null` keeps the pass read-only on that side — Wallet → here still runs.
+   * Injected in tests: the plugin served in-process on a stubbed Wallet (spec §10, owner's). The
+   * calls of the connection's own credentials otherwise.
+   */
+  source?: SourceCalls;
+  /**
+   * Who writes the categories back to Wallet. Injected in tests; the source's own calls otherwise.
+   * `null` keeps the pass read-only on that side — Wallet → here still runs.
    */
   categoryWriter?: WalletCategoryWriter | null;
 }
@@ -248,59 +248,16 @@ export const DAILY_REREAD_MONTHS = 3;
 /* The bridge to the modules' own vocabularies */
 
 /**
- * Wallet's `recordType`, in this app's words. Only the named types decide anything: an unknown or
- * absent type falls back to the sign, which is what `resolveType` (T3) would conclude anyway, and
- * a movement with a counterpart becomes a transfer there whatever this function said.
- */
-const TYPE_BY_PROVIDER_TYPE: Record<string, TransactionType> = {
-  expense: "expense",
-  withdrawal: "expense",
-  debit: "expense",
-  income: "income",
-  deposit: "income",
-  credit: "income",
-  transfer: "transfer",
-};
-
-/**
- * Wallet's `recordState`, in this app's two states. An unrecognised state is `cleared`, the
- * column's own default: a movement Wallet has is a movement that happened, and calling it pending
- * on a word this app does not know would keep it out of nothing while looking like a fact.
- */
-const STATE_BY_PROVIDER_STATE: Record<string, TransactionState> = {
-  cleared: "cleared",
-  reconciled: "cleared",
-  settled: "cleared",
-  posted: "cleared",
-  pending: "pending",
-  uncleared: "pending",
-  planned: "pending",
-};
-
-export function walletTransactionType(
-  movement: Pick<WalletTransaction, "providerType" | "amountCents">,
-): TransactionType {
-  const named = movement.providerType === null ? undefined : TYPE_BY_PROVIDER_TYPE[movement.providerType];
-  if (named) return named;
-  return movement.amountCents < 0n ? "expense" : "income";
-}
-
-export function walletTransactionState(providerState: string | null): TransactionState {
-  return (providerState === null ? undefined : STATE_BY_PROVIDER_STATE[providerState]) ?? "cleared";
-}
-
-/**
  * A Wallet movement as the transactions module receives it (spec §7.2). Three things are this
  * file's own work, because the two shapes do not line up:
  *
- * 1. `transferCounterExternalId` is the module's `counterpartExternalId` — one name for the
- *    reference transfers are paired on, whatever provider gave it;
+ * 1. the amount is the contract's decimal text, made cents here with the core's own `parseCents`;
  * 2. `occurredAt` is required there and optional here, and one invariant decides it — see
  *    {@link occurredAtOf}: the civil date the app reads back from the stored instant is **always**
  *    `occurredOn`, the day Wallet itself stamped;
- * 3. the provider's raw `recordType`/`recordState` become the local enums, and the category *name*
- *    comes from the `/categories` read — a movement carries only the id, and §9.1 adopts a
- *    category by its exact name.
+ * 3. a type or a state the plugin could not name falls back to the sign and to `cleared`, and a
+ *    category the record carries by its id alone takes its name from the `/categories` read —
+ *    §9.1 adopts a category by its exact name.
  */
 /**
  * The instant to store, under one invariant: `civilDateIn(occurredAtOf(movement, tz), tz)` is
@@ -316,10 +273,7 @@ export function walletTransactionState(providerState: string | null): Transactio
  * to another month in the interface and — worse — out of the window Wallet filters on, where it
  * would be declared gone every hour (spec §7.2).
  */
-function occurredAtOf(
-  movement: Pick<WalletTransaction, "occurredAt" | "occurredOn">,
-  timeZone: string,
-): Date {
+function occurredAtOf(movement: { occurredAt: Date | null; occurredOn: string }, timeZone: string): Date {
   if (movement.occurredAt === null) return startOfDayIn(movement.occurredOn, timeZone);
   return civilDateIn(movement.occurredAt, timeZone) === movement.occurredOn
     ? movement.occurredAt
@@ -327,54 +281,60 @@ function occurredAtOf(
 }
 
 export function toIncomingTransaction(
-  movement: WalletTransaction,
-  categories: ReadonlyMap<string, WalletCategory>,
+  movement: SourceMovement,
+  categories: ReadonlyMap<string, SourceCategory>,
   timeZone: string,
 ): IncomingTransaction {
-  const categoryExternalId = movement.categoryExternalId;
+  const category = movement.category;
   // The record carries its own category — name and group — (measured at the collaudo), so it is
   // preferred whole: it also covers a category created between the `/categories` read and this
   // window, and a record saying "no group" is fresher than the list. The list is the fallback for a
   // record that carries the id alone.
-  const listed = categoryExternalId === null ? undefined : categories.get(categoryExternalId);
-  const fromRecord = movement.categoryName !== null;
+  const listed = category === null ? undefined : categories.get(category.externalId);
+  const fromRecord = category?.name != null;
   // Wallet's own word for a giroconto: its built-in Transfer category, whatever the record type
   // says. Wallet leaves such a movement out of its statistics, and so does the app.
-  const inTransferCategory =
-    (movement.categorySystemId ?? listed?.systemId ?? null) === WALLET_TRANSFER_CATEGORY;
-  // A record this app wrote carries its marker in the note (`send.ts`): the note is the person's
-  // own again, and the key says which waiting movement the record is.
-  const marked = splitSendMarker(movement.note);
+  const inTransferCategory = category?.transfer === true || listed?.transfer === true;
+  const amountCents = parseCents(movement.amount);
+  // A record this app wrote carries its marker in the note (`send.ts`): the plugin gives the note
+  // the person's own again, and the key says which waiting movement the record is.
   return {
     externalId: movement.externalId,
-    counterpartExternalId: movement.transferCounterExternalId,
-    occurredAt: occurredAtOf(movement, timeZone),
-    amountCents: movement.amountCents,
+    counterpartExternalId: movement.counterpartExternalId,
+    occurredAt: occurredAtOf(
+      { occurredAt: movement.instant === null ? null : new Date(movement.instant), occurredOn: movement.day },
+      timeZone,
+    ),
+    amountCents,
     currency: movement.currency,
-    type: inTransferCategory ? "transfer" : walletTransactionType(movement),
-    state: walletTransactionState(movement.providerState),
+    // A type Wallet did not name is the sign's, which is what `resolveType` (T3) concludes anyway.
+    type: inTransferCategory ? "transfer" : (movement.type ?? (amountCents < 0n ? "expense" : "income")),
+    // A state Wallet does not say is `cleared`, the column's own default: a movement it has happened.
+    state: movement.state ?? "cleared",
     payee: movement.payee,
-    note: marked.note,
-    sentKey: marked.key,
-    categoryExternalId,
-    categoryName: fromRecord ? movement.categoryName : (listed?.name ?? null),
-    categoryGroupExternalId: fromRecord
-      ? movement.categoryGroupExternalId
-      : (listed?.groupExternalId ?? null),
-    categoryGroupName: fromRecord ? movement.categoryGroupName : (listed?.groupName ?? null),
+    note: movement.note,
+    sentKey: movement.sentKey,
+    categoryExternalId: category?.externalId ?? null,
+    categoryName: fromRecord ? category.name : (listed?.name ?? null),
+    categoryGroupExternalId: fromRecord ? category.groupExternalId : (listed?.groupExternalId ?? null),
+    categoryGroupName: fromRecord ? category.groupName : (listed?.groupName ?? null),
     labels: movement.labels,
   };
 }
 
-/** A Wallet account as the accounts module's lifecycle rules receive it (spec §7.1). */
-export function toRemoteAccount(account: WalletAccount): RemoteAccount {
+/**
+ * A Wallet account as the accounts module's lifecycle rules receive it (spec §7.1). Only a number
+ * that is an IBAN is kept (04-now.md §4.6.1): the plugin gives Wallet's number as it is.
+ */
+export function toRemoteAccount(account: SourceAccount): RemoteAccount {
+  const iban = normalizeIban(account.identifier);
   return {
     provider: WALLET_PROVIDER,
     providerAccountId: account.externalId,
     name: account.name,
     type: account.type,
     currency: account.currency,
-    ...(account.iban ? { iban: account.iban } : {}),
+    ...(iban ? { iban } : {}),
   };
 }
 
@@ -385,12 +345,6 @@ async function walletConnection(ctx: Pick<Ctx, "userId">, connectionId: string):
   if (!connection) throw new IntegrationError("not_found");
   if (connection.provider !== WALLET_PROVIDER) throw new IntegrationError("unknown_provider");
   return connection;
-}
-
-async function walletToken(ctx: Pick<Ctx, "userId">, connectionId: string): Promise<string> {
-  const { token } = await readCredentials(ctx, connectionId);
-  if (!token || token.trim() === "") throw new IntegrationError("invalid_credentials");
-  return token;
 }
 
 /** A run opened and closed as skipped: recorded, because "nothing was attempted" is an answer. */
@@ -430,8 +384,8 @@ interface AccountsPass {
 /**
  * Accounts and balances (spec §9.1: both, every hour).
  *
- * The two reads are the same `/accounts` call seen twice — Wallet publishes the balance inside the
- * account — and both happen before anything is written. `applyProviderAccounts` then decides the
+ * One read gives both — Wallet publishes the balance inside the account — and it happens before
+ * anything is written. `applyProviderAccounts` then decides the
  * lifecycle of §7.1 (adopt once, follow a rename, keep an archived account archived, mark a
  * vanished one `unavailable`), and each balance is stamped with the civil date of *this reading in
  * the user's own zone*, which is the one thing the client cannot know.
@@ -446,11 +400,10 @@ interface AccountsPass {
 async function syncAccounts(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   connectionId: string,
-  client: WalletClient,
+  source: SourceCalls,
   now: Date,
 ): Promise<AccountsPass> {
-  const remote = await client.accounts();
-  const balances = await client.balances();
+  const remote = await source.accounts();
 
   const before = await linkedAccounts(ctx);
   // An account the person left out, or deleted, is neither made nor updated here (PERS-419). One
@@ -466,16 +419,18 @@ async function syncAccounts(
   const on = today(ctx.timeZone, now);
   let written = 0;
   let skipped = 0;
-  for (const balance of balances) {
-    const accountId = after.get(balance.accountExternalId);
+  for (const account of remote) {
+    if (account.balance === null) continue;
+    const accountId = after.get(account.externalId);
     if (accountId === undefined) {
       skipped += 1;
       continue;
     }
+    const availableCents = account.available === null ? null : parseCents(account.available);
     const saved = await saveProviderBalance(
       ctx,
       accountId,
-      { on, cents: balance.cents, availableCents: balance.availableCents },
+      { on, cents: parseCents(account.balance), availableCents },
       now,
     );
     // `null`: a service of Investments owns the account's balance (§1.3), not this pass.
@@ -559,11 +514,6 @@ interface WalletAccountChoice {
   chosen: boolean;
 }
 
-function choiceClient(ctx: Pick<Ctx, "userId">, connectionId: string, options: WalletSyncOptions) {
-  if (options.client) return Promise.resolve(options.client);
-  return walletToken(ctx, connectionId).then((token) => createWalletClient(token, options.clientOptions));
-}
-
 /**
  * The accounts Wallet has now, as the choice shows them: the ones here (always chosen, removed only
  * by deleting the account), and the others, chosen unless the person left them out. Read from
@@ -575,8 +525,8 @@ export async function walletAccountChoices(
   options: WalletSyncOptions = {},
 ): Promise<WalletAccountChoice[]> {
   await walletConnection(ctx, connectionId);
-  const client = await choiceClient(ctx, connectionId, options);
-  const remote = await client.accounts();
+  const source = options.source ?? (await walletCalls(ctx, connectionId));
+  const remote = await source.accounts();
   const here = new Map<string, { id: string; name: string }>();
   for (const account of await listAccounts(ctx, { includeArchived: true })) {
     if (account.provider !== WALLET_PROVIDER || account.providerAccountId === null) continue;
@@ -653,7 +603,7 @@ export async function chooseWalletAccounts(
 async function syncTransactions(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   connectionId: string,
-  client: WalletClient,
+  source: SourceCalls,
   now: Date,
   covered: ReadonlySet<string> | undefined,
   categoryWriter: WalletCategoryWriter | null,
@@ -663,7 +613,7 @@ async function syncTransactions(
   const job = await readSyncJob(ctx, connectionId, "transactions");
   const day = today(ctx.timeZone, now);
   const { windows, judge, deep } = windowsFor(job?.cursor ?? null, day);
-  const categories = new Map((await client.categories()).map((category) => [category.externalId, category]));
+  const categories = new Map((await source.categories()).map((category) => [category.externalId, category]));
   const accounts = await linkedAccounts(ctx);
 
   const counts: Record<string, number> = { [CREATED]: 0, [UPDATED]: 0, [SKIPPED]: 0, [REMOVED]: 0 };
@@ -690,7 +640,7 @@ async function syncTransactions(
   );
   const doubts: string[] = [];
   for (const window of windows) {
-    const rows = await client.transactions(window);
+    const rows = await source.movements(window);
     const byAccount = new Map<string, IncomingTransaction[]>();
     const returned = new Map<string, Set<string>>();
     for (const row of rows) {
@@ -784,16 +734,13 @@ async function syncTransactions(
  * movements read next already hold them. A failure of the connection is handed back, not thrown:
  * the readings are still attempted, and the pass of the movements fails with it.
  */
-async function sendPending(
-  ctx: Pick<Ctx, "userId" | "timeZone">,
-  client: WalletClient,
-): Promise<SendOutcome> {
+async function sendPending(ctx: Pick<Ctx, "userId" | "timeZone">, source: SourceCalls): Promise<SendOutcome> {
   const accounts = await linkedAccounts(ctx);
   const externalIdOf = new Map([...accounts].map(([externalId, accountId]) => [accountId, externalId]));
   const waiting = await pendingSends(ctx, [...externalIdOf.keys()]);
   if (waiting.length === 0) return { counts: { sent: 0, notSent: 0 }, failure: undefined };
   return sendManualMovements(
-    client,
+    source,
     waiting.map((movement) => ({
       ...movement,
       accountExternalId: externalIdOf.get(movement.accountId) as string,
@@ -822,7 +769,7 @@ async function sendPending(
  *   came back truncated is no reason to leave the balances unread.
  *
  * The first failure is re-thrown once every kind has been dealt with, so the caller sees the real
- * error (a `WalletError`, which is how Settings › Integrations tells "token rejected" from
+ * error (a `PluginCallError`, whose code is how Settings › Integrations tells "token rejected" from
  * "unreachable") while the log already holds the whole pass.
  *
  * The whole pass runs under one advisory lock per connection, so "Sync now" and the hourly job can
@@ -862,16 +809,9 @@ async function walletPass(
     return { ...result, refused: "revoked" };
   }
 
-  // Read once: the writer needs the same credential the client uses, and an injected client means
-  // there is no token to read (tests, spec §10).
-  const token = options.client ? null : await walletToken(ctx, connectionId);
-  const client = options.client ?? createWalletClient(token ?? "", options.clientOptions);
+  const source = options.source ?? (await walletCalls(ctx, connectionId));
   const categoryWriter =
-    options.categoryWriter !== undefined
-      ? options.categoryWriter
-      : token === null
-        ? null
-        : createWalletCategoryWriter(token, options.clientOptions);
+    options.categoryWriter !== undefined ? options.categoryWriter : categoryWriterOf(source);
   let refused = false;
   let failure: unknown;
   // Before any reading. A connection with no schedule is paused: it sends nothing, and the
@@ -880,7 +820,7 @@ async function walletPass(
   let sending: SendOutcome = { counts: { sent: 0, notSent: 0 }, failure: undefined };
   if (!paused) {
     try {
-      sending = await sendPending(ctx, client);
+      sending = await sendPending(ctx, source);
     } catch (error) {
       sending = { ...sending, failure: error };
     }
@@ -898,11 +838,11 @@ async function walletPass(
     try {
       let counts: Record<string, number>;
       if (kind === "accounts") {
-        const pass = await syncAccounts(ctx, connectionId, client, now);
+        const pass = await syncAccounts(ctx, connectionId, source, now);
         covered = pass.present;
         counts = pass.counts;
       } else {
-        counts = await syncTransactions(ctx, connectionId, client, now, covered, categoryWriter);
+        counts = await syncTransactions(ctx, connectionId, source, now, covered, categoryWriter);
         if (sending.counts.sent > 0) counts[SENT] = sending.counts.sent;
         if (sending.counts.notSent > 0) counts[NOT_SENT] = sending.counts.notSent;
       }
@@ -923,7 +863,7 @@ async function walletPass(
       // A refused verdict still imported everything it read: the run says so, and says why.
       const counts = error instanceof RemovalRefusedError ? error.counts : {};
       await finishRun(ctx, run.id, { counts, error: message, cause: error }, now);
-      if (isTokenRejected(error)) {
+      if (isTokenRefused(error)) {
         await markConnection(ctx, connectionId, "revoked", message, now);
         refused = true;
       }

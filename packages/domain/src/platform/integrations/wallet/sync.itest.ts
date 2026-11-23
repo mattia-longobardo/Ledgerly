@@ -1,6 +1,7 @@
-// The Wallet sync engine against a real Postgres (spec §11). Wallet itself is a stubbed `fetch`
-// answering with the fixtures in `test/fixtures/wallet/`: there is no token to call the real API
-// with, and the real `client.ts` still does the parsing, the paging and the retries.
+// The Wallet sync engine against a real Postgres (spec §11), reading through the plugin served
+// in-process (rewrite plan R5c). Wallet itself is a stubbed `fetch` answering with the fixtures in
+// `test/fixtures/wallet/`: there is no token to call the real API with, and the real plugin still
+// does the parsing, the paging and the retries.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -15,7 +16,9 @@ import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { createTestUser } from "../../../../../../test/users";
 import { WALLET_PROVIDER } from "../rules";
 import { listConnections, listRuns, readSyncJob, resolveExternal, saveConnection } from "../service";
-import { WalletError, type WalletClientOptions } from "./client";
+import { PluginCallError } from "@plugin-host/client";
+import { servedSource } from "../../../../../../test/fixtures/wallet/served-plugin";
+import type { SourceCalls } from "./calls";
 import {
   MAX_WINDOW_REMOVAL_SHARE,
   RemovalRefusedError,
@@ -61,15 +64,17 @@ function alsoOn(recordDate: string, id: string): WireRecord {
   };
 }
 
-const BASE = "https://wallet.test/api";
+/** Where the plugin finds Wallet's API. */
+const API = "/wallet/v1/api";
 /** A Tuesday 09:07 in Rome (spec §10.2's minute), inside the seven days after the fixture's date. */
 const NOW = new Date("2026-01-06T08:07:00Z");
 const TOKEN = "wallet-token-8ac31f";
 
 interface Stub {
-  /** Every path the client asked for, in order. */
+  /** Every path the plugin asked Wallet for, in order. */
   calls: string[];
-  options: WalletClientOptions;
+  source: SourceCalls;
+  fetch: typeof globalThis.fetch;
 }
 
 /**
@@ -90,39 +95,34 @@ function walletStub(
 ): Stub {
   const records = options.records ?? JANUARY;
   const calls: string[] = [];
-  const stub: WalletClientOptions = {
-    baseUrl: BASE,
-    // The retry policy is the client's and is tested there; here it must not cost 30 seconds.
-    sleep: async () => undefined,
-    jitter: () => 0,
-    fetch: async (input) => {
-      const url = new URL(String(input));
-      calls.push(`${url.pathname}${url.search}`);
-      if (options.offline) throw new TypeError("fetch failed");
-      if (options.status) return new Response("{}", { status: options.status });
-      if (url.pathname.endsWith("/accounts")) {
-        if (options.accountsStatus) return new Response("{}", { status: options.accountsStatus });
-        return Response.json({ accounts: options.accounts ?? ACCOUNTS });
-      }
-      if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
-      const bounds = url.searchParams.getAll("recordDate");
-      const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
-      const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
-      const inWindow = records.filter((row) => row.recordDate >= from && row.recordDate <= to);
-      // The real API declares which date filters it applied, and translates `lte.<day>` into an
-      // exclusive `lt.<day+1>T00:00Z` (measured at the collaudo). The client verifies that
-      // declaration, so the stub has to make it — otherwise these tests would pass against an
-      // answer that never proved it covered the window.
-      return Response.json({
-        records: inWindow,
-        appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
-      });
-    },
+  const fetch: typeof globalThis.fetch = async (input) => {
+    const url = new URL(String(input));
+    calls.push(`${url.pathname.replace(API, "")}${url.search}`);
+    if (options.offline) throw new TypeError("fetch failed");
+    if (options.status) return new Response("{}", { status: options.status });
+    if (url.pathname.endsWith("/accounts")) {
+      if (options.accountsStatus) return new Response("{}", { status: options.accountsStatus });
+      return Response.json({ accounts: options.accounts ?? ACCOUNTS });
+    }
+    if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
+    const bounds = url.searchParams.getAll("recordDate");
+    const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
+    const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
+    const inWindow = records.filter((row) => row.recordDate >= from && row.recordDate <= to);
+    // The real API declares which date filters it applied, and translates `lte.<day>` into an
+    // exclusive `lt.<day+1>T00:00Z` (measured at the collaudo). The client verifies that
+    // declaration, so the stub has to make it — otherwise these tests would pass against an
+    // answer that never proved it covered the window.
+    return Response.json({
+      records: inWindow,
+      appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+    });
   };
-  return { calls, options: stub };
+  // The retry policy is the plugin's and is tested there; here it must not cost 30 seconds.
+  return { calls, fetch, source: servedSource(fetch) };
 }
 
-const recordCalls = (stub: Stub): string[] => stub.calls.filter((path) => path.startsWith("/api/records"));
+const recordCalls = (stub: Stub): string[] => stub.calls.filter((path) => path.startsWith("/records"));
 
 function contextFor(userId: string): Ctx {
   return {
@@ -169,7 +169,7 @@ describe("syncWalletNow", () => {
 
   it("adopts the provider's accounts, stamps their balances with the reading's own day, and records both runs", async () => {
     const stub = walletStub();
-    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: stub.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, source: stub.source });
 
     const accounts = await listAccounts(ctx, { includeArchived: true });
     expect(accounts).toHaveLength(10);
@@ -221,7 +221,7 @@ describe("syncWalletNow", () => {
     );
     await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: walletStub({ accounts: withNumbers }).options,
+      source: walletStub({ accounts: withNumbers }).source,
     });
 
     const accounts = await listAccounts(ctx, { includeArchived: true });
@@ -237,7 +237,7 @@ describe("syncWalletNow", () => {
     // Without the number the account comes in, and the notice goes.
     await syncWalletNow(ctx, connectionId, {
       now: addMinutes(NOW, 60),
-      clientOptions: walletStub({ accounts: ACCOUNTS }).options,
+      source: walletStub({ accounts: ACCOUNTS }).source,
     });
     expect(
       (await listAccounts(ctx, { includeArchived: true })).some(
@@ -249,7 +249,7 @@ describe("syncWalletNow", () => {
 
   it("reads twelve monthly windows on the first link and only the last seven days afterwards", async () => {
     const first = walletStub();
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: first.options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: first.source });
 
     expect(recordCalls(first)).toHaveLength(12);
     expect(recordCalls(first)[0]).toContain("gte.2025-02-01");
@@ -260,7 +260,7 @@ describe("syncWalletNow", () => {
     expect(job?.nextRunAt?.getTime()).toBe(NOW.getTime() + 3_600_000);
 
     const second = walletStub();
-    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: second.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, source: second.source });
     expect(recordCalls(second)).toHaveLength(1);
     expect(recordCalls(second)[0]).toContain("gte.2025-12-31");
     expect(recordCalls(second)[0]).toContain("lte.2026-01-06");
@@ -270,7 +270,7 @@ describe("syncWalletNow", () => {
   });
 
   it("reads as many months as a re-download asks for, and never declares anything gone doing it (F2.5)", async () => {
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: walletStub().source });
     expect(await storedTransactions(ctx)).toHaveLength(1);
 
     await requestWalletBackfill(ctx, connectionId, 24);
@@ -278,7 +278,7 @@ describe("syncWalletNow", () => {
     // for an account with movements in it — refused, and the whole pass failed. A re-download only
     // imports, so it goes through and the movement stays.
     const again = walletStub({ records: [] });
-    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: again.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, source: again.source });
 
     expect(recordCalls(again)).toHaveLength(24);
     expect(recordCalls(again)[0]).toContain("gte.2024-02-01");
@@ -292,7 +292,7 @@ describe("syncWalletNow", () => {
 
     // The next pass is back to the seven-day re-read, which is the one that judges.
     const hourly = walletStub();
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: hourly.options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: hourly.source });
     expect(recordCalls(hourly)).toHaveLength(1);
   });
 
@@ -300,7 +300,7 @@ describe("syncWalletNow", () => {
     const december = alsoOn("2025-12-10", "wr-december");
     await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: walletStub({ records: [...JANUARY, december] }).options,
+      source: walletStub({ records: [...JANUARY, december] }).source,
     });
 
     // The next morning: the December movement was moved to another category in Wallet. Seven days
@@ -311,7 +311,7 @@ describe("syncWalletNow", () => {
       category: { id: "wc-unsorted", name: "Da classificare", group: null, color: null },
     };
     const deep = walletStub({ records: [...JANUARY, recategorised] });
-    const result = await syncWalletNow(ctx, connectionId, { now: nextDay, clientOptions: deep.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: nextDay, source: deep.source });
     expect(recordCalls(deep)).toHaveLength(DAILY_REREAD_MONTHS);
     expect(recordCalls(deep)[0]).toContain("gte.2025-11-01");
     expect(recordCalls(deep)[2]).toContain("lte.2026-01-31");
@@ -326,7 +326,7 @@ describe("syncWalletNow", () => {
     const hourly = walletStub({ records: [...JANUARY, recategorised] });
     await syncWalletNow(ctx, connectionId, {
       now: new Date(nextDay.getTime() + 3_600_000),
-      clientOptions: hourly.options,
+      source: hourly.source,
     });
     expect(recordCalls(hourly)).toHaveLength(1);
   });
@@ -339,7 +339,7 @@ describe("syncWalletNow", () => {
 
   it("imports a movement on the day Wallet stamped it, in the user's own zone", async () => {
     const stub = walletStub();
-    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: stub.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, source: stub.source });
     expect(result.transactions).toMatchObject({ created: 1 });
 
     const [movement] = await storedTransactions(ctx);
@@ -357,7 +357,7 @@ describe("syncWalletNow", () => {
   });
 
   it("files a category under the Wallet group it belongs to, linked as a group (F2.5)", async () => {
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: walletStub().source });
 
     const [movement] = await storedTransactions(ctx);
     const tree = await listCategories(ctx);
@@ -384,12 +384,12 @@ describe("syncWalletNow", () => {
     const both = [JANUARY[0], alsoOn("2026-01-04", "wr-1002")];
     await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: walletStub({ records: both }).options,
+      source: walletStub({ records: both }).source,
     });
     expect(await storedTransactions(ctx)).toHaveLength(2);
 
     const gone = walletStub({ records: [JANUARY[0]] });
-    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: gone.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, source: gone.source });
     expect(result.transactions).toMatchObject({ removed: 1 });
     expect((await runsByKind(ctx)).transactions).toMatchObject({ state: "success", error: null });
 
@@ -400,19 +400,19 @@ describe("syncWalletNow", () => {
     // And it counts again the moment Wallet sends it back.
     const back = await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: walletStub({ records: both }).options,
+      source: walletStub({ records: both }).source,
     });
     expect(back.transactions).toMatchObject({ removed: 0 });
     expect((await storedTransactions(ctx)).every((row) => row.removedUpstreamAt === null)).toBe(true);
   });
 
   it("refuses an empty answer for an account that has movements in the window, and fails the pass", async () => {
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: walletStub().source });
 
     const empty = walletStub({ records: [] });
     const error = await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: empty.options,
+      source: empty.source,
     }).catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(RemovalRefusedError);
 
@@ -433,7 +433,7 @@ describe("syncWalletNow", () => {
     const three = [JANUARY[0], alsoOn("2026-01-02", "wr-1002"), alsoOn("2026-01-04", "wr-1003")];
     await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: walletStub({ records: three }).options,
+      source: walletStub({ records: three }).source,
     });
     expect(await storedTransactions(ctx)).toHaveLength(3);
 
@@ -443,7 +443,7 @@ describe("syncWalletNow", () => {
     expect(2 / 3).toBeGreaterThan(MAX_WINDOW_REMOVAL_SHARE);
     const error = await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: walletStub({ records: truncated }).options,
+      source: walletStub({ records: truncated }).source,
     }).catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(RemovalRefusedError);
 
@@ -459,7 +459,7 @@ describe("syncWalletNow", () => {
   });
 
   it("never judges the window of an account the answer no longer carries", async () => {
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: walletStub().source });
 
     // Wallet stopped returning `wa-general`: it becomes `unavailable` and is never deleted (§7.1),
     // and hiding its movements one window at a time would delete it in all but name.
@@ -467,7 +467,7 @@ describe("syncWalletNow", () => {
       accounts: ACCOUNTS.filter((account) => account.id !== "wa-general"),
       records: [],
     });
-    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: without.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, source: without.source });
 
     const [movement] = await storedTransactions(ctx);
     expect(movement.removedUpstreamAt).toBeNull();
@@ -484,16 +484,16 @@ describe("syncWalletNow", () => {
   });
 
   it("judges nobody's window when the accounts pass never said who was there", async () => {
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: walletStub().source });
 
     // `/accounts` fails, `/records` answers an empty window: the movements pass knows nothing about
     // who is present, so it imports and removes nothing.
     const blind = walletStub({ accountsStatus: 500, records: [] });
     const result = await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: blind.options,
+      source: blind.source,
     }).catch((reason: unknown) => reason);
-    expect(result).toBeInstanceOf(WalletError);
+    expect(result).toBeInstanceOf(PluginCallError);
 
     expect((await storedTransactions(ctx))[0].removedUpstreamAt).toBeNull();
     const runs = await runsByKind(ctx);
@@ -514,14 +514,11 @@ describe("syncWalletNow", () => {
     });
     const first = syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: {
-        ...held.options,
-        fetch: async (input, init) => {
-          entered();
-          await gate;
-          return held.options.fetch!(input, init);
-        },
-      },
+      source: servedSource(async (input, init) => {
+        entered();
+        await gate;
+        return held.fetch(input, init);
+      }),
     });
     await started;
 
@@ -530,7 +527,7 @@ describe("syncWalletNow", () => {
     const second = walletStub();
     const busy = await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: second.options,
+      source: second.source,
     }).catch((reason: unknown) => reason);
     expect(busy).toBeInstanceOf(SyncBusyError);
     expect(isSyncBusy(busy)).toBe(true);
@@ -546,32 +543,32 @@ describe("syncWalletNow", () => {
 
   it("records the failure, then revokes the connection, when the token is refused", async () => {
     const stub = walletStub({ status: 401 });
-    await expect(
-      syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: stub.options }),
-    ).rejects.toBeInstanceOf(WalletError);
+    await expect(syncWalletNow(ctx, connectionId, { now: NOW, source: stub.source })).rejects.toBeInstanceOf(
+      PluginCallError,
+    );
 
     // 401 fails at once (spec §9.1): one attempt, no retry, and no second kind attempted live.
-    expect(stub.calls.filter((path) => path.startsWith("/api/accounts"))).toHaveLength(1);
+    expect(stub.calls.filter((path) => path.startsWith("/accounts"))).toHaveLength(1);
 
     const runs = await runsByKind(ctx);
     expect(runs.accounts).toMatchObject({ state: "failed" });
-    expect(runs.accounts.error).toContain("401");
+    expect(runs.accounts.error).toBe("auth");
     expect(runs.transactions).toMatchObject({ state: "skipped", error: "token rejected" });
 
     const [connection] = await listConnections(ctx);
     expect(connection).toMatchObject({ state: "revoked" });
-    expect(connection.lastError).toContain("401");
+    expect(connection.lastError).toBe("auth");
     expect(connection.lastOkAt).toBeNull();
   });
 
   it("attempts nothing on a connection already revoked, and says so in the log", async () => {
     await syncWalletNow(ctx, connectionId, {
       now: NOW,
-      clientOptions: walletStub({ status: 403 }).options,
+      source: walletStub({ status: 403 }).source,
     }).catch(() => undefined);
 
     const stub = walletStub();
-    const result = await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: stub.options });
+    const result = await syncWalletNow(ctx, connectionId, { now: NOW, source: stub.source });
     // Nothing was attempted, and the result says so: the hourly job must not count this as a
     // pass, or a refused token is reported as a sync that is merely out of date (§10.4).
     expect(result).toEqual({ accounts: {}, transactions: {}, refused: "revoked" });
@@ -589,9 +586,9 @@ describe("syncWalletNow", () => {
 
   it("keeps a provider it cannot reach out of `revoked`, and still tries the second kind", async () => {
     const stub = walletStub({ offline: true });
-    await expect(
-      syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: stub.options }),
-    ).rejects.toBeInstanceOf(WalletError);
+    await expect(syncWalletNow(ctx, connectionId, { now: NOW, source: stub.source })).rejects.toBeInstanceOf(
+      PluginCallError,
+    );
 
     const runs = await runsByKind(ctx);
     expect(runs.accounts.state).toBe("failed");
@@ -600,14 +597,14 @@ describe("syncWalletNow", () => {
     const [connection] = await listConnections(ctx);
     expect(connection.state).toBe("error");
     // Five attempts per read (spec §9.1), and the movements were attempted on their own.
-    expect(stub.calls.filter((path) => path.startsWith("/api/accounts"))).toHaveLength(5);
-    expect(stub.calls.filter((path) => path.startsWith("/api/categories"))).toHaveLength(5);
+    expect(stub.calls.filter((path) => path.startsWith("/accounts"))).toHaveLength(5);
+    expect(stub.calls.filter((path) => path.startsWith("/categories"))).toHaveLength(5);
   });
 
   it("keeps one user's sync out of another's rows", async () => {
     const other = contextFor((await createTestUser()).id);
     await saveConnection(other, { provider: WALLET_PROVIDER, credentials: { token: TOKEN } });
-    await syncWalletNow(ctx, connectionId, { now: NOW, clientOptions: walletStub().options });
+    await syncWalletNow(ctx, connectionId, { now: NOW, source: walletStub().source });
 
     expect(await listAccounts(other, { includeArchived: true })).toEqual([]);
     expect(await storedTransactions(other)).toEqual([]);

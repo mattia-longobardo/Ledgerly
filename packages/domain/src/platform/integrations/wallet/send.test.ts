@@ -1,17 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { WalletError } from "./client";
-import {
-  isMovementRefusal,
-  type MovementToSend,
-  noteWithMarker,
-  type SendDeps,
-  sendManualMovements,
-  sendMarker,
-  splitSendMarker,
-} from "./send";
+import { PluginCallError } from "@plugin-host/client";
+import { parseJsonPreservingNumbers } from "./client";
+import { parseCents } from "../../../shared/money";
+import { sendMarker } from "../../../../../../plugins/wallet/src/marker";
+import { servedSource } from "../../../../../../test/fixtures/wallet/served-plugin";
+import { isMovementRefusal, type MovementToSend, type SendDeps, sendManualMovements } from "./send";
 
 // The manual movements written to the source (rewrite plan N3.1): one movement here is one record
-// there, whatever is lost on the way.
+// there, whatever is lost on the way. The source is the plugin served in-process (R5c); the marker
+// itself is the plugin's, and `plugins/wallet/src/plugin.test.ts` holds it.
 
 const KEY = "0198a1c2-7d3e-7a4b-9c5d-2e6f7a8b9c0d";
 
@@ -31,40 +28,75 @@ function movement(overrides: Partial<MovementToSend> = {}): MovementToSend {
   };
 }
 
-/** A client that remembers what it was asked, and answers as it is told. */
+/** A Wallet record as the plugin reads it back. */
+function wire(id: string, amount: string, day: string, note: string | null) {
+  return {
+    id,
+    accountId: "wa-general",
+    amount: { value: Number(amount), currencyCode: "EUR" },
+    recordDate: day,
+    category: null,
+    labels: [],
+    recordType: "expense",
+    recordState: "cleared",
+    note,
+    counterParty: null,
+    transfer: null,
+  };
+}
+
+/**
+ * Wallet behind the plugin served in-process (rewrite plan R5c): it remembers what it was asked —
+ * a look by marker, a create, an edit of the payee — and answers as it is told. `create` answers
+ * the id of the record, `null` for an answer with none, or the failure to give.
+ */
 function fakeClient(
   options: {
     existing?: { id: string; amountCents: bigint; note: string | null }[];
-    create?: () => Promise<{ id: string | null }>;
+    create?: () => Promise<{ id: string | null } | "refuse" | "down">;
     patchOk?: boolean;
   } = {},
 ) {
   const calls: string[] = [];
   const looked: string[] = [];
-  const created: Parameters<Parameters<typeof sendManualMovements>[0]["createRecord"]>[0][] = [];
-  return {
-    calls,
-    looked,
-    created,
-    client: {
-      async recordsWithNote(query: { on: string }) {
-        calls.push("look");
-        looked.push(query.on);
-        return options.existing ?? [];
-      },
-      async createRecord(input: (typeof created)[number]) {
-        calls.push("create");
-        created.push(input);
-        return options.create ? options.create() : { id: "wr-new" };
-      },
-      async patchRecord() {
-        calls.push("patch");
-        return options.patchOk === false
-          ? ({ ok: false, error: "refused" } as const)
-          : ({ ok: true, record: null } as const);
-      },
-    },
-  };
+  const created: {
+    accountId: string;
+    amountCents: bigint;
+    on: string;
+    note: string;
+    categoryId: string | null;
+  }[] = [];
+  const client = servedSource(async (input, init) => {
+    const url = new URL(String(input));
+    const method = init?.method ?? "GET";
+    if (method === "GET") {
+      calls.push("look");
+      looked.push(url.searchParams.getAll("recordDate")[0].replace("eq.", ""));
+      const day = looked.at(-1) as string;
+      const found = (options.existing ?? []).map((one) =>
+        wire(one.id, (Number(one.amountCents) / 100).toFixed(2), day, one.note),
+      );
+      return Response.json({ records: found });
+    }
+    if (method === "POST") {
+      calls.push("create");
+      const [sent] = parseJsonPreservingNumbers(String(init?.body)) as Record<string, string>[];
+      created.push({
+        accountId: sent.accountId,
+        amountCents: parseCents(sent.amount),
+        on: sent.recordDate,
+        note: sent.note,
+        categoryId: sent.categoryId ?? null,
+      });
+      const answer = options.create ? await options.create() : { id: "wr-new" };
+      if (answer === "refuse") return Response.json({ error: "bad request" }, { status: 400 });
+      if (answer === "down") throw new TypeError("fetch failed");
+      return Response.json({ records: answer.id === null ? [] : [{ id: answer.id }] });
+    }
+    calls.push("patch");
+    return Response.json({ results: [{ inputIndex: 0, success: options.patchOk !== false, record: null }] });
+  });
+  return { calls, looked, created, client };
 }
 
 function deps(category: { id: string; externalId: string } | null = null) {
@@ -84,41 +116,17 @@ function deps(category: { id: string; externalId: string } | null = null) {
   return { log, settled, handed };
 }
 
-describe("the marker of a movement written to the source", () => {
-  it("goes on a line of its own after the person's note, and alone when there is none", () => {
-    expect(noteWithMarker("lunch", KEY)).toBe(`lunch\n${sendMarker(KEY)}`);
-    expect(noteWithMarker("  ", KEY)).toBe(sendMarker(KEY));
-    expect(noteWithMarker(null, KEY)).toBe(sendMarker(KEY));
-  });
-
-  it("is taken off a note read back, with the key it carried", () => {
-    expect(splitSendMarker(noteWithMarker("lunch", KEY))).toEqual({ note: "lunch", key: KEY });
-    expect(splitSendMarker(sendMarker(KEY))).toEqual({ note: null, key: KEY });
-  });
-
-  it("leaves a note of the person's own alone", () => {
-    expect(splitSendMarker("lunch")).toEqual({ note: "lunch", key: null });
-    expect(splitSendMarker(null)).toEqual({ note: null, key: null });
-    expect(splitSendMarker(`${sendMarker(KEY)} and then some`)).toEqual({
-      note: `${sendMarker(KEY)} and then some`,
-      key: null,
-    });
-  });
-});
-
 describe("a failure that is about one movement only", () => {
-  it("is an answer that refuses the request, or one nobody can read", () => {
-    expect(isMovementRefusal(new WalletError("http", "bad request", 400))).toBe(true);
-    expect(isMovementRefusal(new WalletError("http", "unprocessable", 422))).toBe(true);
-    expect(isMovementRefusal(new WalletError("payload", "not JSON"))).toBe(true);
+  it("is the plugin saying the source refused the request", () => {
+    expect(isMovementRefusal(new PluginCallError("refused"))).toBe(true);
   });
 
   it("is not the network, the token, a limit or a failure of the provider", () => {
-    expect(isMovementRefusal(new WalletError("network", "down"))).toBe(false);
-    expect(isMovementRefusal(new WalletError("timeout", "slow"))).toBe(false);
-    expect(isMovementRefusal(new WalletError("token_rejected", "no", 401))).toBe(false);
-    expect(isMovementRefusal(new WalletError("http", "slow down", 429))).toBe(false);
-    expect(isMovementRefusal(new WalletError("http", "broken", 503))).toBe(false);
+    expect(isMovementRefusal(new PluginCallError("provider_down"))).toBe(false);
+    expect(isMovementRefusal(new PluginCallError("plugin_down"))).toBe(false);
+    expect(isMovementRefusal(new PluginCallError("auth"))).toBe(false);
+    expect(isMovementRefusal(new PluginCallError("rate_limited"))).toBe(false);
+    expect(isMovementRefusal(new PluginCallError("invalid_data"))).toBe(false);
     expect(isMovementRefusal(new Error("a bug"))).toBe(false);
   });
 });
@@ -215,7 +223,7 @@ describe("sending the manual movements", () => {
     const wallet = fakeClient({
       create: async () => {
         asked += 1;
-        if (asked === 1) throw new WalletError("http", "bad request", 400);
+        if (asked === 1) return "refuse";
         return { id: "wr-second" };
       },
     });
@@ -230,16 +238,11 @@ describe("sending the manual movements", () => {
   });
 
   it("stops at a failure of the connection, and hands it back", async () => {
-    const down = new WalletError("network", "down");
-    const wallet = fakeClient({
-      create: async () => {
-        throw down;
-      },
-    });
+    const wallet = fakeClient({ create: async () => "down" });
     const { handed } = deps();
     const outcome = await sendManualMovements(wallet.client, [movement(), movement({ id: "tx-2" })], handed);
     expect(outcome.counts).toEqual({ sent: 0, notSent: 1 });
-    expect(outcome.failure).toBe(down);
+    expect(outcome.failure).toMatchObject({ code: "provider_down" });
     expect(wallet.calls).toEqual(["create"]);
   });
 });

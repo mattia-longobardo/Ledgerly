@@ -30,13 +30,11 @@
  *   dialog that Wallet is included. Wallet refuses an id its own records still reference, and that
  *   refusal comes back verbatim rather than being retried around.
  *
- * The HTTP is written here rather than in `client.ts` because that file's own request helper is a
- * closure that only speaks GET and POST. The policy is copied, not invented: one attempt for a
- * write ({@link WRITE_ATTEMPTS}), 401/403 as `token_rejected` at once, the token never in a
- * message, batches of ten, and a ceiling on how much one pass may write (Wallet allows 300
- * requests an hour, and the movements pass is spending from the same budget).
+ * The writes go through the plugin (`POST /categories/write` of contract 2, rewrite plan R5c), which
+ * speaks to Wallet: one attempt for a write, the token never in a message, batches of ten. What
+ * stays here is the plan, and a ceiling on how much one pass may write (Wallet allows 300 requests
+ * an hour, and the movements pass is spending from the same budget).
  */
-import { z } from "zod";
 import {
   CATEGORY_NAME_MAX,
   adoptProviderCategory,
@@ -49,17 +47,8 @@ import {
 } from "../../../modules/transactions";
 import type { Ctx } from "../../context";
 import { WALLET_PROVIDER } from "../rules";
-import { listConnections, readCredentials } from "../service";
-import {
-  backoffDelayMs,
-  isUsableToken,
-  parseRetryAfterMs,
-  WALLET_API_URL,
-  WalletError,
-  type WalletClientOptions,
-  WRITE_ATTEMPTS,
-} from "./client";
-import { WALLET_TRANSFER_CATEGORY, type WalletCategory } from "./mapping";
+import { IntegrationError, listConnections } from "../service";
+import { callCode, type SourceCalls, type SourceCategory, walletCalls } from "./calls";
 
 /** `PatchCategoryRequest.name` and `CreateSubcategoryRequest.name` both stop at 80 characters. */
 const WALLET_CATEGORY_NAME_MAX = 80;
@@ -76,16 +65,12 @@ export const DELETE_BATCH = 10;
 export const MAX_RENAMES_PER_PASS = 30;
 const MAX_CREATES_PER_PASS = 10;
 
-const DEFAULT_TIMEOUT_MS = 20_000;
-
 /* The writer */
 
 /** One item of a `PATCH /categories` answer, per category. */
 export interface CategoryWriteResult {
   externalId: string;
   ok: boolean;
-  /** Wallet's own words when it refused this one; `null` on success. */
-  error: string | null;
 }
 
 export interface WalletCategoryWriter {
@@ -109,234 +94,15 @@ export interface WalletCategoryWriter {
   remove(externalIds: readonly string[]): Promise<CategoryWriteResult[]>;
 }
 
-const patchAnswerSchema = z.object({
-  results: z.array(
-    z.object({
-      id: z.string().nullish(),
-      inputIndex: z.number().int().nullish(),
-      success: z.boolean().nullish(),
-      error: z.string().nullish(),
-    }),
-  ),
-});
-
-/** `{ category: { id } }` is what the endpoint documents; a bare `{ id }` is accepted too. */
-const createdAnswerSchema = z.union([
-  z.object({ category: z.object({ id: z.string().min(1) }) }).transform((body) => body.category.id),
-  z.object({ id: z.string().min(1) }).transform((body) => body.id),
-]);
-
-const UNUSABLE_TOKEN_MESSAGE =
-  "The Wallet token cannot be sent in an HTTP header — a line break or a control character inside it — so no request was made: paste the token again from Wallet";
-
-const defaultSleep = (ms: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
-/** Whatever the body put in `error`, when it put anything there at all. */
-function errorFieldOf(body: string): string | null {
-  try {
-    const parsed: unknown = JSON.parse(body);
-    if (parsed !== null && typeof parsed === "object" && "error" in parsed) {
-      const said = (parsed as { error: unknown }).error;
-      if (typeof said === "string" && said.trim() !== "") return said.trim();
-    }
-  } catch {
-    // Not JSON: there is nothing to quote, which is an answer in itself.
-  }
-  return null;
-}
-
-export function createWalletCategoryWriter(
-  token: string,
-  options: WalletClientOptions = {},
-): WalletCategoryWriter {
-  if (token.trim() === "") throw new Error("createWalletCategoryWriter: the Wallet token is empty");
-
-  const baseUrl = (options.baseUrl ?? WALLET_API_URL).replace(/\/+$/, "");
-  const call = options.fetch ?? globalThis.fetch;
-  const sleep = options.sleep ?? defaultSleep;
-  const jitter = options.jitter ?? Math.random;
-  const now = options.now ?? Date.now;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const secret = token.trim();
-  const secrets = [...new Set([token, secret])];
-
-  function withoutToken(text: string): string {
-    return secrets.reduce((clean, value) => clean.split(value).join("[token redacted]"), text);
-  }
-
-  /** Built outside every `try`, for the reason `client.ts` spells out: `fetch` quotes the value. */
-  function requestHeaders(): Headers {
-    if (!isUsableToken(secret)) {
-      throw new WalletError("token_rejected", UNUSABLE_TOKEN_MESSAGE, null, null, false);
-    }
-    try {
-      return new Headers({
-        accept: "application/json",
-        "content-type": "application/json",
-        authorization: `Bearer ${secret}`,
-      });
-    } catch {
-      throw new WalletError("token_rejected", UNUSABLE_TOKEN_MESSAGE, null, null, false);
-    }
-  }
-
-  async function attempt<T>(
-    path: string,
-    method: "PATCH" | "POST" | "DELETE",
-    body: string,
-    schema: z.ZodType<T>,
-  ): Promise<T> {
-    const headers = requestHeaders();
-    const controller = new AbortController();
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      controller.abort();
-    }, timeoutMs);
-
-    let response: Response;
-    try {
-      response = await call(`${baseUrl}${path}`, { method, headers, body, signal: controller.signal });
-    } catch (error) {
-      if (timedOut) {
-        throw new WalletError("timeout", `Wallet request timed out after ${timeoutMs} ms`, null, null, true);
-      }
-      throw new WalletError(
-        "network",
-        `Wallet request failed: ${withoutToken(errorText(error))}`,
-        null,
-        null,
-        true,
-      );
-    } finally {
-      clearTimeout(timer);
-    }
-
-    const answer = await response.text().catch(() => "");
-    const reason = errorFieldOf(answer);
-    const said = reason === null ? "" : `: ${withoutToken(reason)}`;
-
-    if (response.status === 401 || response.status === 403) {
-      throw new WalletError(
-        "token_rejected",
-        `Wallet rejected the token (HTTP ${response.status})${said}`,
-        response.status,
-        null,
-        false,
-      );
-    }
-    // 207 is a success as far as HTTP goes: the body says which items landed and which did not.
-    if (!response.ok && response.status !== 207) {
-      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"), now());
-      const retryable = response.status === 429 || response.status >= 500;
-      throw new WalletError(
-        "http",
-        `Wallet answered HTTP ${response.status}${said}`,
-        response.status,
-        null,
-        retryable,
-        retryAfterMs,
-      );
-    }
-
-    let payload: unknown;
-    try {
-      // Plain `JSON.parse`, unlike the client's reads: no money crosses these two endpoints — a
-      // category is a name, an id and an index — so there is no exact decimal to preserve.
-      payload = JSON.parse(answer) as unknown;
-    } catch (error) {
-      throw new WalletError("payload", `Wallet answered with a body that is not JSON: ${errorText(error)}`);
-    }
-    const parsed = schema.safeParse(payload);
-    if (!parsed.success) {
-      const issues = parsed.error.issues
-        .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-        .join("; ");
-      throw new WalletError("payload", `Wallet answered an unexpected shape: ${issues}`);
-    }
-    return parsed.data;
-  }
-
-  /**
-   * The same shape as the client's own retry, held to {@link WRITE_ATTEMPTS}: a 5xx after Wallet
-   * has already renamed a category must not send the same batch again. The loop stays because the
-   * policy belongs in one visible place, not because a write is expected to repeat.
-   */
-  async function withRetry<T>(run: () => Promise<T>): Promise<T> {
-    for (let count = 1; ; count += 1) {
-      try {
-        return await run();
-      } catch (error) {
-        const retryable = error instanceof WalletError && error.retryable;
-        if (!retryable || count >= WRITE_ATTEMPTS) throw error;
-        const floor = (error as WalletError).minDelayMs ?? 0;
-        await sleep(Math.max(backoffDelayMs(count, jitter()), floor));
-      }
-    }
-  }
-
+/** The writer of a source's calls: each batch is one call, so a pass writes what it wrote before. */
+export function categoryWriterOf(source: Pick<SourceCalls, "writeCategories">): WalletCategoryWriter {
+  const write = (request: Partial<Parameters<SourceCalls["writeCategories"]>[0]>) =>
+    source.writeCategories({ rename: [], create: [], remove: [], ...request });
   return {
-    async rename(items) {
-      if (items.length === 0) return [];
-      if (items.length > RENAME_BATCH) {
-        throw new Error(`rename: at most ${RENAME_BATCH} categories per request, got ${items.length}`);
-      }
-      const body = JSON.stringify(items.map((item) => ({ id: item.externalId, name: item.name })));
-      const answer = await withRetry(() => attempt("/categories", "PATCH", body, patchAnswerSchema));
-      // `inputIndex` is the documented correlation key; `id` is the fallback, and the position in
-      // the array the last resort — one of the three always points back at the item that was sent.
-      return items.map((item, index) => {
-        const result =
-          answer.results.find((row) => row.inputIndex === index) ??
-          answer.results.find((row) => row.id === item.externalId) ??
-          answer.results[index];
-        const ok = result?.success ?? false;
-        return {
-          externalId: item.externalId,
-          ok,
-          error: ok ? null : (result?.error ?? "Wallet did not answer for this category"),
-        };
-      });
-    },
-    async remove(externalIds) {
-      if (externalIds.length === 0) return [];
-      if (externalIds.length > DELETE_BATCH) {
-        throw new Error(`remove: at most ${DELETE_BATCH} categories per request, got ${externalIds.length}`);
-      }
-      const body = JSON.stringify({ ids: [...externalIds] });
-      const answer = await withRetry(() => attempt("/categories", "DELETE", body, patchAnswerSchema));
-      return externalIds.map((externalId, index) => {
-        const result =
-          answer.results.find((row) => row.inputIndex === index) ??
-          answer.results.find((row) => row.id === externalId) ??
-          answer.results[index];
-        const ok = result?.success ?? false;
-        return {
-          externalId,
-          ok,
-          error: ok ? null : (result?.error ?? "Wallet did not answer for this category"),
-        };
-      });
-    },
-    async create({ name, parentExternalId }) {
-      const body = JSON.stringify({ name, parentId: parentExternalId });
-      try {
-        const id = await withRetry(() => attempt("/categories/custom", "POST", body, createdAnswerSchema));
-        return { externalId: id };
-      } catch (error) {
-        // A shape nobody can read is the one case where the category may exist without this app
-        // knowing its id: reported as unsure, never as a failure to be retried into a twin.
-        if (error instanceof WalletError && error.kind === "payload") return { externalId: null };
-        throw error;
-      }
-    },
+    rename: async (items) => (await write({ rename: [...items] })).renamed,
+    // In the order asked: an answer with no id leaves the category possibly there, never retried.
+    create: async (input) => (await write({ create: [input] })).created[0] ?? { externalId: null },
+    remove: async (externalIds) => (await write({ remove: [...externalIds] })).removed,
   };
 }
 
@@ -407,7 +173,7 @@ function fitsHere(name: string): boolean {
  * archived) inside the envelope group the local parent is mirrored from. Deterministic, so two
  * passes over the same list pick the same parent.
  */
-function baseCategoryIn(remote: readonly WalletCategory[], groupExternalId: string): WalletCategory | null {
+function baseCategoryIn(remote: readonly SourceCategory[], groupExternalId: string): SourceCategory | null {
   const candidates = remote
     .filter((row) => !row.custom && !row.archived && row.groupExternalId === groupExternalId)
     .sort((left, right) => (left.externalId < right.externalId ? -1 : 1));
@@ -429,7 +195,7 @@ function baseCategoryIn(remote: readonly WalletCategory[], groupExternalId: stri
  */
 function mergeName(
   local: ProviderCategory,
-  remote: WalletCategory,
+  remote: SourceCategory,
 ): "agreed" | "adopt" | "push" | "conflict" {
   if (local.name === remote.name) return "agreed";
   // `locally_edited` is the person's own mark (spec §7.2); a name that has walked away from the
@@ -453,7 +219,7 @@ function mergeName(
  */
 export function planCategorySync(
   local: readonly ProviderCategory[],
-  remote: readonly WalletCategory[],
+  remote: readonly SourceCategory[],
 ): CategoryPlan {
   if (remote.length === 0) return emptyPlan();
   const plan = emptyPlan();
@@ -484,7 +250,7 @@ export function planCategorySync(
     // The type is never moved by a sync, in either direction: Wallet publishes none on a category,
     // and the one thing it does say — that this is its built-in Transfer category — is a fact this
     // app reads off the movements (spec §7.2). A disagreement is reported and the local type kept.
-    const walletSaysTransfer = mirror.systemId === WALLET_TRANSFER_CATEGORY;
+    const walletSaysTransfer = mirror.transfer;
     if (walletSaysTransfer !== (category.type === "transfer")) {
       plan.cases.push({
         kind: "type_mismatch",
@@ -612,7 +378,7 @@ export function planCategorySync(
 function planCreation(
   category: ProviderCategory,
   byId: ReadonlyMap<string, ProviderCategory>,
-  remote: readonly WalletCategory[],
+  remote: readonly SourceCategory[],
 ): CategoryCase | { categoryId: string; name: string; parentExternalId: string } | null {
   if (category.archived) return null;
   if (category.parentId === null) return null;
@@ -673,7 +439,7 @@ const databaseStore: CategoryStore = {
 
 interface CategorySyncOptions {
   /** Wallet's whole category list, as the movements pass has just read it. */
-  remote: readonly WalletCategory[];
+  remote: readonly SourceCategory[];
   /** `null` runs the Wallet → here half only, which is what a read-only pass can still do. */
   writer: WalletCategoryWriter | null;
   provider?: string;
@@ -781,7 +547,6 @@ export async function syncWalletCategories(
             externalId: item.externalId,
             local: item.name,
             remote: null,
-            detail: result?.error ?? undefined,
           });
         }
       }
@@ -836,12 +601,18 @@ export async function syncWalletCategories(
 
 /* Deleting on request (owner, 2026-09-21) */
 
+/** The reason of an id Wallet would not delete. */
+const REFUSED = "provider_refused";
+
 /** What became of a deletion Wallet was asked to mirror; never thrown, always reported. */
 type WalletDeletionOutcome =
   /** No Wallet connection, or none of the categories was ever linked to one: nothing to do. */
   | { state: "not_linked" }
   | { state: "deleted"; count: number }
-  /** Wallet refused at least one id — usually because its own records still reference it. */
+  /**
+   * Wallet refused at least one id — usually because its own records still reference it. A reason
+   * is a code (`provider_refused`): the plugin never passes Wallet's own words on.
+   */
   | { state: "refused"; reasons: string[] }
   /** The call never landed: network, timeout, or a token Wallet would not take. */
   | { state: "failed"; reason: string };
@@ -853,23 +624,25 @@ type WalletDeletionOutcome =
  * never throws: the categories are already gone here, so a Wallet that refuses or cannot be
  * reached is news to deliver, not a reason to fail an action that has already succeeded.
  *
- * Wallet's own error text is passed through because it is the only thing that says *why* — "still
- * referenced by 3 records" is the whole answer — and a category's name carries no secret. The token
- * never appears in any of it: `WalletError` is built by the writer, which redacts it.
+ * A failure is a code, never Wallet's words (contract 2): `provider_refused` for an id Wallet would
+ * not delete, the call's own code when the call itself failed. The token never appears in any of it.
  */
 export async function deleteWalletCategories(
   ctx: Pick<Ctx, "userId">,
   externalIds: readonly string[],
-  deps: { writer?: WalletCategoryWriter; options?: WalletClientOptions } = {},
+  deps: { writer?: WalletCategoryWriter } = {},
 ): Promise<WalletDeletionOutcome> {
   if (externalIds.length === 0) return { state: "not_linked" };
   let writer = deps.writer;
   if (!writer) {
     const connection = (await listConnections(ctx)).find((one) => one.provider === WALLET_PROVIDER);
     if (!connection) return { state: "not_linked" };
-    const { token } = await readCredentials(ctx, connection.id);
-    if (!token || token.trim() === "") return { state: "failed", reason: "invalid_credentials" };
-    writer = createWalletCategoryWriter(token, deps.options ?? {});
+    try {
+      writer = categoryWriterOf(await walletCalls(ctx, connection.id));
+    } catch (error) {
+      if (error instanceof IntegrationError) return { state: "failed", reason: error.code };
+      throw error;
+    }
   }
   const refused: string[] = [];
   let deleted = 0;
@@ -879,12 +652,11 @@ export async function deleteWalletCategories(
     try {
       results = await writer.remove(batch);
     } catch (error) {
-      // `WalletError` extends `Error`, and its message is already redacted by the writer.
-      return { state: "failed", reason: error instanceof Error ? error.message : String(error) };
+      return { state: "failed", reason: callCode(error) ?? "failed" };
     }
     for (const result of results) {
       if (result.ok) deleted += 1;
-      else if (result.error) refused.push(result.error);
+      else refused.push(REFUSED);
     }
   }
   if (refused.length > 0) return { state: "refused", reasons: [...new Set(refused)] };

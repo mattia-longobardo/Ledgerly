@@ -1,11 +1,14 @@
 // The parity of a reading (rewrite plan R5c, criterion "parità dei movimenti dopo una sync dal
 // plugin"): one whole pass of the engine on the fixtures of `test/fixtures/wallet/`, and every row
 // it leaves, held to `parity-golden.json`. The golden was written by the engine on its own HTTP
-// client, before the engine read through the plugin; the same pass must still leave exactly it.
+// client, before the engine read through the plugin; the same pass, read through the real plugin
+// served in-process and reached by the port as the application wires it, leaves exactly it.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sql } from "drizzle-orm";
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { openSource, sourceCalls } from "@plugin-host/source";
+import { PLUGIN, stubWallet, toPlugin } from "../../../../../../test/fixtures/wallet/served-plugin";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { createTestUser } from "../../../../../../test/users";
 import type { Ctx } from "../../context";
@@ -13,7 +16,7 @@ import { getDb } from "../../db/client";
 import { addDays } from "../../../shared/dates";
 import { WALLET_PROVIDER } from "../rules";
 import { saveConnection } from "../service";
-import type { WalletClientOptions } from "./client";
+import { wireSource } from "./calls";
 import { syncWalletNow } from "./sync";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/wallet");
@@ -118,13 +121,6 @@ async function walletFetch(input: string | URL | Request): Promise<Response> {
   });
 }
 
-const CLIENT: WalletClientOptions = {
-  baseUrl: "https://wallet.test/api",
-  sleep: async () => undefined,
-  jitter: () => 0,
-  fetch: async (input) => walletFetch(input),
-};
-
 /** The rows a pass writes, table by table, and how each table finds the person's rows. */
 const TABLES: Record<string, string> = {
   accounts: "user_id = $USER",
@@ -200,8 +196,18 @@ function contextFor(userId: string): Ctx {
 }
 
 describe("a pass of the source on the fixtures", () => {
+  // The port as `wireDomain` wires it, with the configured plugin pointing at the served one.
+  beforeAll(() => {
+    wireSource({
+      open: (pluginId, credentials) => sourceCalls({ ...PLUGIN, id: pluginId }, credentials, toPlugin),
+    });
+    stubWallet(TOKEN, async (input) => walletFetch(input));
+  });
   beforeEach(resetDatabase);
-  afterAll(closeDatabase);
+  afterAll(async () => {
+    wireSource({ open: openSource });
+    await closeDatabase();
+  });
 
   it("leaves exactly the rows of the golden", async () => {
     const started = Date.now();
@@ -211,7 +217,7 @@ describe("a pass of the source on the fixtures", () => {
       credentials: { token: TOKEN },
     });
 
-    const result = await syncWalletNow(ctx, connection.id, { now: NOW, clientOptions: CLIENT });
+    const result = await syncWalletNow(ctx, connection.id, { now: NOW });
     const rows = { result, ...(await snapshot(ctx.userId, started)) };
 
     const text = `${JSON.stringify(rows, null, 2)}\n`;

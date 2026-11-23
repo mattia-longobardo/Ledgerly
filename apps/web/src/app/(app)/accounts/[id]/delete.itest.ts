@@ -24,7 +24,8 @@ import {
   saveSchedule,
   skippedAccounts,
 } from "@domain/platform/integrations/service";
-import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
+import type { SourceCalls } from "@domain/platform/integrations/wallet/calls";
+import { servedSource } from "../../../../../../../test/fixtures/wallet/served-plugin";
 import {
   chooseWalletAccounts,
   requestWalletBackfill,
@@ -253,24 +254,20 @@ const ACCOUNTS = (fixture("accounts.json").accounts as { id: string }[]).filter(
 const JANUARY = fixture("records-january-first-half.json").records as WireRecord[];
 const NOW = new Date("2026-01-06T08:07:00Z");
 
-function walletStub(): WalletClientOptions {
-  return {
-    baseUrl: "https://wallet.test/api",
-    sleep: async () => undefined,
-    jitter: () => 0,
-    fetch: async (input) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
-      if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
-      const bounds = url.searchParams.getAll("recordDate");
-      const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
-      const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
-      return Response.json({
-        records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
-        appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
-      });
-    },
-  };
+/** Wallet on the fixtures, read through the plugin served in-process. */
+function walletStub(): SourceCalls {
+  return servedSource(async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
+    if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
+    const bounds = url.searchParams.getAll("recordDate");
+    const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
+    const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
+    return Response.json({
+      records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
+      appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+    });
+  });
 }
 
 const general = async () =>
@@ -279,7 +276,7 @@ const general = async () =>
 describe("an account of Wallet", () => {
   it("is deleted, is not made again by the next reading, and comes back with its movements when chosen again", async () => {
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-    const options = { now: NOW, clientOptions: walletStub() };
+    const options = { now: NOW, source: walletStub() };
     await syncWalletNow(ctx, connection.id, options);
     const before = await general();
     expect(before).toBeDefined();
@@ -298,16 +295,16 @@ describe("an account of Wallet", () => {
     expect((await listAccounts(ctx)).map((one) => one.providerAccountId)).toEqual(["wa-cash"]);
 
     // The choice on the integration's page says which accounts are here and which are not.
-    const choices = await walletAccountChoices(ctx, connection.id, { clientOptions: walletStub() });
+    const choices = await walletAccountChoices(ctx, connection.id, { source: walletStub() });
     expect(choices.map((one) => [one.externalId, one.local === null, one.chosen])).toEqual([
       ["wa-cash", false, true],
       ["wa-general", true, false],
     ]);
 
     // Chosen again: the history is downloaded again, and the movements come back.
-    expect(
-      await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { clientOptions: walletStub() }),
-    ).toEqual({ added: 1 });
+    expect(await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { source: walletStub() })).toEqual({
+      added: 1,
+    });
     expect(await skippedAccounts(ctx, connection.id)).toEqual(new Set());
     expect((await readSyncJob(ctx, connection.id, "transactions"))?.cursor?.backfillMonths).toBe("12");
     await syncWalletNow(ctx, connection.id, { ...options, now: new Date(NOW.getTime() + 7_200_000) });
@@ -319,9 +316,9 @@ describe("an account of Wallet", () => {
   });
 
   it("disconnected and connected again: the accounts left out or deleted stay out, the schedule stays (H55)", async () => {
-    const options = { now: NOW, clientOptions: walletStub() };
+    const options = { now: NOW, source: walletStub() };
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-    await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { clientOptions: walletStub() });
+    await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { source: walletStub() });
     const schedule = {
       rules: [{ kind: "times" as const, times: ["06:30"], days: { kind: "every" as const } }],
     };
@@ -340,7 +337,7 @@ describe("an account of Wallet", () => {
     expect((await readSyncJob(ctx, again.id, "transactions"))?.cursor?.backfillMonths).toBe("24");
     await syncWalletNow(ctx, again.id, { ...options, now: new Date(NOW.getTime() + 3_600_000) });
     expect(await listAccounts(ctx, { includeArchived: true })).toEqual([]);
-    const choices = await walletAccountChoices(ctx, again.id, { clientOptions: walletStub() });
+    const choices = await walletAccountChoices(ctx, again.id, { source: walletStub() });
     expect(choices.map((one) => [one.externalId, one.chosen])).toEqual([
       ["wa-cash", false],
       ["wa-general", false],
@@ -349,10 +346,10 @@ describe("an account of Wallet", () => {
 
   it("left out before the first reading, is never added; the others are", async () => {
     const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-    expect(
-      await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { clientOptions: walletStub() }),
-    ).toEqual({ added: 0 });
-    await syncWalletNow(ctx, connection.id, { now: NOW, clientOptions: walletStub() });
+    expect(await chooseWalletAccounts(ctx, connection.id, ["wa-general"], { source: walletStub() })).toEqual({
+      added: 0,
+    });
+    await syncWalletNow(ctx, connection.id, { now: NOW, source: walletStub() });
     expect((await listAccounts(ctx)).map((one) => one.providerAccountId)).toEqual(["wa-general"]);
   });
 });

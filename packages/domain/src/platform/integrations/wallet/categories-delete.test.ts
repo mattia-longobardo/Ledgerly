@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { DELETE_BATCH, deleteWalletCategories, type WalletCategoryWriter } from "./categories";
 
 vi.mock("../service", () => ({
+  IntegrationError: class IntegrationError extends Error {
+    constructor(readonly code: string) {
+      super(code);
+    }
+  },
   listConnections: async () => connections,
   readCredentials: async () => ({ token }),
 }));
@@ -11,7 +16,7 @@ let token = "wallet-token";
 
 /** A writer that records what it was asked to delete and answers however the test says. */
 function writer(
-  answer: (ids: readonly string[]) => { externalId: string; ok: boolean; error: string | null }[],
+  answer: (ids: readonly string[]) => { externalId: string; ok: boolean }[],
 ): WalletCategoryWriter & { batches: string[][] } {
   const batches: string[][] = [];
   return {
@@ -30,7 +35,7 @@ function writer(
 }
 
 const ctx = { userId: "u1" };
-const allFine = (ids: readonly string[]) => ids.map((externalId) => ({ externalId, ok: true, error: null }));
+const allFine = (ids: readonly string[]) => ids.map((externalId) => ({ externalId, ok: true }));
 
 describe("deleteWalletCategories", () => {
   it("does nothing at all when the category was never linked to Wallet", async () => {
@@ -57,17 +62,11 @@ describe("deleteWalletCategories", () => {
     expect(wallet.batches[1]).toHaveLength(3);
   });
 
-  it("passes Wallet's own reason back rather than inventing one", async () => {
-    const wallet = writer((ids) =>
-      ids.map((externalId) => ({
-        externalId,
-        ok: false,
-        error: "still referenced by 3 records",
-      })),
-    );
+  it("passes the refusal back as a code, never as Wallet's own words (contract 2)", async () => {
+    const wallet = writer((ids) => ids.map((externalId) => ({ externalId, ok: false })));
     expect(await deleteWalletCategories(ctx, ["w1", "w2"], { writer: wallet })).toEqual({
       state: "refused",
-      reasons: ["still referenced by 3 records"],
+      reasons: ["provider_refused"],
     });
   });
 
@@ -76,7 +75,6 @@ describe("deleteWalletCategories", () => {
       ids.map((externalId, index) => ({
         externalId,
         ok: index === 0,
-        error: index === 0 ? null : "in use",
       })),
     );
     expect(await deleteWalletCategories(ctx, ["w1", "w2"], { writer: wallet })).toMatchObject({
@@ -87,7 +85,7 @@ describe("deleteWalletCategories", () => {
   it("answers rather than throwing when the call itself fails", async () => {
     const wallet: WalletCategoryWriter = {
       async remove() {
-        throw new Error("connect ECONNREFUSED");
+        throw Object.assign(new Error("provider_down"), { code: "provider_down" });
       },
       async rename() {
         throw new Error("unused");
@@ -98,7 +96,7 @@ describe("deleteWalletCategories", () => {
     };
     expect(await deleteWalletCategories(ctx, ["w1"], { writer: wallet })).toEqual({
       state: "failed",
-      reason: "connect ECONNREFUSED",
+      reason: "provider_down",
     });
   });
 

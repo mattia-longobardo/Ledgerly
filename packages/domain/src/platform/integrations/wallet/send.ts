@@ -5,46 +5,21 @@
  *
  * One movement here is one record there, whatever goes wrong in between:
  *
- * 1. the record carries a **marker** in its note, with the key of the movement. A movement that was
- *    asked for once before ("not sent") is looked for by its marker first, and taken when it is
- *    there: a request whose answer was lost is never repeated;
+ * 1. the record carries a **marker** in its note, with the key of the movement (the plugin writes it
+ *    and takes it off on the way back). A movement that was asked for once before ("not sent") is
+ *    looked for by its marker first, and taken when it is there: a request whose answer was lost is
+ *    never repeated;
  * 2. the movement is marked "not sent" **before** Wallet is asked, so a process that dies between
  *    the request and the answer leaves the state that makes the next pass look first;
- * 3. the reading recognises the marker too (`sync.ts`), and takes the waiting movement for the
+ * 3. the reading recognises the marker too (`sentKey`), and takes the waiting movement for the
  *    record instead of importing a second row.
  *
- * This file speaks to the client and to nothing else: what waits, and what becomes of it, is handed
+ * This file speaks to the source's calls (`push`, one per movement) and to nothing else: what waits, and what becomes of it, is handed
  * in by the pass, which is the one that may reach the modules.
  */
-import type { CivilDate } from "../../../shared/dates";
-import type { Cents } from "../../../shared/money";
-import { type WalletClient, WalletError } from "./client";
-
-/** What a record written from here carries in its note: `ledgerly-movement:<key>`. */
-const MARKER = "ledgerly-movement:";
-const MARKED = /(?:^|\s)ledgerly-movement:([A-Za-z0-9-]{8,64})\s*$/;
-
-export function sendMarker(key: string): string {
-  return `${MARKER}${key}`;
-}
-
-/** The note a record is created with: the person's own, then the marker on a line of its own. */
-export function noteWithMarker(note: string | null, key: string): string {
-  const own = note?.trim() ?? "";
-  return own === "" ? sendMarker(key) : `${own}\n${sendMarker(key)}`;
-}
-
-/**
- * A note read from Wallet, without the marker, and the key the marker carried. The marker is this
- * app's own business: no screen shows it, and a note that was only the marker is no note.
- */
-export function splitSendMarker(note: string | null): { note: string | null; key: string | null } {
-  if (note === null) return { note: null, key: null };
-  const found = MARKED.exec(note);
-  if (!found) return { note, key: null };
-  const rest = note.slice(0, found.index).trim();
-  return { note: rest === "" ? null : rest, key: found[1] };
-}
+import { type CivilDate } from "../../../shared/dates";
+import { type Cents, centsToDecimal } from "../../../shared/money";
+import { callCode, type SourceCalls } from "./calls";
 
 /** A manual movement that waits, with Wallet's own id of its account. */
 export interface MovementToSend {
@@ -86,77 +61,55 @@ export interface SendOutcome {
 }
 
 /**
- * Whether a failure says something about one movement only: Wallet answered, and said no to this
- * request (a 4xx that is not about the token or the rate), or answered a shape nobody could read.
- * Anything else is the connection's, and there is no point in asking for the next movement.
+ * Whether a failure says something about one movement only: the plugin says the source refused
+ * this request (`refused`). Anything else is the connection's, and there is no point in asking for
+ * the next movement.
  */
 export function isMovementRefusal(error: unknown): boolean {
-  if (!(error instanceof WalletError)) return false;
-  if (error.kind === "payload") return true;
-  return (
-    error.kind === "http" &&
-    error.status !== null &&
-    error.status >= 400 &&
-    error.status < 500 &&
-    error.status !== 429
-  );
+  return callCode(error) === "refused";
 }
 
-type SendClient = Pick<WalletClient, "recordsWithNote" | "createRecord" | "patchRecord">;
-
-async function sendOne(client: SendClient, movement: MovementToSend, deps: SendDeps): Promise<boolean> {
+async function sendOne(
+  source: Pick<SourceCalls, "push">,
+  movement: MovementToSend,
+  deps: SendDeps,
+): Promise<boolean> {
   const category = await deps.categoryFor(movement.categoryId);
-  let recordId: string | null = null;
-  if (movement.state === "not_sent") {
-    // Asked for once already: the record may be there, with or without an answer that arrived —
-    // on the day that request named, whatever day the movement has now.
-    const found = await client.recordsWithNote({
-      accountId: movement.accountExternalId,
-      on: movement.askedOn ?? movement.on,
-      marker: sendMarker(movement.key),
-    });
-    recordId = (found.find((record) => record.amountCents === movement.amountCents) ?? found[0])?.id ?? null;
-  }
-  if (recordId === null) {
-    await deps.markNotSent(movement.id, movement.on);
-    const created = await client.createRecord({
-      accountId: movement.accountExternalId,
-      amountCents: movement.amountCents,
-      on: movement.on,
-      note: noteWithMarker(movement.note, movement.key),
-      categoryId: category?.externalId ?? null,
-    });
-    // No id that could be read: the record may exist. The reading finds it by its marker.
-    if (created.id === null) return false;
-    recordId = created.id;
-  }
-  let payeeSent = movement.payee === null;
-  if (movement.payee !== null) {
-    // The create has no field for the payee; the edit has. A payee Wallet did not take stays the
-    // one written here (`settle` is told), and never fails a movement that is already there.
-    try {
-      payeeSent = (await client.patchRecord({ id: recordId, counterParty: movement.payee })).ok;
-    } catch {
-      payeeSent = false;
-    }
-  }
+  await deps.markNotSent(movement.id, movement.on);
+  // Asked for once already: the plugin looks for the record by its marker first — on the day that
+  // request named, whatever day the movement has now — and creates nothing when it is there.
+  const sent = await source.push({
+    idempotencyKey: movement.key,
+    askedOn: movement.state === "not_sent" ? (movement.askedOn ?? movement.on) : null,
+    movement: {
+      accountExternalId: movement.accountExternalId,
+      day: movement.on,
+      amount: centsToDecimal(movement.amountCents),
+      payee: movement.payee,
+      note: movement.note,
+      categoryExternalId: category?.externalId ?? null,
+    },
+  });
+  // No id that could be read: the record may exist. The reading finds it by its marker.
+  if (sent.externalId === null) return false;
+  // A payee Wallet did not take stays the one written here (`settle` is told).
   return deps.settle(movement.id, {
-    externalId: recordId,
+    externalId: sent.externalId,
     sourceCategoryId: category?.id ?? null,
-    payeeSent,
+    payeeSent: sent.payeeSent,
   });
 }
 
 /** Sends the movements that wait, the oldest first, and says what became of them. */
 export async function sendManualMovements(
-  client: SendClient,
+  source: Pick<SourceCalls, "push">,
   movements: readonly MovementToSend[],
   deps: SendDeps,
 ): Promise<SendOutcome> {
   const counts = { sent: 0, notSent: 0 };
   for (const movement of movements) {
     try {
-      if (await sendOne(client, movement, deps)) counts.sent += 1;
+      if (await sendOne(source, movement, deps)) counts.sent += 1;
       else counts.notSent += 1;
     } catch (error) {
       counts.notSent += 1;

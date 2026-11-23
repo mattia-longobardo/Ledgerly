@@ -22,8 +22,8 @@ import {
   saveConnection,
   saveSchedule,
 } from "@domain/platform/integrations/service";
-import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
-import { sendMarker } from "@domain/platform/integrations/wallet/send";
+import { sendMarker } from "../../../../../../plugins/wallet/src/marker";
+import { servedSource } from "../../../../../../test/fixtures/wallet/served-plugin";
 import { syncWalletNow } from "@domain/platform/integrations/wallet/sync";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { createTestUser } from "../../../../../../test/users";
@@ -57,87 +57,83 @@ function source() {
   const calls: string[] = [];
   const state = { create: "ok" as CreateMode, hideFromReadings: false, balanceCents: 261_539 };
   const bodies: Record<string, unknown>[] = [];
-  const options: WalletClientOptions = {
-    baseUrl: "https://source.test/api",
-    sleep: async () => undefined,
-    jitter: () => 0,
-    fetch: async (input, init) => {
-      const url = new URL(String(input));
-      const method = init?.method ?? "GET";
-      calls.push(`${method} ${url.pathname}`);
-      if (url.pathname.endsWith("/accounts")) {
-        return Response.json({
-          accounts: ACCOUNTS.map((account) =>
-            account.id === "wa-general"
-              ? { ...account, balance: { currentBalance: state.balanceCents / 100 } }
-              : account,
-          ),
-        });
-      }
-      if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
-      if (method === "POST") {
-        if (state.create === "refuse") return Response.json({ error: "not accepted" }, { status: 400 });
-        if (state.create === "down") return new Response("{}", { status: 503 });
-        const [sent] = JSON.parse(String(init?.body)) as Record<string, unknown>[];
-        bodies.push(sent);
-        const category = (CATEGORIES.categories as Wire[]).find((one) => one.id === sent.categoryId);
-        const record: Wire = {
-          id: `wr-sent-${records.length + 1}`,
-          accountId: sent.accountId,
-          amount: { value: sent.amount, currencyCode: "EUR" },
-          recordDate: `${String(sent.recordDate)}T10:00:00.000Z`,
-          category: category ? { id: category.id, name: category.name, group: category.group ?? null } : null,
-          labels: [],
-          recordType: Number(sent.amount) < 0 ? "Expense" : "Income",
-          recordState: "Cleared",
-          note: sent.note,
-          counterParty: null,
-          transfer: null,
-          updatedAt: null,
-        };
-        records.push(record);
-        state.balanceCents += Math.round(Number(sent.amount) * 100);
-        // The record is there, and the answer never arrives.
-        if (state.create === "lose_answer") return new Response("{}", { status: 502 });
-        return Response.json({ records: [{ id: record.id }] }, { status: 201 });
-      }
-      if (method === "PATCH") {
-        const [patch] = JSON.parse(String(init?.body)) as Record<string, unknown>[];
-        const record = records.find((one) => one.id === patch.id);
-        if (record && typeof patch.counterParty === "string") record.counterParty = patch.counterParty;
-        return Response.json({ results: [{ inputIndex: 0, success: record !== undefined, record }] });
-      }
-      const dates = url.searchParams.getAll("recordDate");
-      const exact = dates.find((one) => one.startsWith("eq."))?.slice(3);
-      if (exact !== undefined) {
-        // The search by marker of the duplicate check.
-        const marker = url.searchParams.get("note")?.replace("contains.", "") ?? "";
-        const account = url.searchParams.get("accountId")?.replace("eq.", "");
-        return Response.json({
-          records: records.filter(
-            (one) =>
-              one.accountId === account &&
-              String(one.recordDate).startsWith(exact) &&
-              String(one.note ?? "").includes(marker),
-          ),
-        });
-      }
-      const from = dates.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
-      const to = dates.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
-      const inWindow = state.hideFromReadings
-        ? []
-        : records.filter((one) => {
-            const on = String(one.recordDate).slice(0, 10);
-            return on >= from && on <= to;
-          });
+  const fetch: typeof globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    const method = init?.method ?? "GET";
+    // The source behind the plugin, by the path under its API (`/wallet/v1/api/…`).
+    calls.push(`${method} ${url.pathname.replace("/wallet/v1", "")}`);
+    if (url.pathname.endsWith("/accounts")) {
       return Response.json({
-        records: inWindow,
-        appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+        accounts: ACCOUNTS.map((account) =>
+          account.id === "wa-general"
+            ? { ...account, balance: { currentBalance: state.balanceCents / 100 } }
+            : account,
+        ),
       });
-    },
+    }
+    if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
+    if (method === "POST") {
+      if (state.create === "refuse") return Response.json({ error: "not accepted" }, { status: 400 });
+      if (state.create === "down") return new Response("{}", { status: 503 });
+      const [sent] = JSON.parse(String(init?.body)) as Record<string, unknown>[];
+      bodies.push(sent);
+      const category = (CATEGORIES.categories as Wire[]).find((one) => one.id === sent.categoryId);
+      const record: Wire = {
+        id: `wr-sent-${records.length + 1}`,
+        accountId: sent.accountId,
+        amount: { value: sent.amount, currencyCode: "EUR" },
+        recordDate: `${String(sent.recordDate)}T10:00:00.000Z`,
+        category: category ? { id: category.id, name: category.name, group: category.group ?? null } : null,
+        labels: [],
+        recordType: Number(sent.amount) < 0 ? "Expense" : "Income",
+        recordState: "Cleared",
+        note: sent.note,
+        counterParty: null,
+        transfer: null,
+        updatedAt: null,
+      };
+      records.push(record);
+      state.balanceCents += Math.round(Number(sent.amount) * 100);
+      // The record is there, and the answer never arrives.
+      if (state.create === "lose_answer") return new Response("{}", { status: 502 });
+      return Response.json({ records: [{ id: record.id }] }, { status: 201 });
+    }
+    if (method === "PATCH") {
+      const [patch] = JSON.parse(String(init?.body)) as Record<string, unknown>[];
+      const record = records.find((one) => one.id === patch.id);
+      if (record && typeof patch.counterParty === "string") record.counterParty = patch.counterParty;
+      return Response.json({ results: [{ inputIndex: 0, success: record !== undefined, record }] });
+    }
+    const dates = url.searchParams.getAll("recordDate");
+    const exact = dates.find((one) => one.startsWith("eq."))?.slice(3);
+    if (exact !== undefined) {
+      // The search by marker of the duplicate check.
+      const marker = url.searchParams.get("note")?.replace("contains.", "") ?? "";
+      const account = url.searchParams.get("accountId")?.replace("eq.", "");
+      return Response.json({
+        records: records.filter(
+          (one) =>
+            one.accountId === account &&
+            String(one.recordDate).startsWith(exact) &&
+            String(one.note ?? "").includes(marker),
+        ),
+      });
+    }
+    const from = dates.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
+    const to = dates.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
+    const inWindow = state.hideFromReadings
+      ? []
+      : records.filter((one) => {
+          const on = String(one.recordDate).slice(0, 10);
+          return on >= from && on <= to;
+        });
+    return Response.json({
+      records: inWindow,
+      appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+    });
   };
   const created = () => calls.filter((call) => call === "POST /api/records").length;
-  return { records, calls, bodies, state, options, created };
+  return { records, calls, bodies, state, source: servedSource(fetch), created };
 }
 
 function contextFor(userId: string): Ctx {
@@ -173,7 +169,7 @@ let accountId: string;
 const KEY = "0198a1c2-7d3e-7a4b-9c5d-2e6f7a8b9c0d";
 
 async function update(): Promise<void> {
-  await syncWalletNow(ctx, connectionId, { clientOptions: wallet.options, categoryWriter: null });
+  await syncWalletNow(ctx, connectionId, { source: wallet.source, categoryWriter: null });
 }
 
 async function rows() {

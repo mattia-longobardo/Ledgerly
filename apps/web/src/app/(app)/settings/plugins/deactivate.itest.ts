@@ -33,7 +33,8 @@ import {
   saveConnection,
   skippedAccounts,
 } from "@domain/platform/integrations/service";
-import type { WalletClientOptions } from "@domain/platform/integrations/wallet/client";
+import type { SourceCalls } from "@domain/platform/integrations/wallet/calls";
+import { servedSource } from "../../../../../../../test/fixtures/wallet/served-plugin";
 import { chooseWalletAccounts, syncWalletNow } from "@domain/platform/integrations/wallet/sync";
 import { PLUGIN_PATHS } from "@plugin-contract/calls";
 import { credentialsStatus, isPluginActive } from "@domain/platform/plugins/queries";
@@ -118,24 +119,20 @@ const ACCOUNTS = (fixture("accounts.json").accounts as { id: string }[]).filter(
 );
 const JANUARY = fixture("records-january-first-half.json").records as WireRecord[];
 
-function walletStub(): WalletClientOptions {
-  return {
-    baseUrl: "https://wallet.test/api",
-    sleep: async () => undefined,
-    jitter: () => 0,
-    fetch: async (input) => {
-      const url = new URL(String(input));
-      if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
-      if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
-      const bounds = url.searchParams.getAll("recordDate");
-      const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
-      const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
-      return Response.json({
-        records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
-        appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
-      });
-    },
-  };
+/** Wallet on the fixtures, read through the plugin served in-process. */
+function walletStub(): SourceCalls {
+  return servedSource(async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/accounts")) return Response.json({ accounts: ACCOUNTS });
+    if (url.pathname.endsWith("/categories")) return Response.json(CATEGORIES);
+    const bounds = url.searchParams.getAll("recordDate");
+    const from = bounds.find((one) => one.startsWith("gte."))?.slice(4) ?? "";
+    const to = bounds.find((one) => one.startsWith("lte."))?.slice(4) ?? "";
+    return Response.json({
+      records: JANUARY.filter((row) => row.recordDate >= from && row.recordDate <= to),
+      appliedRecordDateFilters: [`gte.${from}T00:00:00.000Z`, `lt.${addDays(to, 1)}T00:00:00.000Z`],
+    });
+  });
 }
 
 const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: null, days: false });
@@ -144,8 +141,8 @@ const walletAccounts = () => listAccounts(ctx, { includeArchived: true });
 /** Wallet read once, with one account left out, one rule that publishes and one movement waiting. */
 async function walletInUse() {
   const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
-  const options = { now: NOW, clientOptions: walletStub() };
-  await chooseWalletAccounts(ctx, connection.id, ["wa-general", "wa-cash"], { clientOptions: walletStub() });
+  const options = { now: NOW, source: walletStub() };
+  await chooseWalletAccounts(ctx, connection.id, ["wa-general", "wa-cash"], { source: walletStub() });
   await syncWalletNow(ctx, connection.id, options);
   const general = (await listAccounts(ctx)).find((one) => one.providerAccountId === "wa-general")!;
   await createRule(ctx, {
@@ -242,7 +239,7 @@ describe("Turn off Wallet", () => {
     expect(await restoreSourceAccounts(ctx, WALLET_PROVIDER)).toBe(1);
     // The accounts deleted here stay out; the ones left out are asked again (§3.4).
     expect(await skippedAccounts(ctx, again.id)).toEqual(new Set(["wa-cash"]));
-    await syncWalletNow(ctx, again.id, { now: later(2), clientOptions: walletStub() });
+    await syncWalletNow(ctx, again.id, { now: later(2), source: walletStub() });
 
     const accounts = await walletAccounts();
     expect(accounts.map((one) => [one.id, one.provider, one.providerAccountId, one.origin]).sort()).toEqual(

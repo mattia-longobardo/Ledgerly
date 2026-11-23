@@ -3,7 +3,9 @@
 // `sync.itest.ts` against a real Postgres (spec §11: no in-memory fakes).
 import { describe, expect, it } from "vitest";
 import { civilDateIn } from "../../../shared/dates";
-import type { WalletAccount, WalletCategory, WalletTransaction } from "./client";
+import type { SourceMovement } from "@ledgerly/plugin-contract";
+import { centsToDecimal } from "../../../shared/money";
+import type { SourceAccount, SourceCategory } from "./calls";
 import {
   MAX_WINDOW_REMOVAL_SHARE,
   SyncBusyError,
@@ -11,44 +13,77 @@ import {
   removalDoubt,
   toIncomingTransaction,
   toRemoteAccount,
-  walletTransactionState,
-  walletTransactionType,
 } from "./sync";
 
 const ROME = "Europe/Rome";
 
-function movement(over: Partial<WalletTransaction> = {}): WalletTransaction {
-  return {
-    externalId: "wr-1",
-    accountExternalId: "wa-general",
+/**
+ * A movement, written in the words these tests were first written in and given to the engine in
+ * the contract's (rewrite plan R5c): the cases stay the ones the engine always had to decide.
+ * Naming a type and a state is the plugin's work now (`plugins/wallet/src/plugin.test.ts`).
+ */
+interface Written {
+  transferCounterExternalId: string | null;
+  occurredOn: string;
+  occurredAt: Date | null;
+  amountCents: bigint;
+  categoryExternalId: string | null;
+  categoryName: string | null;
+  categoryGroupExternalId: string | null;
+  categoryGroupName: string | null;
+  categorySystemId: string | null;
+  providerType: SourceMovement["type"];
+}
+
+function movement(over: Partial<Written> = {}): SourceMovement {
+  const written: Written = {
     transferCounterExternalId: null,
     occurredOn: "2026-01-05",
     occurredAt: null,
     amountCents: -861n,
-    currency: "EUR",
-    payee: "Panificio Rossi",
-    note: "pane e latte",
     categoryExternalId: "wc-groceries",
     categoryName: null,
     categoryGroupExternalId: null,
     categoryGroupName: null,
     categorySystemId: null,
-    labels: ["spesa"],
     providerType: "expense",
-    providerState: "cleared",
-    updatedAt: null,
     ...over,
+  };
+  return {
+    externalId: "wr-1",
+    accountExternalId: "wa-general",
+    counterpartExternalId: written.transferCounterExternalId,
+    day: written.occurredOn,
+    instant: written.occurredAt?.toISOString() ?? null,
+    amount: centsToDecimal(written.amountCents),
+    currency: "EUR",
+    payee: "Panificio Rossi",
+    note: "pane e latte",
+    sentKey: null,
+    category:
+      written.categoryExternalId === null
+        ? null
+        : {
+            externalId: written.categoryExternalId,
+            name: written.categoryName,
+            groupExternalId: written.categoryGroupExternalId,
+            groupName: written.categoryGroupName,
+            transfer: written.categorySystemId === "system_categories__transfer",
+          },
+    labels: ["spesa"],
+    type: written.providerType,
+    state: "cleared",
   };
 }
 
 /** A category as `/categories` publishes it, with the three levels F6 needs left at their defaults. */
 function category(
-  over: Partial<WalletCategory> & Pick<WalletCategory, "externalId" | "name">,
-): WalletCategory {
+  over: Partial<SourceCategory> & Pick<SourceCategory, "externalId" | "name">,
+): SourceCategory {
   return {
     groupExternalId: null,
     groupName: null,
-    systemId: null,
+    transfer: false,
     custom: false,
     parentExternalId: null,
     archived: false,
@@ -56,54 +91,16 @@ function category(
   };
 }
 
-const CATEGORIES = new Map<string, WalletCategory>([
+const CATEGORIES = new Map<string, SourceCategory>([
   [
     "wc-groceries",
     category({ externalId: "wc-groceries", name: "Spesa", groupExternalId: "wcg-casa", groupName: "Casa" }),
   ],
 ]);
 
-describe("walletTransactionType", () => {
-  it("keeps the type Wallet named", () => {
-    expect(walletTransactionType({ providerType: "expense", amountCents: -100n })).toBe("expense");
-    expect(walletTransactionType({ providerType: "income", amountCents: 100n })).toBe("income");
-    expect(walletTransactionType({ providerType: "transfer", amountCents: -100n })).toBe("transfer");
-  });
-
-  it("accepts the synonyms Wallet also uses", () => {
-    expect(walletTransactionType({ providerType: "withdrawal", amountCents: -100n })).toBe("expense");
-    expect(walletTransactionType({ providerType: "deposit", amountCents: 100n })).toBe("income");
-  });
-
-  it("names a type Wallet did not by the sign of the amount", () => {
-    expect(walletTransactionType({ providerType: null, amountCents: -100n })).toBe("expense");
-    expect(walletTransactionType({ providerType: "sorcery", amountCents: 100n })).toBe("income");
-  });
-
-  it("keeps the provider's word over a sign that does not contradict it", () => {
-    // A refunded expense is positive and still an expense to Wallet; `resolveType` (T3) has the
-    // last word, and this function must not pre-empt it by guessing from the sign.
-    expect(walletTransactionType({ providerType: "expense", amountCents: 100n })).toBe("expense");
-  });
-});
-
-describe("walletTransactionState", () => {
-  it("maps the states Wallet sends", () => {
-    expect(walletTransactionState("cleared")).toBe("cleared");
-    expect(walletTransactionState("reconciled")).toBe("cleared");
-    expect(walletTransactionState("pending")).toBe("pending");
-    expect(walletTransactionState("uncleared")).toBe("pending");
-  });
-
-  it("treats a state it does not know, and a missing one, as cleared", () => {
-    expect(walletTransactionState("sorcery")).toBe("cleared");
-    expect(walletTransactionState(null)).toBe("cleared");
-  });
-});
-
 describe("toIncomingTransaction", () => {
   it("files a movement in Wallet's Transfer category as a giroconto, as Wallet counts it", () => {
-    const transfer = { categorySystemId: "system_categories__transfer", providerType: "expense" };
+    const transfer = { categorySystemId: "system_categories__transfer", providerType: "expense" as const };
     expect(toIncomingTransaction(movement(transfer), CATEGORIES, ROME).type).toBe("transfer");
     // From the category list when the record carries the id alone.
     const listed = new Map([
@@ -113,7 +110,7 @@ describe("toIncomingTransaction", () => {
           externalId: "wc-transfer",
           name: "Trasferimento",
           groupExternalId: "system_categories",
-          systemId: "system_categories__transfer",
+          transfer: true,
         }),
       ],
     ]);
@@ -258,13 +255,15 @@ describe("toIncomingTransaction", () => {
 
 describe("toRemoteAccount", () => {
   it("states the provider and its own id, which is what the lifecycle keys on", () => {
-    const account: WalletAccount = {
+    const account: SourceAccount = {
       externalId: "wa-general",
       name: "Conto corrente",
       type: "checking",
       currency: "EUR",
       archived: false,
-      updatedAt: null,
+      identifier: "0042-1234",
+      balance: "12.00",
+      available: null,
     };
     expect(toRemoteAccount(account)).toEqual({
       provider: "wallet",

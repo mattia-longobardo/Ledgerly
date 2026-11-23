@@ -1284,7 +1284,8 @@
     "sourceCard",
     "syncSourceNow",
     "syncWalletNow",
-    "transactionsSource"
+    "transactionsSource",
+    "wireSource"
   ],
   "packages/domain/src/platform/jobs/index.ts": [
     "JobDetail",
@@ -1471,6 +1472,7 @@
     "forgetPlugin",
     "keepManifestsFresh",
     "listInstitutions",
+    "openSource",
     "pluginPriceSource",
     "prepareAccessClosing",
     "previewBankAccount",
