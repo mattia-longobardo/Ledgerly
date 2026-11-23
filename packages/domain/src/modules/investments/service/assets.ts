@@ -6,7 +6,7 @@ import { type CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { ASSET_SEED } from "../catalog";
-import { instrumentById, type InstrumentHit } from "../../instruments";
+import { marketPrices, type RegistryInstrument } from "../ports";
 import { ASSET_CLASSES } from "../rules";
 import { investmentAssets, investmentHoldings } from "../schema";
 import { type InvestmentAsset, InvestmentError, type InvestmentHolding, translated } from "./types";
@@ -123,7 +123,7 @@ export async function assetOfInstrument(
   ref: InstrumentRef,
   transaction: Tx,
 ): Promise<InvestmentAsset> {
-  const instrument = await instrumentById(ref.instrumentId);
+  const instrument = await marketPrices().instrumentById(ref.instrumentId);
   if (!instrument) throw new InvestmentError("not_found");
   const values = assetValuesOf(instrument, ref);
   const mine = userScoped(ctx).owns(investmentAssets);
@@ -162,7 +162,7 @@ export async function assetOfInstrument(
 }
 
 /** What an asset takes from its instrument and the market of the order: an automatic price when a source has it. */
-function assetValuesOf(instrument: InstrumentHit, ref: InstrumentRef) {
+function assetValuesOf(instrument: RegistryInstrument, ref: InstrumentRef) {
   const listing = ref.mic === null ? null : instrument.listings.find((one) => one.mic === ref.mic);
   if (listing === undefined) throw new InvestmentError("not_found");
   return {

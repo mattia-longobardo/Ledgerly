@@ -1,6 +1,6 @@
 {
   "counts": {
-    "crossModuleImports": 79,
+    "crossModuleImports": 77,
     "moduleIndexFiles": 14,
     "reciprocalModulePairs": 0,
     "reciprocalUnitPairs": 41,
@@ -50,10 +50,8 @@
     "modules/investments/queries.ts → modules/accounts/index",
     "modules/investments/queries.ts → modules/transactions/queries",
     "modules/investments/schema.ts → modules/accounts/schema",
-    "modules/investments/schema.ts → modules/instruments/schema",
     "modules/investments/schema.ts → modules/transactions/schema",
     "modules/investments/service.ts → modules/accounts/index",
-    "modules/investments/service.ts → modules/instruments/index",
     "modules/investments/service.ts → modules/transactions/queries",
     "modules/investments/sync.ts → modules/accounts/index",
     "modules/investments/sync.ts → modules/users/jobs",

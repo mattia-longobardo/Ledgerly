@@ -1,5 +1,5 @@
 {
-  "id": "88532150-7038-4382-bb51-e91808428b85",
+  "id": "d2a33d7d-91fe-4fc5-9302-1bbd20884511",
   "prevId": "b5c48051-eb9b-48a6-897a-e7badd9a6093",
   "version": "7",
   "dialect": "postgresql",
@@ -7434,19 +7434,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "investment_assets_instrument_id_instruments_id_fk": {
-          "name": "investment_assets_instrument_id_instruments_id_fk",
-          "tableFrom": "investment_assets",
-          "tableTo": "instruments",
-          "columnsFrom": [
-            "instrument_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

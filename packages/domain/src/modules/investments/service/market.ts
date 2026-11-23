@@ -1,7 +1,7 @@
 // The daily closes of the registry in a manual portfolio (rewrite plan R5d): an asset whose price is
 // automatic is valued at the close of the market of the order, or of Xetra when that market has no
 // source (decision S3). A close is a valuation of its day; one typed by hand the same day wins.
-import { closesUpTo, FALLBACK_MIC, listingsOf, type MarketKey, marketKey } from "../../instruments";
+import { type MarketKey, marketPrices } from "../ports";
 import { parseDecimal } from "../../../shared/money";
 import { PRICE_SCALE, type EventLike } from "../rules";
 import type { InvestmentAsset, InvestmentHolding } from "./types";
@@ -12,19 +12,21 @@ const LAST_DAY = "9999-12-31";
 /** The markets an asset may be priced on, the order's first: none for a price by hand. */
 export function marketsOf(asset: Pick<InvestmentAsset, "instrumentId" | "mic" | "priceSource">): MarketKey[] {
   if (asset.priceSource !== "market" || asset.instrumentId === null) return [];
+  const fallback = marketPrices().fallbackMic;
   const own = asset.mic === null ? [] : [{ instrumentId: asset.instrumentId, mic: asset.mic }];
-  return asset.mic === FALLBACK_MIC ? own : [...own, { instrumentId: asset.instrumentId, mic: FALLBACK_MIC }];
+  return asset.mic === fallback ? own : [...own, { instrumentId: asset.instrumentId, mic: fallback }];
 }
 
 /** The listing each asset is priced on: the first of its markets that a source prices. */
 export async function pricedListingOf(
   assets: readonly Pick<InvestmentAsset, "id" | "instrumentId" | "mic" | "priceSource">[],
 ): Promise<Map<string, string>> {
-  const listings = await listingsOf(assets.flatMap(marketsOf));
+  const prices = marketPrices();
+  const listings = await prices.listingsOf(assets.flatMap(marketsOf));
   const byAsset = new Map<string, string>();
   for (const asset of assets) {
     const priced = marketsOf(asset)
-      .map((market) => listings.get(marketKey(market)))
+      .map((market) => listings.get(prices.marketKey(market)))
       .find((listing) => listing?.priceSource !== null && listing !== undefined);
     if (priced) byAsset.set(asset.id, priced.listingId);
   }
@@ -39,7 +41,7 @@ export async function marketEvents(
   holdings: readonly (InvestmentHolding & { asset: InvestmentAsset })[],
 ): Promise<EventLike[]> {
   const listingOf = await pricedListingOf(holdings.map((holding) => holding.asset));
-  const closes = await closesUpTo([...new Set(listingOf.values())], LAST_DAY);
+  const closes = await marketPrices().closesUpTo([...new Set(listingOf.values())], LAST_DAY);
   const events: EventLike[] = [];
   for (const holding of holdings) {
     const listingId = listingOf.get(holding.asset.id);

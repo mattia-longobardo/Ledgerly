@@ -1,7 +1,7 @@
 // The prices of the assets of a manual portfolio (rewrite plan R5d): automatic or by hand, the state
 // a row shows («to update»), and what the daily job reads and rewrites.
 import { and, eq } from "drizzle-orm";
-import { isStale, lastCloses, type PricedMarket, type PricesRun } from "../../instruments";
+import { marketPrices } from "../ports";
 import type { Ctx } from "../../../platform/context";
 import { type CivilDate, today } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
@@ -30,6 +30,7 @@ export async function assetPrices(
   pricedOn: ReadonlyMap<string, CivilDate | null> = new Map(),
 ): Promise<Map<string, AssetPrice>> {
   const listingOf = await pricedListingOf(assets);
+  const { lastCloses, isStale } = marketPrices();
   const closes = await lastCloses([...new Set(listingOf.values())], todayOn);
   const priceOf = (asset: InvestmentAsset): AssetPrice => {
     const known = pricedOn.get(asset.id) ?? null;
@@ -106,7 +107,9 @@ async function automaticHoldings(ctx: Pick<Ctx, "userId">) {
 }
 
 /** The markets the daily job reads for a person: each from the day its oldest holding opened. */
-export async function pricedMarkets(ctx: Pick<Ctx, "userId">): Promise<PricedMarket[]> {
+export async function pricedMarkets(
+  ctx: Pick<Ctx, "userId">,
+): Promise<{ listingId: string; neededFrom: CivilDate }[]> {
   const rows = await automaticHoldings(ctx);
   const listingOf = await pricedListingOf(rows.map((row) => row.asset));
   return rows.flatMap((row) => {
@@ -116,7 +119,10 @@ export async function pricedMarkets(ctx: Pick<Ctx, "userId">): Promise<PricedMar
 }
 
 /** After a run of the job: every portfolio of the person on a market whose closes changed, rewritten from the oldest day. */
-export async function revalueAfterPrices(ctx: WriteCtx, run: Pick<PricesRun, "changed">): Promise<number> {
+export async function revalueAfterPrices(
+  ctx: WriteCtx,
+  run: { changed: ReadonlyMap<string, CivilDate> },
+): Promise<number> {
   if (run.changed.size === 0) return 0;
   const rows = await automaticHoldings(ctx);
   const listingOf = await pricedListingOf(rows.map((row) => row.asset));

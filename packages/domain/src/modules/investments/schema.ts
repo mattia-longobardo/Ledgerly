@@ -19,7 +19,6 @@ import { users } from "../../platform/auth/schema";
 import { integrationConnections } from "../../platform/integrations/schema";
 import { accounts } from "../accounts/schema";
 import { transactions } from "../transactions/schema";
-import { instruments } from "../instruments/schema";
 import {
   ADJUSTMENT_CLASSES,
   ASSET_CLASSES,
@@ -139,8 +138,11 @@ export const investmentAssets = pgTable(
     mic: text("mic"),
     currency: text("currency").notNull(),
     priceSource: text("price_source", { enum: PRICE_SOURCES }).notNull().default("manual"),
-    /** The instrument of the registry (R5d); null for an asset typed by hand outside it. */
-    instrumentId: uuid("instrument_id").references(() => instruments.id, { onDelete: "set null" }),
+    /**
+     * The instrument of the registry (R5d); null for an asset typed by hand outside it. No foreign
+     * key: the registry is another module's (M2), and it never deletes an instrument.
+     */
+    instrumentId: uuid("instrument_id"),
     archivedAt: moment("archived_at"),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),

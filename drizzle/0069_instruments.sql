@@ -54,5 +54,4 @@ CREATE UNIQUE INDEX "instrument_listings_market_uq" ON "instrument_listings" USI
 CREATE INDEX "instrument_prices_last_idx" ON "instrument_prices" USING btree ("listing_id","on" DESC NULLS LAST);--> statement-breakpoint
 CREATE UNIQUE INDEX "instruments_isin_uq" ON "instruments" USING btree ("isin") WHERE "instruments"."isin" is not null;--> statement-breakpoint
 CREATE UNIQUE INDEX "instruments_figi_uq" ON "instruments" USING btree ("figi") WHERE "instruments"."figi" is not null;--> statement-breakpoint
-ALTER TABLE "investment_assets" ADD CONSTRAINT "investment_assets_instrument_id_instruments_id_fk" FOREIGN KEY ("instrument_id") REFERENCES "public"."instruments"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "investment_assets_instrument_idx" ON "investment_assets" USING btree ("instrument_id");

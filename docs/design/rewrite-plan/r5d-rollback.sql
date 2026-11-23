@@ -14,7 +14,6 @@
 --
 -- Only to remove the step for good (never needed for the images before): run in one transaction.
 BEGIN;
-ALTER TABLE "investment_assets" DROP CONSTRAINT IF EXISTS "investment_assets_instrument_id_instruments_id_fk";
 DROP INDEX IF EXISTS "investment_assets_instrument_idx";
 ALTER TABLE "investment_assets" DROP COLUMN IF EXISTS "instrument_id";
 DROP TABLE IF EXISTS "instrument_prices";
