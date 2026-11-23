@@ -4,7 +4,7 @@
  *
  * Walks the causes rather than asking `instanceof DrizzleQueryError`: the production bundle can hold
  * more than one copy of drizzle-orm, and an error thrown by one copy is not an instance of the
- * other's class. That is how, on 2026-09-18, a second Wallet group reaching an already linked local
+ * other's class. That is how, on 2026-09-18, a second group of a source reaching an already linked local
  * group was never recognised as `link_conflict` and failed every transactions pass.
  */
 export function hasPgError(error: unknown, code: string, constraint?: string): boolean {

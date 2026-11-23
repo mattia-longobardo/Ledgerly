@@ -67,10 +67,11 @@ const LEAVE_ORIGINS = ["manual", "trek", "external"] as const;
  * Whether a day is taken or planned is **not** a column: it is `on` against today, and it changes
  * by itself at midnight (plan F7 §3.4.3).
  *
- * `pending` is what the next Trek pass owes this row, and `trek_fraction`/`trek_kind` are the last
- * state Trek was **observed** in. Trek's api is a toggle — sending the same pair again removes the
- * day — so a deletion has to name what Trek actually holds, not what we wanted it to hold; without
- * the observed pair a delete can recreate the very day it meant to remove (plan F7 §3.4.8).
+ * `pending` is what the next pass of the calendar owes this row, and `trek_fraction`/`trek_kind` are
+ * the last state the calendar was **observed** in. Its api can be a toggle — sending the same pair
+ * again removes the day — so a deletion has to name what the calendar actually holds, not what we
+ * wanted it to hold; without the observed pair a delete can recreate the very day it meant to remove
+ * (plan F7 §3.4.8).
  */
 export const leaveDays = pgTable(
   "leave_days",
@@ -116,7 +117,7 @@ export const leaveDays = pgTable(
       "leave_days_trek_kind_ck",
       sql`${table.observedKind} is null or ${table.observedKind} in (${sql.raw(inList(CALENDAR_KINDS))})`,
     ),
-    // Nobody asks Trek to delete a day Trek never had: a pending deletion needs a row Trek either
+    // Nobody asks the calendar to delete a day it never had: a pending deletion needs a row it either
     // gave us or has already been told about (plan F7 §3.2).
     check(
       "leave_days_pending_delete_ck",

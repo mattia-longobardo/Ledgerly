@@ -22,7 +22,7 @@ import { inList } from "../../platform/db/checks";
 
 /**
  * How an account earns interest (spec §6, §7.6): tiers, tax withheld, day basis, settlement
- * frequency, validity, and whether the settlements are published to Wallet. `payee_match` (F4, plan
+ * frequency, validity, and whether the settlements are published to the source. `payee_match` (F4, plan
  * §3.6.1) is how the interest the bank really paid is recognised among the account's income.
  * `on delete no action` on the account: an account a rule points at is archived instead (F3).
  */
@@ -48,7 +48,7 @@ export const interestRules = pgTable(
     runHour: smallint("run_hour"),
     mode: text("mode", { enum: RULE_MODES }).notNull().default("analyze_only"),
     /**
-     * The local category a published settlement is filed under in Wallet (spec §7.6, §9.1): the
+     * The local category a published settlement is filed under at the source (spec §7.6, §9.1): the
      * provider's own category id is never stored here — it is read from the `category` link of
      * `provider_links` when the record is posted, so a category re-adopted under another provider
      * id keeps working. `null` publishes with no category at all, which is what the owner's
@@ -119,7 +119,7 @@ export const interestRuleTiers = pgTable(
 
 /**
  * A period's settlement (spec §7.6 "Liquidazione"): the day nets of the period added up, and — for
- * a rule that publishes — where its Wallet posting stands. The Wallet record's id lives in
+ * a rule that publishes — where its posting at the source stands. The record's id lives in
  * `provider_links` (spec §4.3), never here.
  */
 export const interestEntries = pgTable(

@@ -41,18 +41,18 @@ alla disattivazione); **C+P** = la regola è del core, un'opzione è della sorge
 
 | # | Sorgente | Impostazione (it) | Dove sta oggi | Dato | A cosa serve | Va in |
 |---|---|---|---|---|---|---|
-| 1 | Wallet | Token API | Settings › Integrations, `wallet-card.tsx` | `integration_connections.credentials` | Legge Wallet | P |
-| 2 | Wallet | Scegli i conti | `wallet-card.tsx` (dialogo) | `sync_jobs.cursor.skipped` (`kind=accounts`) | Conti Wallet che non entrano in Ledgerly | P |
+| 1 | Wallet | Token API | Settings › Integrations, `source-card.tsx` | `integration_connections.credentials` | Legge Wallet | P |
+| 2 | Wallet | Scegli i conti | `source-card.tsx` (dialogo) | `sync_jobs.cursor.skipped` (`kind=accounts`) | Conti Wallet che non entrano in Ledgerly | P |
 | 3 | Wallet | Storico · Scarica di nuovo (12-120 mesi) | Settings › Integrations › Avanzate, `advanced/history-depth.tsx` | `sync_jobs.cursor.backfillMonths` | Quanto storico legge | P |
 | 4 | Wallet | Pianificazione | Avanzate, `ScheduleControl` | `integration_connections.schedule` | Quando legge da solo | P |
 | 5 | Wallet | Categorie di Wallet (associa / aggiungi, «Nuova») | Settings › Categories, `source-categories.tsx` | `source_categories`, `source_category_undos` | Categoria di Wallet → categoria di Ledgerly (H34) | P |
 | 6 | Wallet | Nomi delle categorie e delle etichette sincronizzati con Wallet | Nessuna schermata: regola della sync | `categories.provider_name`, `provider_links` (`category`) | Un nome cambiato in Ledgerly arriva su Wallet e il contrario | P (regola), C (le categorie) |
 | 7 | Wallet | Regola di interessi «Pubblica ogni liquidazione su Wallet» | Interests, modulo della regola | `interest_rules.mode = post_to_provider`, `posting_category_id` | Scrive l'accredito su Wallet (fino a R5c: ST-14) | C+P |
 | 8 | Wallet | Movimenti a mano «Da inviare» | Expenses, riga del movimento | `transactions.send_state` | Movimento scritto in Ledgerly che aspetta l'invio (N3.1) | C (il movimento), P (l'invio) |
-| 9 | Trek | Indirizzo, ID del client, segreto | Settings › Integrations, `trek-card.tsx`; anche Time Off › Impostazioni | `credentials` | Legge e scrive le ferie | P |
+| 9 | Trek | Indirizzo, ID del client, segreto | Settings › Integrations, `source-card.tsx`; anche Time Off › Impostazioni | `credentials` | Legge e scrive le ferie | P |
 | 10 | Trek | Pianificazione | Avanzate; Time Off › Impostazioni | `schedule` | Quando legge da solo | P |
 | 11 | Trek | Saldi di Trek (usati, residui) | Time Off | `sync_jobs.cursor` (`kind=leave`) | Cifre di Trek | P |
-| 12 | Trek | Modifiche da inviare | `trek-card.tsx` («{count} in attesa») | `leave_days.pending` | Giorni da scrivere o togliere su Trek | C (il giorno), P (l'invio) |
+| 12 | Trek | Modifiche da inviare | `source-card.tsx` («{count} in attesa») | `leave_days.pending` | Giorni da scrivere o togliere su Trek | C (il giorno), P (l'invio) |
 | 13 | Enable Banking | Attiva / Disattiva | Settings › Integrations, `plugin-row.tsx` | `plugin_activations` | Interruttore per utente (H25) | P |
 | 14 | Enable Banking | Credenziali (ID applicazione, chiave) | `banks-card.tsx` | `plugin_user_credentials` | Applicazione dell'utente (C1c) | P |
 | 15 | Enable Banking | Banche collegate e conti scelti per banca | `banks-card.tsx`, `/banks/connect` | `credentials` del collegamento (`chosen`, `skipped`, cifrati) | Quali conti della banca entrano | P |

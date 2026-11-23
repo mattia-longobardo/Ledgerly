@@ -51,7 +51,7 @@ export type ManualServiceInput = z.input<typeof manualServiceSchema>;
 /**
  * The accounts a service may use (§1.3, PERS-342): open accounts of Accounts of type investment or
  * crypto that no other module writes — not a fund's valuation account, not already a service. An
- * account synced by Wallet is offered too: a manual service only reads it. A provider, which
+ * account synced by a source is offered too: a manual service only reads it. A provider, which
  * writes the account, still needs a manual one (`origin`, checked by the connection).
  */
 export async function eligibleAccounts(ctx: Pick<Ctx, "userId">) {
@@ -199,7 +199,7 @@ export async function createManualServiceWithAccount(
 
 /**
  * "Update value" of a manual service (§1.3, PERS-342): a manual balance of its account in Accounts,
- * the one source of its value. Refused on an account a provider reads (Wallet): there the value
+ * the one source of its value. Refused on an account a source reads: there the value
  * is the provider's, and a correction belongs to Accounts.
  */
 export const serviceValueSchema = z.object({

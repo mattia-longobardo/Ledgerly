@@ -106,18 +106,18 @@ interface IbanPairing {
 
 /**
  * Pairs the two legs of a giroconto by IBAN (F2.5, 2026-09-18). Which movements *are* giroconti is
- * the provider's call, never this rule's: Wallet files one under its Transfer category, or links
- * its two legs, and the app follows it so its totals reconcile with Wallet's own. A movement Wallet
+ * the provider's call, never this rule's: the source files one under its Transfer category, or links
+ * its two legs, and the app follows it so its totals reconcile with the source's own. A movement the source
  * counts as income or spending stays one here too, whatever IBAN its details name.
  *
- * What Wallet often leaves undone is the link between the legs. A transfer whose payee or note holds
+ * What the source often leaves undone is the link between the legs. A transfer whose payee or note holds
  * the IBAN of *another* of the user's accounts is looked for in the account that IBAN names: a
  * transfer of the opposite amount, in the same currency, at most {@link IBAN_TRANSFER_MAX_DAYS}
  * days apart, not in a pair already — preferring one that names this account's IBAN back, then the
  * nearest in time. The IBAN is what makes the match a fact rather than a coincidence of amount and
  * date. The pair's group id is the smaller local id, as for the provider's pairs.
  *
- * A row that is no longer a transfer (Wallet re-filed it under a category of the user's) leaves its
+ * A row that is no longer a transfer (the source re-filed it under a category of the user's) leaves its
  * group, and so does a group of one — both left behind by an earlier version of this rule. A pair
  * of two transfers is never taken apart. Returns only the rows whose group changes.
  */

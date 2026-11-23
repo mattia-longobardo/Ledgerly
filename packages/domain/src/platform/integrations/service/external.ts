@@ -75,7 +75,7 @@ export async function linkExternal(
 /**
  * The other direction of {@link resolveExternal}: local entities mapped to the provider's own ids
  * (`entity_id` → `external_id`), for a caller that holds a local row and has to name it to the
- * provider — F4's interest posting, which files its Wallet record under the *provider's* id of the
+ * provider — F4's interest posting, which files its record at the source under the *provider's* id of the
  * category the rule was given (spec §7.6, §9.1).
  *
  * An entity with no link is simply absent from the map: "this local row has no counterpart at the

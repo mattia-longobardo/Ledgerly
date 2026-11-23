@@ -52,7 +52,7 @@ export async function connectionOf(ctx: Pick<Ctx, "userId">, provider: string): 
 
 /**
  * The account a key may be connected to (§1.3): a manual account of Accounts no one else writes, or
- * a manual service on one. An account Wallet reads is never one: it would have two writers. An
+ * a manual service on one. An account a source reads is never one: it would have two writers. An
  * account with no balance yet — made in Accounts for this service — takes the provider's history
  * from its first day, as a new one did (`adopt`); one with balances is handed over from today.
  */

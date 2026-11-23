@@ -130,15 +130,15 @@ export interface TransactionFilters {
 /**
  * The money of a range (spec §7.2, F2.5). Income and spending keep the giroconti out: moving money
  * between two of one's own accounts is neither. The net is the range's cash flow, every movement
- * summed, as Wallet reports it (2026-09-19): the two legs of a giroconto between accounts that are
- * both here cancel out, and a leg whose other side is elsewhere — or that Wallet filed under
+ * summed, as the source reports it (2026-09-19): the two legs of a giroconto between accounts that are
+ * both here cancel out, and a leg whose other side is elsewhere — or that the source filed under
  * another type — moved money all the same. `count` is every row, because it describes the list.
  */
 export interface TransactionsSummary {
   count: number;
   incomeCents: Cents;
   expenseCents: Cents;
-  /** Every movement summed, giroconti included: the cash flow Wallet shows. */
+  /** Every movement summed, giroconti included: the cash flow the source shows. */
   netCents: Cents;
   /** How many of the rows are giroconti, so the header can say what it left out. */
   transferCount: number;

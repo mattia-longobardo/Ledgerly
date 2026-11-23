@@ -60,7 +60,7 @@ export async function createRule(
 }
 
 /**
- * A changed rule. What has been settled stays as it was — a settlement may already be on Wallet —
+ * A changed rule. What has been settled stays as it was — a settlement may already be on the source —
  * and every day after the last settled period is accrued again with the new terms (plan F4
  * §3.4.3, §3.6.9).
  */

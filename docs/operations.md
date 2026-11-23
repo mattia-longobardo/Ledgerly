@@ -73,10 +73,19 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
   the dispatcher at each pass and by `housekeeping`.
 - **Diagnostics.** Admin › Server shows, for each plugin of `PLUGIN_URLS`, whether it answers
   (`plugins.state`, `manifest_read_at`, `unreachable_since`). It shows nothing of any person.
-- **Where the pieces join.** The runtime (`src/platform/plugins/`) states a port for the writes;
+- **Where the pieces join.** The runtime (`packages/plugin-host`) states a port for the writes;
   `src/app/(app)/banks/sink.ts` fills it with the services of the accounts and of the
   transactions; `src/app/plugin-wiring.ts` registers the dispatcher's pass. The tick route and
   "Run now" import the wiring.
+- **A source read with a token, a leave calendar (from R5c).** Wallet and Trek are plugins like the
+  banks, read by two engines of `packages/plugin-host`: `src/movements/` (capability `source.read`:
+  accounts, movements, categories, manual movements sent, edits) and `src/leave/` (capability
+  `leaveCalendar`: the days off). What an engine does with a plugin — send the manual movements,
+  write the categories, take edits, delete a category — is what the plugin's manifest declares
+  (`createRecord`, `categories`, `editRecord`, `deleteCategory`); no code names a provider. Their
+  ports are filled in `apps/api/src/plugin-sinks.ts` (`wireDomain`). Their card and page in
+  Settings › Integrations are the same for both, drawn from `GET /plugins` (`kind`, `fields`): a
+  source or a calendar not in `PLUGIN_URLS`, or whose manifest was never read, is not shown.
 - **The shared secret** proves to the plugin that the app is calling. It is in two files, with the
   same value: `PLUGIN_SECRETS=<id>=<secret>` in `.env.homelab`, and `PLUGIN_SHARED_SECRET=<secret>`
   in `.env.plugin-<id>` (one line, mode `600`, not committed). The plugin does not read

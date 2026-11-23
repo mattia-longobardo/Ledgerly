@@ -52,7 +52,7 @@ export interface SettingsValues {
  * Account detail › Settings: the General card of the earlier design (spec §8.4.8), the data source,
  * what the account counts towards, and archiving. A synced account keeps the provider's currency,
  * so that control is read-only rather than merely ignored on save; its type follows the provider
- * until it is changed here, and the hint says the change stays here (Wallet cannot take it).
+ * until it is changed here, and the hint says the change stays here (the source cannot take it).
  */
 export function AccountSettingsForm({
   account,

@@ -175,8 +175,8 @@ export function accrueDay(input: {
 }
 
 /**
- * What a settlement's `posting_error` says when the record reached Wallet *without* the rule's
- * category, because that category is not linked to a Wallet one (`provider_links`, entity type
+ * What a settlement's `posting_error` says when the record reached the source *without* the rule's
+ * category, because that category is not linked to one of the source (`provider_links`, entity type
  * `category`). The posting itself succeeded — a missing category never fails it and never invents
  * one — so this is a note on a posted settlement, not a failure, and the rule's page translates it.
  */
@@ -406,7 +406,7 @@ interface SettlementNoteInput {
 }
 
 /**
- * What a settlement says about itself on the record published to Wallet (owner, 2026-09-21):
+ * What a settlement says about itself on the record published to the source (owner, 2026-09-21):
  *
  *     auto-interest 2.25%/y (net 1.665%, -26% tax) on 11713.29
  *
@@ -421,7 +421,7 @@ interface SettlementNoteInput {
  * from, the clause is left out rather than guessed.
  *
  * Plain decimals, no thousands separator, no currency: this is read by whoever opens the record in
- * Wallet, and by the next version of this code, not by a screen with a locale.
+ * the source, and by the next version of this code, not by a screen with a locale.
  */
 export function settlementNote(input: SettlementNoteInput): string {
   const taxFixed = fixedFromDecimal(input.taxRate);

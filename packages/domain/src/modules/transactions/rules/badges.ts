@@ -35,7 +35,7 @@ export interface BadgeSource {
 /**
  * Why a row does not simply count (spec §7.2). "Hidden" and "gone from the provider" are two
  * different facts even though both keep the row out of the totals: one is a decision of the
- * person, the other one of Wallet, and only the first is theirs to undo.
+ * person, the other one of the source, and only the first is theirs to undo.
  */
 export function badgesOf(row: BadgeSource): RowBadge[] {
   const badges: RowBadge[] = [];

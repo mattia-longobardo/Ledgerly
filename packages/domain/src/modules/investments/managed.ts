@@ -9,7 +9,7 @@ import { investmentAccounts, investmentReadings } from "./schema";
 /**
  * Which accounts Investments writes (docs/design/investments.md §1.3): a service a provider feeds.
  * From `managed_since` the module is their only writer, and Accounts refuses a manual balance and
- * Wallet a provider balance from that day on. A manual service is no writer (PERS-342): Accounts
+ * the source a provider balance from that day on. A manual service is no writer (PERS-342): Accounts
  * keeps its balance, so it is not here. Its own file with no import of another module, so Accounts
  * can ask without a cycle.
  */

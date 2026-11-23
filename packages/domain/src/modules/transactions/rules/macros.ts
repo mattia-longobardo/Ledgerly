@@ -16,7 +16,7 @@ export interface TypedMovement {
 /**
  * The type a movement counts as, in this order: a leg of a pair keeps its type — whoever paired it
  * made it a transfer, and a leg its source re-filed leaves the pair in `linkOwnTransfers`; a
- * category of Transfers makes a transfer; a source's own transfer (Wallet) stays one while this
+ * category of Transfers makes a transfer; a source's own transfer stays one while this
  * rule did not write it; otherwise the sign decides. A zero keeps what it was (spec §4.3), a
  * transfer excepted. `macro.ts` holds the same rule in SQL; `macro.itest.ts` keeps the two equal.
  */
