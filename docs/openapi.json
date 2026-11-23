@@ -35416,6 +35416,46 @@
                               }
                             ]
                           },
+                          "debit": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "transactionId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  "on": {
+                                    "type": "string"
+                                  },
+                                  "amount": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  },
+                                  "payee": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "linked": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "transactionId",
+                                  "on",
+                                  "amount",
+                                  "payee",
+                                  "linked"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "eventId": {
                             "anyOf": [
                               {
@@ -35441,6 +35481,7 @@
                           "waitingSince",
                           "reason",
                           "proposal",
+                          "debit",
                           "eventId",
                           "automatic"
                         ]
@@ -35528,7 +35569,7 @@
     "/investments/{accountId}/plans/{planId}/runs/{runId}/confirm": {
       "post": {
         "operationId": "confirm_investment_plan_run",
-        "summary": "Confirms a proposed instalment, or one waiting for a price, with the corrections typed: the purchase is written as by hand, with its deposit when the plan has a debit account. `negative_cash` and `quantity_exceeded` as for any purchase; `not_editable` on an instalment already recorded or skipped.",
+        "summary": "Confirms a proposed instalment, or one waiting for a price, with the corrections typed: the purchase is written as by hand, never a deposit (P1). `negative_cash` and `quantity_exceeded` as for any purchase (record a deposit first); `not_editable` on an instalment already recorded or skipped.",
         "tags": [
           "investments"
         ],
@@ -35612,6 +35653,119 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
+        "x-addon": "investments"
+      }
+    },
+    "/investments/{accountId}/plans/{planId}/runs/{runId}/debit": {
+      "post": {
+        "operationId": "link_investment_plan_run_debit",
+        "summary": "Links a recorded instalment to the bank movement the matcher proposed (E7): the movement documents the purchase, and Subscriptions no longer sees it. `not_editable` with no movement proposed or one linked.",
+        "tags": [
+          "investments"
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "planId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done"
           },
           "400": {
             "description": "invalid",

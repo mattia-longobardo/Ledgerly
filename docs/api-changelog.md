@@ -8,9 +8,11 @@ written before it keeps working.
 - `GET /investments/{accountId}/plans` (MCP `list_investment_plans`, read only), `POST` the same path,
   `PATCH /investments/{accountId}/plans/{planId}`: a plan buys one instrument for an amount or a quantity
   (fractions or whole units), every N weeks, months or quarters on a day, from a start to an end or a number
-  of instalments; an optional debit account (each purchase with its deposit), a fee per instalment, the mode
+  of instalments; an optional debit account (only to find the bank movement: a plan never writes a
+  deposit), a fee per instalment, the mode
   `propose` (default) or `auto`, the state `active`, `paused`, `ended`. Only on a manual portfolio.
 - `GET …/plans/{planId}/runs`, `POST …/runs/{runId}/confirm` (with corrections), `POST …/runs/{runId}/skip`,
+  `POST …/runs/{runId}/debit` (links the movement the matcher proposed),
   `POST …/plans/{planId}/backfill` (at most 60 past due dates, all or none).
 - Activity rows: `plan` (`planId`, `runId`, `name`, `automatic`), null for any other operation.
 - «Da fare» and the notifications: the events `plan_run_to_confirm` and `plan_run_price_missing`, on the page

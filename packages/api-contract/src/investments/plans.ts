@@ -1,8 +1,9 @@
 // The purchase plans of a manual portfolio (rewrite plan R5d, step 2; 11-standardization.md §11.3): a
 // plan buys one instrument at each due date, proposed for confirmation by default or written by the
-// job. Defaults of the questions still open with Mattia: P1 A (a debit account brings a deposit with
-// each purchase), P2 A (a purchase the job cannot write becomes a proposal), P3 C (fractions chosen
-// per plan, on by default), P4 A (up to 60 past due dates at creation).
+// job. Mattia's answers of 23/11/2026: P1 B (a plan writes purchases only, never a deposit; its debit
+// account only finds the bank movement to link), P2 A (a purchase the job cannot write becomes a
+// proposal, with its reason), P3 C (fractions chosen per plan, on by default), P4 A (up to 60 past
+// due dates at creation).
 import { z } from "zod";
 import { amountInput, civilDate, id, money } from "../primitives";
 import { defineRoute } from "../route";
@@ -50,7 +51,7 @@ export const planOut = z.object({
   /** The plan ends on a day or after a number of instalments, or never: at most one is set. */
   endOn: civilDate().nullable(),
   runsLimit: z.number().int().nullable(),
-  /** The account the instalment is paid from (P1): each purchase comes with its deposit. */
+  /** The account the instalment is paid from (P1 B): only to find its bank movement, never a deposit. */
   debitAccountId: id().nullable(),
   fee: feeOut.nullable(),
   mode: z.enum(PLAN_MODES),
@@ -150,6 +151,16 @@ export const runOut = z.object({
   /** Why the job did not write it in `auto` (P2): `negative_cash`, `quantity_exceeded`; null otherwise. */
   reason: z.string().nullable(),
   proposal: proposal.nullable(),
+  /** The movement of the debit account the matcher found for it (E7): proposed, linked only when the person says. */
+  debit: z
+    .object({
+      transactionId: id(),
+      on: civilDate(),
+      amount: money(),
+      payee: z.string().nullable(),
+      linked: z.boolean(),
+    })
+    .nullable(),
   /** The purchase written, and whether the job wrote it («automatic»). */
   eventId: id().nullable(),
   automatic: z.boolean(),
@@ -299,6 +310,7 @@ export const listPlanRuns = defineRoute({
             amount: "97.04",
             fee: "2.95",
           },
+          debit: null,
           eventId: null,
           automatic: false,
         },
@@ -315,8 +327,8 @@ export const confirmPlanRun = defineRoute({
   capability: "investments",
   summary:
     "Confirms a proposed instalment, or one waiting for a price, with the corrections typed: the purchase is " +
-    "written as by hand, with its deposit when the plan has a debit account. `negative_cash` and " +
-    "`quantity_exceeded` as for any purchase; `not_editable` on an instalment already recorded or skipped.",
+    "written as by hand, never a deposit (P1). `negative_cash` and `quantity_exceeded` as for any purchase " +
+    "(record a deposit first); `not_editable` on an instalment already recorded or skipped.",
   actions: [],
   params: byRun,
   body: confirmBody,
@@ -328,6 +340,23 @@ export const confirmPlanRun = defineRoute({
     body: { unitPrice: "37.05" },
     response: { id: EVENT_ID },
   },
+});
+
+export const linkPlanRunDebit = defineRoute({
+  id: "link_investment_plan_run_debit",
+  method: "POST",
+  path: "/investments/{accountId}/plans/{planId}/runs/{runId}/debit",
+  scope: "write",
+  capability: "investments",
+  summary:
+    "Links a recorded instalment to the bank movement the matcher proposed (E7): the movement documents the " +
+    "purchase, and Subscriptions no longer sees it. `not_editable` with no movement proposed or one linked.",
+  actions: [],
+  params: byRun,
+  response: null,
+  status: 204,
+  errors: INVESTMENT_ERRORS,
+  example: { params: { accountId: ACCOUNT_ID, planId: PLAN_ID, runId: RUN_ID } },
 });
 
 export const skipPlanRun = defineRoute({
