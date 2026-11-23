@@ -12,7 +12,8 @@
 # The full suite (scripts/full-suite.sh) starts a second preview beside the one of a release, with
 # LEDGERLY_TEST_DATABASE (one of `ledgerly_<1-4>_test`), LEDGERLY_PREVIEW_PORT, LEDGERLY_PREVIEW_NAME
 # and LEDGERLY_PREVIEW_S3_PREFIX. Without them: `ledgerly_test`, 3999, `ledgerly-preview`, `tests/preview/`.
-# The client stream uses LEDGERLY_TEST_DATABASE=ledgerly_test_2 (docs/design/rewrite-plan/08-agents.md §8.6).
+# The client stream uses LEDGERLY_TEST_DATABASE=ledgerly_test_2 (docs/design/rewrite-plan/08-agents.md §8.6),
+# the second server stream ledgerly_test_3 on the ports 3993-3994.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -44,8 +45,8 @@ done
 export PLUGIN_URLS PLUGIN_SECRETS
 
 case "$DATABASE_URL" in
-  */ledgerly_test | */ledgerly_test_2 | */ledgerly_[1-4]_test) ;;
-  *) echo "refusing to run: the database is not ledgerly_test, ledgerly_test_2 or ledgerly_<1-4>_test" >&2; exit 1 ;;
+  */ledgerly_test | */ledgerly_test_2 | */ledgerly_test_3 | */ledgerly_[1-4]_test) ;;
+  *) echo "refusing to run: the database is not ledgerly_test, ledgerly_test_2, ledgerly_test_3 or ledgerly_<1-4>_test" >&2; exit 1 ;;
 esac
 case "$port" in
   *[!0-9]* | "") echo "LEDGERLY_PREVIEW_PORT must be a number" >&2; exit 1 ;;
