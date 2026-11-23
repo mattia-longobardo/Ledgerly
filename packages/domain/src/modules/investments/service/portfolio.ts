@@ -3,19 +3,19 @@
 // does for a synced service: the cash plus the positions.
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { createAccount, getAccount, listBalanceEntries, readingsAt, removeAccount } from "../../accounts";
+import { getAccount, listBalanceEntries, readingsAt } from "../../accounts";
 import type { Ctx } from "../../../platform/context";
-import { addDays, type CivilDate, today } from "../../../shared/dates";
+import type { CivilDate } from "../../../shared/dates";
 import { civilDate } from "../../../shared/inputs";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { accountTypeOf, MANUAL_PROVIDER, PORTFOLIO_PROVIDER } from "../catalog";
+import { MANUAL_PROVIDER, PORTFOLIO_PROVIDER } from "../catalog";
 import { positionCents } from "../rules";
 import { investmentAccountPeriods, investmentAccounts } from "../schema";
 import { assetOfInstrument, holdingFor } from "./assets";
 import { lockInvestmentAccount, rebuild, requireInvestmentAccount } from "./book";
 import { insertEvent, type LegInput, optionalNote, positive, rateOf } from "./events";
-import { eligibleAccounts } from "./services";
+import { openService, withNewAccount } from "./services";
 import { InvestmentError, notFuture, type WriteCtx } from "./types";
 
 const portfolioSchema = z.object({
@@ -26,74 +26,28 @@ export type PortfolioInput = z.input<typeof portfolioSchema>;
 
 /**
  * A manual portfolio on an account of Accounts: refused on a fund's account, another type, an account
- * already a service, and an account a source reads (its balance is the bank's, `synced`). The
- * balance before today is its opening cash, so the account's value does not move.
+ * already a service, and an account a source reads (its balance is the bank's). The balance before
+ * today is its opening cash, so the account's value does not move.
  */
 export async function createPortfolio(ctx: Ctx, input: PortfolioInput): Promise<{ accountId: string }> {
   const parsed = portfolioSchema.parse(input);
-  const eligible = (await eligibleAccounts(ctx)).find((one) => one.account.id === parsed.accountId);
-  if (!eligible || eligible.reason !== null) throw new InvestmentError("not_eligible");
-  if (eligible.account.origin !== "manual") throw new InvestmentError("not_eligible");
-  const todayOn = today(ctx.timeZone);
-  const now = new Date();
-  const opening =
-    (await readingsAt(ctx, [parsed.accountId], addDays(todayOn, -1))).get(parsed.accountId) ?? null;
-  return getDb().transaction(async (transaction) => {
-    const [investment] = await transaction
-      .insert(investmentAccounts)
-      .values(
-        userScoped(ctx).stamp({
-          accountId: parsed.accountId,
-          category: "broker" as const,
-          provider: PORTFOLIO_PROVIDER,
-          managedSince: todayOn,
-          url: parsed.url,
-          openedOn: eligible.account.openedOn ?? todayOn,
-        }),
-      )
-      .returning();
-    await transaction.insert(investmentAccountPeriods).values(
-      userScoped(ctx).stamp({
-        investmentAccountId: investment.id,
-        fromOn: todayOn,
-        startsAt: now,
-        mode: "assets" as const,
-        origin: "manual" as const,
-        reason: "opening" as const,
-      }),
-    );
-    if (opening !== null && opening !== 0n) {
-      await insertEvent(ctx, transaction, investment.id, {
-        on: todayOn,
-        occurredAt: now,
-        origin: "conversion",
-        legs: [{ leg: "main", kind: "opening_cash", amountCents: opening }],
-      });
-    }
-    return { accountId: parsed.accountId };
+  return openService(ctx, {
+    accountId: parsed.accountId,
+    category: "broker",
+    provider: PORTFOLIO_PROVIDER,
+    mode: "assets",
+    url: parsed.url,
   });
 }
 
-/**
- * A manual portfolio on a new account of Accounts, from its name and currency, with no money yet:
- * the first deposit brings it. Two writes of two modules: when the second fails, the account goes.
- */
+/** A manual portfolio on a new account of Accounts, from its name and currency, with no money yet. */
 export async function createPortfolioWithAccount(
   ctx: Ctx,
   input: { name: string; currency: string; url: string | null },
 ): Promise<{ accountId: string }> {
-  const account = await createAccount(ctx, {
-    name: input.name,
-    type: accountTypeOf("broker"),
-    currency: input.currency,
-    openingBalance: null,
-  });
-  try {
-    return await createPortfolio(ctx, { accountId: account.id, url: input.url });
-  } catch (error) {
-    await removeAccount(ctx, account.id);
-    throw error;
-  }
+  return withNewAccount(ctx, { ...input, category: "broker", valueCents: null }, (accountId) =>
+    createPortfolio(ctx, { accountId, url: input.url }),
+  );
 }
 
 /** Whether a service is a manual portfolio: its cash and positions are typed by hand. */
