@@ -1313,6 +1313,7 @@
     "bankAccountNames",
     "bankAccountType",
     "capabilitiesOf",
+    "catalogEntry",
     "configuredPlugins",
     "credentialsStatus",
     "findInstancePlugin",

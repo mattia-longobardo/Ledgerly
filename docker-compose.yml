@@ -49,6 +49,7 @@ services:
       - db_internal
       - mail_internal
       - ledgerly_plugins
+      - ledgerly_egress
       - ledgerly_internal
 
 # Ledgerly Web # --------------------------------------------------------------------------------------------------------------
@@ -127,18 +128,20 @@ services:
       start_period: 30s
     labels:
       - "autoheal=true"
-    # The database, the mail, the plugins; `ledgerly_plugins` is also its way to the providers
-    # on the internet (Wallet, Trek, the exchanges, the ECB).
+    # The database, the mail, the plugins and the egress proxy's door (`ledgerly_plugins`, internal);
+    # `ledgerly_egress` is its way to the internet (the exchanges, the ECB, the holidays).
     networks:
       - db_internal
       - mail_internal
       - ledgerly_plugins
+      - ledgerly_egress
 
 # Ledgerly Plugin Enable Banking # --------------------------------------------------------------------------------------------------------------
 
   # A plugin of the standard installation (docs/operations.md, "Plugins"): stateless, called only by
-  # `ledgerly` on `ledgerly_plugins`. It has no database address, no encryption key and no volume;
-  # its one variable is the secret it shares with the core, in a file of its own.
+  # `ledgerly` on `ledgerly_plugins`, which is internal. It has no database address, no encryption
+  # key and no volume. Its file holds the secret it shares with the core and its proxy address
+  # (`HTTPS_PROXY`, with its own credentials): it reaches the internet through `ledgerly-egress` only.
   ledgerly-plugin-enablebanking:
     build:
       context: .
@@ -156,6 +159,79 @@ services:
     env_file:
       - path: .env.plugin-enablebanking
         required: false
+    environment:
+      # `fetch` goes through `HTTPS_PROXY` of the file above (Node 24+).
+      NODE_USE_ENV_PROXY: "1"
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://127.0.0.1:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "autoheal=true"
+    networks:
+      - ledgerly_plugins
+
+# Ledgerly Plugin Wallet # --------------------------------------------------------------------------------------------------------------
+
+  # A plugin of the standard installation, as `ledgerly-plugin-enablebanking`: reads the accounts and the movements of
+  # Wallet with each person's token (`rest.budgetbakers.com`).
+  ledgerly-plugin-wallet:
+    build:
+      context: .
+      dockerfile: plugins/wallet/Dockerfile
+    image: ledgerly-plugin-wallet:latest
+    container_name: ledgerly-plugin-wallet
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - path: .env.plugin-wallet
+        required: false
+    environment:
+      NODE_USE_ENV_PROXY: "1"
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://127.0.0.1:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "autoheal=true"
+    networks:
+      - ledgerly_plugins
+
+# Ledgerly Plugin Trek # --------------------------------------------------------------------------------------------------------------
+
+  # A plugin of the standard installation, as `ledgerly-plugin-enablebanking`: keeps the leave days level with each
+  # person's own Trek; the core grants the proxy that person's host before each call.
+  ledgerly-plugin-trek:
+    build:
+      context: .
+      dockerfile: plugins/trek/Dockerfile
+    image: ledgerly-plugin-trek:latest
+    container_name: ledgerly-plugin-trek
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - path: .env.plugin-trek
+        required: false
+    environment:
+      NODE_USE_ENV_PROXY: "1"
     restart: unless-stopped
     mem_limit: 128m
     cpus: "0.25"
@@ -173,8 +249,8 @@ services:
 # Ledgerly Plugin Prices # --------------------------------------------------------------------------------------------------------------
 
   # The prices plugin (R5d; docs/operations.md, "Plugins"): the daily closes from Yahoo Finance, for
-  # the instance. Like every plugin: stateless, called only by `ledgerly` on `ledgerly_plugins`, its
-  # one variable the secret it shares with the core.
+  # the instance, as `ledgerly-plugin-enablebanking`: it reaches Yahoo Finance through
+  # `ledgerly-egress` only.
   ledgerly-plugin-prices:
     build:
       context: .
@@ -187,11 +263,11 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    # Not required: without the file the plugin refuses to start, and the rest of the stack — the
-    # app first — still does. A missing file must never stop `docker compose` for `ledgerly`.
     env_file:
       - path: .env.plugin-prices
         required: false
+    environment:
+      NODE_USE_ENV_PROXY: "1"
     restart: unless-stopped
     mem_limit: 128m
     cpus: "0.25"
@@ -206,16 +282,60 @@ services:
     networks:
       - ledgerly_plugins
 
+# Ledgerly Egress # --------------------------------------------------------------------------------------------------------------
+
+  # The plugins' only way to the internet (rewrite plan R5c, decisions I8, D1; docs/operations.md,
+  # "Plugins"): a forward proxy of the repository. `CONNECT` to port 443 only, each plugin with its
+  # own credentials, to the hosts of its catalog entry or of a short grant of the core, and never to
+  # a private, loopback, link-local or Docker address. Port 3128 for the plugins, 8081 for the core
+  # (`POST /grants`, `GET /health`). Its file holds the secrets (`EGRESS_SECRETS`,
+  # `EGRESS_ADMIN_SECRET`); nothing is stored.
+  ledgerly-egress:
+    build:
+      context: .
+      dockerfile: apps/egress/Dockerfile
+    image: ledgerly-egress:latest
+    container_name: ledgerly-egress
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # Not required, as a plugin's: without it the proxy refuses to start, and the app still does.
+    env_file:
+      - path: .env.egress
+        required: false
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: "0.25"
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "autoheal=true"
+    networks:
+      - ledgerly_plugins
+      - ledgerly_egress
+
 networks:
   # The interface and the server, and nothing else (rewrite plan R4): the interface asks the server
   # for the session. `internal`: no way out of the host from here.
   ledgerly_internal:
     name: ledgerly_internal
     internal: true
-  # The core and its plugins, and nothing else: a plugin is not on `db_internal`, `proxy_public` or
-  # `mail_internal`. Not `internal`: a plugin calls its provider on the internet.
+  # The core, its plugins and the egress proxy, and nothing else: a plugin is not on `db_internal`,
+  # `proxy_public` or `mail_internal`. `internal`: a plugin goes out through `ledgerly-egress` only.
   ledgerly_plugins:
     name: ledgerly_plugins
+    internal: true
+  # The way out of the egress proxy and of the core (`ledgerly`, `ledgerly-worker`): the providers
+  # the core still calls itself (the exchanges, the ECB, the holidays, OIDC). No plugin is on it.
+  ledgerly_egress:
+    name: ledgerly_egress
   proxy_public:
     external: true
   db_internal:

@@ -4,7 +4,7 @@ How Ledgerly runs on the homelab, how to configure it, and the admin tasks.
 
 ## Architecture
 
-`docker-compose.yml` starts four containers. The server and the worker read `.env.homelab`; the
+`docker-compose.yml` starts seven containers. The server and the worker read `.env.homelab`; the
 interface reads none of it (rewrite plan R4).
 
 | Container                       | Role                                                                                     |
@@ -13,6 +13,9 @@ interface reads none of it (rewrite plan R4).
 | `ledgerly-web`                  | The interface (target `web`, image `ledgerly-web`): every other path. No database.       |
 | `ledgerly-worker`               | The jobs and the syncs: the image `ledgerly`, `node /app/worker.mjs` (R1). See below.    |
 | `ledgerly-plugin-enablebanking` | A plugin: reads banks through Enable Banking when the app asks. See below.               |
+| `ledgerly-plugin-wallet`        | A plugin: reads Wallet with each person's token. See below.                              |
+| `ledgerly-plugin-trek`          | A plugin: keeps the leave days level with each person's Trek. See below.                 |
+| `ledgerly-egress`               | The plugins' forward proxy: their only way to the internet (`apps/egress`). See below.   |
 
 - The interface's environment is `LEDGERLY_API_URL` (the server on `ledgerly_internal`),
   `LEDGERLY_ROLE=web` (its image) and `.env.web`, which holds public values only:
@@ -22,7 +25,9 @@ interface reads none of it (rewrite plan R4).
   from `/api/v1` in the browser. Its health check is `/privacy`, a page with no session.
 - The server is on `proxy_public` (Traefik), `db_internal` (Postgres, S3) and `ledgerly_internal`
   (`internal: true`, the interface only). The worker is on
-  `db_internal`, `mail_internal` and `ledgerly_plugins` (its way to the providers); it has no port.
+  `db_internal`, `mail_internal`, `ledgerly_plugins` and `ledgerly_egress` (its way to the providers
+  it calls itself: the exchanges, the ECB, the holidays); it has no port. The server is on
+  `ledgerly_plugins` and `ledgerly_egress` too.
 - At start, the app checks every environment variable (`src/platform/env.ts`). If a check fails,
   the app does not start.
 - The app's health (`/api/health`) depends on the database only. It says the worker's heartbeat
@@ -36,9 +41,46 @@ A plugin is a small container of the standard installation. It speaks to one pro
 nothing: no database, no encryption key, no volume, a read-only file system. Contract and rules:
 `docs/design/rewrite-plan/04-now.md` §4.1; code: `plugins/<id>/` and `src/platform/plugins/`.
 
-- **Only the app calls a plugin**, on the network `ledgerly_plugins`. A plugin is not on
-  `db_internal`, `proxy_public` or `mail_internal`, and has no port on the host. It calls its
-  provider on the internet (`api.enablebanking.com`).
+- **Only the app calls a plugin**, on the network `ledgerly_plugins` (`internal: true`). A plugin
+  is not on `db_internal`, `proxy_public` or `mail_internal`, and has no port on the host. It calls
+  its provider through `ledgerly-egress` only (below).
+- **The catalog of the official plugins** (decisions H27, H28):
+  `packages/domain/src/platform/plugins/catalog.json`, read by the core through a zod schema
+  (`catalog.ts`) and by the proxy. One entry per plugin: `id`, `image` (the compose image, and the
+  name of its container), `digest`, `egress` (the hosts every person shares) and, for a plugin whose
+  host is the person's own, `dynamicHost.credential` (the credential that holds its address: Trek's
+  `baseUrl`). A plugin of `PLUGIN_URLS` that is not in the catalog is never called, not even for its
+  manifest, and is never listed to a person: Admin › Server › Diagnostics shows it as "Not an
+  official plugin". A new official plugin is one entry, its service in compose, and its secrets.
+  It lives in the domain package, not in `plugins/`: the core imports it, and no file of a
+  package may import outside it (rule M1).
+- **The digest** is the sha256 of the plugin's bundled `/app/server.mjs`. esbuild gives the same
+  bytes for the same source and lockfile, here and in the image (checked: the three images built
+  locally have the digests of the catalog), so the digest is reproducible without a registry.
+  `npm run plugins:catalog` writes it after a change to a plugin (its version too: every release
+  changes every plugin's digest); `tools/plugin-catalog.test.ts` (`npm test`) fails when it does not
+  match a fresh bundle of the source. The core has no Docker socket: `sh scripts/plugins-check.sh`
+  compares `docker exec <container> sha256sum /app/server.mjs` with the catalog, read only. It runs
+  as the last step of `scripts/release.sh` and as a gate of the nightly suite (`scripts/full-suite.sh`).
+- **The egress proxy** (`ledgerly-egress`, code in `apps/egress/`, decisions I8, A15): a forward
+  proxy of the repository, Node only (`node:*`, no dependency), run by Node's type stripping. It is on
+  `ledgerly_plugins` and on `ledgerly_egress`, the only network with a way out that a plugin can
+  reach through it. A plugin sets `HTTPS_PROXY=http://<id>:<secret>@ledgerly-egress:3128` and
+  `NODE_USE_ENV_PROXY=1` (compose), so its `fetch` sends `CONNECT host:443` with
+  `Proxy-Authorization`. The proxy allows only: port 443 (TLS stays end to end, the proxy sees no
+  content); the plugin proved by its own secret; a host of its catalog entry, or of a live grant;
+  a name whose every address is public. It resolves the name itself, refuses private, loopback,
+  link-local, shared (100.64/10, the VPN) and multicast addresses — Docker's networks included, all
+  in 172.16/12 or 192.168/16 — also IPv4-mapped, and connects to the very address it checked (no
+  second resolution). Each decision is one line of `docker logs ledgerly-egress`
+  (`allow`/`refuse <plugin> <host:port> <reason>`).
+- **The person's own host** (decision D1): before each call to a plugin whose entry has
+  `dynamicHost`, the core (`packages/plugin-host/src/egress.ts`, from the calendar's calls) sends
+  `POST /grants {plugin, host, ttlSeconds: 300}` to `EGRESS_URL` (port 8081) with
+  `Authorization: Bearer <EGRESS_ADMIN_SECRET>`. The proxy keeps the grant in memory for at most 10
+  minutes (a restart loses it; the next call sends it again) and refuses a host that is not a name
+  or has a private address. Only `https://` on port 443: a Trek on another port or on the LAN
+  cannot be reached.
 - **Nobody installs a plugin in the interface.** The app knows its plugins from `PLUGIN_URLS` and
   reads each manifest by itself (again after one hour). A plugin with no manifest read is not shown.
 - **Each person turns a plugin on for themselves**, in Settings › Integrations, and enters their own
@@ -59,7 +101,9 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
   endpoint is no official API and has no licence for automated use (risk accepted by Mattia on
   22/11/2026). The registry of instruments is the app's own: it calls `api.openfigi.com` and
   `registers.esma.europa.eu` itself. Its secret is the pair `prices=` of `PLUGIN_URLS` and
-  `PLUGIN_SECRETS`, and `.env.plugin-prices` with the same value.
+  `PLUGIN_SECRETS`, and `.env.plugin-prices` with the same value. It is in the catalog like every
+  plugin, so it goes out through `ledgerly-egress` (`HTTPS_PROXY` in `.env.plugin-prices`) and is
+  deployed by every release.
 - **The state of a connection (from N2).** One pure rule for every provider
   (`src/platform/integrations/status.ts`): five values, a closed list of error codes
   (`auth`, `consent_expired`, `rate_limited`, `provider_down`, `invalid_data`) and the streak of
@@ -88,9 +132,20 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
   source or a calendar not in `PLUGIN_URLS`, or whose manifest was never read, is not shown.
 - **The shared secret** proves to the plugin that the app is calling. It is in two files, with the
   same value: `PLUGIN_SECRETS=<id>=<secret>` in `.env.homelab`, and `PLUGIN_SHARED_SECRET=<secret>`
-  in `.env.plugin-<id>` (one line, mode `600`, not committed). The plugin does not read
+  in `.env.plugin-<id>` (mode `600`, not committed). The plugin does not read
   `.env.homelab`. To rotate: write a new value in both files, then
   `docker compose up -d ledgerly ledgerly-plugin-<id>`.
+- **The variables of the plugins and of the proxy** (names only; every secret
+  `openssl rand -hex 32`: hexadecimal, so it goes in a URL as it is):
+
+  | File | Variables |
+  | --- | --- |
+  | `.env.homelab` | `PLUGIN_URLS` with `wallet=http://ledgerly-plugin-wallet:8787` and `trek=http://ledgerly-plugin-trek:8787` beside `enablebanking`; `PLUGIN_SECRETS` with their secrets; `EGRESS_URL=http://ledgerly-egress:8081`; `EGRESS_ADMIN_SECRET` |
+  | `.env.plugin-<id>` (each plugin) | `PLUGIN_SHARED_SECRET`; `HTTPS_PROXY=http://<id>:<egress secret>@ledgerly-egress:3128` |
+  | `.env.egress` | `EGRESS_SECRETS=enablebanking=<s1>,wallet=<s2>,trek=<s3>,prices=<s4>` (the same values as in each `HTTPS_PROXY`); `EGRESS_ADMIN_SECRET` (the value of `.env.homelab`) |
+
+  To rotate a plugin's egress secret: both files, then
+  `docker compose up -d ledgerly-egress ledgerly-plugin-<id>`.
 - **The return address** of a provider is `https://<host>/api/v1/plugins/<id>/callback`. It takes
   the session cookie, not a token: a return is accepted only for the session that started it.
 - **What a bank exposes:** `scripts/plugin-probe.ts` reads every plugin connection through its
@@ -99,6 +154,9 @@ nothing: no database, no encryption key, no volume, a read-only file system. Con
   text replaced by its shape. It writes nothing. It needs the database and the plugin, so it runs
   with the two networks: the command of `scripts/on-homelab.sh` with
   `--network db_internal --network ledgerly_plugins`.
+- **A plugin that cannot reach its provider:** `docker logs ledgerly-egress` says why
+  (`refuse … host`: not in its entry, or no grant; `address`: a private address; `port`;
+  `unauthenticated`: its `HTTPS_PROXY` secret is not the one of `EGRESS_SECRETS`).
 - **A plugin that does not answer:** people see "The connection to banks is not available now".
   Read `docker logs ledgerly-plugin-<id>`; the container restarts by itself (`autoheal`). To stop a
   plugin for everybody: `docker compose stop ledgerly-plugin-<id>`. The app keeps working.
@@ -154,6 +212,26 @@ npm run e2e
 ```
 
 The worker runs the image `ledgerly`: it has no build of its own, and it is restarted after the app.
+`scripts/release.sh` also builds and starts every plugin of the catalog and `ledgerly-egress` (a
+plugin's bundle carries the release's version), then checks the running bundles against the
+catalog (`scripts/plugins-check.sh`).
+
+### First deploy of the egress proxy (R5c)
+
+`ledgerly_plugins` becomes `internal`: Docker does not change an existing network, so it is made
+again once, with the app stopped for about a minute.
+
+1. Write the variables of the table in "Plugins" (`.env.egress`, `.env.plugin-wallet`,
+   `.env.plugin-trek`, `HTTPS_PROXY` in `.env.plugin-enablebanking` and `.env.plugin-prices`, the new values of
+   `.env.homelab`), mode `600`.
+2. Disconnect what is not of this compose file: `docker network inspect ledgerly_plugins` (a
+   preview: `docker network disconnect ledgerly_plugins <container>`).
+3. `docker compose stop ledgerly ledgerly-worker ledgerly-plugin-enablebanking ledgerly-plugin-prices && docker network rm ledgerly_plugins`
+4. The release: `sh scripts/release.sh <id> …` creates `ledgerly_plugins` (internal) and
+   `ledgerly_egress`, and starts the plugins and the proxy.
+5. Check: `docker network inspect ledgerly_plugins --format '{{.Internal}}'` is `true`;
+   `sh scripts/plugins-check.sh` prints the four digests; `docker logs ledgerly-egress` shows
+   `allow` lines after a reading of each plugin; Admin › Server › Diagnostics shows the four plugins.
 
 ### Release dumps
 

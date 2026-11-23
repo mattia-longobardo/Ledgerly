@@ -35,6 +35,7 @@
     "unused-exports": "tsx scripts/unused-exports.ts",
     "cleanliness": "tsx scripts/cleanliness.ts",
     "tokens": "tsx scripts/tokens.ts",
+    "plugins:catalog": "tsx scripts/plugins-catalog.ts",
     "static:build": "vite build --config apps/static/vite.config.ts"
   },
   "dependencies": {

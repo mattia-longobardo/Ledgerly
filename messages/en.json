@@ -1439,10 +1439,12 @@
       "down": "Not responding",
       "never": "Never reached",
       "incompatible": "Incompatible contract",
+      "uncatalogued": "Not an official plugin",
       "checked": "Last check {time}",
       "since": "since {time}",
       "neverDetail": "The manifest was never read.",
       "incompatibleDetail": "The plugin uses contract {version}.",
+      "uncataloguedDetail": "Not in the catalog of this release: Ledgerly never calls it.",
       "version": "v{version} · contract v{contract}",
       "empty": "No plugins in this instance.",
       "unavailable": "State not available. Reload the page."

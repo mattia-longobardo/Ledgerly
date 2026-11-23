@@ -4,9 +4,9 @@
     "minLines": 6
   },
   "total": {
-    "lines": 108870,
+    "lines": 108936,
     "duplicatedLines": 15728,
-    "percent": 14.45,
+    "percent": 14.44,
     "blocks": 1225
   },
   "units": {
@@ -17,7 +17,7 @@
       "blocks": 113
     },
     "app": {
-      "lines": 20878,
+      "lines": 20881,
       "duplicatedLines": 2491,
       "percent": 11.93,
       "blocks": 207
@@ -78,8 +78,8 @@
     },
     "modules/payroll": {
       "lines": 3799,
-      "duplicatedLines": 759,
-      "percent": 19.98,
+      "duplicatedLines": 760,
+      "percent": 20.01,
       "blocks": 42
     },
     "modules/pockets": {
@@ -96,8 +96,8 @@
     },
     "modules/subscriptions": {
       "lines": 2293,
-      "duplicatedLines": 428,
-      "percent": 18.67,
+      "duplicatedLines": 427,
+      "percent": 18.62,
       "blocks": 31
     },
     "modules/timeoff": {
@@ -179,7 +179,7 @@
       "blocks": 0
     },
     "platform/env": {
-      "lines": 140,
+      "lines": 146,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -293,9 +293,9 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 4732,
+      "lines": 4789,
       "duplicatedLines": 220,
-      "percent": 4.65,
+      "percent": 4.59,
       "blocks": 16
     },
     "platform/ranges": {
@@ -730,7 +730,7 @@
     "modules/investments/ui/sync.tsx": 61,
     "modules/investments/ui/transfers.tsx": 21,
     "modules/payroll/applied.ts": 29,
-    "modules/payroll/fields.ts": 56,
+    "modules/payroll/fields.ts": 57,
     "modules/payroll/parse/reply-teamsystem.ts": 51,
     "modules/payroll/queries.ts": 19,
     "modules/payroll/rules.ts": 100,
@@ -759,7 +759,7 @@
     "modules/pockets/ui/row-buttons.tsx": 20,
     "modules/subscriptions/jobs.ts": 11,
     "modules/subscriptions/queries.ts": 26,
-    "modules/subscriptions/rules.ts": 8,
+    "modules/subscriptions/rules.ts": 7,
     "modules/subscriptions/schema.ts": 77,
     "modules/subscriptions/service.ts": 115,
     "modules/subscriptions/ui/account-subscriptions.tsx": 7,

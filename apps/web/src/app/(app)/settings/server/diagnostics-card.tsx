@@ -14,7 +14,11 @@ const LOOK: Record<PluginDiagnostic["state"], { dot: string; tone: Tone }> = {
   down: { dot: "bg-neg", tone: "neg" },
   never: { dot: "bg-faint", tone: "muted" },
   incompatible: { dot: "bg-warn", tone: "warn" },
+  uncatalogued: { dot: "bg-warn", tone: "warn" },
 };
+
+/** The second line of a plugin the core has no manifest of. */
+const DETAIL = { never: "neverDetail", uncatalogued: "uncataloguedDetail" } as const;
 
 /**
  * Admin › Server, "Diagnostics" (ux/n2-connection-status.md §9; decision H29): whether each
@@ -46,7 +50,7 @@ export function DiagnosticsCard({ prefs }: { prefs: { locale: string; timeZone: 
   });
   /** The second line of a plugin, one branch per state so the catalogue keys stay literal. */
   const detail = (plugin: PluginDiagnostic): string => {
-    if (plugin.state === "never") return text("neverDetail");
+    if (plugin.state === "never" || plugin.state === "uncatalogued") return text(DETAIL[plugin.state]);
     if (plugin.state === "incompatible")
       return text("incompatibleDetail", { version: plugin.contract ?? "" });
     if (plugin.at === null) return "";

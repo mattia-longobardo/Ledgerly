@@ -13,15 +13,24 @@ import { type Connection, listConnections } from "../integrations/service";
 import { type ConfiguredPlugin, parsePluginConfig } from "../plugin-config";
 import { acceptsContract, hasCapability, type PluginManifest } from "@ledgerly/plugin-contract";
 import { type UserPluginState, userPluginState } from "./rules";
+import { catalogEntry } from "./catalog";
 import { pluginActivations, plugins, pluginUserCredentials } from "./schema";
 
 let configured: ConfiguredPlugin[] | undefined;
 
-/** The plugins of the server's configuration, parsed once. */
-export function configuredPlugins(): ConfiguredPlugin[] {
+/** Every plugin of the server's configuration, parsed once: official or not. */
+function everyConfiguredPlugin(): ConfiguredPlugin[] {
   const env = readEnv();
   configured ??= parsePluginConfig(env.PLUGIN_URLS, env.PLUGIN_SECRETS);
   return configured;
+}
+
+/**
+ * The plugins of the server's configuration that the core calls: the ones of the catalog (H27).
+ * Any other is never called, not even for its manifest, and only the diagnostics name it.
+ */
+export function configuredPlugins(): ConfiguredPlugin[] {
+  return everyConfiguredPlugin().filter((plugin) => catalogEntry(plugin.id) !== null);
 }
 
 export function configuredPlugin(pluginId: string): ConfiguredPlugin | null {
@@ -77,7 +86,8 @@ export interface PluginDiagnostic {
   name: string;
   version: string | null;
   contract: string | null;
-  state: "up" | "down" | "never" | "incompatible";
+  /** `uncatalogued`: configured, not in the catalog of the official plugins, never called. */
+  state: "up" | "down" | "never" | "incompatible" | "uncatalogued";
   /** The last good check (`up`) or the first failed one of the current series (`down`). */
   at: Date | null;
 }
@@ -87,7 +97,7 @@ export interface PluginDiagnostic {
  * no connection, no reading, no error of a connection (decision H29).
  */
 export async function pluginDiagnostics(locale: "en" | "it"): Promise<PluginDiagnostic[]> {
-  const known = configuredPlugins();
+  const known = everyConfiguredPlugin();
   if (known.length === 0) return [];
   const rows = await getDb()
     .select({
@@ -108,8 +118,9 @@ export async function pluginDiagnostics(locale: "en" | "it"): Promise<PluginDiag
     .orderBy(asc(plugins.id));
   return known.map((plugin) => {
     const row = rows.find((one) => one.id === plugin.id);
-    if (!row)
-      return { id: plugin.id, name: plugin.id, version: null, contract: null, state: "never", at: null };
+    const unread = { id: plugin.id, name: plugin.id, version: null, contract: null, at: null };
+    if (catalogEntry(plugin.id) === null) return { ...unread, state: "uncatalogued" };
+    if (!row) return { ...unread, state: "never" };
     const facts = {
       id: plugin.id,
       name: row.manifest.labels.name[locale],

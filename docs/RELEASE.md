@@ -85,7 +85,8 @@ when the image, the dump or the snapshot "before" fails, or when `numbers-before
 empty or different from its checksum: a snapshot taken after the build says nothing about a
 release that moves data. `--before-from` reads the snapshot "before" with the code of another
 checkout (the release in production): a release with a migration needs it. Status 2 means deployed,
-with numbers that differ. The commands below are what the script runs.
+with numbers that differ. Every plugin of the catalog (`packages/domain/src/platform/plugins/catalog.json`) and
+`ledgerly-egress` are in every release by themselves; `--plugin <id>` adds only a plugin outside it. The commands below are what the script runs.
 
 ```bash
 docker tag ledgerly:latest ledgerly:pre-<id>          # the worker runs this image too

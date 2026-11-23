@@ -55,8 +55,8 @@ export const MANIFEST: PluginManifest = {
   ],
   connectionFields: [],
   // Empty on purpose: the host is the person's own Trek, the `baseUrl` of their credentials, not one
-  // address every person shares. The egress proxy opens the saved host for each call (decision D1),
-  // in a later step of R5c.
+  // address every person shares. The core grants the saved host to the egress proxy before each
+  // call (decision D1): the plugin's catalog entry names the credential.
   egress: [],
   // The hourly pass the core has always given Trek.
   schedule: { recommendedPerDay: 24, minIntervalMinutes: 60 },

@@ -17,6 +17,7 @@ import type { z } from "zod";
 import type { ConfiguredPlugin } from "@ledgerly/domain/platform/plugin-config";
 import { configuredPlugins } from "@ledgerly/domain/platform/plugins";
 import { callPlugin, type Fetch, PluginCallError } from "./client";
+import { grantDynamicHost } from "./egress";
 
 /**
  * A write reads the year, sends each change once and reads it again; the plugin retries a read of
@@ -30,8 +31,12 @@ interface Target {
   fetchFn?: Fetch;
 }
 
-/** One call with the connection's credentials in its body, read through the contract's schema. */
-function post<T>(target: Target, path: string, schema: z.ZodType<T>, body: object = {}): Promise<T> {
+/**
+ * One call with the connection's credentials in its body, read through the contract's schema; the
+ * person's own host is granted to the egress proxy first, when the plugin's catalog entry says so.
+ */
+async function post<T>(target: Target, path: string, schema: z.ZodType<T>, body: object = {}): Promise<T> {
+  await grantDynamicHost(target.plugin.id, target.credentials, target.fetchFn);
   const options = { body: { credentials: target.credentials, ...body }, timeoutMs: CALENDAR_TIMEOUT_MS };
   return callPlugin(target.plugin, path, schema, { ...options, fetchFn: target.fetchFn });
 }

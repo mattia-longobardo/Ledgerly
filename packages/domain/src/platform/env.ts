@@ -98,6 +98,11 @@ export const envSchema = z
     // them the app has no plugin and behaves as it did before. Checked together below.
     PLUGIN_URLS: z.preprocess(blankAsUndefined, z.string().optional()),
     PLUGIN_SECRETS: z.preprocess(blankAsUndefined, z.string().optional()),
+    // The plugins' egress proxy (rewrite plan R5c, decision D1): where the core grants a plugin the
+    // person's own host before a call, and the secret of that door. Both or neither; without them
+    // no grant is sent (a plugin whose host is the person's own then cannot go out).
+    EGRESS_URL: z.preprocess(blankAsUndefined, z.url().optional()),
+    EGRESS_ADMIN_SECRET: z.preprocess(blankAsUndefined, z.string().min(32).optional()),
     CRON_SECRET: z.string().min(32),
     METRICS_TOKEN: z.string().min(32).optional(),
     // The reverse proxies in front of the app (comma-separated IPs or CIDR ranges): Better Auth
@@ -113,6 +118,10 @@ export const envSchema = z
           .filter(Boolean),
       )
       .pipe(z.array(ipOrCidr)),
+  })
+  .refine((env) => (env.EGRESS_URL === undefined) === (env.EGRESS_ADMIN_SECRET === undefined), {
+    path: ["EGRESS_URL"],
+    message: "Set with EGRESS_ADMIN_SECRET, or neither",
   })
   .superRefine((env, ctx) => {
     try {

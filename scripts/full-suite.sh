@@ -120,6 +120,8 @@ trap 'exit 130' INT TERM
 gate static "G1 static (format, lint, typecheck)" static
 gate unit "G2 unit + assertions-diff ${previous:-HEAD}..HEAD" unit
 gate duplication "G4 duplicated lines, not above the record" duplication
+# The running plugins against the catalog (decision H28): read only, `docker exec … sha256sum`.
+gate plugins "plugins: the running bundles are the catalog's" sh scripts/plugins-check.sh
 gate integration "G3/G5 integration, 4 shards" sh scripts/test-integration.sh
 ready=no
 gate build "build $image" sh scripts/preview-on-test.sh build "$image" &&

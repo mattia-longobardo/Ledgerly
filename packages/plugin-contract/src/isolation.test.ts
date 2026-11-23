@@ -30,12 +30,6 @@ function importsOf(file: string): string[] {
   );
 }
 
-/**
- * Plugins whose container is not in `docker-compose.yml` yet: written and tested, wired to the core
- * by a later step of R5c. The name leaves this list in the commit that adds its service.
- */
-const NOT_DEPLOYED_YET = ["wallet", "trek"];
-
 const isTest = (file: string) => /\.test\.ts$/.test(file);
 
 describe("a plugin is isolated (M9)", () => {
@@ -89,10 +83,12 @@ describe("a plugin is isolated (M9)", () => {
 
   it("the plugin's container gets no environment of the app, no volume and no public network", () => {
     const compose = readFileSync(join(ROOT, "docker-compose.yml"), "utf8");
-    for (const plugin of plugins.filter((name) => !NOT_DEPLOYED_YET.includes(name))) {
+    for (const plugin of plugins) {
       const start = compose.indexOf(`\n  ledgerly-plugin-${plugin}:`);
       expect(start).toBeGreaterThan(0);
-      const service = compose.slice(start, compose.indexOf("\nnetworks:", start));
+      // The service runs to the banner of the next one, or to the networks of the file.
+      const rest = compose.slice(start + 1);
+      const service = rest.slice(0, rest.search(/\n(# |networks:)/));
       expect(service).not.toContain(".env.homelab");
       expect(service).not.toContain("volumes:");
       expect(service).not.toContain("ports:");
@@ -101,5 +97,7 @@ describe("a plugin is isolated (M9)", () => {
       const networks = service.slice(service.lastIndexOf("networks:")).match(/- (\S+)/g);
       expect(networks).toEqual(["- ledgerly_plugins"]);
     }
+    // A plugin goes out through the egress proxy only (decision I8).
+    expect(compose).toContain("\n  ledgerly_plugins:\n    name: ledgerly_plugins\n    internal: true\n");
   });
 });
