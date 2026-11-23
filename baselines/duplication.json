@@ -4,7 +4,7 @@
     "minLines": 6
   },
   "total": {
-    "lines": 108368,
+    "lines": 108369,
     "duplicatedLines": 16098,
     "percent": 14.85,
     "blocks": 1243
@@ -221,9 +221,9 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 2304,
+      "lines": 2305,
       "duplicatedLines": 470,
-      "percent": 20.4,
+      "percent": 20.39,
       "blocks": 38
     },
     "platform/integrations/ccxt": {

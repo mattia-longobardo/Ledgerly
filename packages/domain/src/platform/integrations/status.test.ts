@@ -300,6 +300,31 @@ describe("the streak of failures", () => {
     });
   });
 
+  it("never counts a pass that ended read-only, and sends no mail for it: the state stays on the connection (D5)", () => {
+    const runs = [
+      run("leave", "failed", "read_only"),
+      run("leave", "failed", "read_only"),
+      run("leave", "failed", "read_only"),
+    ];
+    const streak = failureStreak(runs);
+    expect(streak).toEqual({ failures: 0, errorCode: "read_only" });
+    const facts = {
+      ...HEALTHY,
+      state: "error" as const,
+      consecutiveFailures: streak.failures,
+      errorCode: streak.errorCode,
+    };
+    expect(syncStatus(facts, NOW).text).toBe("readOnly");
+    expect(warningFor(syncStatus(facts, NOW), facts, NOW)).toBeNull();
+    expect(
+      warningFor(
+        syncStatus({ ...facts, lastOkAt: ago(72 * 60) }, NOW),
+        { ...facts, lastOkAt: ago(72 * 60) },
+        NOW,
+      ),
+    ).toBeNull();
+  });
+
   it("ignores the runs that attempted nothing or have not ended", () => {
     expect(
       failureStreak([

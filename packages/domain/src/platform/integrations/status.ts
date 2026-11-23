@@ -130,7 +130,9 @@ export function failureStreak(runs: readonly StreakRun[]): { failures: number; e
       open.delete(run.kind);
       continue;
     }
-    if (run.errorCode === "rate_limited") continue;
+    // Neither a provider that asked to wait (Q2) nor a calendar that may only read (D5) is a failure
+    // to tell: the state stays on the connection.
+    if (run.errorCode === "rate_limited" || run.errorCode === "read_only") continue;
     open.set(run.kind, count + 1);
     failures = Math.max(failures, count + 1);
   }
@@ -256,6 +258,8 @@ type Warning = { kind: "failed"; todo: "renew" | "replaceKey" | null } | { kind:
 export function warningFor(status: SyncStatus, facts: StatusFacts, now: Date): Warning {
   // A plugin turned off, a schedule turned off, accounts not chosen: the person already knows.
   if (status.value === "paused" || status.text === "pending") return null;
+  // A calendar that may only read (D5): the connection says so, and no mail is sent.
+  if (status.text === "readOnly") return null;
   if (status.value === "action") {
     return { kind: "failed", todo: status.action === "renew" ? "renew" : "replaceKey" };
   }
