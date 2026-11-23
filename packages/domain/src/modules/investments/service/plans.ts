@@ -303,28 +303,13 @@ async function debitOf(
   };
 }
 
-/** The purchase each instalment wrote, by instalment. */
-async function eventsOfRuns(
-  ctx: Pick<Ctx, "userId">,
-  runIds: readonly string[],
-): Promise<Map<string, string>> {
-  if (runIds.length === 0) return new Map();
-  const rows = await getDb()
-    .select({ runId: investmentOperations.planRunId, eventId: investmentOperations.eventId })
-    .from(investmentOperations)
-    .where(
-      and(userScoped(ctx).owns(investmentOperations), inArray(investmentOperations.planRunId, [...runIds])),
-    );
-  return new Map(rows.flatMap((row) => (row.runId === null ? [] : [[row.runId, row.eventId] as const])));
-}
-
-/** The plan and the instalment of each purchase a plan wrote, by event: the activity's «automatic» mark. */
-export async function plansOfEvents(
-  ctx: Pick<Ctx, "userId">,
-  eventIds: readonly string[],
-): Promise<Map<string, { planId: string; runId: string; name: string; automatic: boolean }>> {
-  if (eventIds.length === 0) return new Map();
-  const rows = await getDb()
+/** The purchases plans wrote, of some events or of some instalments, with their plan and instalment. */
+async function planPurchases(ctx: Pick<Ctx, "userId">, among: { eventIds?: string[]; runIds?: string[] }) {
+  if (among.eventIds?.length === 0 || among.runIds?.length === 0) return [];
+  const which = among.eventIds
+    ? inArray(investmentOperations.eventId, among.eventIds)
+    : inArray(investmentPlanRuns.id, among.runIds ?? []);
+  return getDb()
     .select({
       eventId: investmentOperations.eventId,
       runId: investmentPlanRuns.id,
@@ -335,15 +320,52 @@ export async function plansOfEvents(
     .from(investmentOperations)
     .innerJoin(investmentPlanRuns, eq(investmentPlanRuns.id, investmentOperations.planRunId))
     .innerJoin(investmentPlans, eq(investmentPlans.id, investmentPlanRuns.planId))
-    .where(
-      and(userScoped(ctx).owns(investmentOperations), inArray(investmentOperations.eventId, [...eventIds])),
-    );
+    .where(and(userScoped(ctx).owns(investmentOperations), which));
+}
+
+/** The purchase each instalment wrote, by instalment. */
+async function eventsOfRuns(
+  ctx: Pick<Ctx, "userId">,
+  runIds: readonly string[],
+): Promise<Map<string, string>> {
+  const rows = await planPurchases(ctx, { runIds: [...runIds] });
+  return new Map(rows.map((row) => [row.runId, row.eventId]));
+}
+
+/** The plan and the instalment of each purchase a plan wrote, by event: the activity's «automatic» mark. */
+export async function plansOfEvents(
+  ctx: Pick<Ctx, "userId">,
+  eventIds: readonly string[],
+): Promise<Map<string, { planId: string; runId: string; name: string; automatic: boolean }>> {
+  const rows = await planPurchases(ctx, { eventIds: [...eventIds] });
   return new Map(
     rows.map((row) => [
       row.eventId,
       { planId: row.planId, runId: row.runId, name: row.name, automatic: row.recordedBy === "job" },
     ]),
   );
+}
+
+/** An instalment of the plan, locked for the transaction, or `not_found`. */
+export async function lockRun(
+  ctx: Pick<Ctx, "userId">,
+  plan: InvestmentPlan,
+  runId: string,
+  transaction: Tx,
+) {
+  const [run] = await transaction
+    .select()
+    .from(investmentPlanRuns)
+    .where(
+      and(
+        userScoped(ctx).owns(investmentPlanRuns),
+        eq(investmentPlanRuns.id, runId),
+        eq(investmentPlanRuns.planId, plan.id),
+      ),
+    )
+    .for("update");
+  if (!run) throw new InvestmentError("not_found");
+  return run;
 }
 
 /**
@@ -358,17 +380,7 @@ export async function linkRunDebit(
 ): Promise<void> {
   const plan = await requirePlan(ctx, accountId, planId);
   await getDb().transaction(async (transaction) => {
-    const [run] = await transaction
-      .select()
-      .from(investmentPlanRuns)
-      .where(
-        and(
-          userScoped(ctx).owns(investmentPlanRuns),
-          eq(investmentPlanRuns.id, runId),
-          eq(investmentPlanRuns.planId, plan.id),
-        ),
-      );
-    if (!run) throw new InvestmentError("not_found");
+    const run = await lockRun(ctx, plan, runId, transaction);
     const eventId = (await eventsOfRuns(ctx, [run.id])).get(run.id);
     if (run.state !== "recorded" || run.debitTransactionId === null || run.debitLinked || !eventId) {
       throw new InvestmentError("not_editable");

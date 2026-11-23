@@ -24,7 +24,14 @@ import { investmentAccounts, investmentEvents, investmentPlanRuns, investmentPla
 import { buyWithin, positive } from "./events";
 import { pricedListingOf } from "./market";
 import { marketPrices } from "../ports";
-import { type InvestmentPlan, type InvestmentPlanRun, requirePlan, scheduleOf, sizeOf } from "./plans";
+import {
+  type InvestmentPlan,
+  type InvestmentPlanRun,
+  lockRun,
+  requirePlan,
+  scheduleOf,
+  sizeOf,
+} from "./plans";
 import { fromNumeric, InvestmentError, type WriteCtx } from "./types";
 import { investmentAssets } from "../schema";
 
@@ -42,18 +49,7 @@ const confirmSchema = z.object({
 export type RunConfirmation = z.input<typeof confirmSchema>;
 
 async function requireRun(ctx: Pick<Ctx, "userId">, plan: InvestmentPlan, runId: string, transaction: Tx) {
-  const [run] = await transaction
-    .select()
-    .from(investmentPlanRuns)
-    .where(
-      and(
-        userScoped(ctx).owns(investmentPlanRuns),
-        eq(investmentPlanRuns.id, runId),
-        eq(investmentPlanRuns.planId, plan.id),
-      ),
-    )
-    .for("update");
-  if (!run) throw new InvestmentError("not_found");
+  const run = await lockRun(ctx, plan, runId, transaction);
   if (run.state === "recorded" || run.state === "skipped") throw new InvestmentError("not_editable");
   return run;
 }

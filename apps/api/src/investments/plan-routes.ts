@@ -19,7 +19,7 @@ import {
   skipRun,
   updatePlan,
 } from "@ledgerly/domain/investments";
-import { centsToDecimal, formatDecimal, parseCents, parseDecimal } from "@ledgerly/domain/shared/money";
+import { centsToDecimal, formatDecimal, parseDecimal } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, type Guard, serve } from "../serve";
 import { maybe } from "./dto";
 import { cents, decimal, refusing } from "./refusals";
@@ -97,26 +97,18 @@ function runOut({ run, proposal, eventId, debit }: RunView) {
 }
 
 function serveWrites(app: Hono<ApiEnv>, guard: Guard): void {
-  serve(app, guard, plans.createPlan, async ({ ctx, params, body }) =>
-    refusing(() =>
+  serve(app, guard, plans.createPlan, async ({ ctx, params, body }) => {
+    const { instrumentId, mic, amount, quantity, fee, ...schedule } = body;
+    return refusing(() =>
       createPlan(ctx, params.accountId, {
-        name: body.name,
-        instrument: { instrumentId: body.instrumentId, mic: body.mic },
-        amountCents: cents(body.amount),
-        quantity: decimal(body.quantity, QUANTITY_SCALE),
-        fractions: body.fractions,
-        frequency: body.frequency,
-        interval: body.interval,
-        day: body.day,
-        startOn: body.startOn,
-        endOn: body.endOn,
-        runsLimit: body.runsLimit,
-        debitAccountId: body.debitAccountId,
-        ...feeOf(body.fee),
-        mode: body.mode,
+        ...schedule,
+        instrument: { instrumentId, mic },
+        amountCents: cents(amount),
+        quantity: decimal(quantity, QUANTITY_SCALE),
+        ...feeOf(fee),
       }),
-    ),
-  );
+    );
+  });
   serve(app, guard, plans.updatePlan, async ({ ctx, params, body }) => {
     const { fee, ...rest } = body;
     await refusing(() =>
@@ -148,9 +140,9 @@ function serveRuns(app: Hono<ApiEnv>, guard: Guard): void {
     const { eventId } = await refusing(() =>
       confirmRun(ctx, params, {
         on: body.on,
-        quantity: body.quantity === undefined ? undefined : parseDecimal(body.quantity, QUANTITY_SCALE),
-        unitPrice: body.unitPrice === undefined ? undefined : parseDecimal(body.unitPrice, PRICE_SCALE),
-        feeCents: body.fee === undefined ? undefined : parseCents(body.fee),
+        quantity: decimal(body.quantity ?? null, QUANTITY_SCALE) ?? undefined,
+        unitPrice: decimal(body.unitPrice ?? null, PRICE_SCALE) ?? undefined,
+        feeCents: cents(body.fee ?? null) ?? undefined,
       }),
     );
     return { id: eventId };
