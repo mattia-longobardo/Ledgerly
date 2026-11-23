@@ -106,7 +106,7 @@ describe("deleteWalletCategories", () => {
   });
 
   it("says so rather than calling Wallet when the stored token is empty", async () => {
-    connections = [{ id: "c1", provider: "wallet" }];
+    connections = [{ id: "c1", provider: "plugin:wallet" }];
     token = "";
     expect(await deleteWalletCategories(ctx, ["w1"])).toEqual({
       state: "failed",

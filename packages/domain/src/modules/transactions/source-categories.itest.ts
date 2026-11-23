@@ -29,7 +29,7 @@ import { createCategory, deleteCategory, listCategories } from "./taxonomy";
 import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 
 /** A provider of the core that gives a category with each movement. */
-const SOURCE = "wallet";
+const SOURCE = "plugin:wallet";
 
 function contextFor(userId: string): Ctx {
   return {

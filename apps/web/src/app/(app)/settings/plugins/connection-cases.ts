@@ -18,6 +18,7 @@ import {
   type Connection,
   findConnection,
   IntegrationError,
+  isBankPluginProvider,
   isPluginProvider,
   makeDueNow,
   saveSchedule,
@@ -66,7 +67,7 @@ async function update(ctx: Ctx, connection: Connection, presence: Presence | nul
     tasks.updateConnection(
       ctx.userId,
       connection.id,
-      isPluginProvider(connection.provider) ? presence : null,
+      isBankPluginProvider(connection.provider) ? presence : null,
     ),
   );
   return null;
@@ -88,7 +89,7 @@ const ACTIONS: Record<
 > = {
   update: (ctx, connection, options) => update(ctx, connection, options.presence),
   async resume(ctx, connection) {
-    const schedule = isPluginProvider(connection.provider)
+    const schedule = isBankPluginProvider(connection.provider)
       ? BANK_SCHEDULE
       : recommendedSchedule(connection.provider);
     await saveSchedule(ctx, connection.id, schedule);

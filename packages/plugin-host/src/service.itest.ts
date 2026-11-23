@@ -891,7 +891,7 @@ describe("the connections of the providers there were before", () => {
       .orderBy(integrationConnections.provider);
     expect(rows).toEqual([
       { provider: "plugin:enablebanking", instanceKey: "IT:Zeta Bank" },
-      { provider: "trek", instanceKey: "" },
+      { provider: "plugin:trek", instanceKey: "" },
     ]);
   });
 });

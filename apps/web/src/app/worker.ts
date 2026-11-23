@@ -8,7 +8,11 @@ import { z } from "zod";
 import { readFirstFlows } from "@ledgerly/domain/investments";
 import { readDocument } from "@ledgerly/domain/imports";
 import { addonOn, type Ctx } from "@ledgerly/domain/platform/context";
-import { findConnection, isPluginProvider, PROVIDER_ADDONS } from "@ledgerly/domain/platform/integrations";
+import {
+  findConnection,
+  isBankPluginProvider,
+  PROVIDER_ADDONS,
+} from "@ledgerly/domain/platform/integrations";
 import type { Task } from "@ledgerly/domain/platform/jobs";
 import { categorisableAccountIds, categorise } from "@ledgerly/domain/transactions";
 import { contextFor, type Person, personById } from "@ledgerly/domain/users";
@@ -64,7 +68,7 @@ async function updateConnection(
 ): Promise<void> {
   const connection = await findConnection(ctx, connectionId);
   if (!connection) return;
-  if (isPluginProvider(connection.provider)) {
+  if (isBankPluginProvider(connection.provider)) {
     const outcome = await readBank(
       ctx,
       {

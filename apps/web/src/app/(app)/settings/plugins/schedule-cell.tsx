@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { PROVIDER_SCHEDULE } from "@ledgerly/domain/investments/client";
-import { DEFAULT_SYNC_SCHEDULE, isPluginProvider } from "@ledgerly/domain/platform/integrations/client";
+import { DEFAULT_SYNC_SCHEDULE, isBankPluginProvider } from "@ledgerly/domain/platform/integrations/client";
 import { formatInstant, type UiLocale } from "@ledgerly/format/format";
 import type { WireConnection } from "./connection-view";
 import { ConnectionSchedule } from "@/ui/connection-schedule";
@@ -31,7 +31,7 @@ export async function ScheduleCell({
   );
   const next = connection.nextSyncAt ? formatInstant(new Date(connection.nextSyncAt), ctx) : null;
   if (!active) return <span className="text-muted">{t("text.pausedProvider", { provider })}</span>;
-  if (isPluginProvider(connection.provider)) {
+  if (isBankPluginProvider(connection.provider)) {
     // The schedule of a plugin's connection is the provider's own: no control.
     return (
       <span className={times === 0 ? "text-muted" : undefined}>

@@ -498,6 +498,13 @@
       "when": 1795580000000,
       "tag": "0070_timeoff_external",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795590000000,
+      "tag": "0071_plugin_providers",
+      "breakpoints": true
     }
   ]
 }

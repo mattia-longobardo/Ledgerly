@@ -10,6 +10,7 @@ export {
   TREK_PROVIDER,
   WALLET_PROVIDER,
   coreCreatesRecords,
+  isBankPluginProvider,
   isKnownProvider,
   isPluginProvider,
   pluginProvider,

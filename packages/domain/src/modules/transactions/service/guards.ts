@@ -8,7 +8,7 @@ import { userScoped } from "../../../platform/db/scope";
 import {
   coreProvidesCategories,
   type EntityType,
-  isPluginProvider,
+  isBankPluginProvider,
   pluginProvider,
 } from "../../../platform/integrations/rules";
 import { listInstancePlugins } from "../../../platform/plugins/queries";
@@ -235,11 +235,11 @@ export async function ruleAccountFacts(ctx: Pick<Ctx, "userId">): Promise<{
 
 async function categorisableOf(accounts: Awaited<ReturnType<typeof listAccounts>>): Promise<string[]> {
   const fromPlugin = accounts.some(
-    (account) => account.provider !== null && isPluginProvider(account.provider),
+    (account) => account.provider !== null && isBankPluginProvider(account.provider),
   );
   const plugins = fromPlugin ? await listInstancePlugins() : [];
   const gives = (provider: string): boolean => {
-    if (!isPluginProvider(provider)) return coreProvidesCategories(provider);
+    if (!isBankPluginProvider(provider)) return coreProvidesCategories(provider);
     const plugin = plugins.find((one) => provider === pluginProvider(one.manifest.id));
     // A plugin whose manifest was never read says nothing: its movements are left alone.
     return plugin === undefined || plugin.manifest.providesCategories;

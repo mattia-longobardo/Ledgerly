@@ -199,7 +199,7 @@ describe("a pass", () => {
     expect(result?.counts.adopted).toBe(1);
     const adopted = await rowOn(WED);
     expect(adopted).toMatchObject({
-      origin: "trek",
+      origin: "external",
       kind: "vacation",
       fraction: "1.0",
       pending: "none",

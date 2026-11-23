@@ -183,7 +183,8 @@ export async function markRefused(ctx: Pick<Ctx, "userId">, ids: readonly string
 
 /**
  * Records a day a pass found on Trek that we did not have (plan F7 §3.4.7.4). It arrives already
- * reconciled: `origin = 'trek'`, nothing pending, and the observed pair is what Trek showed.
+ * reconciled: `origin = 'external'` (since R5c P3; `trek` before), nothing pending, and the observed
+ * pair is what Trek showed.
  *
  * A day we already hold under a **different** kind is left alone and reported back instead of
  * being rewritten: our classification wins, and a Trek `comp` we keep as ROL is a case for a human
@@ -201,7 +202,7 @@ export async function recordFromTrek(
         on: day.on,
         kind: day.kind,
         fraction: day.fraction.toFixed(1),
-        origin: "trek" as const,
+        origin: "external" as const,
         pending: "none" as const,
         syncedAt: now,
         ...observedPair(day.fraction.toFixed(1), day.kind),

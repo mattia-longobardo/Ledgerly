@@ -266,7 +266,7 @@ describe("toRemoteAccount", () => {
       available: null,
     };
     expect(toRemoteAccount(account)).toEqual({
-      provider: "wallet",
+      provider: "plugin:wallet",
       providerAccountId: "wa-general",
       name: "Conto corrente",
       type: "checking",

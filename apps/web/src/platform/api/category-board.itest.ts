@@ -64,8 +64,14 @@ async function sourceWithNote(ctx: Ctx): Promise<string> {
   const { applyProviderAccounts } = await import("@domain/modules/accounts/service");
   const { listAccounts } = await import("@domain/modules/accounts/queries");
   const { upsertFromProvider } = await import("@domain/modules/transactions/service");
-  await applyProviderAccounts(ctx, "wallet", [
-    { provider: "wallet", providerAccountId: "acc-1", name: "Current", type: "checking", currency: "EUR" },
+  await applyProviderAccounts(ctx, "plugin:wallet", [
+    {
+      provider: "plugin:wallet",
+      providerAccountId: "acc-1",
+      name: "Current",
+      type: "checking",
+      currency: "EUR",
+    },
   ]);
   const account = (await listAccounts(ctx)).find((one) => one.name === "Current")!;
   const incoming = (externalId: string, name: string) => ({
@@ -88,14 +94,14 @@ async function sourceWithNote(ctx: Ctx): Promise<string> {
     ctx,
     account.id,
     [incoming("e-1", "Tobacco"), incoming("e-2", "Alcohol, tobacco")],
-    { provider: "wallet" },
+    { provider: "plugin:wallet" },
   );
   const alcohol = (await domain.listCategories(ctx)).find((one) => one.name === "Alcohol, tobacco")!;
   const tobacco = (await send(ctx, "GET", "/source-categories")).body.sourceCategories.find(
     (one: { name: string }) => one.name === "Tobacco",
   );
   // «Categories of {source}»: the source's name and its page come with each row.
-  expect(tobacco).toMatchObject({ sourceName: await sourceNameOf("wallet", "en"), source: "wallet" });
+  expect(tobacco).toMatchObject({ sourceName: await sourceNameOf("plugin:wallet", "en"), source: "wallet" });
   expect(
     (await send(ctx, "PUT", `/source-categories/${tobacco.id}`, { categoryId: alcohol.id })).status,
   ).toBe(200);
@@ -225,7 +231,10 @@ describe("the board of the categories (client R3)", () => {
     ]);
     expect(first.children[0].color).toBe(first.color);
     expect(second).toMatchObject({ id: alcohol, total: "-20.00", canMerge: false, budget: null });
-    expect(second.source).toMatchObject({ provider: "wallet", names: ["Alcohol, tobacco", "Tobacco"] });
+    expect(second.source).toMatchObject({
+      provider: "plugin:wallet",
+      names: ["Alcohol, tobacco", "Tobacco"],
+    });
     expect(expense.rest).toEqual({ count: 1, total: "-3.00", in: "0.00", out: "3.00" });
     expect(board.macros.map((one: { macro: string }) => one.macro)).toEqual([
       "income",

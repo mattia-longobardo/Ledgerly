@@ -727,7 +727,7 @@
     "apps/web/src/app/(app)/settings/plugins/advanced/page.tsx": 1,
     "apps/web/src/app/(app)/settings/plugins/deactivate-zone.tsx": 1,
     "apps/web/src/app/(app)/settings/plugins/deleted-accounts.tsx": 1,
-    "apps/web/src/app/(app)/settings/plugins/page.tsx": 5,
+    "apps/web/src/app/(app)/settings/plugins/page.tsx": 4,
     "apps/web/src/app/(app)/settings/profile/preferences-form.tsx": 6,
     "apps/web/src/app/(app)/settings/server/llm-card.tsx": 1,
     "apps/web/src/app/(app)/settings/server/oidc-card.tsx": 1,

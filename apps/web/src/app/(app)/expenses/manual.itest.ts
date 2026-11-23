@@ -59,7 +59,7 @@ const day = (back: number) => addDays(TODAY, -back);
 /** A provider that only reads: a plugin with no manifest that says it creates records. */
 const BANK = "plugin:testbank";
 /** A provider of the core that takes the movements written here. */
-const TWO_WAY = "wallet";
+const TWO_WAY = "plugin:wallet";
 
 async function balance(ctx: Ctx, accountId: string, on = TODAY): Promise<bigint | undefined> {
   return (await balancesOn(ctx, [accountId], on)).get(accountId);

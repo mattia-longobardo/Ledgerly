@@ -38,6 +38,7 @@ export function asTrekKind(kind: LeaveDayKind): TrekKind {
  * Where a row came from. There is no `payroll`: leave read off a payslip is monthly (hours per
  * usage month), not daily, and inventing a date for it would make up a fact the payslip does not
  * state (plan F7 §3.6.1). Those appear in the table as month rows, read-only, from their own read.
+ * A day of the external calendar is `external` since R5c; `trek` is no longer written (R5f drops it).
  */
 export const LEAVE_ORIGINS = ["manual", "trek", "external"] as const;
 

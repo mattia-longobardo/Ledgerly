@@ -9,7 +9,7 @@ import { listInvestmentAccounts, providerOf } from "@ledgerly/domain/investments
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type Connection,
-  isPluginProvider,
+  isBankPluginProvider,
   listConnections,
   readSyncJob,
   type RecentRun,
@@ -189,7 +189,7 @@ export async function connectionList(ctx: Ctx, now: Date = new Date(), runsShown
       nextAttempt: null,
       capabilities: coreCapabilities(connection.provider),
     };
-    if (isPluginProvider(connection.provider)) {
+    if (isBankPluginProvider(connection.provider)) {
       const pluginId = connection.provider.slice("plugin:".length);
       const active = plugins.some((one) => one.id === pluginId && one.state === "active");
       facts = await bankFacts(ctx, connection, { active, keyRefused: await keyRefused(pluginId) }, now);

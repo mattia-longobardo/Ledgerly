@@ -17,7 +17,7 @@ import {
   type Connection,
   findConnection,
   IntegrationError,
-  isPluginProvider,
+  isBankPluginProvider,
   previewSchedule,
   saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
@@ -121,8 +121,8 @@ export interface ConnectionCases {
   disconnectCore(ctx: Ctx, connection: Connection): Promise<{ ok: true } | Refused>;
 }
 
-/** A provider of the core: neither a plugin nor a service of Investments. */
-const isCore = (provider: string) => !isPluginProvider(provider) && providerOf(provider) === null;
+/** A provider of the core: neither a bank's plugin nor a service of Investments (a plugin read by the core until P3b is one). */
+const isCore = (provider: string) => !isBankPluginProvider(provider) && providerOf(provider) === null;
 
 /** The connection of the person, or `not_found`; another person's id is not found either. */
 async function connectionOf(ctx: Ctx, id: string): Promise<Connection> {
@@ -134,7 +134,7 @@ async function connectionOf(ctx: Ctx, id: string): Promise<Connection> {
 /** A bank's connection: what only a plugin's connection does. */
 async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   const connection = await connectionOf(ctx, id);
-  if (!isPluginProvider(connection.provider)) {
+  if (!isBankPluginProvider(connection.provider)) {
     throw new ApiRefusal("conflict", "not_a_bank");
   }
   return connection;

@@ -602,8 +602,14 @@ describe("the figures of a category's page (client R3)", () => {
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
     const { sourceNotes } = await import("@/app/(app)/settings/finance/source");
     const domain = await import("@ledgerly/domain/transactions");
-    await applyProviderAccounts(alice, "wallet", [
-      { provider: "wallet", providerAccountId: "acc-1", name: "Current", type: "checking", currency: "EUR" },
+    await applyProviderAccounts(alice, "plugin:wallet", [
+      {
+        provider: "plugin:wallet",
+        providerAccountId: "acc-1",
+        name: "Current",
+        type: "checking",
+        currency: "EUR",
+      },
     ]);
     const [account] = await listAccounts(alice);
     const incoming = (externalId: string, name: string) => ({
@@ -627,7 +633,7 @@ describe("the figures of a category's page (client R3)", () => {
       account.id,
       [incoming("e-1", "Tobacco"), incoming("e-2", "Alcohol, tobacco")],
       {
-        provider: "wallet",
+        provider: "plugin:wallet",
       },
     );
     const alcohol = (await domain.listCategories(alice)).find((one) => one.name === "Alcohol, tobacco")!;

@@ -301,7 +301,7 @@ describe("what a pass brings back", () => {
   it("records a day Trek had and we did not", async () => {
     const recorded = await recordFromTrek(ctx, { on: TUESDAY, kind: "vacation", fraction: 0.5 });
     expect(recorded).toMatchObject({
-      origin: "trek",
+      origin: "external",
       pending: "none",
       fraction: "0.5",
       trekFraction: "0.5",

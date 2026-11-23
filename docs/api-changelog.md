@@ -3,6 +3,14 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Wallet and Trek are plugins (R5c)
+
+- Every answer that names a provider (`GET /connections`, `GET /accounts`, `GET /source-categories`,
+  the runs, …): the connections and accounts of Wallet and Trek have the provider `plugin:wallet` and
+  `plugin:trek`, no longer `wallet` and `trek`. The source's page keeps its slug (`wallet`, `trek`).
+  `POST /connections` takes `plugin:wallet` and `plugin:trek`, and turns the plugin on for the person.
+- `GET /timeoff/…`: unchanged, a day of the calendar was already `external`.
+
 ## Unreleased · Interests: no rule publishes on its source (R5c, decision H37)
 
 - `POST /interests` and `PUT /interests/{id}`: `mode: "post_to_provider"` answers `422` with the new error code `mode_retired`. The mode stays in

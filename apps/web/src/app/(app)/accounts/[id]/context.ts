@@ -7,7 +7,7 @@ import { z } from "zod";
 import { type Account, getAccount, openSwitchOf } from "@ledgerly/domain/accounts";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { normalizeIban } from "@ledgerly/domain/platform/iban";
-import { isPluginProvider, listConnections } from "@ledgerly/domain/platform/integrations";
+import { isBankPluginProvider, listConnections } from "@ledgerly/domain/platform/integrations";
 import {
   findInstancePlugin,
   isPluginActive,
@@ -59,7 +59,7 @@ async function switchOf(ctx: Ctx, account: Account) {
 async function connectionIdOf(ctx: Ctx, account: Account): Promise<string | null> {
   const provider = account.provider;
   if (provider === null) return null;
-  if (isPluginProvider(provider)) {
+  if (isBankPluginProvider(provider)) {
     if (account.providerAccountId === null) return null;
     const pluginId = provider.slice("plugin:".length);
     return (await connectionSharing(ctx, pluginId, account.providerAccountId))?.connection.id ?? null;

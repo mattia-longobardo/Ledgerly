@@ -10,6 +10,7 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type Connection,
   findConnection,
+  isBankPluginProvider,
   isPluginProvider,
   isSyncErrorCode,
   listRuns,
@@ -64,7 +65,7 @@ function body<T>(read: { ok: true; answer: T } | Refused): T {
 /** A connection of a plugin of the person: another person's, or not a bank's, is not found. */
 async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   const connection = await findConnection(ctx, id);
-  if (!connection || !isPluginProvider(connection.provider)) throw new ApiRefusal("not_found");
+  if (!connection || !isBankPluginProvider(connection.provider)) throw new ApiRefusal("not_found");
   return connection;
 }
 

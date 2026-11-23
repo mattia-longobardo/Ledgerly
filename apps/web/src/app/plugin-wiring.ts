@@ -5,9 +5,9 @@
 //
 // Every entry that can start a pass imports it: the tick of the cron sidecar and "Run now".
 import "server-only";
-import { registerPass } from "@/platform/integrations/registry";
+import { registerPass, wirePluginActive } from "@/platform/integrations/registry";
 import { PLUGIN_KINDS } from "@ledgerly/domain/platform/integrations";
-import { findInstancePlugin } from "@ledgerly/domain/platform/plugins";
+import { findInstancePlugin, isPluginActive } from "@ledgerly/domain/platform/plugins";
 import { institutionOf } from "@ledgerly/domain/platform/plugins";
 import { runBankPass } from "@ledgerly/plugin-host";
 import { bankSink } from "./(app)/banks/sink";
@@ -26,3 +26,6 @@ registerPass({
     };
   },
 });
+
+// A plugin still read by an engine of the core reads only for a person who has it on (H25, H30).
+wirePluginActive(isPluginActive);

@@ -31,7 +31,11 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import type { UiLocale } from "@ledgerly/format/format";
 import { labelOf } from "@/platform/integrations/registry";
-import { coreCreatesRecords, isPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
+import {
+  coreCreatesRecords,
+  isBankPluginProvider,
+  pluginProvider,
+} from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import type { Cents } from "@ledgerly/domain/shared/money";
 import { hasCapability } from "@ledgerly/plugin-contract";
@@ -54,11 +58,11 @@ async function modesOf<T extends SourcedAccount>(
   accounts: readonly T[],
 ): Promise<Map<T, AccountMode | null>> {
   const fromPlugin = accounts.some(
-    (account) => account.provider !== null && isPluginProvider(account.provider),
+    (account) => account.provider !== null && isBankPluginProvider(account.provider),
   );
   const plugins = fromPlugin ? await listInstancePlugins() : [];
   const creates = (provider: string): boolean => {
-    if (!isPluginProvider(provider)) return coreCreatesRecords(provider);
+    if (!isBankPluginProvider(provider)) return coreCreatesRecords(provider);
     const plugin = plugins.find((one) => provider === pluginProvider(one.manifest.id));
     return plugin !== undefined && hasCapability(plugin.manifest, "createRecord");
   };

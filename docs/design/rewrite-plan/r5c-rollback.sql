@@ -1,3 +1,33 @@
+-- Release R5c, step P3a "Wallet e Trek come plugin": the way back for the database, before the one of
+-- step P2 below (docs/design/rewrite-plan/03-releases.md "R5c"). Run this block first, alone, to go
+-- back to the image of P2; run the block of P2 after it only if P2 is not coming back either.
+--
+-- The step renames the providers `wallet` and `trek` to `plugin:wallet` and `plugin:trek` (the
+-- image before it knows only the old names), turns the plugins on for the people who have a
+-- connection, writes `external` for the days of Trek and turns the interest rules that published to
+-- `analyze_only`. Reversed in reverse order. Two things do not come back: which rules published
+-- (none in production at the release: 0 rows with `post_to_provider`), and an activation a person
+-- made after the release (the image before reads none).
+BEGIN;
+UPDATE leave_days SET origin = 'trek' WHERE origin = 'external';
+DELETE FROM plugin_activations WHERE plugin_id IN ('wallet', 'trek');
+UPDATE account_switches SET to_provider = 'wallet' WHERE to_provider = 'plugin:wallet';
+UPDATE account_switches SET from_provider = 'wallet' WHERE from_provider = 'plugin:wallet';
+UPDATE accounts SET provider = 'trek' WHERE provider = 'plugin:trek';
+UPDATE accounts SET provider = 'wallet' WHERE provider = 'plugin:wallet';
+UPDATE source_skipped_accounts SET provider = 'trek' WHERE provider = 'plugin:trek';
+UPDATE source_skipped_accounts SET provider = 'wallet' WHERE provider = 'plugin:wallet';
+UPDATE source_settings SET provider = 'trek' WHERE provider = 'plugin:trek';
+UPDATE source_settings SET provider = 'wallet' WHERE provider = 'plugin:wallet';
+UPDATE source_categories SET provider = 'trek' WHERE provider = 'plugin:trek';
+UPDATE source_categories SET provider = 'wallet' WHERE provider = 'plugin:wallet';
+UPDATE provider_links SET provider = 'trek' WHERE provider = 'plugin:trek';
+UPDATE provider_links SET provider = 'wallet' WHERE provider = 'plugin:wallet';
+UPDATE integration_connections SET provider = 'trek' WHERE provider = 'plugin:trek';
+UPDATE integration_connections SET provider = 'wallet' WHERE provider = 'plugin:wallet';
+DELETE FROM drizzle.__drizzle_migrations WHERE created_at = 1795590000000;
+COMMIT;
+
 -- Release R5c, step P2 "Trek come plugin": the way back for the database (docs/design/rewrite-plan/03-releases.md "R5c").
 --
 -- The step adds three nullable columns to `leave_days` (`external_kind`, `external_fraction`,

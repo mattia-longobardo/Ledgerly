@@ -25,6 +25,7 @@ import { addDays } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { sourceSettings, sourceSkippedAccounts } from "@domain/platform/integrations/schema";
+import { pluginActivations } from "@domain/platform/plugins/schema";
 import {
   deletedSourceAccounts,
   deleteConnection,
@@ -135,7 +136,7 @@ function walletStub(): SourceCalls {
   });
 }
 
-const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: null, days: false });
+const wallet = (): Source => ({ provider: WALLET_PROVIDER, pluginId: "wallet", days: false });
 const walletAccounts = () => listAccounts(ctx, { includeArchived: true });
 
 /** Wallet read once, with one account left out, one interest rule (none publishes since R5c) and one movement waiting. */
@@ -202,6 +203,9 @@ describe("Turn off Wallet", () => {
       providerAccountId: null,
     });
     expect(await listConnections(ctx)).toEqual([]);
+    // A plugin since R5c: turning the source off turns the plugin off for the person.
+    const activations = await getDb().select().from(pluginActivations);
+    expect(activations.map((row) => [row.pluginId, row.active])).toEqual([["wallet", false]]);
     expect(await sourceCategoryCount(ctx, WALLET_PROVIDER)).toBe(0);
     expect(await pendingSends(ctx, [general.id], 10)).toEqual([]);
     expect(await deactivationCounts(ctx, wallet())).toEqual({
@@ -303,13 +307,15 @@ describe("Turn off Wallet", () => {
 });
 
 describe("the sources a page may turn off", () => {
-  it("are the providers of the core with a page and the plugins the person has on", async () => {
-    expect(await sourceOf(ctx, WALLET_PROVIDER)).toEqual(wallet());
-    expect(await sourceOf(ctx, TREK_PROVIDER)).toEqual({
+  it("are the plugins read by the core with a page, on or not, and the plugins the person has on", async () => {
+    // By the page's slug; Wallet and Trek are plugins since R5c, still read by the core.
+    expect(await sourceOf(ctx, "wallet")).toEqual(wallet());
+    expect(await sourceOf(ctx, "trek")).toEqual({
       provider: TREK_PROVIDER,
-      pluginId: null,
+      pluginId: "trek",
       days: true,
     });
+    expect(await sourceOf(ctx, WALLET_PROVIDER)).toBeNull();
     expect(await sourceOf(ctx, "etoro")).toBeNull();
     expect(await sourceOf(ctx, "enablebanking")).toBeNull();
     expect(await sourceOf(ctx, "../x")).toBeNull();
@@ -332,7 +338,7 @@ describe("Turn off Trek", () => {
     const before = await numbers();
     const allowance = await allowanceOf(ctx, 2026);
 
-    const trek: Source = { provider: TREK_PROVIDER, pluginId: null, days: true };
+    const trek: Source = { provider: TREK_PROVIDER, pluginId: "trek", days: true };
     expect((await deactivationCounts(ctx, trek)).pendingDays).toBe(pending);
     await deactivateSource(ctx, trek, deps, later(1));
 

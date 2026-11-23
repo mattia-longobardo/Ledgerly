@@ -87,7 +87,7 @@ async function makeDue() {
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
-  const wallet = await saveConnection(ctx, { provider: "wallet", credentials: { token: "t" } });
+  const wallet = await saveConnection(ctx, { provider: "plugin:wallet", credentials: { token: "t" } });
   walletId = wallet.id;
   // Wallet stays out of the dispatch, which would call the provider: its runs are written by hand.
   await getDb()

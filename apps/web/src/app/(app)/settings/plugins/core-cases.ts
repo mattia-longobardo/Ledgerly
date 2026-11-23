@@ -16,14 +16,17 @@ import {
   deleteConnection,
   IntegrationError,
   isKnownProvider,
+  isPluginProvider,
   KINDS_OF,
   listConnections,
+  pluginProvider,
   type SyncKind,
 } from "@ledgerly/domain/platform/integrations";
 import { calendarCard } from "@ledgerly/domain/platform/integrations/calendar";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
 import { sourceCard } from "@ledgerly/domain/platform/integrations/source";
 import { closePendingDeletes } from "@ledgerly/domain/timeoff";
+import { PluginActionError, setPluginActive } from "@ledgerly/plugin-host";
 import { tasks } from "@/platform/jobs/queue";
 
 const CARDS: readonly CoreCard[] = [sourceCard, calendarCard];
@@ -43,6 +46,21 @@ async function connectionOf(ctx: Ctx, provider: string): Promise<Connection | nu
 }
 
 /**
+ * A plugin's source is turned on for the person who connects it (H25; H30 for those already connected
+ * at R5c): its readings ask for that. False when the instance has no such plugin.
+ */
+async function turnOn(ctx: Ctx, provider: string): Promise<boolean> {
+  if (!isPluginProvider(provider)) return true;
+  try {
+    await setPluginActive(ctx, { pluginId: provider.slice(pluginProvider("").length), active: true });
+    return true;
+  } catch (error) {
+    if (error instanceof PluginActionError) return false;
+    throw error;
+  }
+}
+
+/**
  * Stores the credential, the first one or a replacement, without asking the provider: a provider that is
  * down must not stop a correct credential being kept, and «Test connection» is the button that asks.
  * The accounts kept by hand come back to the source before it can be read, so no reading makes them twice.
@@ -57,6 +75,7 @@ export async function connectCore(
   if (!card) return { ...NOT_CONNECTED, input: false };
   const checked = card.credentials(input);
   if (!checked.ok) return { ...checked, input: true };
+  if (!(await turnOn(ctx, provider))) return { ok: false, error: "unreachable", input: false };
   const back = await restoreSourceAccounts(ctx, provider);
   try {
     const saved = await card.save(ctx, checked.credentials);

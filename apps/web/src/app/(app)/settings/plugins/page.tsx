@@ -38,9 +38,14 @@ import { SourceWrites } from "./source-writes";
 import { TrekCard } from "./trek-card";
 import { WalletAccounts, WalletCard } from "./wallet-card";
 
-/** The providers of the core with a page of their own (plugin-settings.md §2.1). */
-const WALLET_PROVIDER = "wallet";
-const TREK_PROVIDER = "trek";
+/**
+ * The sources read by an engine of the core, with a page of their own (plugin-settings.md §2.1):
+ * plugins since R5c (`plugin:<id>`), with the page and the card they had until P3b.
+ */
+const WALLET_SOURCE = "wallet";
+const TREK_SOURCE = "trek";
+const WALLET_PROVIDER = `plugin:${WALLET_SOURCE}`;
+const TREK_PROVIDER = `plugin:${TREK_SOURCE}`;
 
 /** Both routes: the list (`/settings/plugins`) and a source's page (`…/[source]`). */
 interface IntegrationsProps {
@@ -60,9 +65,9 @@ export async function generateMetadata({ params }: IntegrationsProps): Promise<M
   const providers = await getTranslations("settings.integrations.providers");
   const name =
     plugin?.name ??
-    (source === WALLET_PROVIDER
+    (source === WALLET_SOURCE
       ? providers("wallet.name")
-      : source === TREK_PROVIDER
+      : source === TREK_SOURCE
         ? providers("trek.name")
         : source);
   return { title: `${name} · ${base}` };
@@ -70,7 +75,7 @@ export async function generateMetadata({ params }: IntegrationsProps): Promise<M
 
 const INTEGRATIONS = "/settings/plugins";
 /** The sources of the core with a page of their own (plugin-settings.md §2.1). */
-const CORE_SOURCES = [WALLET_PROVIDER, TREK_PROVIDER] as const;
+const CORE_SOURCES: readonly string[] = [WALLET_SOURCE, TREK_SOURCE];
 
 /**
  * Settings › Integrations (ux/n2-connection-status.md, plugin-settings.md §2): the list has one
@@ -101,7 +106,8 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
     pluginsOf(),
     apiRead(connectionRoutes.listConnections, { query: { runs: RUNS_PER_CONNECTION } }),
   ]);
-  const userPlugins = pluginsRead?.plugins ?? [];
+  // The plugins read by an engine of the core keep their own row and page (until P3b).
+  const userPlugins = (pluginsRead?.plugins ?? []).filter((one) => !CORE_SOURCES.includes(one.id));
   const connections = connectionsRead?.connections ?? [];
 
   // A source's page: a source of the core, or a plugin the person has on. A plugin that is not on
@@ -110,7 +116,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   if (source !== undefined) {
     if (sourcePlugin !== undefined && sourcePlugin.state !== "active")
       redirect(`${INTEGRATIONS}#source-${source}`);
-    if (sourcePlugin === undefined && !(CORE_SOURCES as readonly string[]).includes(source)) notFound();
+    if (sourcePlugin === undefined && !CORE_SOURCES.includes(source)) notFound();
   }
 
   const rows = await connectionRows(ctx, now);
@@ -130,8 +136,8 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
 
   if (source !== undefined) {
     // ---- The page of one source (plugin-settings.md §2.2): its sections, in a fixed order. ----
-    const name = sourcePlugin?.name ?? (source === WALLET_PROVIDER ? wallet.row.name : trek.row.name);
-    const provider = sourcePlugin ? `plugin:${sourcePlugin.id}` : source;
+    const name = sourcePlugin?.name ?? (source === WALLET_SOURCE ? wallet.row.name : trek.row.name);
+    const provider = `plugin:${source}`;
     const deactivateHref = `${hrefOf(source)}#deactivate`;
     // What waits to be written to the source, what «Disconnect» leaves, the accounts deleted here.
     const page = await apiRead(sources.getSource, { params: { slug: source } });
@@ -144,7 +150,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
     let writes: ReactNode = null;
     let status: RowStatusValue = "absent";
 
-    if (source === WALLET_PROVIDER) {
+    if (source === WALLET_SOURCE) {
       // What "Disconnect" of Wallet leaves: its accounts here and the ones left out (H55, point 4).
       const walletLeave = wallet.connection ? leaveOf(wallet.connection.id) : { accounts: 0, excluded: 0 };
       connection = (
@@ -178,7 +184,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
         const ids = owners.flatMap((account) => (account?.provider === WALLET_PROVIDER ? [account.id] : []));
         writes = <SourceWrites accountIds={ids} waiting={page?.unsent ?? { count: 0, accountIds: [] }} />;
       }
-    } else if (source === TREK_PROVIDER) {
+    } else if (source === TREK_SOURCE) {
       const pending = trek.connection ? (page?.pendingDays ?? 0) : 0;
       connection = (
         <TrekCard
@@ -419,8 +425,8 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       <SettingsSection title={t("title")} description={t("description")} padded={false}>
         <ul className="flex flex-col">
           {[
-            { slug: WALLET_PROVIDER, row: wallet.row },
-            { slug: TREK_PROVIDER, row: trek.row },
+            { slug: WALLET_SOURCE, row: wallet.row },
+            { slug: TREK_SOURCE, row: trek.row },
           ].map(({ slug, row }) => (
             <li key={slug} className="border-t border-border first:border-t-0">
               <SourceLinkRow

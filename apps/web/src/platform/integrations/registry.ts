@@ -68,6 +68,34 @@ export function unnamedBankAccount(locale: UiLocale): string {
   return CATALOGUES[locale].banks.connect.accounts.unnamed;
 }
 
+type Pass = ProviderPass["run"];
+type PluginActive = (ctx: Ctx, pluginId: string) => Promise<boolean>;
+
+// On `globalThis`, as the other ports: one process may load this file in more than one bundle.
+declare global {
+  var ledgerlyPluginActive: PluginActive | undefined;
+}
+
+/**
+ * Whether a person has a plugin on: joined by the application (`plugin-wiring.ts`, rule M8), since
+ * the plugins' unit imports this one's. Not wired, every plugin reads as on.
+ */
+export function wirePluginActive(check: PluginActive): void {
+  globalThis.ledgerlyPluginActive = check;
+}
+
+/**
+ * The pass of a plugin read by an engine of the core (until R5c P3b): only for a person who has the
+ * plugin on, like a bank's (H25, H30). Off, there is nothing to read and nothing is wrong.
+ */
+const whenActive =
+  (run: Pass): Pass =>
+  async (person, ctx, due, now) => {
+    const active = globalThis.ledgerlyPluginActive;
+    const turnedOn = active === undefined || (await active(ctx, due.provider.slice("plugin:".length)));
+    return turnedOn ? run(person, ctx, due, now) : "absent";
+  };
+
 /** A provider with one connection: the connection has the provider's name. */
 const named = (name: string): ConnectionLabel => ({ name, provider: name });
 
@@ -80,15 +108,15 @@ export const PASSES: readonly ProviderPass[] = [
     get history() {
       return WALLET_HISTORY;
     },
-    async run(person, ctx, due, now) {
+    run: whenActive(async (person, ctx, due, now) => {
       const connection = (await listConnections(ctx)).find((one) => one.id === due.id);
       return connection ? await runWalletPass(person, ctx, connection as Connection, now) : "absent";
-    },
+    }),
   },
   {
     provider: TREK_PROVIDER,
     kinds: KINDS_OF[TREK_PROVIDER],
-    run: (_person, ctx) => runTrekPass(ctx),
+    run: whenActive((_person, ctx) => runTrekPass(ctx)),
     label: (_connection, locale) => named(CATALOGUES[locale].settings.integrations.providers.trek.name),
   },
   // Investments (docs/design/investments.md §3.1): the module's own pass, lock and outcomes.

@@ -37,10 +37,13 @@ export type SyncKind = (typeof SYNC_KINDS)[number];
 export type SyncState = (typeof SYNC_STATES)[number];
 export type EntityType = (typeof ENTITY_TYPES)[number];
 
-/** The provider F2 speaks to: accounts and movements. */
-export const WALLET_PROVIDER = "wallet";
-/** The provider F7 speaks to (spec §9.2): the leave calendar, over MCP. */
-export const TREK_PROVIDER = "trek";
+/**
+ * The provider F2 speaks to: accounts and movements. A plugin's connection since R5c (the plugin
+ * `wallet`, `pluginProvider`), still read by the core's own engine until P3b.
+ */
+export const WALLET_PROVIDER = "plugin:wallet";
+/** The provider F7 speaks to (spec §9.2): the leave calendar. A plugin's connection since R5c, as Wallet. */
+export const TREK_PROVIDER = "plugin:trek";
 
 /** eToro, the first online broker of Investments (docs/design/investments.md §3.3). */
 export const ETORO_PROVIDER = "etoro";
@@ -85,16 +88,18 @@ export const KINDS_OF = {
  */
 export function syncsTransactions(provider: string | null): boolean {
   if (provider === null) return false;
+  if (isKnownProvider(provider)) return (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions");
   // A plugin's accounts take their movements from the plugin: the kinds of a plugin's pass.
-  if (isPluginProvider(provider)) return (PLUGIN_KINDS as readonly SyncKind[]).includes("transactions");
-  return isKnownProvider(provider) && (KINDS_OF[provider] as readonly SyncKind[]).includes("transactions");
+  return isPluginProvider(provider) && (PLUGIN_KINDS as readonly SyncKind[]).includes("transactions");
 }
 
 /**
  * The providers of the core that take a movement written here and create it on their side: what
  * makes their accounts "read and write" (rewrite plan, 12-account-modes.md §12.1). A plugin says
  * the same with the capability `createRecord` of its manifest. The rule that reads this
- * (`accountMode`) never sees a provider's name.
+ * (`accountMode`) never sees a provider's name. Wallet's plugin declares it too, but its accounts
+ * keep this rule while the core's engine reads them (until P3b): a manifest not read yet must not
+ * turn them "read only".
  */
 const CREATES_RECORDS: readonly Provider[] = [WALLET_PROVIDER];
 
@@ -130,6 +135,14 @@ export function pluginProvider(pluginId: string): string {
 
 export function isPluginProvider(provider: string): boolean {
   return PLUGIN_PROVIDER.test(provider);
+}
+
+/**
+ * Whether a plugin's connection is read by the plugins' own pass (`PLUGIN_KINDS`, a bank's): not a
+ * plugin whose pass is still an engine of the core (`KINDS_OF`) until R5c P3b.
+ */
+export function isBankPluginProvider(provider: string): boolean {
+  return isPluginProvider(provider) && !isKnownProvider(provider);
 }
 
 export const entityTypeSchema = z.enum(ENTITY_TYPES);
