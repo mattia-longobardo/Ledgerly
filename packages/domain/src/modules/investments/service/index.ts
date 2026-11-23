@@ -54,3 +54,7 @@ export {
 } from "./transfers";
 export type { TransferInput } from "./transfers";
 export { listAssets, listInvestmentAccounts } from "./reads";
+export { createPlan, linkRunDebit, listPlans, listRuns, plansOfEvents, updatePlan } from "./plans";
+export type { InvestmentPlan, InvestmentPlanRun, PlanInput, PlanUpdate, PlanView, RunView } from "./plans";
+export { backfillPlan, confirmRun, plansToDo, runDuePlans, skipRun } from "./plan-runs";
+export type { Backfill, PlanFact, RunConfirmation } from "./plan-runs";

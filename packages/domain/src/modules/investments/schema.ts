@@ -13,6 +13,7 @@ import {
   unique,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
@@ -30,6 +31,11 @@ import {
   NEGATIVE_KINDS,
   OPERATION_KINDS,
   ORIGINS,
+  PLAN_FREQUENCIES,
+  PLAN_MODES,
+  PLAN_RECORDERS,
+  PLAN_RUN_STATES,
+  PLAN_STATES,
   PERIOD_REASONS,
   POSITIVE_KINDS,
   PRICE_SOURCES,
@@ -268,9 +274,14 @@ export const investmentOperations = pgTable(
     quantityBasis: text("quantity_basis", { enum: QUANTITY_BASES }).notNull().default("reported"),
     /** What a correction (R3) stands for (docs/design/investments-ux.md §4.9); `null` = `data`. */
     adjustmentClass: text("adjustment_class", { enum: ADJUSTMENT_CLASSES }),
+    /** The instalment of a purchase plan this purchase is (R5d): one purchase a due date. */
+    planRunId: uuid("plan_run_id").references((): AnyPgColumn => investmentPlanRuns.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     unique("investment_operations_leg_uq").on(table.eventId, table.leg),
+    unique("investment_operations_plan_run_uq").on(table.planRunId),
     index("investment_operations_holding_idx").on(table.holdingId),
     index("investment_operations_user_idx").on(table.userId),
     check("investment_operations_leg_ck", sql`${table.leg} in (${sql.raw(inList(LEGS))})`),
@@ -548,5 +559,114 @@ export const investmentSyncCoverage = pgTable(
       "investment_sync_coverage_reason_ck",
       sql`${table.reason} is null or ${table.reason} ~ '^[a-z][a-z0-9_]{0,59}$'`,
     ),
+  ],
+);
+
+// ——— Purchase plans (R5d, step 2; 11-standardization.md §11.3) ———————————————————————————————
+
+/**
+ * A purchase plan of a manual portfolio: one asset bought for an amount (in the asset's currency) or a
+ * quantity at each due date. It writes purchases only (P1 B): its debit account finds the movement.
+ */
+export const investmentPlans = pgTable(
+  "investment_plans",
+  {
+    id: idColumn(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    investmentAccountId: uuid("investment_account_id")
+      .notNull()
+      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => investmentAssets.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    amountCents: bigint("amount_cents", { mode: "bigint" }),
+    quantity: quantity("quantity"),
+    fractions: boolean("fractions").notNull().default(true),
+    frequency: text("frequency", { enum: PLAN_FREQUENCIES }).notNull(),
+    interval: integer("interval").notNull().default(1),
+    day: integer("day").notNull(),
+    startOn: date("start_on").notNull(),
+    endOn: date("end_on"),
+    runsLimit: integer("runs_limit"),
+    debitAccountId: uuid("debit_account_id").references(() => accounts.id, { onDelete: "set null" }),
+    feeCents: bigint("fee_cents", { mode: "bigint" }),
+    feeRate: rate("fee_rate"),
+    mode: text("mode", { enum: PLAN_MODES }).notNull().default("propose"),
+    state: text("state", { enum: PLAN_STATES }).notNull().default("active"),
+    /** The first day the job looks at: the due dates before it are «Record the past instalments» (P4). */
+    createdOn: date("created_on").notNull(),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => [
+    index("investment_plans_account_idx").on(table.investmentAccountId),
+    index("investment_plans_user_idx").on(table.userId),
+    check("investment_plans_name_ck", sql`length(btrim(${table.name})) between 1 and 80`),
+    check(
+      "investment_plans_size_ck",
+      sql`(${table.amountCents} is null) <> (${table.quantity} is null) and (${table.amountCents} is null or ${table.amountCents} > 0) and (${table.quantity} is null or ${table.quantity} > 0)`,
+    ),
+    check("investment_plans_frequency_ck", sql`${table.frequency} in (${sql.raw(inList(PLAN_FREQUENCIES))})`),
+    check("investment_plans_interval_ck", sql`${table.interval} between 1 and 12`),
+    check(
+      "investment_plans_day_ck",
+      sql`${table.day} between 1 and (case when ${table.frequency} = 'week' then 7 else 31 end)`,
+    ),
+    check("investment_plans_end_ck", sql`${table.endOn} is null or ${table.runsLimit} is null`),
+    check(
+      "investment_plans_runs_ck",
+      sql`${table.runsLimit} is null or ${table.runsLimit} between 1 and 600`,
+    ),
+    check(
+      "investment_plans_fee_ck",
+      sql`(${table.feeCents} is null or ${table.feeCents} >= 0) and (${table.feeRate} is null or ${table.feeRate} >= 0) and (${table.feeCents} is null or ${table.feeRate} is null)`,
+    ),
+    check("investment_plans_mode_ck", sql`${table.mode} in (${sql.raw(inList(PLAN_MODES))})`),
+    check("investment_plans_state_ck", sql`${table.state} in (${sql.raw(inList(PLAN_STATES))})`),
+  ],
+);
+
+/** A due date of a plan, and what came of it: one row a date (the job may run twice). */
+export const investmentPlanRuns = pgTable(
+  "investment_plan_runs",
+  {
+    id: idColumn(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => investmentPlans.id, { onDelete: "cascade" }),
+    dueOn: date("due_on").notNull(),
+    state: text("state", { enum: PLAN_RUN_STATES }).notNull().default("pending"),
+    /** The close it is priced at, its currency and its day: the first on or after the due date. */
+    price: price("price"),
+    priceCurrency: text("price_currency"),
+    priceOn: date("price_on"),
+    waitingSince: date("waiting_since"),
+    /** Why the job did not write an `auto` instalment (P2): a refusal of the purchase. */
+    reason: text("reason"),
+    recordedBy: text("recorded_by", { enum: PLAN_RECORDERS }),
+    /** The movement of the debit account the matcher proposed (E7), and whether the person linked it. */
+    debitTransactionId: uuid("debit_transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    debitLinked: boolean("debit_linked").notNull().default(false),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => [
+    unique("investment_plan_runs_due_uq").on(table.planId, table.dueOn),
+    index("investment_plan_runs_user_idx").on(table.userId),
+    check("investment_plan_runs_state_ck", sql`${table.state} in (${sql.raw(inList(PLAN_RUN_STATES))})`),
+    check("investment_plan_runs_price_ck", sql`${table.price} is null or ${table.price} > 0`),
+    check(
+      "investment_plan_runs_recorded_ck",
+      sql`${table.recordedBy} is null or ${table.recordedBy} in (${sql.raw(inList(PLAN_RECORDERS))})`,
+    ),
+    check("investment_plan_runs_reason_ck", sql`${table.reason} is null or length(${table.reason}) <= 40`),
   ],
 );
