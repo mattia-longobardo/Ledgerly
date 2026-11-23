@@ -9,6 +9,7 @@ import { numberSeparators } from "@ledgerly/format/format";
 import { Field } from "@ledgerly/ui/field";
 import { FormDialog } from "@ledgerly/ui/form-dialog";
 import { DateField, MoneyField, NumberField } from "@ledgerly/ui/form-fields";
+import { PriceOrAmount } from "./price-fields";
 import { Input, Select } from "@ledgerly/ui/input";
 import { useRouter } from "@ledgerly/ui/router";
 import { Segmented } from "@ledgerly/ui/segmented";
@@ -62,24 +63,6 @@ function useHoldingForm(kind: HoldingKind, holding: HoldingSummary, context: Ser
 
 type HoldingFields = ReturnType<typeof useHoldingForm>["fields"];
 
-/** A sale or a valuation by price or by amount: only for a position kept by quantity. */
-function HowChoice({ fields }: { fields: HoldingFields }) {
-  const text = useTranslations("investments");
-  return (
-    <div className="col-span-full">
-      <Segmented
-        label={text("holdingForm.how")}
-        value={fields.how}
-        onChange={fields.setHow}
-        options={[
-          { value: "price", label: text("holdingForm.byPrice") },
-          { value: "amount", label: text("holdingForm.byAmount") },
-        ]}
-      />
-    </div>
-  );
-}
-
 /** By price (a quantity and a unit price) or by amount, and the fee of a sale. */
 function HoldingAmounts({
   id,
@@ -95,36 +78,16 @@ function HoldingAmounts({
   const text = useTranslations("investments");
   return (
     <>
-      {!holding.byValue && <HowChoice fields={fields} />}
-      {fields.how === "price" ? (
-        <>
-          {kind !== "valuation" && (
-            <NumberField
-              id={`${id}-quantity`}
-              label={text("holdingForm.quantity")}
-              value={fields.quantity}
-              onChange={fields.setQuantity}
-            />
-          )}
-          <MoneyField
-            id={`${id}-price`}
-            label={text("holdingForm.unitPrice")}
-            value={fields.unitPrice}
-            onChange={fields.setUnitPrice}
-            currency={holding.currency}
-            autoFocus
-          />
-        </>
-      ) : (
-        <MoneyField
-          id={`${id}-amount`}
-          label={kind === "valuation" ? text("holdingForm.value") : text("holdingForm.proceeds")}
-          value={fields.amount}
-          onChange={fields.setAmount}
-          currency={holding.currency}
-          autoFocus
-        />
-      )}
+      {/* A sale or a valuation by price or by amount: only for a position kept by quantity. */}
+      <PriceOrAmount
+        id={id}
+        currency={holding.currency}
+        fields={fields}
+        choice={!holding.byValue}
+        quantity={kind !== "valuation"}
+        amountLabel={kind === "valuation" ? text("holdingForm.value") : text("holdingForm.proceeds")}
+        autoFocus
+      />
       {kind !== "valuation" && (
         <MoneyField
           id={`${id}-fee`}

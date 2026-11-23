@@ -2,7 +2,8 @@
 
 // The positions open on the period's last day (§3.4, PERS-113 · 4): by value, or under their asset
 // class; with the cash, the total, and the commands of a manual position on the period still running.
-// A table from `md`, a card each below it (DataTable). Every figure is a field of the API.
+// A table from `md`, a card each below it (DataTable). Every figure is a field of the API. A manual
+// portfolio's position names where its price comes from (R5d), and its cash shows even at zero.
 import { useTranslations } from "next-intl";
 import { priceText, quantityText } from "@ledgerly/domain/investments/client";
 import { formatDate, NULL_DISPLAY } from "@ledgerly/format/format";
@@ -14,6 +15,7 @@ import { Link } from "@ledgerly/ui/router";
 import { Td, TotalRow, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
 import { HoldingMenu, type HoldingSummary, ReconcileButton } from "../holdings";
+import { PriceMode } from "../portfolio/price-mode";
 import { useProductLabel } from "../labels";
 import { centsOf } from "../present";
 import { PositionName } from "./position-name";
@@ -56,15 +58,29 @@ function useCells(view: PositionsPage) {
         )}
       </span>
     ),
-    name: (row: OpenRow) => (
-      <PositionName
-        view={view}
-        assetId={row.assetId}
-        product={row.product}
-        manual={row.origin === "manual"}
-        badge={row.at.costSource === "inferred" ? <Badge tone="neutral">{text("inferredCost")}</Badge> : null}
-      />
-    ),
+    name: (row: OpenRow) => {
+      const asset = view.assetOf(row.assetId);
+      const inferred = row.at.costSource === "inferred";
+      const priced = page.context.portfolio ? asset : undefined;
+      return (
+        <PositionName
+          view={view}
+          assetId={row.assetId}
+          product={row.product}
+          manual={row.origin === "manual"}
+          badge={
+            inferred || priced ? (
+              <>
+                {inferred && <Badge tone="neutral">{text("inferredCost")}</Badge>}
+                {priced && (
+                  <PriceMode view={view} holdingId={row.holdingId} name={priced.name} price={priced.price} />
+                )}
+              </>
+            ) : null
+          }
+        />
+      );
+    },
   };
 }
 
@@ -178,7 +194,8 @@ function useGroups(view: PositionsPage, grouping: "asset" | "class") {
 function useTotals(view: PositionsPage, text: Text) {
   const { open, currency } = view.positions;
   const { money, percent } = view.page;
-  const cash = open.cash !== null && centsOf(open.cash) !== 0n ? open.cash : null;
+  const cash =
+    open.cash !== null && (view.page.context.portfolio || centsOf(open.cash) !== 0n) ? open.cash : null;
   const cashName = (
     <span className="flex flex-col">
       <span className="font-medium">{text("cash")}</span>

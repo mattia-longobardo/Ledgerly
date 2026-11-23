@@ -89,6 +89,13 @@ export async function createValueAccount(input: {
   });
 }
 
+/** A manual portfolio (R5d): on an account of Accounts, or on a new one from its name and currency. */
+export function createPortfolio(
+  input: { accountId: string; url: string } | { name: string; currency: string; url: string },
+): Promise<{ ok: true; accountId: string } | Failure> {
+  return attempt(() => call(register.createManualService, { body: { kind: "portfolio", ...input } }));
+}
+
 export function updateServiceUrl(accountId: string, url: string): Promise<ActionResult> {
   return attempt(() => done(call(register.updateServiceUrl, { params: { accountId }, body: { url } })));
 }
@@ -164,6 +171,103 @@ export function recordOperation(accountId: string, input: OperationForm): Promis
   return attempt(async () =>
     done(call(register.recordOperation, { params: { accountId }, body: await operationBody(input) })),
   );
+}
+
+/** What «Record operation» of a manual portfolio writes besides a sale and an income (R5d). */
+export type PortfolioOperationForm =
+  | {
+      kind: "buy";
+      instrumentId: string;
+      mic: string | null;
+      on: string;
+      quantity: string;
+      /** By price: a quantity at a unit price; by amount: the total only, in the instrument's currency. */
+      how: "price" | "amount";
+      unitPrice: string;
+      amount: string;
+      fee: string;
+      fxRate: string;
+      note: string;
+    }
+  | { kind: "deposit" | "withdrawal"; on: string; amount: string; note: string };
+
+async function portfolioBody(input: PortfolioOperationForm) {
+  const format = await formatOf();
+  const note = input.note.trim() === "" ? null : input.note;
+  if (input.kind !== "buy") {
+    const amount = amountOf(input.amount, format);
+    if (amount === null) throw new RangeError("amount");
+    return { kind: input.kind, on: input.on, amount, note };
+  }
+  const byPrice = input.how === "price";
+  return {
+    kind: "buy" as const,
+    instrumentId: input.instrumentId,
+    mic: input.mic,
+    on: input.on,
+    // By amount the position is kept by value: no quantity, as a sale by amount.
+    quantity: byPrice ? decimalOf(input.quantity, format) : null,
+    unitPrice: byPrice ? decimalOf(input.unitPrice, format) : null,
+    amount: byPrice ? null : amountOf(input.amount, format),
+    fee: amountOf(input.fee, format),
+    fxRate: decimalOf(input.fxRate, format),
+    note,
+  };
+}
+
+export function recordPortfolioOperation(
+  accountId: string,
+  input: PortfolioOperationForm,
+): Promise<ActionResult> {
+  return attempt(async () =>
+    done(call(register.recordOperation, { params: { accountId }, body: await portfolioBody(input) })),
+  );
+}
+
+/** Where a holding's price comes from: the market's daily close, or the person (R5d). */
+export function setPriceMode(
+  accountId: string,
+  holdingId: string,
+  mode: "auto" | "manual",
+): Promise<ActionResult> {
+  return attempt(() =>
+    done(call(register.setPriceMode, { params: { accountId, holdingId }, body: { mode } })),
+  );
+}
+
+/** A position of «Switch to positions», as typed. */
+export interface ConversionPosition {
+  instrumentId: string;
+  mic: string | null;
+  quantity: string;
+  unitPrice: string;
+  fxRate: string;
+}
+
+/** «Switch to positions» (D4): the service kept by value becomes a manual portfolio from `on`. */
+export function convertToPortfolio(
+  accountId: string,
+  input: { on: string; positions: readonly ConversionPosition[]; note: string },
+): Promise<ActionResult> {
+  return attempt(async () => {
+    const format = await formatOf();
+    const required = (typed: string) => {
+      const value = decimalOf(typed, format);
+      if (value === null) throw new RangeError("Empty field");
+      return value;
+    };
+    const positions = input.positions.map((one) => ({
+      instrumentId: one.instrumentId,
+      mic: one.mic,
+      quantity: required(one.quantity),
+      unitPrice: required(one.unitPrice),
+      fxRate: decimalOf(one.fxRate, format),
+    }));
+    const note = input.note.trim() === "" ? null : input.note;
+    return done(
+      call(register.convertToPortfolio, { params: { accountId }, body: { on: input.on, positions, note } }),
+    );
+  });
 }
 
 export function deleteOperation(accountId: string, eventId: string): Promise<ActionResult> {

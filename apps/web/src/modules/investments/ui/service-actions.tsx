@@ -2,9 +2,19 @@
 
 // The commands of a service's header (docs/design/investments-ux.md §3.2, PERS-342). A synced one:
 // «Sync», and the key in `⋯` — nothing that moves its value. A manual one on an account typed by hand:
-// «Update value», the only command. A manual one on an account a source of Accounts reads: none, the value is that source's.
+// «Update value», and «Switch to positions» in `⋯` (R5d). A manual portfolio: «Record operation» (R5d).
+// A manual one on an account a source of Accounts reads: none, the value is that source's.
 import { useTranslations } from "next-intl";
-import { type FormEvent, type RefObject, useId, useRef, useState, useTransition } from "react";
+import {
+  type FormEvent,
+  lazy,
+  type RefObject,
+  Suspense,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { parseAmount } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
 import { FormDialog } from "@ledgerly/ui/form-dialog";
@@ -17,7 +27,15 @@ import type { ConnectableProvider } from "./connect";
 import { FORM_GRID, type ServiceContext, useInvestmentResult } from "./dialog-kit";
 import { DisconnectDialog, ReplaceKeyDialog, SyncNowButton } from "./sync";
 
-type HeaderDialog = "value" | "replace" | "disconnect";
+type HeaderDialog = "value" | "replace" | "disconnect" | "operation" | "convert";
+
+// The portfolio's dialogs and the registry's search load when one opens.
+const RecordOperationDialog = lazy(() =>
+  import("./portfolio/record-operation").then((one) => ({ default: one.RecordOperationDialog })),
+);
+const ConvertDialog = lazy(() =>
+  import("./portfolio/convert").then((one) => ({ default: one.ConvertDialog })),
+);
 
 /** Whether the typed amount can be read: «Save» waits for one. */
 function readable(typed: string, context: ServiceContext): boolean {
@@ -90,6 +108,55 @@ function UpdateValueDialog({
   );
 }
 
+/** The dialog of the header open now, mounted only while open. */
+function HeaderDialogs({
+  open,
+  close,
+  context,
+  provider,
+  opener,
+}: {
+  open: HeaderDialog | null;
+  close: () => void;
+  context: ServiceContext;
+  provider: ConnectableProvider | null;
+  opener: RefObject<HTMLButtonElement | null>;
+}) {
+  if (open === "value") return <UpdateValueDialog onClose={close} context={context} opener={opener} />;
+  if (open === "operation" || open === "convert")
+    return (
+      <Suspense fallback={null}>
+        {open === "operation" ? (
+          <RecordOperationDialog onClose={close} context={context} opener={opener} />
+        ) : (
+          <ConvertDialog onClose={close} context={context} opener={opener} />
+        )}
+      </Suspense>
+    );
+  if (open === "replace" && provider)
+    return <ReplaceKeyDialog onClose={close} accountId={context.accountId} provider={provider} />;
+  if (open === "disconnect")
+    return <DisconnectDialog onClose={close} accountId={context.accountId} name={context.name} />;
+  return null;
+}
+
+/** The commands of `⋯`: «Switch to positions» of a service kept by value, and the key's. */
+function useMore(
+  context: ServiceContext,
+  connected: boolean,
+  keyed: boolean,
+  setOpen: (open: HeaderDialog) => void,
+) {
+  const text = useTranslations("investments");
+  return [
+    ...(context.valueEditable ? [{ label: text("header.convert"), onSelect: () => setOpen("convert") }] : []),
+    ...(connected && keyed ? [{ label: text("sync.replace"), onSelect: () => setOpen("replace") }] : []),
+    ...(connected
+      ? [{ label: text("sync.disconnect"), onSelect: () => setOpen("disconnect"), danger: true }]
+      : []),
+  ];
+}
+
 export function ServiceActions({
   context,
   provider,
@@ -103,16 +170,14 @@ export function ServiceActions({
   const [open, setOpen] = useState<HeaderDialog | null>(null);
   const valueButton = useRef<HTMLButtonElement>(null);
   const close = () => setOpen(null);
-  const more = [
-    ...(connected && provider
-      ? [{ label: text("sync.replace"), onSelect: () => setOpen("replace" as const) }]
-      : []),
-    ...(connected
-      ? [{ label: text("sync.disconnect"), onSelect: () => setOpen("disconnect" as const), danger: true }]
-      : []),
-  ];
+  const more = useMore(context, connected, provider !== null, setOpen);
   return (
     <span className="flex flex-wrap items-center gap-2">
+      {context.portfolio && (
+        <Button ref={valueButton} variant="primary" onClick={() => setOpen("operation")}>
+          {text("header.recordOperation")}
+        </Button>
+      )}
       {context.synced
         ? connected && <SyncNowButton accountId={context.accountId} />
         : context.valueEditable && (
@@ -121,13 +186,7 @@ export function ServiceActions({
             </Button>
           )}
       {more.length > 0 && <ActionMenu label={text("actions.more")} items={more} />}
-      {open === "value" && <UpdateValueDialog onClose={close} context={context} opener={valueButton} />}
-      {open === "replace" && provider && (
-        <ReplaceKeyDialog onClose={close} accountId={context.accountId} provider={provider} />
-      )}
-      {open === "disconnect" && (
-        <DisconnectDialog onClose={close} accountId={context.accountId} name={context.name} />
-      )}
+      <HeaderDialogs open={open} close={close} context={context} provider={provider} opener={valueButton} />
     </span>
   );
 }

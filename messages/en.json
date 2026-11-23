@@ -4542,7 +4542,8 @@
       "revoked": "Revocation noted",
       "transferLinked": "Transfer linked",
       "transferUnlinked": "Transfer unlinked",
-      "valueUpdated": "{name} value updated"
+      "valueUpdated": "{name} value updated",
+      "converted": "{name} now keeps positions and cash"
     },
     "errors": {
       "invalid": "Check the fields and try again.",
@@ -4551,7 +4552,7 @@
       "future_date": "A date cannot be in the future.",
       "not_eligible": "That account cannot become a service.",
       "wrong_mode": "Not possible in this account's mode on that date.",
-      "negative_cash": "The opening cash would be negative: confirm to keep it.",
+      "negative_cash": "Not enough cash on that day: the cash would go below zero.",
       "no_value": "The account has no value today.",
       "duplicate_asset": "An asset with that ISIN or symbol already exists.",
       "duplicate_holding": "The account already has that asset in that product.",
@@ -4807,7 +4808,9 @@
       },
       "today": "today {time}",
       "openSite": "Open {name}",
-      "updateValue": "Update value"
+      "updateValue": "Update value",
+      "recordOperation": "Record operation",
+      "convert": "Switch to positions"
     },
     "tabs": {
       "label": "Sections of the service",
@@ -5085,7 +5088,9 @@
       "valueDescription": "A broker, a deposit account, BTPs: you type the value, in its own currency.",
       "fund": "Pension fund",
       "fundDescription": "The fund, how you pay in and its fees, in four steps.",
-      "back": "Back"
+      "back": "Back",
+      "portfolio": "Manual portfolio",
+      "portfolioDescription": "Securities and cash you record by hand: purchases, sales, deposits. Prices update by themselves where a market has them."
     },
     "portfolio": {
       "chips": "Groups",
@@ -5111,6 +5116,61 @@
         "pension_fund": "Pension fund"
       },
       "notInTotal": "not in the total"
+    },
+    "portfolioForm": {
+      "title": "Manual portfolio",
+      "description": "A new account, or an investment account of Accounts. Its value is its cash plus its positions: record a deposit first, then the purchases."
+    },
+    "portfolioOps": {
+      "title": "Record operation · {name}",
+      "kind": "Type",
+      "kinds": {
+        "buy": "Purchase",
+        "sell": "Sale",
+        "deposit": "Deposit",
+        "withdrawal": "Withdrawal",
+        "income": "Dividend"
+      },
+      "descriptions": {
+        "buy": "An instrument bought on a market: the cost and the fee come out of the cash.",
+        "sell": "Part of a position sold: the proceeds go to the cash.",
+        "deposit": "Money that came into the portfolio's cash.",
+        "withdrawal": "Money that left the portfolio's cash.",
+        "income": "A dividend or a coupon paid into the cash."
+      },
+      "instrument": "Instrument",
+      "instrumentHint": "ISIN, name or ticker.",
+      "searching": "Searching…",
+      "searchFailed": "The search did not answer: try again.",
+      "results": "Instruments found",
+      "noResults": "No instrument found.",
+      "partial": "A register did not answer: only the instruments already known are listed.",
+      "noMarket": "No market: its price is typed by hand.",
+      "market": "Market of the order",
+      "marketOption": "{mic} · {ticker} · {currency}",
+      "marketManual": "{mic} · {ticker} · {currency} · price by hand",
+      "position": "Position",
+      "noPosition": "None",
+      "choosePosition": "Choose a position",
+      "positionOption": "{name} · {quantity}",
+      "total": "Total",
+      "fxRate": "Exchange rate {to} per {from}",
+      "fxRateHint": "Optional: empty, the ECB rate of that day.",
+      "recordDeposit": "Record a deposit",
+      "priceAuto": "Automatic price",
+      "priceManual": "Manual price",
+      "priceOn": "{mode} · {date}",
+      "priceSwitch": "Automatic price · {name}",
+      "priceSaved": "Price mode of {name} saved",
+      "stale": "To update"
+    },
+    "convertForm": {
+      "title": "Switch to positions · {name}",
+      "description": "From this day the account keeps positions and cash. Its value of that day stays: the positions open at their price, and the cash is the rest.",
+      "position": "Position {number}",
+      "remove": "Remove position {number}",
+      "add": "Add position",
+      "submit": "Switch"
     }
   },
   "payroll": {

@@ -4542,7 +4542,8 @@
       "revoked": "Revoca registrata",
       "transferLinked": "Giroconto collegato",
       "transferUnlinked": "Giroconto scollegato",
-      "valueUpdated": "Valore di {name} aggiornato"
+      "valueUpdated": "Valore di {name} aggiornato",
+      "converted": "{name} ora tiene posizioni e liquidità"
     },
     "errors": {
       "invalid": "Controlla i campi e riprova.",
@@ -4551,7 +4552,7 @@
       "future_date": "Una data non può essere nel futuro.",
       "not_eligible": "Quel conto non può diventare un servizio.",
       "wrong_mode": "Non possibile nel modo del conto in quella data.",
-      "negative_cash": "La liquidità iniziale sarebbe negativa: conferma per mantenerla.",
+      "negative_cash": "Liquidità insufficiente in quel giorno: andrebbe sotto zero.",
       "no_value": "Il conto oggi non ha un valore.",
       "duplicate_asset": "Esiste già un asset con quell'ISIN o simbolo.",
       "duplicate_holding": "Il conto ha già quell'asset in quel prodotto.",
@@ -4807,7 +4808,9 @@
       },
       "today": "oggi {time}",
       "openSite": "Apri {name}",
-      "updateValue": "Aggiorna valore"
+      "updateValue": "Aggiorna valore",
+      "recordOperation": "Registra operazione",
+      "convert": "Passa a posizioni"
     },
     "tabs": {
       "label": "Sezioni del servizio",
@@ -5085,7 +5088,9 @@
       "valueDescription": "Un broker, un conto deposito, BTP: scrivi tu il valore, nella sua valuta.",
       "fund": "Fondo pensione",
       "fundDescription": "Il fondo, come versi e le commissioni, in quattro passi.",
-      "back": "Indietro"
+      "back": "Indietro",
+      "portfolio": "Portafoglio manuale",
+      "portfolioDescription": "Titoli e liquidità che registri tu: acquisti, vendite, versamenti. I prezzi si aggiornano da soli dove un mercato li ha."
     },
     "portfolio": {
       "chips": "Gruppi",
@@ -5111,6 +5116,61 @@
         "pension_fund": "Fondo pensione"
       },
       "notInTotal": "fuori dal totale"
+    },
+    "portfolioForm": {
+      "title": "Portafoglio manuale",
+      "description": "Un conto nuovo, o un conto di investimento di Conti. Il suo valore è la liquidità più le posizioni: registra prima un versamento, poi gli acquisti."
+    },
+    "portfolioOps": {
+      "title": "Registra operazione · {name}",
+      "kind": "Tipo",
+      "kinds": {
+        "buy": "Acquisto",
+        "sell": "Vendita",
+        "deposit": "Versamento",
+        "withdrawal": "Prelievo",
+        "income": "Dividendo"
+      },
+      "descriptions": {
+        "buy": "Uno strumento comprato su un mercato: il costo e la commissione escono dalla liquidità.",
+        "sell": "Parte di una posizione venduta: il ricavo va nella liquidità.",
+        "deposit": "Denaro entrato nella liquidità del portafoglio.",
+        "withdrawal": "Denaro uscito dalla liquidità del portafoglio.",
+        "income": "Un dividendo o una cedola pagati nella liquidità."
+      },
+      "instrument": "Strumento",
+      "instrumentHint": "ISIN, nome o ticker.",
+      "searching": "Ricerca…",
+      "searchFailed": "La ricerca non ha risposto: riprova.",
+      "results": "Strumenti trovati",
+      "noResults": "Nessuno strumento trovato.",
+      "partial": "Un registro non ha risposto: sono elencati solo gli strumenti già noti.",
+      "noMarket": "Nessun mercato: il prezzo si scrive a mano.",
+      "market": "Mercato dell'ordine",
+      "marketOption": "{mic} · {ticker} · {currency}",
+      "marketManual": "{mic} · {ticker} · {currency} · prezzo a mano",
+      "position": "Posizione",
+      "noPosition": "Nessuna",
+      "choosePosition": "Scegli una posizione",
+      "positionOption": "{name} · {quantity}",
+      "total": "Totale",
+      "fxRate": "Cambio {to} per {from}",
+      "fxRateHint": "Facoltativo: vuoto, il cambio BCE di quel giorno.",
+      "recordDeposit": "Registra un versamento",
+      "priceAuto": "Prezzo automatico",
+      "priceManual": "Prezzo manuale",
+      "priceOn": "{mode} · {date}",
+      "priceSwitch": "Prezzo automatico · {name}",
+      "priceSaved": "Modo del prezzo di {name} salvato",
+      "stale": "Da aggiornare"
+    },
+    "convertForm": {
+      "title": "Passa a posizioni · {name}",
+      "description": "Da questo giorno il conto tiene posizioni e liquidità. Il suo valore di quel giorno resta: le posizioni si aprono al loro prezzo e la liquidità è il resto.",
+      "position": "Posizione {number}",
+      "remove": "Rimuovi la posizione {number}",
+      "add": "Aggiungi posizione",
+      "submit": "Passa"
     }
   },
   "payroll": {

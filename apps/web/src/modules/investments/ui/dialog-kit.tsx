@@ -7,7 +7,9 @@ import { useTranslations } from "next-intl";
 import { type ReactNode, useState, useTransition } from "react";
 import type { NumberFormat, UiLocale } from "@ledgerly/format/format";
 import { Button } from "@ledgerly/ui/button";
+import { Field } from "@ledgerly/ui/field";
 import { ConfirmDialog } from "@ledgerly/ui/form-dialog";
+import { Input } from "@ledgerly/ui/input";
 import { useMutationResult } from "@ledgerly/ui/mutation-result";
 import { notify } from "@ledgerly/ui/toast";
 
@@ -23,6 +25,8 @@ export interface ServiceContext {
   synced: boolean;
   /** A manual service on an account typed by hand: "Update value" writes its balance (PERS-342). */
   valueEditable: boolean;
+  /** A manual portfolio (R5d): «Record operation», positions with their price mode, and cash. */
+  portfolio: boolean;
 }
 
 /** The refusals the dialogs have words for; any other is «failed». */
@@ -129,6 +133,26 @@ export function ConfirmAction({
         })
       }
     />
+  );
+}
+
+/** The note of an operation, across the form. */
+export function NoteField({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (note: string) => void;
+}) {
+  const text = useTranslations("investments");
+  return (
+    <div className="col-span-full">
+      <Field label={text("form.note")} htmlFor={id}>
+        <Input id={id} maxLength={200} value={value} onChange={(event) => onChange(event.target.value)} />
+      </Field>
+    </div>
   );
 }
 

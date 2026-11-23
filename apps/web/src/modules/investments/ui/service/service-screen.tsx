@@ -55,8 +55,10 @@ function useTabs(page: ServicePage): Tab[] {
   const alerts = service.warnings.alerts;
   return [
     { key: "overview", label: text("tabs.overview") },
-    // A manual service keeps no positions (PERS-335): no tab for them.
-    ...(service.origin === "synced" ? [{ key: "positions" as const, label: text("tabs.positions") }] : []),
+    // A service kept by value has no positions (PERS-335): no tab for them; a manual portfolio has (R5d).
+    ...(service.origin === "synced" || page.context.portfolio
+      ? [{ key: "positions" as const, label: text("tabs.positions") }]
+      : []),
     { key: "activity", label: text("tabs.activity") },
     {
       key: "connection",

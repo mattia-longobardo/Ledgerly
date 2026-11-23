@@ -83,7 +83,7 @@ function PositionsRead({ page }: { page: ServicePage }) {
   );
 }
 
-/** A manual service keeps no positions (PERS-335): its value and P&L are on the Overview. */
+/** A service kept by value has no positions (PERS-335): its value and P&L are on the Overview. */
 function ToOverview({ page }: { page: ServicePage }) {
   const router = useRouter();
   const overview = page.href("overview");
@@ -92,6 +92,6 @@ function ToOverview({ page }: { page: ServicePage }) {
 }
 
 export function PositionsTab({ page }: { page: ServicePage }) {
-  if (page.overview.service.origin === "manual") return <ToOverview page={page} />;
+  if (page.overview.service.origin === "manual" && !page.context.portfolio) return <ToOverview page={page} />;
   return <PositionsRead page={page} />;
 }

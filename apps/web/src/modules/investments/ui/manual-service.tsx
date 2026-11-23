@@ -2,7 +2,8 @@
 
 // «Account with value only» of «Add investment» (rewrite plan R5b, B1c, ST-3): a new account from four
 // fields — name, kind, currency, value today — or an investment or crypto account of Accounts, which
-// becomes a service.
+// becomes a service. «Manual portfolio» (R5d) is the same dialog with neither the kind nor the value:
+// its value is its cash and its positions.
 import { useTranslations } from "next-intl";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { parseCents } from "@ledgerly/format/cents";
@@ -12,7 +13,7 @@ import { FormDialog } from "@ledgerly/ui/form-dialog";
 import { Input, Select } from "@ledgerly/ui/input";
 import { useRouter } from "@ledgerly/ui/router";
 import { notify } from "@ledgerly/ui/toast";
-import { createManualService, createValueAccount } from "../calls";
+import { createManualService, createPortfolio, createValueAccount } from "../calls";
 import { FORM_GRID, useInvestmentResult } from "./dialog-kit";
 
 /** An account of Accounts, as the dialogs of «Add investment» offer it. */
@@ -97,8 +98,8 @@ function AccountField({
   );
 }
 
-/** The new account: its name, its currency and its value today. */
-function NewAccountFields({ id, currency }: { id: string; currency: string }) {
+/** The new account: its name, its currency and, for a service kept by value, its value today. */
+function NewAccountFields({ id, currency, withValue }: { id: string; currency: string; withValue: boolean }) {
   const text = useTranslations("investments");
   return (
     <>
@@ -116,39 +117,43 @@ function NewAccountFields({ id, currency }: { id: string; currency: string }) {
           ))}
         </Select>
       </Field>
-      <Field label={text("manualForm.value")} htmlFor={`${id}-value`}>
-        <Input id={`${id}-value`} name="value" required inputMode="decimal" autoComplete="off" />
-      </Field>
+      {withValue && (
+        <Field label={text("manualForm.value")} htmlFor={`${id}-value`}>
+          <Input id={`${id}-value`} name="value" required inputMode="decimal" autoComplete="off" />
+        </Field>
+      )}
     </>
   );
 }
 
-/** The kind of service and its web address. */
+/** The kind of service, when it is kept by value, and its web address. */
 function ServiceFields({
   id,
   category,
   onCategory,
 }: {
   id: string;
-  category: (typeof CATEGORIES)[number];
-  onCategory: (category: (typeof CATEGORIES)[number]) => void;
+  category: Category | null;
+  onCategory: (category: Category) => void;
 }) {
   const text = useTranslations("investments");
   return (
     <>
-      <Field label={text("manualForm.category")} htmlFor={`${id}-category`}>
-        <Select
-          id={`${id}-category`}
-          value={category}
-          onChange={(event) => onCategory(CATEGORIES.find((one) => one === event.target.value) ?? "broker")}
-        >
-          {CATEGORIES.map((one) => (
-            <option key={one} value={one}>
-              {text(`categories.${one}`)}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      {category !== null && (
+        <Field label={text("manualForm.category")} htmlFor={`${id}-category`}>
+          <Select
+            id={`${id}-category`}
+            value={category}
+            onChange={(event) => onCategory(CATEGORIES.find((one) => one === event.target.value) ?? "broker")}
+          >
+            {CATEGORIES.map((one) => (
+              <option key={one} value={one}>
+                {text(`categories.${one}`)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
       <Field label={text("manualForm.url")} htmlFor={`${id}-url`} hint={text("manualForm.urlHint")}>
         <Input
           id={`${id}-url`}
@@ -163,11 +168,38 @@ function ServiceFields({
   );
 }
 
-/** «Add»: a new account from its four fields, or the service of an account of Accounts; then its page. */
+/** A new account and its service, or the service of an account of Accounts. */
+function create(
+  kind: AddKind,
+  input: { accountId: string; name: string; category: Category; field: (name: string) => string },
+) {
+  const url = input.field("url");
+  const fresh = input.accountId === NEW;
+  if (kind === "portfolio")
+    return createPortfolio(
+      fresh
+        ? { name: input.name, currency: input.field("currency"), url }
+        : { accountId: input.accountId, url },
+    );
+  return fresh
+    ? createValueAccount({
+        name: input.name,
+        category: input.category,
+        currency: input.field("currency"),
+        value: input.field("value"),
+        url,
+      })
+    : createManualService({ accountId: input.accountId, category: input.category, url });
+}
+
+/** «Add»: a new account from its fields, or the service of an account of Accounts; then its page. */
 function useSubmit(
-  existing: readonly ExistingChoice[],
-  accountId: string,
-  category: Category,
+  {
+    kind,
+    existing,
+    accountId,
+    category,
+  }: { kind: AddKind; existing: readonly ExistingChoice[]; accountId: string; category: Category },
   onClose: () => void,
 ) {
   const text = useTranslations("investments");
@@ -178,19 +210,10 @@ function useSubmit(
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const field = (name: string) => String(form.get(name) ?? "");
-    const url = field("url");
-    const fresh = accountId === NEW;
-    const name = fresh ? field("name").trim() : (existing.find((one) => one.id === accountId)?.name ?? "");
+    const name =
+      accountId === NEW ? field("name").trim() : (existing.find((one) => one.id === accountId)?.name ?? "");
     startTransition(async () => {
-      const result = fresh
-        ? await createValueAccount({
-            name,
-            category,
-            currency: field("currency"),
-            value: field("value"),
-            url,
-          })
-        : await createManualService({ accountId, category, url });
+      const result = await create(kind, { accountId, name, category, field });
       if (!report(result) || !result.ok) return;
       notify(text("toasts.serviceCreated", { name }));
       onClose();
@@ -200,12 +223,17 @@ function useSubmit(
   return { pending, error, onSubmit };
 }
 
+/** «Account with value only», or «Manual portfolio». */
+type AddKind = "value" | "portfolio";
+
 export function ValueAccountDialog({
+  kind = "value",
   onClose,
   existing,
   numberFormat,
   currency,
 }: {
+  kind?: AddKind;
   onClose: () => void;
   existing: readonly ExistingChoice[];
   numberFormat: NumberFormat;
@@ -216,12 +244,13 @@ export function ValueAccountDialog({
   const id = useId();
   const [accountId, setAccountId] = useState(NEW);
   const [category, setCategory] = useState<Category>("broker");
-  const { pending, error, onSubmit } = useSubmit(existing, accountId, category, onClose);
+  const { pending, error, onSubmit } = useSubmit({ kind, existing, accountId, category }, onClose);
+  const words = kind === "portfolio" ? "portfolioForm" : "manualForm";
   return (
     <FormDialog
       onClose={onClose}
-      title={text("manualForm.title")}
-      description={text("manualForm.description")}
+      title={text(`${words}.title`)}
+      description={text(`${words}.description`)}
       width={520}
       className={FORM_GRID}
       onSubmit={onSubmit}
@@ -237,8 +266,8 @@ export function ValueAccountDialog({
         accountId={accountId}
         onChange={setAccountId}
       />
-      {accountId === NEW && <NewAccountFields id={id} currency={currency} />}
-      <ServiceFields id={id} category={category} onCategory={setCategory} />
+      {accountId === NEW && <NewAccountFields id={id} currency={currency} withValue={kind === "value"} />}
+      <ServiceFields id={id} category={kind === "value" ? category : null} onCategory={setCategory} />
     </FormDialog>
   );
 }

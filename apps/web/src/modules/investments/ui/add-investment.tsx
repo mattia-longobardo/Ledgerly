@@ -3,7 +3,8 @@
 // «Add investment» (rewrite plan R5b, decisions B1c and ST-3): one dialog of three choices in place of
 // the catalog and its «Coming soon». «Connect a service» lists the providers of
 // `GET /investments/catalog`, which has no provider to come; «Account with value only» makes the
-// service of a value typed by hand; «Pension fund» opens the steps of a new fund.
+// service of a value typed by hand; «Manual portfolio» one of cash and positions typed by hand (R5d);
+// «Pension fund» opens the steps of a new fund.
 import { ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useRef, useState } from "react";
@@ -26,7 +27,7 @@ const MANUAL = "manual";
 
 type Catalog = RouteOutput<typeof investments.getInvestmentsCatalog>;
 type Provider = Catalog["providers"][number];
-type Step = "choose" | "connect" | "value" | { provider: ConnectableProvider };
+type Step = "choose" | "connect" | "value" | "portfolio" | { provider: ConnectableProvider };
 
 const CHOICE =
   "focus-ring flex w-full flex-col items-start gap-0.5 rounded-md border border-border p-3 text-left hover:bg-hover";
@@ -54,6 +55,11 @@ function ChooseDialog({ onClose, onPick }: { onClose: () => void; onPick: (step:
         <li>
           <button type="button" className={CHOICE} onClick={() => onPick("value")}>
             <Choice title={text("value")} description={text("valueDescription")} />
+          </button>
+        </li>
+        <li>
+          <button type="button" className={CHOICE} onClick={() => onPick("portfolio")}>
+            <Choice title={text("portfolio")} description={text("portfolioDescription")} />
           </button>
         </li>
         <li>
@@ -185,9 +191,10 @@ function AddFlow({
         )}
       </Modal>
     );
-  if (step === "value")
+  if (step === "value" || step === "portfolio")
     return ready((view, prefs) => (
       <ValueAccountDialog
+        kind={step}
         onClose={onClose}
         existing={view.existing}
         numberFormat={numberStyle(prefs)}

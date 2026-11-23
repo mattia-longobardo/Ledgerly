@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 109019,
-    "duplicatedLines": 16288,
-    "percent": 14.94,
-    "blocks": 1255
+    "lines": 110000,
+    "duplicatedLines": 16414,
+    "percent": 14.92,
+    "blocks": 1265
   },
   "units": {
     "api": {
@@ -18,8 +18,8 @@
     },
     "app": {
       "lines": 20977,
-      "duplicatedLines": 2793,
-      "percent": 13.31,
+      "duplicatedLines": 2799,
+      "percent": 13.34,
       "blocks": 218
     },
     "global.d": {
@@ -48,9 +48,9 @@
     },
     "modules/funds": {
       "lines": 12767,
-      "duplicatedLines": 1815,
-      "percent": 14.22,
-      "blocks": 144
+      "duplicatedLines": 1808,
+      "percent": 14.16,
+      "blocks": 143
     },
     "modules/imports": {
       "lines": 951,
@@ -71,10 +71,10 @@
       "blocks": 32
     },
     "modules/investments": {
-      "lines": 14922,
-      "duplicatedLines": 2415,
-      "percent": 16.18,
-      "blocks": 185
+      "lines": 15903,
+      "duplicatedLines": 2550,
+      "percent": 16.03,
+      "blocks": 197
     },
     "modules/payroll": {
       "lines": 3799,
@@ -108,15 +108,15 @@
     },
     "modules/transactions": {
       "lines": 13057,
-      "duplicatedLines": 1675,
-      "percent": 12.83,
+      "duplicatedLines": 1676,
+      "percent": 12.84,
       "blocks": 134
     },
     "modules/users": {
       "lines": 1004,
-      "duplicatedLines": 205,
-      "percent": 20.42,
-      "blocks": 19
+      "duplicatedLines": 196,
+      "percent": 19.52,
+      "blocks": 18
     },
     "platform/alerts": {
       "lines": 34,
@@ -563,7 +563,7 @@
     "app/(app)/settings/server/diagnostics-card.tsx": 8,
     "app/(app)/settings/server/jobs-card.tsx": 20,
     "app/(app)/settings/server/llm-card.tsx": 74,
-    "app/(app)/settings/server/oidc-card.tsx": 74,
+    "app/(app)/settings/server/oidc-card.tsx": 80,
     "app/(app)/settings/server/server-screen.tsx": 41,
     "app/(app)/settings/server/smtp-card.tsx": 121,
     "app/(app)/settings/users/users-screen.tsx": 8,
@@ -631,7 +631,7 @@
     "modules/funds/ui/contribution-dialog.tsx": 14,
     "modules/funds/ui/contribution-fields.tsx": 60,
     "modules/funds/ui/contribution-sections.tsx": 9,
-    "modules/funds/ui/fee-dialog.tsx": 102,
+    "modules/funds/ui/fee-dialog.tsx": 104,
     "modules/funds/ui/fee-list.tsx": 35,
     "modules/funds/ui/fee-text.ts": 10,
     "modules/funds/ui/fund-chart.tsx": 40,
@@ -651,7 +651,7 @@
     "modules/funds/ui/source-fields.tsx": 108,
     "modules/funds/ui/source-list-client.tsx": 8,
     "modules/funds/ui/source-text.ts": 13,
-    "modules/funds/ui/wizard-fund-step.tsx": 30,
+    "modules/funds/ui/wizard-fund-step.tsx": 21,
     "modules/funds/ui/wizard-leave.tsx": 7,
     "modules/funds/ui/wizard-review.tsx": 7,
     "modules/imports/jobs.ts": 9,
@@ -673,7 +673,7 @@
     "modules/interests/service/switching.ts": 13,
     "modules/interests/ui/rule-dialog.tsx": 110,
     "modules/investments/activity.ts": 15,
-    "modules/investments/calls.ts": 40,
+    "modules/investments/calls.ts": 42,
     "modules/investments/catalog.ts": 82,
     "modules/investments/client.tsx": 8,
     "modules/investments/managed.ts": 21,
@@ -710,30 +710,33 @@
     "modules/investments/ui/activity/activity-kpis.tsx": 16,
     "modules/investments/ui/activity/events-table.tsx": 45,
     "modules/investments/ui/activity/manual-activity.tsx": 22,
-    "modules/investments/ui/add-investment.tsx": 13,
-    "modules/investments/ui/connect.tsx": 23,
+    "modules/investments/ui/add-investment.tsx": 18,
+    "modules/investments/ui/connect.tsx": 29,
     "modules/investments/ui/connection/connection-tab.tsx": 7,
     "modules/investments/ui/connection/corrections-card.tsx": 12,
     "modules/investments/ui/connection/key-card.tsx": 23,
     "modules/investments/ui/connection/received-card.tsx": 24,
     "modules/investments/ui/dialog-kit.tsx": 45,
-    "modules/investments/ui/holding-dialogs.tsx": 94,
+    "modules/investments/ui/holding-dialogs.tsx": 82,
     "modules/investments/ui/home/home-chart.tsx": 68,
     "modules/investments/ui/home/home-composition.tsx": 9,
     "modules/investments/ui/home/home-hero.tsx": 19,
     "modules/investments/ui/home/home-portfolio.tsx": 8,
     "modules/investments/ui/home/home-screen.tsx": 26,
     "modules/investments/ui/home/home-services.tsx": 41,
-    "modules/investments/ui/manual-service.tsx": 71,
+    "modules/investments/ui/manual-service.tsx": 69,
     "modules/investments/ui/overview/overview-chart.tsx": 59,
     "modules/investments/ui/overview/overview-hero.tsx": 22,
     "modules/investments/ui/overview/overview-kpis.tsx": 19,
     "modules/investments/ui/overview/overview-lists.tsx": 35,
     "modules/investments/ui/parts-kpis.tsx": 19,
+    "modules/investments/ui/portfolio/convert.tsx": 21,
+    "modules/investments/ui/portfolio/instrument-field.tsx": 7,
+    "modules/investments/ui/portfolio/record-operation.tsx": 84,
     "modules/investments/ui/positions/closed-positions.tsx": 7,
     "modules/investments/ui/positions/contributions-card.tsx": 23,
     "modules/investments/ui/positions/open-positions.tsx": 12,
-    "modules/investments/ui/service-actions.tsx": 13,
+    "modules/investments/ui/service-actions.tsx": 37,
     "modules/investments/ui/service/service-screen.tsx": 23,
     "modules/investments/ui/settings-forms.tsx": 17,
     "modules/investments/ui/skeletons.tsx": 14,
@@ -817,7 +820,7 @@
     "modules/transactions/service/provider.ts": 26,
     "modules/transactions/source-categories/choosing.ts": 34,
     "modules/transactions/source-categories/reading.ts": 49,
-    "modules/transactions/switch-rules.ts": 40,
+    "modules/transactions/switch-rules.ts": 41,
     "modules/transactions/switching/doubles.ts": 64,
     "modules/transactions/switching/transfers.ts": 45,
     "modules/transactions/taxonomy-calls.ts": 32,
@@ -841,7 +844,7 @@
     "modules/users/service/preferences.ts": 32,
     "modules/users/ui/invite-person.tsx": 30,
     "modules/users/ui/people-table.tsx": 72,
-    "modules/users/ui/two-factor-setup.tsx": 27,
+    "modules/users/ui/two-factor-setup.tsx": 18,
     "platform/api/errors.ts": 15,
     "platform/auth/client-registry.ts": 21,
     "platform/auth/emails.ts": 10,
