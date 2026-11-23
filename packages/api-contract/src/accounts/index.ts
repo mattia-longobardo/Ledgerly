@@ -2,10 +2,9 @@
 // leaves the others out. An area joins when a client calls it.
 import * as accounts from "./accounts";
 import * as balances from "./balances";
-import * as links from "./links";
 import * as removal from "./removal";
 import * as summary from "./summary";
 import * as accountSwitch from "./switch";
 import * as views from "./views";
 
-export { accounts, accountSwitch, balances, links, removal, summary, views };
+export { accounts, accountSwitch, balances, removal, summary, views };

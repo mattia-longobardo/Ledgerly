@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 107602,
-    "duplicatedLines": 16209,
-    "percent": 15.06,
-    "blocks": 1247
+    "lines": 107430,
+    "duplicatedLines": 16155,
+    "percent": 15.04,
+    "blocks": 1244
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 110
     },
     "app": {
-      "lines": 20978,
-      "duplicatedLines": 2818,
-      "percent": 13.43,
-      "blocks": 220
+      "lines": 20977,
+      "duplicatedLines": 2793,
+      "percent": 13.31,
+      "blocks": 218
     },
     "global.d": {
       "lines": 12,
@@ -35,10 +35,10 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 5171,
-      "duplicatedLines": 992,
-      "percent": 19.18,
-      "blocks": 72
+      "lines": 4966,
+      "duplicatedLines": 957,
+      "percent": 19.27,
+      "blocks": 70
     },
     "modules/budgets": {
       "lines": 1544,
@@ -89,10 +89,10 @@
       "blocks": 0
     },
     "modules/subscriptions": {
-      "lines": 2259,
-      "duplicatedLines": 421,
-      "percent": 18.64,
-      "blocks": 30
+      "lines": 2293,
+      "duplicatedLines": 428,
+      "percent": 18.67,
+      "blocks": 31
     },
     "modules/timeoff": {
       "lines": 4251,
@@ -102,8 +102,8 @@
     },
     "modules/transactions": {
       "lines": 13057,
-      "duplicatedLines": 1662,
-      "percent": 12.73,
+      "duplicatedLines": 1661,
+      "percent": 12.72,
       "blocks": 133
     },
     "modules/users": {
@@ -517,7 +517,7 @@
     "app/(app)/settings/addons/page.tsx": 8,
     "app/(app)/settings/data/data-screen.tsx": 29,
     "app/(app)/settings/finance/categories-screen.tsx": 8,
-    "app/(app)/settings/finance/labels-card.tsx": 92,
+    "app/(app)/settings/finance/labels-card.tsx": 67,
     "app/(app)/settings/finance/merge-proposals.tsx": 8,
     "app/(app)/settings/finance/rules/apply-dialog.tsx": 28,
     "app/(app)/settings/finance/rules/page.tsx": 8,
@@ -586,7 +586,6 @@
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 46,
     "modules/accounts/ui/balance-entries.tsx": 135,
-    "modules/accounts/ui/connections.tsx": 35,
     "modules/accounts/ui/settings-form.tsx": 67,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
     "modules/accounts/ui/switch/undo-switch.tsx": 13,
@@ -761,6 +760,7 @@
     "modules/subscriptions/rules.ts": 8,
     "modules/subscriptions/schema.ts": 77,
     "modules/subscriptions/service.ts": 115,
+    "modules/subscriptions/ui/account-subscriptions.tsx": 7,
     "modules/subscriptions/ui/inactive-subscriptions.tsx": 17,
     "modules/subscriptions/ui/subscription-dialog.tsx": 119,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
@@ -815,7 +815,7 @@
     "modules/transactions/ui/breakdown-card.tsx": 6,
     "modules/transactions/ui/category-cell.tsx": 9,
     "modules/transactions/ui/default-groups-form.tsx": 17,
-    "modules/transactions/ui/details-modal.tsx": 52,
+    "modules/transactions/ui/details-modal.tsx": 51,
     "modules/transactions/ui/filter-bar.tsx": 26,
     "modules/transactions/ui/manual-dialog.tsx": 47,
     "modules/transactions/ui/manual-movement.tsx": 6,

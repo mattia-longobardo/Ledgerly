@@ -167,4 +167,16 @@ test("subscriptions are checked against the movements, projected and suggested",
     await page.keyboard.press("Escape");
     await expect(edit).toBeHidden();
   });
+
+  // R5a (ST-13): the page of the account that pays them lists them, in place of its «Connections».
+  await test.step("the paying account lists its subscriptions", async () => {
+    await page.goto("/accounts");
+    await page.getByRole("link", { name: "Revolut Main" }).filter({ visible: true }).first().click();
+    await expect(page).toHaveURL(/\/accounts\/[0-9a-f-]{36}/);
+    await page.goto(`${page.url().split("?")[0]}?tab=settings`);
+    const section = page.getByRole("region", { name: "Subscriptions" });
+    for (const name of ["Netflix", "Spotify", "Amazon Prime"]) await expect(section).toContainText(name);
+    // Barber is paid from no account: it is not this account's.
+    await expect(section).not.toContainText("Barber");
+  });
 });

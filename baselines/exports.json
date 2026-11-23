@@ -36,7 +36,6 @@
     "accountSwitch",
     "accounts",
     "balances",
-    "links",
     "removal",
     "summary",
     "views"
@@ -195,8 +194,6 @@
   "packages/domain/src/modules/accounts/client.ts": [
     "ACCOUNT_TYPES",
     "AccountType",
-    "CONNECTION_CHANNELS",
-    "ConnectionChannel",
     "EntrySource",
     "REMINDERS",
     "TRENDS",

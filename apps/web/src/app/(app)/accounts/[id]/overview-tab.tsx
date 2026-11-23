@@ -36,7 +36,7 @@ import { parsePeriodQuery, periodEnd, periodMonths, type PeriodQuery } from "@le
 import { PeriodBar } from "@ledgerly/ui/period-bar";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import { TONE_TEXT, toneOfSign } from "@ledgerly/ui/tone";
-import { centsOf, ConnectionsSummary } from "@/modules/accounts/client";
+import { centsOf } from "@/modules/accounts/client";
 import type { AccountPage } from "./account-screen";
 
 /** The chart's choices, from the address: the period, its grain, and line or bars. */
@@ -412,7 +412,6 @@ function Details({ page }: { page: AccountPage }) {
               })}
         </dd>
       </dl>
-      <ConnectionsSummary accountId={account.id} />
       <span aria-hidden className="h-1 rounded-full" style={{ background: page.color }} />
     </Card>
   );

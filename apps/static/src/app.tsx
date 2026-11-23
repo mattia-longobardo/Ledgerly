@@ -1,4 +1,5 @@
-// The screens of R3 in the static package: Settings › Profile and Users, and what hangs off an account.
+// The screens of R3 in the static package: Settings › Profile and Users, and the subscriptions an
+// account pays (R5a, in place of its «Connections»).
 // They are the web app's own screens, mounted in the shell of `packages/ui` with the router of the
 // package; nothing here reads or computes a figure of its own.
 import type { ReactNode } from "react";
@@ -13,7 +14,7 @@ import { ShellProvider } from "@ledgerly/ui/shell/shell-context";
 import { useSaveTheme, useShellLabels } from "@ledgerly/ui/shell/shell-labels";
 import { Toaster } from "@ledgerly/ui/toast";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
-import { ConnectionsSection } from "@/modules/accounts/ui/connections";
+import { AccountSubscriptions } from "@/modules/subscriptions/ui/account-subscriptions";
 import { ProfileScreen } from "@/app/(app)/settings/profile/profile-screen";
 import { UsersScreen } from "@/app/(app)/settings/users/users-screen";
 import { useLocation } from "./router";
@@ -73,7 +74,7 @@ function Account({ id }: { id: string }) {
   return (
     <Page title={account.data?.name ?? text("title")} parent={{ href: "/accounts", label: text("title") }}>
       <UnsavedChangesProvider>
-        <ConnectionsSection accountId={id} />
+        <AccountSubscriptions accountId={id} />
       </UnsavedChangesProvider>
     </Page>
   );
