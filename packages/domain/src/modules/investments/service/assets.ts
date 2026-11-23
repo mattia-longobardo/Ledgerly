@@ -1,11 +1,12 @@
 // The asset catalog (§1.4): its seed and a new asset.
-import { and, eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import type { Ctx } from "../../../platform/context";
 import { type CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { ASSET_SEED } from "../catalog";
+import { marketPrices, type RegistryInstrument } from "../ports";
 import { ASSET_CLASSES } from "../rules";
 import { investmentAssets, investmentHoldings } from "../schema";
 import { type InvestmentAsset, InvestmentError, type InvestmentHolding, translated } from "./types";
@@ -104,4 +105,71 @@ export async function holdingFor(
     )
     .returning();
   return row;
+}
+
+/** An instrument of the registry on the market of the order (R5d); `mic` null for one with no market. */
+interface InstrumentRef {
+  instrumentId: string;
+  mic: string | null;
+}
+
+/**
+ * The person's asset of an instrument of the registry (R5d): theirs already — by the instrument, or
+ * by its ISIN when they typed it by hand before, which it then names — or a new one. Its price is
+ * automatic when its market has a source, by hand otherwise.
+ */
+export async function assetOfInstrument(
+  ctx: Pick<Ctx, "userId">,
+  ref: InstrumentRef,
+  transaction: Tx,
+): Promise<InvestmentAsset> {
+  const instrument = await marketPrices().instrumentById(ref.instrumentId);
+  if (!instrument) throw new InvestmentError("not_found");
+  const values = assetValuesOf(instrument, ref);
+  const mine = userScoped(ctx).owns(investmentAssets);
+  const sameInstrument = eq(investmentAssets.instrumentId, instrument.instrumentId);
+  const [found] = await transaction
+    .select()
+    .from(investmentAssets)
+    .where(
+      and(
+        mine,
+        instrument.isin === null
+          ? sameInstrument
+          : or(sameInstrument, eq(investmentAssets.isin, instrument.isin)),
+      ),
+    );
+  if (found && found.instrumentId === instrument.instrumentId && found.mic === ref.mic) return found;
+  const write = found
+    ? transaction
+        .update(investmentAssets)
+        .set({ ...values, updatedAt: new Date() })
+        .where(and(eq(investmentAssets.id, found.id), mine))
+        .returning()
+    : transaction
+        .insert(investmentAssets)
+        .values(
+          userScoped(ctx).stamp({
+            ...values,
+            class: instrument.class,
+            name: instrument.name.slice(0, 120),
+            isin: instrument.isin,
+          }),
+        )
+        .returning();
+  const [row] = await translated(write);
+  return row;
+}
+
+/** What an asset takes from its instrument and the market of the order: an automatic price when a source has it. */
+function assetValuesOf(instrument: RegistryInstrument, ref: InstrumentRef) {
+  const listing = ref.mic === null ? null : instrument.listings.find((one) => one.mic === ref.mic);
+  if (listing === undefined) throw new InvestmentError("not_found");
+  return {
+    instrumentId: instrument.instrumentId,
+    mic: ref.mic,
+    symbol: listing?.ticker ?? null,
+    currency: listing?.currency ?? instrument.currency,
+    priceSource: listing?.priced ? ("market" as const) : ("manual" as const),
+  };
 }

@@ -136,14 +136,22 @@ export const getInvestmentHoldings = defineRoute({
     title: "Investment holdings",
     description:
       "The open positions of one investment service today — asset, product, quantity, price, value " +
-      "and gain in the service's `currency` — as GET /api/v1/investments/{accountId}/holdings. Take " +
+      "and gain in the service's `currency`, and the cash of a manual portfolio — as GET " +
+      "/api/v1/investments/{accountId}/holdings. Take " +
       "the account id from list_investments.",
     arguments: { account_id: accountArgument },
     pathArguments: { accountId: "account_id" },
   },
   example: {
     params: { accountId: ACCOUNT_ID },
-    response: { accountId: ACCOUNT_ID, name: "Directa", currency: "EUR", on: "2026-11-21", holdings: [] },
+    response: {
+      accountId: ACCOUNT_ID,
+      name: "Directa",
+      currency: "EUR",
+      on: "2026-11-21",
+      cash: null,
+      holdings: [],
+    },
   },
 });
 

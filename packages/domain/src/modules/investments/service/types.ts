@@ -34,7 +34,9 @@ export type InvestmentErrorCode =
   | "already_linked"
   | "not_editable"
   | "before_period"
-  | "not_a_transfer";
+  | "not_a_transfer"
+  // A sale of more than the quantity held that day (R5d).
+  | "quantity_exceeded";
 
 export class InvestmentError extends Error {
   constructor(readonly code: InvestmentErrorCode) {

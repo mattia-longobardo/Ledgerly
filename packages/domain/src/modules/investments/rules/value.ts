@@ -80,7 +80,7 @@ const CASH_KINDS: ReadonlySet<OperationKind> = new Set([
 ]);
 
 /** An operation's effect on the account's cash (§1.5): income and fees only when paid in cash. */
-function cashEffect(op: OperationLike): Cents {
+export function cashEffect(op: OperationLike): Cents {
   if (CASH_KINDS.has(op.kind)) return op.amountCents;
   if ((op.kind === "income" || op.kind === "fee") && op.quantity === null) return op.amountCents;
   return 0n;
@@ -193,7 +193,8 @@ export function valueAt(book: Book, on: CivilDate, rates: RateTable): DayValue {
   if (period === null) return EMPTY;
   const adjustmentCents = adjustmentsOn(events, on);
 
-  if (period.origin === "manual" && book.accountBalances !== undefined) {
+  const byBalance = book.balancesUntil === undefined || on < book.balancesUntil;
+  if (period.origin === "manual" && book.accountBalances !== undefined && byBalance) {
     // A manual service is a view on its account (§1.3, PERS-342): V is the account's balance.
     const balance = balanceAt(book.accountBalances, on);
     return {

@@ -11,6 +11,8 @@ export {
   authStartResponseSchema,
   institutionsRequestSchema,
   institutionsResponseSchema,
+  pricesRequestSchema,
+  pricesResponseSchema,
   syncRequestSchema,
   syncResponseSchema,
   verifyRequestSchema,
@@ -22,6 +24,7 @@ export type {
   InstitutionsResponse,
   PluginAccount,
   PluginTransaction,
+  PricesResponse,
   SyncResponse,
   VerifyResponse,
 } from "./calls";

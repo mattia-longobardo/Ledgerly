@@ -22,7 +22,8 @@ import {
 } from "../rules";
 import { investmentEvents, investmentOperations } from "../schema";
 import { civilDate } from "../../../shared/inputs";
-import { assetInputSchema, createAsset, holdingFor, requireAsset } from "./assets";
+import { checkPortfolio } from "./guards";
+import { assetInputSchema, assetOfInstrument, createAsset, holdingFor, requireAsset } from "./assets";
 import { loadBook, type LoadedBook, lockInvestmentAccount, rebuild } from "./book";
 import {
   decimal,
@@ -162,7 +163,20 @@ export const optionalNote = z
 export const positive = z.bigint().positive();
 
 export const buyInputSchema = z.object({
-  asset: z.union([z.object({ id: z.uuid() }), z.object({ create: assetInputSchema })]),
+  asset: z.union([
+    z.object({ id: z.uuid() }),
+    z.object({ create: assetInputSchema }),
+    // An instrument of the registry on the market of the order (R5d).
+    z.object({
+      instrument: z.object({
+        instrumentId: z.uuid(),
+        mic: z
+          .string()
+          .regex(/^[A-Z0-9]{4}$/)
+          .nullable(),
+      }),
+    }),
+  ]),
   product: z.string().regex(new RegExp(PRODUCT_PATTERN)).default("custody"),
   on: civilDate(),
   /** Quantity and unit price, or only the total (a BTP, a fund bought for an amount, A3). */
@@ -201,7 +215,9 @@ export async function addAsset(
     const asset =
       "id" in parsed.asset
         ? await requireAsset(ctx, parsed.asset.id, tx)
-        : await createAsset(ctx, parsed.asset.create, tx);
+        : "create" in parsed.asset
+          ? await createAsset(ctx, parsed.asset.create, tx)
+          : await assetOfInstrument(ctx, parsed.asset.instrument, tx);
     const holding = await holdingFor(ctx, tx, investment.id, asset.id, parsed.product, parsed.on);
     const rate = await rateOf(asset.currency, account.currency, parsed.on, parsed.fxRate);
     const native =
@@ -232,6 +248,7 @@ export async function addAsset(
       note: parsed.note,
       legs,
     });
+    await checkPortfolio(ctx, investment, account.currency, tx);
     await rebuild(ctx, investment, account.currency, parsed.on, tx);
     return { eventId: event.id };
   });

@@ -27,6 +27,7 @@ const POSTS = [
   PLUGIN_PATHS.authComplete,
   PLUGIN_PATHS.authRevoke,
   PLUGIN_PATHS.sync,
+  PLUGIN_PATHS.prices,
 ];
 
 async function json(response: Response): Promise<unknown> {

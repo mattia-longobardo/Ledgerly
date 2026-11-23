@@ -5,9 +5,13 @@ import { z } from "zod";
 import { id } from "../primitives";
 import { defineRoute } from "../route";
 import {
+  conversionBody,
   manualServiceBody,
   newManualServiceBody,
+  newPortfolioBody,
   operationBody,
+  portfolioBody,
+  priceModeBody,
   reconciliationBody,
   transferBody,
   urlBody,
@@ -19,6 +23,7 @@ import {
   DEPOSIT_ID,
   EVENT_ID,
   HOLDING_ID,
+  INSTRUMENT_ID,
   INVESTMENT_ERRORS,
   READING_ID,
 } from "./shared";
@@ -37,9 +42,12 @@ export const createManualService = defineRoute({
     "Makes an investment or crypto account of Accounts a manual service: its value stays the account's " +
     "balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another " +
     "type, or already a service. Without `accountId`, makes the account too, from four fields: `name`, " +
-    "`category`, `currency` and today's `value` (R5b).",
+    "`category`, `currency` and today's `value` (R5b). With `kind: portfolio`, a manual portfolio " +
+    "(R5d): it keeps positions and writes the account's value; `not_eligible` also on an account a " +
+    "source reads (reason `synced`), and without `accountId` it makes the account from `name` and " +
+    "`currency`.",
   actions: [],
-  body: z.union([manualServiceBody, newManualServiceBody]),
+  body: z.union([manualServiceBody, newManualServiceBody, portfolioBody, newPortfolioBody]),
   response: z.object({ accountId: id() }),
   status: 201,
   errors: INVESTMENT_ERRORS,
@@ -90,9 +98,11 @@ export const recordOperation = defineRoute({
   scope: "write",
   capability: "investments",
   summary:
-    "Writes a valuation, a sale, a close or an income on a service (not in the future). A deposit, a " +
-    "withdrawal, an account valuation or a correction comes from Accounts or the provider: `409` " +
-    "`not_editable`. Answers the event's id.",
+    "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual " +
+    "portfolio also a purchase of an instrument, a deposit and a withdrawal (R5d). A sale of more " +
+    "than the quantity held that day, or a change that leaves a later sale short: `409` " +
+    "`quantity_exceeded`. A deposit or a withdrawal of another service, an account valuation or a " +
+    "correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
   actions: [],
   params: byService,
   body: operationBody,
@@ -112,6 +122,54 @@ export const recordOperation = defineRoute({
       note: null,
     },
     response: { id: EVENT_ID },
+  },
+});
+
+export const setPriceMode = defineRoute({
+  id: "set_investment_price_mode",
+  method: "PUT",
+  path: "/investments/{accountId}/holdings/{holdingId}/price-mode",
+  scope: "write",
+  capability: "investments",
+  summary:
+    "Where the price of a manual portfolio's asset comes from (R5d): `auto`, the daily close of the " +
+    "market of the order; `manual`, the valuations typed by hand. `auto` on an asset with no priced " +
+    "market: `409` `not_editable`.",
+  actions: [],
+  params: z.object({ accountId: id(), holdingId: id() }),
+  body: priceModeBody,
+  response: null,
+  status: 204,
+  errors: INVESTMENT_ERRORS,
+  example: { params: { accountId: ACCOUNT_ID, holdingId: HOLDING_ID }, body: { mode: "manual" } },
+});
+
+export const convertToPortfolio = defineRoute({
+  id: "convert_investment_to_portfolio",
+  method: "POST",
+  path: "/investments/{accountId}/conversion",
+  scope: "write",
+  capability: "investments",
+  summary:
+    "«Switch to positions» (R5d): a manual service kept by value becomes a manual portfolio from `on`. " +
+    "The value before stays in its history; the positions open at their price and the cash is the " +
+    "value of that day less the positions. `409` `negative_cash` when the positions are worth more, " +
+    "`not_eligible` on a service that is not a manual one kept by value.",
+  actions: [],
+  params: byService,
+  body: conversionBody,
+  response: null,
+  status: 204,
+  errors: INVESTMENT_ERRORS,
+  example: {
+    params: { accountId: ACCOUNT_ID },
+    body: {
+      on: "2026-11-20",
+      positions: [
+        { instrumentId: INSTRUMENT_ID, mic: "XMIL", quantity: "100", unitPrice: "60", fxRate: null },
+      ],
+      note: null,
+    },
   },
 });
 

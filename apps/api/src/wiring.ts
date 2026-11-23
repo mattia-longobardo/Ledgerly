@@ -6,6 +6,15 @@ import { wireAccounts } from "@ledgerly/domain/accounts";
 import { payrollSource, valuationAccountIds, wireFunds } from "@ledgerly/domain/funds";
 import { wireInterests } from "@ledgerly/domain/interests";
 import { managedAccountsOfInvestments, wireInvestments } from "@ledgerly/domain/investments";
+import {
+  closesUpTo,
+  FALLBACK_MIC,
+  instrumentById,
+  isStale,
+  lastCloses,
+  listingsOf,
+  marketKey,
+} from "@ledgerly/domain/instruments";
 import { ledgerPosting } from "@ledgerly/domain/platform/integrations/source";
 import { leaveCalendar } from "@ledgerly/domain/platform/integrations/calendar";
 import { payrollDirectory, payrollLeaveBalances, wirePayroll } from "@ledgerly/domain/payroll";
@@ -34,5 +43,16 @@ export function wireDomain(): void {
   wireTimeoff({ calendar: leaveCalendar, balances: leaveBalances });
   wirePayroll({ listeners: [payrollSource] });
   wireFunds({ payslips });
-  wireInvestments({ funds: { accountIds: valuationAccountIds } });
+  wireInvestments({
+    funds: { accountIds: valuationAccountIds },
+    prices: {
+      fallbackMic: FALLBACK_MIC,
+      instrumentById,
+      listingsOf,
+      marketKey,
+      closesUpTo,
+      lastCloses,
+      isStale,
+    },
+  });
 }

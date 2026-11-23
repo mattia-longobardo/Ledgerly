@@ -640,6 +640,7 @@
    "name": "Directa",
    "currency": "EUR",
    "on": "2031-10-15",
+   "cash": null,
    "holdings": []
   }
  },

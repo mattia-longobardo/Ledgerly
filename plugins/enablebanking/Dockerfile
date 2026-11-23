@@ -12,6 +12,7 @@ COPY packages/domain/package.json ./packages/domain/
 COPY packages/plugin-contract/package.json ./packages/plugin-contract/
 COPY packages/plugin-host/package.json ./packages/plugin-host/
 COPY plugins/enablebanking/package.json ./plugins/enablebanking/
+COPY plugins/prices/package.json ./plugins/prices/
 RUN npm ci --ignore-scripts
 
 FROM node:26-alpine AS builder

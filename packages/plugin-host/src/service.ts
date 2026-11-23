@@ -38,7 +38,7 @@ import {
   type PluginAccount,
   verifyResponseSchema,
 } from "@ledgerly/plugin-contract";
-import { manifestSchema } from "@ledgerly/plugin-contract";
+import { hasCapability, manifestSchema } from "@ledgerly/plugin-contract";
 import {
   configuredPlugins,
   findInstancePlugin,
@@ -169,7 +169,8 @@ export function keepManifestsFresh(now: Date = new Date()): void {
 
 async function requirePlugin(pluginId: string): Promise<InstancePlugin> {
   const plugin = await findInstancePlugin(pluginId);
-  if (!plugin) throw new PluginActionError("not_found");
+  // The prices plugin serves the instance: no person turns it on or gives it credentials (R5d).
+  if (!plugin || hasCapability(plugin.manifest, "prices.daily")) throw new PluginActionError("not_found");
   return plugin;
 }
 

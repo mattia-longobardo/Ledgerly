@@ -21,6 +21,7 @@ import {
   isPluginActive,
   listPluginConnections,
   listUserPlugins,
+  pricesPlugin,
   pluginDiagnostics,
 } from "@domain/platform/plugins/queries";
 import { hashState } from "@domain/platform/plugins/rules";
@@ -247,6 +248,16 @@ describe("the plugins of the instance", () => {
       fakePlugin({ [PLUGIN_PATHS.manifest]: { body: { ...MANIFEST, contract: "9" } } }).deps,
     );
     expect(await listUserPlugins(ctx)).toEqual([]);
+  });
+
+  it("serve the instance with prices.daily: nobody sees it or turns it on (R5d)", async () => {
+    await resetDatabase();
+    const ctx = await newContext();
+    const prices = { ...MANIFEST, capabilities: ["prices.daily"] };
+    await refreshManifests(NOW, fakePlugin({ [PLUGIN_PATHS.manifest]: { body: prices } }).deps);
+    expect(await pricesPlugin()).toMatchObject({ manifest: { capabilities: ["prices.daily"] } });
+    expect(await listUserPlugins(ctx)).toEqual([]);
+    expect(await rejection(setPluginActive(ctx, { pluginId: PLUGIN, active: true }))).toBe("not_found");
   });
 });
 

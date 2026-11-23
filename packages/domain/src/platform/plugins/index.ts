@@ -8,6 +8,7 @@ export {
   listPluginConnections,
   listUserPlugins,
   pluginDiagnostics,
+  pricesPlugin,
 } from "./queries";
 export type { InstancePlugin, PluginDiagnostic } from "./queries";
 export {

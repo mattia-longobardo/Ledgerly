@@ -1,5 +1,5 @@
 // The examples of the investments' descriptors, checked against their schemas by the gate.
-import { ACCOUNT_ID, ASSET_ID, EVENT_ID, HOLDING_ID } from "./shared";
+import { ACCOUNT_ID, ASSET_ID, EVENT_ID, HOLDING_ID, INSTRUMENT_ID } from "./shared";
 
 export const PARTS_EXAMPLE = {
   pnl: "650.00",
@@ -129,6 +129,9 @@ export const ASSET_EXAMPLE = {
   symbol: "VWCE",
   isin: "IE00BK5BQT80",
   currency: "EUR",
+  instrumentId: INSTRUMENT_ID,
+  mic: "XMIL",
+  price: { mode: "auto", on: "2026-11-20", source: "yahoo", stale: false },
 } as const;
 
 export const ACTIVITY_ROW_EXAMPLE = {

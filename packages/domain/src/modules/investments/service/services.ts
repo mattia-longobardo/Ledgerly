@@ -16,7 +16,7 @@ import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import { accountTypeOf, MANUAL_PROVIDER } from "../catalog";
 import { fundAccounts } from "../ports";
-import { INVESTMENT_CATEGORIES, type InvestmentCategory, MANUAL_MODE } from "../rules";
+import { INVESTMENT_CATEGORIES, type InvestmentCategory, MANUAL_MODE, type Mode } from "../rules";
 import { investmentAccountPeriods, investmentAccounts } from "../schema";
 import { civilDate } from "../../../shared/inputs";
 import { requireInvestmentAccount } from "./book";
@@ -89,22 +89,48 @@ export async function createManualService(
   input: ManualServiceInput,
 ): Promise<{ accountId: string }> {
   const parsed = manualServiceSchema.parse(input);
+  return openService(ctx, {
+    accountId: parsed.accountId,
+    category: parsed.category,
+    provider: MANUAL_PROVIDER,
+    mode: MANUAL_MODE,
+    url: parsed.url,
+  });
+}
+
+/**
+ * A service on an account of Accounts that may hold one: its row, its first period from today, and
+ * the balance before today as its opening, so the account's value does not move. The account must be
+ * eligible; a manual portfolio's also typed by hand (R5d), never read by a source.
+ */
+export async function openService(
+  ctx: Ctx,
+  input: {
+    accountId: string;
+    category: InvestmentCategory;
+    provider: string;
+    mode: Mode;
+    url: string | null;
+  },
+): Promise<{ accountId: string }> {
   const todayOn = today(ctx.timeZone);
   const now = new Date();
-  const eligible = (await eligibleAccounts(ctx)).find((one) => one.account.id === parsed.accountId);
+  const eligible = (await eligibleAccounts(ctx)).find((one) => one.account.id === input.accountId);
   if (!eligible || eligible.reason !== null) throw new InvestmentError("not_eligible");
+  if (input.mode === "assets" && eligible.account.origin !== "manual")
+    throw new InvestmentError("not_eligible");
   const opening =
-    (await readingsAt(ctx, [parsed.accountId], addDays(todayOn, -1))).get(parsed.accountId) ?? null;
+    (await readingsAt(ctx, [input.accountId], addDays(todayOn, -1))).get(input.accountId) ?? null;
   return getDb().transaction(async (tx) => {
     const [investment] = await tx
       .insert(investmentAccounts)
       .values(
         userScoped(ctx).stamp({
-          accountId: parsed.accountId,
-          category: parsed.category,
-          provider: MANUAL_PROVIDER,
+          accountId: input.accountId,
+          category: input.category,
+          provider: input.provider,
           managedSince: todayOn,
-          url: parsed.url,
+          url: input.url,
           openedOn: eligible.account.openedOn ?? todayOn,
         }),
       )
@@ -114,7 +140,7 @@ export async function createManualService(
         investmentAccountId: investment.id,
         fromOn: todayOn,
         startsAt: now,
-        mode: MANUAL_MODE,
+        mode: input.mode,
         origin: "manual" as const,
         reason: "opening" as const,
       }),
@@ -127,15 +153,35 @@ export async function createManualService(
         legs: [{ leg: "main", kind: "opening_cash", amountCents: opening }],
       });
     }
-    return { accountId: parsed.accountId };
+    return { accountId: input.accountId };
   });
 }
 
 /**
- * A manual service on a new account of Accounts (R5b, audit OP-8): the account with today's value as
- * its first balance, then the service. Two writes of two modules: when the second fails, the account
- * is removed, so neither stays alone.
+ * A service on a new account of Accounts (R5b, audit OP-8; R5d): the account first, then the service.
+ * Two writes of two modules: when the second fails, the account is removed, so neither stays alone.
  */
+export async function withNewAccount(
+  ctx: Ctx,
+  account: { name: string; category: InvestmentCategory; currency: string; valueCents: Cents | null },
+  open: (accountId: string) => Promise<{ accountId: string }>,
+): Promise<{ accountId: string }> {
+  const made = await createAccount(ctx, {
+    name: account.name,
+    type: accountTypeOf(account.category),
+    currency: account.currency,
+    openingBalance:
+      account.valueCents === null ? null : { on: today(ctx.timeZone), cents: account.valueCents },
+  });
+  try {
+    return await open(made.id);
+  } catch (error) {
+    await removeAccount(ctx, made.id);
+    throw error;
+  }
+}
+
+/** A manual service on a new account, with today's value as its first balance (R5b). */
 export async function createManualServiceWithAccount(
   ctx: Ctx,
   input: {
@@ -146,22 +192,9 @@ export async function createManualServiceWithAccount(
     url: string | null;
   },
 ): Promise<{ accountId: string }> {
-  const account = await createAccount(ctx, {
-    name: input.name,
-    type: accountTypeOf(input.category),
-    currency: input.currency,
-    openingBalance: { on: today(ctx.timeZone), cents: input.valueCents },
-  });
-  try {
-    return await createManualService(ctx, {
-      accountId: account.id,
-      category: input.category,
-      url: input.url,
-    });
-  } catch (error) {
-    await removeAccount(ctx, account.id);
-    throw error;
-  }
+  return withNewAccount(ctx, input, (accountId) =>
+    createManualService(ctx, { accountId, category: input.category, url: input.url }),
+  );
 }
 
 /**

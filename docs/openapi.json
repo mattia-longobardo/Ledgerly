@@ -24849,6 +24849,181 @@
         "x-addon": "payroll"
       }
     },
+    "/instruments/search": {
+      "get": {
+        "operationId": "search_instruments",
+        "summary": "Instruments by ISIN, name or ticker, with the markets they are listed on, at most 20. What the registry does not know yet is looked up at OpenFIGI and ESMA FIRDS and kept; when they do not answer, `complete` is false and only the known instruments are listed.",
+        "tags": [
+          "investments"
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 60
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "maxItems": 20,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "instrumentId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "isin": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "class": {
+                            "type": "string",
+                            "enum": [
+                              "stock",
+                              "etf",
+                              "fund",
+                              "bond",
+                              "crypto",
+                              "stablecoin",
+                              "cash",
+                              "other"
+                            ]
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "listings": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "mic": {
+                                  "type": "string"
+                                },
+                                "ticker": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "currency": {
+                                  "type": "string"
+                                },
+                                "priced": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "mic",
+                                "ticker",
+                                "currency",
+                                "priced"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "instrumentId",
+                          "isin",
+                          "name",
+                          "class",
+                          "currency",
+                          "listings"
+                        ]
+                      }
+                    },
+                    "complete": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "complete"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "investments:read",
+        "x-addon": "investments"
+      }
+    },
     "/interests": {
       "get": {
         "operationId": "list_interest_rules",
@@ -27236,7 +27411,7 @@
       },
       "post": {
         "operationId": "create_investment_service",
-        "summary": "Makes an investment or crypto account of Accounts a manual service: its value stays the account's balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another type, or already a service. Without `accountId`, makes the account too, from four fields: `name`, `category`, `currency` and today's `value` (R5b).",
+        "summary": "Makes an investment or crypto account of Accounts a manual service: its value stays the account's balance, its deposits and withdrawals the account's movements. `not_eligible`: a fund's, another type, or already a service. Without `accountId`, makes the account too, from four fields: `name`, `category`, `currency` and today's `value` (R5b). With `kind: portfolio`, a manual portfolio (R5d): it keeps positions and writes the account's value; `not_eligible` also on an account a source reads (reason `synced`), and without `accountId` it makes the account from `name` and `currency`.",
         "tags": [
           "investments"
         ],
@@ -27323,6 +27498,73 @@
                       "category",
                       "currency",
                       "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "portfolio"
+                      },
+                      "accountId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "url": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "accountId"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "portfolio"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "currency": {
+                        "type": "string",
+                        "pattern": "^[A-Z]{3}$"
+                      },
+                      "url": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 500
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "name",
+                      "currency"
                     ],
                     "additionalProperties": false
                   }
@@ -28019,6 +28261,58 @@
                               "currency": {
                                 "type": "string"
                               },
+                              "instrumentId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "mic": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "price": {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "auto",
+                                      "manual",
+                                      "provider"
+                                    ]
+                                  },
+                                  "on": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "stale": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "on",
+                                  "source",
+                                  "stale"
+                                ]
+                              },
                               "id": {
                                 "type": "string",
                                 "format": "uuid",
@@ -28031,6 +28325,9 @@
                               "symbol",
                               "isin",
                               "currency",
+                              "instrumentId",
+                              "mic",
+                              "price",
                               "id"
                             ]
                           }
@@ -30901,6 +31198,183 @@
         "x-addon": "investments"
       }
     },
+    "/investments/{accountId}/conversion": {
+      "post": {
+        "operationId": "convert_investment_to_portfolio",
+        "summary": "«Switch to positions» (R5d): a manual service kept by value becomes a manual portfolio from `on`. The value before stays in its history; the positions open at their price and the cash is the value of that day less the positions. `409` `negative_cash` when the positions are worth more, `not_eligible` on a service that is not a manual one kept by value.",
+        "tags": [
+          "investments"
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "on": {
+                    "type": "string"
+                  },
+                  "positions": {
+                    "maxItems": 100,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "instrumentId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "mic": {
+                          "default": null,
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^[A-Z0-9]{4}$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "quantity": {
+                          "type": "string",
+                          "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                        },
+                        "unitPrice": {
+                          "type": "string",
+                          "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                        },
+                        "fxRate": {
+                          "default": null,
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "instrumentId",
+                        "quantity",
+                        "unitPrice"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "note": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "on",
+                  "positions"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
+        "x-addon": "investments"
+      }
+    },
     "/investments/{accountId}/holdings": {
       "get": {
         "operationId": "get_investment_holdings",
@@ -30942,6 +31416,17 @@
                     "on": {
                       "type": "string"
                     },
+                    "cash": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "holdings": {
                       "type": "array",
                       "items": {
@@ -30980,6 +31465,58 @@
                               },
                               "currency": {
                                 "type": "string"
+                              },
+                              "instrumentId": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "mic": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "price": {
+                                "type": "object",
+                                "properties": {
+                                  "mode": {
+                                    "type": "string",
+                                    "enum": [
+                                      "auto",
+                                      "manual",
+                                      "provider"
+                                    ]
+                                  },
+                                  "on": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "source": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "stale": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "mode",
+                                  "on",
+                                  "source",
+                                  "stale"
+                                ]
                               }
                             },
                             "required": [
@@ -30987,7 +31524,10 @@
                               "class",
                               "symbol",
                               "isin",
-                              "currency"
+                              "currency",
+                              "instrumentId",
+                              "mic",
+                              "price"
                             ]
                           },
                           "product": {
@@ -31077,6 +31617,7 @@
                     "name",
                     "currency",
                     "on",
+                    "cash",
                     "holdings"
                   ]
                 }
@@ -31150,6 +31691,132 @@
           }
         ],
         "x-scope": "investments:read",
+        "x-addon": "investments"
+      }
+    },
+    "/investments/{accountId}/holdings/{holdingId}/price-mode": {
+      "put": {
+        "operationId": "set_investment_price_mode",
+        "summary": "Where the price of a manual portfolio's asset comes from (R5d): `auto`, the daily close of the market of the order; `manual`, the valuations typed by hand. `auto` on an asset with no priced market: `409` `not_editable`.",
+        "tags": [
+          "investments"
+        ],
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "holdingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "manual"
+                    ]
+                  }
+                },
+                "required": [
+                  "mode"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
         "x-addon": "investments"
       }
     },
@@ -31630,7 +32297,7 @@
     "/investments/{accountId}/operations": {
       "post": {
         "operationId": "record_investment_operation",
-        "summary": "Writes a valuation, a sale, a close or an income on a service (not in the future). A deposit, a withdrawal, an account valuation or a correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
+        "summary": "Writes a valuation, a sale, a close or an income on a service (not in the future); on a manual portfolio also a purchase of an instrument, a deposit and a withdrawal (R5d). A sale of more than the quantity held that day, or a change that leaves a later sale short: `409` `quantity_exceeded`. A deposit or a withdrawal of another service, an account valuation or a correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
         "tags": [
           "investments"
         ],
@@ -31652,6 +32319,113 @@
             "application/json": {
               "schema": {
                 "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "buy"
+                      },
+                      "instrumentId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "mic": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[A-Z0-9]{4}$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "on": {
+                        "type": "string"
+                      },
+                      "quantity": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "unitPrice": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "amount": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "fee": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "fxRate": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\s*\\d+(\\.\\d+)?\\s*$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "note": {
+                        "default": null,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "instrumentId",
+                      "on"
+                    ],
+                    "additionalProperties": false
+                  },
                   {
                     "type": "object",
                     "properties": {
@@ -31851,7 +32625,51 @@
                         "type": "string",
                         "enum": [
                           "deposit",
-                          "withdrawal",
+                          "withdrawal"
+                        ]
+                      },
+                      "on": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string",
+                        "pattern": "^\\s*[+-]?\\d+(\\.\\d+)?\\s*$"
+                      },
+                      "transactionId": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "note": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": {}
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
                           "account_valuation",
                           "adjustment"
                         ]
@@ -32944,6 +33762,58 @@
                           "currency": {
                             "type": "string"
                           },
+                          "instrumentId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "mic": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "price": {
+                            "type": "object",
+                            "properties": {
+                              "mode": {
+                                "type": "string",
+                                "enum": [
+                                  "auto",
+                                  "manual",
+                                  "provider"
+                                ]
+                              },
+                              "on": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "source": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "stale": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "mode",
+                              "on",
+                              "source",
+                              "stale"
+                            ]
+                          },
                           "id": {
                             "type": "string",
                             "format": "uuid",
@@ -32956,6 +33826,9 @@
                           "symbol",
                           "isin",
                           "currency",
+                          "instrumentId",
+                          "mic",
+                          "price",
                           "id"
                         ]
                       }
@@ -33816,7 +34689,8 @@
                                 "enum": [
                                   "fund",
                                   "type",
-                                  "managed"
+                                  "managed",
+                                  "synced"
                                 ]
                               },
                               {

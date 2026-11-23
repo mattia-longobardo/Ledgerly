@@ -16,6 +16,7 @@ import {
   type ServiceDetail,
   servicePositions,
   unitPriceOf,
+  type AssetPrice,
 } from "@ledgerly/domain/investments";
 import { addDays, type CivilDate, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { type Cents, formatDecimal } from "@ledgerly/domain/shared/money";
@@ -150,7 +151,11 @@ function openOut(detail: ServiceDetail, view: PositionsData) {
 }
 
 /** A service's Positions (§3.4): open on the period's last day, closed in it and ever (S10). */
-export function positionsOut(detail: ServiceDetail, view: PositionsData): Positions {
+export function positionsOut(
+  detail: ServiceDetail,
+  view: PositionsData,
+  prices: ReadonlyMap<string, AssetPrice>,
+): Positions {
   const { service } = view;
   const latest = detail.readings[0];
   return {
@@ -169,7 +174,7 @@ export function positionsOut(detail: ServiceDetail, view: PositionsData): Positi
     closedEver: closedOut(view.allExits, view.holdings),
     contributions: contributionsOut(contributionsOf(service)),
     dust: view.dust,
-    assets: [...view.assets.values()].map(assetOut),
+    assets: [...view.assets.values()].map((asset) => assetOut(asset, prices)),
     latestReading: latest ? { id: latest.id, on: latest.on } : null,
   };
 }

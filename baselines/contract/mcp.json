@@ -44,7 +44,7 @@
    {
     "name": "get_investment_holdings",
     "title": "Investment holdings",
-    "description": "The open positions of one investment service today — asset, product, quantity, price, value and gain in the service's `currency` — as GET /api/v1/investments/{accountId}/holdings. Take the account id from list_investments.",
+    "description": "The open positions of one investment service today — asset, product, quantity, price, value and gain in the service's `currency`, and the cash of a manual portfolio — as GET /api/v1/investments/{accountId}/holdings. Take the account id from list_investments.",
     "inputSchema": {
      "$schema": "http://json-schema.org/draft-07/schema#",
      "type": "object",
@@ -2714,6 +2714,7 @@
    "name": "Directa",
    "currency": "EUR",
    "on": "2031-10-15",
+   "cash": null,
    "holdings": []
   }
  },

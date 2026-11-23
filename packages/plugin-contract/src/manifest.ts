@@ -49,7 +49,9 @@ type Capability =
   | "windowedHistory"
   | "totalOnlyHistory"
   | "costMethod"
-  | "documents.read";
+  | "documents.read"
+  // The plugin answers `POST /prices`: the daily closes of the markets it knows (R5d).
+  | "prices.daily";
 
 export const manifestSchema = z.object({
   id: z.string().regex(PLUGIN_ID),

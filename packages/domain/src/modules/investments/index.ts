@@ -46,6 +46,7 @@ export {
   PRICE_SCALE,
   PRODUCTS,
   QUANTITY_SCALE,
+  RATE_SCALE,
   STALE_VALUE_DAYS,
   plainDecimal,
   unitPriceOf,
@@ -55,6 +56,15 @@ export {
   confirmZeroReading,
   createManualService,
   createManualServiceWithAccount,
+  convertToPortfolio,
+  createPortfolio,
+  createPortfolioWithAccount,
+  addAsset,
+  assetPrices,
+  isPortfolio,
+  pricedMarkets,
+  revalueAfterPrices,
+  setPriceMode,
   deleteOperation,
   ensureAssetSeed,
   linkTransfer,
@@ -66,7 +76,7 @@ export {
   updateServiceUrl,
   updateServiceValue,
 } from "./service";
-export type { ManualServiceInput, OperationInput } from "./service";
+export type { AssetPrice, InvestmentAsset, ManualServiceInput, OperationInput } from "./service";
 export {
   SyncError,
   confirmKeyRevoked,

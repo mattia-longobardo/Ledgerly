@@ -19,6 +19,7 @@ import {
 import { civilDate } from "../../../shared/inputs";
 import { currencyOf, loadBook, type LoadedBook, lockInvestmentAccount, rebuild } from "./book";
 import { insertEvent, insertLegs, type LegInput, optionalNote, periodOn, positive, rateOf } from "./events";
+import { checkPortfolio } from "./guards";
 import { clearTransferGroup } from "./transfers";
 import {
   type InvestmentAccount,
@@ -229,6 +230,7 @@ export async function recordOperation(
       transactionId,
       legs,
     });
+    await checkPortfolio(ctx, investment, account.currency, tx);
     await rebuild(ctx, investment, account.currency, parsed.on, tx);
     return { eventId: event.id };
   });
@@ -318,6 +320,7 @@ export async function updateOperation(ctx: WriteCtx, eventId: string, input: Ope
         .where(and(eq(investmentEvents.id, eventId), userScoped(ctx).owns(investmentEvents))),
     );
     await insertLegs(ctx, tx, eventId, legs);
+    await checkPortfolio(ctx, investment, account.currency, tx);
     await rebuild(ctx, investment, account.currency, oldestDay(event.on, parsed.on) as CivilDate, tx);
   });
 }
@@ -355,6 +358,8 @@ export async function deleteOperation(ctx: WriteCtx, eventId: string, ofAccount?
           .where(and(eq(investmentHoldings.id, holdingId), userScoped(ctx).owns(investmentHoldings)));
       }
     }
-    await rebuild(ctx, investment, await currencyOf(ctx, accountId), event.on, tx);
+    const currency = await currencyOf(ctx, accountId);
+    await checkPortfolio(ctx, investment, currency, tx);
+    await rebuild(ctx, investment, currency, event.on, tx);
   });
 }

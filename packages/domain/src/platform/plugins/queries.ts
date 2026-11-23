@@ -11,7 +11,7 @@ import { readEnv } from "../env";
 import { pluginProvider } from "../integrations/rules";
 import { type Connection, listConnections } from "../integrations/service";
 import { type ConfiguredPlugin, parsePluginConfig } from "../plugin-config";
-import { acceptsContract, type PluginManifest } from "@ledgerly/plugin-contract";
+import { acceptsContract, hasCapability, type PluginManifest } from "@ledgerly/plugin-contract";
 import { type UserPluginState, userPluginState } from "./rules";
 import { pluginActivations, plugins, pluginUserCredentials } from "./schema";
 
@@ -60,6 +60,14 @@ export async function listInstancePlugins(): Promise<InstancePlugin[]> {
       ? [{ config, manifest: row.manifest, manifestReadAt: row.readAt }]
       : [];
   });
+}
+
+/**
+ * The plugin that prices the markets of the instance (R5d), the first one with `prices.daily`, or
+ * null. It serves the instance, not a person: no one turns it on.
+ */
+export async function pricesPlugin(): Promise<InstancePlugin | null> {
+  return (await listInstancePlugins()).find((one) => hasCapability(one.manifest, "prices.daily")) ?? null;
 }
 
 /** What the diagnostics of the server say about one plugin (ux/n2-connection-status.md §9). */
@@ -147,7 +155,10 @@ interface UserPlugin {
  * another person's activation, credentials and connections are not in any of these queries.
  */
 export async function listUserPlugins(ctx: Pick<Ctx, "userId" | "locale">): Promise<UserPlugin[]> {
-  const instance = await listInstancePlugins();
+  // A plugin of the instance, as the prices one, is nobody's to turn on (R5d).
+  const instance = (await listInstancePlugins()).filter(
+    (one) => !hasCapability(one.manifest, "prices.daily"),
+  );
   if (instance.length === 0) return [];
   const [activations, credentials, connections] = await Promise.all([
     getDb()

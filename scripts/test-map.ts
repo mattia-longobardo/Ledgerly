@@ -325,7 +325,14 @@ export const MODULES: Module[] = [
     // The read model of Investments (R5b): pure, no module imports it; `apps/api` composes it.
     id: "portfolio",
     files: ["packages/domain/src/modules/portfolio/**"],
-    usedBy: ["api", "e2e:investments", "e2e:accounts"],
+    usedBy: ["api", "investments", "e2e:investments", "e2e:accounts"],
+  },
+  {
+    // The registry of instruments and their daily prices (R5d): investments reads it through its entry.
+    id: "instruments",
+    files: ["packages/domain/src/modules/instruments/**"],
+    integration: ["packages/domain/src/modules/instruments"],
+    usedBy: ["investments", "connections", "api", "jobs", "e2e:investments"],
   },
   {
     id: "payroll",
@@ -456,6 +463,7 @@ export const MODULES: Module[] = [
     // `apps/api` serves the routes of users, settings and accounts (R2): their tests run with it.
     usedBy: [
       "investments",
+      "jobs",
       "accounts",
       "transactions",
       "budgets",

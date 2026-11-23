@@ -62,8 +62,16 @@ export const XIRR_STATUSES = ["ok", "no_solution", "multiple_solutions", "unavai
 export const PNL_STATUSES = ["verified", "stale", "undetermined"] as const;
 export const PNL_REASONS = ["stale_price", "flows_gap", "base_unknown", "no_value", "no_rate"] as const;
 export const PERIOD_KINDS = ["year", "all", "custom"] as const;
-/** Why an account cannot hold a service: a fund's, not investment or crypto, already a service. */
-export const ELIGIBILITY_REASONS = ["fund", "type", "managed"] as const;
+/**
+ * Why an account cannot hold a service: a fund's, not investment or crypto, already a service; or,
+ * for a manual portfolio only, an account a source reads (R5d).
+ */
+export const ELIGIBILITY_REASONS = ["fund", "type", "managed", "synced"] as const;
+/**
+ * Where an asset's price comes from (R5d): `auto`, the daily close of its market; `manual`, the
+ * valuations the person types; `provider`, the reading of a synced service.
+ */
+export const PRICE_MODES = ["auto", "manual", "provider"] as const;
 
 /**
  * The `reason` of a refusal (`InvestmentError`, `SyncError`). `invalid`: `future_date`,
@@ -84,6 +92,7 @@ export const INVESTMENT_REFUSALS = [
   "not_editable",
   "before_period",
   "not_a_transfer",
+  "quantity_exceeded",
   "unknown_provider",
   "invalid_credentials",
   "not_read_only",
@@ -106,6 +115,7 @@ export const DEPOSIT_ID = "1a2b3c4d-5e6f-4071-a283-2b3c4d5e6f70";
 export const READING_ID = "f8091a2b-3c4d-4e5f-8061-091a2b3c4d5e";
 export const ASSET_ID = "091a2b3c-4d5e-4f60-9172-1a2b3c4d5e6f";
 export const TRANSACTION_ID = "3c4d5e6f-7081-4293-84a5-4d5e6f708192";
+export const INSTRUMENT_ID = "4d5e6f70-8192-43a4-95b6-5e6f708192a3";
 
 export const byService = z.object({ accountId: id() });
 
@@ -200,6 +210,18 @@ export const investmentsList = z.object({
   pnl: legacyPnl,
 });
 
+/**
+ * The price of an asset (R5d): where it comes from, the day of the last one and its source
+ * (`yahoo`, `manual`, the provider's id). `stale`: the last price is older than 5 working days, the
+ * asset is «to update».
+ */
+export const assetPrice = z.object({
+  mode: z.enum(PRICE_MODES),
+  on: civilDate().nullable(),
+  source: z.string().nullable(),
+  stale: z.boolean(),
+});
+
 /** An asset as a row names it. */
 export const assetRef = z.object({
   name: z.string(),
@@ -207,6 +229,10 @@ export const assetRef = z.object({
   symbol: z.string().nullable(),
   isin: z.string().nullable(),
   currency: z.string(),
+  /** The instrument of the registry and the market of the order (R5d); null for an asset outside it. */
+  instrumentId: id().nullable(),
+  mic: z.string().nullable(),
+  price: assetPrice,
 });
 
 /** `GET /investments/{accountId}/holdings` and `get_investment_holdings`: the open positions today. */
@@ -215,6 +241,8 @@ export const holdingsList = z.object({
   name: z.string(),
   currency: z.string(),
   on: civilDate(),
+  /** The cash of a manual portfolio today (R5d): its value is the cash plus the holdings. Null for another service. */
+  cash: money().nullable(),
   holdings: z.array(
     z.object({
       asset: assetRef,

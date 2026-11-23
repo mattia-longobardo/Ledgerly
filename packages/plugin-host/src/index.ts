@@ -18,5 +18,6 @@ export {
   startAccess,
 } from "./service";
 export type { Deps, PluginActionCode, Presence, ReturnOutcome } from "./service";
+export { pluginPriceSource } from "./prices";
 export { chooseAccounts, exposedAccounts, previewBankAccount, readBank, runBankPass, tieBack } from "./sync";
 export type { AccountDecision } from "./sync";

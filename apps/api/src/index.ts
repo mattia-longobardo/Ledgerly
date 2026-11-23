@@ -8,6 +8,7 @@ export { sourceSlugOf } from "./settings/sources";
 export type { SourceReads } from "./settings/sources";
 export type { InvestmentCases } from "./investments/routes";
 export { exportServicesOut, pnlJson } from "./investments/dto";
+export { refreshInstrumentPrices } from "./investments/prices-job";
 export type { ServerCases } from "./settings/server";
 export { deleteCategoryEverywhere } from "./settings/categories";
 export { mergeProposalsView } from "./settings/category-board";

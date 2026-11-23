@@ -101,6 +101,11 @@ export interface Book {
    * module writes.
    */
   accountBalances?: readonly AccountBalanceLike[];
+  /**
+   * The first day the balance no longer is V (R5d, D4): a service kept by value switched to positions
+   * on that day, and from it V is its cash and positions. `undefined`: the balance is V on every day.
+   */
+  balancesUntil?: CivilDate;
 }
 
 export interface AccountBalanceLike {

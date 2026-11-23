@@ -1,0 +1,10 @@
+{
+  "name": "@ledgerly/plugin-prices",
+  "version": "0.62.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@ledgerly/plugin-contract": "*",
+    "zod": "4.6.7"
+  }
+}
