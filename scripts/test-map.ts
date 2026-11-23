@@ -75,7 +75,7 @@ export const FLOWS: Flow[] = [
   },
   {
     id: "investments",
-    specs: ["investments", "investments-home", "investments-service", "investments-groups"],
+    specs: ["investments", "investments-home", "investments-service", "investments-groups", "portfolio"],
     screens: ["a11y", "keyboard"],
   },
   { id: "payroll", specs: ["payroll"], screens: ["a11y"] },
