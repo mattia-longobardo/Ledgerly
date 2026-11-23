@@ -174,7 +174,7 @@ registers the manifest of its source, so its pages exist. Prepare the browser fi
 
 ```bash
 sh scripts/preview-on-test.sh build                      # ledgerly:preview, with its commit on it
-sh scripts/preview-on-test.sh up ledgerly:preview        # on ledgerly_plugins too; wait for /api/health
+sh scripts/preview-on-test.sh up ledgerly:preview        # on ledgerly_plugins; waits for the app, worker, plugins
 sh scripts/preview-on-test.sh seed
 export E2E_BASE_URL=http://localhost:3999
 # … the E2E commands that `npm run test:select` printed …

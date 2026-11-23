@@ -78,15 +78,8 @@ browser() {
     node --input-type=module -e 'import { chromium } from "@playwright/test"; await (await chromium.launch()).close()'
 }
 preview() {
-  # `up` puts the preview on the plugins' network too.
-  sh scripts/preview-on-test.sh up "$image" || return 1
-  i=0
-  until curl -fsS "$E2E_BASE_URL/api/health" >/dev/null 2>&1; do
-    i=$((i + 1))
-    [ "$i" -le 90 ] || { docker logs --tail 50 "$LEDGERLY_PREVIEW_NAME"; return 1; }
-    sleep 1
-  done
-  sh scripts/preview-on-test.sh seed
+  # `up` puts the preview on the plugins' network too, and waits until it and its plugins answer.
+  sh scripts/preview-on-test.sh up "$image" && sh scripts/preview-on-test.sh seed
 }
 # Playwright empties its output folder: this run's goes inside "$out", not over it.
 e2e() { npx playwright test -c playwright.preview.config.ts --reporter=line --output "$out/e2e"; }
