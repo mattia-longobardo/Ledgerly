@@ -258,6 +258,8 @@ describe("the reference user", () => {
     const firstFund = (answers.get_funds as { answer: { funds: { id: string }[] } }).answer.funds[0].id;
     answers.get_fund = await tool("get_fund", { id: firstFund, period: "all" });
     answers.get_investment = await tool("get_investment", { account_id: user.brokerId, period: "all" });
+    // A synced service has no plan (R5d): the tool answers its empty list.
+    answers.list_investment_plans = await tool("list_investment_plans", { account_id: user.brokerId });
     await expect(repeatable(answers)).toMatchFileSnapshot(join(BASELINES, "contract/mcp.json"));
   });
 });

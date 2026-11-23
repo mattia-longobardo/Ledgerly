@@ -135,6 +135,7 @@ and uses the same services as the REST API.
 | `list_investments`         | `GET /api/v1/investments`                   |
 | `get_investment_holdings`  | `GET /api/v1/investments/{accountId}/holdings` |
 | `get_investment`           | `GET /api/v1/investments/{accountId}`       |
+| `list_investment_plans`    | `GET /api/v1/investments/{accountId}/plans` |
 
 ### Connect a client
 

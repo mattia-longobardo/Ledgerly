@@ -1098,5 +1098,10 @@
     "file": "test/wiring.ts",
     "decision": "R5c (P3b)",
     "reason": "eb193ef (R5c, engines moved to plugin-host): every test process remembers the Wallet and Trek manifests, as the core reads them from the plugins, because what a plugin can do is read from its manifest"
+  },
+  {
+    "file": "apps/web/src/modules/investments/exposure.itest.ts",
+    "decision": "R5d passo 2 (PERS-587)",
+    "reason": "R5d passo 2: strumento MCP list_investment_plans con lo scope investments:read; un nome aggiunto alle due liste attese, nessun altro valore cambia"
   }
 ]
