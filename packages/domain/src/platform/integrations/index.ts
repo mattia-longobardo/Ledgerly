@@ -6,13 +6,11 @@ export {
   KINDS_OF,
   PLUGIN_KINDS,
   PROVIDERS,
-  PROVIDER_ADDONS,
-  TREK_PROVIDER,
-  WALLET_PROVIDER,
-  coreCreatesRecords,
-  isBankPluginProvider,
+  addonOf,
+  isBankPlugin,
   isKnownProvider,
   isPluginProvider,
+  pluginKinds,
   pluginProvider,
 } from "./rules";
 export type { SyncKind } from "./rules";
@@ -30,6 +28,7 @@ export {
   deleteOldSyncRuns,
   deletedSourceAccounts,
   dueConnections,
+  externalIdsOf,
   findConnection,
   finishRun,
   forgetSource,
@@ -44,10 +43,15 @@ export {
   recordRun,
   rescheduleConnections,
   runningReadings,
+  saveConnection,
+  saveIbanConflicts,
   savePluginConnection,
   saveSchedule,
+  saveSkippedAccounts,
   saveSyncJob,
+  skipRun,
   skipSourceAccount,
+  skippedAccounts,
   sourceSkippedIds,
 } from "./service";
 export type { Connection, DueConnection, RecentRun } from "./service";
@@ -65,4 +69,3 @@ export {
   warningFor,
 } from "./status";
 export type { StatusFacts, SyncStatus } from "./status";
-export type { CardAccount, CardError, CardResult, CoreCard } from "./card";

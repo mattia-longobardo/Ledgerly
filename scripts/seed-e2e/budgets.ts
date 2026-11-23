@@ -4,7 +4,7 @@ import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * Budgets (F3): this month's spending in four categories, three of them with a limit from this

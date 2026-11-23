@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 108406,
-    "duplicatedLines": 16098,
-    "percent": 14.85,
-    "blocks": 1243
+    "lines": 108967,
+    "duplicatedLines": 16044,
+    "percent": 14.72,
+    "blocks": 1237
   },
   "units": {
     "api": {
-      "lines": 6074,
+      "lines": 6103,
       "duplicatedLines": 1212,
-      "percent": 19.95,
+      "percent": 19.86,
       "blocks": 113
     },
     "app": {
-      "lines": 20993,
-      "duplicatedLines": 2799,
-      "percent": 13.33,
-      "blocks": 218
+      "lines": 20997,
+      "duplicatedLines": 2790,
+      "percent": 13.29,
+      "blocks": 217
     },
     "global.d": {
       "lines": 12,
@@ -65,9 +65,9 @@
       "blocks": 4
     },
     "modules/interests": {
-      "lines": 2164,
+      "lines": 2165,
       "duplicatedLines": 414,
-      "percent": 19.13,
+      "percent": 19.12,
       "blocks": 30
     },
     "modules/investments": {
@@ -101,16 +101,16 @@
       "blocks": 31
     },
     "modules/timeoff": {
-      "lines": 4282,
-      "duplicatedLines": 317,
-      "percent": 7.4,
+      "lines": 4318,
+      "duplicatedLines": 313,
+      "percent": 7.25,
       "blocks": 29
     },
     "modules/transactions": {
-      "lines": 13057,
-      "duplicatedLines": 1676,
-      "percent": 12.84,
-      "blocks": 134
+      "lines": 13058,
+      "duplicatedLines": 1667,
+      "percent": 12.77,
+      "blocks": 133
     },
     "modules/users": {
       "lines": 1004,
@@ -221,9 +221,9 @@
       "blocks": 0
     },
     "platform/integrations": {
-      "lines": 2326,
+      "lines": 2242,
       "duplicatedLines": 470,
-      "percent": 20.21,
+      "percent": 20.96,
       "blocks": 38
     },
     "platform/integrations/ccxt": {
@@ -243,18 +243,6 @@
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
-    },
-    "platform/integrations/trek": {
-      "lines": 402,
-      "duplicatedLines": 16,
-      "percent": 3.98,
-      "blocks": 2
-    },
-    "platform/integrations/wallet": {
-      "lines": 1303,
-      "duplicatedLines": 16,
-      "percent": 1.23,
-      "blocks": 2
     },
     "platform/jobs": {
       "lines": 503,
@@ -305,9 +293,9 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 2433,
+      "lines": 4712,
       "duplicatedLines": 220,
-      "percent": 9.04,
+      "percent": 4.67,
       "blocks": 16
     },
     "platform/ranges": {
@@ -503,7 +491,6 @@
     "app/(app)/expenses/categories/macro-dialog.tsx": 11,
     "app/(app)/expenses/expenses-blocks.tsx": 18,
     "app/(app)/expenses/expenses-screen.tsx": 17,
-    "app/(app)/expenses/manual.ts": 9,
     "app/(app)/expenses/review/review-blocks.tsx": 9,
     "app/(app)/expenses/review/review-screen.tsx": 28,
     "app/(app)/interests/[id]/page.tsx": 8,
@@ -782,7 +769,7 @@
     "modules/subscriptions/ui/suggestions-dialog.tsx": 14,
     "modules/timeoff/ports.ts": 19,
     "modules/timeoff/rules/inputs.ts": 21,
-    "modules/timeoff/schema.ts": 56,
+    "modules/timeoff/schema.ts": 52,
     "modules/timeoff/service/external.ts": 25,
     "modules/timeoff/service/ranges.ts": 13,
     "modules/timeoff/service/records.ts": 14,
@@ -816,7 +803,7 @@
     "modules/transactions/sending.ts": 9,
     "modules/transactions/service/duplicates.ts": 9,
     "modules/transactions/service/edits.ts": 57,
-    "modules/transactions/service/guards.ts": 21,
+    "modules/transactions/service/guards.ts": 12,
     "modules/transactions/service/provider.ts": 26,
     "modules/transactions/source-categories/choosing.ts": 34,
     "modules/transactions/source-categories/reading.ts": 49,
@@ -873,10 +860,6 @@
     "platform/integrations/service/schedule.ts": 31,
     "platform/integrations/service/sources.ts": 74,
     "platform/integrations/status.ts": 19,
-    "platform/integrations/trek/card.ts": 6,
-    "platform/integrations/trek/sync.ts": 10,
-    "platform/integrations/wallet/card.ts": 6,
-    "platform/integrations/wallet/sync.ts": 10,
     "platform/jobs/schema.ts": 28,
     "platform/notifications/reads.ts": 34,
     "platform/notifications/schema.ts": 49,

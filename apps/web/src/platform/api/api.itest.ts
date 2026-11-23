@@ -10,8 +10,8 @@ import { getDb } from "@domain/platform/db/client";
 import { deleteFolder, listFolder } from "@domain/platform/storage";
 import { saveConnection } from "@domain/platform/integrations/service/connections";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
-import { BACKFILL_CHOICES } from "@domain/platform/integrations/wallet/depth";
+import { BACKFILL_CHOICES } from "@plugin-host/movements/depth";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 // `after()` needs a Next request scope. The reading of a document is not what these tests are
 // about — the upload's ownership is — so it is a no-op here, deterministically.

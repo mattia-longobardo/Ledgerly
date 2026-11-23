@@ -11,7 +11,6 @@ import { runTier } from "@/platform/jobs/tick";
 import { dispatchDueConnections, integrationsSyncJob } from "./jobs";
 // Joins the activation of a plugin to the passes, as every entry that starts one does.
 import "@/app/plugin-wiring";
-import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
 import { nextSyncTimes, type SyncSchedule } from "@domain/platform/integrations/schedule";
 import { integrationConnections } from "@domain/platform/integrations/schema";
 import { pluginActivations } from "@domain/platform/plugins/schema";
@@ -25,10 +24,11 @@ import {
   saveConnection,
   saveSchedule,
 } from "@domain/platform/integrations/service";
+import { TREK_PROVIDER } from "../../../../../test/fixtures/providers";
 
 // A Trek pass that answers without calling Trek: the pass is real to the dispatcher, its content
 // beside the point.
-vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn(async () => "answered") }));
+vi.mock("@/modules/timeoff/jobs", () => ({ runCalendarPass: vi.fn(async () => "answered") }));
 
 // The integrations dispatcher of docs/scheduler.md against a real database: a connection is passed
 // when its own rules say so, to the minute, its next pass moves on, and `manual` is never due.

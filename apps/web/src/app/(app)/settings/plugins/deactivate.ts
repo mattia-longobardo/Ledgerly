@@ -12,10 +12,10 @@ import { forgetSends, pendingSends } from "@ledgerly/domain/transactions";
 import { forgetSourceCategories, sourceCategoryCount } from "@ledgerly/domain/transactions";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { getDb } from "@ledgerly/domain/platform/db";
-import { isKnownProvider, KINDS_OF, pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { isBankPlugin, pluginProvider } from "@ledgerly/domain/platform/integrations";
 import { forgetSource, listConnections, runningReadings } from "@ledgerly/domain/platform/integrations";
 import { PLUGIN_ID } from "@ledgerly/plugin-contract";
-import { isPluginActive } from "@ledgerly/domain/platform/plugins";
+import { isPluginActive, pluginManifest } from "@ledgerly/domain/platform/plugins";
 import { type Deps as PluginDeps, forgetPlugin, prepareAccessClosing } from "@ledgerly/plugin-host";
 
 /** A source the person can turn off: a provider of the core with a page, or a plugin they have on. */
@@ -36,16 +36,15 @@ export class DeactivateError extends Error {
 
 /**
  * The source of a page's slug, or `null` when the person has no such source to turn off. A plugin
- * still read by an engine of the core (`KINDS_OF`, until R5c P3b) has its page whether it is on or
- * not, and turning it off turns the plugin off too.
+ * read by an engine of the core (a source read with a token, a leave calendar: its manifest says)
+ * has its page whether it is on or not, and turning it off turns the plugin off too.
  */
 export async function sourceOf(ctx: Pick<Ctx, "userId">, slug: string): Promise<Source | null> {
   if (!PLUGIN_ID.test(slug)) return null;
   const provider = pluginProvider(slug);
-  if (isKnownProvider(provider)) {
-    const kinds: readonly string[] = KINDS_OF[provider];
-    return { provider, pluginId: slug, days: kinds.includes("leave") };
-  }
+  const capabilities = (await pluginManifest(slug))?.capabilities ?? [];
+  if (!isBankPlugin(capabilities))
+    return { provider, pluginId: slug, days: capabilities.includes("leaveCalendar") };
   if (!(await isPluginActive(ctx, slug))) return null;
   return { provider, pluginId: slug, days: false };
 }

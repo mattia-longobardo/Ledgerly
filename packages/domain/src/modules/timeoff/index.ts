@@ -1,7 +1,7 @@
 export type { AccrualView, Overdrawn } from "./accrual";
 export { bookLeave, undoLeave, unbookLeave, unbookLeaveRange } from "./events";
 export type { LeaveAnswer } from "./events";
-export { calendarSync, wireTimeoff } from "./ports";
+export { calendarDays, calendarSync, wireTimeoff } from "./ports";
 export type { LeaveBalanceSource, LeaveCalendarSync } from "./ports";
 export { timeOffView } from "./queries";
 export type { KindView, LeaveRow } from "./queries";

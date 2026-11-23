@@ -7,10 +7,10 @@ import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { contextFor } from "@domain/modules/users/jobs";
 import { setAddon } from "@domain/modules/users/service";
 import type { Ctx } from "@domain/platform/context";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { raise } from "@domain/platform/notifications/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));

@@ -11,8 +11,8 @@ import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { BUDGET_ALERT_KIND, budgetAlertsJob } from "./jobs";
 import { budgetDetail } from "@domain/modules/budgets/queries";
 import { saveAlerts, setLimit } from "@domain/modules/budgets/service";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { setAddon } from "@domain/modules/users/service";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 // One instant for the whole file, for the clock of JavaScript alone: "today" read at two moments is
 // two days when midnight falls between them, and a test that crosses it fails for no fault.

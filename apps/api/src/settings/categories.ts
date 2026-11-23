@@ -4,7 +4,6 @@
 import type { Hono } from "hono";
 import { type RouteContract, SETTINGS } from "@ledgerly/api-contract";
 import type { Ctx } from "@ledgerly/domain/platform/context";
-import { transactionsSource } from "@ledgerly/domain/platform/integrations/source";
 import {
   archiveCategory,
   colorOfCategory,
@@ -20,6 +19,7 @@ import {
   updateCategory,
   updateLabel,
 } from "@ledgerly/domain/transactions";
+import { categorySourceOf } from "@ledgerly/plugin-host";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 
 const { categories, labels } = SETTINGS;
@@ -32,8 +32,9 @@ type Who = Pick<Ctx, "userId">;
  * says so. The other order would let the source lose a category for a deletion that never happened.
  */
 export async function deleteCategoryEverywhere(ctx: Who, id: string) {
-  const deletion = await deleteCategory(ctx, id, transactionsSource);
-  const external = await transactionsSource.deleteCategories(ctx, deletion.externalIds);
+  const source = await categorySourceOf(ctx);
+  const deletion = await deleteCategory(ctx, id, source);
+  const external = await source.deleteCategories(ctx, deletion.externalIds);
   return { removed: deletion.removed.length, uncategorised: deletion.uncategorised, external };
 }
 

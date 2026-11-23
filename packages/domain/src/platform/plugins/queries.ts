@@ -8,7 +8,7 @@ import type { Ctx } from "../context";
 import { getDb } from "../db/client";
 import { userScoped } from "../db/scope";
 import { readEnv } from "../env";
-import { pluginProvider } from "../integrations/rules";
+import { isBankPlugin, isPluginProvider, pluginProvider } from "../integrations/rules";
 import { type Connection, listConnections } from "../integrations/service";
 import { type ConfiguredPlugin, parsePluginConfig } from "../plugin-config";
 import { acceptsContract, hasCapability, type PluginManifest } from "@ledgerly/plugin-contract";
@@ -127,6 +127,31 @@ export async function findInstancePlugin(pluginId: string): Promise<InstancePlug
   return (await listInstancePlugins()).find((plugin) => plugin.config.id === pluginId) ?? null;
 }
 
+// On `globalThis`, as the ports: one process may load this file in more than one bundle.
+declare global {
+  var ledgerlyReadManifests: Map<string, PluginManifest> | undefined;
+}
+
+/**
+ * Keeps a manifest this process has read (`refreshManifests` of plugin-host), or was handed (a
+ * plugin served in-process by the tests): what {@link pluginManifest} answers while the database
+ * has no row of the plugin yet.
+ */
+export function rememberManifest(manifest: PluginManifest): void {
+  globalThis.ledgerlyReadManifests ??= new Map();
+  globalThis.ledgerlyReadManifests.set(manifest.id, manifest);
+}
+
+/**
+ * The manifest of a plugin (rewrite plan R5c, P3b): the one the database keeps, else the one this
+ * process read last; `null` while it was never read. What a plugin can do — its kinds, its addon,
+ * whether its accounts take the movements written here — is read from it, never from its id.
+ */
+export async function pluginManifest(pluginId: string): Promise<PluginManifest | null> {
+  const plugin = await findInstancePlugin(pluginId);
+  return plugin?.manifest ?? globalThis.ledgerlyReadManifests?.get(pluginId) ?? null;
+}
+
 /** The connections one person has through one plugin: one per bank. */
 export async function listPluginConnections(
   ctx: Pick<Ctx, "userId">,
@@ -225,4 +250,24 @@ export async function credentialsStatus(
   return row
     ? { saved: true, savedAt: row.savedAt, invalid: row.invalidAt !== null }
     : { saved: false, savedAt: null, invalid: false };
+}
+
+/**
+ * The capabilities of a connection's provider: its plugin's manifest's, none while it was never read;
+ * `null` for a provider of the core, which has no manifest.
+ */
+export async function capabilitiesOf(provider: string): Promise<readonly string[] | null> {
+  if (!isPluginProvider(provider)) return null;
+  return (await pluginManifest(provider.slice("plugin:".length)))?.capabilities ?? [];
+}
+
+/**
+ * Whether a connection's provider is a bank's plugin, read by the plugins' own pass: a plugin whose
+ * manifest is neither a source read with a token nor a leave calendar. A plugin never read is taken
+ * as a bank's: the plugins the engines of plugin-host read have their manifest read before any
+ * connection of theirs is made.
+ */
+export async function isBankPluginProvider(provider: string): Promise<boolean> {
+  const capabilities = await capabilitiesOf(provider);
+  return capabilities !== null && isBankPlugin(capabilities);
 }

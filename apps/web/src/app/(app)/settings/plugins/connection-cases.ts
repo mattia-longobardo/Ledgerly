@@ -18,16 +18,14 @@ import {
   type Connection,
   findConnection,
   IntegrationError,
-  isBankPluginProvider,
   isPluginProvider,
   makeDueNow,
   saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
 import { enqueue } from "@ledgerly/domain/platform/jobs";
-import { BANK_SCHEDULE } from "@ledgerly/domain/platform/plugins";
-import { PluginActionError, type Presence, setPluginActive } from "@ledgerly/plugin-host";
+import { BANK_SCHEDULE, isBankPluginProvider } from "@ledgerly/domain/platform/plugins";
+import { historyOf, PluginActionError, type Presence, setPluginActive } from "@ledgerly/plugin-host";
 import { tasks } from "@/platform/jobs/queue";
-import { passFor } from "@/platform/integrations/registry";
 import { answered, CODE_OF_ANSWER, type Refusal } from "./connection-codes";
 import { recommendedSchedule } from "./recommended-schedule";
 
@@ -67,13 +65,13 @@ async function update(ctx: Ctx, connection: Connection, presence: Presence | nul
     tasks.updateConnection(
       ctx.userId,
       connection.id,
-      isBankPluginProvider(connection.provider) ? presence : null,
+      (await isBankPluginProvider(connection.provider)) ? presence : null,
     ),
   );
   return null;
 }
 
-/** What a provider of the core answers to "test" or "history": a Server Action of its card until R5c. */
+/** What the card of a plugin read by the core answers to "test" or "history" (`core-cases.ts`). */
 export type CoreConnection = (
   provider: string,
   kind: "test" | "history",
@@ -89,7 +87,7 @@ const ACTIONS: Record<
 > = {
   update: (ctx, connection, options) => update(ctx, connection, options.presence),
   async resume(ctx, connection) {
-    const schedule = isBankPluginProvider(connection.provider)
+    const schedule = (await isBankPluginProvider(connection.provider))
       ? BANK_SCHEDULE
       : recommendedSchedule(connection.provider);
     await saveSchedule(ctx, connection.id, schedule);
@@ -105,7 +103,7 @@ const ACTIONS: Record<
   test: async (_ctx, connection, options) => answered(await options.core(connection.provider, "test")),
   async history(_ctx, connection, options) {
     // "Download the history again": only for a provider that reads a chosen depth.
-    const choices = passFor(connection.provider)?.history?.choices ?? [];
+    const choices = (await historyOf(connection.provider))?.choices ?? [];
     if (options.months === undefined || !choices.includes(options.months)) return "failed";
     return answered(await options.core(connection.provider, "history", options.months));
   },

@@ -42,7 +42,7 @@ import {
   updateFund,
   updateValuation,
 } from "./service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 let ctx: Ctx;
 

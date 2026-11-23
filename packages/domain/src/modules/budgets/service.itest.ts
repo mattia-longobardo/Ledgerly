@@ -8,7 +8,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { budgetsView } from "./queries";
 import { BudgetError, setLimit, stopLimit } from "./service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 let ctx: Ctx;
 let accountId: string;

@@ -3,29 +3,29 @@ import type { Ctx } from "../../../platform/context";
 import type { CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { type LeaveDayKind, goesToTrek } from "../rules";
+import { type LeaveDayKind, goesToCalendar } from "../rules";
 import { leaveDays } from "../schema";
 import type { LeaveDay, LeaveWindow } from "./records";
 
-/* What a Trek pass needs from this module (plan F7 §3.3) */
+/* What a pass of the calendar needs from this module (plan F7 §3.3) */
 
-/** One of this user's days as a Trek pass needs to see it. */
-export interface TrekDay {
+/** One of this user's days as a pass of the calendar needs to see it. */
+interface CalendarDay {
   id: string;
   on: CivilDate;
   kind: LeaveDayKind;
   fraction: number | null;
   pending: "none" | "upsert" | "delete";
-  /** The pair Trek was last observed holding, which is what a deletion has to send back. */
-  trekFraction: number | null;
-  trekKind: LeaveDayKind | null;
+  /** The pair the calendar was last observed holding, which is what a deletion has to send back. */
+  observedFraction: number | null;
+  observedKind: LeaveDayKind | null;
 }
 
-async function daysForTrek(
+async function daysForCalendar(
   ctx: Pick<Ctx, "userId">,
   window: LeaveWindow,
   onlyPending: boolean,
-): Promise<TrekDay[]> {
+): Promise<CalendarDay[]> {
   const rows = await getDb()
     .select({
       id: leaveDays.id,
@@ -33,8 +33,8 @@ async function daysForTrek(
       kind: leaveDays.kind,
       fraction: leaveDays.fraction,
       pending: leaveDays.pending,
-      trekFraction: leaveDays.trekFraction,
-      trekKind: leaveDays.trekKind,
+      observedFraction: leaveDays.observedFraction,
+      observedKind: leaveDays.observedKind,
     })
     .from(leaveDays)
     .where(
@@ -48,34 +48,34 @@ async function daysForTrek(
     .orderBy(asc(leaveDays.on), asc(leaveDays.kind), asc(leaveDays.id));
 
   return rows
-    .filter((row) => goesToTrek(row.kind))
+    .filter((row) => goesToCalendar(row.kind))
     .map((row) => ({
       id: row.id,
       on: row.on,
       kind: row.kind,
       fraction: row.fraction === null ? null : Number(row.fraction),
       pending: row.pending,
-      trekFraction: row.trekFraction === null ? null : Number(row.trekFraction),
-      trekKind: row.trekKind,
+      observedFraction: row.observedFraction === null ? null : Number(row.observedFraction),
+      observedKind: row.observedKind,
     }));
 }
 
 /**
- * Every day of a year the next pass owes Trek something for, oldest first. Only the kinds Trek
+ * Every day of a year the next pass owes the calendar something for, oldest first. Only the kinds the calendar
  * knows: a ROL row never carries a pending state, but the filter is stated here too so a future
  * kind cannot leak into a request by forgetting one (spec §9.2).
  */
-export function pendingForTrek(ctx: Pick<Ctx, "userId">, window: LeaveWindow): Promise<TrekDay[]> {
-  return daysForTrek(ctx, window, true);
+export function pendingForCalendar(ctx: Pick<Ctx, "userId">, window: LeaveWindow): Promise<CalendarDay[]> {
+  return daysForCalendar(ctx, window, true);
 }
 
 /**
- * Every Trek-eligible day of a year, pending or not — what a pass diffs against the year Trek
- * reports. The whole set and not only the pending ones, because a day Trek has quietly lost is
+ * Every calendar-eligible day of a year, pending or not — what a pass diffs against the year the calendar
+ * reports. The whole set and not only the pending ones, because a day the calendar has quietly lost is
  * one we still hold and still want: the diff puts it back without anybody having to notice first.
  */
-export function trekDaysOf(ctx: Pick<Ctx, "userId">, window: LeaveWindow): Promise<TrekDay[]> {
-  return daysForTrek(ctx, window, false);
+export function calendarDaysOf(ctx: Pick<Ctx, "userId">, window: LeaveWindow): Promise<CalendarDay[]> {
+  return daysForCalendar(ctx, window, false);
 }
 
 /** Every date in a year this user holds a day on, whatever its kind — the conflict check's input. */
@@ -89,7 +89,7 @@ export async function datesHeld(ctx: Pick<Ctx, "userId">, window: LeaveWindow): 
   return new Set(rows.map((row) => row.on));
 }
 
-/** How many days are waiting to be sent to Trek or taken back from it. */
+/** How many days are waiting to be sent to the calendar or taken back from it. */
 export async function pendingCount(ctx: Pick<Ctx, "userId">): Promise<number> {
   const rows = await getDb()
     .select({ id: leaveDays.id })
@@ -109,14 +109,14 @@ export async function yearsWithPending(ctx: Pick<Ctx, "userId">): Promise<number
 }
 
 /**
- * The pair the calendar was observed holding, written twice (rewrite plan R5c, P2): the `trek_*`
+ * The pair the calendar was observed holding, written twice (rewrite plan R5c, P2): the old
  * columns every read still uses, and the `external_*` ones that replace them in a later release.
  * Both always carry the same values; an observed pair is a settled one.
  */
 function observedPair(fraction: string | null, kind: "vacation" | "comp") {
   return {
-    trekFraction: fraction,
-    trekKind: kind,
+    observedFraction: fraction,
+    observedKind: kind,
     externalFraction: fraction,
     externalKind: kind,
     externalState: "synced" as const,
@@ -124,19 +124,19 @@ function observedPair(fraction: string | null, kind: "vacation" | "comp") {
 }
 
 /** What a pass observed about one day once it had re-read the year. */
-export interface Observed {
+interface Observed {
   id: string;
-  /** What Trek holds now, or `null` when Trek no longer holds the day at all. */
+  /** What the calendar holds now, or `null` when the calendar no longer holds the day at all. */
   fraction: number | null;
   kind: LeaveDayKind | null;
 }
 
 /**
- * Applies the outcome of a pass: a day Trek now holds as we meant it becomes `pending = 'none'`
- * with the observed pair recorded; a day Trek no longer holds, and that we had asked it to
+ * Applies the outcome of a pass: a day the calendar now holds as we meant it becomes `pending = 'none'`
+ * with the observed pair recorded; a day the calendar no longer holds, and that we had asked it to
  * remove, is finally deleted.
  *
- * Nothing here decides anything — the pass has already re-read Trek and worked out what is true.
+ * Nothing here decides anything — the pass has already re-read the calendar and worked out what is true.
  * This only writes it down, in one transaction so a half-applied outcome cannot be read.
  */
 export async function markSynced(
@@ -182,15 +182,15 @@ export async function markRefused(ctx: Pick<Ctx, "userId">, ids: readonly string
 }
 
 /**
- * Records a day a pass found on Trek that we did not have (plan F7 §3.4.7.4). It arrives already
- * reconciled: `origin = 'external'` (since R5c P3; `trek` before), nothing pending, and the observed
- * pair is what Trek showed.
+ * Records a day a pass found on the calendar that we did not have (plan F7 §3.4.7.4). It arrives already
+ * reconciled: `origin = 'external'` (since R5c P3; the old origin before), nothing pending, and the observed
+ * pair is what the calendar showed.
  *
  * A day we already hold under a **different** kind is left alone and reported back instead of
- * being rewritten: our classification wins, and a Trek `comp` we keep as ROL is a case for a human
+ * being rewritten: our classification wins, and a calendar `comp` we keep as ROL is a case for a human
  * to look at, not for the sync to resolve (plan F7 §3.6.3).
  */
-export async function recordFromTrek(
+export async function recordFromCalendar(
   ctx: Pick<Ctx, "userId">,
   day: { on: CivilDate; kind: "vacation" | "comp"; fraction: number },
   now: Date = new Date(),
@@ -224,7 +224,7 @@ export async function recordFromTrek(
 
 /**
  * Closes every pending removal of this user, by really removing the days (plan F7 §3.4.10).
- * Called when Trek is unlinked: a row waiting for a pass that will never come would sit in the
+ * Called when the calendar is unlinked: a row waiting for a pass that will never come would sit in the
  * table for ever, and there is no longer anybody to ask.
  */
 export async function closePendingDeletes(ctx: Pick<Ctx, "userId">): Promise<number> {

@@ -7,6 +7,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
+import { TREK_PROVIDER } from "../../../../../test/fixtures/providers";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
@@ -162,12 +163,12 @@ describe("the routes of time off", () => {
 describe("the external calendar's figures on GET /timeoff/{year}", () => {
   it("are null without a calendar, and what its last pass said once it has one", async () => {
     // The calendar of the application, not the test's: its figures are what this route answers.
-    const { leaveCalendar } = await import("@ledgerly/domain/platform/integrations/calendar");
+    const { leaveCalendar } = await import("@ledgerly/plugin-host");
     timeoff.wireTimeoff({ calendar: leaveCalendar });
     expect((await send(alice, "GET", "/timeoff/2026")).body.external).toBeNull();
 
     const connection = await integrations.saveConnection(alice, {
-      provider: integrations.TREK_PROVIDER,
+      provider: TREK_PROVIDER,
       credentials: { baseUrl: "https://trek.example", clientId: "id", clientSecret: "secret" },
     });
     const cursor = { year: "2026", used: "11", remaining: "18", totalAvailable: "29" };

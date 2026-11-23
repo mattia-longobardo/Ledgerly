@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { ConfiguredPlugin } from "@domain/platform/plugin-config";
-import type { SourceCalls } from "@domain/platform/integrations/wallet/calls";
+import type { SourceCalls } from "@plugin-host/movements/calls";
 import { sourceCalls } from "@plugin-host/source";
 
 type Fetch = typeof globalThis.fetch;

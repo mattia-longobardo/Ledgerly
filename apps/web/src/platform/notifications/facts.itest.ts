@@ -10,7 +10,6 @@ import { DEFAULT_PREFERENCES } from "@domain/modules/users/rules";
 import { setAddon, updatePreferences } from "@domain/modules/users/service";
 import type { Ctx } from "@domain/platform/context";
 import { getDb } from "@domain/platform/db/client";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import {
   findConnection,
   finishRun,
@@ -32,6 +31,7 @@ import { accountAlertsJob } from "@/modules/accounts/jobs";
 import { budgetAlertsJob } from "@/modules/budgets/jobs";
 import { reportConnection } from "@/platform/integrations/alerts";
 import { monthlySummaryJob } from "@/platform/reports/jobs";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 vi.useFakeTimers({ toFake: ["Date"], now: new Date() });
 afterAll(() => {

@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "@domain/platform/context";
 import { getDb } from "@domain/platform/db/client";
-import { pluginProvider, TREK_PROVIDER } from "@domain/platform/integrations/rules";
+import { pluginProvider } from "@domain/platform/integrations/rules";
 import { integrationConnections } from "@domain/platform/integrations/schema";
 import {
   type Connection,
@@ -44,6 +44,7 @@ import {
   setPluginActive,
   startAccess,
 } from "./service";
+import { TREK_PROVIDER } from "../../../test/fixtures/providers";
 
 const PLUGIN = "enablebanking";
 const SECRET = "integration-plugin-secret-integration-1";

@@ -5,7 +5,7 @@ import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { addDays, today } from "@domain/shared/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * Pockets (F3): a synced savings account holding 10.000 €, a pocket with a target resting on it

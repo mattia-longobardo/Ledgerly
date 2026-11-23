@@ -15,7 +15,7 @@ import { userScoped } from "@domain/platform/db/scope";
 import { pluginProvider } from "@domain/platform/integrations/rules";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, lastMonthOf, syncedAccount, thisMonthOf, walletMovement } from "./common";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 export async function seedExpenses(): Promise<void> {
   const ctx = await contextOf(USERS.expenses.email);

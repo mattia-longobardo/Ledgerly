@@ -18,7 +18,7 @@ import { createTestUser } from "../../../../../test/users";
 import { categoryMacroTotals, listTransactions, monthlyTotals, transactionsSummary } from "./queries";
 import type { IncomingTransaction } from "./rules";
 import { upsertFromProvider } from "./service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 let ctx: Ctx;
 

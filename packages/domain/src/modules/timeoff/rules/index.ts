@@ -9,10 +9,9 @@
  */
 export {
   LEAVE_DAY_KINDS,
-  TREK_KINDS,
-  goesToTrek,
-  asTrekKind,
-  LEAVE_ORIGINS,
+  CALENDAR_KINDS,
+  goesToCalendar,
+  asCalendarKind,
   EXTERNAL_STATES,
   PENDING_STATES,
   stillBooked,

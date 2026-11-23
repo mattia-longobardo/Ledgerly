@@ -3,8 +3,8 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
 import { getDb } from "@domain/platform/db/client";
-import { ETORO_PROVIDER, TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
-import { BACKFILL_MONTHS, FIRST_LINK_MONTHS } from "@domain/platform/integrations/wallet/depth";
+import { ETORO_PROVIDER } from "@domain/platform/integrations/rules";
+import { BACKFILL_MONTHS, FIRST_LINK_MONTHS } from "@plugin-host/movements/depth";
 import { integrationConnections } from "@domain/platform/integrations/schema";
 import {
   listConnections,
@@ -22,6 +22,7 @@ import { keyServiceAccount } from "../../../../../../../test/investments";
 import { createTestUser } from "../../../../../../../test/users";
 import { connectionList } from "./connection-list";
 import { statusOf } from "./connection-state";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../../../test/fixtures/providers";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));

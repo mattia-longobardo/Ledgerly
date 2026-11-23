@@ -12,7 +12,7 @@ import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
 import { saveRates, storedRange } from "@domain/platform/fx/service";
 import { isBookable } from "@domain/platform/holidays/rules";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * The Expenses journey needs movements that arrived the way real ones do: a synced account adopted

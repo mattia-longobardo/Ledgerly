@@ -14,15 +14,21 @@ import {
   listingsOf,
   marketKey,
 } from "@ledgerly/domain/instruments";
-import { wireSource } from "@ledgerly/domain/platform/integrations/source";
-import { leaveCalendar, wireCalendar } from "@ledgerly/domain/platform/integrations/calendar";
 import { payrollDirectory, payrollLeaveBalances, wirePayroll } from "@ledgerly/domain/payroll";
 import { wireTimeoff } from "@ledgerly/domain/timeoff";
 import { wireAuth } from "@ledgerly/domain/platform/auth";
 import { startOnboarding } from "@ledgerly/domain/users";
 import { addonOn } from "@ledgerly/domain/platform/context";
 import { movementsOfAccounts } from "@ledgerly/domain/transactions";
-import { openCalendar, openSource } from "@ledgerly/plugin-host";
+import {
+  leaveCalendar,
+  openCalendar,
+  openSource,
+  wireCalendar,
+  wireSinks,
+  wireSource,
+} from "@ledgerly/plugin-host";
+import { leaveSink, movementsSink } from "./plugin-sinks";
 
 // Without Payroll (H52, PA12) time off and funds stay on, without what the payslips gave them: time off
 // has no balances from the payslips, a fund's detail no codes or documents of a payslip.
@@ -41,6 +47,7 @@ export function wireDomain(): void {
   wireAccounts({ movements: movementsOfAccounts, managed: managedAccountsOfInvestments });
   wireSource({ open: openSource });
   wireCalendar({ open: openCalendar });
+  wireSinks({ movements: movementsSink, leave: leaveSink });
   wireTimeoff({ calendar: leaveCalendar, balances: leaveBalances });
   wirePayroll({ listeners: [payrollSource] });
   wireFunds({ payslips });

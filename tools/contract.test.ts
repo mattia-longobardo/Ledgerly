@@ -40,6 +40,7 @@ import * as interestsWire from "../packages/api-contract/src/interests/shared";
 import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
 import * as timeoffDomain from "@domain/modules/timeoff/rules";
+import { leaveDays } from "@domain/modules/timeoff/schema";
 import { HOLIDAY_SOURCES } from "@domain/platform/holidays/rules";
 import * as fundsWire from "../packages/api-contract/src/funds/shared";
 import * as fundsSources from "@domain/modules/funds/sources";
@@ -405,9 +406,9 @@ describe("the Server Actions of time off", () => {
     expect(timeoffWire.LEAVE_KINDS).toEqual(timeoffDomain.LEAVE_DAY_KINDS);
     expect(timeoffWire.RESIDUAL_BASES).toEqual(timeoffDomain.RESIDUAL_BASES);
     expect(timeoffWire.SYNC_STATES).toEqual(timeoffDomain.PENDING_STATES);
-    // The wire says `external` for every origin that is not `manual` (`trek` until R5c P3).
+    // The wire says `external` for every origin that is not `manual` (the old one until R5c P3).
     const wireOrigin = (origin: string) => (origin === "manual" ? "manual" : "external");
-    expect([...new Set(timeoffDomain.LEAVE_ORIGINS.map(wireOrigin))]).toEqual(timeoffWire.LEAVE_ORIGINS);
+    expect([...new Set(leaveDays.origin.enumValues.map(wireOrigin))]).toEqual(timeoffWire.LEAVE_ORIGINS);
     expect(timeoffWire.MAX_RANGE_DAYS).toBe(timeoffDomain.MAX_RANGE_DAYS);
     expect(timeoffWire.HOLIDAY_SOURCES).toEqual(HOLIDAY_SOURCES);
   });

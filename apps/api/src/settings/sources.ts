@@ -10,14 +10,13 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type Connection,
   findConnection,
-  isBankPluginProvider,
   isPluginProvider,
   isSyncErrorCode,
   listRuns,
   PROVIDERS,
   SYNC_RUN_RETENTION_DAYS,
 } from "@ledgerly/domain/platform/integrations";
-import { credentialsStatus, listUserPlugins } from "@ledgerly/domain/platform/plugins";
+import { credentialsStatus, isBankPluginProvider, listUserPlugins } from "@ledgerly/domain/platform/plugins";
 import { keepManifestsFresh, returnAddress } from "@ledgerly/plugin-host";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 
@@ -65,7 +64,7 @@ function body<T>(read: { ok: true; answer: T } | Refused): T {
 /** A connection of a plugin of the person: another person's, or not a bank's, is not found. */
 async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   const connection = await findConnection(ctx, id);
-  if (!connection || !isBankPluginProvider(connection.provider)) throw new ApiRefusal("not_found");
+  if (!connection || !(await isBankPluginProvider(connection.provider))) throw new ApiRefusal("not_found");
   return connection;
 }
 

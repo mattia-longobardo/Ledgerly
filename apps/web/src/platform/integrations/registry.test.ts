@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/modules/timeoff/jobs", () => ({ runTrekPass: vi.fn() }));
-vi.mock("@/modules/transactions/jobs", () => ({ runWalletPass: vi.fn() }));
+vi.mock("@/modules/timeoff/jobs", () => ({ runCalendarPass: vi.fn() }));
+vi.mock("@/modules/transactions/jobs", () => ({ runSourcePass: vi.fn() }));
 vi.mock("@domain/platform/integrations/service", () => ({ listConnections: vi.fn() }));
 
 const { PASSES, passFor } = await import("./registry");

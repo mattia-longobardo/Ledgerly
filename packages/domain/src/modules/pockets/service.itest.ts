@@ -25,10 +25,10 @@ import {
   unlinkExpense,
   updatePocket,
 } from "./service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { ADDONS } from "@ledgerly/api-contract";
 import { setAddon } from "../users/service";
 import { pocketMovements } from "./schema";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 let ctx: Ctx;
 let thisMonth: string;

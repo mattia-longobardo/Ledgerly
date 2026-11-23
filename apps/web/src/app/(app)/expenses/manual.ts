@@ -31,15 +31,9 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type CivilDate, today } from "@ledgerly/domain/shared/dates";
 import type { UiLocale } from "@ledgerly/format/format";
 import { labelOf } from "@/platform/integrations/registry";
-import {
-  coreCreatesRecords,
-  isBankPluginProvider,
-  pluginProvider,
-} from "@ledgerly/domain/platform/integrations";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import type { Cents } from "@ledgerly/domain/shared/money";
-import { hasCapability } from "@ledgerly/plugin-contract";
-import { listInstancePlugins } from "@ledgerly/domain/platform/plugins";
+import { capabilitiesOf } from "@ledgerly/domain/platform/plugins";
 
 type ManualCtx = Pick<Ctx, "userId" | "timeZone">;
 
@@ -50,26 +44,26 @@ interface SourcedAccount {
 }
 
 /**
- * The mode of each account, from what its source says it can do: a plugin in its manifest, a
- * provider of the core in the integrations' own rules. The manifests are read only when an account
- * comes from a plugin.
+ * The mode of each account, from what its source says it can do: a plugin in its manifest (rewrite
+ * plan R5c, P3b). The manifests are read only when an account comes from a plugin.
  */
 async function modesOf<T extends SourcedAccount>(
   accounts: readonly T[],
 ): Promise<Map<T, AccountMode | null>> {
-  const fromPlugin = accounts.some(
-    (account) => account.provider !== null && isBankPluginProvider(account.provider),
-  );
-  const plugins = fromPlugin ? await listInstancePlugins() : [];
-  const creates = (provider: string): boolean => {
-    if (!isBankPluginProvider(provider)) return coreCreatesRecords(provider);
-    const plugin = plugins.find((one) => provider === pluginProvider(one.manifest.id));
-    return plugin !== undefined && hasCapability(plugin.manifest, "createRecord");
-  };
+  const creates = new Map<string, boolean>();
+  for (const account of accounts) {
+    if (account.provider === null || creates.has(account.provider)) continue;
+    // A provider of the core has no manifest, and none takes the movements written here.
+    const capabilities = await capabilitiesOf(account.provider);
+    creates.set(account.provider, capabilities?.includes("createRecord") ?? false);
+  }
   return new Map(
     accounts.map((account) => [
       account,
-      accountMode(account, account.provider === null ? null : { createsRecords: creates(account.provider) }),
+      accountMode(
+        account,
+        account.provider === null ? null : { createsRecords: creates.get(account.provider) === true },
+      ),
     ]),
   );
 }

@@ -23,16 +23,14 @@ export {
   toldCalendar,
 } from "./ranges";
 export {
-  type Observed,
-  type TrekDay,
   closePendingDeletes,
   datesHeld,
   forgetPendingDays,
   markRefused,
   markSynced,
   pendingCount,
-  pendingForTrek,
-  recordFromTrek,
-  trekDaysOf,
+  pendingForCalendar,
+  recordFromCalendar,
+  calendarDaysOf,
   yearsWithPending,
 } from "./external";

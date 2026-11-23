@@ -124,7 +124,9 @@ export async function saveConnection(
   input: { provider: string; credentials: Record<string, string> },
 ): Promise<Connection> {
   const provider = input.provider.trim();
-  if (!isKnownProvider(provider)) throw new IntegrationError("unknown_provider");
+  // A provider of the core, or a plugin whose connection is one credential (rewrite plan R5c).
+  if (!isKnownProvider(provider) && !isPluginProvider(provider))
+    throw new IntegrationError("unknown_provider");
   // The schema's own error is dropped on purpose: its issues name the keys they rejected, and a
   // credential bag has no business in a stack trace.
   const parsed = credentialsSchema.safeParse(input.credentials);
@@ -294,7 +296,8 @@ export async function deleteConnection(ctx: Pick<Ctx, "userId">, connectionId: s
       .where(owned)
       .for("update");
     if (!connection) throw new IntegrationError("not_found");
-    if (isKnownProvider(connection.provider)) {
+    // A connection of one credential, as `saveConnection` makes it: not one of a plugin's banks.
+    if (isKnownProvider(connection.provider) || connection.instanceKey === "") {
       const jobs = await tx
         .select({ kind: syncJobs.kind, cursor: syncJobs.cursor })
         .from(syncJobs)

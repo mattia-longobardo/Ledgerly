@@ -128,11 +128,13 @@ describe("writing a range", () => {
   });
 
   it("marks only the leave that reaches Trek as pending, ROL included", async () => {
-    expect((await saveLeaveRange(ctx, { from: MON, to: MON, kind: "rol", fraction: 1 })).trek).toBe(true);
-    expect((await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "vacation", fraction: 1 })).trek).toBe(
+    expect((await saveLeaveRange(ctx, { from: MON, to: MON, kind: "rol", fraction: 1 })).calendar).toBe(true);
+    expect((await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "vacation", fraction: 1 })).calendar).toBe(
       true,
     );
-    expect((await saveLeaveRange(ctx, { from: WED, to: WED, kind: "other", fraction: 1 })).trek).toBe(false);
+    expect((await saveLeaveRange(ctx, { from: WED, to: WED, kind: "other", fraction: 1 })).calendar).toBe(
+      false,
+    );
     expect(await rows()).toEqual([
       [MON, "rol", "1.0", "upsert"],
       [TUE, "vacation", "1.0", "upsert"],
@@ -171,7 +173,7 @@ describe("what a range replaces", () => {
       [TUE, "rol", "1.0", "delete"],
     ]);
     // "Other" never reaches Trek, but the removal does: the pass is worth starting.
-    expect(result.trek).toBe(true);
+    expect(result.calendar).toBe(true);
   });
 
   it("keeps a half of another kind beside a new half", async () => {
@@ -188,7 +190,7 @@ describe("what a range replaces", () => {
     await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
     await saveLeaveRange(ctx, { from: MON, to: TUE, kind: "vacation", fraction: 0.5 });
     const row = (await listLeaveDays(ctx, WINDOW)).find((one) => one.on === TUE);
-    expect(row).toMatchObject({ id: day.id, fraction: "0.5", pending: "upsert", trekFraction: "1.0" });
+    expect(row).toMatchObject({ id: day.id, fraction: "0.5", pending: "upsert", observedFraction: "1.0" });
     expect(row?.syncedAt).not.toBeNull();
   });
 
@@ -217,7 +219,7 @@ describe("half of one kind and half of another, in one step (decision of 17/11/2
       [TUE, "vacation", "0.5", "upsert"],
     ]);
     expect(result.totalDays).toBe(1);
-    expect(result.trek).toBe(true);
+    expect(result.calendar).toBe(true);
     expect(result.undo).toEqual({ dates: [TUE], rows: [] });
     await restoreLeave(ctx, result.undo);
     expect(await rows()).toEqual([]);
@@ -241,7 +243,7 @@ describe("half of one kind and half of another, in one step (decision of 17/11/2
     ]);
     expect(stored.find((row) => row.kind === "vacation")).toMatchObject({
       id: whole.id,
-      trekFraction: "1.0",
+      observedFraction: "1.0",
     });
   });
 
@@ -417,7 +419,7 @@ describe("removing a range (decision of 17/11/2026, N5 §7.5)", () => {
 describe("undo", () => {
   it("takes a row created and undone before any sync away for good: Trek never hears of it", async () => {
     const result = await saveLeaveRange(ctx, { from: MON, to: WED, kind: "vacation", fraction: 1 });
-    expect(await restoreLeave(ctx, result.undo)).toEqual({ trek: false });
+    expect(await restoreLeave(ctx, result.undo)).toEqual({ calendar: false });
     expect(await rows()).toEqual([]);
   });
 
@@ -427,14 +429,14 @@ describe("undo", () => {
     const removed = await removeLeave(ctx, { id: day.id });
     expect(await rows()).toEqual([[TUE, "vacation", "1.0", "delete"]]);
 
-    expect(await restoreLeave(ctx, removed.undo)).toEqual({ trek: true });
+    expect(await restoreLeave(ctx, removed.undo)).toEqual({ calendar: true });
     const [row] = await listLeaveDays(ctx, WINDOW);
     expect(row).toMatchObject({
       id: day.id,
       note: "trip",
       pending: "upsert",
-      trekFraction: "1.0",
-      trekKind: "vacation",
+      observedFraction: "1.0",
+      observedKind: "vacation",
     });
     expect(row.syncedAt).not.toBeNull();
   });
@@ -472,7 +474,7 @@ describe("undo", () => {
     const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5 });
     await markSynced(ctx, [{ id: rol.id, fraction: 0.5, kind: "vacation" }]);
     const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 0.5 });
-    expect(await restoreLeave(ctx, result.undo)).toEqual({ trek: false });
+    expect(await restoreLeave(ctx, result.undo)).toEqual({ calendar: false });
     expect(await rows()).toEqual([[TUE, "rol", "0.5", "none"]]);
   });
 

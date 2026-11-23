@@ -11,7 +11,7 @@ import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { monthlySummaryJob } from "./jobs";
 import { monthlyFigures } from "./monthly";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 function contextFor(userId: string): Ctx {
   return {

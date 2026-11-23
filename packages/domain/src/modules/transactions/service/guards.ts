@@ -8,10 +8,9 @@ import { userScoped } from "../../../platform/db/scope";
 import {
   coreProvidesCategories,
   type EntityType,
-  isBankPluginProvider,
-  pluginProvider,
+  isPluginProvider,
 } from "../../../platform/integrations/rules";
-import { listInstancePlugins } from "../../../platform/plugins/queries";
+import { pluginManifest } from "../../../platform/plugins/queries";
 import { type TransactionPatch, normalizeIban, type OwnIban } from "../rules";
 import { type Transaction, getTransaction } from "../queries";
 import { labels, transactionLabels, transactions } from "../schema";
@@ -233,18 +232,22 @@ export async function ruleAccountFacts(ctx: Pick<Ctx, "userId">): Promise<{
   };
 }
 
+/** Whether a provider gives a category with each movement: a plugin says so in its manifest. */
+async function givesCategories(provider: string): Promise<boolean> {
+  if (!isPluginProvider(provider)) return coreProvidesCategories(provider);
+  const manifest = await pluginManifest(provider.slice("plugin:".length));
+  // A plugin whose manifest was never read says nothing: its movements are left alone.
+  return manifest === null || manifest.providesCategories;
+}
+
 async function categorisableOf(accounts: Awaited<ReturnType<typeof listAccounts>>): Promise<string[]> {
-  const fromPlugin = accounts.some(
-    (account) => account.provider !== null && isBankPluginProvider(account.provider),
-  );
-  const plugins = fromPlugin ? await listInstancePlugins() : [];
-  const gives = (provider: string): boolean => {
-    if (!isBankPluginProvider(provider)) return coreProvidesCategories(provider);
-    const plugin = plugins.find((one) => provider === pluginProvider(one.manifest.id));
-    // A plugin whose manifest was never read says nothing: its movements are left alone.
-    return plugin === undefined || plugin.manifest.providesCategories;
-  };
+  const gives = new Map<string, boolean>();
+  for (const account of accounts) {
+    if (account.provider !== null && !gives.has(account.provider)) {
+      gives.set(account.provider, await givesCategories(account.provider));
+    }
+  }
   return accounts
-    .filter((account) => account.provider === null || !gives(account.provider))
+    .filter((account) => account.provider === null || gives.get(account.provider) !== true)
     .map((account) => account.id);
 }

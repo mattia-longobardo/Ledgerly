@@ -24,7 +24,8 @@ import { transferCandidates, writeTransferPairs } from "@ledgerly/domain/transac
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type CivilDate, civilDateIn, wallClockIn } from "@ledgerly/domain/shared/dates";
 import { getDb } from "@ledgerly/domain/platform/db";
-import { isBankPluginProvider, pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { pluginProvider } from "@ledgerly/domain/platform/integrations";
+import { isBankPluginProvider } from "@ledgerly/domain/platform/plugins";
 import { connectionSharing } from "@ledgerly/plugin-host";
 import { exposedAccounts } from "@ledgerly/plugin-host";
 import { parseCents } from "@ledgerly/domain/shared/money";
@@ -152,7 +153,7 @@ async function laterTransfers(
   accountIds: readonly string[],
 ): Promise<void> {
   for (const open of await openSwitches(ctx)) {
-    if (!accountIds.includes(open.accountId) || !isBankPluginProvider(open.toProvider)) continue;
+    if (!accountIds.includes(open.accountId) || !(await isBankPluginProvider(open.toProvider))) continue;
     const pluginId = open.toProvider.slice(pluginProvider("").length);
     // The bank's connection of today, not the one of the switch: a bank disconnected and connected
     // again has a new connection, and the switch stays open across it.

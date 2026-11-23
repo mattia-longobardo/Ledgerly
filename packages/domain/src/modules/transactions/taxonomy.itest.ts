@@ -4,7 +4,6 @@ import { createAccount } from "../accounts/service";
 import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
 import { linkExternal, resolveExternal } from "../../platform/integrations/service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { transactionLabels, transactions } from "./schema";
@@ -30,6 +29,7 @@ import {
   updateCategory,
   updateLabel,
 } from "./taxonomy";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 function contextFor(userId: string): Ctx {
   return {

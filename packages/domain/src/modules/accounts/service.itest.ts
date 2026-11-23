@@ -2,7 +2,6 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { Ctx } from "../../platform/context";
 import { upsertFromProvider } from "../transactions/service";
 import { addDays, today } from "../../shared/dates";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
 import { resolveExternal } from "../../platform/integrations/service";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
@@ -39,6 +38,7 @@ import {
   updateBalanceEntry,
   updateConnection,
 } from "./service";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 function contextFor(userId: string): Ctx {
   return {

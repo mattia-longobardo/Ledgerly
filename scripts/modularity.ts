@@ -59,8 +59,6 @@ export const FORBIDDEN_NAMES = [
 const OWN_FOLDER: Partial<Record<(typeof FORBIDDEN_NAMES)[number], string>> = {
   etoro: "platform/integrations/etoro/",
   binance: "platform/integrations/ccxt/",
-  wallet: "platform/integrations/wallet/",
-  trek: "platform/integrations/trek/",
 };
 
 /** Rule M12 over the product files: which file writes which name, outside the name's own folder. */

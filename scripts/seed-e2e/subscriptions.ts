@@ -7,7 +7,7 @@ import { listCategories } from "@domain/modules/transactions/taxonomy";
 import { addDays, today } from "@domain/shared/dates";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /**
  * Subscriptions (F3): three plans paid from one synced account holding 1.500 € — Netflix found at

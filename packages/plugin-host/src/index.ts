@@ -23,3 +23,16 @@ export { chooseAccounts, exposedAccounts, previewBankAccount, readBank, runBankP
 export type { AccountDecision } from "./sync";
 export { openSource } from "./source";
 export { openCalendar } from "./calendar";
+// The engines of a source read with a token and of a leave calendar (rewrite plan R5c, P3b).
+export { cardOf, historyOf } from "./cards";
+export type { CardAccount, CardError, CardResult, PluginCard } from "./card";
+export { connectionsThatCan, providerCan } from "./capabilities";
+export { wireSinks } from "./sinks";
+export type { MovementsSink } from "./movements/ports";
+export { wireSource } from "./movements/calls";
+export { isSyncBusy, syncSourceNow } from "./movements/sync";
+export { editAtSource, editableAtSource, syncSourceFor } from "./movements/records";
+export { categorySourceOf } from "./movements/categories";
+export type { LeaveSink } from "./leave/ports";
+export { wireCalendar } from "./leave/calls";
+export { leaveCalendar } from "./leave/port";

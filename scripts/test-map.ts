@@ -401,8 +401,6 @@ export const MODULES: Module[] = [
     files: [
       "apps/web/src/platform/integrations/*",
       "packages/domain/src/platform/integrations/*",
-      "packages/domain/src/platform/integrations/wallet/**",
-      "packages/domain/src/platform/integrations/trek/**",
       "packages/domain/src/platform/plugins/**",
       "packages/plugin-contract/**",
       "packages/plugin-host/**",

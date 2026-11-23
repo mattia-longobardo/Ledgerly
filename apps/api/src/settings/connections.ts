@@ -17,11 +17,11 @@ import {
   type Connection,
   findConnection,
   IntegrationError,
-  isBankPluginProvider,
   previewSchedule,
   saveSchedule,
 } from "@ledgerly/domain/platform/integrations";
 import { getAuth } from "@ledgerly/domain/platform/auth";
+import { isBankPluginProvider } from "@ledgerly/domain/platform/plugins";
 import {
   PluginActionError,
   removeUserCredentials,
@@ -106,7 +106,7 @@ export interface ConnectionCases {
     sessionId: string,
     connectionId: string,
   ): Promise<{ ok: true; url: string } | Refused>;
-  /** The card of a provider of the core (R5c anticipated): `input` says the refusal is of the credential. */
+  /** The card of a plugin read by the core (R5c): `input` says the refusal is of the credential. */
   connectCore(
     ctx: Ctx,
     provider: string,
@@ -121,8 +121,9 @@ export interface ConnectionCases {
   disconnectCore(ctx: Ctx, connection: Connection): Promise<{ ok: true } | Refused>;
 }
 
-/** A provider of the core: neither a bank's plugin nor a service of Investments (a plugin read by the core until P3b is one). */
-const isCore = (provider: string) => !isBankPluginProvider(provider) && providerOf(provider) === null;
+/** A provider with a card: neither a bank's plugin nor a service of Investments (a plugin read by an engine of the core). */
+const isCore = async (provider: string) =>
+  !(await isBankPluginProvider(provider)) && providerOf(provider) === null;
 
 /** The connection of the person, or `not_found`; another person's id is not found either. */
 async function connectionOf(ctx: Ctx, id: string): Promise<Connection> {
@@ -134,7 +135,7 @@ async function connectionOf(ctx: Ctx, id: string): Promise<Connection> {
 /** A bank's connection: what only a plugin's connection does. */
 async function bankOf(ctx: Ctx, id: string): Promise<Connection> {
   const connection = await connectionOf(ctx, id);
-  if (!isBankPluginProvider(connection.provider)) {
+  if (!(await isBankPluginProvider(connection.provider))) {
     throw new ApiRefusal("conflict", "not_a_bank");
   }
   return connection;
@@ -188,7 +189,7 @@ function serveRuns(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): voi
 function serveConnectionAccounts(app: Hono<ApiEnv>, guard: Guard, cases: ConnectionCases): void {
   serve(app, guard, connections.listConnectionAccounts, async ({ ctx, params }) => {
     const connection = await connectionOf(ctx, params.id);
-    if (!isCore(connection.provider))
+    if (!(await isCore(connection.provider)))
       return settled(await cases.exposedAccounts(ctx, await bankOf(ctx, params.id)));
     const { accounts } = settled(await cases.coreAccounts(ctx, connection));
     return {
@@ -204,7 +205,7 @@ function serveConnectionAccounts(app: Hono<ApiEnv>, guard: Guard, cases: Connect
   serve(app, guard, connections.chooseConnectionAccounts, async ({ ctx, params, body, headers }) => {
     const connection = await connectionOf(ctx, params.id);
     const kept = body.decisions.filter((one) => one.target.kind !== "skip");
-    if (isCore(connection.provider)) {
+    if (await isCore(connection.provider)) {
       const chosen = kept.map((one) => one.providerAccountId);
       return { added: settled(await cases.chooseCoreAccounts(ctx, connection, chosen)).added };
     }
@@ -219,7 +220,7 @@ function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: Connectio
     return { connections: list };
   });
   serve(app, guard, connections.connect, async ({ ctx, body }) => {
-    if (!isCore(body.provider)) throw new ApiRefusal("conflict", "not_by_credentials");
+    if (!(await isCore(body.provider))) throw new ApiRefusal("conflict", "not_by_credentials");
     const outcome = await cases.connectCore(ctx, body.provider, body.credentials);
     // No card for the provider: a plugin or a service of Investments connects another way.
     if (!outcome.ok && outcome.error === "notConnected")
@@ -229,7 +230,7 @@ function serveConnectionRoutes(app: Hono<ApiEnv>, guard: Guard, cases: Connectio
   });
   serve(app, guard, connections.disconnect, async ({ ctx, params }) => {
     const connection = await connectionOf(ctx, params.id);
-    if (isCore(connection.provider)) settled(await cases.disconnectCore(ctx, connection));
+    if (await isCore(connection.provider)) settled(await cases.disconnectCore(ctx, connection));
     else settled(await cases.cancelBank(ctx, (await bankOf(ctx, params.id)).id));
   });
   serve(app, guard, connections.setSchedule, async ({ ctx, params, body }) => {

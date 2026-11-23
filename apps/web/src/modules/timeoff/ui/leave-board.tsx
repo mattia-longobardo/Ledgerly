@@ -286,7 +286,7 @@ export function LeaveBoard({
         }
         if (result.removed === 0) return;
         keep({ type: "remove", target });
-        // A day Trek holds does not go until Trek agrees: "removed" alone would be a lie the badge
+        // A day the calendar holds does not go until the calendar agrees: "removed" alone would be a lie the badge
         // on the row contradicts.
         notify(
           result.pending > 0 ? t("toasts.removalPending") : t("toasts.removed", { count: result.removed }),
@@ -330,7 +330,7 @@ export function LeaveBoard({
     [close, keep, messageFor, show, t, undoAction],
   );
 
-  /** The edited day becomes the first day of a range: the calendar takes it from here. */
+  /** The edited day becomes the first day of a range: The calendar takes it from here. */
   const selectMore = useCallback(
     (date: string) => {
       close();
@@ -361,7 +361,7 @@ export function LeaveBoard({
   }
 
   /** The rows the calendar shows, removals on their way left out (N5 §7.4); the table may still
-   * name a row waiting for Trek, the calendar never does. */
+   * name a row waiting for the calendar, the calendar never does. */
   const rowsOf = useCallback(
     (date: string, rowId?: string) => {
       const shownRow = (day: BookedLeave) =>

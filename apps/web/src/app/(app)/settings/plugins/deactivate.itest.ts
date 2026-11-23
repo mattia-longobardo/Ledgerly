@@ -23,7 +23,6 @@ import { sourceCategoryCount } from "@domain/modules/transactions/source-categor
 import type { Ctx } from "@domain/platform/context";
 import { addDays } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
-import { TREK_PROVIDER, WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { sourceSettings, sourceSkippedAccounts } from "@domain/platform/integrations/schema";
 import { pluginActivations } from "@domain/platform/plugins/schema";
 import {
@@ -34,9 +33,10 @@ import {
   saveConnection,
   skippedAccounts,
 } from "@domain/platform/integrations/service";
-import type { SourceCalls } from "@domain/platform/integrations/wallet/calls";
+import type { SourceCalls } from "@plugin-host/movements/calls";
 import { servedSource } from "../../../../../../../test/fixtures/wallet/served-plugin";
-import { chooseWalletAccounts, syncWalletNow } from "@domain/platform/integrations/wallet/sync";
+import { chooseSourceAccounts } from "@plugin-host/movements/accounts";
+import { syncSourceNow } from "@plugin-host/movements/sync";
 import { PLUGIN_PATHS } from "@plugin-contract/calls";
 import { credentialsStatus, isPluginActive } from "@domain/platform/plugins/queries";
 import { refreshManifests } from "@plugin-host/service";
@@ -50,6 +50,7 @@ import { createTestUser } from "../../../../../../../test/users";
 import { deleteAccount } from "../../accounts/[id]/delete";
 import { bankSink } from "../../banks/sink";
 import { DeactivateError, deactivateSource, deactivationCounts, type Source, sourceOf } from "./deactivate";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../../../../../../test/fixtures/providers";
 
 /** One failure of the conversion on demand, in the middle of its transaction (criterion 3). */
 const failure = vi.hoisted(() => ({ next: false }));
@@ -143,8 +144,8 @@ const walletAccounts = () => listAccounts(ctx, { includeArchived: true });
 async function walletInUse() {
   const connection = await saveConnection(ctx, { provider: WALLET_PROVIDER, credentials: { token: "t" } });
   const options = { now: NOW, source: walletStub() };
-  await chooseWalletAccounts(ctx, connection.id, ["wa-general", "wa-cash"], { source: walletStub() });
-  await syncWalletNow(ctx, connection.id, options);
+  await chooseSourceAccounts(ctx, connection.id, ["wa-general", "wa-cash"], { source: walletStub() });
+  await syncSourceNow(ctx, connection.id, options);
   const general = (await listAccounts(ctx)).find((one) => one.providerAccountId === "wa-general")!;
   await createRule(ctx, {
     accountId: general.id,
@@ -243,7 +244,7 @@ describe("Turn off Wallet", () => {
     expect(await restoreSourceAccounts(ctx, WALLET_PROVIDER)).toBe(1);
     // The accounts deleted here stay out; the ones left out are asked again (§3.4).
     expect(await skippedAccounts(ctx, again.id)).toEqual(new Set(["wa-cash"]));
-    await syncWalletNow(ctx, again.id, { now: later(2), source: walletStub() });
+    await syncSourceNow(ctx, again.id, { now: later(2), source: walletStub() });
 
     const accounts = await walletAccounts();
     expect(accounts.map((one) => [one.id, one.provider, one.providerAccountId, one.origin]).sort()).toEqual(
@@ -308,7 +309,7 @@ describe("Turn off Wallet", () => {
 
 describe("the sources a page may turn off", () => {
   it("are the plugins read by the core with a page, on or not, and the plugins the person has on", async () => {
-    // By the page's slug; Wallet and Trek are plugins since R5c, still read by the core.
+    // By the page's slug; Wallet and Trek are plugins read by the engines of plugin-host (R5c P3b).
     expect(await sourceOf(ctx, "wallet")).toEqual(wallet());
     expect(await sourceOf(ctx, "trek")).toEqual({
       provider: TREK_PROVIDER,

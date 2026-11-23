@@ -21,7 +21,6 @@ import { refreshRecurrences } from "../../apps/web/src/modules/transactions/jobs
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
 import { addDays, addMonths, monthKey, today } from "@domain/shared/dates";
-import { TREK_PROVIDER } from "@domain/platform/integrations/rules";
 import { saveConnection, saveSchedule } from "@domain/platform/integrations/service";
 import { findInstancePlugin } from "@domain/platform/plugins/queries";
 import { setPluginActive } from "@plugin-host/service";
@@ -31,7 +30,7 @@ import { addDeposit, debitFund, importedOperation, importedPosition, payrollFund
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, lastMonthOf, syncedAccount, thisMonthOf, walletMovement, workingDay } from "./common";
 import { seedBinance, seedEtoro } from "./investments";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
+import { TREK_PROVIDER, WALLET_PROVIDER } from "../../test/fixtures/providers";
 
 /** `email`: the `layout` user, or a copy of it for a journey that changes what every page shows. */
 export async function seedLayout(email: string = USERS.layout.email): Promise<void> {

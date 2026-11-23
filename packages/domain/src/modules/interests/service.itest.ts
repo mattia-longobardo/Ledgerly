@@ -8,7 +8,7 @@ import { anAccount, movement, newContext } from "../../../../../test/fixtures";
 import { interestsAccrualJob } from "../../../../../apps/web/src/modules/interests/jobs";
 import { interestsView, ruleDetail, rulesOnAccount } from "./queries";
 import { accruedInterest, createRule, InterestError, setRuleState, updateRule } from "./service";
-import { WALLET_PROVIDER } from "../../platform/integrations/rules";
+import { WALLET_PROVIDER } from "../../../../../test/fixtures/providers";
 
 let ctx: Ctx;
 let accountId: string;

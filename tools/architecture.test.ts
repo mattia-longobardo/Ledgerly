@@ -188,7 +188,7 @@ describe("the known modularity violations", () => {
 describe("the import graph reader", () => {
   it("names the unit of a file", () => {
     expect(unitOf("modules/accounts/ui/period.ts")).toBe("modules/accounts");
-    expect(unitOf("platform/integrations/wallet/sync.ts")).toBe("platform/integrations/wallet");
+    expect(unitOf("platform/integrations/etoro/sync.ts")).toBe("platform/integrations/etoro");
     expect(unitOf("platform/integrations/service.ts")).toBe("platform/integrations");
     expect(unitOf("platform/dates.ts")).toBe("platform/dates");
     expect(unitOf("app/(app)/page.tsx")).toBe("app");
@@ -214,8 +214,9 @@ describe("the import graph reader", () => {
  * test reading. Every other `saveConnection` call names a provider that is not in the catalog.
  */
 describe("saving an investment key", () => {
-  const CALL = /saveConnection\(\s*ctx,\s*\{\s*provider:\s*([A-Za-z_.]+)/g;
-  const OTHERS = new Set(["WALLET_PROVIDER", "TREK_PROVIDER"]);
+  const CALL = /saveConnection\(\s*ctx,\s*\{\s*provider(?:\s*:\s*([A-Za-z_.]+))?/g;
+  // The card of a plugin's connection (`cardOf` of plugin-host): its `provider` is `plugin:<id>`.
+  const OTHERS = new Set(["provider"]);
   const OWNER = "modules/investments/sync.ts";
 
   /** The tree, a file split in parts read as the one file it was (rule Q6, scripts/source-graph.ts). */
@@ -233,7 +234,7 @@ describe("saving an investment key", () => {
     for (const [rel, content] of asFiles()) {
       if (rel === SELF || /\.(test|itest)\.tsx?$/.test(rel) || rel === "platform/integrations/service.ts")
         continue;
-      const providers = [...content.matchAll(CALL)].map((match) => match[1]);
+      const providers = [...content.matchAll(CALL)].map((match) => match[1] ?? "provider");
       if (content.includes("saveConnection(") || providers.length > 0) found.set(rel, providers);
     }
     return found;

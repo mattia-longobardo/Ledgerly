@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, date, index, numeric, pgTable, smallint, text, unique, uuid } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
-import { EXTERNAL_STATES, LEAVE_DAY_KINDS, LEAVE_ORIGINS, PENDING_STATES, TREK_KINDS } from "./rules";
+import { CALENDAR_KINDS, EXTERNAL_STATES, LEAVE_DAY_KINDS, PENDING_STATES } from "./rules";
 import { inList } from "../../platform/db/checks";
 
 /**
@@ -51,6 +51,14 @@ export const timeoffAllowances = pgTable(
 );
 
 /**
+ * Where a row came from. There is no `payroll`: leave read off a payslip is monthly (hours per
+ * usage month), not daily, and inventing a date for it would make up a fact the payslip does not
+ * state (plan F7 §3.6.1). Those appear in the table as month rows, read-only, from their own read.
+ * A day of the external calendar is `external` since R5c; `trek` is no longer written (R5f drops it).
+ */
+const LEAVE_ORIGINS = ["manual", "trek", "external"] as const;
+
+/**
  * One day off, one kind (spec §6, §7.9). Half a day of vacation and half a day of ROL are two
  * rows, which is why the unique key carries the kind. Every kind is counted the same way — half a
  * day or a whole one — since N0: ROL used to be free-form minutes, and nobody books leave by the
@@ -79,8 +87,8 @@ export const leaveDays = pgTable(
     origin: text("origin", { enum: LEAVE_ORIGINS }).notNull().default("manual"),
     pending: text("pending", { enum: PENDING_STATES }).notNull().default("none"),
     syncedAt: moment("synced_at"),
-    trekFraction: numeric("trek_fraction", { precision: 2, scale: 1 }),
-    trekKind: text("trek_kind", { enum: TREK_KINDS }),
+    observedFraction: numeric("trek_fraction", { precision: 2, scale: 1 }),
+    observedKind: text("trek_kind", { enum: CALENDAR_KINDS }),
     /**
      * The same observed pair in the words of contract 2 (rewrite plan R5c): written with `trek_*`
      * on every write, read from a later release, when `trek_*` goes. The kind is the calendar's own
@@ -106,7 +114,7 @@ export const leaveDays = pgTable(
     check("leave_days_note_ck", sql`${table.note} is null or length(${table.note}) <= 200`),
     check(
       "leave_days_trek_kind_ck",
-      sql`${table.trekKind} is null or ${table.trekKind} in (${sql.raw(inList(TREK_KINDS))})`,
+      sql`${table.observedKind} is null or ${table.observedKind} in (${sql.raw(inList(CALENDAR_KINDS))})`,
     ),
     // Nobody asks Trek to delete a day Trek never had: a pending deletion needs a row Trek either
     // gave us or has already been told about (plan F7 §3.2).

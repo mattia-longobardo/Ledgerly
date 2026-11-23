@@ -12,7 +12,7 @@ import {
   MAX_RANGE_DAYS,
   bookable,
   datesBetween,
-  goesToTrek,
+  goesToCalendar,
   leaveRangeInputSchema,
   leaveRemovalRangeSchema,
   leaveUndoSchema,
@@ -28,9 +28,9 @@ import { type LeaveDay, TimeOffError, deleteLeaveDay, listLeaveDays } from "./re
 /**
  * Everything on one day goes: what Delete on a day of the calendar asks for.
  *
- * Whatever Trek knows about goes the long way round — marked for removal and taken away once Trek
+ * Whatever the calendar knows about goes the long way round — marked for removal and taken away once the calendar
  * confirms — and whatever it never had simply goes. The counts come back so the caller knows
- * whether a Trek pass is worth starting at all.
+ * whether a pass of the calendar is worth starting at all.
  */
 export async function clearDay(
   ctx: Pick<Ctx, "userId">,
@@ -63,7 +63,7 @@ function stateOf(dates: readonly CivilDate[], rows: readonly LeaveDay[]): LeaveU
   return {
     dates: [...dates],
     rows: rows
-      // A row waiting for Trek to let it go is already removed as far as its owner is concerned.
+      // A row waiting for the calendar to let it go is already removed as far as its owner is concerned.
       .filter((row) => row.pending !== "delete" && dates.includes(row.on))
       .map((row) => ({ on: row.on, kind: row.kind, fraction: Number(row.fraction), note: row.note })),
   };
@@ -104,8 +104,8 @@ interface LeaveRangeResult {
   totalDays: number;
   /** What the touched days held before, for "Undo". */
   undo: LeaveUndo;
-  /** Whether the next Trek pass has something to do, and so is worth starting now. */
-  trek: boolean;
+  /** Whether the next pass of the calendar has something to do, and so is worth starting now. */
+  calendar: boolean;
 }
 
 /**
@@ -117,7 +117,7 @@ interface LeaveRangeResult {
  * anybody works is refused, with the days and their reasons.
  *
  * A row of another kind that no longer fits the day goes the way a removed day goes: at once when
- * Trek never heard of it, marked for removal when it did. Nothing is said to Trek from here.
+ * The calendar never heard of it, marked for removal when it did. Nothing is said to the calendar from here.
  */
 export async function saveLeaveRange(
   ctx: Pick<Ctx, "userId">,
@@ -146,10 +146,10 @@ export async function saveLeaveRange(
     if (preview.written.length === 0) throw new TimeOffError("not_bookable", preview.excluded);
 
     const parts = rangeParts({ kind, fraction, otherKind });
-    let toldTrek = parts.some((part) => goesToTrek(part.kind));
+    let owesCalendar = parts.some((part) => goesToCalendar(part.kind));
     for (const gone of preview.removed) {
       const row = existing.find((one) => one.on === gone.on && one.kind === gone.kind);
-      if (row !== undefined && (await takeAway(tx, ctx, row)) === "pending") toldTrek = true;
+      if (row !== undefined && (await takeAway(tx, ctx, row)) === "pending") owesCalendar = true;
     }
 
     const days = await tx
@@ -162,7 +162,7 @@ export async function saveLeaveRange(
               kind: part.kind,
               fraction: part.fraction.toFixed(1),
               note,
-              pending: goesToTrek(part.kind) ? ("upsert" as const) : ("none" as const),
+              pending: goesToCalendar(part.kind) ? ("upsert" as const) : ("none" as const),
             }),
           ),
         ),
@@ -183,7 +183,7 @@ export async function saveLeaveRange(
       days,
       totalDays: preview.totalDays,
       undo: stateOf(preview.written, existing),
-      trek: toldTrek,
+      calendar: owesCalendar,
     };
   });
 }
@@ -191,7 +191,7 @@ export async function saveLeaveRange(
 /**
  * Removes one row, or everything on one day, and says what the day held before.
  *
- * The removal itself is {@link deleteLeaveDay} and {@link clearDay}, unchanged: what Trek knows
+ * The removal itself is {@link deleteLeaveDay} and {@link clearDay}, unchanged: what the calendar knows
  * goes the long way round. Only the state before is new, for the toast's "Undo".
  */
 export async function removeLeave(
@@ -222,7 +222,7 @@ export async function removeLeave(
 /**
  * Removes every row still booked between two dates, in one transaction: all of them, or none
  * (decision of 17/11/2026, spec N5 §7.5). Each row goes the way "Remove" takes one — at once when
- * Trek never heard of it, marked `pending = 'delete'` when it did — so Trek is told one row at a
+ * The calendar never heard of it, marked `pending = 'delete'` when it did — so the calendar is told one row at a
  * time, by the next pass, as for a single day. The answer carries the days as they were, for the
  * toast's "Undo", and how many dates lost something.
  */
@@ -254,13 +254,16 @@ export async function removeLeaveRange(
 /**
  * "Undo": puts the touched days back as they were, in one transaction.
  *
- * Trek is never called from here. A row that was created and is not wanted goes the way any
+ * The calendar is never called from here. A row that was created and is not wanted goes the way any
  * removed row goes; a row that is wanted again comes back `pending = 'upsert'` when its kind
- * reaches Trek — whether it was waiting for removal or had been deleted outright — and the next
- * pass, which always reads before it writes, settles it against what Trek really holds. What Trek
- * was observed holding is never restated: it is still on the row, or the row is new to Trek.
+ * reaches the calendar — whether it was waiting for removal or had been deleted outright — and the next
+ * pass, which always reads before it writes, settles it against what the calendar really holds. What the calendar
+ * was observed holding is never restated: it is still on the row, or the row is new to the calendar.
  */
-export async function restoreLeave(ctx: Pick<Ctx, "userId">, input: LeaveUndo): Promise<{ trek: boolean }> {
+export async function restoreLeave(
+  ctx: Pick<Ctx, "userId">,
+  input: LeaveUndo,
+): Promise<{ calendar: boolean }> {
   const parsed = leaveUndoSchema.safeParse(input);
   if (!parsed.success) throw new TimeOffError("invalid_input");
   const { dates, rows: wanted } = parsed.data;
@@ -271,12 +274,12 @@ export async function restoreLeave(ctx: Pick<Ctx, "userId">, input: LeaveUndo): 
 
   return getDb().transaction(async (tx) => {
     const current = await rowsOn(tx, ctx, inArray(leaveDays.on, dates));
-    let toldTrek = false;
+    let owesCalendar = false;
 
     for (const row of current) {
       const kept = wanted.some((one) => one.on === row.on && one.kind === row.kind);
       if (kept || row.pending === "delete") continue;
-      if ((await takeAway(tx, ctx, row)) === "pending") toldTrek = true;
+      if ((await takeAway(tx, ctx, row)) === "pending") owesCalendar = true;
     }
 
     for (const one of wanted) {
@@ -290,14 +293,14 @@ export async function restoreLeave(ctx: Pick<Ctx, "userId">, input: LeaveUndo): 
       ) {
         continue;
       }
-      // A row that is not there any more was never Trek's: it is booked again, and only on a day
+      // A row that is not there any more was never the calendar's: it is booked again, and only on a day
       // that can be booked — an undo is not a way round the calendar.
       if (row === undefined) {
         const verdict = bookable(one.on, holidays);
         if (!verdict.ok) throw new TimeOffError("not_bookable", [{ on: one.on, reason: verdict.reason }]);
       }
-      const pending = goesToTrek(one.kind) ? ("upsert" as const) : ("none" as const);
-      if (pending === "upsert") toldTrek = true;
+      const pending = goesToCalendar(one.kind) ? ("upsert" as const) : ("none" as const);
+      if (pending === "upsert") owesCalendar = true;
       await tx
         .insert(leaveDays)
         .values(userScoped(ctx).stamp({ on: one.on, kind: one.kind, fraction, note: one.note, pending }))
@@ -306,9 +309,9 @@ export async function restoreLeave(ctx: Pick<Ctx, "userId">, input: LeaveUndo): 
           set: { fraction, note: one.note, pending, updatedAt: new Date() },
         });
     }
-    return { trek: toldTrek };
+    return { calendar: owesCalendar };
   });
 }
 
-/** Whether a write left the external calendar something to hear: its flag keeps the provider's name until R5f (TOF-2). */
-export const toldCalendar = (result: { trek: boolean }): boolean => result.trek;
+/** Whether a write left the external calendar something to hear (TOF-2). */
+export const toldCalendar = (result: { calendar: boolean }): boolean => result.calendar;

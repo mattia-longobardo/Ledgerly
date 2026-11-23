@@ -349,7 +349,7 @@ describe("the badges of a row (client R3)", () => {
   it("are the ones badgesOf gives the page, where hidden and edited say something else", async () => {
     const domain = await import("@ledgerly/domain/transactions");
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
-    const { WALLET_PROVIDER } = await import("@domain/platform/integrations/rules");
+    const { WALLET_PROVIDER } = await import("../../../../../test/fixtures/providers");
     const { getDb } = await import("@domain/platform/db/client");
     const { eq } = await import("drizzle-orm");
     const account = await newAccount(alice);
@@ -482,7 +482,7 @@ describe("the sign, the series' shares, the groups' counts and the macros (clien
 
     // 4. The macros a category may be chosen in: by the sign, and `transfer` only for a pair.
     const { upsertFromProvider } = await import("@domain/modules/transactions/service");
-    const { WALLET_PROVIDER } = await import("@domain/platform/integrations/rules");
+    const { WALLET_PROVIDER } = await import("../../../../../test/fixtures/providers");
     const other = await newAccount(alice, "Revolut");
     const leg = (accountId: string, externalId: string, counterpart: string, amountCents: bigint) =>
       upsertFromProvider(

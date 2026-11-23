@@ -14,7 +14,6 @@ import { listCategories } from "@domain/modules/transactions/taxonomy";
 import type { Ctx } from "@domain/platform/context";
 import { addDays, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
-import { WALLET_PROVIDER } from "@domain/platform/integrations/rules";
 import { DEFAULT_SYNC_SCHEDULE } from "@domain/platform/integrations/schedule";
 import {
   listRuns,
@@ -24,7 +23,7 @@ import {
 } from "@domain/platform/integrations/service";
 import { sendMarker } from "../../../../../../plugins/wallet/src/marker";
 import { servedSource } from "../../../../../../test/fixtures/wallet/served-plugin";
-import { syncWalletNow } from "@domain/platform/integrations/wallet/sync";
+import { syncSourceNow } from "@plugin-host/movements/sync";
 import { closeDatabase, resetDatabase } from "../../../../../../test/db";
 import { createTestUser } from "../../../../../../test/users";
 import {
@@ -35,6 +34,7 @@ import {
   sendSourceNames,
   updateManual,
 } from "./manual";
+import { WALLET_PROVIDER } from "../../../../../../test/fixtures/providers";
 
 const FIXTURES = join(process.cwd(), "test/fixtures/wallet");
 const fixture = (name: string): { [key: string]: unknown } =>
@@ -169,7 +169,7 @@ let accountId: string;
 const KEY = "0198a1c2-7d3e-7a4b-9c5d-2e6f7a8b9c0d";
 
 async function update(): Promise<void> {
-  await syncWalletNow(ctx, connectionId, { source: wallet.source, categoryWriter: null });
+  await syncSourceNow(ctx, connectionId, { source: wallet.source, categoryWriter: null });
 }
 
 async function rows() {

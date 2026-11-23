@@ -11,7 +11,7 @@ import {
   dayStatus,
   dayWeight,
   daysToMinutes,
-  goesToTrek,
+  goesToCalendar,
   leaveInputSchema,
   minuteWeight,
   minutesToDays,
@@ -142,16 +142,16 @@ describe("what a day is worth (N0)", () => {
   });
 });
 
-describe("goesToTrek (N4)", () => {
+describe("goesToCalendar (N4)", () => {
   it("is true for the leave that spends the allowance, ROL included", () => {
-    expect(goesToTrek("vacation")).toBe(true);
-    expect(goesToTrek("comp")).toBe(true);
-    expect(goesToTrek("rol")).toBe(true);
+    expect(goesToCalendar("vacation")).toBe(true);
+    expect(goesToCalendar("comp")).toBe(true);
+    expect(goesToCalendar("rol")).toBe(true);
   });
 
   it("is false for the absences that are not leave anybody books", () => {
-    expect(goesToTrek("sick")).toBe(false);
-    expect(goesToTrek("other")).toBe(false);
+    expect(goesToCalendar("sick")).toBe(false);
+    expect(goesToCalendar("other")).toBe(false);
   });
 });
 

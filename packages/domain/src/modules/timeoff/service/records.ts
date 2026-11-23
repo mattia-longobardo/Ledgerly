@@ -12,7 +12,7 @@ import {
   allowanceInputSchema,
   bookable,
   datesBetween,
-  goesToTrek,
+  goesToCalendar,
   leaveInputSchema,
 } from "../rules";
 import { leaveDays, timeoffAllowances } from "../schema";
@@ -122,9 +122,9 @@ export function yearWindow(year: number): LeaveWindow {
  * difference is what the user stated, not what the calendar happens to hold.
  *
  * A day that already exists for this kind is updated in place — one row per day and kind is the
- * database's rule — and either way the row goes back to `pending = 'upsert'` when Trek knows this
- * kind, because Trek has not been told yet. The `synced_at` of the previous state is kept: it is
- * the record of what Trek holds, and a pass that has not run yet has not changed it.
+ * database's rule — and either way the row goes back to `pending = 'upsert'` when the calendar knows this
+ * kind, because the calendar has not been told yet. The `synced_at` of the previous state is kept: it is
+ * the record of what the calendar holds, and a pass that has not run yet has not changed it.
  */
 export async function saveLeaveDay(ctx: Pick<Ctx, "userId">, input: LeaveInput): Promise<LeaveDay[]> {
   const parsed = leaveInputSchema.safeParse(input);
@@ -153,7 +153,7 @@ export async function saveLeaveDay(ctx: Pick<Ctx, "userId">, input: LeaveInput):
     if (refused.length > 0) throw new TimeOffError("not_bookable", refused);
   }
 
-  const pending = goesToTrek(kind) ? ("upsert" as const) : ("none" as const);
+  const pending = goesToCalendar(kind) ? ("upsert" as const) : ("none" as const);
   const values = {
     kind,
     // Every kind is half a day or a whole one since N0; ROL no longer states minutes.
@@ -178,14 +178,14 @@ export async function saveLeaveDay(ctx: Pick<Ctx, "userId">, input: LeaveInput):
 }
 
 /**
- * Removes a day (spec §7.9), which is two different things depending on what Trek knows:
+ * Removes a day (spec §7.9), which is two different things depending on what the calendar knows:
  *
- *  - a day Trek has never heard of is simply deleted;
- *  - a day Trek holds is marked `pending = 'delete'` and stays, because Trek has to be told before
+ *  - a day the calendar has never heard of is simply deleted;
+ *  - a day the calendar holds is marked `pending = 'delete'` and stays, because the calendar has to be told before
  *    it can go. It disappears from the table the moment the pass confirms the removal.
  *
- * The row is kept whole rather than reduced to a tombstone: the observed `trek_fraction` and
- * `trek_kind` are exactly what the toggle has to send back, and a tombstone would have to carry
+ * The row is kept whole rather than reduced to a tombstone: the observed fraction and
+ * kind are exactly what the toggle has to send back, and a tombstone would have to carry
  * them anyway (plan F7 §3.4.8).
  */
 export async function deleteLeaveDay(ctx: Pick<Ctx, "userId">, id: string): Promise<"deleted" | "pending"> {
@@ -195,8 +195,8 @@ export async function deleteLeaveDay(ctx: Pick<Ctx, "userId">, id: string): Prom
     .where(and(eq(leaveDays.id, id), userScoped(ctx).owns(leaveDays)));
   if (!row) throw new TimeOffError("not_found");
 
-  const knownToTrek = row.origin !== "manual" || row.syncedAt !== null;
-  if (!knownToTrek) {
+  const knownToCalendar = row.origin !== "manual" || row.syncedAt !== null;
+  if (!knownToCalendar) {
     await getDb()
       .delete(leaveDays)
       .where(and(eq(leaveDays.id, id), userScoped(ctx).owns(leaveDays)));

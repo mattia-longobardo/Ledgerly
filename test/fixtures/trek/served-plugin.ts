@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { ConfiguredPlugin } from "@domain/platform/plugin-config";
-import type { CalendarCalls } from "@domain/platform/integrations/trek/calls";
+import type { CalendarCalls } from "@plugin-host/leave/calls";
 import { calendarCalls } from "@plugin-host/calendar";
 
 type Fetch = typeof globalThis.fetch;

@@ -3,6 +3,17 @@
 // R5c), and the leave balances a payslip printed, realised by payroll. Both are declared here. The application wires it once per process (`wireDomain` in `apps/api`): a port that is
 // not wired fails loudly. The module never names the provider.
 import type { Ctx } from "../../platform/context";
+import type { CivilDate } from "../../shared/dates";
+import { asCalendarKind, CALENDAR_KINDS, LEAVE_DAY_KINDS, type LeaveDayKind } from "./rules";
+import {
+  calendarDaysOf,
+  datesHeld,
+  markRefused,
+  markSynced,
+  recordFromCalendar,
+  yearsWithPending,
+  yearWindow,
+} from "./service";
 
 /** The external calendar of the days off. */
 export interface LeaveCalendarSync {
@@ -82,3 +93,46 @@ export function calendarSync(): LeaveCalendarSync {
 function notWired(): never {
   throw new Error("timeoff: the ports are not wired (wireDomain of @ledgerly/api)");
 }
+
+/*
+ * The days of time off as the leave engine of a plugin with a calendar reads and writes them (rewrite
+ * plan R5c, P3b): the adapter of its port, realised here from the module's own services, by year. The
+ * application wires it (`wireDomain`); the engine never reaches the module's tables. A kind the
+ * engine names is one of this module's: anything else is a bug of the caller, refused loudly.
+ */
+
+function dayKind(kind: string): LeaveDayKind {
+  const known = LEAVE_DAY_KINDS.find((one) => one === kind);
+  if (known === undefined) throw new RangeError(`Not a kind of day off: ${kind}`);
+  return known;
+}
+
+function calendarKind(kind: string): (typeof CALENDAR_KINDS)[number] {
+  const known = CALENDAR_KINDS.find((one) => one === kind);
+  if (known === undefined) throw new RangeError(`Not a kind of the calendar: ${kind}`);
+  return known;
+}
+
+export const calendarDays = {
+  calendarKinds: CALENDAR_KINDS,
+  asCalendarKind: (kind: string): string => asCalendarKind(dayKind(kind)),
+  daysOf: (ctx: Pick<Ctx, "userId">, year: number) => calendarDaysOf(ctx, yearWindow(year)),
+  datesHeld: (ctx: Pick<Ctx, "userId">, year: number) => datesHeld(ctx, yearWindow(year)),
+  yearsWithPending,
+  markSynced: (
+    ctx: Pick<Ctx, "userId">,
+    observed: readonly { id: string; fraction: number | null; kind: string | null }[],
+    now: Date,
+  ) =>
+    markSynced(
+      ctx,
+      observed.map((one) => ({ ...one, kind: one.kind === null ? null : dayKind(one.kind) })),
+      now,
+    ),
+  markRefused,
+  recordFromCalendar: (
+    ctx: Pick<Ctx, "userId">,
+    day: { on: CivilDate; kind: string; fraction: number },
+    now: Date,
+  ) => recordFromCalendar(ctx, { ...day, kind: calendarKind(day.kind) }, now),
+};
