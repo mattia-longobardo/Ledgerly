@@ -6,7 +6,7 @@
 import type { Hono } from "hono";
 import type { z } from "zod";
 import { INVESTMENTS, INVESTMENTS_ROUTES, type RouteContract } from "@ledgerly/api-contract";
-import { AccountError, accountsView } from "@ledgerly/domain/accounts";
+import { accountsView } from "@ledgerly/domain/accounts";
 import { fundValues } from "@ledgerly/domain/funds";
 import {
   catalogView,
@@ -14,11 +14,13 @@ import {
   confirmKeyRevoked,
   confirmZeroReading,
   connectInvestmentProvider,
+  assetPrices,
   createManualService,
   createManualServiceWithAccount,
+  createPortfolio,
+  createPortfolioWithAccount,
   deleteOperation,
   disconnectProvider,
-  InvestmentError,
   investmentsHome,
   investmentsPnl,
   investmentsPnlView,
@@ -38,7 +40,6 @@ import {
   serviceMovements,
   servicePnlView,
   servicePositions,
-  SyncError,
   unlinkTransfer,
   updateServiceUrl,
   updateServiceValue,
@@ -47,12 +48,14 @@ import {
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
 import { today } from "@ledgerly/domain/shared/dates";
-import { parseCents, parseDecimal } from "@ledgerly/domain/shared/money";
+import { parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { holdingsOut, listOut } from "./dto";
 import { activityOut, homeOut, movementsOut, overviewOut } from "./pages";
 import { catalogOut, connectionOut, positionsOut } from "./tabs";
 import { fundsListOut, portfolioOut } from "./portfolio";
+import { servePortfolio, writeOperation } from "./portfolio-routes";
+import { cents, decimal, notFound, refusing } from "./refusals";
 
 const { investments, register, connection } = INVESTMENTS;
 
@@ -67,48 +70,10 @@ export interface InvestmentCases {
   queueFirstFlows(ctx: Ctx, connectionId: string, accountId: string): Promise<void>;
 }
 
-/** The refusals of the caller's input (`INVESTMENT_REFUSALS`): every other one is a conflict. */
-const INVALID = new Set([
-  "future_date",
-  "before_period",
-  "invalid_transaction",
-  "unknown_provider",
-  "invalid_credentials",
-  "unsupported_currency",
-  "invalid",
-]);
-
-/** A missing service, with the words the MCP tool `get_investment_holdings` has always said. */
-function notFound(): ApiRefusal {
-  const refusal = new ApiRefusal("not_found");
-  refusal.message = "Investment service not found.";
-  return refusal;
-}
-
-/** Runs a use case of the module and turns its refusal into the contract's. */
-async function refusing<T>(work: () => Promise<T>): Promise<T> {
-  try {
-    return await work();
-  } catch (error) {
-    if (error instanceof InvestmentError || error instanceof SyncError || error instanceof AccountError) {
-      if (error.code === "not_found") throw notFound();
-      if (INVALID.has(error.code))
-        throw new ApiRefusal("invalid", error.code === "invalid" ? undefined : error.code);
-      throw new ApiRefusal("conflict", error.code);
-    }
-    if (error instanceof RangeError) throw new ApiRefusal("invalid");
-    if (error instanceof Error && error.name === "ZodError") throw new ApiRefusal("invalid");
-    throw error;
-  }
-}
-
 const found = <T>(value: T | null): T => {
   if (value === null) throw notFound();
   return value;
 };
-
-const decimal = (value: string | null, scale: number) => (value === null ? null : parseDecimal(value, scale));
-const cents = (value: string | null) => (value === null ? null : parseCents(value));
 
 /**
  * The period of the pages' reads (`period` = `all` | a year | `custom` with `from` and `to`; none is
@@ -137,7 +102,7 @@ async function withDetail<T>(
   const snapshot = await investmentsSnapshot(ctx, { accountId });
   const [detail, view] = await Promise.all([serviceDetail(ctx, accountId, snapshot), read(snapshot)]);
   if (!detail || !view) throw notFound();
-  return { detail, view };
+  return { detail, view, prices: await assetPrices(detail.assets, snapshot.todayOn) };
 }
 
 function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
@@ -174,7 +139,11 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
   );
   serve(app, guard, investments.getInvestment, async ({ ctx, params, query }) => {
     const period = periodOf(ctx, query);
-    const { detail, view: pnl } = await withDetail(ctx, params.accountId, (snapshot) =>
+    const {
+      detail,
+      view: pnl,
+      prices,
+    } = await withDetail(ctx, params.accountId, (snapshot) =>
       servicePnlView(ctx, params.accountId, period, snapshot),
     );
     const activity = await serviceActivity(ctx, params.accountId, {
@@ -184,7 +153,7 @@ function serveReads(app: Hono<ApiEnv>, guard: Guard): void {
       assetId: null,
       page: 1,
     });
-    return overviewOut(detail, pnl, activity);
+    return overviewOut(detail, pnl, activity, prices);
   });
 }
 
@@ -214,7 +183,7 @@ function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
     const { detail, view } = await withDetail(ctx, params.accountId, (snapshot) =>
       servicePositions(ctx, params.accountId, period, snapshot),
     );
-    return positionsOut(detail, view);
+    return positionsOut(detail, view, await assetPrices([...view.assets.values()], view.todayOn));
   });
   serve(app, guard, investments.getInvestmentConnection, async ({ ctx, params }) => {
     const detail = found(await serviceDetail(ctx, params.accountId));
@@ -227,12 +196,6 @@ function serveTabs(app: Hono<ApiEnv>, guard: Guard): void {
 }
 
 type OperationBody = z.output<typeof register.recordOperation.body>;
-
-/**
- * What a person may no longer write (PERS-342): money in and out, the value and a correction come
- * from Accounts on a manual service and from the provider on a synced one — as the Server Action.
- */
-const VALUE_KINDS = new Set(["deposit", "withdrawal", "account_valuation", "adjustment"]);
 
 /** An operation as the domain takes it: a price wins over an amount, as the form's (`operationOf`). */
 function operationInput(body: OperationBody) {
@@ -278,11 +241,16 @@ function operationInput(body: OperationBody) {
 
 function serveRegister(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, register.createManualService, async ({ ctx, body }) =>
-    refusing(() =>
-      "accountId" in body
+    refusing(() => {
+      if ("kind" in body) {
+        return "accountId" in body
+          ? createPortfolio(ctx, { accountId: body.accountId, url: body.url })
+          : createPortfolioWithAccount(ctx, { name: body.name, currency: body.currency, url: body.url });
+      }
+      return "accountId" in body
         ? createManualService(ctx, body)
-        : createManualServiceWithAccount(ctx, { ...body, valueCents: parseCents(body.value) }),
-    ),
+        : createManualServiceWithAccount(ctx, { ...body, valueCents: parseCents(body.value) });
+    }),
   );
   serve(app, guard, register.updateServiceUrl, async ({ ctx, params, body }) => {
     await refusing(() => updateServiceUrl(ctx, params.accountId, body.url));
@@ -293,9 +261,10 @@ function serveRegister(app: Hono<ApiEnv>, guard: Guard): void {
     );
   });
   serve(app, guard, register.recordOperation, async ({ ctx, params, body }) => {
-    if (VALUE_KINDS.has(body.kind)) throw new ApiRefusal("conflict", "not_editable");
     const { eventId } = await refusing(async () =>
-      recordOperation(ctx, params.accountId, operationInput(body)),
+      writeOperation(ctx, params.accountId, body, (input) =>
+        recordOperation(ctx, params.accountId, operationInput(input)),
+      ),
     );
     return { id: eventId };
   });
@@ -371,5 +340,6 @@ export function serveInvestments(
   serveTabs(app, guard);
   serveRegister(app, guard);
   serveConnection(app, guard, cases);
+  servePortfolio(app, guard);
   return INVESTMENTS_ROUTES;
 }

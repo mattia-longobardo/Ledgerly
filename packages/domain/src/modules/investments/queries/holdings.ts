@@ -14,7 +14,15 @@ import {
   QUANTITY_SCALE,
 } from "../rules";
 import { formatDecimal, parseDecimal } from "../../../shared/money";
-import { type InvestmentAsset, type InvestmentPeriod, type InvestmentReading, listAssets } from "../service";
+import {
+  type AssetPrice,
+  assetPrices,
+  type InvestmentAsset,
+  type InvestmentPeriod,
+  type InvestmentReading,
+  listAssets,
+} from "../service";
+import { PORTFOLIO_PROVIDER } from "../catalog";
 import { type SyncStatus } from "../sync";
 import { readingPositionsOf } from "./home";
 import { type InvestmentsSnapshot, type Loaded, servicesOf, snapshotOf } from "./snapshot";
@@ -207,16 +215,33 @@ export async function serviceHoldings(
   ctx: Pick<Ctx, "userId" | "timeZone">,
   accountId: string,
   source: Date | InvestmentsSnapshot = new Date(),
-): Promise<{ account: Account; currency: string; on: CivilDate; holdings: HoldingRow[] } | null> {
+): Promise<{
+  account: Account;
+  currency: string;
+  on: CivilDate;
+  holdings: HoldingRow[];
+  /** A manual portfolio's cash today (R5d); null for another service. */
+  cashCents: Cents | null;
+  /** The price state of each asset of the rows, by asset id. */
+  prices: Map<string, AssetPrice>;
+} | null> {
   const snapshot = await snapshotOf(ctx, source, accountId);
   const { todayOn } = snapshot;
   const one = servicesOf(snapshot, accountId)[0];
   if (!one) return null;
+  const holdings = await holdingsOf(ctx, one, todayOn);
+  const pricedOn = new Map(holdings.map((row) => [row.asset.id, row.state.pricedOn]));
   return {
     account: one.account,
     currency: one.account.currency,
     on: todayOn,
-    holdings: await holdingsOf(ctx, one, todayOn),
+    holdings,
+    cashCents: one.investment.provider === PORTFOLIO_PROVIDER ? one.day.cashCents : null,
+    prices: await assetPrices(
+      holdings.map((row) => row.asset),
+      todayOn,
+      pricedOn,
+    ),
   };
 }
 

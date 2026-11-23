@@ -5,9 +5,11 @@
 // read; here they change form and are summed as the pages sum them, never changed.
 import {
   accountTypeOf,
+  type AssetPrice,
   connectableProvider,
   contributionsOf,
   type HoldingRow,
+  type InvestmentAsset,
   type InvestmentsPnl,
   type PnlParts,
   type Portfolio,
@@ -188,15 +190,9 @@ export function pnlJson(result: InvestmentsPnl) {
   };
 }
 
-function holdingJson(row: HoldingRow) {
+function holdingJson(row: HoldingRow, prices: ReadonlyMap<string, AssetPrice>) {
   return {
-    asset: {
-      name: row.asset.name,
-      class: row.asset.class,
-      symbol: row.asset.symbol,
-      isin: row.asset.isin,
-      currency: row.asset.currency,
-    },
+    asset: assetRefOut(row.asset, prices),
     product: row.product,
     origin: row.origin,
     quantity: row.quantityText,
@@ -217,7 +213,8 @@ export function holdingsOut(view: Holdings) {
     name: view.account.name,
     currency: view.currency,
     on: view.on,
-    holdings: view.holdings.map(holdingJson),
+    cash: maybe(view.cashCents),
+    holdings: view.holdings.map((row) => holdingJson(row, view.prices)),
   };
 }
 
@@ -351,15 +348,31 @@ export function contributionsOut(found: Contributions) {
   };
 }
 
-export function assetOut(asset: ServiceDetail["assets"][number]) {
+/** The price state of an asset whose state is not known: a price by hand never typed. */
+const NO_PRICE: AssetPrice = { mode: "manual", on: null, source: null, stale: false };
+
+/** An asset as a row names it, with its instrument, its market and the state of its price (R5d). */
+export function assetRefOut(
+  asset: Pick<
+    InvestmentAsset,
+    "id" | "name" | "class" | "symbol" | "isin" | "currency" | "instrumentId" | "mic"
+  >,
+  prices: ReadonlyMap<string, AssetPrice>,
+) {
   return {
-    id: asset.id,
     name: asset.name,
     class: asset.class,
     symbol: asset.symbol,
     isin: asset.isin,
     currency: asset.currency,
+    instrumentId: asset.instrumentId,
+    mic: asset.mic,
+    price: prices.get(asset.id) ?? NO_PRICE,
   };
+}
+
+export function assetOut(asset: ServiceDetail["assets"][number], prices: ReadonlyMap<string, AssetPrice>) {
+  return { id: asset.id, ...assetRefOut(asset, prices) };
 }
 
 /** A provider a key connects, as the key dialogs take it: the names of its fields, never a value. */

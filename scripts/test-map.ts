@@ -331,6 +331,7 @@ export const MODULES: Module[] = [
     // The registry of instruments and their daily prices (R5d): investments reads it through its entry.
     id: "instruments",
     files: ["packages/domain/src/modules/instruments/**"],
+    integration: ["packages/domain/src/modules/instruments"],
     usedBy: ["investments", "connections", "api", "jobs", "e2e:investments"],
   },
   {

@@ -195,7 +195,7 @@ export async function loadBook(
     operations: opsByEvent.get(event.id) ?? [],
   }));
   const holdingRows = holdingJoin.map((row) => ({ ...row.holding, asset: row.asset }));
-  const portfolio = await portfolioParts(ctx, investment, periodRows, holdingRows);
+  const portfolio = await portfolioParts(ctx, investment, periodRows, holdingRows, events);
   if (portfolio.events.length > 0) {
     events.push(...portfolio.events);
     events.sort(compareEvents);
@@ -267,9 +267,10 @@ async function portfolioParts(
   investment: InvestmentAccount,
   periodRows: readonly InvestmentPeriod[],
   holdingRows: Parameters<typeof marketEvents>[0],
+  bookEvents: readonly EventLike[],
 ): Promise<{ events: EventLike[]; balances: Pick<Book, "accountBalances" | "balancesUntil"> }> {
   if (investment.provider !== PORTFOLIO_PROVIDER) return { events: [], balances: {} };
-  const events = await marketEvents(holdingRows);
+  const events = await marketEvents(holdingRows, bookEvents);
   const switchedOn = switchDay(periodRows);
   if (switchedOn === null) return { events, balances: {} };
   const before = await accountView(ctx, investment, periodRows);

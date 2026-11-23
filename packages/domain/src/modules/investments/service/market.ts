@@ -33,13 +33,32 @@ export async function pricedListingOf(
   return byAsset;
 }
 
+/** After every event of its day: a close is the day's last price (the instant only orders the day). */
+const AFTER_THE_DAY = new Date("9999-12-31T23:59:59.999Z");
+
+/** The holding and day of each valuation typed by hand: there, the close gives way. */
+function typedValuations(events: readonly EventLike[]): Set<string> {
+  return new Set(
+    events.flatMap((event) =>
+      event.origin === "manual"
+        ? event.operations
+            .filter((operation) => operation.kind === "valuation")
+            .map((operation) => `${operation.holdingId}:${event.on}`)
+        : [],
+    ),
+  );
+}
+
 /**
  * The closes of the automatic assets of a portfolio as valuations, from the day each holding opened.
- * At the first instant of their day, so that a valuation typed by hand the same day comes after them.
+ * A close is the last price of its day, after a purchase or a sale of that day; a valuation typed by
+ * hand the same day wins, and its close is left out.
  */
 export async function marketEvents(
   holdings: readonly (InvestmentHolding & { asset: InvestmentAsset })[],
+  bookEvents: readonly EventLike[],
 ): Promise<EventLike[]> {
+  const typed = typedValuations(bookEvents);
   const listingOf = await pricedListingOf(holdings.map((holding) => holding.asset));
   const closes = await marketPrices().closesUpTo([...new Set(listingOf.values())], LAST_DAY);
   const events: EventLike[] = [];
@@ -48,10 +67,11 @@ export async function marketEvents(
     if (holding.origin !== "manual" || listingId === undefined) continue;
     for (const close of closes) {
       if (close.listingId !== listingId || close.on < holding.openedOn) continue;
+      if (typed.has(`${holding.id}:${close.on}`)) continue;
       events.push({
         id: `close:${holding.id}:${close.on}`,
         on: close.on,
-        occurredAt: new Date(`${close.on}T00:00:00Z`),
+        occurredAt: AFTER_THE_DAY,
         seq: 0n,
         origin: "provider",
         transferGroupId: null,

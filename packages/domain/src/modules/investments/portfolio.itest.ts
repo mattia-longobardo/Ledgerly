@@ -11,14 +11,19 @@ import { createTestUser } from "../../../../../test/users";
 import { serviceKind } from "../portfolio";
 import { PRICE_SCALE, QUANTITY_SCALE } from "./rules";
 import { parseDecimal } from "../../shared/money";
+import { refreshPrices, searchInstruments } from "../instruments";
 import {
   addAsset,
+  convertToPortfolio,
+  createManualService,
   createPortfolio,
   createPortfolioWithAccount,
   deleteOperation,
   isPortfolio,
   listInvestmentAccounts,
   recordOperation,
+  revalueAfterPrices,
+  setPriceMode,
 } from "./service";
 import { investmentAccounts, investmentHoldings } from "./schema";
 
@@ -130,3 +135,117 @@ async function holdingOf(accountId: string): Promise<string> {
     .where(eq(investmentAccounts.accountId, accountId));
   return row.id;
 }
+
+// A public example ISIN (ISO 6166), no person's data; the registers and the source are fakes.
+const ISIN = "US0378331005";
+const REGISTERS = (async (input: string | URL | Request) => {
+  const figi = [
+    { data: [{ ticker: "EXA", exchCode: "IM", shareClassFIGI: "BBG000000001", securityType: "ETP" }] },
+  ];
+  const firds = {
+    response: {
+      docs: [{ gnr_full_name: "Example ETF", gnr_cfi_code: "CEOGLS", gnr_notional_curr_code: "EUR" }],
+    },
+  };
+  return new Response(JSON.stringify(new URL(String(input)).host === "api.openfigi.com" ? figi : firds));
+}) as typeof globalThis.fetch;
+
+/** The example instrument in the registry, its Milan market priced by the source `prices`. */
+async function instrument(): Promise<{ instrumentId: string; listingId: string }> {
+  const [hit] = (await searchInstruments(ISIN, { fetch: REGISTERS, priceSourceId: "prices" })).items;
+  return { instrumentId: hit.instrumentId, listingId: hit.listings[0].listingId };
+}
+
+/** The source closes the market at `close` today, and the portfolios on it are rewritten. */
+async function closeAt(listingId: string, close: string) {
+  const run = await refreshPrices({
+    source: {
+      id: "prices",
+      closes: async (request) => ({
+        bars: request.listings.map((one) => ({ key: one.key, on: todayOn, close, currency: "EUR" })),
+        errors: [],
+      }),
+    },
+    markets: [{ listingId, neededFrom: todayOn }],
+    today: todayOn,
+    cap: 10,
+  });
+  await revalueAfterPrices(ctx, run);
+}
+
+describe("a portfolio's prices", () => {
+  it("values an automatic asset at the close of its market, and by hand once switched", async () => {
+    const { instrumentId, listingId } = await instrument();
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 2_000_00n });
+    await addAsset(ctx, accountId, {
+      asset: { instrument: { instrumentId, mic: "XMIL" } },
+      on: todayOn,
+      quantity: qty("10"),
+      unitPrice: price("100"),
+    });
+    await closeAt(listingId, "110");
+    expect(await valueOf(accountId)).toBe(1_000_00n + 1_100_00n);
+    await setPriceMode(ctx, accountId, await holdingOf(accountId), "manual");
+    expect(await valueOf(accountId)).toBe(2_000_00n);
+  });
+
+  it("refuses an automatic price on a market no source has", async () => {
+    const [hit] = (await searchInstruments(ISIN, { fetch: REGISTERS, priceSourceId: null })).items;
+    const { accountId } = await createPortfolioWithAccount(ctx, {
+      name: "Broker",
+      currency: "EUR",
+      url: null,
+    });
+    await recordOperation(ctx, accountId, { kind: "deposit", on: todayOn, amountCents: 2_000_00n });
+    await addAsset(ctx, accountId, {
+      asset: { instrument: { instrumentId: hit.instrumentId, mic: "XMIL" } },
+      on: todayOn,
+      quantity: qty("1"),
+      unitPrice: price("100"),
+    });
+    await expect(setPriceMode(ctx, accountId, await holdingOf(accountId), "auto")).rejects.toMatchObject({
+      code: "not_editable",
+    });
+  });
+});
+
+describe("«Switch to positions» (D4)", () => {
+  it("keeps the value of the day and the history before, the positions open at their price", async () => {
+    const { instrumentId } = await instrument();
+    const account = await createAccount(ctx, {
+      name: "Bank titles",
+      type: "investment",
+      currency: "EUR",
+      openingBalance: { on: "2026-01-01", cents: 5_000_00n },
+    });
+    await createManualService(ctx, { accountId: account.id, category: "broker" });
+    const positions = [{ instrumentId, mic: "XMIL", quantity: qty("10"), unitPrice: price("100") }];
+    await expect(
+      convertToPortfolio(ctx, account.id, {
+        on: todayOn,
+        positions: [{ ...positions[0], quantity: qty("60") }],
+      }),
+    ).rejects.toMatchObject({ code: "negative_cash" });
+    await convertToPortfolio(ctx, account.id, { on: todayOn, positions });
+    expect(await isPortfolio(ctx, account.id)).toBe(true);
+    expect(await valueOf(account.id)).toBe(5_000_00n);
+    expect((await readingsAt(ctx, [account.id], "2026-06-01")).get(account.id)).toBe(5_000_00n);
+    // The cash is the rest: 4,000 after the 1,000 of positions; a sale brings it back.
+    await recordOperation(ctx, account.id, {
+      kind: "sell",
+      holdingId: await holdingOf(account.id),
+      on: todayOn,
+      quantity: qty("10"),
+      unitPrice: price("100"),
+    });
+    expect(await valueOf(account.id)).toBe(5_000_00n);
+    await expect(convertToPortfolio(ctx, account.id, { on: todayOn, positions: [] })).rejects.toMatchObject({
+      code: "not_eligible",
+    });
+  });
+});

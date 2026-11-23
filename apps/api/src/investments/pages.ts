@@ -12,6 +12,7 @@ import {
   serviceActivity,
   serviceMovements,
   STALE_VALUE_DAYS,
+  type AssetPrice,
 } from "@ledgerly/domain/investments";
 import type { CivilDate } from "@ledgerly/domain/shared/dates";
 import { type Cents, sumCents } from "@ledgerly/domain/shared/money";
@@ -197,7 +198,12 @@ export function homeOut(
 }
 
 /** The service as its header, its tabs and its dialogs read it (§3.2): the sync's state only. */
-function serviceHeaderOut(detail: ServiceDetail, colorIndex: number, firstOn: CivilDate | null) {
+function serviceHeaderOut(
+  detail: ServiceDetail,
+  colorIndex: number,
+  firstOn: CivilDate | null,
+  prices: ReadonlyMap<string, AssetPrice>,
+) {
   const { summary, sync } = detail;
   const manual = summary.manualPnl;
   const option = (row: ServiceDetail["linkOptions"]["out"][number]) => ({
@@ -238,14 +244,19 @@ function serviceHeaderOut(detail: ServiceDetail, colorIndex: number, firstOn: Ci
             lastOkAt: iso(sync.lastOkAt),
           },
     provider: sync === null ? null : connectableOut(sync.provider),
-    assets: detail.assets.map(assetOut),
+    assets: detail.assets.map((asset) => assetOut(asset, prices)),
     coveredProducts: detail.coveredProducts,
     linkOptions: { out: detail.linkOptions.out.map(option), in: detail.linkOptions.in.map(option) },
   };
 }
 
 /** A service's Overview (§3.3): `activity` is the first page of the period's events. */
-export function overviewOut(detail: ServiceDetail, pnl: View, activity: ActivityData | null): Overview {
+export function overviewOut(
+  detail: ServiceDetail,
+  pnl: View,
+  activity: ActivityData | null,
+  prices: ReadonlyMap<string, AssetPrice>,
+): Overview {
   const service = pnl.portfolio.services[0];
   const markers = pnl.intervals.map((interval) => {
     const flows = service.flows.filter((flow) => flow.on >= interval.from && flow.on <= interval.to);
@@ -258,7 +269,7 @@ export function overviewOut(detail: ServiceDetail, pnl: View, activity: Activity
     on: pnl.todayOn,
     currency: pnl.currency,
     period: periodOut(pnl),
-    service: serviceHeaderOut(detail, pnl.colorIndex.get(service.accountId) ?? 0, pnl.firstOn),
+    service: serviceHeaderOut(detail, pnl.colorIndex.get(service.accountId) ?? 0, pnl.firstOn, prices),
     pnl: servicePnlOut(service),
     chart: {
       ...chartOut(pnl, service.display?.pnlCents ?? null, service.displayReturn?.dietz ?? null),
