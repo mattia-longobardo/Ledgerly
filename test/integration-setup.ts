@@ -15,9 +15,36 @@ async function resetTestDatabase(pool: Pool): Promise<void> {
   if (!/_test(_\d+)?$/.test(database)) {
     throw new Error(`Refusing to reset "${database}": not a _test database`);
   }
-  await pool.query("DROP SCHEMA IF EXISTS drizzle CASCADE");
-  await pool.query("DROP SCHEMA IF EXISTS public CASCADE");
+  for (const schema of ["drizzle", "public"]) {
+    await dropTablesInGroups(pool, schema);
+    // What is left — sequences, types, functions — is a handful of locks.
+    await pool.query(`DROP SCHEMA IF EXISTS ${quoted(schema)} CASCADE`);
+  }
   await pool.query("CREATE SCHEMA public");
+}
+
+/** The tables dropped at once, each group in its own transaction (a statement of the pool commits). */
+const TABLES_PER_DROP = 10;
+
+const quoted = (name: string) => `"${name.replace(/"/g, '""')}"`;
+
+/**
+ * The tables of a schema, a few at a time. `DROP SCHEMA … CASCADE` takes a lock on every table, index,
+ * sequence and constraint in one transaction: several hundred, and four shards doing it together run
+ * out of the lock table the homelab's Postgres shares between its databases (`max_locks_per_transaction`
+ * 64, "out of shared memory"). A group holds a few dozen, released at its commit.
+ */
+async function dropTablesInGroups(pool: Pool, schema: string): Promise<void> {
+  const { rows } = await pool.query<{ name: string }>(
+    "SELECT tablename AS name FROM pg_tables WHERE schemaname = $1 ORDER BY tablename",
+    [schema],
+  );
+  for (let start = 0; start < rows.length; start += TABLES_PER_DROP) {
+    const names = rows
+      .slice(start, start + TABLES_PER_DROP)
+      .map((row) => `${quoted(schema)}.${quoted(row.name)}`);
+    await pool.query(`DROP TABLE IF EXISTS ${names.join(", ")} CASCADE`);
+  }
 }
 
 /**
@@ -43,6 +70,11 @@ export default async function setup(): Promise<() => Promise<void>> {
   try {
     await resetTestDatabase(pool);
     await runMigrations(pool, "./drizzle");
+  } catch (error) {
+    // Vite prints a failed global setup through its source maps, and can lose the error on the way
+    // ("code.charCodeAt is not a function"): the cause is written here first.
+    console.error("[integration-setup] the test database could not be prepared:", error);
+    throw error;
   } finally {
     await pool.end();
   }
