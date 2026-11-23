@@ -111,7 +111,12 @@ export async function confirmRun(
     const unitPrice = parsed.unitPrice ?? fromNumeric(run.price, PRICE_SCALE);
     if (unitPrice === null) throw new RangeError("An instalment with no price needs one");
     const day = parsed.on ?? run.priceOn ?? run.dueOn;
-    const eventId = await recordRun(ctx, transaction, { plan, run, on: day, unitPrice, by: "person" }, parsed);
+    const eventId = await recordRun(
+      ctx,
+      transaction,
+      { plan, run, on: day, unitPrice, by: "person" },
+      parsed,
+    );
     return { eventId };
   });
 }

@@ -4,7 +4,8 @@
 // test: the web server (`instrumentation.ts`), the worker, the test projects and the scripts.
 import { wireAccounts } from "@ledgerly/domain/accounts";
 import { payrollSource, valuationAccountIds, wireFunds } from "@ledgerly/domain/funds";
-import { managedAccountsOfInvestments, wireInvestments } from "@ledgerly/domain/investments";
+import { linkedPayeeKeys, managedAccountsOfInvestments, wireInvestments } from "@ledgerly/domain/investments";
+import { wireSubscriptions } from "@ledgerly/domain/subscriptions";
 import {
   closesUpTo,
   FALLBACK_MIC,
@@ -51,6 +52,7 @@ export function wireDomain(): void {
   wireTimeoff({ calendar: leaveCalendar, balances: leaveBalances });
   wirePayroll({ listeners: [payrollSource] });
   wireFunds({ payslips });
+  wireSubscriptions({ linked: { payeeKeys: linkedPayeeKeys } });
   wireInvestments({
     funds: { accountIds: valuationAccountIds },
     prices: {

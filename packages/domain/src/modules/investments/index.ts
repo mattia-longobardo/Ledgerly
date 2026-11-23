@@ -62,6 +62,7 @@ export {
   convertToPortfolio,
   createPlan,
   linkRunDebit,
+  linkedPayeeKeys,
   listPlans,
   listRuns,
   plansOfEvents,

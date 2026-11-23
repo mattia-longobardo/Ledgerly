@@ -58,3 +58,4 @@ export { createPlan, linkRunDebit, listPlans, listRuns, plansOfEvents, updatePla
 export type { InvestmentPlan, InvestmentPlanRun, PlanInput, PlanUpdate, PlanView, RunView } from "./plans";
 export { backfillPlan, confirmRun, plansToDo, runDuePlans, skipRun } from "./plan-runs";
 export type { Backfill, PlanFact, RunConfirmation } from "./plan-runs";
+export { linkedPayeeKeys } from "./linked";

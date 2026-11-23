@@ -6,7 +6,9 @@ import { and, eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { createAccount, readingsAt } from "../accounts";
 import type { Ctx } from "../../platform/context";
-import { dayOfWeek, today } from "../../shared/dates";
+import { addDays, dayOfWeek, today } from "../../shared/dates";
+import { refreshRecurrences } from "@/modules/transactions/jobs";
+import { suggestions } from "../subscriptions";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
@@ -239,5 +241,27 @@ describe("a purchase plan", () => {
     await expect(linkRunDebit(ctx, accountId, planId, proposed.run.id)).rejects.toMatchObject({
       code: "not_editable",
     });
+  });
+
+  it("takes the payee of a linked debit out of the subscription suggestions (§11.3.3)", async () => {
+    await closeToday("40");
+    const bank = await createAccount(ctx, {
+      name: "Conto",
+      type: "checking",
+      currency: "EUR",
+      openingBalance: null,
+    });
+    for (const days of [90, 60, 30, 0]) {
+      await accountMovement(ctx, bank.id, addDays(todayOn, -days), -101_00n, { payee: "BROKER PAC" });
+    }
+    await refreshRecurrences(ctx);
+    expect((await suggestions(ctx)).map((one) => one.name)).toEqual(["BROKER PAC"]);
+    const accountId = await portfolio(1_000_00n);
+    const { id: planId } = await createPlan(ctx, accountId, dueToday({ debitAccountId: bank.id }));
+    await runDuePlans(ctx);
+    const [run] = await listRuns(ctx, accountId, planId);
+    await confirmRun(ctx, { accountId, planId, runId: run.run.id }, {});
+    await linkRunDebit(ctx, accountId, planId, run.run.id);
+    expect(await suggestions(ctx)).toEqual([]);
   });
 });
