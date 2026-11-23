@@ -71,6 +71,15 @@ export const USERS = {
     password: "portfolio-journey-password-123",
     name: "Portfolio Journey",
   },
+  // R5d, step 2: two manual portfolios with purchase plans and an instalment of today proposed — one
+  // with its bank transaction found, one with no cash (P2) — for the screen check; `plansJourney` has the
+  // same and the journey writes on it.
+  plans: { email: "plans@example.test", password: "plans-password-123", name: "Plans" },
+  plansJourney: {
+    email: "plans-journey@example.test",
+    password: "plans-journey-password-123",
+    name: "Plans Journey",
+  },
   payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
   // Release N6: the journey of a fund fed by the payslip, with no document. It starts with no fund.
   fundsPayslip: {
@@ -244,6 +253,8 @@ export const SESSIONS = {
   investments: { user: "investments", file: "investments-session.json" },
   portfolio: { user: "portfolio", file: "portfolio-session.json" },
   portfolioJourney: { user: "portfolioJourney", file: "portfolio-journey-session.json" },
+  plans: { user: "plans", file: "plans-session.json" },
+  plansJourney: { user: "plansJourney", file: "plans-journey-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
   fundsPayslip: { user: "fundsPayslip", file: "funds-payslip-session.json" },
   fundsNew: { user: "fundsNew", file: "funds-new-session.json" },

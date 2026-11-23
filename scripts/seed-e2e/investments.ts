@@ -1,20 +1,23 @@
 // scripts/seed-e2e/investments.ts — the users and the data of the flow `investments` (tests/e2e/investments/).
 import { createAccount, saveBalanceEntry, saveProviderBalance } from "@domain/modules/accounts/service";
-import { searchInstruments } from "@domain/modules/instruments";
+import { refreshPrices, searchInstruments } from "@domain/modules/instruments";
 import {
   addAsset,
+  convertToPortfolio,
   createManualService,
+  createPlan,
   createPortfolioWithAccount,
   PRICE_SCALE,
   QUANTITY_SCALE,
   recordOperation,
+  runDuePlans,
 } from "@domain/modules/investments";
 import { pricesPlugin } from "@domain/platform/plugins";
 import { parseDecimal } from "@domain/shared/money";
 import { connectInvestmentProvider, setSourcesForTests } from "@domain/modules/investments/sync";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { type Ctx } from "@domain/platform/context";
-import { addDays, today } from "@domain/shared/dates";
+import { addDays, dayOfWeek, today } from "@domain/shared/dates";
 import { listConnections, saveSchedule } from "@domain/platform/integrations/service";
 import { USERS } from "../../tests/e2e/_shared/env";
 import { contextOf, syncedAccount, walletMovement } from "./common";
@@ -481,4 +484,92 @@ export async function seedPortfolio(): Promise<void> {
   });
   await valueService(USERS.portfolio.email);
   await valueService(USERS.portfolioJourney.email);
+}
+
+/**
+ * The instrument of the plans (R5d, step 2): a public example ISIN (ISO 6166) of its own, priced by a
+ * source of the seed's, so its close of today is known without the instance's prices plugin. The
+ * registers are answered here, as for the portfolio's instrument.
+ */
+const PLAN_ISIN = "US0378331005";
+const PLAN_SOURCE = "e2e-prices";
+const PLAN_REGISTERS = (async (input: string | URL | Request) => {
+  const figi = [
+    { data: [{ ticker: "EXA", exchCode: "IM", shareClassFIGI: "BBG000000001", securityType: "ETP" }] },
+  ];
+  const firds = {
+    response: {
+      docs: [{ gnr_full_name: "Example ETF", gnr_cfi_code: "CEOGLS", gnr_notional_curr_code: "EUR" }],
+    },
+  };
+  return new Response(JSON.stringify(new URL(String(input)).host === "api.openfigi.com" ? figi : firds));
+}) as typeof globalThis.fetch;
+
+/** The plans' instrument, closing at 40 € today on Borsa Italiana. */
+async function planInstrument(on: string): Promise<string> {
+  const [hit] = (await searchInstruments(PLAN_ISIN, { fetch: PLAN_REGISTERS, priceSourceId: PLAN_SOURCE }))
+    .items;
+  const { listingId } = hit.listings[0];
+  await refreshPrices({
+    source: {
+      id: PLAN_SOURCE,
+      closes: async (request) => ({
+        bars: request.listings.map((one) => ({ key: one.key, on, close: "40", currency: "EUR" })),
+        errors: [],
+      }),
+    },
+    markets: [{ listingId, neededFrom: on }],
+    today: on,
+    cap: 10,
+  });
+  return hit.instrumentId;
+}
+
+/**
+ * One person's plans: «Piani», a portfolio made today with 1.000 € of cash, a weekly plan of 100 €
+ * (fee 1 €) due today, started three weeks ago, paid from a bank account whose transaction of 101 €
+ * the job finds, and a second one from today the journey skips; and «Senza liquidità», with no cash
+ * and an automatic plan the job could not buy (P2); «Titoli a valore», kept by value until today's
+ * «Switch to positions», with a plan started two weeks ago. The daily job runs once: every instalment
+ * of today is proposed.
+ */
+async function planUser(email: string, instrumentId: string, key: string): Promise<void> {
+  const ctx = await contextOf(email);
+  const on = today(ctx.timeZone);
+  const day = dayOfWeek(on) === 0 ? 7 : dayOfWeek(on);
+  const instrument = { instrumentId, mic: "XMIL" };
+  const bank = await syncedAccount(ctx, `e2e-plans-${key}`, "Conto corrente");
+  const debit = walletMovement(`e2e-plans-${key}-tx-1`, on, -10_100n, "BROKER SPA", null);
+  await upsertFromProvider(ctx, bank, [debit], { provider: WALLET_PROVIDER });
+  const piani = await createPortfolioWithAccount(ctx, { name: "Piani", currency: "EUR", url: null });
+  await recordOperation(ctx, piani.accountId, { kind: "deposit", on, amountCents: 1_000_00n });
+  const weekly = { amountCents: 100_00n, frequency: "week" as const, day, feeCents: 1_00n, instrument };
+  await createPlan(ctx, piani.accountId, {
+    ...weekly,
+    name: "ETF settimanale",
+    startOn: addDays(on, -21),
+    debitAccountId: bank,
+  });
+  await createPlan(ctx, piani.accountId, { ...weekly, name: "ETF da saltare", startOn: on });
+  const empty = await createPortfolioWithAccount(ctx, {
+    name: "Senza liquidità",
+    currency: "EUR",
+    url: null,
+  });
+  await createPlan(ctx, empty.accountId, { ...weekly, name: "ETF automatico", startOn: on, mode: "auto" });
+  // Kept by value until today's «Switch to positions»: the days before have no positions.
+  const switched = await createAccount(ctx, { name: "Titoli a valore", type: "investment", currency: "EUR" });
+  await saveBalanceEntry(ctx, switched.id, { on: addDays(on, -30), cents: 1_000_00n });
+  await createManualService(ctx, { accountId: switched.id, category: "broker", url: null });
+  await convertToPortfolio(ctx, switched.id, { on, positions: [] });
+  await createPlan(ctx, switched.id, { ...weekly, name: "ETF dopo il passaggio", startOn: addDays(on, -14) });
+  await runDuePlans(ctx);
+}
+
+/** The purchase plans (R5d, step 2): `plans` for the screen check, `plansJourney` for the journey. */
+export async function seedPlans(): Promise<void> {
+  const on = today((await contextOf(USERS.plans.email)).timeZone);
+  const instrumentId = await planInstrument(on);
+  await planUser(USERS.plans.email, instrumentId, "1");
+  await planUser(USERS.plansJourney.email, instrumentId, "2");
 }

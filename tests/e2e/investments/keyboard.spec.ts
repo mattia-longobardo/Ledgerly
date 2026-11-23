@@ -82,3 +82,31 @@ test.describe("a manual portfolio (R5d)", () => {
     await expect(record).toBeFocused();
   });
 });
+
+test.describe("the purchase plans (R5d, step 2)", () => {
+  test.use({ storageState: sessionState("plans") });
+
+  test("an instalment's «Confirm» opens from the keyboard, and Escape gives the focus back", async ({
+    page,
+  }) => {
+    await page.goto("/investments");
+    const service = page
+      .getByRole("link", { name: "Senza liquidità", exact: true })
+      .filter({ visible: true })
+      .first();
+    await page.goto(`${await service.getAttribute("href")}/plans`);
+    const confirm = page
+      .getByRole("button", { name: /^Confirm the instalment of/ })
+      .filter({ visible: true })
+      .first();
+    await focusOn(confirm);
+    expect(await focusIsVisible(page), "the button draws no ring").toBe(true);
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: /^Confirm the instalment of/ });
+    await expect(dialog).toBeVisible();
+    await dialogHasFocus(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(confirm).toBeFocused();
+  });
+});

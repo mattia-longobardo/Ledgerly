@@ -45,6 +45,12 @@ const PAGES: Screen[] = [
     session: "portfolio" as const,
     open: (page: Page) => serviceTab(page, "Broker", tab),
   })),
+  // The purchase plans of a manual portfolio (R5d, step 2): the plans and the instalments of one.
+  ...(["Piani", "Senza liquidità"] as const).map((portfolio) => ({
+    name: `/investments/[accountId]/plans, ${portfolio}`,
+    session: "plans" as const,
+    open: (page: Page) => plansTab(page, portfolio),
+  })),
   // The closed positions of Positions (§3.4, U4): in the period and ever, of a synced service.
   ...(["closed", "all"] as const).map((status) => ({
     name: `/investments/[accountId]/positions?status=${status}, synced with eToro`,
@@ -72,6 +78,21 @@ const PAGES: Screen[] = [
 ];
 
 /** «Add investment» on the home, and then one of its choices when named (rewrite plan R5b, B1c). */
+/** The Plans tab of a manual portfolio (R5d, step 2). */
+async function plansTab(page: Page, portfolio: string) {
+  await follow(page, "/investments", new RegExp(`^${portfolio}$`));
+  await page.goto(`${page.url().split("?")[0]}/plans`);
+  await settled(page);
+}
+
+/** A command of a plan's `⋯` menu. */
+async function planCommand(page: Page, command: string) {
+  await plansTab(page, "Piani");
+  await page.getByRole("button", { name: "Commands of ETF settimanale" }).filter({ visible: true }).click();
+  await page.getByRole("menuitem", { name: command, exact: true }).click();
+  await settledDialog(page);
+}
+
 async function addInvestment(page: Page, choice?: RegExp) {
   await page.goto("/investments");
   await settled(page);
@@ -141,6 +162,44 @@ const OVERLAYS: Screen[] = [
     open: async (page) => {
       await follow(page, "/investments", /^Titoli$/);
       await headerCommand(page, "More actions", "Switch to positions");
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the new purchase plan dialog, with its instrument found",
+    session: "plans",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await plansTab(page, "Piani");
+      await page.getByRole("button", { name: "New plan" }).click();
+      await page.getByRole("searchbox", { name: "Instrument" }).fill("IE00BK5BQT80");
+      await page.getByTestId("instrument-hit").first().click();
+      await settledDialog(page);
+    },
+  },
+  {
+    name: "the edit plan dialog",
+    session: "plans",
+    roots: ['[role="dialog"]'],
+    open: (page) => planCommand(page, "Edit"),
+  },
+  {
+    name: "the past instalments dialog",
+    session: "plans",
+    roots: ['[role="dialog"]'],
+    open: (page) => planCommand(page, "Record the past instalments"),
+  },
+  {
+    name: "the confirm instalment dialog, with no cash",
+    session: "plans",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await plansTab(page, "Senza liquidità");
+      await page
+        .getByRole("button", { name: /^Confirm the instalment of/ })
+        .filter({ visible: true })
+        .first()
+        .click();
       await settledDialog(page);
     },
   },
