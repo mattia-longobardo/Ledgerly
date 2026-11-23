@@ -1,4 +1,4 @@
-// tests/e2e/funds/place.ts — where a fund is since R5b (decision B1b): a row of «Pension funds» on the
+// tests/e2e/_shared/funds.ts — where a fund is since R5b (decision B1b): a row of «Pension funds» on the
 // Investments home, its page at its account's address in Investments.
 import type { Page } from "@playwright/test";
 

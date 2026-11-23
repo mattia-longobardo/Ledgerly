@@ -3,7 +3,7 @@
 // person edits, on the funds of the `fundsSetup` seed — one fund per journey.
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
-import { fundPath } from "./place";
+import { fundPath } from "../_shared/funds";
 
 // The tests of this file change the data of one user, each from what the one before left: they run
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).

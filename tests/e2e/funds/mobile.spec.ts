@@ -2,7 +2,7 @@
 // `mobile` of playwright.config.ts runs every `mobile.spec.ts`).
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
-import { fundPath } from "./place";
+import { fundPath } from "../_shared/funds";
 import { LAST_YEAR } from "../_shared/helpers";
 
 /**

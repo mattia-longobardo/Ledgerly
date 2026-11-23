@@ -4,7 +4,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { dialogHasFocus, focused, focusIsVisible, focusOn } from "../_shared/keyboard";
 import { sessionState } from "../_shared/env";
 import { LAST_YEAR } from "../_shared/helpers";
-import { FUNDS, fundLink, fundPath } from "./place";
+import { FUNDS, fundLink, fundPath } from "../_shared/funds";
 
 test.use({ storageState: sessionState("layout") });
 

@@ -7,7 +7,7 @@ import { APRIL, FEBRUARY, JANUARY, MARCH, THIRTEENTH } from "../../../test/fixtu
 import { twinPdf } from "../../../test/fixtures/payroll/twin";
 import { sessionState } from "../_shared/env";
 import { LAST_YEAR } from "../_shared/helpers";
-import { addFund, FUNDS, fundLink, fundPath } from "./place";
+import { addFund, FUNDS, fundLink, fundPath } from "../_shared/funds";
 
 /** The twins are dated 2031, and a fund's pages read nothing after today: last year, every day of it past. */
 const lastYear = <T>(twin: T): T =>

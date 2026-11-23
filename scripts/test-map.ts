@@ -755,6 +755,8 @@ export const MODULES: Module[] = [
     id: "docs",
     files: ["docs/**", "*.md", "LICENSE", ".env.example", "tests/shots/**", "playwright.shots.config.ts"],
   },
+  // Where a fund is since R5b, which the specs of `funds` share.
+  { id: "funds-place", files: ["tests/e2e/_shared/funds.ts"], flows: ["funds"] },
   // A changed file of a flow's folder starts the whole folder: its journeys and its screens.
   ...FLOWS.filter((flow) => flow.id !== "screens").map((flow) => ({
     id: `spec-${flow.id}`,

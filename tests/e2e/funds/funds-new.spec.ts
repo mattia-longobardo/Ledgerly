@@ -3,7 +3,7 @@
 // kind, nothing written before "Create fund".
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
-import { addFund } from "./place";
+import { addFund } from "../_shared/funds";
 
 const TODAY = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
 const Y = Number(TODAY.slice(0, 4));

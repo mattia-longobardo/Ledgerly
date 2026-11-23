@@ -2,7 +2,7 @@
 // one fund model since release N6, docs/design/rewrite-plan/ux/n6-pension-fund.md §3, §9).
 import { expect, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
-import { addFund, FUNDS } from "./place";
+import { addFund, FUNDS } from "../_shared/funds";
 
 // Its own user: two Fideuram debits on a synced account (scripts/seed-e2e.ts).
 test.use({ storageState: sessionState("funds") });

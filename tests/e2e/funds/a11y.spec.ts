@@ -12,7 +12,7 @@ import {
   settledDialog,
 } from "../_shared/a11y";
 import { THIS_YEAR } from "../_shared/helpers";
-import { FUNDS } from "./place";
+import { FUNDS } from "../_shared/funds";
 
 const PAGES: Screen[] = [
   // The pension funds are a group of Investments since R5b (decision B1b): its chip is the old home.

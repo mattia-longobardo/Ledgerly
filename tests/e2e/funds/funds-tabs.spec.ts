@@ -4,7 +4,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
 import { THIS_YEAR } from "../_shared/helpers";
-import { FUNDS as HOME, fundPath, fundsList } from "./place";
+import { FUNDS as HOME, fundPath, fundsList } from "../_shared/funds";
 
 // The tests of this file change the data of one user, each from what the one before left: they run
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).

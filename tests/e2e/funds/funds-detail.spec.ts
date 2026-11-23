@@ -4,7 +4,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
 import { THIS_YEAR } from "../_shared/helpers";
-import { cents, FUNDS as HOME, fundLink, fundPath, fundsList } from "./place";
+import { cents, FUNDS as HOME, fundLink, fundPath, fundsList } from "../_shared/funds";
 
 const Y = THIS_YEAR;
 
@@ -232,11 +232,11 @@ test.describe("a fund's page", () => {
     test("an archived fund: its badge, its gain, and a last value that is not held today", async ({
       page,
     }) => {
-      // An archived fund is no row of the home (R5b): its old address leads to its page, and its gain
-      // since the start is the one of `list_funds`.
+      // An archived fund is no row of the home (R5b): its old address leads to its page. Its gain since
+      // the start is the seed's: 410,00 € of value on 400,00 € paid in (scripts/seed-e2e/funds.ts).
       const gamma = (await fundsList(page)).find((one) => one.name === "Piano Gamma")!;
       await page.goto(`/funds/${gamma.id}?preset=all`);
-      await expect(hero(page)).toHaveAttribute("data-cents", String(cents(gamma.gain!)));
+      await expect(hero(page)).toHaveAttribute("data-cents", "1000");
       await expect(page.locator("h1")).toContainText("Archived");
       await expect(page.getByTestId("fund-value")).toContainText("Last value");
       await expect(page.getByRole("button", { name: "Update value" })).toHaveCount(0);

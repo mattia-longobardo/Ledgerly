@@ -3,7 +3,7 @@
 // the `fundsHome` seed. The home's own figures went with it: the fund's page keeps them (funds-detail).
 import { expect, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
-import { FUNDS, fundLink, fundsList } from "./place";
+import { FUNDS, fundLink, fundsList } from "../_shared/funds";
 
 test.use({ storageState: sessionState("fundsHome") });
 
