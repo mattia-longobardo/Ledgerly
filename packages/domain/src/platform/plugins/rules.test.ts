@@ -13,6 +13,7 @@ import {
   movementIds,
   normalizePrivateKey,
   pickBalance,
+  pluginKinds,
   providerAccountIdOf,
   userPluginState,
 } from "./rules";
@@ -300,5 +301,13 @@ describe("the name of a bank's account", () => {
       "checking",
       "checking",
     ]);
+  });
+});
+
+describe("what a plugin reads", () => {
+  it("is the days off for a calendar, the accounts then the movements for the others", () => {
+    expect(pluginKinds("calendar")).toEqual(["leave"]);
+    expect(pluginKinds("bank")).toEqual(["accounts", "transactions"]);
+    expect(pluginKinds("source")).toEqual(["accounts", "transactions"]);
   });
 });

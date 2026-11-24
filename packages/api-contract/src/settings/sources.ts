@@ -185,6 +185,11 @@ export const listPlugins = defineRoute({
          * person's own credential (`source`), a calendar of days off (`calendar`).
          */
         kind: z.enum(["bank", "source", "calendar"]),
+        /**
+         * What the plugin reads, from its manifest: the kinds of the runs of its pass, in their order
+         * (the `kind` of `GET /connections/runs`).
+         */
+        kinds: z.array(z.enum(["accounts", "transactions", "leave", "documents", "holdings", "flows"])),
         /** The fields of the credential of a connection, in the person's language: never a value. */
         fields: z.array(
           z.object({
@@ -213,6 +218,7 @@ export const listPlugins = defineRoute({
           returnAddress: "https://ledgerly.example/api/v1/plugins/examplebank/callback",
           countries: ["DE", "IT"],
           kind: "bank",
+          kinds: ["accounts", "transactions"],
           fields: [],
         },
       ],

@@ -4,6 +4,7 @@
  */
 import { createHash } from "node:crypto";
 import type { PluginAccount, PluginTransaction, SyncResponse } from "@ledgerly/plugin-contract";
+import { PLUGIN_KINDS, type SyncKind } from "../integrations/rules";
 
 /** How long a person has to come back from the provider's site. */
 export const AUTH_STATE_MINUTES = 15;
@@ -21,6 +22,14 @@ export function userPluginState(facts: {
 }): UserPluginState {
   if (facts.active) return "active";
   return facts.hasCredentials || facts.connections > 0 ? "paused" : "available";
+}
+
+/**
+ * What a plugin reads, from what reads it (its manifest's capabilities): the kinds of the runs of
+ * its pass, in their order. A calendar's reads the days off; a bank's or a source's the movements.
+ */
+export function pluginKinds(kind: "bank" | "source" | "calendar"): SyncKind[] {
+  return kind === "calendar" ? ["leave"] : [...PLUGIN_KINDS];
 }
 
 /** What is kept of a `state`: its hash, so the stored row cannot finish anybody's access. */

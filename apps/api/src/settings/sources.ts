@@ -16,7 +16,12 @@ import {
   PROVIDERS,
   SYNC_RUN_RETENTION_DAYS,
 } from "@ledgerly/domain/platform/integrations";
-import { credentialsStatus, isBankPluginProvider, listUserPlugins } from "@ledgerly/domain/platform/plugins";
+import {
+  credentialsStatus,
+  isBankPluginProvider,
+  listUserPlugins,
+  pluginKinds,
+} from "@ledgerly/domain/platform/plugins";
 import { keepManifestsFresh, returnAddress } from "@ledgerly/plugin-host";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 
@@ -88,6 +93,7 @@ function servePlugins(app: Hono<ApiEnv>, guard: Guard): void {
             returnAddress: returnAddress(plugin.id),
             countries: plugin.countries,
             kind: plugin.kind,
+            kinds: pluginKinds(plugin.kind),
             fields: plugin.fields,
           };
         }),

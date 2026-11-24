@@ -199,6 +199,24 @@ describe("the plugins, a source's page and the log", () => {
     expect(plugin.countries).toEqual(["IT", "DE"]);
   });
 
+  it("answers what a bank's plugin reads: the accounts, then the movements", async () => {
+    await refreshManifests(BANK_NOW, fakePlugin().deps);
+    const [bank] = sources.listPlugins.response.parse((await send(alice, "/plugins")).body).plugins;
+    expect(bank).toMatchObject({ kind: "bank", kinds: ["accounts", "transactions"] });
+  });
+
+  it("answers what a calendar's plugin reads, from its manifest's capabilities", async () => {
+    const fake = fakePlugin();
+    const manifest = { ...MANIFEST, capabilities: ["leaveCalendar"] };
+    const fetchFn: typeof fake.deps.fetchFn = async (input, init) =>
+      new URL(String(input)).pathname === PLUGIN_PATHS.manifest
+        ? new Response(JSON.stringify(manifest))
+        : fake.deps.fetchFn(input, init);
+    await refreshManifests(BANK_NOW, { fetchFn });
+    const [calendar] = sources.listPlugins.response.parse((await send(alice, "/plugins")).body).plugins;
+    expect(calendar).toMatchObject({ kind: "calendar", kinds: ["leave"] });
+  });
+
   it("answers a source's page: deleted accounts, what waits, what «Disconnect» leaves", async () => {
     const { plugin, connectionId } = await connectedBank();
     await chosenAndRead(plugin, connectionId);

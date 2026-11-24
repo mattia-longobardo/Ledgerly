@@ -32,6 +32,7 @@ export {
   movementIds,
   normalizePrivateKey,
   pickBalance,
+  pluginKinds,
   providerAccountIdOf,
 } from "./rules";
 export type { BankAccountType, ReadingError, ReturnError } from "./rules";
