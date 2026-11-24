@@ -8,16 +8,16 @@ import { Field } from "@ledgerly/ui/field";
 import { FormDialog } from "@ledgerly/ui/form-dialog";
 import { Input, InputGroup, Select } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
-import { MAX_EXTRA_PAYMENTS, type ManualInput, PAYSLIP_KINDS, saveManualPayslipAction } from "../manual-calls";
+import { MAX_EXTRA_PAYMENTS, PAYSLIP_KINDS } from "@ledgerly/api-contract/payroll";
+import { type ManualInput, saveManualPayslipAction } from "../manual-calls";
 import { kindLabel, useFieldLabel } from "./labels";
 import { type Catalogue, type Format, hoursOf, type ManualPayslip } from "./present";
 
 /** 1…n. */
 const upTo = (count: number) => [...Array(count).keys()].map((index) => index + 1);
 const MONTHS = upTo(12);
-// shortcut: `conflict` is read as "the month already has a payslip" because the route gives the same
-// reason to a concurrent write; use the route's own reason once it has one.
 const ERROR_KEYS = {
+  month_applied: "errors.month_applied",
   conflict: "errors.conflict",
   invalid_value: "errors.invalid_value",
   invalid: "errors.invalid",

@@ -21,14 +21,6 @@ export interface ManualInput {
   fields: Record<string, string>;
 }
 
-// shortcut: the vocabularies are read from the routes' schemas because `@ledgerly/api-contract/payroll`
-// does not export PAYSLIP_KINDS, PAY_FREQUENCIES and MAX_EXTRA_PAYMENTS; import them once it does.
-const manualShape = manual.createManualPayslip.body.shape;
-export const PAYSLIP_KINDS = manualShape.kind.options;
-export const PAY_FREQUENCIES = employer.setPayrollEmployer.body.shape.payFrequency.options;
-/** The most extra payments a payslip or an employer names (the contract's `MAX_EXTRA_PAYMENTS`). */
-export const MAX_EXTRA_PAYMENTS = manualShape.extraNumber.unwrap().maxValue ?? 1;
-
 const wholeOrNull = (typed: string) => (typed.trim() === "" ? null : Number(typed));
 
 /** The route's body, or null when an amount is not a number the person can mean. */

@@ -5827,7 +5827,8 @@
       "noDocument": "No PDF",
       "notPaid": "Payment date not given",
       "errors": {
-        "conflict": "This month already has a payslip in the register.",
+        "month_applied": "This month already has a payslip in the register.",
+        "conflict": "This PDF already has a payslip, or someone saved at the same time: reload the page.",
         "invalid_value": "Check the values: an amount is not a number or is negative, the net is over the gross, or the month does not fit the kind.",
         "invalid": "Check the values: an amount is not a number or is negative, the net is over the gross, or the month does not fit the kind.",
         "invalid_state": "The PDF is still being read, or it is a scan with no text: try again in a moment, or save without it.",

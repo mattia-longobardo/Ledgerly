@@ -3,7 +3,7 @@
 // Payroll › Settings › the employer (R5g, E6): how often it pays, and the month of each extra
 // payment. The yearly gross of the register expects every extra payment listed here.
 import { useTranslations } from "next-intl";
-import { employer as employerRoutes } from "@ledgerly/api-contract/payroll";
+import { employer as employerRoutes, MAX_EXTRA_PAYMENTS, PAY_FREQUENCIES } from "@ledgerly/api-contract/payroll";
 import { type FormEvent, useId, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { useApi } from "@ledgerly/ui/data";
@@ -12,7 +12,7 @@ import { SettingsSection } from "@ledgerly/ui/section";
 import { Field } from "@ledgerly/ui/field";
 import { Select } from "@ledgerly/ui/input";
 import { notify } from "@ledgerly/ui/toast";
-import { MAX_EXTRA_PAYMENTS, PAY_FREQUENCIES, saveEmployerAction } from "../manual-calls";
+import { saveEmployerAction } from "../manual-calls";
 import { kindLabel } from "./labels";
 import { monthName } from "./manual-dialog";
 import { usePayrollFormat } from "./format";

@@ -5827,7 +5827,8 @@
       "noDocument": "Nessun PDF",
       "notPaid": "Data di pagamento non indicata",
       "errors": {
-        "conflict": "Questo mese ha già un cedolino nel registro.",
+        "month_applied": "Questo mese ha già un cedolino nel registro.",
+        "conflict": "Questo PDF ha già un cedolino, oppure qualcuno ha salvato nello stesso momento: ricarica la pagina.",
         "invalid_value": "Controlla i valori: un importo non è un numero o è negativo, il netto supera il lordo, oppure il mese non va con il tipo.",
         "invalid": "Controlla i valori: un importo non è un numero o è negativo, il netto supera il lordo, oppure il mese non va con il tipo.",
         "invalid_state": "Il PDF è ancora in lettura, oppure è una scansione senza testo: riprova tra poco, o salva senza.",
