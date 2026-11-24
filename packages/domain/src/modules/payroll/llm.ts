@@ -4,8 +4,8 @@ import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
 import { llmFallbackCredentials } from "../../platform/settings/service";
 import { FIELDS, type FieldName, isFieldName, llmFillable } from "./fields";
-import { layoutText, readReply, requestBody } from "./parse/llm-prompt";
-import { PayrollError, recompute } from "./service";
+import { layoutText, readAnswer, requestBody } from "./parse/llm-prompt";
+import { PayrollError, profileOf, recompute } from "./service";
 
 const ENDPOINT = "https://api.openai.com/v1/chat/completions";
 const TIMEOUT_MS = 25_000;
@@ -17,10 +17,12 @@ const INFERRED_CONFIDENCE = 0.4;
  * those —, one request with the document's text, personal identifiers masked; what comes back is
  * `inferred`, low confidence, unconfirmed, and blocks verifying until a person decides on it.
  * Without an admin's configuration nothing is sent. The key and the text never reach a log.
- * The request is made outside any transaction; the result is written in a short one.
+ * The request is made outside any transaction; the result is written in a short one. The prompt
+ * comes from the profile the payslip was read with, in the person's language, for the profile's
+ * currency.
  */
 export async function fillWithLlm(
-  ctx: Pick<Ctx, "userId">,
+  ctx: Pick<Ctx, "userId"> & Partial<Pick<Ctx, "locale">>,
   documentId: string,
   deps: { fetch: typeof fetch } = { fetch: globalThis.fetch },
 ): Promise<{ asked: FieldName[]; filled: FieldName[] }> {
@@ -43,13 +45,15 @@ export async function fillWithLlm(
   const original = await readOriginal(ctx, documentId);
   if (!original) throw new PayrollError("not_found");
   const text = layoutText(await readPdfText(original.bytes));
+  const profile = await profileOf(ctx, documentId);
+  const settings = { profile, language: ctx.locale ?? profile.language, currency: profile.currency };
 
   let content: unknown;
   try {
     const response = await deps.fetch(ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${credentials.apiKey}` },
-      body: JSON.stringify(requestBody(credentials.model, asked, text)),
+      body: JSON.stringify(requestBody(credentials.model, asked, text, settings)),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!response.ok) throw new PayrollError("llm_failed");
@@ -60,7 +64,7 @@ export async function fillWithLlm(
     if (error instanceof PayrollError) throw error;
     throw new PayrollError("llm_failed");
   }
-  const values = readReply(content, asked);
+  const values = readAnswer(content, asked);
   const filled = asked.filter((field) => values[field] !== undefined);
   if (filled.length === 0) return { asked, filled };
 

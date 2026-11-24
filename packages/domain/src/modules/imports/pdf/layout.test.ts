@@ -11,6 +11,9 @@ import {
 } from "./layout";
 import type { TextItem } from "./text";
 
+/** The measures of the first payslip profile's form. */
+const GEOMETRY = { labelMaxSize: 7, rowTolerance: 1.5, labelHang: [3, 9], labelAbove: [12, 19] } as const;
+
 function item(text: string, x0: number, baseline: number, size: number, width?: number): TextItem {
   const x1 = x0 + (width ?? text.length * size * 0.6);
   return { text, page: 1, x0, x1, top: baseline - size * 0.8, bottom: baseline + size * 0.2, baseline, size };
@@ -37,15 +40,18 @@ describe("labelKey", () => {
 
 describe("labelRows", () => {
   it("groups labels by baseline and joins a label's second line to it", () => {
-    const rows = labelRows([
-      item("COD.", 113.4, 100.3, 5, 12.5),
-      item("AZIENDA", 113.4, 106, 5, 21.1),
-      item("MESE RETRIBUITO", 27, 100, 5, 45.6),
-      item("ARROTONDAMENTO", 428.3, 604.3, 5, 48.5),
-      item("ATTUALE", 442.4, 608.6, 5, 21.6),
-      item("NETTO BUSTA", 487.6, 604.5, 5, 35.3),
-      item("AGOSTO", 24.5, 116, 10),
-    ]);
+    const rows = labelRows(
+      [
+        item("COD.", 113.4, 100.3, 5, 12.5),
+        item("AZIENDA", 113.4, 106, 5, 21.1),
+        item("MESE RETRIBUITO", 27, 100, 5, 45.6),
+        item("ARROTONDAMENTO", 428.3, 604.3, 5, 48.5),
+        item("ATTUALE", 442.4, 608.6, 5, 21.6),
+        item("NETTO BUSTA", 487.6, 604.5, 5, 35.3),
+        item("AGOSTO", 24.5, 116, 10),
+      ],
+      GEOMETRY,
+    );
     expect(rows.map((row) => row.labels.map((label) => label.key))).toEqual([
       ["MESERETRIBUITO", "CODAZIENDA"],
       ["ARROTONDAMENTOATTUALE", "NETTOBUSTA"],
@@ -54,14 +60,17 @@ describe("labelRows", () => {
 });
 
 describe("labelFor and cellsOf", () => {
-  const labels = labelRows([
-    item("TOTALE LORDO", 27, 484.3, 5, 39.6),
-    item("IMPON. CONTR. SOC.", 111.3, 484.3, 5, 51.4),
-    item("TOTALE CONTRIBUTI SOCIALI", 487.6, 484.5, 5, 73),
-  ]);
+  const labels = labelRows(
+    [
+      item("TOTALE LORDO", 27, 484.3, 5, 39.6),
+      item("IMPON. CONTR. SOC.", 111.3, 484.3, 5, 51.4),
+      item("TOTALE CONTRIBUTI SOCIALI", 487.6, 484.5, 5, 73),
+    ],
+    GEOMETRY,
+  );
 
   it("gives a value to the last label that starts before the value ends", () => {
-    const [row] = valueRows([item("2.345,67", 54.5, 500, 10), item("183,80", 528.5, 500, 10)]);
+    const [row] = valueRows([item("2.345,67", 54.5, 500, 10), item("183,80", 528.5, 500, 10)], GEOMETRY);
     expect(row.tokens.map((token) => labelFor(labels[0].labels, token)?.key)).toEqual([
       "TOTALELORDO",
       "TOTALECONTRIBUTISOCIALI",
@@ -69,12 +78,12 @@ describe("labelFor and cellsOf", () => {
   });
 
   it("fills only the label row a value row sits under, one line's height above", () => {
-    const [row] = valueRows([item("2.345,67", 54.5, 500, 10)]);
+    const [row] = valueRows([item("2.345,67", 54.5, 500, 10)], GEOMETRY);
     expect(
-      cellsOf(labels, row).map((cell) => [cell.label.key, cell.tokens.map((token) => token.text)]),
+      cellsOf(labels, row, GEOMETRY).map((cell) => [cell.label.key, cell.tokens.map((token) => token.text)]),
     ).toEqual([["TOTALELORDO", ["2.345,67"]]]);
-    const [far] = valueRows([item("2.345,67", 54.5, 540, 10)]);
-    expect(cellsOf(labels, far)).toEqual([]);
+    const [far] = valueRows([item("2.345,67", 54.5, 540, 10)], GEOMETRY);
+    expect(cellsOf(labels, far, GEOMETRY)).toEqual([]);
   });
 });
 

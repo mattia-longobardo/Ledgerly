@@ -13,6 +13,7 @@ import {
   fixedFromDecimal,
   fixedToDecimal,
   periodOf,
+  yearDays,
   roundToCents,
   settlementPeriods,
 } from "../rules";
@@ -187,7 +188,7 @@ async function accruedDays(
     const accrual = accrueDay({
       balanceCents: values[index],
       tiers,
-      basis: rule.dayBasis === "360" ? 360 : 365,
+      basis: yearDays(rule.dayCount, day),
       taxRate: rule.taxRate,
       carryBefore: carry,
     });

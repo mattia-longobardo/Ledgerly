@@ -19,7 +19,7 @@ import {
   averageNet,
   averageTaxRate,
   groupByYear,
-  isExtraMonth,
+  isOrdinary,
   meanCents,
   ralEstimate,
   type RalEstimate,
@@ -28,11 +28,24 @@ import {
   type SummedField,
 } from "./rules";
 import { leaveBalanceSnapshots, payrollLeaveEvents } from "./schema";
-import { codeMapOf, computeState, listCodeMap, type Payslip, payslipsOf, type Recomputed } from "./service";
+import {
+  codeMapOf,
+  computeState,
+  employerOf,
+  listCodeMap,
+  type Pairs,
+  pairsOf,
+  type Payslip,
+  payslipsOf,
+  type Recomputed,
+} from "./service";
 
 export interface RegisterRow {
   payslip: Payslip;
-  document: Document;
+  /** Null for a payslip typed by hand without its PDF. */
+  document: Document | null;
+  /** The country's fields of the payslip, as pairs (R5g, E4). */
+  fields: Pairs;
   /** Hours left as the payslip printed them (applied ordinary payslips only). */
   leaveLeft: Partial<Record<LeaveKind, string | null>>;
   /**
@@ -71,8 +84,16 @@ interface RegisterView {
   span: { from: string; to: string } | null;
 }
 
+/**
+ * A column of the register for one payslip: a field of the country from its pair — or from the old
+ * column, on a row the image before R5g wrote without pairs —, a base field (never a pair) from its row.
+ */
+function amountOf(row: RegisterRow, field: SummedField): Cents | null {
+  return row.fields[field] ?? row.payslip[field];
+}
+
 function sumOf(rows: readonly RegisterRow[], field: SummedField): Cents | null {
-  const known = rows.map((row) => row.payslip[field]).filter((value): value is Cents => value !== null);
+  const known = rows.map((row) => amountOf(row, field)).filter((value): value is Cents => value !== null);
   return known.length === 0 ? null : known.reduce((sum, value) => sum + value, 0n);
 }
 
@@ -82,13 +103,22 @@ function sumOf(rows: readonly RegisterRow[], field: SummedField): Cents | null {
  * KPIs over applied ordinary payslips only. Superseded and rejected documents are not in it.
  */
 export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterView> {
-  const [documents, payslips] = await Promise.all([listDocuments(ctx, ["payslip"]), payslipsOf(ctx)]);
+  const [documents, payslips, employer] = await Promise.all([
+    listDocuments(ctx, ["payslip"]),
+    payslipsOf(ctx),
+    employerOf(ctx),
+  ]);
   const documentOf = new Map(documents.map((document) => [document.id, document]));
   const shown = payslips.filter((payslip) => {
+    if (payslip.documentId === null) return payslip.source === "manual";
     const document = documentOf.get(payslip.documentId);
     return document !== undefined && !["superseded", "rejected"].includes(document.state);
   });
   const active = shown.filter((payslip) => payslip.active);
+  const pairs = await pairsOf(
+    ctx,
+    shown.map((payslip) => payslip.id),
+  );
   const snapshots =
     active.length === 0
       ? []
@@ -115,25 +145,29 @@ export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterVi
   }
   const rows: RegisterRow[] = shown.map((payslip) => ({
     payslip,
-    document: documentOf.get(payslip.documentId)!,
+    document: payslip.documentId === null ? null : documentOf.get(payslip.documentId)!,
+    fields: pairs.get(payslip.id) ?? {},
     leaveLeft: leaveOf.get(payslip.id) ?? {},
     openWarnings: payslip.active ? 0 : payslip.warnings.length,
   }));
 
-  const years = groupByYear(rows.map((row) => ({ ...row.payslip, row }))).map((group) => {
+  const years = groupByYear(
+    rows.map((row) => ({ ...row.payslip, row })),
+    employer,
+  ).map((group) => {
     const ofYear = group.payslips.map((payslip) => payslip.row);
     const applied = ofYear.filter((row) => row.payslip.active);
-    const ordinary = applied.filter((row) => !isExtraMonth(row.payslip.type));
+    const ordinary = applied.filter((row) => isOrdinary(row.payslip));
     const totals = {} as Record<SummedField, Cents | null>;
     const averages = {} as Record<SummedField, Cents | null>;
     for (const field of SUMMED_FIELDS) {
       totals[field] = sumOf(applied, field);
-      averages[field] = meanCents(ordinary.map((row) => row.payslip[field]));
+      averages[field] = meanCents(ordinary.map((row) => amountOf(row, field)));
     }
     return { year: group.year, rows: ofYear, totals, averages };
   });
 
-  const withPayslip = new Set(payslips.map((payslip) => payslip.documentId));
+  const withPayslip = new Set(payslips.flatMap((payslip) => payslip.documentId ?? []));
   const inbox = documents.filter(
     (document) => !withPayslip.has(document.id) && !["rejected", "superseded", "applied"].includes(document.state),
   );
@@ -148,7 +182,7 @@ export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterVi
       net6: averageNet(active, 6),
       net12: averageNet(active, 12),
       taxRate: averageTaxRate(active),
-      ral: ralEstimate(active),
+      ral: ralEstimate(active, employer),
     },
     applied: active.length,
     span: periods.length === 0 ? null : { from: periods[0], to: periods.at(-1)! },
@@ -163,6 +197,12 @@ interface ReviewView extends Recomputed {
   leaveEvents: { kind: LeaveKind; hours: string; usagePeriod: string }[];
   /** «Fill with AI» can run: blank fields it may fill, a payslip to review, the fallback configured. */
   llmFill: boolean;
+  /** The country's fields of the payslip, as pairs. */
+  pairs: Pairs;
+}
+
+async function pairsOfOne(ctx: Pick<Ctx, "userId">, payslip: Payslip | null): Promise<Pairs> {
+  return payslip === null ? {} : ((await pairsOf(ctx, [payslip.id])).get(payslip.id) ?? {});
 }
 
 /** One payslip's review (spec §7.8 "Review payslip"): what was read, from where, and what it implies. */
@@ -178,6 +218,7 @@ export async function reviewView(ctx: Pick<Ctx, "userId">, documentId: string): 
           .where(and(userScoped(ctx).owns(payrollLeaveEvents), eq(payrollLeaveEvents.payslipId, state.payslip.id)))
           .orderBy(payrollLeaveEvents.usagePeriod, payrollLeaveEvents.kind)
       : [];
+  const pairs = await pairsOfOne(ctx, state.payslip);
   const period = state.identity?.period ?? null;
   const blanks = evidence.some(
     (row) => isFieldName(row.field) && llmFillable(row.field) && row.value === null && row.origin === "printed",
@@ -194,6 +235,7 @@ export async function reviewView(ctx: Pick<Ctx, "userId">, documentId: string): 
           ? state.assembled.events.map((event) => ({ kind: event.kind, hours: event.hours, usagePeriod: addMonths(period, -1) }))
           : [],
     llmFill: blanks && document.state === "needs_review" && (await llmFallbackAvailable()),
+    pairs,
   };
 }
 

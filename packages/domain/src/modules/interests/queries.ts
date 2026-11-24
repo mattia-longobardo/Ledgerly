@@ -199,7 +199,7 @@ async function paidBySettlement(
   todayOn: CivilDate,
 ): Promise<Map<string, Cents>> {
   const windows = entries.map((entry) =>
-    paymentWindow(rule.settlement, { to: entry.periodTo, settleOn: entry.settleOn }),
+    paymentWindow(rule.settlement, { to: entry.periodTo, settleOn: entry.settleOn }, rule.paymentWindowDays),
   );
   if (windows.length === 0) return new Map();
   const payments = (
@@ -214,6 +214,7 @@ async function paidBySettlement(
     rule.settlement,
     entries.map((entry) => ({ id: entry.id, to: entry.periodTo, settleOn: entry.settleOn })),
     payments,
+    rule.paymentWindowDays,
   );
   const amountOf = new Map(payments.map((payment) => [payment.id, payment.cents]));
   return new Map(
@@ -248,7 +249,11 @@ async function settlementRows(
     const paidCents = publishes ? posted : looked ? (paid.get(entry.id) ?? 0n) : null;
     const count = counts.get(entry.id);
     const accruedDays = Number(count?.accrued ?? 0);
-    const window = paymentWindow(rule.settlement, { to: entry.periodTo, settleOn: entry.settleOn });
+    const window = paymentWindow(
+      rule.settlement,
+      { to: entry.periodTo, settleOn: entry.settleOn },
+      rule.paymentWindowDays,
+    );
     return {
       entry,
       accruedDays,

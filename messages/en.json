@@ -3298,7 +3298,8 @@
     },
     "basis": {
       "360": "360 days",
-      "365": "365 days"
+      "365": "365 days",
+      "act_act": "Actual days of the year"
     },
     "settlement": {
       "daily": "Daily",
@@ -3340,7 +3341,13 @@
       "retiredMode": "This rule posted each payout to its source. That option no longer exists: Ledgerly now only calculates the interest. Save the rule to keep it as analysis only, and record each payout at the source yourself.",
       "active": "Rule is active",
       "cancel": "Cancel",
-      "save": "Save rule"
+      "save": "Save rule",
+      "advanced": "Advanced",
+      "periodAnchor": "Periods",
+      "anchorCalendar": "Calendar months, quarters and years",
+      "paymentWindow": "Payment window",
+      "paymentWindowHint": "Days after the payout date the bank's payment is looked for. Empty: 10 days, 1 for a daily payout.",
+      "days": "days"
     },
     "toasts": {
       "saved": "Interest rule saved — accrual recalculated since the last payout",

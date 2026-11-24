@@ -53,3 +53,26 @@ describe("RuleDialog, the retired «Publish to {source}»", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(messages.interests.errors.mode_retired);
   });
 });
+
+// R5g (E6): the conventions of the rule are fields of the dialog.
+describe("RuleDialog, the conventions of the rule", () => {
+  it("sends the day count and the payment window typed under Advanced", async () => {
+    renderDialog(false);
+    await userEvent.selectOptions(screen.getByLabelText(T.basis), "act_act");
+    await userEvent.type(screen.getByLabelText(T.paymentWindow, { exact: false }), "5");
+    await userEvent.click(screen.getByRole("button", { name: T.save }));
+    expect(update).toHaveBeenCalledWith(
+      "r1",
+      expect.objectContaining({ dayCount: "act_act", paymentWindowDays: "5" }),
+    );
+  });
+
+  it("keeps the default window when the field is left empty", async () => {
+    renderDialog(false);
+    await userEvent.click(screen.getByRole("button", { name: T.save }));
+    expect(update).toHaveBeenCalledWith(
+      "r1",
+      expect.objectContaining({ dayCount: "365", paymentWindowDays: "" }),
+    );
+  });
+});

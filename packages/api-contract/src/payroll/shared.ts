@@ -8,7 +8,14 @@ import { PAYROLL_LEAVE_KINDS } from "../timeoff/shared";
 
 // The vocabularies are the domain's (`@ledgerly/domain/payroll`, `imports`): the contract imports zod
 // only (10-modularity.md §10.2), so `tools/contract.test.ts` holds the lists equal.
+/** Deprecated (R5g): the old type; read `kind` and `extraNumber`. */
 export const PAYSLIP_TYPES = ["ordinary", "thirteenth", "fourteenth", "fifteenth", "bonus", "settlement"] as const;
+export const PAYSLIP_KINDS = ["ordinary", "extra", "bonus", "settlement"] as const;
+/** `read`: from a document, through the review; `manual`: typed by hand, applied at once. */
+export const PAYSLIP_SOURCES = ["read", "manual"] as const;
+export const PAY_FREQUENCIES = ["monthly", "semimonthly", "biweekly", "weekly"] as const;
+/** The most extra payments an employer has, until the old type goes (R5f). */
+export const MAX_EXTRA_PAYMENTS = 3;
 export const DOCUMENT_STATES = [
   "received",
   "scanning",
@@ -116,7 +123,7 @@ export const CODE_PATTERN = /^\d{1,6}$/;
 export const PAYROLL_ERRORS = ["invalid", "conflict", "not_found"] as const;
 
 export const DOCUMENT_ID = "8d9e0f1a-2b3c-4d4e-9f5a-6b7c8d9e0f1a";
-const PAYSLIP_ID = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";
+export const PAYSLIP_ID = "9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b";
 
 export const byPayslip = z.object({ id: id() });
 export const byCode = z.object({ code: z.string().regex(CODE_PATTERN) });
@@ -136,14 +143,33 @@ const payslipDocument = z.object({
   hasOriginal: z.boolean(),
 });
 
-/** One row of the register: a payslip applied or waiting for a decision. `id` is its document's. */
+/** The country's fields of a payslip, as pairs: the key of the catalogue (`GET /payroll/fields`) and its amount. */
+export const payslipFieldValues = () => z.record(z.string(), money());
+
+/** What a payslip is: its kind, and the number of its extra payment (1: the first, a 13th). */
+const kindOfPayslip = {
+  kind: z.enum(PAYSLIP_KINDS),
+  extraNumber: z.number().int().min(1).nullable(),
+};
+
+/**
+ * One row of the register: a payslip applied or waiting for a decision. `id` is its document's —
+ * the payslip's own (`payslipId`) for one typed by hand without a document.
+ */
 const registerRow = z.object({
   id: id(),
   payslipId: id(),
   year: z.number().int(),
-  /** The month paid; null for a 13th and for the months a payslip does not name. */
+  /** The month paid; null for an extra payment and for the months a payslip does not name. */
   period: monthStart().nullable(),
+  /** Deprecated (R5g): read `kind` and `extraNumber`. */
   type: z.enum(PAYSLIP_TYPES),
+  ...kindOfPayslip,
+  source: z.enum(PAYSLIP_SOURCES),
+  /** Its document; null for a payslip typed by hand without one. */
+  documentId: id().nullable(),
+  /** The country's fields it has, as pairs. */
+  fields: payslipFieldValues(),
   state: z.enum(DOCUMENT_STATES),
   applied: z.boolean(),
   fileName: z.string(),
@@ -214,7 +240,12 @@ export const payslipReview = z.object({
       id: id(),
       year: z.number().int(),
       period: monthStart().nullable(),
+      /** Deprecated (R5g): read `kind` and `extraNumber`. */
       type: z.enum(PAYSLIP_TYPES),
+      ...kindOfPayslip,
+      source: z.enum(PAYSLIP_SOURCES),
+      /** The country's fields, as pairs. */
+      fields: payslipFieldValues(),
       printedOn: civilDate().nullable(),
       paidOn: civilDate().nullable(),
       applied: z.boolean(),
@@ -276,6 +307,11 @@ export const REGISTER_EXAMPLE = {
           year: 2026,
           period: "2026-03-01",
           type: "ordinary",
+          kind: "ordinary",
+          extraNumber: null,
+          source: "read",
+          documentId: DOCUMENT_ID,
+          fields: { irpefGross: "520.00" },
           state: "applied",
           applied: true,
           fileName: "payslip-2026-03.pdf",
@@ -312,6 +348,10 @@ export const REVIEW_EXAMPLE = {
     year: 2026,
     period: "2026-03-01",
     type: "ordinary",
+    kind: "ordinary",
+    extraNumber: null,
+    source: "read",
+    fields: { irpefGross: "520.00" },
     printedOn: "2026-03-27",
     paidOn: null,
     applied: false,

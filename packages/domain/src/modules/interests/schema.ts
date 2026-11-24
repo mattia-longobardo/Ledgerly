@@ -17,7 +17,17 @@ import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platfo
 import { users } from "../../platform/auth/schema";
 import { accounts } from "../accounts/schema";
 import { categories } from "../transactions/schema";
-import { ACCRUAL_STATUSES, DAY_BASES, POSTING_STATES, RULE_MODES, RULE_STATES, SETTLEMENTS } from "./rules";
+import {
+  ACCRUAL_STATUSES,
+  DAY_BASES,
+  DAY_COUNTS,
+  MAX_PAYMENT_WINDOW_DAYS,
+  PERIOD_ANCHORS,
+  POSTING_STATES,
+  RULE_MODES,
+  RULE_STATES,
+  SETTLEMENTS,
+} from "./rules";
 import { inList } from "../../platform/db/checks";
 
 /**
@@ -37,7 +47,13 @@ export const interestRules = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "no action" }),
     taxRate: numeric("tax_rate", { precision: 10, scale: 6 }).notNull().default("0.26"),
+    /** Deprecated (R5g): written from `day_count` until R5f ("365" for `act_act`); nothing reads it. */
     dayBasis: text("day_basis", { enum: DAY_BASES }).notNull().default("365"),
+    /** The day-count convention (E6); `drizzle/0075` copies `day_basis` into it for the rules of before. */
+    dayCount: text("day_count", { enum: DAY_COUNTS }).notNull().default("365"),
+    periodAnchor: text("period_anchor", { enum: PERIOD_ANCHORS }).notNull().default("calendar"),
+    /** Days after the settlement date the payment is looked for; `null`: 10, or 1 for a daily payout. */
+    paymentWindowDays: smallint("payment_window_days"),
     settlement: text("settlement", { enum: SETTLEMENTS }).notNull().default("monthly"),
     validFrom: date("valid_from").notNull(),
     validTo: date("valid_to"),
@@ -71,6 +87,12 @@ export const interestRules = pgTable(
     index("interest_rules_user_idx").on(table.userId, table.validFrom, table.id),
     check("interest_rules_tax_ck", sql`${table.taxRate} between 0 and 1`),
     check("interest_rules_basis_ck", sql`${table.dayBasis} in (${sql.raw(inList(DAY_BASES))})`),
+    check("interest_rules_day_count_ck", sql`${table.dayCount} in (${sql.raw(inList(DAY_COUNTS))})`),
+    check("interest_rules_anchor_ck", sql`${table.periodAnchor} in (${sql.raw(inList(PERIOD_ANCHORS))})`),
+    check(
+      "interest_rules_window_ck",
+      sql`${table.paymentWindowDays} is null or ${table.paymentWindowDays} between 0 and ${sql.raw(String(MAX_PAYMENT_WINDOW_DAYS))}`,
+    ),
     check("interest_rules_settlement_ck", sql`${table.settlement} in (${sql.raw(inList(SETTLEMENTS))})`),
     check("interest_rules_mode_ck", sql`${table.mode} in (${sql.raw(inList(RULE_MODES))})`),
     check("interest_rules_state_ck", sql`${table.state} in (${sql.raw(inList(RULE_STATES))})`),

@@ -3,6 +3,38 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · R5g step 2 · Payroll: manual payslips, the employer, the fields as pairs
+
+- `POST /payroll/manual-payslips` (`201`), `GET`/`PUT`/`DELETE /payroll/manual-payslips/{id}`: a payslip typed by
+  hand — `kind` (`ordinary`, `extra`, `bonus`, `settlement`), `year`, `month` (required for `ordinary`, none for
+  `extra`), `extraNumber` (`extra` only, 1-3), `paidOn`, `gross`, `taxes`, `contributions`, `net` (at most
+  `gross`), optional `fields` (pairs of the catalogue) and `documentId` (a payslip's document, read and not
+  applied: upload it with `POST /imports` first). It is applied at once. `409` `conflict` for a month already
+  applied; `DELETE` answers `deletedDocument`.
+- `GET`/`PUT /payroll/employer`: `payFrequency` (`monthly`, `semimonthly`, `biweekly`, `weekly`) and
+  `extraMonths` (the month of each extra payment, at most 3); `configured` false is the default (monthly, one
+  extra payment in December). The yearly gross (`kpis.ral`) expects every extra payment listed.
+- `GET /payroll/fields`: the catalogue of the person's payslips, the base fields then their country's
+  (`key`, `group`, `base`, `summed`).
+- `GET /payroll/payslips` (and `get_payroll`): a row adds `kind`, `extraNumber`, `source` (`read`, `manual`),
+  `documentId` and `fields` (the country's fields as pairs). A manual row without a document has its own id as
+  `id`, `state` `applied`, an empty `fileName`. `GET /payroll/payslips/{id}` (and `get_payslip`): `payslip` adds
+  `kind`, `extraNumber`, `source` and `fields`.
+- `DELETE /payroll/payslips/{id}` of a manual payslip's document deletes the payslip with it;
+  `POST /payroll/payslips/{id}/reopen` of one is `409` `invalid_state`; applying a read payslip over a month
+  typed by hand is `409` `conflict`.
+- Deprecated, removed in R5f: `type` of the register's rows and of a payslip (read `kind` and `extraNumber`).
+
+## Unreleased · R5g step 2 · Interests: the conventions of a rule are fields
+
+- `GET /interests`, `GET /interests/{id}` (and `list_interest_rules`): a rule adds `dayCount` (`365`, `360`,
+  `act_act`: the actual days of each day's year), `periodAnchor` (`calendar`, the only one) and
+  `paymentWindowDays` (days after the settlement date the bank's payment is looked for; `null`: 10, or 1 for
+  a daily payout, as before).
+- `POST /interests`, `PUT /interests/{id}`: the same three fields, optional. Without `dayCount` the rule takes
+  `dayBasis`, or `365`; `dayBasis` is optional now.
+- Deprecated, removed in R5f: `dayBasis` (read: `dayCount`, `365` for `act_act`).
+
 ## Unreleased · Time off: the types of leave are the person's (R5g, step 1)
 
 - `GET /timeoff/types` (MCP read), `POST /timeoff/types`, `PUT /timeoff/types/{id}`, `DELETE /timeoff/types/{id}`

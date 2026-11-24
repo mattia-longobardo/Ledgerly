@@ -1,12 +1,13 @@
 import { sql } from "drizzle-orm";
 import { type AnyPgColumn, bigint, boolean, check, date, doublePrecision, index, jsonb, numeric, pgTable, smallint, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
-import { users } from "../../platform/auth/schema";
-import { documents } from "../imports/schema";
-import { LEAVE_KINDS } from "./fields";
-import type { CheckResult, Warning } from "./parse/checks";
-import { CODE_ROLES, LINE_UNITS, PAYSLIP_TYPES, TFR_SOURCES } from "./rules";
-import { inList } from "../../platform/db/checks";
+import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../../platform/db/columns";
+import { users } from "../../../platform/auth/schema";
+import { documents } from "../../imports/schema";
+import { LEAVE_KINDS } from "../fields";
+import type { CheckResult, Warning } from "../parse/checks";
+import { CODE_ROLES, LINE_UNITS, MAX_EXTRA_PAYMENTS, PAY_FREQUENCIES, PAYSLIP_KINDS, PAYSLIP_SOURCES } from "../rules";
+import { inList } from "../../../platform/db/checks";
+import { legacyFieldColumns, legacyPayslipChecks, legacyTypeColumn } from "./legacy";
 
 const money = (name: string) => bigint(name, { mode: "bigint" });
 const hours = (name: string) => numeric(name, { precision: 8, scale: 2 });
@@ -51,10 +52,12 @@ export const payrollRawLines = pgTable(
 
 /**
  * A payslip (spec §6, §7.8; owner's spec L42–87): its identity, the logical key a rectification
- * shares (employer + employee + year/period + type), and every amount the fields catalogue lists,
- * `null` when the document does not show it. The values are the evidence's, corrections applied;
- * they are rewritten whenever the evidence changes. `active` marks the one applied, not superseded,
- * payslip of a logical key — the database allows one.
+ * shares (employer + employee + year/period + type), its kind and the base amounts of the core,
+ * `null` when the document does not show them; the country's fields are pairs of `payslip_fields`
+ * (R5g, E4). A read payslip's values are the evidence's, corrections applied, rewritten whenever the
+ * evidence changes; a manual one (`source` `manual`, ST-21) has the person's and an optional
+ * document. `active` marks the one applied, not superseded, payslip of a logical key — the database
+ * allows one.
  */
 export const payslips = pgTable(
   "payslips",
@@ -63,14 +66,18 @@ export const payslips = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    documentId: uuid("document_id")
-      .notNull()
-      .references(() => documents.id, { onDelete: "cascade" }),
+    /** Null for a payslip typed by hand without its PDF (R5g). */
+    documentId: uuid("document_id").references(() => documents.id, { onDelete: "cascade" }),
     employerKey: text("employer_key").notNull(),
     employeeKey: text("employee_key").notNull(),
     year: smallint("year").notNull(),
     period: date("period"),
-    type: text("type", { enum: PAYSLIP_TYPES }).notNull(),
+    ...legacyTypeColumn(),
+    /** Null only on a row the image before R5g wrote: its old `type` says it. */
+    kind: text("kind", { enum: PAYSLIP_KINDS }),
+    /** The employer's extra payment it is: 1 for the first (a 13th), 2 for the second… */
+    extraNumber: smallint("extra_number"),
+    source: text("source", { enum: PAYSLIP_SOURCES }).notNull().default("read"),
     printedOn: date("printed_on"),
     paidOn: date("paid_on"),
     active: boolean("active").notNull().default(false),
@@ -81,49 +88,11 @@ export const payslips = pgTable(
     checks: jsonb("checks").$type<CheckResult[]>().notNull().default([]),
     warnings: jsonb("warnings").$type<Warning[]>().notNull().default([]),
 
-    contractualGross: money("contractual_gross"),
-    ordinaryEarnings: money("ordinary_earnings"),
-    totalGrossPrinted: money("total_gross_printed"),
-    welfareCash: money("welfare_cash"),
-    welfareInKind: money("welfare_in_kind"),
     gross: money("gross"),
-
-    irpefTaxable: money("irpef_taxable"),
-    irpefGross: money("irpef_gross"),
-    taxDeductions: money("tax_deductions"),
-    irpefWithheld: money("irpef_withheld"),
-    yearEndAdjustment: money("year_end_adjustment"),
-    regionalInstallment: money("regional_installment"),
-    municipalWithheld: money("municipal_withheld"),
-    substituteTax: money("substitute_tax"),
-    refund730: money("refund_730"),
-    compensatedCredit: money("compensated_credit"),
     taxesTotal: money("taxes_total"),
-    taxesNetOfRefunds: money("taxes_net_of_refunds"),
-
     employeeSocial: money("employee_social"),
-    employeeFundRegular: money("employee_fund_regular"),
-    employeeFundAdjustments: money("employee_fund_adjustments"),
-    employeeFundEnrollment: money("employee_fund_enrollment"),
-    employeeFundEffective: money("employee_fund_effective"),
-    employerFundPrinted: money("employer_fund_printed"),
-    employerFundAdjustments: money("employer_fund_adjustments"),
-    employerFundEnrollment: money("employer_fund_enrollment"),
-    employerFundEffective: money("employer_fund_effective"),
-    employerSocialTotal: money("employer_social_total"),
-
-    tfrMonthField: money("tfr_month_field"),
-    tfrContributionLine: money("tfr_contribution_line"),
-    tfrSelected: money("tfr_selected"),
-    tfrSource: text("tfr_source", { enum: TFR_SOURCES }),
-
-    bodyEarnings: money("body_earnings"),
-    bodyDeductions: money("body_deductions"),
-    bodyDeductionsPrinted: money("body_deductions_printed"),
-    totalDeductionsPrinted: money("total_deductions_printed"),
-    roundingPrevious: money("rounding_previous"),
-    roundingCurrent: money("rounding_current"),
     netPay: money("net_pay"),
+    ...legacyFieldColumns(),
 
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
@@ -141,20 +110,24 @@ export const payslips = pgTable(
       )
       .where(sql`${table.active}`),
     index("payslips_user_year_idx").on(table.userId, table.year),
-    check("payslips_type_ck", sql`${table.type} in (${sql.raw(inList(PAYSLIP_TYPES))})`),
+    ...legacyPayslipChecks(table),
+    check("payslips_kind_ck", sql`${table.kind} is null or ${table.kind} in (${sql.raw(inList(PAYSLIP_KINDS))})`),
+    check("payslips_source_ck", sql`${table.source} in (${sql.raw(inList(PAYSLIP_SOURCES))})`),
+    check("payslips_document_ck", sql`${table.source} = 'manual' or ${table.documentId} is not null`),
+    // An extra payment has its number and no month; an ordinary payslip has its month.
     check(
-      "payslips_tfr_source_ck",
-      sql`${table.tfrSource} is null or ${table.tfrSource} in (${sql.raw(inList(TFR_SOURCES))})`,
+      "payslips_extra_number_ck",
+      sql`(${table.kind} = 'extra') = (${table.extraNumber} is not null) or ${table.kind} is null`,
+    ),
+    check("payslips_extra_number_range_ck", sql`${table.extraNumber} is null or ${table.extraNumber} >= 1`),
+    check(
+      "payslips_period_kind_ck",
+      sql`(${table.kind} is distinct from 'ordinary' or ${table.period} is not null) and (${table.kind} is distinct from 'extra' or ${table.period} is null)`,
     ),
     check("payslips_year_ck", sql`${table.year} between 1990 and 2200`),
     check(
       "payslips_period_ck",
       sql`${table.period} is null or (extract(day from ${table.period}) = 1 and extract(year from ${table.period}) = ${table.year})`,
-    ),
-    // An ordinary payslip has its month; a 13th, 14th or 15th has none to invent (owner's spec L37).
-    check(
-      "payslips_period_type_ck",
-      sql`(${table.type} <> 'ordinary' or ${table.period} is not null) and (${table.type} not in ('thirteenth', 'fourteenth', 'fifteenth') or ${table.period} is null)`,
     ),
     check("payslips_active_ck", sql`not ${table.active} or ${table.appliedAt} is not null`),
   ],
@@ -162,7 +135,7 @@ export const payslips = pgTable(
 
 /**
  * The payroll code map (spec §6, §7.8): which field or family each body code of a layout profile
- * feeds. Seeded from the Reply/TeamSystem profile on a person's first import, editable in
+ * feeds. Seeded from the codes of the reading profile on a person's first import, editable in
  * Settings › Data.
  */
 export const payrollCodeMap = pgTable(
@@ -248,6 +221,59 @@ export const payrollLeaveEvents = pgTable(
     check(
       "payroll_leave_events_usage_ck",
       sql`${table.usagePeriod} = (${table.payrollPeriod} - interval '1 month')::date`,
+    ),
+  ],
+);
+
+/**
+ * A field of a payslip beyond the base ones (R5g, E4): a key of the catalogue of the country's pack
+ * and its amount in cents — every field a pack has is an amount. A read payslip writes one for every field
+ * of the catalogue it shows; the fixed columns of `payslips` stay written beside them until R5f.
+ * The key is an open vocabulary (M13): the pack checks it, the database its form.
+ */
+export const payslipFields = pgTable(
+  "payslip_fields",
+  {
+    id: idColumn(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    payslipId: uuid("payslip_id")
+      .notNull()
+      .references(() => payslips.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    valueCents: money("value_cents").notNull(),
+    createdAt: createdAtColumn(),
+  },
+  (table) => [
+    unique("payslip_fields_key_uq").on(table.payslipId, table.key),
+    index("payslip_fields_user_idx").on(table.userId),
+    check("payslip_fields_key_ck", sql`${table.key} ~ '^[a-z][A-Za-z0-9_]{0,63}$'`),
+  ],
+);
+
+/**
+ * How a person's employer pays (R5g, E6): the frequency and the month of each extra payment, in
+ * order (the 1st, a 13th; the 2nd, a 14th…). One per person; none is the default of the rules.
+ */
+export const payrollEmployers = pgTable(
+  "payroll_employers",
+  {
+    id: idColumn(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    payFrequency: text("pay_frequency", { enum: PAY_FREQUENCIES }).notNull().default("monthly"),
+    extraMonths: smallint("extra_months").array().notNull().default(sql`'{}'::smallint[]`),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => [
+    unique("payroll_employers_user_uq").on(table.userId),
+    check("payroll_employers_frequency_ck", sql`${table.payFrequency} in (${sql.raw(inList(PAY_FREQUENCIES))})`),
+    check(
+      "payroll_employers_extra_months_ck",
+      sql`cardinality(${table.extraMonths}) <= ${sql.raw(String(MAX_EXTRA_PAYMENTS))} and ${table.extraMonths} <@ '{1,2,3,4,5,6,7,8,9,10,11,12}'::smallint[]`,
     ),
   ],
 );

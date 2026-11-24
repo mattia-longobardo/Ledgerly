@@ -1,10 +1,21 @@
 import { centsToDecimal, type Cents } from "../../../shared/money";
 import { LEAVE_COLUMNS, LEAVE_KINDS, leaveField, type MoneyField } from "../fields";
-import { medianCents, type PayslipType } from "../rules";
+import { medianCents, type PayslipType, type ProfileCheck } from "../rules";
+import { UNCONFIRMED_LEAVE } from "../rules/legacy";
 import { hundredthsOf, moneyOf, type Values } from "./derive";
-import type { RawLine } from "./reply-teamsystem";
+import type { RawLine } from "./read";
 
-export const CHECK_IDS = ["irpef", "net", "body_deductions", "total_deductions", "substitute_tax", "leave_vacation", "leave_rol", "leave_permit", "plausibility_net", "plausibility_gross"] as const;
+/** The results a check writes: one per check, one per balance (`leave_<kind>`), two for plausibility. */
+export const CHECK_IDS = [
+  "irpef",
+  "net",
+  "body_deductions",
+  "total_deductions",
+  "substitute_tax",
+  ...LEAVE_KINDS.map((kind) => `leave_${kind}` as const),
+  "plausibility_net",
+  "plausibility_gross",
+] as const;
 type CheckId = (typeof CHECK_IDS)[number];
 
 /**
@@ -22,7 +33,7 @@ export interface CheckResult {
   reason?: string;
 }
 
-export const WARNING_CODES = ["unknown_code", "tfr_both_differ", "tfr_partial_month", "employer_fund_adjustment_only", "permit_unclassified", "extra_month_leave", "rectification", "missing_identity", "unknown_layout"] as const;
+export const WARNING_CODES = ["unknown_code", "tfr_both_differ", "tfr_partial_month", "employer_fund_adjustment_only", UNCONFIRMED_LEAVE, "extra_month_leave", "rectification", "missing_identity", "unknown_layout"] as const;
 type WarningCode = (typeof WARNING_CODES)[number];
 
 /** Something a person must look at, even when every check passes (owner's spec L254). */
@@ -47,10 +58,6 @@ interface CheckInput {
   /** Ordinary payslips of the same employee applied before this one, any order. */
   history: readonly HistoryPoint[];
 }
-
-/** How far net or gross may move from the median of the last six before a warning: 30 %. */
-const PLAUSIBILITY_RATIO = 0.3;
-const PLAUSIBILITY_WINDOW = 6;
 
 const decimal = (cents: Cents) => centsToDecimal(cents);
 
@@ -78,113 +85,139 @@ const skipped = (id: CheckId, severity: CheckResult["severity"], reason: string)
   reason,
 });
 
-/**
- * The controls of spec §7.8 (owner's spec L115, L175, L224–235, L242), on the fields as they
- * stand. None of them corrects anything: a failure only says the payslip is "to verify".
- */
-export function runChecks(input: CheckInput): CheckResult[] {
-  const money = (field: MoneyField) => moneyOf(input.values, field);
-  const results: CheckResult[] = [];
+type Check<C extends ProfileCheck["id"]> = (
+  input: CheckInput,
+  check: Extract<ProfileCheck, { id: C }>,
+) => CheckResult[];
 
-  // IRPEF gross − deductions = IRPEF withheld, within a cent, in ordinary months (L115).
-  const irpefGross = money("irpefGross");
-  const withheld = money("irpefWithheld");
-  if (input.type !== "ordinary") results.push(skipped("irpef", "error", "extra_month"));
-  else if (money("yearEndAdjustment") !== null) results.push(skipped("irpef", "error", "year_end_adjustment"));
-  else if (irpefGross === null || withheld === null) results.push(skipped("irpef", "error", "missing"));
-  else results.push(passedIf("irpef", "error", irpefGross - (money("taxDeductions") ?? 0n), withheld, 1n));
+const money = (input: CheckInput, field: MoneyField) => moneyOf(input.values, field);
 
-  // The net rebuilt from the lines' columns and their meaning, to the cent (L224–233).
-  const net = money("netPay");
-  const earnings = money("bodyEarnings");
-  if (net === null || earnings === null) results.push(skipped("net", "error", "missing"));
-  else {
-    const adjustment = money("yearEndAdjustment");
-    const rebuilt =
-      earnings -
-      (money("bodyDeductions") ?? 0n) -
-      (money("employeeSocial") ?? 0n) -
-      (withheld ?? 0n) -
-      (adjustment ?? 0n) -
-      (money("substituteTax") ?? 0n) -
-      (money("roundingPrevious") ?? 0n) +
-      (money("roundingCurrent") ?? 0n);
-    results.push(passedIf("net", "error", rebuilt, net));
-  }
+// IRPEF gross − deductions = IRPEF withheld, within the tolerance, in ordinary months (L115).
+const irpef: Check<"irpef"> = (input, check) => {
+  const irpefGross = money(input, "irpefGross");
+  const withheld = money(input, "irpefWithheld");
+  if (input.type !== "ordinary") return [skipped("irpef", "error", "extra_month")];
+  if (money(input, "yearEndAdjustment") !== null) return [skipped("irpef", "error", "year_end_adjustment")];
+  if (irpefGross === null || withheld === null) return [skipped("irpef", "error", "missing")];
+  const expected = irpefGross - (money(input, "taxDeductions") ?? 0n);
+  return [passedIf("irpef", "error", expected, withheld, BigInt(check.tolerance))];
+};
 
-  // The body's deductions add up to TRATTENUTE CORPO, a blank box being none.
-  const bodyDeductions = money("bodyDeductions");
-  if (bodyDeductions === null) results.push(skipped("body_deductions", "error", "missing"));
-  else results.push(passedIf("body_deductions", "error", money("bodyDeductionsPrinted") ?? 0n, bodyDeductions));
+// The net rebuilt from the lines' columns and their meaning, to the cent (L224–233).
+const net: Check<"net"> = (input) => {
+  const amount = money(input, "netPay");
+  const earnings = money(input, "bodyEarnings");
+  if (amount === null || earnings === null) return [skipped("net", "error", "missing")];
+  const rebuilt =
+    earnings -
+    (money(input, "bodyDeductions") ?? 0n) -
+    (money(input, "employeeSocial") ?? 0n) -
+    (money(input, "irpefWithheld") ?? 0n) -
+    (money(input, "yearEndAdjustment") ?? 0n) -
+    (money(input, "substituteTax") ?? 0n) -
+    (money(input, "roundingPrevious") ?? 0n) +
+    (money(input, "roundingCurrent") ?? 0n);
+  return [passedIf("net", "error", rebuilt, amount)];
+};
 
-  // TOTALE TRATTENUTE = body deductions + social contributions + IRPEF + substitute tax + the
-  // previous month's rounding: a second, independent way to the net.
-  const totalPrinted = money("totalDeductionsPrinted");
-  if (totalPrinted === null || bodyDeductions === null) {
-    results.push(skipped("total_deductions", "error", "missing"));
-  } else {
-    const rebuilt =
-      bodyDeductions +
-      (money("employeeSocial") ?? 0n) +
-      (withheld ?? 0n) +
-      (money("yearEndAdjustment") ?? 0n) +
-      (money("substituteTax") ?? 0n) +
-      (money("roundingPrevious") ?? 0n);
-    results.push(passedIf("total_deductions", "error", totalPrinted, rebuilt));
-  }
+// The body's deductions add up to the printed body total, a blank box being none.
+const bodyDeductions: Check<"body_deductions"> = (input) => {
+  const deductions = money(input, "bodyDeductions");
+  if (deductions === null) return [skipped("body_deductions", "error", "missing")];
+  return [passedIf("body_deductions", "error", money(input, "bodyDeductionsPrinted") ?? 0n, deductions)];
+};
 
-  // The substitute tax printed twice (body line and T.S. box) is one tax (L242).
+// The printed total of deductions = body deductions + social contributions + IRPEF + substitute
+// tax + the previous month's rounding: a second, independent way to the net.
+const totalDeductions: Check<"total_deductions"> = (input) => {
+  const totalPrinted = money(input, "totalDeductionsPrinted");
+  const deductions = money(input, "bodyDeductions");
+  if (totalPrinted === null || deductions === null) return [skipped("total_deductions", "error", "missing")];
+  const rebuilt =
+    deductions +
+    (money(input, "employeeSocial") ?? 0n) +
+    (money(input, "irpefWithheld") ?? 0n) +
+    (money(input, "yearEndAdjustment") ?? 0n) +
+    (money(input, "substituteTax") ?? 0n) +
+    (money(input, "roundingPrevious") ?? 0n);
+  return [passedIf("total_deductions", "error", totalPrinted, rebuilt)];
+};
+
+// The substitute tax printed twice (body line and summary box) is one tax (L242).
+const substituteTax: Check<"substitute_tax"> = (input) => {
   const substituteLines = input.lines.filter((line) => line.role === "substitute_tax");
-  const substitute = money("substituteTax");
-  if (substituteLines.length === 0 || substitute === null) {
-    results.push(skipped("substitute_tax", "error", "single_source"));
-  } else {
-    const fromLines = substituteLines.reduce<Cents>(
-      (sum, line) => sum + (line.statisticalCents ?? line.deductionsCents ?? line.earningsCents ?? 0n),
-      0n,
-    );
-    results.push(passedIf("substitute_tax", "error", fromLines, substitute));
-  }
+  const substitute = money(input, "substituteTax");
+  if (substituteLines.length === 0 || substitute === null) return [skipped("substitute_tax", "error", "single_source")];
+  const fromLines = substituteLines.reduce<Cents>(
+    (sum, line) => sum + (line.statisticalCents ?? line.deductionsCents ?? line.earningsCents ?? 0n),
+    0n,
+  );
+  return [passedIf("substitute_tax", "error", fromLines, substitute)];
+};
 
-  // A.P. + MAT. − GOD. = RES. (L175): a blank counts as zero for the sum only.
-  for (const kind of LEAVE_KINDS) {
+// Previous year + accrued − used = remaining, per balance (L175): a blank counts as zero for the sum only.
+const leaveBalance: Check<"leave_balance"> = (input, check) =>
+  check.kinds.map((kind) => {
     const id: CheckId = `leave_${kind}`;
     const [previous, accrued, used, remaining] = LEAVE_COLUMNS.map((column) =>
       hundredthsOf(input.values, leaveField(kind, column)),
     );
-    if ([previous, accrued, used, remaining].every((value) => value === null)) {
-      results.push(skipped(id, "error", "blank"));
-      continue;
-    }
+    if ([previous, accrued, used, remaining].every((value) => value === null)) return skipped(id, "error", "blank");
     const expected = (previous ?? 0n) + (accrued ?? 0n) - (used ?? 0n);
-    results.push(passedIf(id, "error", expected, remaining ?? 0n, 1n));
-  }
+    return passedIf(id, "error", expected, remaining ?? 0n, BigInt(check.tolerance));
+  });
 
-  // Plausibility against the person's own payslips (spec §7.8): only ever a warning.
+// Net and gross against the median of the person's last payslips (spec §7.8): only ever a warning.
+const plausibility: Check<"plausibility"> = (input, check) => {
   const baseline = input.history
     .filter((point) => input.period === null || point.period < input.period)
     .toSorted((a, b) => b.period.localeCompare(a.period))
-    .slice(0, PLAUSIBILITY_WINDOW);
-  for (const [id, field, pick] of [
-    ["plausibility_net", "netPay", (point: HistoryPoint) => point.netPay],
-    ["plausibility_gross", "gross", (point: HistoryPoint) => point.gross],
-  ] as const) {
-    const value = money(field);
+    .slice(0, check.window);
+  return (
+    [
+      ["plausibility_net", "netPay", (point: HistoryPoint) => point.netPay],
+      ["plausibility_gross", "gross", (point: HistoryPoint) => point.gross],
+    ] as const
+  ).map(([id, field, pick]): CheckResult => {
+    const value = money(input, field);
     const median = medianCents(baseline.map(pick));
-    if (input.type !== "ordinary") results.push(skipped(id, "warning", "extra_month"));
-    else if (value === null || median === null || median === 0n) results.push(skipped(id, "warning", "no_history"));
-    else {
-      const deviation = Math.abs(Number(value - median)) / Math.abs(Number(median));
-      results.push({
-        id,
-        severity: "warning",
-        status: deviation > PLAUSIBILITY_RATIO ? "failed" : "passed",
-        expected: decimal(median),
-        actual: decimal(value),
-      });
+    if (input.type !== "ordinary") return skipped(id, "warning", "extra_month");
+    if (value === null || median === null || median === 0n) return skipped(id, "warning", "no_history");
+    const deviation = Math.abs(Number(value - median)) / Math.abs(Number(median));
+    return {
+      id,
+      severity: "warning",
+      status: deviation > check.ratio ? "failed" : "passed",
+      expected: decimal(median),
+      actual: decimal(value),
+    };
+  });
+};
+
+/**
+ * The controls of spec §7.8 (owner's spec L115, L175, L224–235, L242) a profile lists, in its order,
+ * on the fields as they stand. None of them corrects anything: a failure only says the payslip is
+ * "to verify".
+ */
+export function runChecks(input: CheckInput, checks: readonly ProfileCheck[]): CheckResult[] {
+  return checks.flatMap((check) => {
+    switch (check.id) {
+      case "irpef":
+        return irpef(input, check);
+      case "net":
+        return net(input, check);
+      case "body_deductions":
+        return bodyDeductions(input, check);
+      case "total_deductions":
+        return totalDeductions(input, check);
+      case "substitute_tax":
+        return substituteTax(input, check);
+      case "leave_balance":
+        return leaveBalance(input, check);
+      case "plausibility":
+        return plausibility(input, check);
     }
-  }
-  return results;
+  });
 }
 
 /** Whether any check that keeps a payslip "to verify" failed. */

@@ -3,7 +3,7 @@
 // are read in the person's number format here, on the client, and go on the wire as decimal strings
 // (`amountInput`, a plain percentage); the conversion of a percentage to the stored fraction is the
 // domain's.
-import { DAY_BASES, interests, SETTLEMENTS } from "@ledgerly/api-contract/interests";
+import { DAY_COUNTS, interests, SETTLEMENTS } from "@ledgerly/api-contract/interests";
 import { pockets as pocketRoutes } from "@ledgerly/api-contract/pockets";
 import { profile } from "@ledgerly/api-contract/settings";
 import { call } from "@ledgerly/api-client";
@@ -24,7 +24,9 @@ interface RuleFormInput {
   runHour: string;
   tiers: { upTo: string; rate: string }[];
   tax: string;
-  dayBasis: string;
+  dayCount: string;
+  /** Days after the settlement date; empty is the default window. */
+  paymentWindowDays: string;
   settlement: string;
   payeeMatch: string;
   /** The category the rule has, sent back as it is; empty is none. */
@@ -59,7 +61,10 @@ async function bodyOf(input: RuleFormInput) {
     ),
     tax: rate(input.tax === "" ? "0" : input.tax),
     // From the dialog's selects: always one of the lists.
-    dayBasis: DAY_BASES.find((basis) => basis === input.dayBasis) ?? "365",
+    dayCount: DAY_COUNTS.find((count) => count === input.dayCount) ?? "365",
+    periodAnchor: "calendar" as const,
+    // The field takes whole days only (`type="number"`); the route refuses anything out of range.
+    paymentWindowDays: input.paymentWindowDays === "" ? null : Number(input.paymentWindowDays),
     settlement: SETTLEMENTS.find((settlement) => settlement === input.settlement) ?? "monthly",
     payeeMatch: input.payeeMatch,
     // No rule publishes on its source any more (decision H37): the route refuses that mode.

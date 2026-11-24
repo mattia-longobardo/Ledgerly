@@ -1,51 +1,48 @@
-import { addMonths, type CivilDate, type MonthKey } from "../../shared/dates";
-import type { Cents } from "../../shared/money";
-import type { MoneyField } from "./fields";
+import { addMonths, type CivilDate, type MonthKey } from "../../../shared/dates";
+import type { Cents } from "../../../shared/money";
+import type { MoneyField } from "../fields";
+import { kindOfType, type PayslipType } from "./legacy";
+import { DEFAULT_EMPLOYER, type Employer, type PayslipKind } from "./payslip";
+import type { CodeRole } from "./roles";
 
-export const PAYSLIP_TYPES = ["ordinary", "thirteenth", "fourteenth", "fifteenth", "bonus", "settlement"] as const;
-export type PayslipType = (typeof PAYSLIP_TYPES)[number];
+export { kindOfType, PAYSLIP_TYPES, type PayslipType, typeOfKind } from "./legacy";
+export {
+  BASE_FIELDS,
+  type BaseField,
+  baseColumnsOf,
+  type CatalogueField,
+  COUNTRY_FIELDS,
+  DEFAULT_EMPLOYER,
+  type Employer,
+  employerInputSchema,
+  fieldCatalogue,
+  isCountryField,
+  type ManualPayslip,
+  manualPayslipSchema,
+  MAX_EXTRA_PAYMENTS,
+  PAY_FREQUENCIES,
+  type PayFrequency,
+  PAYSLIP_KINDS,
+  PAYSLIP_SOURCES,
+  type PayslipKind,
+  periodOfManual,
+  REGISTER_FIELDS,
+} from "./payslip";
 
-export const LINE_UNITS = ["hours", "days", "months"] as const;
-export type LineUnit = (typeof LINE_UNITS)[number];
+export { CODE_ROLES, type CodeRole, LINE_UNITS, type LineUnit } from "./roles";
+export {
+  DEFAULT_PROFILE,
+  isSeededCode,
+  PAYSLIP_PROFILES,
+  type PayslipProfile,
+  type ProfileBalance,
+  type ProfileCheck,
+  profileById,
+  profileOfVersion,
+} from "./profiles";
 
 export const TFR_SOURCES = ["month_field", "contribution_line", "both"] as const;
 export type TfrSource = (typeof TFR_SOURCES)[number];
-
-/**
- * What a body code means (spec §7.8 "Mappa dei codici"; owner's spec L91–161). A role either feeds
- * one field (`ROLE_FIELD`), produces leave events, or is kept as a raw line only.
- */
-export const CODE_ROLES = [
-  "ordinary_earnings",
-  "thirteenth_earnings",
-  "holiday_pay",
-  "absence",
-  "paid_leave",
-  "vacation_offset",
-  "vacation_event",
-  "permit_offset",
-  "permit_event",
-  "separate_payment",
-  "refund_730",
-  "regional_installment",
-  "municipal_installment",
-  "substitute_tax",
-  "substitute_tax_base",
-  "employee_fund",
-  "employee_fund_adjustment",
-  "employee_fund_enrollment",
-  "employer_fund",
-  "employer_fund_adjustment",
-  "employer_fund_enrollment",
-  "tfr_contribution",
-  "tfr_exemption",
-  "welfare_cash",
-  "welfare_in_kind",
-  "compensated_credit",
-  "statistical",
-  "other",
-] as const;
-export type CodeRole = (typeof CODE_ROLES)[number];
 
 /** The field a role's lines add up to; roles missing here stay raw lines. */
 export const ROLE_FIELD: Partial<Record<CodeRole, MoneyField>> = {
@@ -65,13 +62,6 @@ export const ROLE_FIELD: Partial<Record<CodeRole, MoneyField>> = {
   compensated_credit: "compensatedCredit",
 };
 
-export const REPLY_TEAMSYSTEM = "reply-teamsystem";
-
-/** Whether the reading profile has the code: «Reset» puts it back rather than removing it. */
-export function isSeededCode(code: string): boolean {
-  return REPLY_TEAMSYSTEM_CODES.some((entry) => entry.code === code);
-}
-
 /** The register's amount columns (spec §7.8 D13): summed per year, averaged per ordinary month. */
 export const SUMMED_FIELDS = [
   "gross",
@@ -89,44 +79,6 @@ export const SUMMED_FIELDS = [
   "tfrSelected",
 ] as const satisfies readonly MoneyField[];
 export type SummedField = (typeof SUMMED_FIELDS)[number];
-
-/**
- * The Reply/TeamSystem profile the code map is seeded with (spec §7.8): every code the owner's
- * spec names, and the ones its twelve payslips carry. A code missing here is `other`, and a
- * payslip with one waits for review.
- */
-export const REPLY_TEAMSYSTEM_CODES: readonly { code: string; role: CodeRole }[] = [
-  { code: "2", role: "ordinary_earnings" },
-  { code: "4", role: "absence" },
-  { code: "19", role: "absence" },
-  { code: "300", role: "vacation_offset" },
-  { code: "301", role: "vacation_event" },
-  { code: "308", role: "permit_offset" },
-  { code: "309", role: "permit_event" },
-  { code: "901", role: "thirteenth_earnings" },
-  { code: "1101", role: "refund_730" },
-  { code: "1150", role: "regional_installment" },
-  { code: "1405", role: "holiday_pay" },
-  { code: "1406", role: "holiday_pay" },
-  { code: "2161", role: "paid_leave" },
-  { code: "7052", role: "employer_fund_enrollment" },
-  { code: "7053", role: "employee_fund_enrollment" },
-  { code: "7101", role: "employee_fund" },
-  { code: "7897", role: "tfr_exemption" },
-  { code: "8003", role: "tfr_contribution" },
-  { code: "8054", role: "employee_fund_adjustment" },
-  { code: "8056", role: "employer_fund_adjustment" },
-  { code: "8992", role: "separate_payment" },
-  { code: "9109", role: "employer_fund" },
-  { code: "9110", role: "statistical" },
-  { code: "9208", role: "compensated_credit" },
-  { code: "9424", role: "statistical" },
-  { code: "9582", role: "welfare_cash" },
-  { code: "9586", role: "welfare_in_kind" },
-  { code: "9824", role: "separate_payment" },
-  { code: "9837", role: "substitute_tax_base" },
-  { code: "9838", role: "substitute_tax" },
-];
 
 const MONTHS: Record<string, number> = {
   GENNAIO: 1,
@@ -171,9 +123,12 @@ export function parsePeriodLabel(label: string): PayslipIdentity | null {
   return null;
 }
 
-/** The month the leave in a payslip was used in: the month before (owner's spec L9–20). */
-export function usagePeriodOf(payrollPeriod: MonthKey): MonthKey {
-  return addMonths(payrollPeriod, -1);
+/**
+ * The month the leave in a payslip was used in: `lagMonths` before the payslip's own, as its profile
+ * says (one, owner's spec L9–20).
+ */
+export function usagePeriodOf(payrollPeriod: MonthKey, lagMonths: number): MonthKey {
+  return addMonths(payrollPeriod, -lagMonths);
 }
 
 /** "28/08/26" → 2026-08-28; two-digit years are this century's. */
@@ -197,18 +152,34 @@ export function logicalKey(payslip: {
   return [payslip.employerKey, payslip.employeeKey, payslip.year, payslip.type, payslip.period ?? "-"].join("|");
 }
 
-/** A 13th, 14th or 15th: kept out of monthly averages, in the yearly totals (spec §7.8 "Medie"). */
-export function isExtraMonth(type: PayslipType): boolean {
-  return type === "thirteenth" || type === "fourteenth" || type === "fifteenth";
-}
-
 export interface RegisterPayslip {
   type: PayslipType;
+  /** Null on a row the image before R5g wrote: its old `type` says it. */
+  kind?: PayslipKind | null;
+  extraNumber?: number | null;
   year: number;
   period: MonthKey | null;
   gross: Cents | null;
   taxesTotal: Cents | null;
   netPay: Cents | null;
+}
+
+/** A payslip's kind and extra payment's number: stored, or from its old type. */
+export function kindOf(payslip: Pick<RegisterPayslip, "type" | "kind" | "extraNumber">): {
+  kind: PayslipKind;
+  extraNumber: number | null;
+} {
+  return payslip.kind ? { kind: payslip.kind, extraNumber: payslip.extraNumber ?? null } : kindOfType(payslip.type);
+}
+
+/** An extra payment (13th, 14th…): kept out of monthly averages, in the yearly totals (spec §7.8 "Medie"). */
+export function isExtra(payslip: Pick<RegisterPayslip, "type" | "kind" | "extraNumber">): boolean {
+  return kindOf(payslip).kind === "extra";
+}
+
+/** An ordinary payslip: one month's pay, what the means and the KPIs read. */
+export function isOrdinary(payslip: Pick<RegisterPayslip, "type" | "kind" | "extraNumber">): boolean {
+  return kindOf(payslip).kind === "ordinary";
 }
 
 /** The mean of known amounts, rounded half away from zero; null when none is known. */
@@ -224,8 +195,8 @@ export function meanCents(values: readonly (Cents | null)[]): Cents | null {
 /** Ordinary payslips, newest first. */
 function ordinariesNewestFirst<P extends RegisterPayslip>(payslips: readonly P[]): P[] {
   return payslips
-    .filter((payslip) => payslip.type === "ordinary" && payslip.period !== null)
-    .toSorted((a, b) => (b.period ?? "").localeCompare(a.period ?? ""));
+    .filter((payslip) => isOrdinary(payslip) && payslip.period !== null)
+    .toSorted((one, two) => (two.period ?? "").localeCompare(one.period ?? ""));
 }
 
 /** The average net of the last `months` ordinary payslips (spec §7.8 KPI strip). */
@@ -261,21 +232,24 @@ export interface RalEstimate {
 
 /**
  * The yearly gross (spec §7.8 "Stima RAL"): the year's gross when its twelve ordinary months and
- * its 13th are all there; otherwise the mean ordinary gross × 12, plus the real 13th or one mean
- * month in its place, plus the 14th and the 15th when the year has them. A 15th is never required
- * for a complete year. The year is the latest one with an ordinary payslip.
+ * every extra payment the employer makes are all there; otherwise the mean ordinary gross × 12, plus
+ * each extra payment the employer makes — the real one or one mean month in its place — plus any
+ * other extra payment the year has. The year is the latest one with an ordinary payslip.
  */
-export function ralEstimate(payslips: readonly RegisterPayslip[]): RalEstimate | null {
+export function ralEstimate(payslips: readonly RegisterPayslip[], employer: Employer = DEFAULT_EMPLOYER): RalEstimate | null {
   const latest = ordinariesNewestFirst(payslips)[0];
   if (!latest) return null;
   const year = latest.year;
   const ofYear = payslips.filter((payslip) => payslip.year === year);
-  const ordinary = ofYear.filter((payslip) => payslip.type === "ordinary");
-  const thirteenth = ofYear.find((payslip) => payslip.type === "thirteenth");
-  const fourteenth = ofYear.find((payslip) => payslip.type === "fourteenth");
-  const fifteenth = ofYear.find((payslip) => payslip.type === "fifteenth");
+  const ordinary = ofYear.filter(isOrdinary);
+  const extras = new Map(ofYear.filter(isExtra).map((payslip) => [kindOf(payslip).extraNumber, payslip]));
+  const expected = [...employer.extraMonths.keys()].map((index) => index + 1);
   const months = new Set(ordinary.map((payslip) => payslip.period));
-  if (months.size === 12 && thirteenth && ofYear.every((payslip) => payslip.gross !== null)) {
+  if (
+    months.size === 12 &&
+    expected.every((number) => extras.has(number)) &&
+    ofYear.every((payslip) => payslip.gross !== null)
+  ) {
     return {
       cents: ofYear.reduce((sum, payslip) => sum + (payslip.gross ?? 0n), 0n),
       basis: "complete_year",
@@ -284,11 +258,11 @@ export function ralEstimate(payslips: readonly RegisterPayslip[]): RalEstimate |
   }
   const mean = meanCents(ordinary.map((payslip) => payslip.gross));
   if (mean === null) return null;
-  return {
-    cents: mean * 12n + (thirteenth?.gross ?? mean) + (fourteenth?.gross ?? 0n) + (fifteenth?.gross ?? 0n),
-    basis: "estimate",
-    year,
-  };
+  const expectedCents = expected.reduce((sum, number) => sum + (extras.get(number)?.gross ?? mean), 0n);
+  const otherCents = [...extras]
+    .filter(([number]) => number === null || !expected.includes(number))
+    .reduce((sum, [, payslip]) => sum + (payslip.gross ?? 0n), 0n);
+  return { cents: mean * 12n + expectedCents + otherCents, basis: "estimate", year };
 }
 
 interface YearGroup<P extends RegisterPayslip> {
@@ -297,27 +271,30 @@ interface YearGroup<P extends RegisterPayslip> {
 }
 
 /**
- * The register's year groups, newest year first, each newest month first: the 14th with June, the
- * 13th after December, and the 15th — which has no fixed month — after the 13th.
+ * The register's year groups, newest year first, each newest month first: an extra payment with the
+ * month the employer pays it in (December when it does not say), after that month's payslip, and
+ * the later extra payments of a month above the earlier ones.
  */
-export function groupByYear<P extends RegisterPayslip>(payslips: readonly P[]): YearGroup<P>[] {
-  const years = [...new Set(payslips.map((payslip) => payslip.year))].toSorted((a, b) => b - a);
-  const rank = (payslip: P) =>
-    payslip.period ??
-    (payslip.type === "fourteenth"
-      ? `${payslip.year}-06-99`
-      : payslip.type === "fifteenth"
-        ? `${payslip.year}-12-999`
-        : `${payslip.year}-12-99`);
+export function groupByYear<P extends RegisterPayslip>(
+  payslips: readonly P[],
+  employer: Employer = DEFAULT_EMPLOYER,
+): YearGroup<P>[] {
+  const years = [...new Set(payslips.map((payslip) => payslip.year))].toSorted((one, two) => two - one);
+  const rank = (payslip: P) => {
+    if (payslip.period) return payslip.period;
+    const { extraNumber } = kindOf(payslip);
+    const month = (extraNumber === null ? undefined : employer.extraMonths[extraNumber - 1]) ?? 12;
+    return `${payslip.year}-${String(month).padStart(2, "0")}-99${extraNumber ?? ""}`;
+  };
   return years.map((year) => ({
     year,
-    payslips: payslips.filter((payslip) => payslip.year === year).toSorted((a, b) => rank(b).localeCompare(rank(a))),
+    payslips: payslips.filter((payslip) => payslip.year === year).toSorted((one, two) => rank(two).localeCompare(rank(one))),
   }));
 }
 
 /** Median of known amounts (the plausibility baseline, plan F5 §3.6.7). */
 export function medianCents(values: readonly (Cents | null)[]): Cents | null {
-  const known = values.filter((value): value is Cents => value !== null).toSorted((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const known = values.filter((value): value is Cents => value !== null).toSorted((one, two) => (one < two ? -1 : one > two ? 1 : 0));
   if (known.length === 0) return null;
   const middle = Math.floor(known.length / 2);
   return known.length % 2 === 1 ? known[middle] : meanCents([known[middle - 1], known[middle]]);

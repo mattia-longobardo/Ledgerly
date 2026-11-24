@@ -135,7 +135,8 @@
     "syncScheduleSchema"
   ],
   "packages/api-contract/src/interests/index.ts": [
-    "DAY_BASES",
+    "DAY_COUNTS",
+    "MAX_PAYMENT_WINDOW_DAYS",
     "SETTLEMENTS",
     "interests"
   ],
@@ -151,6 +152,8 @@
     "FIELD_GROUPS",
     "SUMMED_FIELDS",
     "codes",
+    "employer",
+    "manual",
     "payroll"
   ],
   "packages/api-contract/src/pockets/index.ts": [
@@ -721,6 +724,7 @@
     "isDerived"
   ],
   "packages/domain/src/modules/payroll/index.ts": [
+    "COUNTRY_FIELDS",
     "FIELDS",
     "PAYSLIP_DOCUMENT",
     "PayrollError",
@@ -728,11 +732,17 @@
     "applyPayslip",
     "codeMapOf",
     "codeMapView",
+    "createManualPayslip",
     "decideField",
+    "deleteManualPayslip",
     "deletePayslip",
+    "employerOf",
+    "fieldCatalogue",
     "fillWithLlm",
     "isFieldName",
+    "kindOf",
     "llmFillable",
+    "manualPayslipView",
     "payrollDirectory",
     "payrollLeaveBalances",
     "payslipsAwaitingReview",
@@ -744,7 +754,9 @@
     "resetCode",
     "retryPayslip",
     "reviewView",
+    "saveEmployer",
     "setCodeRole",
+    "updateManualPayslip",
     "uploadPayslip",
     "verifyPayslip",
     "wirePayroll"

@@ -1,0 +1,7084 @@
+{
+  "JANUARY": {
+    "parsed": {
+      "recognised": true,
+      "identity": {
+        "type": "ordinary",
+        "year": 2031,
+        "period": "2031-01-01"
+      },
+      "fields": [
+        {
+          "field": "bodyDeductions",
+          "value": "40.16",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.43949
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:4",
+            "line:5",
+            "line:10"
+          ]
+        },
+        {
+          "field": "bodyDeductionsPrinted",
+          "value": "40.16",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE CORPO",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.66993,
+            0.80718,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "40,16"
+        },
+        {
+          "field": "bodyEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "COMPETENZE",
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.33972
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:1",
+            "line:2",
+            "line:3"
+          ]
+        },
+        {
+          "field": "compensatedCredit",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "contractualGross",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "RETRIBUZIONE DI FATTO",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.1853,
+            0.16211,
+            0.19718
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "employeeFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundEnrollment",
+          "value": "5.16",
+          "unit": "eur",
+          "sourceLabel": "7053 QUOTA ISCRIZIONE DIPEND.",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.42761,
+            0.82734,
+            0.43949
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7053 QUOTA ISCRIZIONE DIPEND. 5,16",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeFundRegular",
+          "value": "25.00",
+          "unit": "eur",
+          "sourceLabel": "7101 FONDO C/DIPE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeKey",
+          "value": "901",
+          "unit": "text",
+          "sourceLabel": "CODICE",
+          "page": 1,
+          "bbox": [
+            0.52496,
+            0.12828,
+            0.5552,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "901"
+        },
+        {
+          "field": "employeeSocial",
+          "value": "183.80",
+          "unit": "eur",
+          "sourceLabel": "TOTALE CONTRIBUTI SOCIALI",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.58441,
+            0.94829,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "183,80"
+        },
+        {
+          "field": "employerFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundEnrollment",
+          "value": "5.16",
+          "unit": "eur",
+          "sourceLabel": "7052 QUOTA ISCRIZIONE AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.44187,
+            0.95837,
+            0.45375
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7052 QUOTA ISCRIZIONE AZIENDA 5,16",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerFundPrinted",
+          "value": "45.00",
+          "unit": "eur",
+          "sourceLabel": "9109 FONDO C/AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerKey",
+          "value": "01234567890",
+          "unit": "text",
+          "sourceLabel": "Cod.fiscale",
+          "page": 1,
+          "bbox": [
+            0.22258,
+            0.08552,
+            0.33346,
+            0.0974
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "Cod.fiscale : 01234567890"
+        },
+        {
+          "field": "employerSocialTotal",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "irpefGross",
+          "value": "417.73",
+          "unit": "eur",
+          "sourceLabel": "IRPEF LORDA",
+          "page": 1,
+          "bbox": [
+            0.64591,
+            0.64142,
+            0.70639,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "417,73"
+        },
+        {
+          "field": "irpefTaxable",
+          "value": "1816.20",
+          "unit": "eur",
+          "sourceLabel": "IMPONIBILE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.49473,
+            0.64142,
+            0.57536,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.816,20"
+        },
+        {
+          "field": "irpefWithheld",
+          "value": "267.73",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.64142,
+            0.94829,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "267,73"
+        },
+        {
+          "field": "municipalWithheld",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "netPay",
+          "value": "1505.84",
+          "unit": "eur",
+          "sourceLabel": "NETTO BUSTA",
+          "page": 1,
+          "bbox": [
+            0.87774,
+            0.72694,
+            0.95837,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.505,84"
+        },
+        {
+          "field": "ordinaryEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "2 LAVORO ORDIN.(mens.)",
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "periodLabel",
+          "value": "GENNAIO 2031",
+          "unit": "text",
+          "sourceLabel": "MESE RETRIBUITO",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.12828,
+            0.16211,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "GENNAIO 2031"
+        },
+        {
+          "field": "permitAccrued",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI MAT.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitPreviousYear",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI A.P.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitRemaining",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI RES.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "printedOn",
+          "value": "2031-01-27",
+          "unit": "date",
+          "sourceLabel": "stampato il",
+          "page": 1,
+          "bbox": [
+            0.67195,
+            0.94503,
+            0.82655,
+            0.95156
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "stampato il 27/01/31 alle ore 12:00:00"
+        },
+        {
+          "field": "refund730",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "regionalInstallment",
+          "value": "10.00",
+          "unit": "eur",
+          "sourceLabel": "1150 RATA ADD.REG. A.P.",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "rolAccrued",
+          "value": "20.00",
+          "unit": "hours",
+          "sourceLabel": "ROL MAT.",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.75545,
+            0.80718,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "20,00"
+        },
+        {
+          "field": "rolPreviousYear",
+          "value": "10.00",
+          "unit": "hours",
+          "sourceLabel": "ROL A.P.",
+          "page": 1,
+          "bbox": [
+            0.67615,
+            0.75545,
+            0.72655,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "10,00"
+        },
+        {
+          "field": "rolRemaining",
+          "value": "30.00",
+          "unit": "hours",
+          "sourceLabel": "ROL. RES.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.75545,
+            0.95837,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "30,00"
+        },
+        {
+          "field": "rolUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "ROL. GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "roundingCurrent",
+          "value": "0.43",
+          "unit": "eur",
+          "sourceLabel": "ARROTONDAMENTO ATTUALE",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.72694,
+            0.80718,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,43"
+        },
+        {
+          "field": "roundingPrevious",
+          "value": "0.40",
+          "unit": "eur",
+          "sourceLabel": "ARROTOND. PRECED.",
+          "page": 1,
+          "bbox": [
+            0.65599,
+            0.66993,
+            0.69631,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,40"
+        },
+        {
+          "field": "substituteTax",
+          "value": "2.50",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF T.S.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.61291,
+            0.94829,
+            0.62479
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2,50"
+        },
+        {
+          "field": "taxDeductions",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE DETRAZIONI",
+          "page": 1,
+          "bbox": [
+            0.74671,
+            0.64142,
+            0.80718,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "150,00"
+        },
+        {
+          "field": "tfrContributionLine",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "8003 CONTRIBUZIONE TFR",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "tfrMonthField",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TFR MESE",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "totalDeductionsPrinted",
+          "value": "494.59",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.66993,
+            0.94829,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "494,59"
+        },
+        {
+          "field": "totalGrossPrinted",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE LORDO",
+          "page": 1,
+          "bbox": [
+            0.09155,
+            0.58441,
+            0.17219,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "vacationAccrued",
+          "value": "40.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE MAT.",
+          "page": 1,
+          "bbox": [
+            0.14195,
+            0.75545,
+            0.19235,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "40,00"
+        },
+        {
+          "field": "vacationPreviousYear",
+          "value": "5.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE A.P.",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.75545,
+            0.12179,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "vacationRemaining",
+          "value": "45.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE RES.",
+          "page": 1,
+          "bbox": [
+            0.30322,
+            0.75545,
+            0.35362,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "45,00"
+        },
+        {
+          "field": "vacationUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "FERIE GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareCash",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareInKind",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "yearEndAdjustment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "CONGUAGLIO IRPEF +/-",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        }
+      ],
+      "lines": [
+        {
+          "position": 1,
+          "code": "2",
+          "description": "LAVORO ORDIN.(mens.)",
+          "quantity": "1.00",
+          "quantityUnit": "months",
+          "rate": "2000.00000",
+          "earningsCents": "200000n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "role": "ordinary_earnings"
+        },
+        {
+          "position": 2,
+          "code": "300",
+          "description": "ASSENZA X FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "-11.56069",
+          "earningsCents": "-9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.31358,
+            0.69631,
+            0.32546
+          ],
+          "rawText": "300 ASSENZA X FERIE A.C.(hh) 8,00 -11,56069 -92,49",
+          "role": "vacation_offset"
+        },
+        {
+          "position": 3,
+          "code": "301",
+          "description": "FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "11.56069",
+          "earningsCents": "9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.32784,
+            0.69631,
+            0.33972
+          ],
+          "rawText": "301 FERIE A.C.(hh) 8,00 11,56069 92,49",
+          "role": "vacation_event"
+        },
+        {
+          "position": 4,
+          "code": "1150",
+          "description": "RATA ADD.REG. A.P.",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "1000n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "role": "regional_installment"
+        },
+        {
+          "position": 5,
+          "code": "7101",
+          "description": "FONDO C/DIPE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "2500n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "role": "employee_fund"
+        },
+        {
+          "position": 6,
+          "code": "8003",
+          "description": "CONTRIBUZIONE TFR",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "15000n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "role": "tfr_contribution"
+        },
+        {
+          "position": 7,
+          "code": "9109",
+          "description": "FONDO C/AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "4500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "role": "employer_fund"
+        },
+        {
+          "position": 8,
+          "code": "9110",
+          "description": "COMUNICAZIONE DIPENDENTE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "2500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.39911,
+            0.95837,
+            0.41098
+          ],
+          "rawText": "9110 COMUNICAZIONE DIPENDENTE 25,00",
+          "role": "statistical"
+        },
+        {
+          "position": 9,
+          "code": "9838",
+          "description": "IMPOSTA SOST. 5% L.199/25",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "250n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.41336,
+            0.95837,
+            0.42524
+          ],
+          "rawText": "9838 IMPOSTA SOST. 5% L.199/25 2,50",
+          "role": "substitute_tax"
+        },
+        {
+          "position": 10,
+          "code": "7053",
+          "description": "QUOTA ISCRIZIONE DIPEND.",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "516n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.42761,
+            0.82734,
+            0.43949
+          ],
+          "rawText": "7053 QUOTA ISCRIZIONE DIPEND. 5,16",
+          "role": "employee_fund_enrollment"
+        },
+        {
+          "position": 11,
+          "code": "7052",
+          "description": "QUOTA ISCRIZIONE AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "516n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.44187,
+            0.95837,
+            0.45375
+          ],
+          "rawText": "7052 QUOTA ISCRIZIONE AZIENDA 5,16",
+          "role": "employer_fund_enrollment"
+        }
+      ],
+      "warnings": [],
+      "textChars": 1590
+    },
+    "assembled": {
+      "values": {
+        "periodLabel": "GENNAIO 2031",
+        "employeeKey": "901",
+        "contractualGross": "2000.00",
+        "totalGrossPrinted": "2000.00",
+        "employeeSocial": "183.80",
+        "substituteTax": "2.50",
+        "irpefTaxable": "1816.20",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "irpefWithheld": "267.73",
+        "roundingPrevious": "0.40",
+        "bodyDeductionsPrinted": "40.16",
+        "totalDeductionsPrinted": "494.59",
+        "yearEndAdjustment": null,
+        "roundingCurrent": "0.43",
+        "netPay": "1505.84",
+        "tfrMonthField": null,
+        "vacationPreviousYear": "5.00",
+        "vacationAccrued": "40.00",
+        "vacationUsed": null,
+        "vacationRemaining": "45.00",
+        "permitPreviousYear": null,
+        "permitAccrued": null,
+        "permitUsed": null,
+        "permitRemaining": null,
+        "rolPreviousYear": "10.00",
+        "rolAccrued": "20.00",
+        "rolUsed": null,
+        "rolRemaining": "30.00",
+        "employerKey": "01234567890",
+        "printedOn": "2031-01-27",
+        "ordinaryEarnings": "2000.00",
+        "refund730": null,
+        "regionalInstallment": "10.00",
+        "municipalWithheld": null,
+        "employeeFundRegular": "25.00",
+        "employeeFundAdjustments": null,
+        "employeeFundEnrollment": "5.16",
+        "employerFundPrinted": "45.00",
+        "employerFundAdjustments": null,
+        "employerFundEnrollment": "5.16",
+        "tfrContributionLine": "150.00",
+        "welfareCash": null,
+        "welfareInKind": null,
+        "compensatedCredit": null,
+        "bodyEarnings": "2000.00",
+        "bodyDeductions": "40.16",
+        "employerSocialTotal": null,
+        "gross": "2000.00",
+        "taxesTotal": "280.23",
+        "taxesNetOfRefunds": "280.23",
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00",
+        "tfrSource": "contribution_line"
+      },
+      "checks": [
+        {
+          "id": "irpef",
+          "severity": "error",
+          "status": "passed",
+          "expected": "267.73",
+          "actual": "267.73"
+        },
+        {
+          "id": "net",
+          "severity": "error",
+          "status": "passed",
+          "expected": "1505.84",
+          "actual": "1505.84"
+        },
+        {
+          "id": "body_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "40.16",
+          "actual": "40.16"
+        },
+        {
+          "id": "total_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "494.59",
+          "actual": "494.59"
+        },
+        {
+          "id": "substitute_tax",
+          "severity": "error",
+          "status": "passed",
+          "expected": "2.50",
+          "actual": "2.50"
+        },
+        {
+          "id": "leave_vacation",
+          "severity": "error",
+          "status": "passed",
+          "expected": "45.00",
+          "actual": "45.00"
+        },
+        {
+          "id": "leave_rol",
+          "severity": "error",
+          "status": "passed",
+          "expected": "30.00",
+          "actual": "30.00"
+        },
+        {
+          "id": "leave_permit",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "blank"
+        },
+        {
+          "id": "plausibility_net",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        },
+        {
+          "id": "plausibility_gross",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        }
+      ],
+      "events": [
+        {
+          "kind": "vacation",
+          "hours": "8.00",
+          "linePositions": [
+            3
+          ]
+        }
+      ],
+      "warnings": []
+    }
+  },
+  "FEBRUARY": {
+    "parsed": {
+      "recognised": true,
+      "identity": {
+        "type": "ordinary",
+        "year": 2031,
+        "period": "2031-02-01"
+      },
+      "fields": [
+        {
+          "field": "bodyDeductions",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.36822
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:4",
+            "line:5"
+          ]
+        },
+        {
+          "field": "bodyDeductionsPrinted",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE CORPO",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.66993,
+            0.80718,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "35,00"
+        },
+        {
+          "field": "bodyEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "COMPETENZE",
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.33972
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:1",
+            "line:2",
+            "line:3"
+          ]
+        },
+        {
+          "field": "compensatedCredit",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "contractualGross",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "RETRIBUZIONE DI FATTO",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.1853,
+            0.16211,
+            0.19718
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "employeeFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundRegular",
+          "value": "25.00",
+          "unit": "eur",
+          "sourceLabel": "7101 FONDO C/DIPE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeKey",
+          "value": "901",
+          "unit": "text",
+          "sourceLabel": "CODICE",
+          "page": 1,
+          "bbox": [
+            0.52496,
+            0.12828,
+            0.5552,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "901"
+        },
+        {
+          "field": "employeeSocial",
+          "value": "183.80",
+          "unit": "eur",
+          "sourceLabel": "TOTALE CONTRIBUTI SOCIALI",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.58441,
+            0.94829,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "183,80"
+        },
+        {
+          "field": "employerFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundPrinted",
+          "value": "45.00",
+          "unit": "eur",
+          "sourceLabel": "9109 FONDO C/AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerKey",
+          "value": "01234567890",
+          "unit": "text",
+          "sourceLabel": "Cod.fiscale",
+          "page": 1,
+          "bbox": [
+            0.22258,
+            0.08552,
+            0.33346,
+            0.0974
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "Cod.fiscale : 01234567890"
+        },
+        {
+          "field": "employerSocialTotal",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "irpefGross",
+          "value": "417.73",
+          "unit": "eur",
+          "sourceLabel": "IRPEF LORDA",
+          "page": 1,
+          "bbox": [
+            0.64591,
+            0.64142,
+            0.70639,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "417,73"
+        },
+        {
+          "field": "irpefTaxable",
+          "value": "1816.20",
+          "unit": "eur",
+          "sourceLabel": "IMPONIBILE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.49473,
+            0.64142,
+            0.57536,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.816,20"
+        },
+        {
+          "field": "irpefWithheld",
+          "value": "267.73",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.64142,
+            0.94829,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "267,73"
+        },
+        {
+          "field": "municipalWithheld",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "netPay",
+          "value": "1511.00",
+          "unit": "eur",
+          "sourceLabel": "NETTO BUSTA",
+          "page": 1,
+          "bbox": [
+            0.87774,
+            0.72694,
+            0.95837,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.511,00"
+        },
+        {
+          "field": "ordinaryEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "2 LAVORO ORDIN.(mens.)",
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "periodLabel",
+          "value": "FEBBRAIO 2031",
+          "unit": "text",
+          "sourceLabel": "MESE RETRIBUITO",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.12828,
+            0.17219,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "FEBBRAIO 2031"
+        },
+        {
+          "field": "permitAccrued",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI MAT.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitPreviousYear",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI A.P.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitRemaining",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI RES.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "printedOn",
+          "value": "2031-02-27",
+          "unit": "date",
+          "sourceLabel": "stampato il",
+          "page": 1,
+          "bbox": [
+            0.67195,
+            0.94503,
+            0.82655,
+            0.95156
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "stampato il 27/02/31 alle ore 12:00:00"
+        },
+        {
+          "field": "refund730",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "regionalInstallment",
+          "value": "10.00",
+          "unit": "eur",
+          "sourceLabel": "1150 RATA ADD.REG. A.P.",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "rolAccrued",
+          "value": "20.00",
+          "unit": "hours",
+          "sourceLabel": "ROL MAT.",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.75545,
+            0.80718,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "20,00"
+        },
+        {
+          "field": "rolPreviousYear",
+          "value": "10.00",
+          "unit": "hours",
+          "sourceLabel": "ROL A.P.",
+          "page": 1,
+          "bbox": [
+            0.67615,
+            0.75545,
+            0.72655,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "10,00"
+        },
+        {
+          "field": "rolRemaining",
+          "value": "30.00",
+          "unit": "hours",
+          "sourceLabel": "ROL. RES.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.75545,
+            0.95837,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "30,00"
+        },
+        {
+          "field": "rolUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "ROL. GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "roundingCurrent",
+          "value": "0.43",
+          "unit": "eur",
+          "sourceLabel": "ARROTONDAMENTO ATTUALE",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.72694,
+            0.80718,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,43"
+        },
+        {
+          "field": "roundingPrevious",
+          "value": "0.40",
+          "unit": "eur",
+          "sourceLabel": "ARROTOND. PRECED.",
+          "page": 1,
+          "bbox": [
+            0.65599,
+            0.66993,
+            0.69631,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,40"
+        },
+        {
+          "field": "substituteTax",
+          "value": "2.50",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF T.S.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.61291,
+            0.94829,
+            0.62479
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2,50"
+        },
+        {
+          "field": "taxDeductions",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE DETRAZIONI",
+          "page": 1,
+          "bbox": [
+            0.74671,
+            0.64142,
+            0.80718,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "150,00"
+        },
+        {
+          "field": "tfrContributionLine",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "8003 CONTRIBUZIONE TFR",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "tfrMonthField",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TFR MESE",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "totalDeductionsPrinted",
+          "value": "489.43",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.66993,
+            0.94829,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "489,43"
+        },
+        {
+          "field": "totalGrossPrinted",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE LORDO",
+          "page": 1,
+          "bbox": [
+            0.09155,
+            0.58441,
+            0.17219,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "vacationAccrued",
+          "value": "40.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE MAT.",
+          "page": 1,
+          "bbox": [
+            0.14195,
+            0.75545,
+            0.19235,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "40,00"
+        },
+        {
+          "field": "vacationPreviousYear",
+          "value": "5.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE A.P.",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.75545,
+            0.12179,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "vacationRemaining",
+          "value": "45.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE RES.",
+          "page": 1,
+          "bbox": [
+            0.30322,
+            0.75545,
+            0.35362,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "45,00"
+        },
+        {
+          "field": "vacationUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "FERIE GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareCash",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareInKind",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "yearEndAdjustment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "CONGUAGLIO IRPEF +/-",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        }
+      ],
+      "lines": [
+        {
+          "position": 1,
+          "code": "2",
+          "description": "LAVORO ORDIN.(mens.)",
+          "quantity": "1.00",
+          "quantityUnit": "months",
+          "rate": "2000.00000",
+          "earningsCents": "200000n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "role": "ordinary_earnings"
+        },
+        {
+          "position": 2,
+          "code": "300",
+          "description": "ASSENZA X FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "-11.56069",
+          "earningsCents": "-9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.31358,
+            0.69631,
+            0.32546
+          ],
+          "rawText": "300 ASSENZA X FERIE A.C.(hh) 8,00 -11,56069 -92,49",
+          "role": "vacation_offset"
+        },
+        {
+          "position": 3,
+          "code": "301",
+          "description": "FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "11.56069",
+          "earningsCents": "9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.32784,
+            0.69631,
+            0.33972
+          ],
+          "rawText": "301 FERIE A.C.(hh) 8,00 11,56069 92,49",
+          "role": "vacation_event"
+        },
+        {
+          "position": 4,
+          "code": "1150",
+          "description": "RATA ADD.REG. A.P.",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "1000n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "role": "regional_installment"
+        },
+        {
+          "position": 5,
+          "code": "7101",
+          "description": "FONDO C/DIPE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "2500n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "role": "employee_fund"
+        },
+        {
+          "position": 6,
+          "code": "8003",
+          "description": "CONTRIBUZIONE TFR",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "15000n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "role": "tfr_contribution"
+        },
+        {
+          "position": 7,
+          "code": "9109",
+          "description": "FONDO C/AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "4500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "role": "employer_fund"
+        },
+        {
+          "position": 8,
+          "code": "9110",
+          "description": "COMUNICAZIONE DIPENDENTE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "2500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.39911,
+            0.95837,
+            0.41098
+          ],
+          "rawText": "9110 COMUNICAZIONE DIPENDENTE 25,00",
+          "role": "statistical"
+        },
+        {
+          "position": 9,
+          "code": "9838",
+          "description": "IMPOSTA SOST. 5% L.199/25",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "250n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.41336,
+            0.95837,
+            0.42524
+          ],
+          "rawText": "9838 IMPOSTA SOST. 5% L.199/25 2,50",
+          "role": "substitute_tax"
+        }
+      ],
+      "warnings": [],
+      "textChars": 1525
+    },
+    "assembled": {
+      "values": {
+        "periodLabel": "FEBBRAIO 2031",
+        "employeeKey": "901",
+        "contractualGross": "2000.00",
+        "totalGrossPrinted": "2000.00",
+        "employeeSocial": "183.80",
+        "substituteTax": "2.50",
+        "irpefTaxable": "1816.20",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "irpefWithheld": "267.73",
+        "roundingPrevious": "0.40",
+        "bodyDeductionsPrinted": "35.00",
+        "totalDeductionsPrinted": "489.43",
+        "yearEndAdjustment": null,
+        "roundingCurrent": "0.43",
+        "netPay": "1511.00",
+        "tfrMonthField": null,
+        "vacationPreviousYear": "5.00",
+        "vacationAccrued": "40.00",
+        "vacationUsed": null,
+        "vacationRemaining": "45.00",
+        "permitPreviousYear": null,
+        "permitAccrued": null,
+        "permitUsed": null,
+        "permitRemaining": null,
+        "rolPreviousYear": "10.00",
+        "rolAccrued": "20.00",
+        "rolUsed": null,
+        "rolRemaining": "30.00",
+        "employerKey": "01234567890",
+        "printedOn": "2031-02-27",
+        "ordinaryEarnings": "2000.00",
+        "refund730": null,
+        "regionalInstallment": "10.00",
+        "municipalWithheld": null,
+        "employeeFundRegular": "25.00",
+        "employeeFundAdjustments": null,
+        "employeeFundEnrollment": null,
+        "employerFundPrinted": "45.00",
+        "employerFundAdjustments": null,
+        "employerFundEnrollment": null,
+        "tfrContributionLine": "150.00",
+        "welfareCash": null,
+        "welfareInKind": null,
+        "compensatedCredit": null,
+        "bodyEarnings": "2000.00",
+        "bodyDeductions": "35.00",
+        "employerSocialTotal": null,
+        "gross": "2000.00",
+        "taxesTotal": "280.23",
+        "taxesNetOfRefunds": "280.23",
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00",
+        "tfrSource": "contribution_line"
+      },
+      "checks": [
+        {
+          "id": "irpef",
+          "severity": "error",
+          "status": "passed",
+          "expected": "267.73",
+          "actual": "267.73"
+        },
+        {
+          "id": "net",
+          "severity": "error",
+          "status": "passed",
+          "expected": "1511.00",
+          "actual": "1511.00"
+        },
+        {
+          "id": "body_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "35.00",
+          "actual": "35.00"
+        },
+        {
+          "id": "total_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "489.43",
+          "actual": "489.43"
+        },
+        {
+          "id": "substitute_tax",
+          "severity": "error",
+          "status": "passed",
+          "expected": "2.50",
+          "actual": "2.50"
+        },
+        {
+          "id": "leave_vacation",
+          "severity": "error",
+          "status": "passed",
+          "expected": "45.00",
+          "actual": "45.00"
+        },
+        {
+          "id": "leave_rol",
+          "severity": "error",
+          "status": "passed",
+          "expected": "30.00",
+          "actual": "30.00"
+        },
+        {
+          "id": "leave_permit",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "blank"
+        },
+        {
+          "id": "plausibility_net",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        },
+        {
+          "id": "plausibility_gross",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        }
+      ],
+      "events": [
+        {
+          "kind": "vacation",
+          "hours": "8.00",
+          "linePositions": [
+            3
+          ]
+        }
+      ],
+      "warnings": []
+    }
+  },
+  "MARCH": {
+    "parsed": {
+      "recognised": true,
+      "identity": {
+        "type": "ordinary",
+        "year": 2031,
+        "period": "2031-03-01"
+      },
+      "fields": [
+        {
+          "field": "bodyDeductions",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.36822
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:4",
+            "line:5"
+          ]
+        },
+        {
+          "field": "bodyDeductionsPrinted",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE CORPO",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.66993,
+            0.80718,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "35,00"
+        },
+        {
+          "field": "bodyEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "COMPETENZE",
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.33972
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:1",
+            "line:2",
+            "line:3"
+          ]
+        },
+        {
+          "field": "compensatedCredit",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "contractualGross",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "RETRIBUZIONE DI FATTO",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.1853,
+            0.16211,
+            0.19718
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "employeeFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundRegular",
+          "value": "25.00",
+          "unit": "eur",
+          "sourceLabel": "7101 FONDO C/DIPE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeKey",
+          "value": "901",
+          "unit": "text",
+          "sourceLabel": "CODICE",
+          "page": 1,
+          "bbox": [
+            0.52496,
+            0.12828,
+            0.5552,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "901"
+        },
+        {
+          "field": "employeeSocial",
+          "value": "183.80",
+          "unit": "eur",
+          "sourceLabel": "TOTALE CONTRIBUTI SOCIALI",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.58441,
+            0.94829,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "183,80"
+        },
+        {
+          "field": "employerFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundPrinted",
+          "value": "45.00",
+          "unit": "eur",
+          "sourceLabel": "9109 FONDO C/AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerKey",
+          "value": "01234567890",
+          "unit": "text",
+          "sourceLabel": "Cod.fiscale",
+          "page": 1,
+          "bbox": [
+            0.22258,
+            0.08552,
+            0.33346,
+            0.0974
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "Cod.fiscale : 01234567890"
+        },
+        {
+          "field": "employerSocialTotal",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "irpefGross",
+          "value": "417.73",
+          "unit": "eur",
+          "sourceLabel": "IRPEF LORDA",
+          "page": 1,
+          "bbox": [
+            0.64591,
+            0.64142,
+            0.70639,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "417,73"
+        },
+        {
+          "field": "irpefTaxable",
+          "value": "1816.20",
+          "unit": "eur",
+          "sourceLabel": "IMPONIBILE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.49473,
+            0.64142,
+            0.57536,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.816,20"
+        },
+        {
+          "field": "irpefWithheld",
+          "value": "267.73",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.64142,
+            0.94829,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "267,73"
+        },
+        {
+          "field": "municipalWithheld",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "netPay",
+          "value": "1511.00",
+          "unit": "eur",
+          "sourceLabel": "NETTO BUSTA",
+          "page": 1,
+          "bbox": [
+            0.87774,
+            0.72694,
+            0.95837,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.511,00"
+        },
+        {
+          "field": "ordinaryEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "2 LAVORO ORDIN.(mens.)",
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "periodLabel",
+          "value": "MARZO 2031",
+          "unit": "text",
+          "sourceLabel": "MESE RETRIBUITO",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.12828,
+            0.14195,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "MARZO 2031"
+        },
+        {
+          "field": "permitAccrued",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI MAT.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitPreviousYear",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI A.P.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitRemaining",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI RES.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "printedOn",
+          "value": "2031-03-27",
+          "unit": "date",
+          "sourceLabel": "stampato il",
+          "page": 1,
+          "bbox": [
+            0.67195,
+            0.94503,
+            0.82655,
+            0.95156
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "stampato il 27/03/31 alle ore 12:00:00"
+        },
+        {
+          "field": "refund730",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "regionalInstallment",
+          "value": "10.00",
+          "unit": "eur",
+          "sourceLabel": "1150 RATA ADD.REG. A.P.",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "rolAccrued",
+          "value": "20.00",
+          "unit": "hours",
+          "sourceLabel": "ROL MAT.",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.75545,
+            0.80718,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "20,00"
+        },
+        {
+          "field": "rolPreviousYear",
+          "value": "10.00",
+          "unit": "hours",
+          "sourceLabel": "ROL A.P.",
+          "page": 1,
+          "bbox": [
+            0.67615,
+            0.75545,
+            0.72655,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "10,00"
+        },
+        {
+          "field": "rolRemaining",
+          "value": "30.00",
+          "unit": "hours",
+          "sourceLabel": "ROL. RES.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.75545,
+            0.95837,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "30,00"
+        },
+        {
+          "field": "rolUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "ROL. GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "roundingCurrent",
+          "value": "0.43",
+          "unit": "eur",
+          "sourceLabel": "ARROTONDAMENTO ATTUALE",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.72694,
+            0.80718,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,43"
+        },
+        {
+          "field": "roundingPrevious",
+          "value": "0.40",
+          "unit": "eur",
+          "sourceLabel": "ARROTOND. PRECED.",
+          "page": 1,
+          "bbox": [
+            0.65599,
+            0.66993,
+            0.69631,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,40"
+        },
+        {
+          "field": "substituteTax",
+          "value": "2.50",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF T.S.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.61291,
+            0.94829,
+            0.62479
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2,50"
+        },
+        {
+          "field": "taxDeductions",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE DETRAZIONI",
+          "page": 1,
+          "bbox": [
+            0.74671,
+            0.64142,
+            0.80718,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "150,00"
+        },
+        {
+          "field": "tfrContributionLine",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "8003 CONTRIBUZIONE TFR",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "tfrMonthField",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TFR MESE",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "totalDeductionsPrinted",
+          "value": "489.43",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.66993,
+            0.94829,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "489,43"
+        },
+        {
+          "field": "totalGrossPrinted",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE LORDO",
+          "page": 1,
+          "bbox": [
+            0.09155,
+            0.58441,
+            0.17219,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "vacationAccrued",
+          "value": "40.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE MAT.",
+          "page": 1,
+          "bbox": [
+            0.14195,
+            0.75545,
+            0.19235,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "40,00"
+        },
+        {
+          "field": "vacationPreviousYear",
+          "value": "5.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE A.P.",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.75545,
+            0.12179,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "vacationRemaining",
+          "value": "45.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE RES.",
+          "page": 1,
+          "bbox": [
+            0.30322,
+            0.75545,
+            0.35362,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "45,00"
+        },
+        {
+          "field": "vacationUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "FERIE GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareCash",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareInKind",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "yearEndAdjustment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "CONGUAGLIO IRPEF +/-",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        }
+      ],
+      "lines": [
+        {
+          "position": 1,
+          "code": "2",
+          "description": "LAVORO ORDIN.(mens.)",
+          "quantity": "1.00",
+          "quantityUnit": "months",
+          "rate": "2000.00000",
+          "earningsCents": "200000n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "role": "ordinary_earnings"
+        },
+        {
+          "position": 2,
+          "code": "300",
+          "description": "ASSENZA X FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "-11.56069",
+          "earningsCents": "-9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.31358,
+            0.69631,
+            0.32546
+          ],
+          "rawText": "300 ASSENZA X FERIE A.C.(hh) 8,00 -11,56069 -92,49",
+          "role": "vacation_offset"
+        },
+        {
+          "position": 3,
+          "code": "301",
+          "description": "FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "11.56069",
+          "earningsCents": "9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.32784,
+            0.69631,
+            0.33972
+          ],
+          "rawText": "301 FERIE A.C.(hh) 8,00 11,56069 92,49",
+          "role": "vacation_event"
+        },
+        {
+          "position": 4,
+          "code": "1150",
+          "description": "RATA ADD.REG. A.P.",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "1000n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "role": "regional_installment"
+        },
+        {
+          "position": 5,
+          "code": "7101",
+          "description": "FONDO C/DIPE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "2500n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "role": "employee_fund"
+        },
+        {
+          "position": 6,
+          "code": "8003",
+          "description": "CONTRIBUZIONE TFR",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "15000n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "role": "tfr_contribution"
+        },
+        {
+          "position": 7,
+          "code": "9109",
+          "description": "FONDO C/AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "4500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "role": "employer_fund"
+        },
+        {
+          "position": 8,
+          "code": "9110",
+          "description": "COMUNICAZIONE DIPENDENTE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "2500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.39911,
+            0.95837,
+            0.41098
+          ],
+          "rawText": "9110 COMUNICAZIONE DIPENDENTE 25,00",
+          "role": "statistical"
+        },
+        {
+          "position": 9,
+          "code": "9838",
+          "description": "IMPOSTA SOST. 5% L.199/25",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "250n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.41336,
+            0.95837,
+            0.42524
+          ],
+          "rawText": "9838 IMPOSTA SOST. 5% L.199/25 2,50",
+          "role": "substitute_tax"
+        }
+      ],
+      "warnings": [],
+      "textChars": 1548
+    },
+    "assembled": {
+      "values": {
+        "periodLabel": "MARZO 2031",
+        "employeeKey": "901",
+        "contractualGross": "2000.00",
+        "totalGrossPrinted": "2000.00",
+        "employeeSocial": "183.80",
+        "substituteTax": "2.50",
+        "irpefTaxable": "1816.20",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "irpefWithheld": "267.73",
+        "roundingPrevious": "0.40",
+        "bodyDeductionsPrinted": "35.00",
+        "totalDeductionsPrinted": "489.43",
+        "yearEndAdjustment": null,
+        "roundingCurrent": "0.43",
+        "netPay": "1511.00",
+        "tfrMonthField": null,
+        "vacationPreviousYear": "5.00",
+        "vacationAccrued": "40.00",
+        "vacationUsed": null,
+        "vacationRemaining": "45.00",
+        "permitPreviousYear": null,
+        "permitAccrued": null,
+        "permitUsed": null,
+        "permitRemaining": null,
+        "rolPreviousYear": "10.00",
+        "rolAccrued": "20.00",
+        "rolUsed": null,
+        "rolRemaining": "30.00",
+        "employerKey": "01234567890",
+        "printedOn": "2031-03-27",
+        "ordinaryEarnings": "2000.00",
+        "refund730": null,
+        "regionalInstallment": "10.00",
+        "municipalWithheld": null,
+        "employeeFundRegular": "25.00",
+        "employeeFundAdjustments": null,
+        "employeeFundEnrollment": null,
+        "employerFundPrinted": "45.00",
+        "employerFundAdjustments": null,
+        "employerFundEnrollment": null,
+        "tfrContributionLine": "150.00",
+        "welfareCash": null,
+        "welfareInKind": null,
+        "compensatedCredit": null,
+        "bodyEarnings": "2000.00",
+        "bodyDeductions": "35.00",
+        "employerSocialTotal": null,
+        "gross": "2000.00",
+        "taxesTotal": "280.23",
+        "taxesNetOfRefunds": "280.23",
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00",
+        "tfrSource": "contribution_line"
+      },
+      "checks": [
+        {
+          "id": "irpef",
+          "severity": "error",
+          "status": "passed",
+          "expected": "267.73",
+          "actual": "267.73"
+        },
+        {
+          "id": "net",
+          "severity": "error",
+          "status": "passed",
+          "expected": "1511.00",
+          "actual": "1511.00"
+        },
+        {
+          "id": "body_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "35.00",
+          "actual": "35.00"
+        },
+        {
+          "id": "total_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "489.43",
+          "actual": "489.43"
+        },
+        {
+          "id": "substitute_tax",
+          "severity": "error",
+          "status": "passed",
+          "expected": "2.50",
+          "actual": "2.50"
+        },
+        {
+          "id": "leave_vacation",
+          "severity": "error",
+          "status": "passed",
+          "expected": "45.00",
+          "actual": "45.00"
+        },
+        {
+          "id": "leave_rol",
+          "severity": "error",
+          "status": "passed",
+          "expected": "30.00",
+          "actual": "30.00"
+        },
+        {
+          "id": "leave_permit",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "blank"
+        },
+        {
+          "id": "plausibility_net",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        },
+        {
+          "id": "plausibility_gross",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        }
+      ],
+      "events": [
+        {
+          "kind": "vacation",
+          "hours": "8.00",
+          "linePositions": [
+            3
+          ]
+        }
+      ],
+      "warnings": []
+    }
+  },
+  "APRIL": {
+    "parsed": {
+      "recognised": true,
+      "identity": {
+        "type": "ordinary",
+        "year": 2031,
+        "period": "2031-04-01"
+      },
+      "fields": [
+        {
+          "field": "bodyDeductions",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.36822
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:4",
+            "line:5"
+          ]
+        },
+        {
+          "field": "bodyDeductionsPrinted",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE CORPO",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.66993,
+            0.80718,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "35,00"
+        },
+        {
+          "field": "bodyEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "COMPETENZE",
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.33972
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:1",
+            "line:2",
+            "line:3"
+          ]
+        },
+        {
+          "field": "compensatedCredit",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "contractualGross",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "RETRIBUZIONE DI FATTO",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.1853,
+            0.16211,
+            0.19718
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "employeeFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundRegular",
+          "value": "25.00",
+          "unit": "eur",
+          "sourceLabel": "7101 FONDO C/DIPE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeKey",
+          "value": "901",
+          "unit": "text",
+          "sourceLabel": "CODICE",
+          "page": 1,
+          "bbox": [
+            0.52496,
+            0.12828,
+            0.5552,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "901"
+        },
+        {
+          "field": "employeeSocial",
+          "value": "183.80",
+          "unit": "eur",
+          "sourceLabel": "TOTALE CONTRIBUTI SOCIALI",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.58441,
+            0.94829,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "183,80"
+        },
+        {
+          "field": "employerFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundPrinted",
+          "value": "45.00",
+          "unit": "eur",
+          "sourceLabel": "9109 FONDO C/AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerKey",
+          "value": "01234567890",
+          "unit": "text",
+          "sourceLabel": "Cod.fiscale",
+          "page": 1,
+          "bbox": [
+            0.22258,
+            0.08552,
+            0.33346,
+            0.0974
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "Cod.fiscale : 01234567890"
+        },
+        {
+          "field": "employerSocialTotal",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "irpefGross",
+          "value": "417.73",
+          "unit": "eur",
+          "sourceLabel": "IRPEF LORDA",
+          "page": 1,
+          "bbox": [
+            0.64591,
+            0.64142,
+            0.70639,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "417,73"
+        },
+        {
+          "field": "irpefTaxable",
+          "value": "1816.20",
+          "unit": "eur",
+          "sourceLabel": "IMPONIBILE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.49473,
+            0.64142,
+            0.57536,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.816,20"
+        },
+        {
+          "field": "irpefWithheld",
+          "value": "267.73",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.64142,
+            0.94829,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "267,73"
+        },
+        {
+          "field": "municipalWithheld",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "netPay",
+          "value": "1514.00",
+          "unit": "eur",
+          "sourceLabel": "NETTO BUSTA",
+          "page": 1,
+          "bbox": [
+            0.87774,
+            0.72694,
+            0.95837,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.514,00"
+        },
+        {
+          "field": "ordinaryEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "2 LAVORO ORDIN.(mens.)",
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "periodLabel",
+          "value": "APRILE 2031",
+          "unit": "text",
+          "sourceLabel": "MESE RETRIBUITO",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.12828,
+            0.15203,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "APRILE 2031"
+        },
+        {
+          "field": "permitAccrued",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI MAT.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitPreviousYear",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI A.P.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitRemaining",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI RES.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "printedOn",
+          "value": "2031-04-28",
+          "unit": "date",
+          "sourceLabel": "stampato il",
+          "page": 1,
+          "bbox": [
+            0.67195,
+            0.94503,
+            0.82655,
+            0.95156
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "stampato il 28/04/31 alle ore 12:00:00"
+        },
+        {
+          "field": "refund730",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "regionalInstallment",
+          "value": "10.00",
+          "unit": "eur",
+          "sourceLabel": "1150 RATA ADD.REG. A.P.",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "rolAccrued",
+          "value": "26.66",
+          "unit": "hours",
+          "sourceLabel": "ROL MAT.",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.75545,
+            0.80718,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "26,66"
+        },
+        {
+          "field": "rolPreviousYear",
+          "value": "6.00",
+          "unit": "hours",
+          "sourceLabel": "ROL A.P.",
+          "page": 1,
+          "bbox": [
+            0.68623,
+            0.75545,
+            0.72655,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "6,00"
+        },
+        {
+          "field": "rolRemaining",
+          "value": "32.66",
+          "unit": "hours",
+          "sourceLabel": "ROL. RES.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.75545,
+            0.95837,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "32,66"
+        },
+        {
+          "field": "rolUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "ROL. GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "roundingCurrent",
+          "value": "0.96",
+          "unit": "eur",
+          "sourceLabel": "ARROTONDAMENTO ATTUALE",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.72694,
+            0.80718,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,96"
+        },
+        {
+          "field": "roundingPrevious",
+          "value": "0.43",
+          "unit": "eur",
+          "sourceLabel": "ARROTOND. PRECED.",
+          "page": 1,
+          "bbox": [
+            0.65599,
+            0.66993,
+            0.69631,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,43"
+        },
+        {
+          "field": "substituteTax",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF T.S.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "taxDeductions",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE DETRAZIONI",
+          "page": 1,
+          "bbox": [
+            0.74671,
+            0.64142,
+            0.80718,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "150,00"
+        },
+        {
+          "field": "tfrContributionLine",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "8003 CONTRIBUZIONE TFR",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "tfrMonthField",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TFR MESE",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "totalDeductionsPrinted",
+          "value": "486.96",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.66993,
+            0.94829,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "486,96"
+        },
+        {
+          "field": "totalGrossPrinted",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE LORDO",
+          "page": 1,
+          "bbox": [
+            0.09155,
+            0.58441,
+            0.17219,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "vacationAccrued",
+          "value": "46.66",
+          "unit": "hours",
+          "sourceLabel": "FERIE MAT.",
+          "page": 1,
+          "bbox": [
+            0.14195,
+            0.75545,
+            0.19235,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "46,66"
+        },
+        {
+          "field": "vacationPreviousYear",
+          "value": "5.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE A.P.",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.75545,
+            0.12179,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "vacationRemaining",
+          "value": "51.66",
+          "unit": "hours",
+          "sourceLabel": "FERIE RES.",
+          "page": 1,
+          "bbox": [
+            0.30322,
+            0.75545,
+            0.35362,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "51,66"
+        },
+        {
+          "field": "vacationUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "FERIE GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareCash",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareInKind",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "yearEndAdjustment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "CONGUAGLIO IRPEF +/-",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        }
+      ],
+      "lines": [
+        {
+          "position": 1,
+          "code": "2",
+          "description": "LAVORO ORDIN.(mens.)",
+          "quantity": "1.00",
+          "quantityUnit": "months",
+          "rate": "2000.00000",
+          "earningsCents": "200000n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "role": "ordinary_earnings"
+        },
+        {
+          "position": 2,
+          "code": "308",
+          "description": "ASSENZA X PERM. A.C.(hh)",
+          "quantity": "4.00",
+          "quantityUnit": "hours",
+          "rate": "-11.56069",
+          "earningsCents": "-4624n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.31358,
+            0.69631,
+            0.32546
+          ],
+          "rawText": "308 ASSENZA X PERM. A.C.(hh) 4,00 -11,56069 -46,24",
+          "role": "permit_offset"
+        },
+        {
+          "position": 3,
+          "code": "309",
+          "description": "PERMESSI A.C.(hh)",
+          "quantity": "4.00",
+          "quantityUnit": "hours",
+          "rate": "11.56069",
+          "earningsCents": "4624n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.32784,
+            0.69631,
+            0.33972
+          ],
+          "rawText": "309 PERMESSI A.C.(hh) 4,00 11,56069 46,24",
+          "role": "permit_event"
+        },
+        {
+          "position": 4,
+          "code": "1150",
+          "description": "RATA ADD.REG. A.P.",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "1000n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "role": "regional_installment"
+        },
+        {
+          "position": 5,
+          "code": "7101",
+          "description": "FONDO C/DIPE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "2500n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "role": "employee_fund"
+        },
+        {
+          "position": 6,
+          "code": "8003",
+          "description": "CONTRIBUZIONE TFR",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "15000n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "role": "tfr_contribution"
+        },
+        {
+          "position": 7,
+          "code": "9109",
+          "description": "FONDO C/AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "4500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "role": "employer_fund"
+        }
+      ],
+      "warnings": [],
+      "textChars": 1453
+    },
+    "assembled": {
+      "values": {
+        "periodLabel": "APRILE 2031",
+        "employeeKey": "901",
+        "contractualGross": "2000.00",
+        "totalGrossPrinted": "2000.00",
+        "employeeSocial": "183.80",
+        "substituteTax": null,
+        "irpefTaxable": "1816.20",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "irpefWithheld": "267.73",
+        "roundingPrevious": "0.43",
+        "bodyDeductionsPrinted": "35.00",
+        "totalDeductionsPrinted": "486.96",
+        "yearEndAdjustment": null,
+        "roundingCurrent": "0.96",
+        "netPay": "1514.00",
+        "tfrMonthField": null,
+        "vacationPreviousYear": "5.00",
+        "vacationAccrued": "46.66",
+        "vacationUsed": null,
+        "vacationRemaining": "51.66",
+        "permitPreviousYear": null,
+        "permitAccrued": null,
+        "permitUsed": null,
+        "permitRemaining": null,
+        "rolPreviousYear": "6.00",
+        "rolAccrued": "26.66",
+        "rolUsed": null,
+        "rolRemaining": "32.66",
+        "employerKey": "01234567890",
+        "printedOn": "2031-04-28",
+        "ordinaryEarnings": "2000.00",
+        "refund730": null,
+        "regionalInstallment": "10.00",
+        "municipalWithheld": null,
+        "employeeFundRegular": "25.00",
+        "employeeFundAdjustments": null,
+        "employeeFundEnrollment": null,
+        "employerFundPrinted": "45.00",
+        "employerFundAdjustments": null,
+        "employerFundEnrollment": null,
+        "tfrContributionLine": "150.00",
+        "welfareCash": null,
+        "welfareInKind": null,
+        "compensatedCredit": null,
+        "bodyEarnings": "2000.00",
+        "bodyDeductions": "35.00",
+        "employerSocialTotal": null,
+        "gross": "2000.00",
+        "taxesTotal": "277.73",
+        "taxesNetOfRefunds": "277.73",
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00",
+        "tfrSource": "contribution_line"
+      },
+      "checks": [
+        {
+          "id": "irpef",
+          "severity": "error",
+          "status": "passed",
+          "expected": "267.73",
+          "actual": "267.73"
+        },
+        {
+          "id": "net",
+          "severity": "error",
+          "status": "passed",
+          "expected": "1514.00",
+          "actual": "1514.00"
+        },
+        {
+          "id": "body_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "35.00",
+          "actual": "35.00"
+        },
+        {
+          "id": "total_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "486.96",
+          "actual": "486.96"
+        },
+        {
+          "id": "substitute_tax",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "single_source"
+        },
+        {
+          "id": "leave_vacation",
+          "severity": "error",
+          "status": "passed",
+          "expected": "51.66",
+          "actual": "51.66"
+        },
+        {
+          "id": "leave_rol",
+          "severity": "error",
+          "status": "passed",
+          "expected": "32.66",
+          "actual": "32.66"
+        },
+        {
+          "id": "leave_permit",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "blank"
+        },
+        {
+          "id": "plausibility_net",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        },
+        {
+          "id": "plausibility_gross",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        }
+      ],
+      "events": [
+        {
+          "kind": "rol",
+          "hours": "4.00",
+          "linePositions": [
+            3
+          ]
+        }
+      ],
+      "warnings": []
+    }
+  },
+  "MARCH_REPRINT": {
+    "parsed": {
+      "recognised": true,
+      "identity": {
+        "type": "ordinary",
+        "year": 2031,
+        "period": "2031-03-01"
+      },
+      "fields": [
+        {
+          "field": "bodyDeductions",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.36822
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:4",
+            "line:5"
+          ]
+        },
+        {
+          "field": "bodyDeductionsPrinted",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE CORPO",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.66993,
+            0.80718,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "35,00"
+        },
+        {
+          "field": "bodyEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "COMPETENZE",
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.33972
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:1",
+            "line:2",
+            "line:3"
+          ]
+        },
+        {
+          "field": "compensatedCredit",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "contractualGross",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "RETRIBUZIONE DI FATTO",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.1853,
+            0.16211,
+            0.19718
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "employeeFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundRegular",
+          "value": "25.00",
+          "unit": "eur",
+          "sourceLabel": "7101 FONDO C/DIPE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeKey",
+          "value": "901",
+          "unit": "text",
+          "sourceLabel": "CODICE",
+          "page": 1,
+          "bbox": [
+            0.52496,
+            0.12828,
+            0.5552,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "901"
+        },
+        {
+          "field": "employeeSocial",
+          "value": "183.80",
+          "unit": "eur",
+          "sourceLabel": "TOTALE CONTRIBUTI SOCIALI",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.58441,
+            0.94829,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "183,80"
+        },
+        {
+          "field": "employerFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundPrinted",
+          "value": "45.00",
+          "unit": "eur",
+          "sourceLabel": "9109 FONDO C/AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerKey",
+          "value": "01234567890",
+          "unit": "text",
+          "sourceLabel": "Cod.fiscale",
+          "page": 1,
+          "bbox": [
+            0.22258,
+            0.08552,
+            0.33346,
+            0.0974
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "Cod.fiscale : 01234567890"
+        },
+        {
+          "field": "employerSocialTotal",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "irpefGross",
+          "value": "417.73",
+          "unit": "eur",
+          "sourceLabel": "IRPEF LORDA",
+          "page": 1,
+          "bbox": [
+            0.64591,
+            0.64142,
+            0.70639,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "417,73"
+        },
+        {
+          "field": "irpefTaxable",
+          "value": "1816.20",
+          "unit": "eur",
+          "sourceLabel": "IMPONIBILE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.49473,
+            0.64142,
+            0.57536,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.816,20"
+        },
+        {
+          "field": "irpefWithheld",
+          "value": "267.73",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.64142,
+            0.94829,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "267,73"
+        },
+        {
+          "field": "municipalWithheld",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "netPay",
+          "value": "1511.00",
+          "unit": "eur",
+          "sourceLabel": "NETTO BUSTA",
+          "page": 1,
+          "bbox": [
+            0.87774,
+            0.72694,
+            0.95837,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.511,00"
+        },
+        {
+          "field": "ordinaryEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "2 LAVORO ORDIN.(mens.)",
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "periodLabel",
+          "value": "MARZO 2031",
+          "unit": "text",
+          "sourceLabel": "MESE RETRIBUITO",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.12828,
+            0.14195,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "MARZO 2031"
+        },
+        {
+          "field": "permitAccrued",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI MAT.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitPreviousYear",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI A.P.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitRemaining",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI RES.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "printedOn",
+          "value": "2031-04-02",
+          "unit": "date",
+          "sourceLabel": "stampato il",
+          "page": 1,
+          "bbox": [
+            0.67195,
+            0.94503,
+            0.82655,
+            0.95156
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "stampato il 02/04/31 alle ore 12:00:00"
+        },
+        {
+          "field": "refund730",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "regionalInstallment",
+          "value": "10.00",
+          "unit": "eur",
+          "sourceLabel": "1150 RATA ADD.REG. A.P.",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "rolAccrued",
+          "value": "20.00",
+          "unit": "hours",
+          "sourceLabel": "ROL MAT.",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.75545,
+            0.80718,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "20,00"
+        },
+        {
+          "field": "rolPreviousYear",
+          "value": "10.00",
+          "unit": "hours",
+          "sourceLabel": "ROL A.P.",
+          "page": 1,
+          "bbox": [
+            0.67615,
+            0.75545,
+            0.72655,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "10,00"
+        },
+        {
+          "field": "rolRemaining",
+          "value": "30.00",
+          "unit": "hours",
+          "sourceLabel": "ROL. RES.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.75545,
+            0.95837,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "30,00"
+        },
+        {
+          "field": "rolUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "ROL. GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "roundingCurrent",
+          "value": "0.43",
+          "unit": "eur",
+          "sourceLabel": "ARROTONDAMENTO ATTUALE",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.72694,
+            0.80718,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,43"
+        },
+        {
+          "field": "roundingPrevious",
+          "value": "0.40",
+          "unit": "eur",
+          "sourceLabel": "ARROTOND. PRECED.",
+          "page": 1,
+          "bbox": [
+            0.65599,
+            0.66993,
+            0.69631,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,40"
+        },
+        {
+          "field": "substituteTax",
+          "value": "2.50",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF T.S.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.61291,
+            0.94829,
+            0.62479
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2,50"
+        },
+        {
+          "field": "taxDeductions",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE DETRAZIONI",
+          "page": 1,
+          "bbox": [
+            0.74671,
+            0.64142,
+            0.80718,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "150,00"
+        },
+        {
+          "field": "tfrContributionLine",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "8003 CONTRIBUZIONE TFR",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "tfrMonthField",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TFR MESE",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "totalDeductionsPrinted",
+          "value": "489.43",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.66993,
+            0.94829,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "489,43"
+        },
+        {
+          "field": "totalGrossPrinted",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE LORDO",
+          "page": 1,
+          "bbox": [
+            0.09155,
+            0.58441,
+            0.17219,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "vacationAccrued",
+          "value": "40.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE MAT.",
+          "page": 1,
+          "bbox": [
+            0.14195,
+            0.75545,
+            0.19235,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "40,00"
+        },
+        {
+          "field": "vacationPreviousYear",
+          "value": "5.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE A.P.",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.75545,
+            0.12179,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "vacationRemaining",
+          "value": "45.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE RES.",
+          "page": 1,
+          "bbox": [
+            0.30322,
+            0.75545,
+            0.35362,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "45,00"
+        },
+        {
+          "field": "vacationUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "FERIE GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareCash",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareInKind",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "yearEndAdjustment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "CONGUAGLIO IRPEF +/-",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        }
+      ],
+      "lines": [
+        {
+          "position": 1,
+          "code": "2",
+          "description": "LAVORO ORDIN.(mens.)",
+          "quantity": "1.00",
+          "quantityUnit": "months",
+          "rate": "2000.00000",
+          "earningsCents": "200000n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "role": "ordinary_earnings"
+        },
+        {
+          "position": 2,
+          "code": "300",
+          "description": "ASSENZA X FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "-11.56069",
+          "earningsCents": "-9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.31358,
+            0.69631,
+            0.32546
+          ],
+          "rawText": "300 ASSENZA X FERIE A.C.(hh) 8,00 -11,56069 -92,49",
+          "role": "vacation_offset"
+        },
+        {
+          "position": 3,
+          "code": "301",
+          "description": "FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "11.56069",
+          "earningsCents": "9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.32784,
+            0.69631,
+            0.33972
+          ],
+          "rawText": "301 FERIE A.C.(hh) 8,00 11,56069 92,49",
+          "role": "vacation_event"
+        },
+        {
+          "position": 4,
+          "code": "1150",
+          "description": "RATA ADD.REG. A.P.",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "1000n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "role": "regional_installment"
+        },
+        {
+          "position": 5,
+          "code": "7101",
+          "description": "FONDO C/DIPE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "2500n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "role": "employee_fund"
+        },
+        {
+          "position": 6,
+          "code": "8003",
+          "description": "CONTRIBUZIONE TFR",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "15000n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "role": "tfr_contribution"
+        },
+        {
+          "position": 7,
+          "code": "9109",
+          "description": "FONDO C/AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "4500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "role": "employer_fund"
+        },
+        {
+          "position": 8,
+          "code": "9110",
+          "description": "COMUNICAZIONE DIPENDENTE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "2500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.39911,
+            0.95837,
+            0.41098
+          ],
+          "rawText": "9110 COMUNICAZIONE DIPENDENTE 25,00",
+          "role": "statistical"
+        },
+        {
+          "position": 9,
+          "code": "9838",
+          "description": "IMPOSTA SOST. 5% L.199/25",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "250n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.41336,
+            0.95837,
+            0.42524
+          ],
+          "rawText": "9838 IMPOSTA SOST. 5% L.199/25 2,50",
+          "role": "substitute_tax"
+        }
+      ],
+      "warnings": [],
+      "textChars": 1548
+    },
+    "assembled": {
+      "values": {
+        "periodLabel": "MARZO 2031",
+        "employeeKey": "901",
+        "contractualGross": "2000.00",
+        "totalGrossPrinted": "2000.00",
+        "employeeSocial": "183.80",
+        "substituteTax": "2.50",
+        "irpefTaxable": "1816.20",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "irpefWithheld": "267.73",
+        "roundingPrevious": "0.40",
+        "bodyDeductionsPrinted": "35.00",
+        "totalDeductionsPrinted": "489.43",
+        "yearEndAdjustment": null,
+        "roundingCurrent": "0.43",
+        "netPay": "1511.00",
+        "tfrMonthField": null,
+        "vacationPreviousYear": "5.00",
+        "vacationAccrued": "40.00",
+        "vacationUsed": null,
+        "vacationRemaining": "45.00",
+        "permitPreviousYear": null,
+        "permitAccrued": null,
+        "permitUsed": null,
+        "permitRemaining": null,
+        "rolPreviousYear": "10.00",
+        "rolAccrued": "20.00",
+        "rolUsed": null,
+        "rolRemaining": "30.00",
+        "employerKey": "01234567890",
+        "printedOn": "2031-04-02",
+        "ordinaryEarnings": "2000.00",
+        "refund730": null,
+        "regionalInstallment": "10.00",
+        "municipalWithheld": null,
+        "employeeFundRegular": "25.00",
+        "employeeFundAdjustments": null,
+        "employeeFundEnrollment": null,
+        "employerFundPrinted": "45.00",
+        "employerFundAdjustments": null,
+        "employerFundEnrollment": null,
+        "tfrContributionLine": "150.00",
+        "welfareCash": null,
+        "welfareInKind": null,
+        "compensatedCredit": null,
+        "bodyEarnings": "2000.00",
+        "bodyDeductions": "35.00",
+        "employerSocialTotal": null,
+        "gross": "2000.00",
+        "taxesTotal": "280.23",
+        "taxesNetOfRefunds": "280.23",
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00",
+        "tfrSource": "contribution_line"
+      },
+      "checks": [
+        {
+          "id": "irpef",
+          "severity": "error",
+          "status": "passed",
+          "expected": "267.73",
+          "actual": "267.73"
+        },
+        {
+          "id": "net",
+          "severity": "error",
+          "status": "passed",
+          "expected": "1511.00",
+          "actual": "1511.00"
+        },
+        {
+          "id": "body_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "35.00",
+          "actual": "35.00"
+        },
+        {
+          "id": "total_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "489.43",
+          "actual": "489.43"
+        },
+        {
+          "id": "substitute_tax",
+          "severity": "error",
+          "status": "passed",
+          "expected": "2.50",
+          "actual": "2.50"
+        },
+        {
+          "id": "leave_vacation",
+          "severity": "error",
+          "status": "passed",
+          "expected": "45.00",
+          "actual": "45.00"
+        },
+        {
+          "id": "leave_rol",
+          "severity": "error",
+          "status": "passed",
+          "expected": "30.00",
+          "actual": "30.00"
+        },
+        {
+          "id": "leave_permit",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "blank"
+        },
+        {
+          "id": "plausibility_net",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        },
+        {
+          "id": "plausibility_gross",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        }
+      ],
+      "events": [
+        {
+          "kind": "vacation",
+          "hours": "8.00",
+          "linePositions": [
+            3
+          ]
+        }
+      ],
+      "warnings": []
+    }
+  },
+  "MARCH_UNKNOWN_CODE": {
+    "parsed": {
+      "recognised": true,
+      "identity": {
+        "type": "ordinary",
+        "year": 2031,
+        "period": "2031-03-01"
+      },
+      "fields": [
+        {
+          "field": "bodyDeductions",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.36822
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:4",
+            "line:5"
+          ]
+        },
+        {
+          "field": "bodyDeductionsPrinted",
+          "value": "35.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE CORPO",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.66993,
+            0.80718,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "35,00"
+        },
+        {
+          "field": "bodyEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "COMPETENZE",
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.33972
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:1",
+            "line:2",
+            "line:3"
+          ]
+        },
+        {
+          "field": "compensatedCredit",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "contractualGross",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "RETRIBUZIONE DI FATTO",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.1853,
+            0.16211,
+            0.19718
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "employeeFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundRegular",
+          "value": "25.00",
+          "unit": "eur",
+          "sourceLabel": "7101 FONDO C/DIPE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeKey",
+          "value": "901",
+          "unit": "text",
+          "sourceLabel": "CODICE",
+          "page": 1,
+          "bbox": [
+            0.52496,
+            0.12828,
+            0.5552,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "901"
+        },
+        {
+          "field": "employeeSocial",
+          "value": "183.80",
+          "unit": "eur",
+          "sourceLabel": "TOTALE CONTRIBUTI SOCIALI",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.58441,
+            0.94829,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "183,80"
+        },
+        {
+          "field": "employerFundAdjustments",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundPrinted",
+          "value": "45.00",
+          "unit": "eur",
+          "sourceLabel": "9109 FONDO C/AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerKey",
+          "value": "01234567890",
+          "unit": "text",
+          "sourceLabel": "Cod.fiscale",
+          "page": 1,
+          "bbox": [
+            0.22258,
+            0.08552,
+            0.33346,
+            0.0974
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "Cod.fiscale : 01234567890"
+        },
+        {
+          "field": "employerSocialTotal",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "irpefGross",
+          "value": "417.73",
+          "unit": "eur",
+          "sourceLabel": "IRPEF LORDA",
+          "page": 1,
+          "bbox": [
+            0.64591,
+            0.64142,
+            0.70639,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "417,73"
+        },
+        {
+          "field": "irpefTaxable",
+          "value": "1816.20",
+          "unit": "eur",
+          "sourceLabel": "IMPONIBILE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.49473,
+            0.64142,
+            0.57536,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.816,20"
+        },
+        {
+          "field": "irpefWithheld",
+          "value": "267.73",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.64142,
+            0.94829,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "267,73"
+        },
+        {
+          "field": "municipalWithheld",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "netPay",
+          "value": "1511.00",
+          "unit": "eur",
+          "sourceLabel": "NETTO BUSTA",
+          "page": 1,
+          "bbox": [
+            0.87774,
+            0.72694,
+            0.95837,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1.511,00"
+        },
+        {
+          "field": "ordinaryEarnings",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "2 LAVORO ORDIN.(mens.)",
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "periodLabel",
+          "value": "MARZO 2031",
+          "unit": "text",
+          "sourceLabel": "MESE RETRIBUITO",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.12828,
+            0.14195,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "MARZO 2031"
+        },
+        {
+          "field": "permitAccrued",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI MAT.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitPreviousYear",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI A.P.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitRemaining",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI RES.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "printedOn",
+          "value": "2031-03-29",
+          "unit": "date",
+          "sourceLabel": "stampato il",
+          "page": 1,
+          "bbox": [
+            0.67195,
+            0.94503,
+            0.82655,
+            0.95156
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "stampato il 29/03/31 alle ore 12:00:00"
+        },
+        {
+          "field": "refund730",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "regionalInstallment",
+          "value": "10.00",
+          "unit": "eur",
+          "sourceLabel": "1150 RATA ADD.REG. A.P.",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "rolAccrued",
+          "value": "20.00",
+          "unit": "hours",
+          "sourceLabel": "ROL MAT.",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.75545,
+            0.80718,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "20,00"
+        },
+        {
+          "field": "rolPreviousYear",
+          "value": "10.00",
+          "unit": "hours",
+          "sourceLabel": "ROL A.P.",
+          "page": 1,
+          "bbox": [
+            0.67615,
+            0.75545,
+            0.72655,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "10,00"
+        },
+        {
+          "field": "rolRemaining",
+          "value": "30.00",
+          "unit": "hours",
+          "sourceLabel": "ROL. RES.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.75545,
+            0.95837,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "30,00"
+        },
+        {
+          "field": "rolUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "ROL. GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "roundingCurrent",
+          "value": "0.43",
+          "unit": "eur",
+          "sourceLabel": "ARROTONDAMENTO ATTUALE",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.72694,
+            0.80718,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,43"
+        },
+        {
+          "field": "roundingPrevious",
+          "value": "0.40",
+          "unit": "eur",
+          "sourceLabel": "ARROTOND. PRECED.",
+          "page": 1,
+          "bbox": [
+            0.65599,
+            0.66993,
+            0.69631,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,40"
+        },
+        {
+          "field": "substituteTax",
+          "value": "2.50",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF T.S.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.61291,
+            0.94829,
+            0.62479
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2,50"
+        },
+        {
+          "field": "taxDeductions",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE DETRAZIONI",
+          "page": 1,
+          "bbox": [
+            0.74671,
+            0.64142,
+            0.80718,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "150,00"
+        },
+        {
+          "field": "tfrContributionLine",
+          "value": "150.00",
+          "unit": "eur",
+          "sourceLabel": "8003 CONTRIBUZIONE TFR",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "tfrMonthField",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TFR MESE",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "totalDeductionsPrinted",
+          "value": "489.43",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.66993,
+            0.94829,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "489,43"
+        },
+        {
+          "field": "totalGrossPrinted",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE LORDO",
+          "page": 1,
+          "bbox": [
+            0.09155,
+            0.58441,
+            0.17219,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "vacationAccrued",
+          "value": "40.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE MAT.",
+          "page": 1,
+          "bbox": [
+            0.14195,
+            0.75545,
+            0.19235,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "40,00"
+        },
+        {
+          "field": "vacationPreviousYear",
+          "value": "5.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE A.P.",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.75545,
+            0.12179,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "vacationRemaining",
+          "value": "45.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE RES.",
+          "page": 1,
+          "bbox": [
+            0.30322,
+            0.75545,
+            0.35362,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "45,00"
+        },
+        {
+          "field": "vacationUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "FERIE GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareCash",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareInKind",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "yearEndAdjustment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "CONGUAGLIO IRPEF +/-",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        }
+      ],
+      "lines": [
+        {
+          "position": 1,
+          "code": "2",
+          "description": "LAVORO ORDIN.(mens.)",
+          "quantity": "1.00",
+          "quantityUnit": "months",
+          "rate": "2000.00000",
+          "earningsCents": "200000n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.07139,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "rawText": "2 LAVORO ORDIN.(mens.) 1,00 2.000,00000 2.000,00",
+          "role": "ordinary_earnings"
+        },
+        {
+          "position": 2,
+          "code": "300",
+          "description": "ASSENZA X FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "-11.56069",
+          "earningsCents": "-9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.31358,
+            0.69631,
+            0.32546
+          ],
+          "rawText": "300 ASSENZA X FERIE A.C.(hh) 8,00 -11,56069 -92,49",
+          "role": "vacation_offset"
+        },
+        {
+          "position": 3,
+          "code": "301",
+          "description": "FERIE A.C.(hh)",
+          "quantity": "8.00",
+          "quantityUnit": "hours",
+          "rate": "11.56069",
+          "earningsCents": "9249n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.32784,
+            0.69631,
+            0.33972
+          ],
+          "rawText": "301 FERIE A.C.(hh) 8,00 11,56069 92,49",
+          "role": "vacation_event"
+        },
+        {
+          "position": 4,
+          "code": "1150",
+          "description": "RATA ADD.REG. A.P.",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "1000n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.82734,
+            0.35397
+          ],
+          "rawText": "1150 RATA ADD.REG. A.P. 10,00",
+          "role": "regional_installment"
+        },
+        {
+          "position": 5,
+          "code": "7101",
+          "description": "FONDO C/DIPE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "2500n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.35635,
+            0.82734,
+            0.36822
+          ],
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "role": "employee_fund"
+        },
+        {
+          "position": 6,
+          "code": "8003",
+          "description": "CONTRIBUZIONE TFR",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "15000n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.3706,
+            0.95837,
+            0.38248
+          ],
+          "rawText": "8003 CONTRIBUZIONE TFR 150,00",
+          "role": "tfr_contribution"
+        },
+        {
+          "position": 7,
+          "code": "9109",
+          "description": "FONDO C/AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "4500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.38485,
+            0.95837,
+            0.39673
+          ],
+          "rawText": "9109 FONDO C/AZIENDA 45,00",
+          "role": "employer_fund"
+        },
+        {
+          "position": 8,
+          "code": "9110",
+          "description": "COMUNICAZIONE DIPENDENTE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "2500n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.39911,
+            0.95837,
+            0.41098
+          ],
+          "rawText": "9110 COMUNICAZIONE DIPENDENTE 25,00",
+          "role": "statistical"
+        },
+        {
+          "position": 9,
+          "code": "9838",
+          "description": "IMPOSTA SOST. 5% L.199/25",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "250n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.41336,
+            0.95837,
+            0.42524
+          ],
+          "rawText": "9838 IMPOSTA SOST. 5% L.199/25 2,50",
+          "role": "substitute_tax"
+        },
+        {
+          "position": 10,
+          "code": "5555",
+          "description": "VOCE SCONOSCIUTA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "100n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.42761,
+            0.95837,
+            0.43949
+          ],
+          "rawText": "5555 VOCE SCONOSCIUTA 1,00",
+          "role": "other"
+        }
+      ],
+      "warnings": [
+        {
+          "code": "unknown_code",
+          "detail": {
+            "code": "5555"
+          }
+        }
+      ],
+      "textChars": 1573
+    },
+    "assembled": {
+      "values": {
+        "periodLabel": "MARZO 2031",
+        "employeeKey": "901",
+        "contractualGross": "2000.00",
+        "totalGrossPrinted": "2000.00",
+        "employeeSocial": "183.80",
+        "substituteTax": "2.50",
+        "irpefTaxable": "1816.20",
+        "irpefGross": "417.73",
+        "taxDeductions": "150.00",
+        "irpefWithheld": "267.73",
+        "roundingPrevious": "0.40",
+        "bodyDeductionsPrinted": "35.00",
+        "totalDeductionsPrinted": "489.43",
+        "yearEndAdjustment": null,
+        "roundingCurrent": "0.43",
+        "netPay": "1511.00",
+        "tfrMonthField": null,
+        "vacationPreviousYear": "5.00",
+        "vacationAccrued": "40.00",
+        "vacationUsed": null,
+        "vacationRemaining": "45.00",
+        "permitPreviousYear": null,
+        "permitAccrued": null,
+        "permitUsed": null,
+        "permitRemaining": null,
+        "rolPreviousYear": "10.00",
+        "rolAccrued": "20.00",
+        "rolUsed": null,
+        "rolRemaining": "30.00",
+        "employerKey": "01234567890",
+        "printedOn": "2031-03-29",
+        "ordinaryEarnings": "2000.00",
+        "refund730": null,
+        "regionalInstallment": "10.00",
+        "municipalWithheld": null,
+        "employeeFundRegular": "25.00",
+        "employeeFundAdjustments": null,
+        "employeeFundEnrollment": null,
+        "employerFundPrinted": "45.00",
+        "employerFundAdjustments": null,
+        "employerFundEnrollment": null,
+        "tfrContributionLine": "150.00",
+        "welfareCash": null,
+        "welfareInKind": null,
+        "compensatedCredit": null,
+        "bodyEarnings": "2000.00",
+        "bodyDeductions": "35.00",
+        "employerSocialTotal": null,
+        "gross": "2000.00",
+        "taxesTotal": "280.23",
+        "taxesNetOfRefunds": "280.23",
+        "employeeFundEffective": "25.00",
+        "employerFundEffective": "45.00",
+        "tfrSelected": "150.00",
+        "tfrSource": "contribution_line"
+      },
+      "checks": [
+        {
+          "id": "irpef",
+          "severity": "error",
+          "status": "passed",
+          "expected": "267.73",
+          "actual": "267.73"
+        },
+        {
+          "id": "net",
+          "severity": "error",
+          "status": "passed",
+          "expected": "1511.00",
+          "actual": "1511.00"
+        },
+        {
+          "id": "body_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "35.00",
+          "actual": "35.00"
+        },
+        {
+          "id": "total_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "489.43",
+          "actual": "489.43"
+        },
+        {
+          "id": "substitute_tax",
+          "severity": "error",
+          "status": "passed",
+          "expected": "2.50",
+          "actual": "2.50"
+        },
+        {
+          "id": "leave_vacation",
+          "severity": "error",
+          "status": "passed",
+          "expected": "45.00",
+          "actual": "45.00"
+        },
+        {
+          "id": "leave_rol",
+          "severity": "error",
+          "status": "passed",
+          "expected": "30.00",
+          "actual": "30.00"
+        },
+        {
+          "id": "leave_permit",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "blank"
+        },
+        {
+          "id": "plausibility_net",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        },
+        {
+          "id": "plausibility_gross",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "no_history"
+        }
+      ],
+      "events": [
+        {
+          "kind": "vacation",
+          "hours": "8.00",
+          "linePositions": [
+            3
+          ]
+        }
+      ],
+      "warnings": []
+    }
+  },
+  "THIRTEENTH": {
+    "parsed": {
+      "recognised": true,
+      "identity": {
+        "type": "thirteenth",
+        "year": 2031,
+        "period": null
+      },
+      "fields": [
+        {
+          "field": "bodyDeductions",
+          "value": "5.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.31358,
+            0.82734,
+            0.33972
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:2",
+            "line:3"
+          ]
+        },
+        {
+          "field": "bodyDeductionsPrinted",
+          "value": "5.00",
+          "unit": "eur",
+          "sourceLabel": "TRATTENUTE CORPO",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.66993,
+            0.80718,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "bodyEarnings",
+          "value": "500.00",
+          "unit": "eur",
+          "sourceLabel": "COMPETENZE",
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "origin": "derived",
+          "confidence": 0.9,
+          "rawText": null,
+          "derivedFrom": [
+            "line:1"
+          ]
+        },
+        {
+          "field": "compensatedCredit",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "contractualGross",
+          "value": "2000.00",
+          "unit": "eur",
+          "sourceLabel": "RETRIBUZIONE DI FATTO",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.1853,
+            0.16211,
+            0.19718
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "2.000,00"
+        },
+        {
+          "field": "employeeFundAdjustments",
+          "value": "-20.00",
+          "unit": "eur",
+          "sourceLabel": "8054 CONTRIBUTO DIPENDENTE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.32784,
+            0.82734,
+            0.33972
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8054 CONTRIBUTO DIPENDENTE -20,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employeeFundRegular",
+          "value": "25.00",
+          "unit": "eur",
+          "sourceLabel": "7101 FONDO C/DIPE",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.31358,
+            0.82734,
+            0.32546
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employeeKey",
+          "value": "901",
+          "unit": "text",
+          "sourceLabel": "CODICE",
+          "page": 1,
+          "bbox": [
+            0.52496,
+            0.12828,
+            0.5552,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "901"
+        },
+        {
+          "field": "employeeSocial",
+          "value": "45.95",
+          "unit": "eur",
+          "sourceLabel": "TOTALE CONTRIBUTI SOCIALI",
+          "page": 1,
+          "bbox": [
+            0.8979,
+            0.58441,
+            0.94829,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "45,95"
+        },
+        {
+          "field": "employerFundAdjustments",
+          "value": "-30.00",
+          "unit": "eur",
+          "sourceLabel": "8056 CONTRIBUZIONE C/AZIENDA",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.95837,
+            0.35397
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "8056 CONTRIBUZIONE C/AZIENDA -30,00",
+          "derivedFrom": null
+        },
+        {
+          "field": "employerFundEnrollment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerFundPrinted",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "employerKey",
+          "value": "01234567890",
+          "unit": "text",
+          "sourceLabel": "Cod.fiscale",
+          "page": 1,
+          "bbox": [
+            0.22258,
+            0.08552,
+            0.33346,
+            0.0974
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "Cod.fiscale : 01234567890"
+        },
+        {
+          "field": "employerSocialTotal",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "irpefGross",
+          "value": "104.43",
+          "unit": "eur",
+          "sourceLabel": "IRPEF LORDA",
+          "page": 1,
+          "bbox": [
+            0.64591,
+            0.64142,
+            0.70639,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "104,43"
+        },
+        {
+          "field": "irpefTaxable",
+          "value": "454.05",
+          "unit": "eur",
+          "sourceLabel": "IMPONIBILE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.51488,
+            0.64142,
+            0.57536,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "454,05"
+        },
+        {
+          "field": "irpefWithheld",
+          "value": "104.43",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.64142,
+            0.94829,
+            0.6533
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "104,43"
+        },
+        {
+          "field": "municipalWithheld",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "netPay",
+          "value": "345.00",
+          "unit": "eur",
+          "sourceLabel": "NETTO BUSTA",
+          "page": 1,
+          "bbox": [
+            0.8979,
+            0.72694,
+            0.95837,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "345,00"
+        },
+        {
+          "field": "ordinaryEarnings",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "periodLabel",
+          "value": "13a MENS. 2031",
+          "unit": "text",
+          "sourceLabel": "MESE RETRIBUITO",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.12828,
+            0.18227,
+            0.14016
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "13a MENS. 2031"
+        },
+        {
+          "field": "permitAccrued",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI MAT.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitPreviousYear",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI A.P.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitRemaining",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI RES.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "permitUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "PERMESSI GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "printedOn",
+          "value": "2031-12-12",
+          "unit": "date",
+          "sourceLabel": "stampato il",
+          "page": 1,
+          "bbox": [
+            0.67195,
+            0.94503,
+            0.82655,
+            0.95156
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "stampato il 12/12/31 alle ore 12:00:00"
+        },
+        {
+          "field": "refund730",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "regionalInstallment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "rolAccrued",
+          "value": "20.00",
+          "unit": "hours",
+          "sourceLabel": "ROL MAT.",
+          "page": 1,
+          "bbox": [
+            0.75679,
+            0.75545,
+            0.80718,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "20,00"
+        },
+        {
+          "field": "rolPreviousYear",
+          "value": "10.00",
+          "unit": "hours",
+          "sourceLabel": "ROL A.P.",
+          "page": 1,
+          "bbox": [
+            0.67615,
+            0.75545,
+            0.72655,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "10,00"
+        },
+        {
+          "field": "rolRemaining",
+          "value": "30.00",
+          "unit": "hours",
+          "sourceLabel": "ROL. RES.",
+          "page": 1,
+          "bbox": [
+            0.90798,
+            0.75545,
+            0.95837,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "30,00"
+        },
+        {
+          "field": "rolUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "ROL. GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "roundingCurrent",
+          "value": "0.81",
+          "unit": "eur",
+          "sourceLabel": "ARROTONDAMENTO ATTUALE",
+          "page": 1,
+          "bbox": [
+            0.76687,
+            0.72694,
+            0.80718,
+            0.73882
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,81"
+        },
+        {
+          "field": "roundingPrevious",
+          "value": "0.43",
+          "unit": "eur",
+          "sourceLabel": "ARROTOND. PRECED.",
+          "page": 1,
+          "bbox": [
+            0.65599,
+            0.66993,
+            0.69631,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "0,43"
+        },
+        {
+          "field": "substituteTax",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE IRPEF T.S.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "taxDeductions",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TOTALE DETRAZIONI",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "tfrContributionLine",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "tfrMonthField",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "TFR MESE",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "totalDeductionsPrinted",
+          "value": "155.81",
+          "unit": "eur",
+          "sourceLabel": "TOTALE TRATTENUTE",
+          "page": 1,
+          "bbox": [
+            0.88782,
+            0.66993,
+            0.94829,
+            0.68181
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "155,81"
+        },
+        {
+          "field": "totalGrossPrinted",
+          "value": "500.00",
+          "unit": "eur",
+          "sourceLabel": "TOTALE LORDO",
+          "page": 1,
+          "bbox": [
+            0.11171,
+            0.58441,
+            0.17219,
+            0.59628
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "500,00"
+        },
+        {
+          "field": "vacationAccrued",
+          "value": "40.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE MAT.",
+          "page": 1,
+          "bbox": [
+            0.14195,
+            0.75545,
+            0.19235,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "40,00"
+        },
+        {
+          "field": "vacationPreviousYear",
+          "value": "5.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE A.P.",
+          "page": 1,
+          "bbox": [
+            0.08147,
+            0.75545,
+            0.12179,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "5,00"
+        },
+        {
+          "field": "vacationRemaining",
+          "value": "45.00",
+          "unit": "hours",
+          "sourceLabel": "FERIE RES.",
+          "page": 1,
+          "bbox": [
+            0.30322,
+            0.75545,
+            0.35362,
+            0.76733
+          ],
+          "origin": "printed",
+          "confidence": 0.95,
+          "rawText": "45,00"
+        },
+        {
+          "field": "vacationUsed",
+          "value": null,
+          "unit": "hours",
+          "sourceLabel": "FERIE GOD.",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareCash",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "welfareInKind",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": null,
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        },
+        {
+          "field": "yearEndAdjustment",
+          "value": null,
+          "unit": "eur",
+          "sourceLabel": "CONGUAGLIO IRPEF +/-",
+          "page": null,
+          "bbox": null,
+          "origin": "printed",
+          "confidence": 0.9,
+          "rawText": null
+        }
+      ],
+      "lines": [
+        {
+          "position": 1,
+          "code": "901",
+          "description": "13^ MENSILITA'(hh)",
+          "quantity": "43.25",
+          "quantityUnit": "hours",
+          "rate": "11.56069",
+          "earningsCents": "50000n",
+          "deductionsCents": null,
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.05124,
+            0.29933,
+            0.69631,
+            0.31121
+          ],
+          "rawText": "901 13^ MENSILITA'(hh) 43,25 11,56069 500,00",
+          "role": "thirteenth_earnings"
+        },
+        {
+          "position": 2,
+          "code": "7101",
+          "description": "FONDO C/DIPE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "2500n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.31358,
+            0.82734,
+            0.32546
+          ],
+          "rawText": "7101 FONDO C/DIPE 25,00",
+          "role": "employee_fund"
+        },
+        {
+          "position": 3,
+          "code": "8054",
+          "description": "CONTRIBUTO DIPENDENTE",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": "-2000n",
+          "statisticalCents": null,
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.32784,
+            0.82734,
+            0.33972
+          ],
+          "rawText": "8054 CONTRIBUTO DIPENDENTE -20,00",
+          "role": "employee_fund_adjustment"
+        },
+        {
+          "position": 4,
+          "code": "8056",
+          "description": "CONTRIBUZIONE C/AZIENDA",
+          "quantity": null,
+          "quantityUnit": null,
+          "rate": null,
+          "earningsCents": null,
+          "deductionsCents": null,
+          "statisticalCents": "-3000n",
+          "page": 1,
+          "bbox": [
+            0.04116,
+            0.34209,
+            0.95837,
+            0.35397
+          ],
+          "rawText": "8056 CONTRIBUZIONE C/AZIENDA -30,00",
+          "role": "employer_fund_adjustment"
+        }
+      ],
+      "warnings": [],
+      "textChars": 1332
+    },
+    "assembled": {
+      "values": {
+        "periodLabel": "13a MENS. 2031",
+        "employeeKey": "901",
+        "contractualGross": "2000.00",
+        "totalGrossPrinted": "500.00",
+        "employeeSocial": "45.95",
+        "substituteTax": null,
+        "irpefTaxable": "454.05",
+        "irpefGross": "104.43",
+        "taxDeductions": null,
+        "irpefWithheld": "104.43",
+        "roundingPrevious": "0.43",
+        "bodyDeductionsPrinted": "5.00",
+        "totalDeductionsPrinted": "155.81",
+        "yearEndAdjustment": null,
+        "roundingCurrent": "0.81",
+        "netPay": "345.00",
+        "tfrMonthField": null,
+        "vacationPreviousYear": "5.00",
+        "vacationAccrued": "40.00",
+        "vacationUsed": null,
+        "vacationRemaining": "45.00",
+        "permitPreviousYear": null,
+        "permitAccrued": null,
+        "permitUsed": null,
+        "permitRemaining": null,
+        "rolPreviousYear": "10.00",
+        "rolAccrued": "20.00",
+        "rolUsed": null,
+        "rolRemaining": "30.00",
+        "employerKey": "01234567890",
+        "printedOn": "2031-12-12",
+        "ordinaryEarnings": null,
+        "refund730": null,
+        "regionalInstallment": null,
+        "municipalWithheld": null,
+        "employeeFundRegular": "25.00",
+        "employeeFundAdjustments": "-20.00",
+        "employeeFundEnrollment": null,
+        "employerFundPrinted": null,
+        "employerFundAdjustments": "-30.00",
+        "employerFundEnrollment": null,
+        "tfrContributionLine": null,
+        "welfareCash": null,
+        "welfareInKind": null,
+        "compensatedCredit": null,
+        "bodyEarnings": "500.00",
+        "bodyDeductions": "5.00",
+        "employerSocialTotal": null,
+        "gross": "500.00",
+        "taxesTotal": "104.43",
+        "taxesNetOfRefunds": "104.43",
+        "employeeFundEffective": "5.00",
+        "employerFundEffective": null,
+        "tfrSelected": null,
+        "tfrSource": null
+      },
+      "checks": [
+        {
+          "id": "irpef",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "extra_month"
+        },
+        {
+          "id": "net",
+          "severity": "error",
+          "status": "passed",
+          "expected": "345.00",
+          "actual": "345.00"
+        },
+        {
+          "id": "body_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "5.00",
+          "actual": "5.00"
+        },
+        {
+          "id": "total_deductions",
+          "severity": "error",
+          "status": "passed",
+          "expected": "155.81",
+          "actual": "155.81"
+        },
+        {
+          "id": "substitute_tax",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "single_source"
+        },
+        {
+          "id": "leave_vacation",
+          "severity": "error",
+          "status": "passed",
+          "expected": "45.00",
+          "actual": "45.00"
+        },
+        {
+          "id": "leave_rol",
+          "severity": "error",
+          "status": "passed",
+          "expected": "30.00",
+          "actual": "30.00"
+        },
+        {
+          "id": "leave_permit",
+          "severity": "error",
+          "status": "skipped",
+          "reason": "blank"
+        },
+        {
+          "id": "plausibility_net",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "extra_month"
+        },
+        {
+          "id": "plausibility_gross",
+          "severity": "warning",
+          "status": "skipped",
+          "reason": "extra_month"
+        }
+      ],
+      "events": [],
+      "warnings": []
+    }
+  }
+}

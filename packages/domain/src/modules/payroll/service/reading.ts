@@ -12,16 +12,27 @@ import { type Assembled, assemble } from "../parse/assemble";
 import { type HistoryPoint, type Warning } from "../parse/checks";
 import { moneyOf, type Values } from "../parse/derive";
 import type { PreviousPayslip } from "../parse/leave";
-import { PARSER_VERSION, parseReplyTeamsystem, type RawLine } from "../parse/reply-teamsystem";
-import { type CodeRole, parsePeriodLabel, type PayslipIdentity, type TfrSource } from "../rules";
+import { detectProfile, type RawLine, readWithProfile } from "../parse/read";
+import {
+  type CodeRole,
+  DEFAULT_PROFILE,
+  kindOfType,
+  parsePeriodLabel,
+  type PayslipIdentity,
+  type PayslipProfile,
+  profileOfVersion,
+  type TfrSource,
+} from "../rules";
 import { payrollRawLines, payslips } from "../schema";
 import { PayrollError, codeMapOf, type Payslip, type RawLineRow } from "./codes";
+import { writePairs } from "./fields";
 
 // ——— Reading (spec §7.8, §9.3 step 3) ———
 
 /**
- * The payslip as a kind of document (extension point E1): a PDF in `payslips/`, read by the parser
- * of the payroll's layout. The app registers it; payroll's own calls pass it directly.
+ * The payslip as a kind of document (extension point E1): a PDF in `payslips/`, read with the
+ * profile its labels match (`detectProfile`). The app registers it; payroll's own calls pass it
+ * directly.
  */
 export const PAYSLIP_DOCUMENT: DocumentReader = {
   kind: "payslip",
@@ -50,7 +61,9 @@ export function processPayslip(
 
 /**
  * Step 3 for a payslip: the text of the PDF, too little of it waits for OCR (spec D11), then the
- * parser. The raw lines are written, and the payslip recomputed, with the evidence.
+ * profile it matches and the reader. A document no profile matches is read with the default one
+ * and comes out unrecognised (`unknown_layout`). The raw lines are written, and the payslip
+ * recomputed, with the evidence.
  */
 async function readPayslip(ctx: Pick<Ctx, "userId">, documentId: string, bytes: Uint8Array): Promise<Reading> {
   let pages;
@@ -63,12 +76,13 @@ async function readPayslip(ctx: Pick<Ctx, "userId">, documentId: string, bytes: 
     (sum, page) => sum + page.items.reduce((count, item) => count + item.text.trim().length, 0),
     0,
   );
-  if (textChars < MIN_TEXT_CHARS) return { outcome: "needs_ocr", parserVersion: PARSER_VERSION };
-  const codeMap = await codeMapOf(ctx);
-  const parsed = parseReplyTeamsystem(pages, codeMap);
+  if (textChars < MIN_TEXT_CHARS) return { outcome: "needs_ocr", parserVersion: DEFAULT_PROFILE.parserVersion };
+  const profile = detectProfile(pages) ?? DEFAULT_PROFILE;
+  const codeMap = await codeMapOf(ctx, profile.id);
+  const parsed = readWithProfile(pages, profile, codeMap);
   return {
     outcome: "read",
-    parserVersion: PARSER_VERSION,
+    parserVersion: profile.parserVersion,
     evidence: parsed.fields,
     async write(tx) {
       await tx
@@ -95,12 +109,18 @@ async function readPayslip(ctx: Pick<Ctx, "userId">, documentId: string, bytes: 
           ),
         );
       }
-      await recompute(ctx, documentId, tx);
+      await recompute(ctx, documentId, tx, profile);
     },
   };
 }
 
 // ——— The fields as they stand ———
+
+/** The profile a document was read with, from the version stored on it; the default one otherwise. */
+export async function profileOf(ctx: Pick<Ctx, "userId">, documentId: string): Promise<PayslipProfile> {
+  const document = await getDocument(ctx, documentId);
+  return profileOfVersion(document?.parserVersion ?? null) ?? DEFAULT_PROFILE;
+}
 
 async function valuesOf(ctx: Pick<Ctx, "userId">, documentId: string, tx: Tx | Db): Promise<Values> {
   const rows = await listEvidence(ctx, documentId, tx);
@@ -149,7 +169,8 @@ function identityOf(values: Values): Identity | null {
 
 /**
  * The payslip before this one — same employer and employee, the month before — as it stands: the
- * applied one if there is, else the latest one still being reviewed. It confirms permits as ROL.
+ * applied one if there is, else the latest one still being reviewed. It confirms a use of leave
+ * against a balance.
  */
 async function previousOf(
   ctx: Pick<Ctx, "userId">,
@@ -175,7 +196,7 @@ async function previousOf(
     )
     .orderBy(desc(payslips.active), desc(payslips.updatedAt))
     .limit(1);
-  if (!row) return null;
+  if (!row?.documentId) return null;
   const document = await getDocument(ctx, row.documentId);
   if (!document || document.state === "rejected") return null;
   return { period, values: await valuesOf(ctx, row.documentId, tx) };
@@ -200,6 +221,8 @@ async function historyOf(ctx: Pick<Ctx, "userId">, identity: Identity, tx: Tx | 
 }
 
 export interface Recomputed {
+  /** The profile the payslip was read with: its checks, balances and lag. */
+  profile: PayslipProfile;
   identity: Identity | null;
   assembled: Assembled;
   warnings: Warning[];
@@ -212,8 +235,13 @@ export interface Recomputed {
  * evidence, checks, warnings and the payslip row, which exists as soon as the identity is known.
  * Run after a reading and after every decision on a field.
  */
-export async function recompute(ctx: Pick<Ctx, "userId">, documentId: string, tx: Tx): Promise<Recomputed> {
-  const state = await computeState(ctx, documentId, tx);
+export async function recompute(
+  ctx: Pick<Ctx, "userId">,
+  documentId: string,
+  tx: Tx,
+  profile?: PayslipProfile,
+): Promise<Recomputed> {
+  const state = await computeState(ctx, documentId, tx, profile);
   const { identity, assembled, warnings } = state;
   const derivedRows: EvidenceInput[] = FIELD_NAMES.filter(isDerived).map((field) => ({
     field,
@@ -243,6 +271,7 @@ export async function recompute(ctx: Pick<Ctx, "userId">, documentId: string, tx
     year: identity.year,
     period: identity.period,
     type: identity.type,
+    ...kindOfType(identity.type),
     printedOn: state.values.printedOn && isCivilDate(state.values.printedOn) ? state.values.printedOn : null,
     checks: assembled.checks,
     warnings,
@@ -259,6 +288,7 @@ export async function recompute(ctx: Pick<Ctx, "userId">, documentId: string, tx
         .insert(payslips)
         .values(userScoped(ctx).stamp({ documentId, ...row }))
         .returning();
+  await writePairs(ctx, payslip.id, amounts, tx);
   return { ...state, payslip };
 }
 
@@ -270,12 +300,15 @@ export async function computeState(
   ctx: Pick<Ctx, "userId">,
   documentId: string,
   executor: Tx | Db = getDb(),
+  readWith?: PayslipProfile,
 ): Promise<Recomputed & { values: Values }> {
+  const profile = readWith ?? (await profileOf(ctx, documentId));
   const values = await valuesOf(ctx, documentId, executor);
-  const codeMap = await codeMapOf(ctx);
+  const codeMap = await codeMapOf(ctx, profile.id);
   const lines = withRoles(await linesOf(ctx, documentId, executor), codeMap);
   const identity = identityOf(values);
   const assembled = assemble({
+    profile,
     type: identity?.type ?? "ordinary",
     period: identity?.period ?? null,
     values,
@@ -290,7 +323,7 @@ export async function computeState(
   if (!identity) warnings.push({ code: values.netPay || values.periodLabel ? "missing_identity" : "unknown_layout" });
   else {
     const active = await activeWithKey(ctx, identity, executor);
-    if (active && active.documentId !== documentId) {
+    if (active?.documentId && active.documentId !== documentId) {
       warnings.push({ code: "rectification", detail: { documentId: active.documentId } });
     }
   }
@@ -298,7 +331,7 @@ export async function computeState(
     .select()
     .from(payslips)
     .where(and(eq(payslips.documentId, documentId), userScoped(ctx).owns(payslips)));
-  return { identity, assembled, warnings, lines, payslip: payslip ?? null, values };
+  return { identity, assembled, warnings, lines, payslip: payslip ?? null, values, profile };
 }
 
 export async function activeWithKey(ctx: Pick<Ctx, "userId">, identity: Identity, tx: Tx | Db): Promise<Payslip | null> {

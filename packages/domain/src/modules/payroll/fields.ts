@@ -1,4 +1,8 @@
 import type { EvidenceUnit } from "../imports/rules";
+import { type LeaveKind } from "./rules/legacy";
+import { PAYSLIP_PROFILES } from "./rules/profiles";
+
+export { LEAVE_KINDS, type LeaveKind } from "./rules/legacy";
 
 /**
  * Every value a payslip carries (owner's spec L42–87, spec §7.8), in the groups the review screen
@@ -15,7 +19,7 @@ interface FieldSpec {
   llm?: boolean;
 }
 
-export const FIELDS = {
+const FIXED_FIELDS = {
   // Identity (owner's spec L34–40).
   periodLabel: { group: "identity", unit: "text" },
   employerKey: { group: "identity", unit: "text" },
@@ -71,50 +75,47 @@ export const FIELDS = {
   roundingPrevious: { group: "net", unit: "eur" },
   roundingCurrent: { group: "net", unit: "eur" },
   netPay: { group: "net", unit: "eur", llm: true },
-
-  // Leave balances as printed (L163–182): snapshots, never flows.
-  vacationPreviousYear: { group: "leave", unit: "hours" },
-  vacationAccrued: { group: "leave", unit: "hours" },
-  vacationUsed: { group: "leave", unit: "hours" },
-  vacationRemaining: { group: "leave", unit: "hours" },
-  permitPreviousYear: { group: "leave", unit: "hours" },
-  permitAccrued: { group: "leave", unit: "hours" },
-  permitUsed: { group: "leave", unit: "hours" },
-  permitRemaining: { group: "leave", unit: "hours" },
-  rolPreviousYear: { group: "leave", unit: "hours" },
-  rolAccrued: { group: "leave", unit: "hours" },
-  rolUsed: { group: "leave", unit: "hours" },
-  rolRemaining: { group: "leave", unit: "hours" },
 } as const satisfies Record<string, FieldSpec>;
+type FixedField = keyof typeof FIXED_FIELDS;
 
-export type FieldName = keyof typeof FIELDS;
-export const FIELD_NAMES = Object.keys(FIELDS) as FieldName[];
+/** The four printed columns of a balance, in the order previous year · accrued · used · remaining. */
+export const LEAVE_COLUMNS = ["PreviousYear", "Accrued", "Used", "Remaining"] as const;
+type LeaveColumn = (typeof LEAVE_COLUMNS)[number];
+type LeaveField = `${LeaveKind}${LeaveColumn}`;
+const LEAVE_SPEC = { group: "leave", unit: "hours" } as const;
+
+export function leaveField(kind: LeaveKind, column: LeaveColumn): LeaveField {
+  return `${kind}${column}`;
+}
+
+// The leave balances as printed (L163–182: snapshots, never flows): four per balance the profiles
+// read, in the order their forms print them. Built from data, so the type is asserted once here.
+const LEAVE_FIELDS = Object.fromEntries(
+  PAYSLIP_PROFILES.flatMap((profile) => profile.balances).flatMap((balance) =>
+    LEAVE_COLUMNS.map((column) => [leaveField(balance.kind, column), LEAVE_SPEC]),
+  ),
+) as Readonly<Record<LeaveField, typeof LEAVE_SPEC>>;
+
+export const FIELDS = { ...FIXED_FIELDS, ...LEAVE_FIELDS };
+
+export type FieldName = FixedField | LeaveField;
+export const FIELD_NAMES: readonly FieldName[] = Object.keys(FIELDS).filter(isFieldName);
 
 export function isFieldName(value: string): value is FieldName {
   return Object.hasOwn(FIELDS, value);
 }
 
-type SpecOf<F extends FieldName> = (typeof FIELDS)[F];
-export type MoneyField = { [F in FieldName]: SpecOf<F>["unit"] extends "eur" ? F : never }[FieldName];
-type HoursField = { [F in FieldName]: SpecOf<F>["unit"] extends "hours" ? F : never }[FieldName];
+type SpecOf<F extends FixedField> = (typeof FIXED_FIELDS)[F];
+export type MoneyField = { [F in FixedField]: SpecOf<F>["unit"] extends "eur" ? F : never }[FixedField];
 
-export const MONEY_FIELDS = FIELD_NAMES.filter((name) => FIELDS[name].unit === "eur") as MoneyField[];
+const isMoneyField = (name: string): name is MoneyField => isFieldName(name) && FIELDS[name].unit === "eur";
+export const MONEY_FIELDS: readonly MoneyField[] = FIELD_NAMES.filter(isMoneyField);
 export function isDerived(field: FieldName): boolean {
   return "derived" in FIELDS[field] && FIELDS[field].derived === true;
 }
 
 export function llmFillable(field: FieldName): boolean {
   return "llm" in FIELDS[field] && FIELDS[field].llm === true;
-}
-
-export const LEAVE_KINDS = ["vacation", "rol", "permit"] as const;
-export type LeaveKind = (typeof LEAVE_KINDS)[number];
-
-/** The four printed columns of a leave kind, in the order A.P. · MAT. · GOD. · RES. */
-export const LEAVE_COLUMNS = ["PreviousYear", "Accrued", "Used", "Remaining"] as const;
-
-export function leaveField(kind: LeaveKind, column: (typeof LEAVE_COLUMNS)[number]): HoursField {
-  return `${kind}${column}` as HoursField;
 }
 
 /** A field's value as it stands: the person's correction when there is one (owner's spec L249). */

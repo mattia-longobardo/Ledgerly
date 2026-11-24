@@ -370,6 +370,9 @@ describe("the Server Actions of interests", () => {
 
   it("speak the vocabularies of the domain", () => {
     expect(interestsWire.DAY_BASES).toEqual(interestsDomain.DAY_BASES);
+    expect(interestsWire.DAY_COUNTS).toEqual(interestsDomain.DAY_COUNTS);
+    expect(interestsWire.PERIOD_ANCHORS).toEqual(interestsDomain.PERIOD_ANCHORS);
+    expect(interestsWire.MAX_PAYMENT_WINDOW_DAYS).toBe(interestsDomain.MAX_PAYMENT_WINDOW_DAYS);
     expect(interestsWire.SETTLEMENTS).toEqual(interestsDomain.SETTLEMENTS);
     expect(interestsWire.RULE_MODES).toEqual(interestsDomain.RULE_MODES);
     expect(interestsWire.RULE_STATES).toEqual(interestsDomain.RULE_STATES);
@@ -437,6 +440,10 @@ describe("the Server Actions of payroll", () => {
 
   it("speak the vocabularies of the domain", () => {
     expect(payrollWire.PAYSLIP_TYPES).toEqual(payrollRules.PAYSLIP_TYPES);
+    expect(payrollWire.PAYSLIP_KINDS).toEqual(payrollRules.PAYSLIP_KINDS);
+    expect(payrollWire.PAYSLIP_SOURCES).toEqual(payrollRules.PAYSLIP_SOURCES);
+    expect(payrollWire.PAY_FREQUENCIES).toEqual(payrollRules.PAY_FREQUENCIES);
+    expect(payrollWire.MAX_EXTRA_PAYMENTS).toBe(payrollRules.MAX_EXTRA_PAYMENTS);
     expect(payrollWire.CODE_ROLES).toEqual(payrollRules.CODE_ROLES);
     expect(payrollWire.LINE_UNITS).toEqual(payrollRules.LINE_UNITS);
     expect(payrollWire.SUMMED_FIELDS).toEqual(payrollRules.SUMMED_FIELDS);

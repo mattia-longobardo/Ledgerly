@@ -5,6 +5,17 @@ import { civilDate, optionalText } from "../../shared/inputs";
 import { type Cents, centsToDecimal, parseCents, percentToFraction } from "../../shared/money";
 
 export const DAY_BASES = ["365", "360"] as const;
+/**
+ * The day-count convention of a rule (11-standardization.md §11.5, E6): a year of 365 or 360 days,
+ * or `act_act`, the actual days of the day's own year (366 in a leap year). It replaces `day_basis`,
+ * which stays written until R5f: equal for 365 and 360, "365" for `act_act`.
+ */
+export const DAY_COUNTS = ["365", "360", "act_act"] as const;
+/** How a rule's periods are cut: `calendar`, months, quarters and years of the calendar. */
+export const PERIOD_ANCHORS = ["calendar"] as const;
+/** The longest payment window a rule may set, in days after the settlement date. */
+export const MAX_PAYMENT_WINDOW_DAYS = 90;
+export type DayCount = (typeof DAY_COUNTS)[number];
 export const SETTLEMENTS = ["daily", "monthly", "quarterly", "annual"] as const;
 export const RULE_MODES = ["analyze_only", "post_to_provider"] as const;
 export const RULE_STATES = ["active", "paused"] as const;
@@ -61,7 +72,12 @@ export const ruleInputSchema = z
   .object({
     accountId: z.uuid(),
     taxRate: fraction,
-    dayBasis: z.enum(DAY_BASES),
+    /** Deprecated (R5g): read only when `dayCount` is missing, and written back from it. */
+    dayBasis: z.enum(DAY_BASES).optional(),
+    dayCount: z.enum(DAY_COUNTS).optional(),
+    periodAnchor: z.enum(PERIOD_ANCHORS).default("calendar"),
+    /** Days after the settlement date the bank's payment is looked for; `null`: the default window. */
+    paymentWindowDays: z.int().min(0).max(MAX_PAYMENT_WINDOW_DAYS).nullable().default(null),
     settlement: z.enum(SETTLEMENTS),
     validFrom: civilDate(),
     validTo: civilDate().nullable().default(null),
@@ -73,7 +89,11 @@ export const ruleInputSchema = z
     payeeMatch: optionalText(MAX_MATCH),
     tiers: z.array(z.object({ upToCents: z.bigint().positive().nullable(), annualRate: fraction })).min(1),
   })
-  .refine((rule) => rule.validTo === null || rule.validTo >= rule.validFrom, "Ends before it starts");
+  .refine((rule) => rule.validTo === null || rule.validTo >= rule.validFrom, "Ends before it starts")
+  .transform(({ dayBasis, dayCount, ...rule }) => {
+    const count = dayCount ?? dayBasis ?? "365";
+    return { ...rule, dayCount: count, dayBasis: count === "360" ? ("360" as const) : ("365" as const) };
+  });
 
 export type RuleInput = z.input<typeof ruleInputSchema>;
 
@@ -88,7 +108,11 @@ export interface PlainRule {
   runHour: number | null;
   tiers: readonly { upTo: string | null; rate: string }[];
   tax: string;
-  dayBasis: (typeof DAY_BASES)[number];
+  /** Deprecated (R5g): `dayCount` wins when both are given. */
+  dayBasis?: (typeof DAY_BASES)[number];
+  dayCount?: DayCount;
+  periodAnchor?: (typeof PERIOD_ANCHORS)[number];
+  paymentWindowDays?: number | null;
   settlement: Settlement;
   payeeMatch: string | null;
   mode: RuleMode;
@@ -109,6 +133,9 @@ export function ruleInputOf(plain: PlainRule): RuleInput {
     })),
     taxRate: percentToFraction(plain.tax),
     dayBasis: plain.dayBasis,
+    dayCount: plain.dayCount,
+    periodAnchor: plain.periodAnchor,
+    paymentWindowDays: plain.paymentWindowDays,
     settlement: plain.settlement,
     payeeMatch: plain.payeeMatch,
     mode: plain.mode,
@@ -117,11 +144,18 @@ export function ruleInputOf(plain: PlainRule): RuleInput {
   };
 }
 
+/** The days of the year a day's interest is divided by, under a rule's day-count convention. */
+export function yearDays(dayCount: DayCount, on: CivilDate): number {
+  if (dayCount !== "act_act") return Number(dayCount);
+  const year = Number(on.slice(0, 4));
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 366 : 365;
+}
+
 /**
  * A day's gross interest on a balance, tier by tier (spec §7.6): each tier's rate on the part of
  * the balance between the previous threshold and its own, summed. Cents × 10¹².
  */
-export function grossOfDay(balanceCents: Cents, tiers: readonly Tier[], basis: 365 | 360): Fixed {
+export function grossOfDay(balanceCents: Cents, tiers: readonly Tier[], basis: number): Fixed {
   let previous = 0n;
   let gross = 0n;
   for (const tier of tiers) {
@@ -157,7 +191,7 @@ interface DayAccrual {
 export function accrueDay(input: {
   balanceCents: Cents | null;
   tiers: readonly Tier[];
-  basis: 365 | 360;
+  basis: number;
   taxRate: string;
   carryBefore: Fixed | null;
 }): DayAccrual {
@@ -319,16 +353,18 @@ export { fractionToPercent } from "@ledgerly/format/format";
 
 /**
  * Where the bank's payment of a settlement is looked for (plan F4 §3.4.5): from the period's last
- * day to 10 days after it settles, since many banks date the credit on the last day of the period
- * (value date 31/12) and not the day after; for a daily payout, from the day itself to two days
- * after, since a bank that pays every day may date it on the day or the next.
+ * day, since many banks date the credit on the last day of the period (value date 31/12) and not
+ * the day after, to `windowDays` after it settles. With no `windowDays` of the rule (`null`): 10
+ * days, and for a daily payout 1 — two days after the day itself, since a bank that pays every day
+ * may date it on the day or the next.
  */
 export function paymentWindow(
   frequency: Settlement,
   period: { to: CivilDate; settleOn: CivilDate },
+  windowDays: number | null = null,
 ): { from: CivilDate; to: CivilDate } {
-  if (frequency === "daily") return { from: period.to, to: addDays(period.to, 2) };
-  return { from: period.to, to: addDays(period.settleOn, 10) };
+  const days = windowDays ?? (frequency === "daily" ? 1 : 10);
+  return { from: period.to, to: addDays(period.settleOn, days) };
 }
 
 /**
@@ -356,12 +392,13 @@ export function assignPayments(
   frequency: Settlement,
   settlements: readonly { id: string; to: CivilDate; settleOn: CivilDate }[],
   payments: readonly { id: string; on: CivilDate }[],
+  windowDays: number | null = null,
 ): Map<string, string[]> {
   const byDate = [...payments].sort((a, b) => (a.on < b.on ? -1 : a.on > b.on ? 1 : a.id < b.id ? -1 : 1));
   const taken = new Set<string>();
   const result = new Map<string, string[]>();
   for (const settlement of [...settlements].sort((a, b) => (a.to < b.to ? -1 : 1))) {
-    const window = paymentWindow(frequency, settlement);
+    const window = paymentWindow(frequency, settlement, windowDays);
     const inWindow = byDate.filter(
       (payment) => !taken.has(payment.id) && payment.on >= window.from && payment.on <= window.to,
     );

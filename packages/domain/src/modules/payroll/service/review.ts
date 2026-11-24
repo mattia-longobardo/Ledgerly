@@ -8,10 +8,12 @@ import { userScoped } from "../../../platform/db/scope";
 import { centsToDecimal, parseCents } from "../../../shared/money";
 import { FIELDS, type FieldName, isDerived, isFieldName, LEAVE_COLUMNS, LEAVE_KINDS, leaveField } from "../fields";
 import { hasBlockingFailure } from "../parse/checks";
+import { usagePeriodOf } from "../rules";
 import { appliedEventOf } from "../applied";
 import { payslipApplied, payslipWithdrawn } from "../events";
 import { leaveBalanceSnapshots, payrollLeaveEvents, payslips } from "../schema";
 import { PayrollError, type Payslip } from "./codes";
+import { activeOfMonth, deleteManualPayslip, manualOfDocument } from "./manual";
 import { activeWithKey, computeState, linesOf, processPayslip, recompute, type Recomputed } from "./reading";
 
 // ——— Review (spec §7.8, §9.3 step 4) ———
@@ -101,8 +103,8 @@ export async function verifyPayslip(
  * Step 5 (spec §7.8 "Applicazione"), one transaction: the active payslip with the same logical key
  * is superseded — never summed —, this one becomes the active one, its leave snapshots and
  * events are written, and `PayslipApplied` tells the listeners (the pension fund) in the same
- * transaction. The payslip after it, if applied, has its leave read again, since its permits
- * are confirmed against this one.
+ * transaction. The payslip after it, if applied, has its leave read again, since its uses of
+ * leave are confirmed against this one.
  */
 export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string, now: Date = new Date()): Promise<Payslip> {
   const document = await requireDocumentOf(ctx, documentId);
@@ -111,6 +113,8 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
     return await getDb().transaction(async (tx) => {
       const { payslip, identity } = await recompute(ctx, documentId, tx);
       if (!payslip || !identity) throw new PayrollError("no_identity");
+      // A month typed by hand is not superseded by a reading: the person deletes one of the two.
+      if ((await activeOfMonth(ctx, identity, tx, payslip.id))?.source === "manual") throw new PayrollError("conflict");
       const replaced = await activeWithKey(ctx, identity, tx);
       if (replaced && replaced.id !== payslip.id) {
         await tx
@@ -119,7 +123,7 @@ export async function applyPayslip(ctx: Pick<Ctx, "userId">, documentId: string,
           .where(and(eq(payslips.id, replaced.id), userScoped(ctx).owns(payslips)));
         await clearLeave(ctx, replaced.id, tx);
         await payslipWithdrawn(ctx, replaced.id, tx);
-        if (!(await transition(ctx, replaced.documentId, "superseded", {}, tx))) throw new PayrollError("conflict");
+        if (!(await transition(ctx, replaced.documentId!, "superseded", {}, tx))) throw new PayrollError("conflict");
       }
       const [applied] = await tx
         .update(payslips)
@@ -143,9 +147,9 @@ async function announce(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Pro
   await payslipApplied(ctx, await appliedEventOf(ctx, payslip, tx), tx);
 }
 
-/** The next month's payslip, if applied, confirms its permits against this one: read them again. */
+/** The next month's payslip, if applied, confirms its uses of leave against this one: read them again. */
 async function rereadNext(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
-  if (payslip.type !== "ordinary" || payslip.period === null) return;
+  if (payslip.type !== "ordinary" || payslip.period === null || payslip.documentId === null) return;
   const [next] = await tx
     .select()
     .from(payslips)
@@ -159,7 +163,7 @@ async function rereadNext(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): P
         eq(payslips.period, addMonths(payslip.period, 1)),
       ),
     );
-  if (next) {
+  if (next?.documentId) {
     await recompute(ctx, next.documentId, tx);
     await writeLeave(ctx, next, tx);
   }
@@ -168,7 +172,7 @@ async function rereadNext(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): P
 /**
  * Takes an applied payslip back to review so its values can be changed — `applyPayslip` undone, in
  * one transaction: it leaves the register with its leave (`PayslipWithdrawn`), the payslip it
- * had replaced (a rectification) is applied again, and the next month's permits are read again.
+ * had replaced (a rectification) is applied again, and the next month's leave is read again.
  * Applying it once more after the review puts everything back. Returns whether a replaced payslip
  * was restored.
  */
@@ -181,6 +185,8 @@ export async function reopenPayslip(ctx: Pick<Ctx, "userId">, documentId: string
       .from(payslips)
       .where(and(eq(payslips.documentId, documentId), userScoped(ctx).owns(payslips), eq(payslips.active, true)));
     if (!payslip) throw new PayrollError("conflict");
+    // A payslip typed by hand has no review to go back to: it is changed in place.
+    if (payslip.source === "manual") throw new PayrollError("invalid_state");
     await clearLeave(ctx, payslip.id, tx);
     await payslipWithdrawn(ctx, payslip.id, tx);
     const [reopened] = await tx
@@ -202,7 +208,7 @@ export async function reopenPayslip(ctx: Pick<Ctx, "userId">, documentId: string
         .set({ active: true, supersededBy: null })
         .where(and(eq(payslips.id, replaced.id), userScoped(ctx).owns(payslips)))
         .returning();
-      if (!(await transition(ctx, restored.documentId, "applied", {}, tx))) throw new PayrollError("conflict");
+      if (!(await transition(ctx, restored.documentId!, "applied", {}, tx))) throw new PayrollError("conflict");
       await writeLeave(ctx, restored, tx);
       await announce(ctx, restored, tx);
     }
@@ -221,6 +227,11 @@ export async function deletePayslip(
   documentId: string,
 ): Promise<{ unapplied: boolean; restored: boolean }> {
   const document = await requireDocumentOf(ctx, documentId);
+  const manual = await manualOfDocument(ctx, documentId);
+  if (manual) {
+    await deleteManualPayslip(ctx, manual.id);
+    return { unapplied: true, restored: false };
+  }
   const { restored } = document.state === "applied" ? await reopenPayslip(ctx, documentId) : { restored: false };
   await deleteDocument(ctx, documentId);
   return { unapplied: document.state === "applied", restored };
@@ -241,17 +252,14 @@ async function clearLeave(ctx: Pick<Ctx, "userId">, payslipId: string, tx: Tx): 
     .where(and(eq(leaveBalanceSnapshots.payslipId, payslipId), userScoped(ctx).owns(leaveBalanceSnapshots)));
 }
 
-const UNIT_EVIDENCE =
-  "Reply/TeamSystem profile: balances in hours (owner's spec L165); body lines 301/309 marked (hh).";
-
 /**
  * An applied ordinary payslip's leave (spec §7.8): the balances as printed, snapshots never summed,
- * and the events of its FERIE/PERMESSI lines in the month they were used. A 13th writes none.
+ * and the events of its leave lines in the month they were used. A 13th writes none.
  */
 async function writeLeave(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): Promise<void> {
   await clearLeave(ctx, payslip.id, tx);
-  if (payslip.type !== "ordinary" || payslip.period === null) return;
-  const { assembled } = await computeState(ctx, payslip.documentId, tx);
+  if (payslip.type !== "ordinary" || payslip.period === null || payslip.documentId === null) return;
+  const { assembled, profile } = await computeState(ctx, payslip.documentId, tx);
   const values = assembled.values;
   for (const kind of LEAVE_KINDS) {
     const [previousYear, accrued, used, remaining] = LEAVE_COLUMNS.map((column) => values[leaveField(kind, column)] ?? null);
@@ -265,7 +273,7 @@ async function writeLeave(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): P
         accrued,
         used,
         remaining,
-        unitEvidence: UNIT_EVIDENCE,
+        unitEvidence: profile.unitEvidence,
       }),
     );
   }
@@ -278,7 +286,7 @@ async function writeLeave(ctx: Pick<Ctx, "userId">, payslip: Payslip, tx: Tx): P
         kind: event.kind,
         hours: event.hours,
         payrollPeriod: payslip.period,
-        usagePeriod: addMonths(payslip.period, -1),
+        usagePeriod: usagePeriodOf(payslip.period, profile.absenceLagMonths),
         sourceLineIds: event.linePositions.flatMap((position) => idOf.get(position) ?? []),
       }),
     );

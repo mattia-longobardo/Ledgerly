@@ -2,7 +2,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { type CodeRole, CODE_ROLES, REPLY_TEAMSYSTEM, REPLY_TEAMSYSTEM_CODES } from "../rules";
+import { type CodeRole, CODE_ROLES, DEFAULT_PROFILE, profileById } from "../rules";
 import { payrollCodeMap, payrollRawLines, payslips } from "../schema";
 
 export type Payslip = typeof payslips.$inferSelect;
@@ -30,23 +30,24 @@ export class PayrollError extends Error {
 
 // ——— The code map (spec §7.8 "Mappa dei codici") ———
 
-/** The code map of a profile, seeded with the Reply/TeamSystem codes the first time it is needed. */
+/** The code map of a profile, seeded with the profile's own codes the first time it is needed. */
 export async function codeMapOf(
   ctx: Pick<Ctx, "userId">,
-  profile = REPLY_TEAMSYSTEM,
+  profile = DEFAULT_PROFILE.id,
 ): Promise<Map<string, CodeRole>> {
   let rows = await listCodeMap(ctx, profile);
-  if (rows.length === 0 && profile === REPLY_TEAMSYSTEM) {
+  const seed = profileById(profile)?.codes ?? [];
+  if (rows.length === 0 && seed.length > 0) {
     await getDb()
       .insert(payrollCodeMap)
-      .values(REPLY_TEAMSYSTEM_CODES.map((entry) => userScoped(ctx).stamp({ profile, ...entry })))
+      .values(seed.map((entry) => userScoped(ctx).stamp({ profile, ...entry })))
       .onConflictDoNothing();
     rows = await listCodeMap(ctx, profile);
   }
   return new Map(rows.map((row) => [row.code, row.role]));
 }
 
-export async function listCodeMap(ctx: Pick<Ctx, "userId">, profile = REPLY_TEAMSYSTEM): Promise<CodeMapEntry[]> {
+export async function listCodeMap(ctx: Pick<Ctx, "userId">, profile = DEFAULT_PROFILE.id): Promise<CodeMapEntry[]> {
   return getDb()
     .select()
     .from(payrollCodeMap)
@@ -58,7 +59,7 @@ export async function listCodeMap(ctx: Pick<Ctx, "userId">, profile = REPLY_TEAM
 export async function setCodeRole(
   ctx: Pick<Ctx, "userId">,
   input: { code: string; role: string; note?: string | null },
-  profile = REPLY_TEAMSYSTEM,
+  profile = DEFAULT_PROFILE.id,
 ): Promise<void> {
   const code = input.code.trim();
   const note = input.note?.trim() || null;
@@ -76,14 +77,14 @@ export async function setCodeRole(
 }
 
 /** Puts a code back to what the profile says, or removes a code the profile does not have. */
-export async function resetCode(ctx: Pick<Ctx, "userId">, code: string, profile = REPLY_TEAMSYSTEM): Promise<void> {
-  const seeded = REPLY_TEAMSYSTEM_CODES.find((entry) => entry.code === code);
+export async function resetCode(ctx: Pick<Ctx, "userId">, code: string, profile = DEFAULT_PROFILE.id): Promise<void> {
+  const seeded = profileById(profile)?.codes.find((entry) => entry.code === code);
   const where = and(
     userScoped(ctx).owns(payrollCodeMap),
     eq(payrollCodeMap.profile, profile),
     eq(payrollCodeMap.code, code),
   );
-  if (seeded && profile === REPLY_TEAMSYSTEM) {
+  if (seeded) {
     await getDb().update(payrollCodeMap).set({ role: seeded.role, note: null }).where(where);
   } else {
     await getDb().delete(payrollCodeMap).where(where);

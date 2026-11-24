@@ -3298,7 +3298,8 @@
     },
     "basis": {
       "360": "360 giorni",
-      "365": "365 giorni"
+      "365": "365 giorni",
+      "act_act": "Giorni effettivi dell'anno"
     },
     "settlement": {
       "daily": "Giornaliera",
@@ -3340,7 +3341,13 @@
       "retiredMode": "Questa regola pubblicava ogni liquidazione sulla sua sorgente. Questa opzione non esiste più: ora Ledgerly calcola soltanto gli interessi. Salva la regola per tenerla in sola analisi e registra tu ogni liquidazione sulla sorgente.",
       "active": "Regola attiva",
       "cancel": "Annulla",
-      "save": "Salva regola"
+      "save": "Salva regola",
+      "advanced": "Avanzate",
+      "periodAnchor": "Periodi",
+      "anchorCalendar": "Mesi, trimestri e anni di calendario",
+      "paymentWindow": "Finestra del pagamento",
+      "paymentWindowHint": "Giorni dopo la data della liquidazione in cui si cerca il pagamento della banca. Vuoto: 10 giorni, 1 per la liquidazione giornaliera.",
+      "days": "giorni"
     },
     "toasts": {
       "saved": "Regola salvata: maturazione ricalcolata dall'ultima liquidazione",

@@ -9,11 +9,18 @@ import type { TextItem } from "./text";
 /** A word of text with its box: an item split at its spaces. */
 export type Token = TextItem;
 
-/** Items at most this size are a form's printed labels; larger ones are the values filled in. */
-const LABEL_MAX_SIZE = 7;
-
-/** How far apart two baselines may be and still be one row. */
-const ROW_TOLERANCE = 1.5;
+/**
+ * The measures of a form, from the profile that reads it (payroll's `PayslipProfile`): text at most
+ * `labelMaxSize` is a printed label, larger text a value filled in; two baselines `rowTolerance`
+ * apart are one row; a label's second line hangs `labelHang` below it; a value row sits `labelAbove`
+ * below its label row.
+ */
+interface Geometry {
+  labelMaxSize: number;
+  rowTolerance: number;
+  labelHang: readonly [number, number];
+  labelAbove: readonly [number, number];
+}
 
 /**
  * Splits an item at its spaces. A value run can carry several columns ("1,00 2.345,67000"); the
@@ -63,9 +70,10 @@ export interface LabelRow {
  * The label rows of a page. A label's second line (the "AZIENDA" under "COD.", the "ATTUALE" under
  * "ARROTONDAMENTO") joins the label it hangs under instead of starting a column of its own.
  */
-export function labelRows(items: readonly TextItem[]): LabelRow[] {
+export function labelRows(items: readonly TextItem[], geometry: Geometry): LabelRow[] {
+  const [hangMin, hangMax] = geometry.labelHang;
   const labels = items
-    .filter((item) => item.size <= LABEL_MAX_SIZE)
+    .filter((item) => item.size <= geometry.labelMaxSize)
     .toSorted((a, b) => a.page - b.page || a.baseline - b.baseline || a.x0 - b.x0);
   const rows: LabelRow[] = [];
   for (const item of labels) {
@@ -74,8 +82,8 @@ export function labelRows(items: readonly TextItem[]): LabelRow[] {
       .flatMap((row) => row.labels.map((label) => ({ row, label })))
       .find(
         ({ label }) =>
-          item.baseline - label.baseline > 3 &&
-          item.baseline - label.baseline < 9 &&
+          item.baseline - label.baseline > hangMin &&
+          item.baseline - label.baseline < hangMax &&
           item.x0 >= label.x0 - 1 &&
           item.x0 <= label.x1,
       );
@@ -94,7 +102,7 @@ export function labelRows(items: readonly TextItem[]): LabelRow[] {
       baseline: item.baseline,
     };
     const row = rows.find(
-      (one) => one.page === item.page && Math.abs(one.baseline - item.baseline) <= ROW_TOLERANCE,
+      (one) => one.page === item.page && Math.abs(one.baseline - item.baseline) <= geometry.rowTolerance,
     );
     if (row) row.labels.push(label);
     else rows.push({ page: item.page, baseline: item.baseline, labels: [label] });
@@ -111,15 +119,15 @@ interface ValueRow {
 }
 
 /** The value rows of a page: its larger text, split into words, grouped by baseline. */
-export function valueRows(items: readonly TextItem[]): ValueRow[] {
+export function valueRows(items: readonly TextItem[], geometry: Geometry): ValueRow[] {
   const tokens = items
-    .filter((item) => item.size > LABEL_MAX_SIZE)
+    .filter((item) => item.size > geometry.labelMaxSize)
     .flatMap(tokensOf)
     .toSorted((a, b) => a.page - b.page || a.baseline - b.baseline || a.x0 - b.x0);
   const rows: ValueRow[] = [];
   for (const token of tokens) {
     const row = rows.find(
-      (one) => one.page === token.page && Math.abs(one.baseline - token.baseline) <= ROW_TOLERANCE,
+      (one) => one.page === token.page && Math.abs(one.baseline - token.baseline) <= geometry.rowTolerance,
     );
     if (row) row.tokens.push(token);
     else rows.push({ page: token.page, baseline: token.baseline, tokens: [token] });
@@ -142,12 +150,13 @@ export function labelFor(labels: readonly Label[], token: Token): Label | null {
 }
 
 /** The label row a value row fills: the one just above it, a value line's height away. */
-function labelRowAbove(rows: readonly LabelRow[], values: ValueRow): LabelRow | null {
+function labelRowAbove(rows: readonly LabelRow[], values: ValueRow, geometry: Geometry): LabelRow | null {
+  const [min, max] = geometry.labelAbove;
   const candidates = rows.filter(
     (row) =>
       row.page === values.page &&
-      values.baseline - row.baseline >= 12 &&
-      values.baseline - row.baseline <= 19,
+      values.baseline - row.baseline >= min &&
+      values.baseline - row.baseline <= max,
   );
   return candidates.toSorted((a, b) => b.baseline - a.baseline)[0] ?? null;
 }
@@ -159,8 +168,8 @@ interface Cell {
 }
 
 /** Every cell of a value row, by the label above it. */
-export function cellsOf(rows: readonly LabelRow[], values: ValueRow): Cell[] {
-  const header = labelRowAbove(rows, values);
+export function cellsOf(rows: readonly LabelRow[], values: ValueRow, geometry: Geometry): Cell[] {
+  const header = labelRowAbove(rows, values, geometry);
   if (!header) return [];
   const cells = new Map<Label, Token[]>();
   for (const token of values.tokens) {

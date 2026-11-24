@@ -9,13 +9,14 @@ import {
   THIRTEENTH,
 } from "../../../../../../test/fixtures/payroll/samples";
 import { twinPdf, type TwinPayslip } from "../../../../../../test/fixtures/payroll/twin";
-import { REPLY_TEAMSYSTEM_CODES } from "../rules";
-import { assemble } from "./assemble";
+import { DEFAULT_PROFILE } from "../rules";
+import { assemble as assembleWith } from "./assemble";
 import { hasBlockingFailure } from "./checks";
-import { parseReplyTeamsystem, type ParsedPayslip } from "./reply-teamsystem";
+import { type ParsedPayslip, readWithProfile } from "./read";
 
-const codeMap = new Map(REPLY_TEAMSYSTEM_CODES.map((entry) => [entry.code, entry.role]));
-const read = async (twin: TwinPayslip) => parseReplyTeamsystem(await readPdfText(await twinPdf(twin)), codeMap);
+const codeMap = new Map(DEFAULT_PROFILE.codes.map((entry) => [entry.code, entry.role]));
+const read = async (twin: TwinPayslip) => readWithProfile(await readPdfText(await twinPdf(twin)), DEFAULT_PROFILE, codeMap);
+const assemble = (input: Omit<Parameters<typeof assembleWith>[0], "profile">) => assembleWith({ ...input, profile: DEFAULT_PROFILE });
 const valuesOf = (parsed: ParsedPayslip) => Object.fromEntries(parsed.fields.map((field) => [field.field, field.value]));
 
 let march: ParsedPayslip;
@@ -239,7 +240,7 @@ it("does not recognise a PDF that is not this form", async () => {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage();
   page.drawText("Fattura n. 12 del 2031 — importo 100,00", { x: 50, y: 700, size: 10, font: await pdf.embedFont(StandardFonts.Courier) });
-  const parsed = parseReplyTeamsystem(await readPdfText(await pdf.save()), codeMap);
+  const parsed = readWithProfile(await readPdfText(await pdf.save()), DEFAULT_PROFILE, codeMap);
   expect(parsed.recognised).toBe(false);
   expect(parsed.warnings).toContainEqual({ code: "unknown_layout" });
   expect(parsed.fields.every((field) => field.value === null || field.field === "printedOn")).toBe(true);
