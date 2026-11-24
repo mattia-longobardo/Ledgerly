@@ -1,51 +1,50 @@
 import { z } from "zod";
 import { type CivilDate, addDays } from "../../../shared/dates";
-import { DAY_FRACTIONS, LEAVE_DAY_KINDS } from "./days";
+import { DAY_FRACTIONS, LEAVE_COLORS, LEAVE_UNITS } from "./days";
 import { civilDate } from "../../../shared/inputs";
 
 /* What a caller may state */
 
 const MAX_NOTE = 200;
+const typeId = () => z.uuid("not a type of leave");
+/** The length of a row in hours, in minutes: at least a minute, at most a day. */
+const rowMinutes = () => z.number().int().min(1).max(1440).nullish().default(null);
 
-/**
- * An allowance for one year, as the modal states it: only what an employer grants.
- *
- * What last year left over is **not** here any more (N9). It was asked for twice — once of the
- * person and once of the payslip, which prints it as A.P. — and the two could disagree with no way
- * to tell which was right. The payslip is the employer's own figure, so the payslip keeps it.
- *
- * ROL is stated in days like everything else since N9. A contract usually says hours, but the
- * whole screen counts in days, and a field in a unit nothing else uses is a field people convert
- * in their head and get wrong.
- */
+/** What a year grants of one type, and the carry-over a person states when no payslip says it. */
 export const allowanceInputSchema = z.object({
-  vacationDays: z.number().min(0).max(400).nullable().default(null),
-  rolDays: z.number().min(0).max(400).nullable().default(null),
-  /** Vacation and ROL together, as the contract states it (N7); `null` when nobody has. */
-  totalDays: z.number().min(0).max(400).nullable().default(null),
-  note: z.string().trim().max(MAX_NOTE).nullish().default(null),
+  days: z.number().min(0).max(400).nullable().default(null),
+  carriedDays: z.number().min(-400).max(400).nullable().default(null),
 });
 export type AllowanceInput = z.input<typeof allowanceInputSchema>;
 
-/**
- * Whether the two parts of an allowance add up to the total the contract states (N7).
- *
- * `null` when there is nothing to compare — no total stated, or a part missing. Otherwise the
- * difference in days, positive when the parts come to more than the total. The screen reports it
- * rather than correcting either figure: both are things a person typed off a contract, and which
- * one is wrong is not the app's to decide.
- */
-export function allowanceMismatchDays(input: {
-  totalDays: number | null;
-  vacationDays: number | null;
-  rolDays: number | null;
-}): number | null {
-  const { totalDays, vacationDays, rolDays } = input;
-  if (totalDays === null || vacationDays === null || rolDays === null) return null;
-  const difference = vacationDays + rolDays - totalDays;
-  // A tenth of a day is rounding between two units, not a disagreement worth a sentence.
-  return Math.abs(difference) < 0.1 ? null : difference;
-}
+/** A type of leave as a person states it (R5g). */
+export const leaveTypeInputSchema = z.object({
+  name: z.string().trim().min(1).max(40),
+  color: z.enum(LEAVE_COLORS),
+  unit: z.enum(LEAVE_UNITS),
+  hasAllowance: z.boolean(),
+  toCalendar: z.boolean(),
+});
+export type LeaveTypeInput = z.input<typeof leaveTypeInputSchema>;
+
+/** A day of the year the person does not work, every year. */
+export const restDayInputSchema = z.object({
+  month: z.number().int().min(1).max(12),
+  day: z.number().int().min(1).max(31),
+  name: z.string().trim().min(1).max(60),
+});
+export type RestDayInput = z.input<typeof restDayInputSchema>;
+
+/** The working week and the first month of the leave year. */
+export const leaveSettingsInputSchema = z.object({
+  yearStartMonth: z.number().int().min(1).max(12),
+  workDays: z
+    .array(z.number().int().min(0).max(6))
+    .min(1)
+    .max(7)
+    .refine((days) => new Set(days).size === days.length, "a day of the week twice"),
+});
+export type LeaveSettingsInput = z.input<typeof leaveSettingsInputSchema>;
 
 /**
  * A day off, or a run of them: `to` left out means the single day `from`. One unit for every kind
@@ -56,8 +55,9 @@ export const leaveInputSchema = z
   .object({
     from: civilDate("not a civil date"),
     to: civilDate("not a civil date").nullish().default(null),
-    kind: z.enum(LEAVE_DAY_KINDS),
+    typeId: typeId(),
     fraction: z.number().nullish().default(null),
+    minutes: rowMinutes(),
     note: z.string().trim().max(MAX_NOTE).nullish().default(null),
   })
   .refine((input) => input.to === null || input.to === undefined || input.to >= input.from, {
@@ -75,26 +75,30 @@ export const leaveRangeInputSchema = z
   .object({
     from: civilDate("not a civil date"),
     to: civilDate("not a civil date"),
-    kind: z.enum(LEAVE_DAY_KINDS),
+    typeId: typeId(),
     fraction: z.number().refine((value) => (DAY_FRACTIONS as readonly number[]).includes(value)),
+    minutes: rowMinutes(),
     note: z.string().trim().max(MAX_NOTE).nullish().default(null),
-    editedKind: z.enum(LEAVE_DAY_KINDS).nullish().default(null),
-    /** The kind of the second half of every day: half `kind` and half this (decision of 17/11/2026). */
-    otherKind: z.enum(LEAVE_DAY_KINDS).nullish().default(null),
+    editedTypeId: typeId().nullish().default(null),
+    /** The type of the second half of every day: half `typeId` and half this (decision of 17/11/2026). */
+    otherTypeId: typeId().nullish().default(null),
   })
   .refine((input) => input.to >= input.from, { path: ["to"], message: "range ends before it begins" })
   .refine(
     (input) =>
-      input.otherKind === null ||
-      input.otherKind === undefined ||
-      (input.fraction === 0.5 && input.otherKind !== input.kind),
-    { path: ["otherKind"], message: "a split day is two halves of two kinds" },
+      input.otherTypeId === null ||
+      input.otherTypeId === undefined ||
+      (input.fraction === 0.5 && input.otherTypeId !== input.typeId),
+    { path: ["otherTypeId"], message: "a split day is two halves of two types" },
   )
   // An edit is of the one day its row stands for.
-  .refine((input) => input.editedKind === null || input.editedKind === undefined || input.to === input.from, {
-    path: ["to"],
-    message: "an edit touches one day",
-  });
+  .refine(
+    (input) => input.editedTypeId === null || input.editedTypeId === undefined || input.to === input.from,
+    {
+      path: ["to"],
+      message: "an edit touches one day",
+    },
+  );
 export type LeaveRangeFields = z.input<typeof leaveRangeInputSchema>;
 
 /** The two ends of a range whose leave goes, all of it ("Remove N days", N5 §7.5). */
@@ -114,12 +118,13 @@ export const leaveUndoSchema = z
       .array(
         z.object({
           on: civilDate("not a civil date"),
-          kind: z.enum(LEAVE_DAY_KINDS),
+          typeId: typeId(),
           fraction: z.number().refine((value) => (DAY_FRACTIONS as readonly number[]).includes(value)),
+          minutes: z.number().int().min(1).max(1440).nullish().default(null),
           note: z.string().trim().max(MAX_NOTE).nullable(),
         }),
       )
-      .max(366 * LEAVE_DAY_KINDS.length),
+      .max(366 * 8),
   })
   .refine((undo) => undo.rows.every((row) => undo.dates.includes(row.on)), {
     path: ["rows"],

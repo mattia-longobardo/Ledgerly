@@ -42,6 +42,7 @@ import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
 import * as timeoffDomain from "@domain/modules/timeoff/rules";
 import { leaveDays } from "@domain/modules/timeoff/schema";
+import { LEGACY_KINDS } from "@domain/modules/timeoff/schema/legacy";
 import { HOLIDAY_SOURCES } from "@domain/platform/holidays/rules";
 import * as fundsWire from "../packages/api-contract/src/funds/shared";
 import * as fundsSources from "@domain/modules/funds/sources";
@@ -63,7 +64,6 @@ import * as payrollFields from "@domain/modules/payroll/fields";
 import * as payrollChecks from "@domain/modules/payroll/parse/checks";
 import * as importsRules from "@domain/modules/imports/rules";
 import * as importsWire from "../packages/api-contract/src/imports/imports";
-import { BALANCE_KINDS } from "@domain/modules/timeoff/ports";
 import * as domain from "@domain/modules/accounts/rules";
 import * as transactionsDomain from "@domain/modules/transactions/rules";
 import * as rulesDomain from "@domain/modules/transactions/categorize/user-rules";
@@ -405,7 +405,8 @@ describe("the Server Actions of time off", () => {
   });
 
   it("speak the vocabularies of the domain", () => {
-    expect(timeoffWire.LEAVE_KINDS).toEqual(timeoffDomain.LEAVE_DAY_KINDS);
+    // The deprecated `kind` of the wire (R5g) is the old column's vocabulary.
+    expect(timeoffWire.LEAVE_KINDS).toEqual(LEGACY_KINDS);
     expect(timeoffWire.RESIDUAL_BASES).toEqual(timeoffDomain.RESIDUAL_BASES);
     expect(timeoffWire.SYNC_STATES).toEqual(timeoffDomain.PENDING_STATES);
     // The wire says `external` for every origin that is not `manual` (the old one until R5c P3).
@@ -441,8 +442,8 @@ describe("the Server Actions of payroll", () => {
     expect(payrollWire.SUMMED_FIELDS).toEqual(payrollRules.SUMMED_FIELDS);
     expect(payrollWire.FIELD_GROUPS).toEqual(payrollFields.FIELD_GROUPS);
     expect(payrollWire.LEAVE_KINDS).toEqual(payrollFields.LEAVE_KINDS);
-    // PAY-6: one vocabulary of the balances, payroll's and the port of time off alike.
-    expect(payrollFields.LEAVE_KINDS).toEqual(BALANCE_KINDS);
+    // PAY-6: one vocabulary of the balances, payroll's and the wire of time off alike.
+    expect(timeoffWire.PAYROLL_LEAVE_KINDS).toEqual(payrollFields.LEAVE_KINDS);
     expect(payrollWire.CHECK_IDS).toEqual(payrollChecks.CHECK_IDS);
     expect(payrollWire.WARNING_CODES).toEqual(payrollChecks.WARNING_CODES);
     expect(payrollWire.DOCUMENT_STATES).toEqual(importsRules.DOCUMENT_STATES);

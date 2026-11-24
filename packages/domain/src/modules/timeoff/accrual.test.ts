@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { italianHolidays } from "../../platform/holidays/rules";
+import { italianHolidays } from "../../../../../test/fixtures/holidays";
 import {
   type AccrualRate,
   type AccruedReading,
@@ -19,8 +19,11 @@ const MINUTES_PER_DAY = 420;
 const d = (count: number) => count * MINUTES_PER_DAY;
 
 function vacation(on: string, fraction = 1): LeaveDayView {
-  return { on, kind: "vacation", fraction };
+  return { on, typeId: "vacation", fraction };
 }
+
+/** The days of a calendar year: a leave year that starts in January. */
+const win = (year: number) => ({ from: `${year}-01-01`, to: `${year}-12-31` });
 
 /** A payslip's MAT. for a month: the year's running total, in hours. */
 const reading = (period: string, accruedHours: number | null): AccruedReading => ({ period, accruedHours });
@@ -32,7 +35,7 @@ const TWO_DAYS: AccrualRate = { minutesPerMonth: d(2), source: "payslip" };
 function fromMay(days: LeaveDayView[] = [], rate: AccrualRate | null = TWO_DAYS): ForecastInput {
   return {
     rate,
-    opening: forecastOpening({ period: "2026-05-01", remainingHours: 35 }, 2026),
+    opening: forecastOpening({ period: "2026-05-01", remainingHours: 35 }, win(2026)),
     days,
     minutesPerDay: MINUTES_PER_DAY,
   };
@@ -115,7 +118,7 @@ describe("monthlyRate (D1)", () => {
 
 describe("forecastOpening (D1, D4)", () => {
   it("starts from the last payslip's RES., at the month it was printed for", () => {
-    expect(forecastOpening({ period: "2026-05-01", remainingHours: 35 }, 2026)).toEqual({
+    expect(forecastOpening({ period: "2026-05-01", remainingHours: 35 }, win(2026))).toEqual({
       source: "payslip",
       minutes: d(5),
       accruedThrough: "2026-05-01",
@@ -124,17 +127,26 @@ describe("forecastOpening (D1, D4)", () => {
   });
 
   it("starts from the payslip of the year before as it is: nothing resets at the turn of the year", () => {
-    const opening = forecastOpening({ period: "2026-10-01", remainingHours: 70 }, 2027);
+    const opening = forecastOpening({ period: "2026-10-01", remainingHours: 70 }, win(2027));
     expect(opening.source).toBe("payslip");
     expect(opening.spentFrom).toBe("2026-10-01");
   });
 
   it("starts an empty first of January when there is no payslip at all", () => {
-    expect(forecastOpening(null, 2027)).toEqual({
+    expect(forecastOpening(null, win(2027))).toEqual({
       source: "year",
       minutes: 0,
       accruedThrough: "2026-12-01",
       spentFrom: "2027-01-01",
+    });
+  });
+
+  it("starts an empty first month of a leave year that does not start in January (R5g)", () => {
+    expect(forecastOpening(null, { from: "2026-04-01", to: "2027-03-31" })).toEqual({
+      source: "year",
+      minutes: 0,
+      accruedThrough: "2026-03-01",
+      spentFrom: "2026-04-01",
     });
   });
 });
@@ -185,42 +197,42 @@ describe("forecastAt (D3)", () => {
     // October's payslip: ten days. Seen from 2027, with two days booked in December 2026.
     const input: ForecastInput = {
       rate: TWO_DAYS,
-      opening: forecastOpening({ period: "2026-10-01", remainingHours: 70 }, 2027),
+      opening: forecastOpening({ period: "2026-10-01", remainingHours: 70 }, win(2027)),
       days: [vacation("2026-12-28"), vacation("2026-12-29"), vacation("2027-03-10")],
       minutesPerDay: MINUTES_PER_DAY,
     };
     // November to February have ended by 10 March: four months.
     expect(forecastAt(input, on("2027-03-10"))).toBe(d(10) + d(8) - d(3));
     // November 2026 to December 2027: fourteen months.
-    expect(forecastAtYearEnd(input, 2027)).toBe(d(10) + d(28) - d(3));
+    expect(forecastAtYearEnd(input, win(2027))).toBe(d(10) + d(28) - d(3));
   });
 });
 
 describe("forecastAtYearEnd", () => {
   it("counts December too: it is what the year hands on", () => {
     // June to December: seven months of two days on top of the five of May.
-    expect(forecastAtYearEnd(fromMay(), 2026)).toBe(d(19));
+    expect(forecastAtYearEnd(fromMay(), win(2026))).toBe(d(19));
   });
 
   it("comes to the plain allowance residual for a year with no payslip", () => {
     // Twenty-four days a year, none carried, three booked: the allowance formula says 21.
     const input: ForecastInput = {
       rate: monthlyRate([], d(24)),
-      opening: forecastOpening(null, 2026),
+      opening: forecastOpening(null, win(2026)),
       days: [vacation("2026-02-02"), vacation("2026-07-06"), vacation("2026-12-21")],
       minutesPerDay: MINUTES_PER_DAY,
     };
-    expect(forecastAtYearEnd(input, 2026)).toBe(d(21));
+    expect(forecastAtYearEnd(input, win(2026))).toBe(d(21));
   });
 
   it("has nothing to say about a year that ended before the payslip", () => {
-    expect(forecastAtYearEnd(fromMay(), 2025)).toBeNull();
+    expect(forecastAtYearEnd(fromMay(), win(2025))).toBeNull();
   });
 });
 
 describe("accrualView (D6)", () => {
   it("stays beside the residual when the year has a payslip of its own", () => {
-    expect(accrualView(fromMay(), 2026, "payslip")).toEqual({
+    expect(accrualView(fromMay(), win(2026), "payslip")).toEqual({
       rate: TWO_DAYS,
       yearEndMinutes: d(19),
       payslipPeriod: "2026-05-01",
@@ -229,22 +241,22 @@ describe("accrualView (D6)", () => {
   });
 
   it("leads the card in a year with no payslip yet, read from the last one there is", () => {
-    const view = accrualView(fromMay(), 2027, "allowance");
+    const view = accrualView(fromMay(), win(2027), "allowance");
     expect(view.leads).toBe(true);
     expect(view.payslipPeriod).toBe("2026-05-01");
     // June 2026 to December 2027: nineteen months.
     expect(view.yearEndMinutes).toBe(d(5) + d(38));
-    expect(accrualView(fromMay(), 2027, "unknown").leads).toBe(true);
+    expect(accrualView(fromMay(), win(2027), "unknown").leads).toBe(true);
   });
 
   it("does not lead without a payslip to start from, and names none", () => {
     const input: ForecastInput = {
       rate: monthlyRate([], d(24)),
-      opening: forecastOpening(null, 2027),
+      opening: forecastOpening(null, win(2027)),
       days: [],
       minutesPerDay: MINUTES_PER_DAY,
     };
-    expect(accrualView(input, 2027, "allowance")).toEqual({
+    expect(accrualView(input, win(2027), "allowance")).toEqual({
       rate: { minutesPerMonth: d(2), source: "allowance" },
       yearEndMinutes: d(24),
       payslipPeriod: null,
@@ -256,11 +268,11 @@ describe("accrualView (D6)", () => {
     for (const year of [2026, 2027, 2040]) {
       const input: ForecastInput = {
         rate: monthlyRate([], null),
-        opening: forecastOpening(null, year),
+        opening: forecastOpening(null, win(year)),
         days: [vacation(`${year}-03-02`)],
         minutesPerDay: MINUTES_PER_DAY,
       };
-      expect(accrualView(input, year, "unknown")).toEqual({
+      expect(accrualView(input, win(year), "unknown")).toEqual({
         rate: null,
         yearEndMinutes: null,
         payslipPeriod: null,
@@ -277,7 +289,7 @@ describe("forecastChange (U2)", () => {
   it("says what the absence does to the balance on the day it starts", () => {
     const booked = [vacation("2026-06-10")];
     expect(
-      forecastChange(fromMay(booked), range, 2026, { before: booked, after: [...booked, ...week] }),
+      forecastChange(fromMay(booked), range, win(2026), { before: booked, after: [...booked, ...week] }),
     ).toEqual({ beforeMinutes: d(8), afterMinutes: d(3) });
   });
 
@@ -286,7 +298,7 @@ describe("forecastChange (U2)", () => {
     const fortnight = datesBetween(june.from, june.to)
       .filter((date) => bookable(date, new Set()).ok)
       .map((date) => vacation(date));
-    expect(forecastChange(fromMay(), june, 2026, { before: [], after: fortnight })).toEqual({
+    expect(forecastChange(fromMay(), june, win(2026), { before: [], after: fortnight })).toEqual({
       beforeMinutes: d(5),
       afterMinutes: d(5) - d(10),
     });
@@ -295,21 +307,21 @@ describe("forecastChange (U2)", () => {
   it("keeps the days of the year before, which are not the panel's to change", () => {
     const input: ForecastInput = {
       rate: TWO_DAYS,
-      opening: forecastOpening({ period: "2026-10-01", remainingHours: 70 }, 2027),
+      opening: forecastOpening({ period: "2026-10-01", remainingHours: 70 }, win(2027)),
       days: [vacation("2026-12-28")],
       minutesPerDay: MINUTES_PER_DAY,
     };
     const march = { from: "2027-03-10", to: "2027-03-10" };
-    expect(forecastChange(input, march, 2027, { before: [], after: [vacation("2027-03-10")] })).toEqual({
+    expect(forecastChange(input, march, win(2027), { before: [], after: [vacation("2027-03-10")] })).toEqual({
       beforeMinutes: d(10) + d(8) - d(1),
       afterMinutes: d(10) + d(8) - d(2),
     });
   });
 
   it("has nothing to say without a forecast, or for a range that starts in another year", () => {
-    expect(forecastChange(undefined, range, 2026, { before: [], after: week })).toBeNull();
-    expect(forecastChange(fromMay([], null), range, 2026, { before: [], after: week })).toBeNull();
-    expect(forecastChange(fromMay(), range, 2027, { before: [], after: week })).toBeNull();
+    expect(forecastChange(undefined, range, win(2026), { before: [], after: week })).toBeNull();
+    expect(forecastChange(fromMay([], null), range, win(2026), { before: [], after: week })).toBeNull();
+    expect(forecastChange(fromMay(), range, win(2027), { before: [], after: week })).toBeNull();
   });
 });
 
@@ -343,7 +355,7 @@ describe("overdrawn (N5b, N9, D5)", () => {
             remainingHours: ((residualView.remainingMinutes ?? 0) + residualView.plannedMinutes) / 60,
           }
         : null,
-      2026,
+      win(2026),
     ),
     days,
     minutesPerDay: MINUTES_PER_DAY,
@@ -358,7 +370,7 @@ describe("overdrawn (N5b, N9, D5)", () => {
       view: residualView,
       forecast: forecast(residualView, options.rate === undefined ? RATE : options.rate, planned),
       carriedMinutes: options.carriedMinutes ?? 0,
-      year: 2026,
+      window: win(2026),
       planned,
     });
 
@@ -378,7 +390,7 @@ describe("overdrawn (N5b, N9, D5)", () => {
 
   it("measures how far past zero it went, always as a positive number", () => {
     expect(flat(view({ remainingMinutes: -d(1.5) }))).toEqual({
-      kind: "vacation",
+      typeId: "vacation",
       byMinutes: d(1.5),
       basis: "allowance",
       snapshotPeriod: null,
@@ -389,12 +401,29 @@ describe("overdrawn (N5b, N9, D5)", () => {
 
   it("reports the number it went past, so the warning and the card cannot disagree", () => {
     expect(flat(view({ basis: "payslip", remainingMinutes: -210, snapshotPeriod: "2026-05-01" }))).toEqual({
-      kind: "vacation",
+      typeId: "vacation",
       byMinutes: 210,
       basis: "payslip",
       snapshotPeriod: "2026-05-01",
       onDate: null,
     });
+  });
+
+  it("counts the taken days of a year with no payslip: a past day can overdraw too (R5g)", () => {
+    // Nothing planned, a whole week taken in January against no carry-over and a month accrued.
+    const taken = datesBetween("2026-01-12", "2026-01-16").map((date) => vacation(date));
+    const takenMinutes = taken.length * MINUTES_PER_DAY;
+    const residualView = view({ remainingMinutes: -d(1), takenMinutes, plannedMinutes: 0 });
+    const found = overdrawn("vacation", {
+      view: residualView,
+      forecast: forecast(residualView, RATE, taken),
+      carriedMinutes: 0,
+      window: win(2026),
+      planned: [],
+      taken,
+    });
+    expect(found).toMatchObject({ typeId: "vacation", basis: "allowance" });
+    expect(found?.onDate).toBe("2026-01-16");
   });
 
   it("stays quiet when the year will have granted the days by the time they are taken (N9)", () => {
@@ -565,7 +594,7 @@ describe("overdrawn (N5b, N9, D5)", () => {
     const days = datesBetween("2027-01-11", "2027-01-22").map((date) => vacation(date));
     const input: ForecastInput = {
       rate: TWO_DAYS,
-      opening: forecastOpening({ period: "2026-10-01", remainingHours: 21 }, 2027),
+      opening: forecastOpening({ period: "2026-10-01", remainingHours: 21 }, win(2027)),
       days,
       minutesPerDay: MINUTES_PER_DAY,
     };
@@ -577,7 +606,7 @@ describe("overdrawn (N5b, N9, D5)", () => {
         view: residualView,
         forecast: input,
         carriedMinutes: 0,
-        year: 2027,
+        window: win(2027),
         planned: days,
       }),
     ).toBeNull();
@@ -589,11 +618,11 @@ describe("overdrawn (N5b, N9, D5)", () => {
         view: residualView,
         forecast: thin,
         carriedMinutes: 0,
-        year: 2027,
+        window: win(2027),
         planned: days,
       }),
     ).toEqual({
-      kind: "vacation",
+      typeId: "vacation",
       basis: "payslip",
       snapshotPeriod: "2026-10-01",
       // November and December have ended by January: half a day on top of the three.

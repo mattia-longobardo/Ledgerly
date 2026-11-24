@@ -100,7 +100,7 @@ function dayShare(day: CalendarDay): Fraction {
  * The desired state of one year, and what must be taken back.
  *
  * The calendar keeps one row per **date**; we keep one per date *and kind*. The two are reconciled
- * by **adding up**: half a day of ferie and half a day of ROL is one whole day away from the
+ * by **adding up**: half a day of two types of leave is one whole day away from the
  * office. The sum is capped at a whole day because that is the most a calendar row can hold.
  *
  * A date is a `removal` only once **nothing** of ours is left on it: while one half is still
@@ -119,8 +119,8 @@ export function splitForCalendar(days: readonly CalendarDay[]): {
   const desired: DesiredDay[] = [];
   for (const [date, group] of perDate) {
     const share = group.reduce((sum, day) => sum + dayShare(day), 0);
-    // Every kind that reaches the calendar lands on the same one (N4): the first row answers.
-    desired.push({ date, fraction: share > 0.5 ? 1 : 0.5, kind: leaveSink().asCalendarKind(group[0].kind) });
+    // Every type that reaches the calendar lands on the same word (N4): the module says which.
+    desired.push({ date, fraction: share > 0.5 ? 1 : 0.5, kind: group[0].kind });
   }
   const removals = days
     .filter((day) => day.pending === "delete" && !perDate.has(day.on))
@@ -129,10 +129,6 @@ export function splitForCalendar(days: readonly CalendarDay[]): {
     desired: desired.sort((left, right) => (left.date < right.date ? -1 : 1)),
     removals: [...new Set(removals)].sort(),
   };
-}
-
-function isCalendarKind(kind: string | null): kind is string {
-  return leaveSink().calendarKinds.some((one) => one === kind);
 }
 
 /**
@@ -191,12 +187,14 @@ async function adopt(ctx: Pick<Ctx, "userId">, year: number, input: AdoptInput) 
     if (input.wanted.has(entry.day) || asked.has(entry.day)) continue;
     if (held.has(entry.day)) conflicts.add(entry.day);
     // A kind this app cannot hold a day under is left upstream rather than guessed.
-    else if (isCalendarKind(entry.kind)) {
-      await leaveSink().recordFromCalendar(
+    else if (
+      entry.kind !== null &&
+      (await leaveSink().recordFromCalendar(
         ctx,
         { on: entry.day, kind: entry.kind, fraction: entry.fraction },
         input.now,
-      );
+      ))
+    ) {
       adopted += 1;
     }
   }

@@ -1,18 +1,18 @@
 "use client";
 
 // Time off › Settings (PERS-158), read from `/api/v1` (rewrite plan R3): everything that only leave
-// depends on — the year's allowance, how long a working day is, the holidays, and the way to the
-// external calendar. The values keep their own routes; its connection is on its own page of
+// depends on — the types of leave and what a year grants of each (R5g), the working week, how long a
+// working day is, the holidays and the days off, and the way to the external calendar. The values keep their own routes; its connection is on its own page of
 // Settings › Integrations.
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { profile } from "@ledgerly/api-contract/settings";
-import { holidays, timeoff } from "@ledgerly/api-contract/timeoff";
+import { holidays, timeoff, types } from "@ledgerly/api-contract/timeoff";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { civilDateIn, today } from "@ledgerly/format/dates";
 import { formatDate } from "@ledgerly/format/format";
 import { ButtonLink } from "@ledgerly/ui/button";
-import { type ApiState, useApi } from "@ledgerly/ui/data";
+import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { Page } from "@ledgerly/ui/shell/page";
@@ -22,26 +22,31 @@ import { parseYearQuery } from "@ledgerly/ui/period";
 import { YearPicker } from "@ledgerly/ui/year-picker";
 import TimeOffLoading from "../loading";
 import { type CalendarRow, HolidayCalendars } from "./holiday-calendars";
-import { type AllowanceSummary, AllowanceForm, PatronSaintForm, WorkingHoursForm } from "./settings-forms";
+import { LeaveTypes } from "./leave-types";
+import { RestDays } from "./rest-days";
+import { WorkingHoursForm } from "./settings-forms";
+import { type TypeAllowance, TypeAllowanceForm } from "./type-allowances";
+import { WorkWeekForm } from "./work-week";
 
-type Allowance = RouteOutput<typeof timeoff.listTimeOffAllowances>["allowances"][number];
+type Year = RouteOutput<typeof timeoff.getTimeOff>;
 type Preferences = RouteOutput<typeof profile.getPreferences>;
 type Calendar = RouteOutput<typeof holidays.listHolidayCalendars>["calendars"][number];
 
 /** A stated number of days as a person would type it back. */
-const typed = (days: number | null) => (days === null ? "" : String(days));
+const typed = (days: number | null | undefined) => (days === null || days === undefined ? "" : String(days));
 
-function summary(year: number, allowance: Allowance | undefined): AllowanceSummary {
-  return {
-    year,
-    vacationDays: typed(allowance?.vacationDays ?? null),
-    rolDays: typed(allowance?.rolDays ?? null),
-    totalDays: typed(allowance?.totalDays ?? null),
-    note: allowance?.note ?? "",
-  };
+/** The allowance of each type with one, of a year: what the form starts from. */
+function allowancesOf(year: Pick<Year, "allowances">, counted: Year["types"]): TypeAllowance[] {
+  return counted.map((type) => {
+    const stated = year.allowances.find((one) => one.typeId === type.id);
+    return {
+      typeId: type.id,
+      name: type.name,
+      days: typed(stated?.days),
+      carriedDays: typed(stated?.carriedDays),
+    };
+  });
 }
-
-const statedFor = (stated: Allowance[], year: number) => stated.find((one) => one.year === year);
 
 function rowOf(calendar: Calendar, where: Pick<Preferences, "timeZone" | "locale">): CalendarRow {
   return {
@@ -92,9 +97,7 @@ function SettingsPage({
   calendarLink: CalendarLink | null;
 }) {
   const text = useTranslations("timeoff");
-  const settings = useTranslations("settings");
-  const allowances = useApi(timeoff.listTimeOffAllowances, {});
-  const calendars = useApi(holidays.listHolidayCalendars, {});
+  const leaveTypes = useApi(types.listLeaveTypes, {});
   return (
     <Page title={text("tabs.settings")} parent={{ href: "/timeoff", label: text("title") }}>
       <div className="flex flex-col gap-4">
@@ -111,30 +114,25 @@ function SettingsPage({
       <UnsavedChangesProvider>
         <SettingsGrid>
           <SettingsSection
-            title={text("settings.allowance.title")}
-            description={text("allowance.description")}
+            title={text("settings.types.title")}
+            description={text("settings.types.description")}
           >
-            <AllowanceSection place={place} allowances={allowances} />
+            <Loaded state={leaveTypes}>{(list) => <LeaveTypes types={list.types} />}</Loaded>
           </SettingsSection>
+          <SettingsSection
+            title={text("settings.allowance.title")}
+            description={text("settings.allowance.description")}
+          >
+            <AllowanceSection place={place} />
+          </SettingsSection>
+          <WeekSection weekStart={preferences.weekStart} />
           <SettingsSection
             title={text("settings.hours.title")}
             description={text("settings.hours.description")}
           >
             <WorkingHoursForm minutesPerDay={preferences.minutesPerDay} />
           </SettingsSection>
-          <SettingsSection title={settings("holidays.title")} description={settings("holidays.description")}>
-            <div className="flex flex-col gap-3">
-              <Loaded state={calendars}>
-                {(kept) => (
-                  <HolidayCalendars
-                    calendars={kept.calendars.map((one) => rowOf(one, preferences))}
-                    year={place.currentYear}
-                  />
-                )}
-              </Loaded>
-              <PatronSaintForm patronSaint={preferences.patronSaint} />
-            </div>
-          </SettingsSection>
+          <HolidaysSection place={place} preferences={preferences} />
           {calendarLink && <CalendarLinkSection link={calendarLink} />}
         </SettingsGrid>
       </UnsavedChangesProvider>
@@ -142,49 +140,105 @@ function SettingsPage({
   );
 }
 
-/**
- * The year's allowance. The stepper changes the year through the URL; the form is keyed by the
- * year, so a value typed for one year is never saved under another.
- */
-function AllowanceSection({
-  place,
-  allowances,
-}: {
-  place: Place;
-  allowances: ApiState<{ allowances: Allowance[] }>;
-}) {
+function WeekSection({ weekStart }: { weekStart: number }) {
   const text = useTranslations("timeoff");
-  const { year, currentYear } = place;
+  const week = useApi(types.getLeaveSettings, {});
   return (
-    <Loaded state={allowances}>
-      {({ allowances: stated }) => {
-        const previous = statedFor(stated, year - 1);
+    <SettingsSection title={text("settings.week.title")} description={text("settings.week.description")}>
+      <Loaded state={week}>
+        {(stated) => (
+          <WorkWeekForm
+            workDays={stated.workDays}
+            yearStartMonth={stated.yearStartMonth}
+            weekStart={weekStart}
+          />
+        )}
+      </Loaded>
+    </SettingsSection>
+  );
+}
+
+/** The calendars of public holidays, and the person's own days off of the year beside them. */
+function HolidaysSection({ place, preferences }: { place: Place; preferences: Preferences }) {
+  const text = useTranslations("timeoff");
+  const settings = useTranslations("settings");
+  const restDays = useApi(types.listRestDays, {});
+  const calendars = useApi(holidays.listHolidayCalendars, {});
+  return (
+    <SettingsSection title={settings("holidays.title")} description={settings("holidays.description")}>
+      <div className="flex flex-col gap-3">
+        <Loaded state={calendars}>
+          {(kept) => (
+            <>
+              {/* Without a calendar only the working week is known: a holiday reads as a working day. */}
+              {kept.calendars.length === 0 && (
+                <p className="text-sm text-warn" data-testid="no-holiday-calendar">
+                  {text("settings.noCalendar")}
+                </p>
+              )}
+              <HolidayCalendars
+                calendars={kept.calendars.map((one) => rowOf(one, preferences))}
+                year={place.currentYear}
+              />
+            </>
+          )}
+        </Loaded>
+        <Loaded state={restDays}>{(stated) => <RestDays days={stated.days} />}</Loaded>
+      </div>
+    </SettingsSection>
+  );
+}
+
+/**
+ * What the year grants of each type with an allowance. The stepper changes the year through the URL;
+ * the form is keyed by the year, so a value typed for one year is never saved under another.
+ */
+function AllowanceSection({ place }: { place: Place }) {
+  const text = useTranslations("timeoff");
+  const { year } = place;
+  const shown = useApi(timeoff.getTimeOff, { params: { year: String(year) } });
+  const before = useApi(timeoff.getTimeOff, { params: { year: String(year - 1) } });
+  return (
+    <Loaded state={shown}>
+      {(view) => {
+        const counted = view.types.filter((type) => type.hasAllowance);
+        if (counted.length === 0) return <p className="text-muted">{text("settings.allowance.none")}</p>;
+        const previous = before.data?.allowances.some((one) => one.days !== null)
+          ? allowancesOf(before.data, counted)
+          : null;
         return (
           <div className="@container">
-            <AllowanceForm
-              key={year}
-              allowance={summary(year, statedFor(stated, year))}
-              previous={previous ? summary(year - 1, previous) : null}
-              stepper={
-                <YearPicker
-                  year={year}
-                  years={stated.map((one) => one.year)}
-                  currentYear={currentYear}
-                  lastYear={currentYear + 1}
-                  hrefFor={hrefFor}
-                  labels={{
-                    label: text("header.yearLabel"),
-                    previous: text("header.previousYear"),
-                    next: text("header.nextYear"),
-                    today: text("header.thisYear"),
-                  }}
-                />
-              }
+            <TypeAllowanceForm
+              // Another year, or another list of types, is another form.
+              key={`${year} ${counted.map((one) => one.id).join(" ")}`}
+              year={year}
+              rows={allowancesOf(view, counted)}
+              previous={previous}
+              stepper={<AllowanceYears place={place} years={view.years} />}
             />
           </div>
         );
       }}
     </Loaded>
+  );
+}
+
+function AllowanceYears({ place, years }: { place: Place; years: number[] }) {
+  const text = useTranslations("timeoff");
+  return (
+    <YearPicker
+      year={place.year}
+      years={years}
+      currentYear={place.currentYear}
+      lastYear={place.currentYear + 1}
+      hrefFor={hrefFor}
+      labels={{
+        label: text("header.yearLabel"),
+        previous: text("header.previousYear"),
+        next: text("header.nextYear"),
+        today: text("header.thisYear"),
+      }}
+    />
   );
 }
 

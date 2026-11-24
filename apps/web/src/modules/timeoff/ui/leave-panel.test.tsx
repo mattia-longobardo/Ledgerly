@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/en.json";
-import { italianHolidays } from "@domain/platform/holidays/rules";
-import type { LeaveDayKind, LeaveDayView, ResidualInput } from "@domain/modules/timeoff/rules";
-import { leaveTypeOptions } from "./kinds";
+import { italianHolidays } from "../../../../../../test/fixtures/holidays";
+import type { LeaveDayView, ResidualInput } from "@domain/modules/timeoff/rules";
+import type { LeaveTypeView } from "./kinds";
 import { type BookedLeave, type LeavePanelEntry, LeavePanel } from "./leave-panel";
 
 const onConfirm = vi.fn();
@@ -15,15 +15,17 @@ const onRangeChange = vi.fn();
 
 const MINUTES_PER_DAY = 420;
 const HOLIDAYS = new Set(italianHolidays(2026, { month: 12, day: 7 }).map((one) => one.date));
+/** A type of the person's: the panel names it with its own name, never a message. */
+function type(id: string, name: string, extra: Partial<LeaveTypeView> = {}): LeaveTypeView {
+  return { id, name, color: "primary", unit: "half_day", hasAllowance: false, toCalendar: true, ...extra };
+}
 // Names nobody wrote in the panel: if one of them shows, it came from this list.
-const NAMES: Record<LeaveDayKind, string> = {
-  vacation: "Holiday leave",
-  rol: "Hours bank",
-  comp: "Time in lieu",
-  sick: "Illness",
-  other: "Something else",
-};
-const TYPES = leaveTypeOptions((kind) => NAMES[kind]);
+const TYPES = [
+  type("vacation", "Holiday leave", { hasAllowance: true }),
+  type("rol", "Hours bank", { color: "warn", hasAllowance: true }),
+  type("comp", "Time in lieu", { color: "accent" }),
+  type("other", "Something else", { color: "faint", toCalendar: false }),
+];
 
 function allowance(days: number, booked: LeaveDayView[]): ResidualInput {
   return {
@@ -36,19 +38,40 @@ function allowance(days: number, booked: LeaveDayView[]): ResidualInput {
   };
 }
 
-function row(on: string, kind: LeaveDayKind, fraction = 1, extra: Partial<BookedLeave> = {}): BookedLeave {
-  return { id: `${on}-${kind}`, on, kind, fraction, note: null, origin: "manual", pending: "none", ...extra };
+function row(on: string, typeId: string, fraction = 1, extra: Partial<BookedLeave> = {}): BookedLeave {
+  return {
+    id: `${on}-${typeId}`,
+    on,
+    typeId,
+    fraction,
+    minutes: null,
+    note: null,
+    origin: "manual",
+    pending: "none",
+    ...extra,
+  };
 }
 
 function renderPanel(
   entry: LeavePanelEntry,
   booked: BookedLeave[] = [],
-  options: { vacation?: number | null; rol?: number; saving?: boolean; error?: string } = {},
+  options: {
+    vacation?: number | null;
+    rol?: number;
+    saving?: boolean;
+    error?: string;
+    types?: LeaveTypeView[];
+  } = {},
 ) {
-  const days = booked.map(({ on, kind, fraction }) => ({ on, kind, fraction }));
+  const days: LeaveDayView[] = booked.map(({ on, typeId, fraction, minutes }) => ({
+    on,
+    typeId,
+    fraction,
+    minutes,
+  }));
   const vacation = allowance(
     options.vacation ?? 26,
-    days.filter((one) => one.kind === "vacation"),
+    days.filter((one) => one.typeId === "vacation"),
   );
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
@@ -56,17 +79,19 @@ function renderPanel(
         entry={entry}
         data={{
           year: 2026,
+          window: { from: "2026-01-01", to: "2026-12-31" },
           minutesPerDay: MINUTES_PER_DAY,
+          workDays: [1, 2, 3, 4, 5],
           days,
           holidays: HOLIDAYS,
           residuals: {
             vacation: options.vacation === null ? { ...vacation, allowanceMinutes: null } : vacation,
             rol: allowance(
               options.rol ?? 4,
-              days.filter((one) => one.kind === "rol"),
+              days.filter((one) => one.typeId === "rol"),
             ),
           },
-          types: TYPES,
+          types: options.types ?? TYPES,
         }}
         saving={options.saving ?? false}
         error={options.error ?? null}
@@ -113,14 +138,14 @@ describe("a range picked on the calendar", () => {
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith({
       from: "2026-06-15",
       to: "2026-06-19",
-      kind: "rol",
+      typeId: "rol",
       fraction: "0.5",
       note: "mornings",
-      editedKind: null,
+      editedTypeId: null,
     });
   });
 
-  it("lists the rows the range replaces, with their kind, and the balance they give back", () => {
+  it("lists the rows the range replaces, with their type, and the balance they give back", () => {
     renderPanel({ mode: "range", from: "2026-06-15", to: "2026-06-19" }, [
       row("2026-06-17", "rol"),
       row("2026-06-18", "rol", 0.5),
@@ -161,7 +186,7 @@ describe("a range picked on the calendar", () => {
     );
   });
 
-  it("says a kind with no allowance spends none", async () => {
+  it("says a type with no allowance spends none", async () => {
     const panel = renderPanel({ mode: "range", from: "2026-06-15", to: "2026-06-15" });
     await userEvent.selectOptions(panel.getByLabelText("Type"), "comp");
     expect(panel.getByText("This type does not use the balance.")).toBeInTheDocument();
@@ -177,7 +202,7 @@ describe("a range picked on the calendar", () => {
 });
 
 describe("the fields", () => {
-  it("offers the kinds of the list it is handed, and not the one nobody books any more", () => {
+  it("offers the person's types, in their order", () => {
     const panel = renderPanel({ mode: "add", from: "2026-06-15" });
     const options = within(panel.getByLabelText("Type")).getAllByRole("option");
     expect(options.map((option) => option.textContent)).toEqual([
@@ -193,7 +218,7 @@ describe("the fields", () => {
     const panel = renderPanel({ mode: "add", from: "2026-06-15" });
     expect(panel.getByLabelText("From")).toHaveValue("2026-06-15");
     expect(panel.getByLabelText("To")).toHaveValue("2026-06-15");
-    expect(panel.getByText("Weekends and public holidays are not counted.")).toBeInTheDocument();
+    expect(panel.getByText("Days you do not work and public holidays are not counted.")).toBeInTheDocument();
   });
 
   it("moves the last day along when the first day is put after it, and tells the calendar", async () => {
@@ -237,7 +262,7 @@ describe("the fields", () => {
     expect(panel.getByRole("button", { name: "Confirm" })).toBeDisabled();
   });
 
-  it("says where the note goes, by what the list says about the kind", async () => {
+  it("says where the note goes, by whether the type goes to the calendar", async () => {
     const panel = renderPanel({ mode: "add", from: "2026-06-15" });
     expect(panel.getByText(/never goes to Trek/)).toBeInTheDocument();
     await userEvent.selectOptions(panel.getByLabelText("Type"), "other");
@@ -280,17 +305,17 @@ describe("a booked day", () => {
     await userEvent.selectOptions(panel.getByLabelText("Type"), "rol");
     expect(line("Holiday leave balance")).toHaveTextContent("25 d → 26 d");
     expect(line("Hours bank balance")).toHaveTextContent("4 d → 3 d");
-    // The row's own change of kind is the edit, not something the edit replaces.
+    // The row's own change of type is the edit, not something the edit replaces.
     expect(within(summary()).queryByText("Replaces")).not.toBeInTheDocument();
 
     await userEvent.click(panel.getByRole("button", { name: "Confirm" }));
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith({
       from: "2026-06-17",
       to: "2026-06-17",
-      kind: "rol",
+      typeId: "rol",
       fraction: "1",
       note: "",
-      editedKind: "vacation",
+      editedTypeId: "vacation",
     });
   });
 
@@ -323,7 +348,7 @@ describe("a booked day", () => {
     expect(panel.getByLabelText("Type")).toHaveValue("rol");
   });
 
-  it("adds the other half as a new leave of the kind the rules propose", async () => {
+  it("adds the other half as a new leave of the type the rules propose", async () => {
     const half = row("2026-06-17", "vacation", 0.5);
     const panel = renderPanel({ mode: "edit", date: "2026-06-17", rows: [half] }, [half]);
     await userEvent.click(panel.getByRole("button", { name: "Add the other half" }));
@@ -339,14 +364,14 @@ describe("a booked day", () => {
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith({
       from: "2026-06-17",
       to: "2026-06-17",
-      kind: "rol",
+      typeId: "rol",
       fraction: "0.5",
       note: "",
-      editedKind: null,
+      editedTypeId: null,
     });
   });
 
-  it("splits a whole day into half of each kind in one step (decision of 17/11/2026)", async () => {
+  it("splits a whole day into half of each type in one step (decision of 17/11/2026)", async () => {
     const whole = row("2026-11-17", "vacation");
     const panel = renderPanel({ mode: "edit", date: "2026-11-17", rows: [whole] }, [whole]);
     await userEvent.click(panel.getByRole("button", { name: "Half + half" }));
@@ -360,15 +385,15 @@ describe("a booked day", () => {
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith({
       from: "2026-11-17",
       to: "2026-11-17",
-      kind: "vacation",
+      typeId: "vacation",
       fraction: "0.5",
       note: "",
-      editedKind: "vacation",
-      otherKind: "rol",
+      editedTypeId: "vacation",
+      otherTypeId: "rol",
     });
   });
 
-  it("never offers the first half's kind for the second, and moves it on when the first takes it", async () => {
+  it("never offers the first half's type for the second, and moves it on when the first takes it", async () => {
     const panel = renderPanel({ mode: "range", from: "2026-06-15", to: "2026-06-16" });
     await userEvent.click(panel.getByRole("button", { name: "Half + half" }));
     const other = panel.getByLabelText("Other half");
@@ -379,7 +404,7 @@ describe("a booked day", () => {
 
     await userEvent.click(panel.getByRole("button", { name: "Confirm" }));
     expect(onConfirm).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({ kind: "rol", fraction: "0.5", otherKind: "vacation" }),
+      expect.objectContaining({ typeId: "rol", fraction: "0.5", otherTypeId: "vacation" }),
     );
   });
 
@@ -389,17 +414,58 @@ describe("a booked day", () => {
     expect(screen.queryByRole("button", { name: "Add the other half" })).not.toBeInTheDocument();
   });
 
-  it("keeps the kind of a row that carries one nobody books any more", () => {
-    const sick = row("2026-06-17", "sick");
-    const panel = renderPanel({ mode: "edit", date: "2026-06-17", rows: [sick] }, [sick]);
-    expect(panel.getByLabelText("Type")).toHaveValue("sick");
-    expect(within(panel.getByLabelText("Type")).getByRole("option", { name: "Illness" })).toBeInTheDocument();
-  });
-
   it("says where the row came from and what Trek is still owed", () => {
     const fromTrek = row("2026-06-17", "vacation", 1, { origin: "external", pending: "delete" });
     const panel = renderPanel({ mode: "edit", date: "2026-06-17", rows: [fromTrek] }, [fromTrek]);
     expect(panel.getByText("From Trek")).toBeInTheDocument();
     expect(panel.getByText(messages.timeoff.table.pending.delete)).toBeInTheDocument();
+  });
+});
+
+describe("the unit of a type (R5g)", () => {
+  const units = [
+    type("vacation", "Holiday leave", { hasAllowance: true }),
+    type("sick", "Illness", { unit: "day" }),
+    type("permit", "Permit", { unit: "hours", hasAllowance: true }),
+  ];
+
+  it("offers only whole days for a type counted in days", async () => {
+    const panel = renderPanel({ mode: "add", from: "2026-06-15" }, [], { types: units });
+    await userEvent.selectOptions(panel.getByLabelText("Type"), "sick");
+    expect(panel.queryByRole("button", { name: "Half day" })).not.toBeInTheDocument();
+    expect(line("Duration")).toHaveTextContent("1 d (1 working day)");
+  });
+
+  it("offers no «½ + ½» without a second type counted in half days", () => {
+    const panel = renderPanel({ mode: "add", from: "2026-06-15" }, [], { types: units });
+    expect(panel.getByRole("button", { name: "Half day" })).toBeInTheDocument();
+    expect(panel.queryByRole("button", { name: "Half + half" })).not.toBeInTheDocument();
+  });
+
+  it("asks the hours of a type counted in hours, and sends them as minutes", async () => {
+    const panel = renderPanel({ mode: "range", from: "2026-06-15", to: "2026-06-16" }, [], { types: units });
+    await userEvent.selectOptions(panel.getByLabelText("Type"), "permit");
+    const hours = panel.getByLabelText("Hours a day");
+    await userEvent.clear(hours);
+    await userEvent.type(hours, "3.5");
+    expect(line("Duration")).toHaveTextContent("1 d (2 days of 3.5 h)");
+
+    await userEvent.click(panel.getByRole("button", { name: "Confirm" }));
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith({
+      from: "2026-06-15",
+      to: "2026-06-16",
+      typeId: "permit",
+      fraction: "1",
+      minutes: 210,
+      note: "",
+      editedTypeId: null,
+    });
+  });
+
+  it("will not confirm hours that are no length of a day", async () => {
+    const panel = renderPanel({ mode: "add", from: "2026-06-15" }, [], { types: units });
+    await userEvent.selectOptions(panel.getByLabelText("Type"), "permit");
+    await userEvent.clear(panel.getByLabelText("Hours a day"));
+    expect(panel.getByRole("button", { name: "Confirm" })).toBeDisabled();
   });
 });

@@ -16,5 +16,19 @@ export const payrollDirectory = {
   },
 };
 
+/**
+ * The balance a use of leave counts against, when it is not its own: a permit is spent from the ROL
+ * balance (F5). R5g step 2 moves it into the payslip's profile.
+ */
+const COUNTS_AGAINST: Readonly<Record<string, string>> = { permit: "rol" };
+
 /** The adapter of `LeaveBalanceSource` (time off): the balances and the leave the payslips printed. */
-export const payrollLeaveBalances = { snapshotHistory: leaveSnapshotHistory, eventsOf: leaveEventsOf };
+export const payrollLeaveBalances = {
+  snapshotHistory: leaveSnapshotHistory,
+  async eventsOf(ctx: Pick<Ctx, "userId">, year: number) {
+    return (await leaveEventsOf(ctx, year)).map((event) => ({
+      ...event,
+      balance: COUNTS_AGAINST[event.kind] ?? event.kind,
+    }));
+  },
+};

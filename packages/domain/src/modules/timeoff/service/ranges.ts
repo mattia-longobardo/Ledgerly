@@ -1,6 +1,5 @@
 import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { getPreferences } from "../../users/service";
-import { holidaysFor } from "../../../platform/holidays/service";
 import type { Ctx } from "../../../platform/context";
 import type { CivilDate } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
@@ -12,7 +11,6 @@ import {
   MAX_RANGE_DAYS,
   bookable,
   datesBetween,
-  goesToCalendar,
   leaveRangeInputSchema,
   leaveRemovalRangeSchema,
   leaveUndoSchema,
@@ -21,7 +19,8 @@ import {
   stillBooked,
 } from "../rules";
 import { leaveDays } from "../schema";
-import { type LeaveDay, TimeOffError, deleteLeaveDay, listLeaveDays } from "./records";
+import { type LeaveDay, TimeOffError, deleteLeaveDay, listLeaveDays, rowOf, typeIn } from "./records";
+import { leaveContext, yearsOf } from "./types";
 
 /* A whole day, and a whole range (rewrite plan N5) */
 
@@ -52,10 +51,12 @@ export async function clearDay(
 
 type Transaction = Parameters<Parameters<ReturnType<typeof getDb>["transaction"]>[0]>[0];
 
+/** A row as the rules see it; a row the image before R5g wrote has no type and counts for none. */
 const asView = (row: LeaveDay): LeaveDayView => ({
   on: row.on,
-  kind: row.kind,
+  typeId: row.typeId ?? "",
   fraction: Number(row.fraction),
+  minutes: row.minutes,
 });
 
 /** The rows a person still means to keep, as "Undo" will be handed them back. */
@@ -65,7 +66,13 @@ function stateOf(dates: readonly CivilDate[], rows: readonly LeaveDay[]): LeaveU
     rows: rows
       // A row waiting for the calendar to let it go is already removed as far as its owner is concerned.
       .filter((row) => row.pending !== "delete" && dates.includes(row.on))
-      .map((row) => ({ on: row.on, kind: row.kind, fraction: Number(row.fraction), note: row.note })),
+      .map((row) => ({
+        on: row.on,
+        typeId: row.typeId ?? "",
+        fraction: Number(row.fraction),
+        minutes: row.minutes,
+        note: row.note,
+      })),
   };
 }
 
@@ -93,7 +100,7 @@ async function rowsOn(
     .select()
     .from(leaveDays)
     .where(and(userScoped(ctx).owns(leaveDays), where))
-    .orderBy(asc(leaveDays.on), asc(leaveDays.kind), asc(leaveDays.id))
+    .orderBy(asc(leaveDays.on), asc(leaveDays.typeId), asc(leaveDays.id))
     .for("update");
 }
 
@@ -125,53 +132,57 @@ export async function saveLeaveRange(
 ): Promise<LeaveRangeResult> {
   const parsed = leaveRangeInputSchema.safeParse(input);
   if (!parsed.success) throw new TimeOffError("invalid_input");
-  const { from, to, kind, fraction } = parsed.data;
-  const otherKind = parsed.data.otherKind ?? null;
+  const { from, to, typeId, fraction } = parsed.data;
+  const minutes = parsed.data.minutes ?? null;
+  const otherTypeId = parsed.data.otherTypeId ?? null;
   const note = parsed.data.note ?? null;
 
   const span = datesBetween(from, to);
   if (span.length > MAX_RANGE_DAYS) throw new TimeOffError("range_too_long");
-  const { patronSaint } = await getPreferences(ctx);
   // A range can cross new year, so both years are asked for.
-  const years = [...new Set(span.map((date) => Number(date.slice(0, 4))))];
-  const holidays = await holidaysFor(ctx, years, patronSaint);
+  const { types, settings, holidays } = await leaveContext(ctx, yearsOf({ from, to }));
+  const { minutesPerDay } = await getPreferences(ctx);
+  const parts = rangeParts({ typeId, fraction, minutes, otherTypeId });
+  // Each part is written by its type's own rule, which also refuses a size the type does not take.
+  const rows = parts.map((part) =>
+    rowOf(
+      typeIn(types, part.typeId),
+      { fraction: part.fraction, minutes: part.minutes ?? null },
+      minutesPerDay,
+    ),
+  );
+  if (parsed.data.editedTypeId) typeIn(types, parsed.data.editedTypeId);
 
   return getDb().transaction(async (tx) => {
     const existing = await rowsOn(tx, ctx, and(gte(leaveDays.on, from), lte(leaveDays.on, to)));
     const preview = previewLeaveRange(
-      { from, to, kind, fraction, otherKind, editedKind: parsed.data.editedKind ?? null },
+      { from, to, typeId, fraction, minutes, otherTypeId, editedTypeId: parsed.data.editedTypeId ?? null },
       // The panel works from the rows still booked; the server answers from the same ones.
-      { days: existing.filter(stillBooked).map(asView), holidays },
+      {
+        days: existing.filter(stillBooked).map(asView),
+        holidays,
+        types,
+        workDays: settings.workDays,
+        minutesPerDay,
+      },
     );
     if (preview.written.length === 0) throw new TimeOffError("not_bookable", preview.excluded);
 
-    const parts = rangeParts({ kind, fraction, otherKind });
-    let owesCalendar = parts.some((part) => goesToCalendar(part.kind));
+    let owesCalendar = rows.some((row) => row.pending === "upsert");
     for (const gone of preview.removed) {
-      const row = existing.find((one) => one.on === gone.on && one.kind === gone.kind);
+      const row = existing.find((one) => one.on === gone.on && one.typeId === gone.typeId);
       if (row !== undefined && (await takeAway(tx, ctx, row)) === "pending") owesCalendar = true;
     }
 
     const days = await tx
       .insert(leaveDays)
-      .values(
-        preview.written.flatMap((on) =>
-          parts.map((part) =>
-            userScoped(ctx).stamp({
-              on,
-              kind: part.kind,
-              fraction: part.fraction.toFixed(1),
-              note,
-              pending: goesToCalendar(part.kind) ? ("upsert" as const) : ("none" as const),
-            }),
-          ),
-        ),
-      )
+      .values(preview.written.flatMap((on) => rows.map((row) => userScoped(ctx).stamp({ on, ...row, note }))))
       .onConflictDoUpdate({
-        target: [leaveDays.userId, leaveDays.on, leaveDays.kind],
+        target: [leaveDays.userId, leaveDays.on, leaveDays.typeId],
         // Each row keeps its own values: `excluded` is the row that was about to be inserted.
         set: {
           fraction: sql`excluded.fraction`,
+          minutes: sql`excluded.minutes`,
           note,
           pending: sql`excluded.pending`,
           updatedAt: new Date(),
@@ -268,27 +279,33 @@ export async function restoreLeave(
   if (!parsed.success) throw new TimeOffError("invalid_input");
   const { dates, rows: wanted } = parsed.data;
 
-  const { patronSaint } = await getPreferences(ctx);
-  const years = [...new Set(dates.map((date) => Number(date.slice(0, 4))))];
-  const holidays = await holidaysFor(ctx, years, patronSaint);
+  const { types, settings, holidays } = await leaveContext(ctx, [
+    ...new Set(dates.map((date) => Number(date.slice(0, 4)))),
+  ]);
+  const { minutesPerDay } = await getPreferences(ctx);
 
   return getDb().transaction(async (tx) => {
     const current = await rowsOn(tx, ctx, inArray(leaveDays.on, dates));
     let owesCalendar = false;
 
     for (const row of current) {
-      const kept = wanted.some((one) => one.on === row.on && one.kind === row.kind);
+      const kept = wanted.some((one) => one.on === row.on && one.typeId === row.typeId);
       if (kept || row.pending === "delete") continue;
       if ((await takeAway(tx, ctx, row)) === "pending") owesCalendar = true;
     }
 
     for (const one of wanted) {
-      const row = current.find((held) => held.on === one.on && held.kind === one.kind);
-      const fraction = one.fraction.toFixed(1);
+      const row = current.find((held) => held.on === one.on && held.typeId === one.typeId);
+      const values = rowOf(
+        typeIn(types, one.typeId),
+        { fraction: one.fraction, minutes: one.minutes ?? null },
+        minutesPerDay,
+      );
       if (
         row !== undefined &&
         row.pending !== "delete" &&
-        row.fraction === fraction &&
+        row.fraction === values.fraction &&
+        row.minutes === values.minutes &&
         row.note === one.note
       ) {
         continue;
@@ -296,17 +313,22 @@ export async function restoreLeave(
       // A row that is not there any more was never the calendar's: it is booked again, and only on a day
       // that can be booked — an undo is not a way round the calendar.
       if (row === undefined) {
-        const verdict = bookable(one.on, holidays);
+        const verdict = bookable(one.on, holidays, settings.workDays);
         if (!verdict.ok) throw new TimeOffError("not_bookable", [{ on: one.on, reason: verdict.reason }]);
       }
-      const pending = goesToCalendar(one.kind) ? ("upsert" as const) : ("none" as const);
-      if (pending === "upsert") owesCalendar = true;
+      if (values.pending === "upsert") owesCalendar = true;
       await tx
         .insert(leaveDays)
-        .values(userScoped(ctx).stamp({ on: one.on, kind: one.kind, fraction, note: one.note, pending }))
+        .values(userScoped(ctx).stamp({ on: one.on, ...values, note: one.note }))
         .onConflictDoUpdate({
-          target: [leaveDays.userId, leaveDays.on, leaveDays.kind],
-          set: { fraction, note: one.note, pending, updatedAt: new Date() },
+          target: [leaveDays.userId, leaveDays.on, leaveDays.typeId],
+          set: {
+            fraction: values.fraction,
+            minutes: values.minutes,
+            note: one.note,
+            pending: values.pending,
+            updatedAt: new Date(),
+          },
         });
     }
     return { calendar: owesCalendar };

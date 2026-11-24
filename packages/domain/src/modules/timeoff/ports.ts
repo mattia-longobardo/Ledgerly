@@ -4,7 +4,6 @@
 // not wired fails loudly. The module never names the provider.
 import type { Ctx } from "../../platform/context";
 import type { CivilDate } from "../../shared/dates";
-import { asCalendarKind, CALENDAR_KINDS, LEAVE_DAY_KINDS, type LeaveDayKind } from "./rules";
 import {
   calendarDaysOf,
   datesHeld,
@@ -31,11 +30,11 @@ export interface LeaveCalendarSync {
 }
 
 /**
- * The kinds of leave a payslip prints, in hours (PAY-6): the one vocabulary of the balances. A
- * `permit` is counted as ROL here (`rules/totals.ts`), the one place that maps it.
+ * The word a payslip prints a leave balance and its use under, in hours (PAY-6): payroll's own
+ * vocabulary, which a type of leave names as its `balance_key` (R5g). A use payroll counts against
+ * another balance arrives under that balance's word.
  */
-export const BALANCE_KINDS = ["vacation", "rol", "permit"] as const;
-export type BalanceKind = (typeof BALANCE_KINDS)[number];
+type BalanceKind = string;
 
 /** A leave balance as one applied payslip printed it. */
 interface LeaveBalance {
@@ -51,6 +50,8 @@ interface LeaveBalance {
 /** Leave taken, as an applied payslip accounted for it, in the month it was used. */
 interface LeaveTaken {
   kind: BalanceKind;
+  /** The balance the use counts against: `kind` itself, or the balance payroll spends it from. */
+  balance: BalanceKind;
   hours: number;
   /** The payslip's own month. */
   payrollPeriod: string;
@@ -97,42 +98,18 @@ function notWired(): never {
 /*
  * The days of time off as the leave engine of a plugin with a calendar reads and writes them (rewrite
  * plan R5c, P3b): the adapter of its port, realised here from the module's own services, by year. The
- * application wires it (`wireDomain`); the engine never reaches the module's tables. A kind the
- * engine names is one of this module's: anything else is a bug of the caller, refused loudly.
+ * application wires it (`wireDomain`); the engine never reaches the module's tables. The words of the
+ * calendar are the types' own (R5g): a word no type has is refused by `recordFromCalendar`.
  */
-
-function dayKind(kind: string): LeaveDayKind {
-  const known = LEAVE_DAY_KINDS.find((one) => one === kind);
-  if (known === undefined) throw new RangeError(`Not a kind of day off: ${kind}`);
-  return known;
-}
-
-function calendarKind(kind: string): (typeof CALENDAR_KINDS)[number] {
-  const known = CALENDAR_KINDS.find((one) => one === kind);
-  if (known === undefined) throw new RangeError(`Not a kind of the calendar: ${kind}`);
-  return known;
-}
-
 export const calendarDays = {
-  calendarKinds: CALENDAR_KINDS,
-  asCalendarKind: (kind: string): string => asCalendarKind(dayKind(kind)),
   daysOf: (ctx: Pick<Ctx, "userId">, year: number) => calendarDaysOf(ctx, yearWindow(year)),
   datesHeld: (ctx: Pick<Ctx, "userId">, year: number) => datesHeld(ctx, yearWindow(year)),
   yearsWithPending,
-  markSynced: (
-    ctx: Pick<Ctx, "userId">,
-    observed: readonly { id: string; fraction: number | null; kind: string | null }[],
-    now: Date,
-  ) =>
-    markSynced(
-      ctx,
-      observed.map((one) => ({ ...one, kind: one.kind === null ? null : dayKind(one.kind) })),
-      now,
-    ),
+  markSynced,
   markRefused,
   recordFromCalendar: (
     ctx: Pick<Ctx, "userId">,
     day: { on: CivilDate; kind: string; fraction: number },
     now: Date,
-  ) => recordFromCalendar(ctx, { ...day, kind: calendarKind(day.kind) }, now),
+  ) => recordFromCalendar(ctx, day, now),
 };

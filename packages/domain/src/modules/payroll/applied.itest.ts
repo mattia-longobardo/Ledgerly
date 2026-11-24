@@ -10,11 +10,13 @@ import { deleteFolder, ensureBucket } from "../../platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
 import { payrollFund } from "../../../../../test/funds";
+import { oldLeaveTypes, type OldTypes } from "../../../../../test/leave-types";
 import { APRIL, MARCH, MARCH_REPRINT, THIRTEENTH } from "../../../../../test/fixtures/payroll/samples";
 import { twinPdf, type TwinPayslip } from "../../../../../test/fixtures/payroll/twin";
 import { applyPayslip, processPayslip, reopenPayslip, uploadPayslip, verifyPayslip } from "./service";
 
 let ctx: Ctx;
+let types: OldTypes;
 const NOW = new Date("2031-10-15T10:00:00Z");
 const stopClock = () => {
   vi.useFakeTimers({ toFake: ["Date"] });
@@ -25,6 +27,7 @@ beforeAll(ensureBucket);
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
+  types = await oldLeaveTypes(ctx);
   stopClock();
 });
 afterEach(() => vi.useRealTimers());
@@ -71,11 +74,16 @@ async function fundRows(fundId: string) {
 /** The Time off residuals and the payslip's months of 2031. */
 async function timeOff() {
   const view = await timeOffView(ctx, 2031);
+  // Back to the old kinds, so the numbers stay comparable with the code before R5g.
+  const kindOf = (typeId: string | null) => Object.entries(types).find(([, id]) => id === typeId)?.[0] ?? null;
+  const residualOf = (typeId: string) => view.balances.find((one) => one.typeId === typeId)?.residual;
   return {
-    vacation: view.vacation.residual,
-    rol: view.rol.residual,
-    payroll: view.rows.filter((row) => row.source === "payroll").map(({ id: _id, ...row }) => row),
-    unrecorded: view.unrecorded,
+    vacation: residualOf(types.vacation),
+    rol: residualOf(types.rol),
+    payroll: view.rows
+      .filter((row) => row.source === "payroll")
+      .map(({ id: _id, typeId, ...row }) => ({ ...row, type: kindOf(typeId) })),
+    unrecorded: view.unrecorded.map(({ typeId, ...gap }) => ({ ...gap, kind: kindOf(typeId) })),
   };
 }
 
@@ -139,6 +147,7 @@ describe("an applied payslip gives the fund and Time off the same numbers as bef
               "kind": "vacation",
               "payrollPeriod": "2031-03-01",
               "source": "payroll",
+              "type": "vacation",
               "usagePeriod": "2031-02-01",
             },
             {
@@ -146,6 +155,7 @@ describe("an applied payslip gives the fund and Time off the same numbers as bef
               "kind": "rol",
               "payrollPeriod": "2031-04-01",
               "source": "payroll",
+              "type": "rol",
               "usagePeriod": "2031-03-01",
             },
           ],
@@ -225,6 +235,7 @@ describe("an applied payslip gives the fund and Time off the same numbers as bef
               "kind": "rol",
               "payrollPeriod": "2031-04-01",
               "source": "payroll",
+              "type": "rol",
               "usagePeriod": "2031-03-01",
             },
           ],

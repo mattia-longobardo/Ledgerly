@@ -14,6 +14,7 @@ import { addDays } from "@ledgerly/format/dates";
 import { formatDate, type UiLocale } from "@ledgerly/format/format";
 import type { CalendarCell, CalendarMonth } from "@ledgerly/domain/timeoff/client";
 import { BlankCell, type CellSelection, DayCell } from "./day-cell";
+import { colorOf, type LeaveTypeView, nameOf } from "./kinds";
 import { SelectionBar } from "./selection-bar";
 
 export interface DayRange {
@@ -26,8 +27,10 @@ export interface YearCalendarProps {
   /** The month names, already in the user's language, 1–12. */
   monthNames: string[];
   weekdays: string[];
-  /** What each month's total reads, e.g. "3 d" — the design prints it next to the name. */
+  /** What each month's total reads, e.g. "3 d", in the order of `months`: the design prints it next to the name. */
   totals: string[];
+  /** The person's types, for each day's colours and words. */
+  types: readonly LeaveTypeView[];
   today: string;
   /** The range the open panel is about: it stays drawn behind the panel. */
   range?: DayRange | null;
@@ -51,7 +54,7 @@ export interface YearCalendarProps {
 type Cell = CalendarCell & { date: string };
 
 const isDay = (cell: CalendarCell): cell is Cell => cell.date !== null;
-const canAct = (cell: CalendarCell): boolean => cell.kinds.length > 0 || (!cell.weekend && !cell.holiday);
+const canAct = (cell: CalendarCell): boolean => cell.typeIds.length > 0 || (!cell.weekend && !cell.holiday);
 const ordered = (a: string, b: string): DayRange => (a <= b ? { from: a, to: b } : { from: b, to: a });
 
 /** The day an event happened on, read off the cell — a button or, for a weekend, a span. */
@@ -78,6 +81,7 @@ export function YearCalendar({
   monthNames,
   weekdays,
   totals,
+  types,
   today,
   range = null,
   waiting,
@@ -109,6 +113,7 @@ export function YearCalendar({
       for (const cell of month.weeks.flat()) if (isDay(cell)) byDate.set(cell.date, cell);
     return byDate;
   }, [months]);
+  const spansTwo = months.length > 0 && months[0].year !== months[months.length - 1].year;
   /** Every day of the year an arrow key can land on, in order. */
   const reachable = useMemo(() => [...cells.values()].filter(canAct).map((cell) => cell.date), [cells]);
 
@@ -169,10 +174,10 @@ export function YearCalendar({
     if (start !== null && shown !== null && cell.date === start) label = t("selection.firstLabel", { date });
     else if (start !== null && shown !== null && (cell.date === shown.from || cell.date === shown.to)) {
       label = t("selection.lastLabel", { date });
-    } else if (cell.kinds.length > 0) {
+    } else if (cell.typeIds.length > 0) {
       label = t("calendar.dayLabel", {
         date,
-        kinds: cell.kinds.map((kind) => t(`kinds.${kind}` as "kinds.vacation")).join(", "),
+        kinds: cell.typeIds.map((typeId) => nameOf(types, typeId)).join(", "),
       });
     } else label = t("calendar.bookLabel", { date });
     return cell.date === today ? `${label}, ${t("calendar.today")}` : label;
@@ -214,7 +219,7 @@ export function YearCalendar({
       finish(anchor, date);
       return;
     }
-    if (cell.kinds.length > 0) {
+    if (cell.typeIds.length > 0) {
       onEdit(date);
       return;
     }
@@ -226,7 +231,7 @@ export function YearCalendar({
   function onPointerDown(event: PointerEvent) {
     if (event.pointerType !== "mouse" || event.button !== 0 || anchor !== null) return;
     const date = dateOf(event, "button[data-date]");
-    if (date === null || (cells.get(date)?.kinds.length ?? 0) > 0) return;
+    if (date === null || (cells.get(date)?.typeIds.length ?? 0) > 0) return;
     setDragFrom(date);
     setHover(date);
   }
@@ -272,7 +277,7 @@ export function YearCalendar({
   function onKeyDown(event: KeyboardEvent) {
     const date = dateOf(event, "button[data-date]");
     if (date === null) return;
-    const month = months[Number(date.slice(5, 7)) - 1];
+    const month = months.find((one) => one.month === Number(date.slice(5, 7))) ?? months[0];
     const inMonth = month.weeks
       .flat()
       .filter((cell) => isDay(cell) && canAct(cell))
@@ -314,7 +319,7 @@ export function YearCalendar({
 
   /** Delete removes what a booked day carries; on a free day, and during a range, it does nothing. */
   function remove(date: string) {
-    if (anchor !== null || (cells.get(date)?.kinds.length ?? 0) === 0) return;
+    if (anchor !== null || (cells.get(date)?.typeIds.length ?? 0) === 0) return;
     onRemove(date);
   }
 
@@ -335,7 +340,7 @@ export function YearCalendar({
         // number of columns follows the page's own width, not the window's.
         className="grid grid-cols-1 gap-4 gap-x-5 select-none @2xl:grid-cols-2 @4xl:grid-cols-3 @6xl:grid-cols-4 @[100rem]:grid-cols-6"
       >
-        {months.map((month) => {
+        {months.map((month, position) => {
           const days = month.weeks.flat().filter((cell) => isDay(cell) && canAct(cell));
           const stored = cursor[month.month];
           const tabStop =
@@ -352,8 +357,11 @@ export function YearCalendar({
               className="flex min-w-0 scroll-mt-16 flex-col gap-1.5"
             >
               <div className="flex justify-between text-sm">
-                <span className="font-semibold">{monthNames[month.month - 1]}</span>
-                <span className="text-muted tabular-nums">{totals[month.month - 1]}</span>
+                <span className="font-semibold">
+                  {/* A leave year that does not start in January spans two: each month says its year. */}
+                  {spansTwo ? `${monthNames[month.month - 1]} ${month.year}` : monthNames[month.month - 1]}
+                </span>
+                <span className="text-muted tabular-nums">{totals[position]}</span>
               </div>
               <div
                 className="grid grid-cols-7 gap-0.5 text-center text-xs text-faint max-md:leading-5"
@@ -371,6 +379,7 @@ export function YearCalendar({
                       <DayCell
                         key={cell.date}
                         cell={cell}
+                        colors={cell.typeIds.map((typeId) => colorOf(types, typeId))}
                         label={labelFor(cell)}
                         tabbable={cell.date === tabStop}
                         today={cell.date === today}

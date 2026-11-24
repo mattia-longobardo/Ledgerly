@@ -2165,6 +2165,242 @@
   "isError": false,
   "answer": {
    "year": 2031,
+   "types": [
+    {
+     "id": "<id-130>",
+     "name": "Vacation",
+     "color": "primary",
+     "unit": "half_day",
+     "hasAllowance": true,
+     "toCalendar": true
+    },
+    {
+     "id": "<id-131>",
+     "name": "ROL",
+     "color": "warn",
+     "unit": "half_day",
+     "hasAllowance": true,
+     "toCalendar": true
+    },
+    {
+     "id": "<id-132>",
+     "name": "Time off in lieu",
+     "color": "accent",
+     "unit": "half_day",
+     "hasAllowance": false,
+     "toCalendar": true
+    },
+    {
+     "id": "<id-133>",
+     "name": "Other",
+     "color": "faint",
+     "unit": "half_day",
+     "hasAllowance": false,
+     "toCalendar": false
+    }
+   ],
+   "allowances": [
+    {
+     "typeId": "<id-130>",
+     "year": 2031,
+     "days": 26,
+     "carriedDays": null
+    },
+    {
+     "typeId": "<id-131>",
+     "year": 2031,
+     "days": 4,
+     "carriedDays": null
+    }
+   ],
+   "balances": [
+    {
+     "typeId": "<id-130>",
+     "residual": {
+      "basis": "payslip",
+      "remainingMinutes": 1660,
+      "takenMinutes": 0,
+      "plannedMinutes": 1440,
+      "snapshotPeriod": "2031-04-01",
+      "countedThrough": "2031-03-01"
+     },
+     "allowanceMinutes": 12480,
+     "carriedMinutes": 300,
+     "residualInput": {
+      "snapshot": {
+       "period": "2031-04-01",
+       "remainingHours": 51.66
+      },
+      "allowanceMinutes": 12480,
+      "carriedMinutes": 300,
+      "days": [
+       {
+        "on": "2031-08-11",
+        "kind": "vacation",
+        "fraction": 1,
+        "typeId": "<id-130>",
+        "minutes": null
+       },
+       {
+        "on": "2031-08-12",
+        "kind": "vacation",
+        "fraction": 1,
+        "typeId": "<id-130>",
+        "minutes": null
+       },
+       {
+        "on": "2031-08-13",
+        "kind": "vacation",
+        "fraction": 1,
+        "typeId": "<id-130>",
+        "minutes": null
+       }
+      ],
+      "countedThrough": "2031-03-01",
+      "today": null,
+      "minutesPerDay": 480
+     },
+     "forecastInput": {
+      "rate": {
+       "minutesPerMonth": 399.5999999999998,
+       "source": "payslip"
+      },
+      "opening": {
+       "source": "payslip",
+       "minutes": 3100,
+       "accruedThrough": "2031-04-01",
+       "spentFrom": "2031-04-01"
+      },
+      "days": [
+       {
+        "on": "2031-08-11",
+        "kind": "vacation",
+        "fraction": 1,
+        "typeId": "<id-130>",
+        "minutes": null
+       },
+       {
+        "on": "2031-08-12",
+        "kind": "vacation",
+        "fraction": 1,
+        "typeId": "<id-130>",
+        "minutes": null
+       },
+       {
+        "on": "2031-08-13",
+        "kind": "vacation",
+        "fraction": 1,
+        "typeId": "<id-130>",
+        "minutes": null
+       }
+      ],
+      "minutesPerDay": 480
+     },
+     "accrual": {
+      "rate": {
+       "minutesPerMonth": 399.5999999999998,
+       "source": "payslip"
+      },
+      "yearEndMinutes": 4857,
+      "payslipPeriod": "2031-04-01",
+      "leads": false
+     }
+    },
+    {
+     "typeId": "<id-131>",
+     "residual": {
+      "basis": "payslip",
+      "remainingMinutes": 1720,
+      "takenMinutes": 0,
+      "plannedMinutes": 240,
+      "snapshotPeriod": "2031-04-01",
+      "countedThrough": "2031-03-01"
+     },
+     "allowanceMinutes": 1920,
+     "carriedMinutes": 360,
+     "residualInput": {
+      "snapshot": {
+       "period": "2031-04-01",
+       "remainingHours": 32.66
+      },
+      "allowanceMinutes": 1920,
+      "carriedMinutes": 360,
+      "days": [
+       {
+        "on": "2031-09-19",
+        "kind": "rol",
+        "fraction": 0.5,
+        "typeId": "<id-131>",
+        "minutes": null
+       }
+      ],
+      "countedThrough": "2031-03-01",
+      "today": null,
+      "minutesPerDay": 480
+     },
+     "forecastInput": {
+      "rate": {
+       "minutesPerMonth": 399.6,
+       "source": "payslip"
+      },
+      "opening": {
+       "source": "payslip",
+       "minutes": 1960,
+       "accruedThrough": "2031-04-01",
+       "spentFrom": "2031-04-01"
+      },
+      "days": [
+       {
+        "on": "2031-09-19",
+        "kind": "rol",
+        "fraction": 0.5,
+        "typeId": "<id-131>",
+        "minutes": null
+       }
+      ],
+      "minutesPerDay": 480
+     },
+     "accrual": {
+      "rate": {
+       "minutesPerMonth": 399.6,
+       "source": "payslip"
+      },
+      "yearEndMinutes": 4917,
+      "payslipPeriod": "2031-04-01",
+      "leads": false
+     }
+    }
+   ],
+   "workDays": [
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "yearStartMonth": 1,
+   "window": {
+    "from": "2031-01-01",
+    "to": "2031-12-31"
+   },
+   "hasHolidayCalendar": false,
+   "unrecordedByType": [
+    {
+     "month": "2031-02-01",
+     "typeId": "<id-130>",
+     "payrollMinutes": 480,
+     "recordedMinutes": 0,
+     "missingMinutes": 480
+    },
+    {
+     "month": "2031-03-01",
+     "typeId": "<id-131>",
+     "payrollMinutes": 240,
+     "recordedMinutes": 0,
+     "missingMinutes": 240
+    }
+   ],
+   "overdrawnByType": [],
    "today": "2031-10-15",
    "minutesPerDay": 480,
    "weekStart": 1,
@@ -2267,6 +2503,7 @@
      "id": "payroll-2031-02-01-vacation-0",
      "usagePeriod": "2031-02-01",
      "kind": "vacation",
+     "typeId": "<id-130>",
      "hours": 8,
      "payrollPeriod": "2031-03-01"
     },
@@ -2275,15 +2512,18 @@
      "id": "payroll-2031-03-01-rol-1",
      "usagePeriod": "2031-03-01",
      "kind": "rol",
+     "typeId": "<id-131>",
      "hours": 4,
      "payrollPeriod": "2031-04-01"
     },
     {
      "source": "day",
-     "id": "<id-130>",
+     "id": "<id-134>",
      "on": "2031-08-11",
      "kind": "vacation",
+     "typeId": "<id-130>",
      "fraction": 1,
+     "minutes": null,
      "note": null,
      "origin": "manual",
      "status": "planned",
@@ -2291,10 +2531,12 @@
     },
     {
      "source": "day",
-     "id": "<id-131>",
+     "id": "<id-135>",
      "on": "2031-08-12",
      "kind": "vacation",
+     "typeId": "<id-130>",
      "fraction": 1,
+     "minutes": null,
      "note": null,
      "origin": "manual",
      "status": "planned",
@@ -2302,10 +2544,12 @@
     },
     {
      "source": "day",
-     "id": "<id-132>",
+     "id": "<id-136>",
      "on": "2031-08-13",
      "kind": "vacation",
+     "typeId": "<id-130>",
      "fraction": 1,
+     "minutes": null,
      "note": null,
      "origin": "manual",
      "status": "planned",
@@ -2313,10 +2557,12 @@
     },
     {
      "source": "day",
-     "id": "<id-133>",
+     "id": "<id-137>",
      "on": "2031-09-19",
      "kind": "rol",
+     "typeId": "<id-131>",
      "fraction": 0.5,
+     "minutes": null,
      "note": null,
      "origin": "manual",
      "status": "planned",
@@ -2356,6 +2602,16 @@
       "kind": "rol",
       "minutes": 240
      }
+    ],
+    "byType": [
+     {
+      "typeId": "<id-130>",
+      "minutes": 1440
+     },
+     {
+      "typeId": "<id-131>",
+      "minutes": 240
+     }
     ]
    },
    "countedThrough": "2031-03-01",
@@ -2368,6 +2624,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": true
@@ -2383,6 +2641,13 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": [
+      {
+       "typeId": "<id-130>",
+       "minutes": 480
+      }
+     ],
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 480,
      "counted": true
@@ -2398,6 +2663,13 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": [
+      {
+       "typeId": "<id-131>",
+       "minutes": 240
+      }
+     ],
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 240,
      "counted": true
@@ -2410,6 +2682,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": false
@@ -2422,6 +2696,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": false
@@ -2434,6 +2710,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": false
@@ -2446,6 +2724,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": false
@@ -2458,6 +2738,13 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [
+      {
+       "typeId": "<id-130>",
+       "minutes": 1440
+      }
+     ],
      "plannedMinutes": 1440,
      "missingMinutes": 0,
      "counted": false
@@ -2470,6 +2757,13 @@
       "rolMinutes": 240,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [
+      {
+       "typeId": "<id-131>",
+       "minutes": 240
+      }
+     ],
      "plannedMinutes": 240,
      "missingMinutes": 0,
      "counted": false
@@ -2482,6 +2776,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": false
@@ -2494,6 +2790,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": false
@@ -2506,6 +2804,8 @@
       "rolMinutes": 0,
       "otherMinutes": 0
      },
+     "payrollByType": null,
+     "recordedByType": [],
      "plannedMinutes": 0,
      "missingMinutes": 0,
      "counted": false
@@ -2513,20 +2813,7 @@
    ],
    "totalAllowanceMinutes": null,
    "allowanceMismatch": null,
-   "holidays": [
-    "2031-01-01",
-    "2031-01-06",
-    "2031-04-13",
-    "2031-04-14",
-    "2031-04-25",
-    "2031-05-01",
-    "2031-06-02",
-    "2031-08-15",
-    "2031-11-01",
-    "2031-12-08",
-    "2031-12-25",
-    "2031-12-26"
-   ],
+   "holidays": [],
    "residualInputs": {
     "vacation": {
      "snapshot": {
@@ -2539,20 +2826,27 @@
       {
        "on": "2031-08-11",
        "kind": "vacation",
-       "fraction": 1
+       "fraction": 1,
+       "typeId": "<id-130>",
+       "minutes": null
       },
       {
        "on": "2031-08-12",
        "kind": "vacation",
-       "fraction": 1
+       "fraction": 1,
+       "typeId": "<id-130>",
+       "minutes": null
       },
       {
        "on": "2031-08-13",
        "kind": "vacation",
-       "fraction": 1
+       "fraction": 1,
+       "typeId": "<id-130>",
+       "minutes": null
       }
      ],
      "countedThrough": "2031-03-01",
+     "today": null,
      "minutesPerDay": 480
     },
     "rol": {
@@ -2566,10 +2860,13 @@
       {
        "on": "2031-09-19",
        "kind": "rol",
-       "fraction": 0.5
+       "fraction": 0.5,
+       "typeId": "<id-131>",
+       "minutes": null
       }
      ],
      "countedThrough": "2031-03-01",
+     "today": null,
      "minutesPerDay": 480
     }
    },
@@ -2610,17 +2907,23 @@
       {
        "on": "2031-08-11",
        "kind": "vacation",
-       "fraction": 1
+       "fraction": 1,
+       "typeId": "<id-130>",
+       "minutes": null
       },
       {
        "on": "2031-08-12",
        "kind": "vacation",
-       "fraction": 1
+       "fraction": 1,
+       "typeId": "<id-130>",
+       "minutes": null
       },
       {
        "on": "2031-08-13",
        "kind": "vacation",
-       "fraction": 1
+       "fraction": 1,
+       "typeId": "<id-130>",
+       "minutes": null
       }
      ],
      "minutesPerDay": 480
@@ -2640,7 +2943,9 @@
       {
        "on": "2031-09-19",
        "kind": "rol",
-       "fraction": 0.5
+       "fraction": 0.5,
+       "typeId": "<id-131>",
+       "minutes": null
       }
      ],
      "minutesPerDay": 480
@@ -2755,8 +3060,8 @@
      "year": 2031,
      "rows": [
       {
-       "id": "<id-134>",
-       "payslipId": "<id-135>",
+       "id": "<id-138>",
+       "payslipId": "<id-139>",
        "year": 2031,
        "period": "2031-04-01",
        "type": "ordinary",
@@ -2787,8 +3092,8 @@
        "openWarnings": 0
       },
       {
-       "id": "<id-136>",
-       "payslipId": "<id-137>",
+       "id": "<id-140>",
+       "payslipId": "<id-141>",
        "year": 2031,
        "period": "2031-03-01",
        "type": "ordinary",
@@ -2920,7 +3225,7 @@
    },
    "funds": [
     {
-     "id": "<id-138>",
+     "id": "<id-142>",
      "name": "Fideuram Piano Accumulo",
      "provider": "Fideuram",
      "compartment": "Bilanciato",
@@ -2932,7 +3237,7 @@
      "accountId": "<id-6>",
      "accountName": "Fideuram Piano Accumulo",
      "line": {
-      "fundId": "<id-138>",
+      "fundId": "<id-142>",
       "status": "measured",
       "start": {
        "on": "2030-10-31",
@@ -2965,7 +3270,7 @@
      "stale": false,
      "lastValueOn": "2031-09-30",
      "debit": {
-      "sourceId": "<id-139>",
+      "sourceId": "<id-143>",
       "state": "active",
       "amount": "251.00",
       "frequency": {
@@ -3002,14 +3307,14 @@
       "total": "29.00",
       "funds": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "gain": "29.00",
         "share": 0.004673303020711909
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2030-10-31",
         "to": "2030-12-31",
         "gain": "29.00",
@@ -3026,28 +3331,28 @@
       "total": "180.00",
       "funds": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "gain": "180.00",
         "share": 0.029006708404418744
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2030-12-31",
         "to": "2031-03-31",
         "gain": "82.00",
         "share": 0.013214167162012984
        },
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2031-03-31",
         "to": "2031-06-30",
         "gain": "155.00",
         "share": 0.024977998903805032
        },
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2031-06-30",
         "to": "2031-09-30",
         "gain": "-57.00",
@@ -3158,7 +3463,7 @@
   "isError": false,
   "answer": {
    "fund": {
-    "id": "<id-138>",
+    "id": "<id-142>",
     "name": "Fideuram Piano Accumulo",
     "provider": "Fideuram",
     "compartment": "Bilanciato",
@@ -3213,7 +3518,7 @@
     ]
    },
    "line": {
-    "fundId": "<id-138>",
+    "fundId": "<id-142>",
     "status": "measured",
     "start": {
      "on": "2030-10-31",
@@ -3253,14 +3558,14 @@
       "total": "29.00",
       "funds": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "gain": "29.00",
         "share": 0.004673303020711909
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2030-10-31",
         "to": "2030-12-31",
         "gain": "29.00",
@@ -3277,28 +3582,28 @@
       "total": "180.00",
       "funds": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "gain": "180.00",
         "share": 0.029006708404418744
        }
       ],
       "stretches": [
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2030-12-31",
         "to": "2031-03-31",
         "gain": "82.00",
         "share": 0.013214167162012984
        },
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2031-03-31",
         "to": "2031-06-30",
         "gain": "155.00",
         "share": 0.024977998903805032
        },
        {
-        "fundId": "<id-138>",
+        "fundId": "<id-142>",
         "from": "2031-06-30",
         "to": "2031-09-30",
         "gain": "-57.00",
@@ -3392,7 +3697,7 @@
    "bridge": null,
    "payslipsAccrued": null,
    "debit": {
-    "sourceId": "<id-139>",
+    "sourceId": "<id-143>",
     "state": "active",
     "amount": "251.00",
     "frequency": {
@@ -3414,7 +3719,7 @@
    },
    "recent": [
     {
-     "id": "<id-140>",
+     "id": "<id-144>",
      "on": "2031-10-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3432,7 +3737,7 @@
      "origin": "manual"
     },
     {
-     "id": "<id-141>",
+     "id": "<id-145>",
      "on": "2031-09-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3450,7 +3755,7 @@
      "origin": "manual"
     },
     {
-     "id": "<id-142>",
+     "id": "<id-146>",
      "on": "2031-08-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3468,7 +3773,7 @@
      "origin": "manual"
     },
     {
-     "id": "<id-143>",
+     "id": "<id-147>",
      "on": "2031-07-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3486,7 +3791,7 @@
      "origin": "manual"
     },
     {
-     "id": "<id-144>",
+     "id": "<id-148>",
      "on": "2031-06-05",
      "classification": "voluntary",
      "source": "manual",
@@ -3653,126 +3958,126 @@
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-145>",
+       "id": "<id-149>",
        "on": "2031-08-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-146>",
+       "id": "<id-150>",
        "on": "2031-08-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-147>",
+       "id": "<id-151>",
        "on": "2031-08-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-148>",
+       "id": "<id-152>",
        "on": "2031-08-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-149>",
+       "id": "<id-153>",
        "on": "2031-08-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-150>",
+       "id": "<id-154>",
        "on": "2031-08-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-151>",
+       "id": "<id-155>",
        "on": "2031-07-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-152>",
+       "id": "<id-156>",
        "on": "2031-07-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-153>",
+       "id": "<id-157>",
        "on": "2031-07-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-154>",
+       "id": "<id-158>",
        "on": "2031-07-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-155>",
+       "id": "<id-159>",
        "on": "2031-07-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-156>",
+       "id": "<id-160>",
        "on": "2031-07-03",
        "amount": "12.99",
        "payee": "Netflix",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-157>",
+       "id": "<id-161>",
        "on": "2031-06-21",
        "amount": "93.10",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-158>",
+       "id": "<id-162>",
        "on": "2031-06-13",
        "amount": "48.00",
        "payee": "Trattoria",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-159>",
+       "id": "<id-163>",
        "on": "2031-06-12",
        "amount": "61.75",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-160>",
+       "id": "<id-164>",
        "on": "2031-06-08",
        "amount": "36.50",
        "payee": "Trenitalia",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-161>",
+       "id": "<id-165>",
        "on": "2031-06-05",
        "amount": "84.20",
        "payee": "Esselunga",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-162>",
+       "id": "<id-166>",
        "on": "2031-06-03",
        "amount": "12.99",
        "payee": "Netflix",
@@ -3788,35 +4093,35 @@
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-163>",
+       "id": "<id-167>",
        "on": "2031-08-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-164>",
+       "id": "<id-168>",
        "on": "2031-07-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-165>",
+       "id": "<id-169>",
        "on": "2031-07-01",
        "amount": "2000.00",
        "payee": "Bonifico",
        "accountName": "Directa"
       },
       {
-       "id": "<id-166>",
+       "id": "<id-170>",
        "on": "2031-06-27",
        "amount": "2450.00",
        "payee": "ACME S.p.A.",
        "accountName": "ING Conto Arancio"
       },
       {
-       "id": "<id-167>",
+       "id": "<id-171>",
        "on": "2031-03-03",
        "amount": "10000.00",
        "payee": "Bonifico",

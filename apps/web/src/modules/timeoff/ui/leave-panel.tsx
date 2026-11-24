@@ -13,25 +13,26 @@ import { Input, Select, Textarea } from "@ledgerly/ui/input";
 import { Modal } from "@ledgerly/ui/modal";
 import { Link } from "@ledgerly/ui/router";
 import { Segmented } from "@ledgerly/ui/segmented";
-import { type ForecastInput, forecastChange } from "@ledgerly/domain/timeoff/client";
+import { type ForecastInput, type YearWindow, forecastChange } from "@ledgerly/domain/timeoff/client";
 import type { LeaveFormInput } from "../calls";
 import {
-  type LeaveDayKind,
   type LeaveDayView,
   type ResidualInput,
   MAX_RANGE_DAYS,
   otherHalfOf,
   previewLeaveRange,
 } from "@ledgerly/domain/timeoff/client";
-import { type LeaveTypeOption, fullDate, rangeEnds, shortDay } from "./kinds";
+import { type LeaveTypeView, forRules, fullDate, nameOf, rangeEnds, shortDay } from "./kinds";
 
 /** A booked row as the panel and the table's buttons need it. */
 export interface BookedLeave {
   id: string;
   on: string;
-  kind: LeaveDayKind;
-  /** Half a day or a whole one, every kind alike (N0). */
+  typeId: string;
+  /** Half a day or a whole one; for a type counted in hours, the nearest of the two. */
   fraction: number;
+  /** The length of a row of a type counted in hours; null for the others. */
+  minutes: number | null;
   note: string | null;
   /** Typed here, or read off the external calendar. */
   origin: "manual" | "external";
@@ -42,17 +43,21 @@ export interface BookedLeave {
 /** Everything the panel works from. The page hands it over; the panel reads nothing itself. */
 interface LeavePanelData {
   year: number;
+  /** The days of the leave year the residuals are about. */
+  window: YearWindow;
   minutesPerDay: number;
+  /** The days of the week the person works, 0 Sunday … 6 Saturday. */
+  workDays: readonly number[];
   /** Every booked row of the year shown. */
   days: readonly LeaveDayView[];
-  /** The days of the year nobody works, the patron saint included. */
+  /** The holidays and the days off of the year the person does not work. */
   holidays: ReadonlySet<string>;
-  /** What each residual on the page was worked out from, by kind. */
-  residuals: Partial<Record<LeaveDayKind, ResidualInput>>;
-  /** What each forecast on the page was worked out from, by kind (release N5.1). */
-  forecasts?: Partial<Record<LeaveDayKind, ForecastInput>>;
-  /** The kinds of leave, as a list: the panel names none of its own (anticipation AN1). */
-  types: readonly LeaveTypeOption[];
+  /** What each residual on the page was worked out from, by type id. */
+  residuals: Partial<Record<string, ResidualInput>>;
+  /** What each forecast on the page was worked out from, by type id (release N5.1). */
+  forecasts?: Partial<Record<string, ForecastInput>>;
+  /** The person's types of leave, in their order: the panel names none of its own. */
+  types: readonly LeaveTypeView[];
 }
 
 /** What opened the panel: a range of the calendar, the "Add leave" button, or a booked day. */
@@ -112,37 +117,47 @@ export function LeavePanel({
   const [editing, setEditing] = useState(entry.mode === "edit");
   const row = editing ? (rows.find((one) => one.id === activeId) ?? rows[0]) : undefined;
 
-  const selectable = data.types.filter((type) => type.selectable);
+  const rulesTypes = useMemo(() => forRules(data.types), [data.types]);
+  /** The type the rules propose beside `first` for the other half; null when there is none. */
+  const proposedOther = (first: string) => otherHalfOf(rulesTypes, first);
   const firstDay = entry.mode === "edit" ? entry.date : entry.from;
   const [from, setFrom] = useState(firstDay);
   const [to, setTo] = useState(entry.mode === "range" ? entry.to : firstDay);
-  const [kind, setKind] = useState<LeaveDayKind>(row?.kind ?? selectable[0]?.id ?? data.types[0].id);
-  /** "split" is half of `kind` and half of `otherKind` on every day, in one step (decision of 17/11/2026). */
+  const [typeId, setTypeId] = useState(row?.typeId ?? data.types[0].id);
+  /** "split" is half of `typeId` and half of `otherTypeId` on every day, in one step (decision of 17/11/2026). */
   const [fraction, setFraction] = useState<"1" | "0.5" | "split">(row?.fraction === 0.5 ? "0.5" : "1");
+  /** The hours of every day, as typed, for a type counted in hours. */
+  const [hours, setHours] = useState(hoursOf(row?.minutes ?? null, data.minutesPerDay));
   const [note, setNote] = useState(row?.note ?? "");
-  /** The second half's kind: the other row of the day when there is one, else what the rules propose. */
-  const [otherKind, setOtherKind] = useState<LeaveDayKind>(
-    rows.find((one) => one.id !== row?.id)?.kind ?? proposedOther(row?.kind ?? kind),
+  /** The second half's type: the other row of the day when there is one, else what the rules propose. */
+  const [otherTypeId, setOtherTypeId] = useState<string | null>(
+    rows.find((one) => one.id !== row?.id)?.typeId ?? proposedOther(row?.typeId ?? typeId),
   );
-  const split = fraction === "split";
 
-  /** The kind beside `first`: the rules' proposal when it can be booked, or the first one that can. */
-  function proposedOther(first: LeaveDayKind): LeaveDayKind {
-    const proposed = otherHalfOf(first);
-    if (selectable.some((type) => type.id === proposed)) return proposed;
-    return selectable.find((type) => type.id !== first)?.id ?? proposed;
+  const typeOf = (one: string) => data.types.find((type) => type.id === one);
+  const unit = typeOf(typeId)?.unit ?? "half_day";
+  /** The size the type allows: a type of whole days or of hours has no half, «½ + ½» needs a second type. */
+  const size = unit === "half_day" && (fraction !== "split" || otherTypeId !== null) ? fraction : "1";
+  const split = size === "split";
+  const minutes = unit === "hours" ? minutesOf(hours) : null;
+  const badHours = unit === "hours" && minutes === null;
+
+  function changeType(next: string) {
+    setTypeId(next);
+    // The two halves are of two types: picking the second half's type for the first moves it on.
+    if (next === otherTypeId || otherTypeId === null) setOtherTypeId(proposedOther(next));
   }
 
-  function changeKind(next: LeaveDayKind) {
-    setKind(next);
-    // The two halves are of two kinds: picking the second half's kind for the first moves it on.
-    if (next === otherKind) setOtherKind(proposedOther(next));
-  }
-
-  const typeOf = (one: LeaveDayKind) => data.types.find((type) => type.id === one);
-  const nameOf = (one: LeaveDayKind) => typeOf(one)?.name ?? one;
-  const days = (minutes: number) =>
-    t("units.days", { amount: formatDays(minutes / data.minutesPerDay, locale) });
+  const name = (one: string | null) => nameOf(data.types, one);
+  const days = (amount: number) =>
+    t("units.days", { amount: formatDays(amount / data.minutesPerDay, locale) });
+  /** A row as the panel names it: «Vacation», «Vacation ½», «Permit 2 h». */
+  const rowName = (one: { typeId: string; fraction: number; minutes?: number | null }) =>
+    one.minutes != null
+      ? t("panel.hoursOf", { kind: name(one.typeId), amount: formatDays(one.minutes / 60, locale) })
+      : one.fraction === 0.5
+        ? t("panel.half", { kind: name(one.typeId) })
+        : name(one.typeId);
 
   /** While the two dates are one day, the last day follows the first: one day stays one day. */
   const [oneDay, setOneDay] = useState(entry.mode !== "range" || entry.from === entry.to);
@@ -170,38 +185,51 @@ export function LeavePanel({
     const other = rows.find((one) => one.id === next);
     if (other === undefined) return;
     setActiveId(next);
-    setKind(other.kind);
+    setTypeId(other.typeId);
     setFraction(other.fraction === 0.5 ? "0.5" : "1");
+    setHours(hoursOf(other.minutes, data.minutesPerDay));
     setNote(other.note ?? "");
   }
 
-  /** A second half day beside the one that is there, of the kind the rules propose. */
-  function addOtherHalf(beside: BookedLeave) {
-    const proposed = otherHalfOf(beside.kind);
+  /** A second half day beside the one that is there, of the type the rules propose. */
+  function addOtherHalf(proposed: string) {
     setEditing(false);
-    setKind(selectable.some((type) => type.id === proposed) ? proposed : (selectable[0]?.id ?? proposed));
+    setTypeId(proposed);
     setFraction("0.5");
     setNote("");
   }
+  const otherHalf =
+    row !== undefined && rows.length === 1 && row.fraction === 0.5 && row.minutes === null
+      ? proposedOther(row.typeId)
+      : null;
 
   const validDates = isCivilDate(from) && isCivilDate(to) && to >= from;
   const tooLong = validDates && daysBetween(from, to) + 1 > MAX_RANGE_DAYS;
   const preview = useMemo(
     () =>
-      validDates && !tooLong
+      validDates && !tooLong && !badHours
         ? previewLeaveRange(
             {
               from,
               to,
-              kind,
-              fraction: split ? 0.5 : Number(fraction),
-              otherKind: split ? otherKind : null,
-              editedKind: row?.kind ?? null,
+              typeId,
+              fraction: split ? 0.5 : Number(size),
+              minutes,
+              otherTypeId: split ? otherTypeId : null,
+              editedTypeId: row?.typeId ?? null,
             },
-            { days: data.days, holidays: data.holidays, residuals: data.residuals, year: data.year },
+            {
+              days: data.days,
+              holidays: data.holidays,
+              types: data.types,
+              workDays: data.workDays,
+              minutesPerDay: data.minutesPerDay,
+              residuals: data.residuals,
+              window: data.window,
+            },
           )
         : null,
-    [validDates, tooLong, from, to, kind, fraction, split, otherKind, row?.kind, data],
+    [validDates, tooLong, badHours, from, to, typeId, size, minutes, split, otherTypeId, row?.typeId, data],
   );
   const nothing = preview !== null && preview.written.length === 0;
 
@@ -225,11 +253,12 @@ export function LeavePanel({
     onConfirm({
       from,
       to,
-      kind,
-      fraction: split ? "0.5" : fraction,
+      typeId,
+      fraction: split ? "0.5" : size,
+      ...(minutes === null ? {} : { minutes }),
       note,
-      editedKind: row?.kind ?? null,
-      ...(split ? { otherKind } : {}),
+      editedTypeId: row?.typeId ?? null,
+      ...(split ? { otherTypeId } : {}),
     });
   }
 
@@ -259,16 +288,16 @@ export function LeavePanel({
    * residual says what the year adds up to, this says whether the days will be there by then.
    */
   const forecasts = (preview?.balances ?? []).flatMap((one) => {
-    const ofKind = (list: readonly LeaveDayView[]) => list.filter((day) => day.kind === one.kind);
-    const change = forecastChange(data.forecasts?.[one.kind], { from, to }, data.year, {
-      before: ofKind(data.days),
-      after: ofKind(preview?.after ?? []),
+    const ofType = (list: readonly LeaveDayView[]) => list.filter((day) => day.typeId === one.typeId);
+    const change = forecastChange(data.forecasts?.[one.typeId], { from, to }, data.window, {
+      before: ofType(data.days),
+      after: ofType(preview?.after ?? []),
     });
-    return change === null ? [] : [{ kind: one.kind, ...change }];
+    return change === null ? [] : [{ typeId: one.typeId, ...change }];
   });
   // The first day is a date here: a forecast comes only from a range the preview accepted.
   const forecastDate = forecasts.length > 0 ? formatDate(from, "long", locale) : "";
-  const otherYear = preview?.written.find((date) => Number(date.slice(0, 4)) !== data.year);
+  const otherYear = preview?.written.find((date) => date < data.window.from || date > data.window.to);
 
   return (
     <Modal
@@ -339,11 +368,7 @@ export function LeavePanel({
               <li key={on}>
                 {t("panel.removeLine", {
                   day: shortDay(on, locale),
-                  kinds: held
-                    .map((one) =>
-                      one.fraction === 0.5 ? t("panel.half", { kind: nameOf(one.kind) }) : nameOf(one.kind),
-                    )
-                    .join(", "),
+                  kinds: held.map(rowName).join(", "),
                 })}
               </li>
             ))}
@@ -366,12 +391,7 @@ export function LeavePanel({
                 label={t("panel.which")}
                 value={row.id}
                 onChange={activate}
-                options={rows.map((one) => ({
-                  value: one.id,
-                  label:
-                    one.fraction === 0.5 ? t("panel.half", { kind: nameOf(one.kind) }) : nameOf(one.kind),
-                  disabled: saving,
-                }))}
+                options={rows.map((one) => ({ value: one.id, label: rowName(one), disabled: saving }))}
               />
             </Choice>
           )}
@@ -419,49 +439,72 @@ export function LeavePanel({
           <Field label={t("dialog.kind")} htmlFor={`${id}-kind`}>
             <Select
               id={`${id}-kind`}
-              value={kind}
-              onChange={(event) => changeKind(event.target.value as LeaveDayKind)}
+              value={typeId}
+              onChange={(event) => changeType(event.target.value)}
               disabled={saving}
             >
-              {data.types
-                // A kind nobody books any more is offered only to the row that already carries it.
-                .filter((type) => type.selectable || type.id === row?.kind)
-                .map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.name}
-                  </option>
-                ))}
+              {data.types.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
             </Select>
           </Field>
 
-          <Choice label={t("dialog.duration")}>
-            <Segmented
-              label={t("dialog.duration")}
-              value={fraction}
-              onChange={setFraction}
-              options={[
-                { value: "1", label: t("dialog.wholeDay"), disabled: saving },
-                { value: "0.5", label: t("dialog.halfDay"), disabled: saving },
-                { value: "split", label: t("dialog.splitDay"), disabled: saving },
-              ]}
-            />
-            {row !== undefined && rows.length === 1 && row.fraction === 0.5 && (
-              <LinkButton className="self-start" onClick={() => addOtherHalf(row)} disabled={saving}>
-                {t("panel.otherHalf")}
-              </LinkButton>
-            )}
-          </Choice>
+          {unit === "half_day" && (
+            <Choice label={t("dialog.duration")}>
+              <Segmented
+                label={t("dialog.duration")}
+                value={fraction}
+                onChange={setFraction}
+                options={[
+                  { value: "1", label: t("dialog.wholeDay"), disabled: saving },
+                  { value: "0.5", label: t("dialog.halfDay"), disabled: saving },
+                  // «½ + ½» needs a second type counted in half days.
+                  ...(otherTypeId === null
+                    ? []
+                    : [{ value: "split" as const, label: t("dialog.splitDay"), disabled: saving }]),
+                ]}
+              />
+              {otherHalf !== null && (
+                <LinkButton className="self-start" onClick={() => addOtherHalf(otherHalf)} disabled={saving}>
+                  {t("panel.otherHalf")}
+                </LinkButton>
+              )}
+            </Choice>
+          )}
 
-          {split && (
+          {unit === "hours" && (
+            <Field
+              label={t("dialog.hours")}
+              htmlFor={`${id}-hours`}
+              error={badHours ? t("errors.invalid") : undefined}
+            >
+              <Input
+                id={`${id}-hours`}
+                type="number"
+                min={0.25}
+                max={24}
+                step={0.25}
+                className="tabular-nums"
+                value={hours}
+                onChange={(event) => setHours(event.target.value)}
+                disabled={saving}
+                required
+              />
+            </Field>
+          )}
+
+          {split && otherTypeId !== null && (
             <Field label={t("dialog.otherKind")} htmlFor={`${id}-other`}>
               <Select
                 id={`${id}-other`}
-                value={otherKind}
-                onChange={(event) => setOtherKind(event.target.value as LeaveDayKind)}
+                value={otherTypeId}
+                onChange={(event) => setOtherTypeId(event.target.value)}
                 disabled={saving}
               >
                 {data.types
-                  .filter((type) => type.id !== kind && (type.selectable || type.id === otherKind))
+                  .filter((type) => type.id !== typeId && type.unit === "half_day")
                   .map((type) => (
                     <option key={type.id} value={type.id}>
                       {type.name}
@@ -474,7 +517,7 @@ export function LeavePanel({
           <Field
             label={t("dialog.note")}
             htmlFor={`${id}-note`}
-            hint={typeOf(kind)?.local ? t("dialog.localOnly") : t("dialog.noteHint")}
+            hint={typeOf(typeId)?.toCalendar === false ? t("dialog.localOnly") : t("dialog.noteHint")}
           >
             <Textarea
               id={`${id}-note`}
@@ -500,18 +543,24 @@ export function LeavePanel({
                     ? t("panel.durationSplit", {
                         total: days(preview.totalDays * data.minutesPerDay),
                         count: preview.written.length,
-                        first: t("panel.half", { kind: nameOf(kind) }),
-                        second: t("panel.half", { kind: nameOf(otherKind) }),
+                        first: t("panel.half", { kind: name(typeId) }),
+                        second: t("panel.half", { kind: name(otherTypeId) }),
                       })
-                    : fraction === "0.5"
-                      ? t("panel.durationHalf", {
+                    : minutes !== null
+                      ? t("panel.durationHours", {
                           total: days(preview.totalDays * data.minutesPerDay),
                           count: preview.written.length,
+                          hours: t("units.hours", { amount: formatDays(minutes / 60, locale) }),
                         })
-                      : t("panel.durationWhole", {
-                          total: days(preview.totalDays * data.minutesPerDay),
-                          count: preview.written.length,
-                        })}
+                      : size === "0.5"
+                        ? t("panel.durationHalf", {
+                            total: days(preview.totalDays * data.minutesPerDay),
+                            count: preview.written.length,
+                          })
+                        : t("panel.durationWhole", {
+                            total: days(preview.totalDays * data.minutesPerDay),
+                            count: preview.written.length,
+                          })}
                 </Line>
 
                 {preview.excluded.length > 0 && (
@@ -532,13 +581,7 @@ export function LeavePanel({
                     {preview.replaced.length}:{" "}
                     {listed(
                       preview.replaced.map((one) =>
-                        t("panel.replacedDay", {
-                          day: shortDay(one.on, locale),
-                          kind:
-                            one.fraction === 0.5
-                              ? t("panel.half", { kind: nameOf(one.kind) })
-                              : nameOf(one.kind),
-                        }),
+                        t("panel.replacedDay", { day: shortDay(one.on, locale), kind: rowName(one) }),
                       ),
                     )}
                   </Line>
@@ -546,8 +589,8 @@ export function LeavePanel({
 
                 {preview.balances.map((one) => (
                   <Line
-                    key={one.kind}
-                    label={t("panel.balance", { kind: nameOf(one.kind) })}
+                    key={one.typeId}
+                    label={t("panel.balance", { kind: name(one.typeId) })}
                     negative={one.afterMinutes !== null && one.afterMinutes < 0}
                   >
                     {one.beforeMinutes === null || one.afterMinutes === null ? (
@@ -570,8 +613,8 @@ export function LeavePanel({
                 ))}
                 {forecasts.map((one) => (
                   <Line
-                    key={`forecast-${one.kind}`}
-                    label={t("panel.forecast", { kind: nameOf(one.kind), date: forecastDate })}
+                    key={`forecast-${one.typeId}`}
+                    label={t("panel.forecast", { kind: name(one.typeId), date: forecastDate })}
                     negative={one.afterMinutes < 0}
                   >
                     {t("panel.balanceChange", {
@@ -593,16 +636,16 @@ export function LeavePanel({
               {/* Below zero is an ordinary answer — this is also where leave is planned — so it is
                 said plainly and stops nothing. */}
               {overdrawn.map((one) => (
-                <p key={one.kind} className="text-sm text-muted">
+                <p key={one.typeId} className="text-sm text-muted">
                   {t("panel.overdrawn", { amount: days(-(one.afterMinutes as number)) })}
                 </p>
               ))}
               {forecasts
                 .filter((one) => one.afterMinutes < 0)
                 .map((one) => (
-                  <p key={one.kind} className="text-sm text-muted">
+                  <p key={one.typeId} className="text-sm text-muted">
                     {t("panel.forecastBelowZero", {
-                      kind: nameOf(one.kind),
+                      kind: name(one.typeId),
                       amount: days(-one.afterMinutes),
                       date: forecastDate,
                     })}
@@ -668,4 +711,15 @@ function Line({ label, negative, children }: { label: string; negative?: boolean
 
 function formatDays(value: number, locale: UiLocale): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+}
+
+/** A row's minutes as the hours field shows them; a working day when the row has none. */
+function hoursOf(minutes: number | null, minutesPerDay: number): string {
+  return String((minutes ?? minutesPerDay) / 60);
+}
+
+/** The hours typed, in minutes; null for what is no length of a day. */
+function minutesOf(hours: string): number | null {
+  const value = Math.round(Number(hours.replace(",", ".")) * 60);
+  return hours.trim() !== "" && Number.isFinite(value) && value >= 1 && value <= 1440 ? value : null;
 }

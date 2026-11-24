@@ -4,7 +4,7 @@
 // calendar starts from the event `LeaveChanged`, the same for an action and a route.
 import { z } from "zod";
 import { defineRoute } from "../route";
-import { civilDate } from "../primitives";
+import { civilDate, id } from "../primitives";
 import {
   allowance,
   byDate,
@@ -16,10 +16,9 @@ import {
   leaveUndo,
   MAX_NOTE,
   TIMEOFF_ERRORS,
-  TIMEOFF_YEAR_EXAMPLE,
   timeOffYear,
-  UNDO_EXAMPLE,
 } from "./shared";
+import { TIMEOFF_YEAR_EXAMPLE, TYPE_ID, UNDO_EXAMPLE } from "./examples";
 
 export const getTimeOff = defineRoute({
   id: "get_time_off",
@@ -109,31 +108,44 @@ export const saveLeave = defineRoute({
   scope: "write",
   capability: "timeoff",
   summary:
-    "Books a range of days, one kind and one size for every day; weekends and holidays are left out. " +
-    "`editedKind` edits the row of one day; `otherKind` books «½ + ½». Answers what «Undo» sends back.",
+    "Books a range of days, one type and one size for every day; the days not worked and the holidays " +
+    "are left out. `editedTypeId` edits the row of one day; `otherTypeId` books «½ + ½». Answers what " +
+    "«Undo» sends back.",
   actions: [],
   body: z
     .object({
       from: civilDate(),
       to: civilDate(),
-      kind: z.enum(LEAVE_KINDS),
+      /** Deprecated (R5g): the type by its old kind, for a client that sends no `typeId`. */
+      kind: z.enum(LEAVE_KINDS).optional(),
+      typeId: id().optional(),
       fraction: z.union(DAY_FRACTIONS.map((one) => z.literal(one))),
+      /** For a type counted in hours: the length of every day, in minutes (R5g). */
+      minutes: z.number().int().min(1).max(1440).nullish(),
       note: z.string().max(MAX_NOTE).nullable(),
-      editedKind: z.enum(LEAVE_KINDS).nullable(),
-      otherKind: z.enum(LEAVE_KINDS).nullable(),
+      /** Deprecated (R5g): read `editedTypeId`. */
+      editedKind: z.enum(LEAVE_KINDS).nullish(),
+      editedTypeId: id().nullish(),
+      /** Deprecated (R5g): read `otherTypeId`. */
+      otherKind: z.enum(LEAVE_KINDS).nullish(),
+      otherTypeId: id().nullish(),
     })
-    .strict(),
+    .strict()
+    .refine((body) => body.kind !== undefined || body.typeId !== undefined, {
+      path: ["typeId"],
+      message: "a range names its type",
+    }),
   response: undoAnswer,
   errors: TIMEOFF_ERRORS,
   example: {
     body: {
       from: "2026-08-10",
       to: "2026-08-10",
-      kind: "vacation",
+      typeId: TYPE_ID,
       fraction: 1,
       note: null,
-      editedKind: null,
-      otherKind: null,
+      editedTypeId: null,
+      otherTypeId: null,
     },
     response: { undo: { dates: ["2026-08-10"], rows: [] }, days: 1, removed: 0, pending: 0 },
   },

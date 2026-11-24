@@ -55,7 +55,41 @@ export const byDate = z.object({ date: civilDate() });
 export const byCalendar = z.object({ id: id() });
 
 /** One day of leave as the residual and the forecast weigh it. */
-const dayView = z.object({ on: civilDate(), kind: z.enum(LEAVE_KINDS), fraction: z.number() });
+const dayView = z.object({
+  on: civilDate(),
+  /** Deprecated (R5g): the day's old kind; `other` for a type made since. Read `typeId`. */
+  kind: z.enum(LEAVE_KINDS),
+  fraction: z.number(),
+  /** The id of the day's type (R5g). */
+  typeId: z.string(),
+  /** The length of a row of a type counted in hours; null for the others. */
+  minutes: minutes().nullable(),
+});
+
+/** What one row of a type is (R5g). */
+export const LEAVE_UNITS = ["day", "half_day", "hours"] as const;
+/** The colours a type may take: tokens of the design system. */
+export const LEAVE_COLORS = ["primary", "warn", "accent", "neg", "faint", "pos", "muted"] as const;
+
+/** A type of leave of the person (R5g): data, not a name of the code. */
+export const leaveType = z.object({
+  id: id(),
+  name: z.string(),
+  color: z.enum(LEAVE_COLORS),
+  unit: z.enum(LEAVE_UNITS),
+  hasAllowance: z.boolean(),
+  toCalendar: z.boolean(),
+});
+
+/** What a year grants of one type, in days, and the carry-over stated where no payslip prints it. */
+export const typeAllowance = z.object({
+  typeId: id(),
+  year: z.number().int(),
+  days: z.number().nullable(),
+  carriedDays: z.number().nullable(),
+});
+
+const typeMinutes = z.object({ typeId: z.string(), minutes: minutes() });
 
 /** The allowance of a year as stated, in days; null for a part nobody stated. */
 export const allowance = z.object({
@@ -86,6 +120,8 @@ const residualInput = z.object({
   carriedMinutes: minutes(),
   days: z.array(dayView),
   countedThrough: month().nullable(),
+  /** In a year with no payslip, a day before it is taken (R5g). */
+  today: civilDate().nullable(),
   minutesPerDay: minutes(),
 });
 
@@ -104,6 +140,7 @@ const forecastInput = z.object({
   minutesPerDay: minutes(),
 });
 
+/** Deprecated (R5g): one of the two old kinds; `balances` has every type. */
 const kindView = z.object({
   residual,
   allowanceMinutes: minutes().nullable(),
@@ -116,8 +153,11 @@ const leaveRow = z.discriminatedUnion("source", [
     source: z.literal("day"),
     id: id(),
     on: civilDate(),
+    /** Deprecated (R5g): read `typeId`. */
     kind: z.enum(LEAVE_KINDS),
+    typeId: z.string(),
     fraction: z.number(),
+    minutes: minutes().nullable(),
     note: z.string().nullable(),
     origin: z.enum(LEAVE_ORIGINS),
     status: z.enum(DAY_STATUSES),
@@ -128,6 +168,8 @@ const leaveRow = z.discriminatedUnion("source", [
     id: z.string(),
     usagePeriod: month(),
     kind: z.enum(PAYROLL_LEAVE_KINDS),
+    /** The type the use counts against; null when no type of the person's has its balance. */
+    typeId: z.string().nullable(),
     hours: z.number(),
     payrollPeriod: month(),
   }),
@@ -139,6 +181,47 @@ const leaveRow = z.discriminatedUnion("source", [
  */
 export const timeOffYear = z.object({
   year: z.number().int(),
+  /** The person's types of leave, in their order (R5g). */
+  types: z.array(leaveType),
+  /** What the person stated for the year, by type (R5g). */
+  allowances: z.array(typeAllowance),
+  /** The residual and the forecast of each type with an allowance, in the types' order (R5g). */
+  balances: z.array(
+    z.object({
+      typeId: id(),
+      residual,
+      allowanceMinutes: minutes().nullable(),
+      carriedMinutes: minutes(),
+      residualInput,
+      forecastInput,
+      accrual: accrualView(),
+    }),
+  ),
+  /** The days of the week the person works, 0 Sunday … 6 Saturday (R5g). */
+  workDays: z.array(z.number().int().min(0).max(6)),
+  /** The month the leave year starts in, and its days (R5g). */
+  yearStartMonth: z.number().int().min(1).max(12),
+  window: z.object({ from: civilDate(), to: civilDate() }),
+  /** Without a calendar of holidays only the working week is known (R5g). */
+  hasHolidayCalendar: z.boolean(),
+  unrecordedByType: z.array(
+    z.object({
+      month: month(),
+      typeId: id(),
+      payrollMinutes: minutes(),
+      recordedMinutes: minutes(),
+      missingMinutes: minutes(),
+    }),
+  ),
+  overdrawnByType: z.array(
+    z.object({
+      typeId: id(),
+      byMinutes: minutes(),
+      basis: z.enum(RESIDUAL_BASES),
+      snapshotPeriod: month().nullable(),
+      onDate: civilDate().nullable(),
+    }),
+  ),
   today: civilDate(),
   minutesPerDay: minutes(),
   /** 0 Sunday … 6 Saturday. */
@@ -175,7 +258,9 @@ export const timeOffYear = z.object({
     takenMinutes: minutes(),
     plannedMinutes: minutes(),
     totalMinutes: minutes(),
+    /** Deprecated (R5g): read `byType`. */
     byKind: z.array(z.object({ kind: z.enum(LEAVE_KINDS), minutes: minutes() })),
+    byType: z.array(typeMinutes),
   }),
   countedThrough: month().nullable(),
   months: z.array(
@@ -183,6 +268,10 @@ export const timeOffYear = z.object({
       month: month(),
       payroll: z.object({ vacationMinutes: minutes(), rolMinutes: minutes() }).nullable(),
       recorded: z.object({ vacationMinutes: minutes(), rolMinutes: minutes(), otherMinutes: minutes() }),
+      /** What the payslips counted, per type (R5g); null when no payslip covers the month. */
+      payrollByType: z.array(typeMinutes).nullable(),
+      /** What is recorded here, per type with something (R5g). */
+      recordedByType: z.array(typeMinutes),
       plannedMinutes: minutes(),
       missingMinutes: minutes(),
       counted: z.boolean(),
@@ -217,109 +306,17 @@ export const leaveUndo = z.object({
   dates: z.array(civilDate()).min(1).max(366),
   rows: z
     .array(
-      z.object({
-        on: civilDate(),
-        kind: z.enum(LEAVE_KINDS),
-        /** Half a day or a whole one. */
-        fraction: z.number(),
-        note: z.string().max(MAX_NOTE).nullable(),
-      }),
+      z
+        .object({
+          on: civilDate(),
+          /** Deprecated (R5g): a client that sends no `typeId` names the type by its old kind. */
+          kind: z.enum(LEAVE_KINDS).optional(),
+          typeId: id().optional(),
+          fraction: z.number(),
+          minutes: minutes().nullish(),
+          note: z.string().max(MAX_NOTE).nullable(),
+        })
+        .refine((row) => row.kind !== undefined || row.typeId !== undefined, "a row names its type"),
     )
-    .max(366 * LEAVE_KINDS.length),
+    .max(366 * 8),
 });
-
-const KIND_VIEW_EXAMPLE = {
-  residual: {
-    basis: "allowance",
-    remainingMinutes: 7200,
-    takenMinutes: 2400,
-    plannedMinutes: 960,
-    snapshotPeriod: null,
-    countedThrough: null,
-  },
-  allowanceMinutes: 10560,
-  carriedMinutes: 0,
-};
-
-const FORECAST_EXAMPLE = {
-  rate: { minutesPerMonth: 880, source: "allowance" },
-  opening: { source: "year", minutes: 0, accruedThrough: "2025-12-01", spentFrom: "2026-01-01" },
-  days: [{ on: "2026-08-10", kind: "vacation", fraction: 1 }],
-  minutesPerDay: 480,
-};
-
-export const UNDO_EXAMPLE = {
-  dates: ["2026-08-10"],
-  rows: [{ on: "2026-08-10", kind: "vacation", fraction: 1, note: null }],
-};
-
-export const TIMEOFF_YEAR_EXAMPLE = {
-  year: 2026,
-  today: "2026-11-21",
-  minutesPerDay: 480,
-  weekStart: 1,
-  allowance: { year: 2026, vacationDays: 22, rolDays: 4, totalDays: 26, note: null },
-  vacation: KIND_VIEW_EXAMPLE,
-  rol: { ...KIND_VIEW_EXAMPLE, allowanceMinutes: 1920 },
-  bars: [{ month: 8, takenMinutes: 480, plannedMinutes: 0 }],
-  rows: [
-    {
-      source: "day",
-      id: DAY_ID,
-      on: "2026-08-10",
-      kind: "vacation",
-      fraction: 1,
-      note: null,
-      origin: "manual",
-      status: "taken",
-      sync: "none",
-    },
-  ],
-  years: [2025, 2026],
-  unrecorded: [],
-  overdrawn: [],
-  totals: {
-    takenMinutes: 480,
-    plannedMinutes: 0,
-    totalMinutes: 480,
-    byKind: [{ kind: "vacation", minutes: 480 }],
-  },
-  countedThrough: null,
-  months: [
-    {
-      month: "2026-08-01",
-      payroll: null,
-      recorded: { vacationMinutes: 480, rolMinutes: 0, otherMinutes: 0 },
-      plannedMinutes: 0,
-      missingMinutes: 0,
-      counted: false,
-    },
-  ],
-  totalAllowanceMinutes: 12480,
-  allowanceMismatch: null,
-  holidays: ["2026-08-15"],
-  residualInputs: {
-    vacation: {
-      snapshot: null,
-      allowanceMinutes: 10560,
-      carriedMinutes: 0,
-      days: [{ on: "2026-08-10", kind: "vacation", fraction: 1 }],
-      countedThrough: null,
-      minutesPerDay: 480,
-    },
-    rol: {
-      snapshot: null,
-      allowanceMinutes: 1920,
-      carriedMinutes: 0,
-      days: [],
-      countedThrough: null,
-      minutesPerDay: 480,
-    },
-  },
-  external: { used: 11, remaining: 18, totalAvailable: 29 },
-  accrual: {
-    vacation: { rate: FORECAST_EXAMPLE.rate, yearEndMinutes: 10080, payslipPeriod: null, leads: false },
-    rol: { rate: null, yearEndMinutes: null, payslipPeriod: null, leads: false },
-  },
-  forecastInputs: { vacation: FORECAST_EXAMPLE, rol: { ...FORECAST_EXAMPLE, rate: null, days: [] } },
-};

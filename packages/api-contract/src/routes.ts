@@ -48,6 +48,7 @@ import * as spending from "./transactions/spending";
 import * as subscriptions from "./subscriptions/subscriptions";
 import * as holidays from "./timeoff/holidays";
 import * as timeoff from "./timeoff/timeoff";
+import * as leaveTypes from "./timeoff/types";
 
 /** The routes of users and settings by area, for `apps/api` to serve each one by name. */
 export const SETTINGS = {
@@ -131,10 +132,11 @@ export const INTERESTS = { interests } as const;
 export const INTERESTS_ROUTES: readonly RouteContract[] = Object.values(interests);
 
 /** Time off by area, for `apps/api` to serve each one by name. */
-export const TIMEOFF = { timeoff, holidays } as const;
+export const TIMEOFF = { timeoff, holidays, types: leaveTypes } as const;
 
 /** Time off, the eighth module of R2 (05-refactor.md §5.2), with its holiday calendars (TOF-6). */
 export const TIMEOFF_ROUTES: readonly RouteContract[] = [
+  ...Object.values(leaveTypes),
   ...Object.values(timeoff),
   ...Object.values(holidays),
 ];

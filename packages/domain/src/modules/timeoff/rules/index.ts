@@ -1,49 +1,61 @@
 /**
  * The vocabulary of time off, and every rule about it that needs no database (spec §7.9).
  *
- * One unit for booking, two for counting. A day off is half a day or a whole one, whatever its
- * kind (N0: ROL used to be free-form minutes, and nobody books leave by the minute). The totals
- * are held in **minutes** because a payslip states ROL in hours and an allowance in days, and
- * minutes are the finer of the two — converting down loses nothing, converting up rounds. The
- * bridge is `minutes_per_day` from the user's preferences; there is no "8 hours" written here.
+ * The types of leave are data of the person since R5g (E6): a rule takes them as a list. A row is
+ * half a day or a whole one, or hours for a type counted in hours. The totals are held in
+ * **minutes** because a payslip states leave in hours and an allowance in days, and minutes are
+ * the finer of the two. The bridge is `minutes_per_day` from the user's preferences.
  */
 export {
-  LEAVE_DAY_KINDS,
-  CALENDAR_KINDS,
-  goesToCalendar,
-  asCalendarKind,
+  LEAVE_UNITS,
+  LEAVE_COLORS,
   EXTERNAL_STATES,
   PENDING_STATES,
+  DAY_FRACTIONS,
+  DEFAULT_WORK_DAYS,
+  calendarWordOf,
   stillBooked,
   minutesToDays,
   daysToMinutes,
+  isRestDay,
   bookable,
   dayStatus,
-  dayWeight,
   minuteWeight,
+  fractionOfMinutes,
+  byTypeOrder,
 } from "./days";
-export type { LeaveDayKind, LeaveDayView } from "./days";
-export { RESIDUAL_BASES, residual, monthBars, calendar } from "./residual";
+export type { LeaveColor, LeaveDayView, LeaveType, LeaveUnit } from "./days";
+export { RESIDUAL_BASES, residual, monthBars, calendar, leaveYearMonths } from "./residual";
 export type {
   ResidualBasis,
   ResidualInput,
   ResidualView,
   MonthBar,
   CalendarCell,
+  CalendarContext,
   CalendarMonth,
 } from "./residual";
 export {
   allowanceInputSchema,
-  allowanceMismatchDays,
   leaveInputSchema,
   leaveRangeInputSchema,
   leaveRemovalRangeSchema,
+  leaveSettingsInputSchema,
+  leaveTypeInputSchema,
   leaveUndoSchema,
+  restDayInputSchema,
   MAX_RANGE_DAYS,
   datesBetween,
 } from "./inputs";
-export type { AllowanceInput, LeaveInput, LeaveRangeFields, LeaveUndo } from "./inputs";
-export { LEAVE_TYPES, otherHalfOf, rangeParts, previewLeaveRange } from "./ranges";
-export type { LeaveType } from "./ranges";
+export type {
+  AllowanceInput,
+  LeaveInput,
+  LeaveRangeFields,
+  LeaveSettingsInput,
+  LeaveTypeInput,
+  LeaveUndo,
+  RestDayInput,
+} from "./inputs";
+export { otherHalfOf, rangeParts, previewLeaveRange } from "./ranges";
 export { unrecordedLeave, yearTotals, monthGroups } from "./totals";
-export type { UnrecordedLeave, YearTotals, MonthGroup } from "./totals";
+export type { TypeMinutes, UnrecordedLeave, YearTotals, MonthGroup } from "./totals";

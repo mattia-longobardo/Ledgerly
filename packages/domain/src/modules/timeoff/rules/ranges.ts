@@ -1,41 +1,15 @@
 import { type CivilDate } from "../../../shared/dates";
-import { LEAVE_DAY_KINDS, bookable, goesToCalendar, type LeaveDayKind, type LeaveDayView } from "./days";
+import { bookable, byTypeOrder, DEFAULT_WORK_DAYS, type LeaveDayView, type LeaveType } from "./days";
 import { datesBetween } from "./inputs";
-import { byDeclaredOrder, residual, type ResidualInput } from "./residual";
-
-/* The kinds as a list (anticipation AN1 of the rewrite plan) */
-
-/** The kinds that spend a yearly allowance, and so have a residual to show. */
-const BALANCE_KINDS = ["vacation", "rol"] as const;
+import { residual, type ResidualInput } from "./residual";
 
 /**
- * One kind of leave as a screen is handed it: an entry of a list, not a name written in a component.
- *
- * The list is built from today's fixed kinds and will come from a table (R5g) without the panel
- * that reads it changing. `selectable` is `false` for sickness: it is not a kind of leave anybody
- * books here any more (decisions H20 and ST-27), but the rows that already carry it are still
- * shown and still edited, so the entry stays in the list.
+ * The type "Add the other half" proposes beside a half day: the first other type with an
+ * allowance, else the first other type; `null` when the person has no other type.
  */
-export interface LeaveType {
-  id: LeaveDayKind;
-  /** Whether a new day off may be given this kind. */
-  selectable: boolean;
-  /** Whether the kind spends an allowance. */
-  hasBalance: boolean;
-  /** Whether the kind stays here and is never told to the calendar. */
-  local: boolean;
-}
-
-export const LEAVE_TYPES: readonly LeaveType[] = LEAVE_DAY_KINDS.map((id) => ({
-  id,
-  selectable: id !== "sick",
-  hasBalance: (BALANCE_KINDS as readonly string[]).includes(id),
-  local: !goesToCalendar(id),
-}));
-
-/** The kind "Add the other half" proposes beside a half day: ROL beside vacation, vacation otherwise. */
-export function otherHalfOf(kind: LeaveDayKind): LeaveDayKind {
-  return kind === "vacation" ? "rol" : "vacation";
+export function otherHalfOf(types: readonly LeaveType[], typeId: string): string | null {
+  const others = types.filter((type) => type.id !== typeId && type.unit === "half_day");
+  return (others.find((type) => type.hasAllowance) ?? others[0])?.id ?? null;
 }
 
 /* What a range would write, before anything is written (rewrite plan N5) */
@@ -44,30 +18,35 @@ export function otherHalfOf(kind: LeaveDayKind): LeaveDayKind {
 interface LeaveRangeInput {
   from: CivilDate;
   to: CivilDate;
-  kind: LeaveDayKind;
+  typeId: string;
   /** Half a day or a whole one, for every day of the range. */
   fraction: number;
+  /** For a type counted in hours: the length of every day of the range; `fraction` is then its nearest size. */
+  minutes?: number | null;
   /**
-   * Set when the panel edits a row instead of adding one: the kind that row has now. The row is
+   * Set when the panel edits a row instead of adding one: the type that row has now. The row is
    * the one on `from`, and it is what the input replaces — so it is neither counted against the
    * day nor reported as something the range takes away.
    */
-  editedKind?: LeaveDayKind | null;
+  editedTypeId?: string | null;
   /**
-   * Set when every day is split: half a day of `kind` and half a day of this one, written together
-   * (decision of 17/11/2026). `fraction` is then 0.5.
+   * Set when every day is split: half a day of `typeId` and half a day of this one, written
+   * together (decision of 17/11/2026). `fraction` is then 0.5.
    */
-  otherKind?: LeaveDayKind | null;
+  otherTypeId?: string | null;
 }
 
 /** What one day of a range holds once written: one row, or the two halves of a split day. */
-export function rangeParts(input: Pick<LeaveRangeInput, "kind" | "fraction" | "otherKind">): LeaveDayView[] {
-  const other = input.otherKind ?? null;
-  return other === null || other === input.kind
-    ? [{ on: "", kind: input.kind, fraction: input.fraction }]
+export function rangeParts(
+  input: Pick<LeaveRangeInput, "typeId" | "fraction" | "minutes" | "otherTypeId">,
+): LeaveDayView[] {
+  const other = input.otherTypeId ?? null;
+  const minutes = input.minutes ?? null;
+  return other === null || other === input.typeId
+    ? [{ on: "", typeId: input.typeId, fraction: input.fraction, minutes }]
     : [
-        { on: "", kind: input.kind, fraction: 0.5 },
-        { on: "", kind: other, fraction: 0.5 },
+        { on: "", typeId: input.typeId, fraction: 0.5, minutes: null },
+        { on: "", typeId: other, fraction: 0.5, minutes: null },
       ];
 }
 
@@ -75,10 +54,16 @@ interface LeaveRangeContext {
   /** The rows already booked: at least every row of the range. */
   days: readonly LeaveDayView[];
   holidays: ReadonlySet<CivilDate>;
-  /** The residual inputs of the kinds that have one, each with the days of `year` only. */
-  residuals?: Partial<Record<LeaveDayKind, ResidualInput>>;
-  /** The year the residuals are about; days of another year are written and not counted. */
-  year?: number | null;
+  /** The person's types, in their order: the order of every list here. */
+  types: readonly Pick<LeaveType, "id">[];
+  /** The days of the week the person works; Monday to Friday when absent. */
+  workDays?: readonly number[];
+  /** The length of the person's working day, for the rows counted in hours. */
+  minutesPerDay?: number;
+  /** The residual inputs of the types that have one, by type id, each with the days of the year only. */
+  residuals?: Partial<Record<string, ResidualInput>>;
+  /** The days of the year the residuals are about; days outside are written and not counted. */
+  window?: { from: CivilDate; to: CivilDate } | null;
 }
 
 /** A row the range changes on its way: taken away, or kept with another size. */
@@ -87,7 +72,7 @@ interface ReplacedRow extends LeaveDayView {
 }
 
 interface BalanceChange {
-  kind: LeaveDayKind;
+  typeId: string;
   /** `null` when nobody can compute the residual: no payslip and no allowance. */
   beforeMinutes: number | null;
   afterMinutes: number | null;
@@ -104,9 +89,9 @@ interface LeaveRangePreview {
   removed: LeaveDayView[];
   /** What the range comes to, in days. */
   totalDays: number;
-  /** The written days that are not in `year`. */
+  /** The written days that are not in the year's window. */
   otherYearDays: number;
-  /** The residual before and after, for the range's own kind and for every kind a replacement frees. */
+  /** The residual before and after, for the range's own type and for every type a replacement frees. */
   balances: BalanceChange[];
   /** The rows as they will be once the range is written. */
   after: LeaveDayView[];
@@ -117,11 +102,11 @@ interface LeaveRangePreview {
  * before "Confirm" and the service writes after it, so the two cannot disagree.
  *
  * A day never ends up holding more than a whole day off:
- *  1. the row of the same kind is updated in place;
- *  2. when the new row and the rows of other kinds come to more than a day, the others go;
- *  3. when they do not — a new half beside a half of another kind — the two stay together.
+ *  1. the row of the same type is updated in place;
+ *  2. when the new row and the rows of other types come to more than a day, the others go;
+ *  3. when they do not — a new half beside a half of another type — the two stay together.
  *
- * A split day (`otherKind`) writes two halves at once, each by rule 1; any third kind goes by rule 2.
+ * A split day (`otherTypeId`) writes two halves at once, each by rule 1; any third type goes by rule 2.
  *
  * Nothing here is a new rule about residuals: "after" is {@link residual} again, over the days as
  * they will be. A residual below zero is an ordinary answer and not an error — the page is also
@@ -129,18 +114,24 @@ interface LeaveRangePreview {
  */
 export function previewLeaveRange(input: LeaveRangeInput, context: LeaveRangeContext): LeaveRangePreview {
   const { from, to } = input;
-  const kind = input.kind;
+  const typeId = input.typeId;
   const parts = rangeParts(input);
-  const partKinds = new Set(parts.map((part) => part.kind));
-  const perDay = parts.reduce((sum, part) => sum + part.fraction, 0);
-  const editedKind = input.editedKind ?? null;
-  const year = context.year ?? null;
-  const inYear = (date: CivilDate) => year === null || Number(date.slice(0, 4)) === year;
+  const partTypes = new Set(parts.map((part) => part.typeId));
+  const minutesPerDay = context.minutesPerDay ?? 480;
+  // A row's share of a day: its fraction, or its hours against the working day.
+  const share = (row: LeaveDayView) => (row.minutes == null ? row.fraction : row.minutes / minutesPerDay);
+  const perDay = parts.reduce((sum, part) => sum + share(part), 0);
+  const editedTypeId = input.editedTypeId ?? null;
+  const window = context.window ?? null;
+  const inYear = (date: CivilDate) => window === null || (date >= window.from && date <= window.to);
+  const order = byTypeOrder(context.types);
+  const byDayThenType = (a: LeaveDayView, b: LeaveDayView) =>
+    a.on === b.on ? order(a.typeId, b.typeId) : a.on < b.on ? -1 : 1;
 
   const written: CivilDate[] = [];
   const excluded: LeaveRangePreview["excluded"] = [];
   for (const date of datesBetween(from, to)) {
-    const verdict = bookable(date, context.holidays);
+    const verdict = bookable(date, context.holidays, context.workDays ?? DEFAULT_WORK_DAYS);
     if (verdict.ok) written.push(date);
     else excluded.push({ on: date, reason: verdict.reason });
   }
@@ -152,18 +143,18 @@ export function previewLeaveRange(input: LeaveRangeInput, context: LeaveRangeCon
   const removed: LeaveDayView[] = [];
   for (const date of written) {
     const rows = byDate.get(date) ?? [];
-    const edited = date === from && editedKind !== null ? editedKind : null;
-    if (edited !== null && !partKinds.has(edited)) {
-      removed.push(...rows.filter((row) => row.kind === edited));
+    const edited = date === from && editedTypeId !== null ? editedTypeId : null;
+    if (edited !== null && !partTypes.has(edited)) {
+      removed.push(...rows.filter((row) => row.typeId === edited));
     }
     for (const part of parts) {
-      const same = rows.find((row) => row.kind === part.kind);
-      if (same !== undefined && same.fraction !== part.fraction && edited !== part.kind) {
+      const same = rows.find((row) => row.typeId === part.typeId);
+      if (same !== undefined && share(same) !== share(part) && edited !== part.typeId) {
         replaced.push({ ...same, change: "resized" });
       }
     }
-    const others = rows.filter((row) => !partKinds.has(row.kind) && row.kind !== edited);
-    if (perDay + others.reduce((sum, row) => sum + row.fraction, 0) > 1) {
+    const others = rows.filter((row) => !partTypes.has(row.typeId) && row.typeId !== edited);
+    if (perDay + others.reduce((sum, row) => sum + share(row), 0) > 1) {
       for (const row of others) {
         replaced.push({ ...row, change: "removed" });
         removed.push(row);
@@ -171,36 +162,34 @@ export function previewLeaveRange(input: LeaveRangeInput, context: LeaveRangeCon
     }
   }
 
-  const gone = new Set(removed.map((row) => `${row.on} ${row.kind}`));
-  const rewritten = new Set(written.flatMap((date) => parts.map((part) => `${date} ${part.kind}`)));
+  const gone = new Set(removed.map((row) => `${row.on} ${row.typeId}`));
+  const rewritten = new Set(written.flatMap((date) => parts.map((part) => `${date} ${part.typeId}`)));
   const after: LeaveDayView[] = [
     ...context.days.filter((day) => {
-      const key = `${day.on} ${day.kind}`;
+      const key = `${day.on} ${day.typeId}`;
       return !gone.has(key) && !rewritten.has(key);
     }),
     ...written.filter(inYear).flatMap((on) => parts.map((part) => ({ ...part, on }))),
-  ].sort((a, b) => (a.on === b.on ? byDeclaredOrder(a.kind, b.kind) : a.on < b.on ? -1 : 1));
+  ].sort(byDayThenType);
 
   const balances: BalanceChange[] = [];
-  for (const one of LEAVE_DAY_KINDS) {
-    const residualInput = context.residuals?.[one];
+  for (const one of context.types) {
+    const residualInput = context.residuals?.[one.id];
     if (residualInput === undefined) continue;
     const beforeMinutes = residual(residualInput).remainingMinutes;
     const afterMinutes = residual({
       ...residualInput,
-      days: after.filter((day) => day.kind === one),
+      days: after.filter((day) => day.typeId === one.id),
     }).remainingMinutes;
-    if (one === kind || beforeMinutes !== afterMinutes) {
-      balances.push({ kind: one, beforeMinutes, afterMinutes });
+    if (one.id === typeId || beforeMinutes !== afterMinutes) {
+      balances.push({ typeId: one.id, beforeMinutes, afterMinutes });
     }
   }
 
   return {
     written,
     excluded,
-    replaced: replaced.sort((a, b) =>
-      a.on === b.on ? byDeclaredOrder(a.kind, b.kind) : a.on < b.on ? -1 : 1,
-    ),
+    replaced: replaced.sort(byDayThenType),
     removed,
     totalDays: written.length * perDay,
     otherYearDays: written.filter((date) => !inYear(date)).length,

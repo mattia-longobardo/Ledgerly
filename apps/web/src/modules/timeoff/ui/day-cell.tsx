@@ -1,6 +1,6 @@
 import { cn } from "@ledgerly/ui/cn";
-import type { CalendarCell } from "@ledgerly/domain/timeoff/client";
-import { KIND_BORDER, KIND_CLASS, KIND_TEXT } from "./kinds";
+import type { CalendarCell, LeaveColor } from "@ledgerly/domain/timeoff/client";
+import { COLOR_BORDER, COLOR_FILL, COLOR_TEXT } from "./kinds";
 
 /** Where a day stands in the range being picked: one of its two ends, inside it, or outside. */
 export type CellSelection = "edge" | "inside" | null;
@@ -25,6 +25,7 @@ export function BlankCell() {
  */
 export function DayCell({
   cell,
+  colors,
   label,
   tabbable,
   today,
@@ -32,6 +33,8 @@ export function DayCell({
   waiting,
 }: {
   cell: CalendarCell & { date: string };
+  /** The colours of the day's types, in the order of `cell.typeIds`. */
+  colors: readonly LeaveColor[];
   label: string;
   /** Whether this is the day its month offers to the Tab key. */
   tabbable: boolean;
@@ -40,7 +43,7 @@ export function DayCell({
   /** Drawn as it will be, and paler: the server has not answered yet. */
   waiting: boolean;
 }) {
-  const marked = cell.kinds.length > 0;
+  const marked = colors.length > 0;
   const planned = cell.status === "planned";
   const number = (
     <span className={cn("relative", today && "font-semibold underline underline-offset-2")}>
@@ -89,8 +92,8 @@ export function DayCell({
           ? cn(
               "font-medium",
               // Counted is filled, planned is hollow — a real difference, not a one-pixel accent
-              // border, which in this theme is the same teal as a vacation day.
-              planned ? cn("border-2", KIND_BORDER[cell.kinds[0]]) : "border border-transparent",
+              // border, which in this theme is the same teal as a `primary` day.
+              planned ? cn("border-2", COLOR_BORDER[colors[0]]) : "border border-transparent",
               // A booked day inside the range keeps its own drawing: the ring says it is in.
               selection !== null && "ring-2 ring-accent ring-offset-1 ring-offset-card",
             )
@@ -106,12 +109,12 @@ export function DayCell({
     >
       {marked && !planned && (
         <>
-          <span aria-hidden="true" className={cn("absolute inset-0", KIND_CLASS[cell.kinds[0]])} />
-          {/* A second kind on the same day takes the opposite corner. */}
-          {cell.kinds.length > 1 && (
+          <span aria-hidden="true" className={cn("absolute inset-0", COLOR_FILL[colors[0]])} />
+          {/* A second type on the same day takes the opposite corner. */}
+          {colors.length > 1 && (
             <span
               aria-hidden="true"
-              className={cn("absolute inset-0", KIND_CLASS[cell.kinds[1]])}
+              className={cn("absolute inset-0", COLOR_FILL[colors[1]])}
               style={{ clipPath: "polygon(100% 0, 0 0, 100% 100%)" }}
             />
           )}
@@ -132,29 +135,29 @@ export function DayCell({
       {marked && planned && (
         <>
           {/* A planned half day: the outline is there either way, so the corner that says "half"
-              is drawn in the kind's colour instead of cut out. */}
+              is drawn in the type's colour instead of cut out. */}
           {cell.partial && (
             <span
               aria-hidden="true"
-              className={cn("absolute inset-0", KIND_CLASS[cell.kinds[0]])}
+              className={cn("absolute inset-0", COLOR_FILL[colors[0]])}
               style={{ clipPath: "polygon(0 55%, 0 100%, 45% 100%)" }}
             />
           )}
           {/*
-            A second kind on a planned day (N10). A hollow cell has no fill for the opposite corner
-            to cut into, so the other kind gets a corner of its own — otherwise half vacation and
-            half ROL is drawn exactly like a day of vacation.
+            A second type on a planned day (N10). A hollow cell has no fill for the opposite corner
+            to cut into, so the other type gets a corner of its own — otherwise half of one type and
+            half of another is drawn exactly like a whole day of the first.
           */}
-          {cell.kinds.length > 1 && (
+          {colors.length > 1 && (
             <span
               aria-hidden="true"
-              className={cn("absolute inset-0", KIND_CLASS[cell.kinds[1]])}
+              className={cn("absolute inset-0", COLOR_FILL[colors[1]])}
               style={{ clipPath: "polygon(55% 0, 100% 0, 100% 45%)" }}
             />
           )}
         </>
       )}
-      <span className={cn("relative", marked && (planned ? KIND_TEXT[cell.kinds[0]] : "text-primary-fg"))}>
+      <span className={cn("relative", marked && (planned ? COLOR_TEXT[colors[0]] : "text-primary-fg"))}>
         {number}
       </span>
     </button>

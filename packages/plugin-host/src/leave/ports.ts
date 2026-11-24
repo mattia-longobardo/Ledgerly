@@ -13,6 +13,7 @@ type Who = Pick<Ctx, "userId">;
 export interface CalendarDay {
   id: string;
   on: CivilDate;
+  /** The word the calendar holds the day under: the module works it out from the day's type. */
   kind: string;
   fraction: number | null;
   pending: "none" | "upsert" | "delete";
@@ -26,10 +27,6 @@ export interface Observed {
 }
 
 export interface LeaveSink {
-  /** The kinds the calendar's own days can be in, and therefore the only ones a write may name. */
-  calendarKinds: readonly string[];
-  /** What a kind of day off becomes on the calendar. */
-  asCalendarKind: (kind: string) => string;
   /** Every day of a year that goes to the calendar, pending or not. */
   daysOf: (ctx: Who, year: number) => Promise<CalendarDay[]>;
   /** Every date of a year the person holds a day on, whatever its kind. */
@@ -38,12 +35,15 @@ export interface LeaveSink {
   yearsWithPending: (ctx: Who) => Promise<number[]>;
   markSynced: (ctx: Who, observed: readonly Observed[], now: Date) => Promise<void>;
   markRefused: (ctx: Who, ids: readonly string[]) => Promise<void>;
-  /** A day the calendar holds and the person did not: recorded, already reconciled. */
+  /**
+   * A day the calendar holds and the person did not: recorded, already reconciled. `false` when the
+   * person has no type of leave the calendar's word stands for: the day is left upstream.
+   */
   recordFromCalendar: (
     ctx: Who,
     day: { on: CivilDate; kind: string; fraction: number },
     now: Date,
-  ) => Promise<unknown>;
+  ) => Promise<boolean>;
 }
 
 /** The wired port. */

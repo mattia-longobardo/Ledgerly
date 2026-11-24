@@ -13,9 +13,10 @@ import {
   allowanceOf,
   listLeaveDays,
   pendingCount,
-  saveAllowance,
   saveLeaveDay,
+  saveTypeAllowance,
 } from "@domain/modules/timeoff/service";
+import { oldLeaveTypes } from "../../../../../../../test/leave-types";
 import { createManualTransaction } from "@domain/modules/transactions/manual";
 import { transactionIdsOfAccount } from "@domain/modules/transactions/queries";
 import { pendingSends } from "@domain/modules/transactions/sending";
@@ -371,12 +372,13 @@ describe("the sources a page may turn off", () => {
 
 describe("Turn off Trek", () => {
   it("keeps every day and the residual; the changes waiting are not sent", async () => {
-    await saveAllowance(ctx, 2026, { vacationDays: 26 });
+    const types = await oldLeaveTypes(ctx);
+    await saveTypeAllowance(ctx, types.vacation, 2026, { days: 26 });
     await saveConnection(ctx, {
       provider: TREK_PROVIDER,
       credentials: { baseUrl: "https://trek.test", clientId: "c", clientSecret: "s" },
     });
-    await saveLeaveDay(ctx, { from: "2026-01-12", to: "2026-01-13", kind: "vacation" });
+    await saveLeaveDay(ctx, { from: "2026-01-12", to: "2026-01-13", typeId: types.vacation });
     const pending = await pendingCount(ctx);
     const window = { from: "2026-01-01", to: "2026-12-31" } as const;
     const days = await listLeaveDays(ctx, window);
@@ -388,8 +390,8 @@ describe("Turn off Trek", () => {
     await deactivateSource(ctx, trek, deps, later(1));
 
     expect(await pendingCount(ctx)).toBe(0);
-    expect((await listLeaveDays(ctx, window)).map((one) => [one.on, one.kind, one.fraction])).toEqual(
-      days.map((one) => [one.on, one.kind, one.fraction]),
+    expect((await listLeaveDays(ctx, window)).map((one) => [one.on, one.typeId, one.fraction])).toEqual(
+      days.map((one) => [one.on, one.typeId, one.fraction]),
     );
     expect(await allowanceOf(ctx, 2026)).toEqual(allowance);
     expect(differences(before, await numbers())).toEqual([]);

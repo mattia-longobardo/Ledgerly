@@ -7,7 +7,7 @@ import type { RouteOutput } from "@ledgerly/api-client";
 type MonthBar = RouteOutput<typeof timeoff.getTimeOff>["bars"][number];
 
 /**
- * One of the two headline cards of the design: how much is left, a bar split between taken and
+ * The card of one type with an allowance: how much is left, a bar split between taken and
  * planned, and — below it — where the number came from.
  *
  * The provenance line is not decoration. §7.9 makes the residual come from either the last
@@ -25,7 +25,7 @@ export function KindCard({
   accrualNotes = [],
   takenShare,
   plannedShare,
-  tone,
+  fill,
   testId,
 }: {
   label: string;
@@ -43,7 +43,8 @@ export function KindCard({
   /** 0–1 of the bar each part fills; they are clamped so the two together never exceed it. */
   takenShare: number;
   plannedShare: number;
-  tone: "primary" | "warn";
+  /** The fill class of the type's colour: the taken part of the bar wears it. */
+  fill: string;
   testId: string;
 }) {
   const taken = clamp(takenShare);
@@ -51,10 +52,7 @@ export function KindCard({
   return (
     <YearCard label={label} aside={allowanceNote || null} value={value} unit={valueUnit} testId={testId}>
       <div className="flex h-1.5 overflow-hidden rounded-full bg-track">
-        <div
-          className={cn("h-full", tone === "warn" ? "bg-warn" : "bg-primary")}
-          style={{ width: `${taken * 100}%` }}
-        />
+        <div className={cn("h-full", fill)} style={{ width: `${taken * 100}%` }} />
         <div className="h-full bg-accent opacity-45" style={{ width: `${planned * 100}%` }} />
       </div>
       <div className="flex flex-wrap gap-x-3 text-sm text-muted tabular-nums">

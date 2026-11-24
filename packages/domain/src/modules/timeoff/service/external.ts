@@ -3,9 +3,12 @@ import type { Ctx } from "../../../platform/context";
 import type { CivilDate } from "../../../shared/dates";
 import { getDb, type Tx } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { type LeaveDayKind, goesToCalendar } from "../rules";
+import { calendarWordOf } from "../rules";
 import { leaveDays } from "../schema";
-import type { LeaveDay, LeaveWindow } from "./records";
+import { legacyKind, legacyObservedKind } from "../schema/legacy";
+import { listLeaveTypes } from "./types";
+
+type LeaveWindow = { from: CivilDate; to: CivilDate };
 
 /* What a pass of the calendar needs from this module (plan F7 §3.3) */
 
@@ -13,12 +16,13 @@ import type { LeaveDay, LeaveWindow } from "./records";
 interface CalendarDay {
   id: string;
   on: CivilDate;
-  kind: LeaveDayKind;
+  /** The word the calendar holds the day under (`calendarWordOf`). */
+  kind: string;
   fraction: number | null;
   pending: "none" | "upsert" | "delete";
   /** The pair the calendar was last observed holding, which is what a deletion has to send back. */
   observedFraction: number | null;
-  observedKind: LeaveDayKind | null;
+  observedKind: string | null;
 }
 
 async function daysForCalendar(
@@ -26,15 +30,20 @@ async function daysForCalendar(
   window: LeaveWindow,
   onlyPending: boolean,
 ): Promise<CalendarDay[]> {
+  const types = await listLeaveTypes(ctx);
+  const word = calendarWordOf(types);
+  // No type has a word of the calendar's: nothing of the person's can go there.
+  if (word === null) return [];
+  const going = new Set(types.filter((type) => type.toCalendar).map((type) => type.id));
   const rows = await getDb()
     .select({
       id: leaveDays.id,
       on: leaveDays.on,
-      kind: leaveDays.kind,
+      typeId: leaveDays.typeId,
       fraction: leaveDays.fraction,
       pending: leaveDays.pending,
-      observedFraction: leaveDays.observedFraction,
-      observedKind: leaveDays.observedKind,
+      observedFraction: leaveDays.externalFraction,
+      observedKind: leaveDays.externalKind,
     })
     .from(leaveDays)
     .where(
@@ -45,14 +54,14 @@ async function daysForCalendar(
         onlyPending ? ne(leaveDays.pending, "none") : undefined,
       ),
     )
-    .orderBy(asc(leaveDays.on), asc(leaveDays.kind), asc(leaveDays.id));
+    .orderBy(asc(leaveDays.on), asc(leaveDays.typeId), asc(leaveDays.id));
 
   return rows
-    .filter((row) => goesToCalendar(row.kind))
+    .filter((row) => row.typeId !== null && going.has(row.typeId))
     .map((row) => ({
       id: row.id,
       on: row.on,
-      kind: row.kind,
+      kind: word,
       fraction: row.fraction === null ? null : Number(row.fraction),
       pending: row.pending,
       observedFraction: row.observedFraction === null ? null : Number(row.observedFraction),
@@ -61,9 +70,9 @@ async function daysForCalendar(
 }
 
 /**
- * Every day of a year the next pass owes the calendar something for, oldest first. Only the kinds the calendar
- * knows: a ROL row never carries a pending state, but the filter is stated here too so a future
- * kind cannot leak into a request by forgetting one (spec §9.2).
+ * Every day of a year the next pass owes the calendar something for, oldest first. Only the types
+ * that go to the calendar: the filter is stated here too so a type kept here cannot leak into a
+ * request (spec §9.2).
  */
 export function pendingForCalendar(ctx: Pick<Ctx, "userId">, window: LeaveWindow): Promise<CalendarDay[]> {
   return daysForCalendar(ctx, window, true);
@@ -109,14 +118,14 @@ export async function yearsWithPending(ctx: Pick<Ctx, "userId">): Promise<number
 }
 
 /**
- * The pair the calendar was observed holding, written twice (rewrite plan R5c, P2): the old
- * columns every read still uses, and the `external_*` ones that replace them in a later release.
- * Both always carry the same values; an observed pair is a settled one.
+ * The pair the calendar was observed holding: the `external_*` columns every read uses since R5g,
+ * and the old ones, still written for the image before it (R5f drops them) when they take the word.
  */
-function observedPair(fraction: string | null, kind: "vacation" | "comp") {
+function observedPair(fraction: string | null, kind: string) {
+  const old = legacyObservedKind(kind);
   return {
-    observedFraction: fraction,
-    observedKind: kind,
+    observedFraction: old === null ? null : fraction,
+    observedKind: old,
     externalFraction: fraction,
     externalKind: kind,
     externalState: "synced" as const,
@@ -128,7 +137,7 @@ interface Observed {
   id: string;
   /** What the calendar holds now, or `null` when the calendar no longer holds the day at all. */
   fraction: number | null;
-  kind: LeaveDayKind | null;
+  kind: string | null;
 }
 
 /**
@@ -155,10 +164,7 @@ export async function markSynced(
         .set({
           pending: "none",
           syncedAt: now,
-          ...observedPair(
-            one.fraction === null ? null : one.fraction.toFixed(1),
-            one.kind as "vacation" | "comp",
-          ),
+          ...observedPair(one.fraction === null ? null : one.fraction.toFixed(1), one.kind as string),
           updatedAt: now,
         })
         .where(and(eq(leaveDays.id, one.id), userScoped(ctx).owns(leaveDays)));
@@ -182,44 +188,38 @@ export async function markRefused(ctx: Pick<Ctx, "userId">, ids: readonly string
 }
 
 /**
- * Records a day a pass found on the calendar that we did not have (plan F7 §3.4.7.4). It arrives already
- * reconciled: `origin = 'external'` (since R5c P3; the old origin before), nothing pending, and the observed
- * pair is what the calendar showed.
- *
- * A day we already hold under a **different** kind is left alone and reported back instead of
- * being rewritten: our classification wins, and a calendar `comp` we keep as ROL is a case for a human
- * to look at, not for the sync to resolve (plan F7 §3.6.3).
+ * Records a day a pass found on the calendar that we did not have (plan F7 §3.4.7.4), under the
+ * type whose word it is. It arrives already reconciled: `origin = 'external'`, nothing pending,
+ * and the observed pair is what the calendar showed. `false`: no type of the person's has the
+ * calendar's word, and the day is left upstream rather than guessed.
  */
 export async function recordFromCalendar(
   ctx: Pick<Ctx, "userId">,
-  day: { on: CivilDate; kind: "vacation" | "comp"; fraction: number },
+  day: { on: CivilDate; kind: string; fraction: number },
   now: Date = new Date(),
-): Promise<LeaveDay | null> {
-  const [row] = await getDb()
+): Promise<boolean> {
+  const type = (await listLeaveTypes(ctx)).find((one) => one.calendarKind === day.kind);
+  if (type === undefined) return false;
+  const fraction = day.fraction.toFixed(1);
+  await getDb()
     .insert(leaveDays)
     .values(
       userScoped(ctx).stamp({
         on: day.on,
-        kind: day.kind,
-        fraction: day.fraction.toFixed(1),
+        typeId: type.id,
+        kind: legacyKind(type.legacyKind),
+        fraction,
         origin: "external" as const,
         pending: "none" as const,
         syncedAt: now,
-        ...observedPair(day.fraction.toFixed(1), day.kind),
+        ...observedPair(fraction, day.kind),
       }),
     )
     .onConflictDoUpdate({
-      target: [leaveDays.userId, leaveDays.on, leaveDays.kind],
-      set: {
-        fraction: day.fraction.toFixed(1),
-        pending: "none",
-        syncedAt: now,
-        ...observedPair(day.fraction.toFixed(1), day.kind),
-        updatedAt: now,
-      },
-    })
-    .returning();
-  return row ?? null;
+      target: [leaveDays.userId, leaveDays.on, leaveDays.typeId],
+      set: { fraction, pending: "none", syncedAt: now, ...observedPair(fraction, day.kind), updatedAt: now },
+    });
+  return true;
 }
 
 /**

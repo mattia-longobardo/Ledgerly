@@ -12,10 +12,11 @@ import type { Ctx } from "../../platform/context";
 import { deleteFolder, ensureBucket } from "../../platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
+import { type OldTypes, oldLeaveTypes } from "../../../../../test/leave-types";
 import { MARCH } from "../../../../../test/fixtures/payroll/samples";
 import { twinPdf } from "../../../../../test/fixtures/payroll/twin";
 import { timeOffView } from "./queries";
-import { saveAllowance, saveLeaveDay } from "./service";
+import { saveLeaveDay, saveTypeAllowance } from "./service";
 
 /** The twin payslip's own year: March 2031, so everything from March on is still planned. */
 const YEAR = 2031;
@@ -50,11 +51,13 @@ const DECEMBER_DAYS = [
 ];
 
 let ctx: Ctx;
+let types: OldTypes;
 
 beforeAll(ensureBucket);
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
+  types = await oldLeaveTypes(ctx);
 });
 afterAll(async () => {
   await deleteFolder("payslips/");
@@ -69,23 +72,45 @@ async function withMarchPayslip(): Promise<void> {
 }
 
 async function book(dates: readonly string[]): Promise<void> {
-  for (const on of dates) await saveLeaveDay(ctx, { from: on, kind: "vacation", fraction: 1 });
+  for (const on of dates) await saveLeaveDay(ctx, { from: on, typeId: types.vacation, fraction: 1 });
+}
+
+type View = Awaited<ReturnType<typeof timeOffView>>;
+const balanceOf = (view: View, typeId: string) => view.balances.find((one) => one.typeId === typeId)!;
+
+async function allowance(vacationDays: number, rolDays: number, vacationCarried: number | null = null) {
+  await saveTypeAllowance(ctx, types.vacation, YEAR, { days: vacationDays, carriedDays: vacationCarried });
+  await saveTypeAllowance(ctx, types.rol, YEAR, { days: rolDays });
 }
 
 describe("the carry-over comes from the payslip (N9)", () => {
   it("reads it off the A.P. column, with nobody having stated a thing", async () => {
     await withMarchPayslip();
     const view = await timeOffView(ctx, YEAR);
-    expect(view.vacation.carriedMinutes).toBe(CARRIED_VACATION_HOURS * 60);
-    expect(view.rol.carriedMinutes).toBe(CARRIED_ROL_HOURS * 60);
+    expect(balanceOf(view, types.vacation).carriedMinutes).toBe(CARRIED_VACATION_HOURS * 60);
+    expect(balanceOf(view, types.rol).carriedMinutes).toBe(CARRIED_ROL_HOURS * 60);
   });
 
   it("is nothing at all when no payslip has spoken, rather than a figure of our own", async () => {
-    await saveAllowance(ctx, YEAR, { vacationDays: 26, rolDays: 4 });
+    await allowance(26, 4);
     const view = await timeOffView(ctx, YEAR);
-    expect(view.vacation.carriedMinutes).toBe(0);
-    expect(view.rol.carriedMinutes).toBe(0);
-    expect(view.vacation.residual.basis).toBe("allowance");
+    expect(balanceOf(view, types.vacation).carriedMinutes).toBe(0);
+    expect(balanceOf(view, types.rol).carriedMinutes).toBe(0);
+    expect(balanceOf(view, types.vacation).residual.basis).toBe("allowance");
+  });
+
+  it("is the stated carry-over only when no payslip prints one (R5g)", async () => {
+    await allowance(26, 4, 3);
+    const view = await timeOffView(ctx, YEAR);
+    expect(balanceOf(view, types.vacation).carriedMinutes).toBe(3 * view.minutesPerDay);
+    expect(balanceOf(view, types.vacation).residual.remainingMinutes).toBe(29 * view.minutesPerDay);
+  });
+
+  it("lets the payslip's A.P. win over a stated carry-over (R5g)", async () => {
+    await withMarchPayslip();
+    await allowance(26, 4, 3);
+    const view = await timeOffView(ctx, YEAR);
+    expect(balanceOf(view, types.vacation).carriedMinutes).toBe(CARRIED_VACATION_HOURS * 60);
   });
 
   it("never counts it twice: a printed RES. already has it inside", async () => {
@@ -95,8 +120,8 @@ describe("the carry-over comes from the payslip (N9)", () => {
 
     // RES. 45 h less the one day booked after the month the payslip counted — the 5 h of A.P. are
     // part of the 45 and are not added again.
-    expect(view.vacation.residual.basis).toBe("payslip");
-    expect(view.vacation.residual.remainingMinutes).toBe(45 * 60 - view.minutesPerDay);
+    expect(balanceOf(view, types.vacation).residual.basis).toBe("payslip");
+    expect(balanceOf(view, types.vacation).residual.remainingMinutes).toBe(45 * 60 - view.minutesPerDay);
   });
 });
 
@@ -106,24 +131,24 @@ describe("the alert waits for the days to be earned (N9)", () => {
 
   it("says nothing about days that will have accrued by the time they come", async () => {
     await withMarchPayslip();
-    await saveAllowance(ctx, YEAR, { vacationDays: 26, rolDays: 4 });
+    await allowance(26, 4);
     await book(DECEMBER_DAYS.slice(0, overBooked));
 
     const view = await timeOffView(ctx, YEAR);
     // Past the printed residual, and the card says so plainly…
-    expect(view.vacation.residual.remainingMinutes).toBeLessThan(0);
+    expect(balanceOf(view, types.vacation).residual.remainingMinutes).toBeLessThan(0);
     // …but nine months of work will have granted far more than ten days by December.
     expect(view.overdrawn).toEqual([]);
   });
 
   it("does warn about the same ten days taken in April, and names the day", async () => {
     await withMarchPayslip();
-    await saveAllowance(ctx, YEAR, { vacationDays: 26, rolDays: 4 });
+    await allowance(26, 4);
     await book(APRIL_DAYS.slice(0, overBooked));
 
     const view = await timeOffView(ctx, YEAR);
     const [over] = view.overdrawn;
-    expect(over?.kind).toBe("vacation");
+    expect(over?.typeId).toBe(types.vacation);
     expect(over?.basis).toBe("payslip");
     expect(over?.onDate).toBe(APRIL_DAYS[overBooked - 1]);
   });

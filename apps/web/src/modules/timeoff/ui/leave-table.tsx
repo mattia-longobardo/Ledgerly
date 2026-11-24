@@ -9,9 +9,9 @@ import { cn } from "@ledgerly/ui/cn";
 import { useRouter } from "@ledgerly/ui/router";
 import { Segmented } from "@ledgerly/ui/segmented";
 import { GroupRow, Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
-import { KIND_CLASS } from "./kinds";
+import { COLOR_FILL, colorOf, nameOf } from "./kinds";
 import { RowActions } from "./leave-actions";
-import { daysOf, type MonthGroup, monthSummary, type Say, type View } from "./words";
+import { daysOf, formatNumber, type MonthGroup, monthSummary, type Say, type View } from "./words";
 import { type Filter, FILTERS, yearHref } from "./year";
 
 type DayRow = Extract<View["rows"][number], { source: "day" }>;
@@ -36,7 +36,7 @@ function groupsOf(view: View, filter: Filter): { month: MonthGroup; rows: DayRow
       rows: dayRows.filter((row) => row.on.slice(0, 7) === month.month.slice(0, 7)),
     }))
     .filter((group) =>
-      filter === "all" ? group.rows.length > 0 || group.month.payroll !== null : group.rows.length > 0,
+      filter === "all" ? group.rows.length > 0 || group.month.payrollByType !== null : group.rows.length > 0,
     );
 }
 
@@ -73,7 +73,7 @@ export function LeaveTable({
       {groups.length === 0 ? (
         <p className="px-4 pb-4 text-muted">{text("table.empty")}</p>
       ) : (
-        <Rows groups={groups} say={say} />
+        <Rows groups={groups} types={view.types} say={say} />
       )}
     </Card>
   );
@@ -84,7 +84,15 @@ export function LeaveTable({
  * said in less room step aside: the note goes, and the status moves under the date as the badge it
  * already is. Nothing is lost, and the page never scrolls.
  */
-function Rows({ groups, say }: { groups: { month: MonthGroup; rows: DayRow[] }[]; say: Say }) {
+function Rows({
+  groups,
+  types,
+  say,
+}: {
+  groups: { month: MonthGroup; rows: DayRow[] }[];
+  types: View["types"];
+  say: Say;
+}) {
   const { text, locale } = say;
   return (
     <div className="overflow-x-auto">
@@ -105,10 +113,10 @@ function Rows({ groups, say }: { groups: { month: MonthGroup; rows: DayRow[] }[]
               <GroupRow
                 colSpan={6}
                 label={formatDate(group.month.month, "monthYear", locale)}
-                summary={monthSummary(say, group.month)}
+                summary={monthSummary(say, group.month, types)}
               />
               {group.rows.map((row) => (
-                <DayLine key={row.id} row={row} say={say} />
+                <DayLine key={row.id} row={row} types={types} say={say} />
               ))}
             </Fragment>
           ))}
@@ -118,7 +126,7 @@ function Rows({ groups, say }: { groups: { month: MonthGroup; rows: DayRow[] }[]
   );
 }
 
-function DayLine({ row, say }: { row: DayRow; say: Say }) {
+function DayLine({ row, types, say }: { row: DayRow; types: View["types"]; say: Say }) {
   const { text, locale } = say;
   return (
     <Tr>
@@ -132,12 +140,18 @@ function DayLine({ row, say }: { row: DayRow; say: Say }) {
       </Td>
       <Td>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden="true" className={cn("size-2 rounded-xs", KIND_CLASS[row.kind])} />
-          {text(`kinds.${row.kind}`)}
+          <span
+            aria-hidden="true"
+            className={cn("size-2 rounded-xs", COLOR_FILL[colorOf(types, row.typeId)])}
+          />
+          {nameOf(types, row.typeId)}
         </span>
       </Td>
       <Td align="right" className="tabular-nums">
-        {daysOf(say, row.fraction * say.minutesPerDay)}
+        {/* A row of a type counted in hours says its hours. */}
+        {row.minutes === null
+          ? daysOf(say, row.fraction * say.minutesPerDay)
+          : text("units.hours", { amount: formatNumber(row.minutes / 60, locale) })}
       </Td>
       <Td muted className="max-w-0 truncate max-md:hidden">
         {row.note ?? ""}

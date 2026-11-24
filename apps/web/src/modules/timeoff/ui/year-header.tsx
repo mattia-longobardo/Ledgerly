@@ -1,11 +1,11 @@
 "use client";
 
 // The top of the Time off page: the year stepper and «Add leave», the heading with the year's
-// allowances, the tabs, and the two lines that qualify the figures below them.
+// allowances, the tabs, and the line that qualifies the figures below them.
 import { ButtonLink } from "@ledgerly/ui/button";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { AddLeave } from "./leave-actions";
-import { daysOf, formatNumber, headline, type Say, type View } from "./words";
+import { formatNumber, headline, type Say, type View } from "./words";
 import { type Filter, yearHref } from "./year";
 import { YearPicker } from "@ledgerly/ui/year-picker";
 
@@ -65,7 +65,8 @@ export function YearHeader({
           <p className="text-muted">{headline(say, view) || text("header.noAllowance")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {view.allowance === null && (
+          {/* No type has an allowance stated for the year: the way to state one. */}
+          {view.balances.every((one) => one.allowanceMinutes === null) && (
             <ButtonLink href={`/timeoff/settings?year=${place.year}`} size="sm" className="max-md:h-9">
               {text("actions.setAllowance")}
             </ButtonLink>
@@ -80,24 +81,15 @@ export function YearHeader({
           { href: `/timeoff/settings?year=${place.year}`, label: text("tabs.settings"), active: false },
         ]}
       />
-      <Qualifiers view={view} external={external} say={say} />
+      <Qualifiers external={external} say={say} />
     </>
   );
 }
 
-function Qualifiers({ view, external, say }: { view: View; external: ExternalStats | null; say: Say }) {
+function Qualifiers({ external, say }: { external: ExternalStats | null; say: Say }) {
   const { text, locale } = say;
   return (
     <>
-      {/* The two parts against the total the contract states (N7): reported, never corrected. */}
-      {view.allowanceMismatch !== null && (
-        <p className="-mt-2 text-sm text-warn">
-          {text("mismatch", {
-            amount: daysOf(say, Math.abs(view.allowanceMismatch) * view.minutesPerDay),
-            direction: view.allowanceMismatch > 0 ? text("mismatchOver") : text("mismatchUnder"),
-          })}
-        </p>
-      )}
       {/* The external calendar's own figures, beside ours and never folded into them: it honours a
         leave-year window (calendar, fiscal or anniversary) this app does not model (plan F7 §3.6.4). */}
       {external !== null && (

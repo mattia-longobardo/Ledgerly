@@ -7,15 +7,15 @@ import { applyProviderAccounts } from "@domain/modules/accounts/service";
 import { type IncomingTransaction } from "@domain/modules/transactions/rules";
 import { users } from "@domain/platform/auth/schema";
 import { type Ctx } from "@domain/platform/context";
-import { addDays, addMonths, monthKey, today } from "@domain/shared/dates";
+import { addDays, addMonths, dayOfWeek, monthKey, today } from "@domain/shared/dates";
 import { getDb } from "@domain/platform/db/client";
 import { userScoped } from "@domain/platform/db/scope";
 import { saveRates, storedRange } from "@domain/platform/fx/service";
-import { isBookable } from "@domain/platform/holidays/rules";
 import { configuredPlugins } from "@domain/platform/plugins/queries";
 import { plugins } from "@domain/platform/plugins/schema";
 import type { PluginManifest } from "@ledgerly/plugin-contract";
 import { WALLET_PROVIDER } from "../../test/fixtures/providers";
+import { italianHolidays } from "../../test/fixtures/holidays";
 
 /**
  * The Expenses journey needs movements that arrived the way real ones do: a synced account adopted
@@ -105,7 +105,10 @@ export const lastMonthOf = (ctx: Ctx) => addMonths(monthKey(today(ctx.timeZone))
 export function workingDay(from: string, delta: number): string {
   const step = delta >= 0 ? 1 : -1;
   let date = addDays(from, delta);
-  while (!isBookable(date, { month: 12, day: 7 })) date = addDays(date, step);
+  const closed = (on: string) =>
+    [0, 6].includes(dayOfWeek(on)) ||
+    italianHolidays(Number(on.slice(0, 4)), { month: 12, day: 7 }).some((one) => one.date === on);
+  while (closed(date)) date = addDays(date, step);
   return date;
 }
 

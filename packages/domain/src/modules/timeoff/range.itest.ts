@@ -9,24 +9,30 @@ import type { Ctx } from "../../platform/context";
 import { getDb } from "../../platform/db/client";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
+import { oldLeaveTypes, type OldTypes } from "../../../../../test/leave-types";
 import { timeOffView } from "./queries";
-import { calendar } from "./rules";
+import { calendar, type LeaveUndo } from "./rules";
 import {
   MAX_RANGE_DAYS,
   TimeOffError,
+  addRestDay,
+  leaveContext,
   listLeaveDays,
   markSynced,
   removeLeave,
   removeLeaveRange,
   restoreLeave,
-  saveAllowance,
   saveLeaveDay,
   saveLeaveRange,
+  saveTypeAllowance,
   yearWindow,
 } from "./service";
 
 let ctx: Ctx;
 let other: Ctx;
+/** The types of `ctx` and of `other`, by their old kind. */
+let T: OldTypes;
+let O: OldTypes;
 const WINDOW = yearWindow(2026);
 
 /** Monday 15 June 2026 to Friday the 19th; the 13th and 14th are a weekend. */
@@ -40,25 +46,52 @@ beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
   other = await newContext();
+  T = await oldLeaveTypes(ctx);
+  O = await oldLeaveTypes(other);
 });
 
 afterAll(closeDatabase);
 
 /** The rows of the year as the assertions read them: date, kind, size, what Trek is owed. */
 async function rows(of: Ctx = ctx) {
-  return (await listLeaveDays(of, WINDOW)).map((row) => [row.on, row.kind, row.fraction, row.pending]);
+  return (await listLeaveDays(of, WINDOW))
+    .map((row) => [row.on, row.kind, row.fraction, row.pending])
+    .sort((a, b) => `${a[0]} ${a[1]}`.localeCompare(`${b[0]} ${b[1]}`));
+}
+
+/** An undo as the assertions read it: the old kind of each row instead of its type, by date then kind. */
+function named(undo: LeaveUndo | null) {
+  if (undo === null) return null;
+  const kindOf = (typeId: string) => Object.entries(T).find(([, id]) => id === typeId)?.[0];
+  return {
+    dates: undo.dates,
+    rows: undo.rows
+      .map(({ on, typeId, fraction, note }) => ({ on, kind: kindOf(typeId), fraction, note }))
+      .sort((a, b) => `${a.on} ${a.kind}`.localeCompare(`${b.on} ${b.kind}`)),
+  };
 }
 
 describe("writing a range", () => {
   it("writes every working day of the range and leaves the others out", async () => {
-    const result = await saveLeaveRange(ctx, { from: "2026-06-12", to: FRI, kind: "vacation", fraction: 1 });
+    const result = await saveLeaveRange(ctx, {
+      from: "2026-06-12",
+      to: FRI,
+      typeId: T.vacation,
+      fraction: 1,
+    });
     expect(result.days.map((day) => day.on)).toEqual(["2026-06-12", MON, TUE, WED, THU, FRI]);
     expect(result.totalDays).toBe(6);
     expect(await rows()).toHaveLength(6);
   });
 
   it("writes one day when the two ends are the same", async () => {
-    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "comp", fraction: 0.5, note: "pm" });
+    const result = await saveLeaveRange(ctx, {
+      from: TUE,
+      to: TUE,
+      typeId: T.comp,
+      fraction: 0.5,
+      note: "pm",
+    });
     expect(result.days).toHaveLength(1);
     expect(result.days[0]).toMatchObject({ on: TUE, kind: "comp", fraction: "0.5", note: "pm" });
   });
@@ -66,7 +99,7 @@ describe("writing a range", () => {
   it("writes every row or none: a failure on one day leaves the whole range unwritten", async () => {
     // A ROL day in the range is replaced before the new rows go in; if the write then fails on a
     // later day, the replaced row has to be back as well — that is what one transaction is for.
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 1 });
     const before = await rows();
 
     await getDb().execute(
@@ -84,7 +117,7 @@ describe("writing a range", () => {
     );
     try {
       await expect(
-        saveLeaveRange(ctx, { from: MON, to: FRI, kind: "vacation", fraction: 1 }),
+        saveLeaveRange(ctx, { from: MON, to: FRI, typeId: T.vacation, fraction: 1 }),
       ).rejects.toThrow();
     } finally {
       await getDb().execute(
@@ -94,7 +127,7 @@ describe("writing a range", () => {
 
     expect(await rows()).toEqual(before);
     // And with nothing in the way the same range goes in whole.
-    await saveLeaveRange(ctx, { from: MON, to: FRI, kind: "vacation", fraction: 1 });
+    await saveLeaveRange(ctx, { from: MON, to: FRI, typeId: T.vacation, fraction: 1 });
     expect((await rows()).map((row) => row[1])).toEqual(Array.from({ length: 5 }, () => "vacation"));
   });
 
@@ -102,7 +135,7 @@ describe("writing a range", () => {
     const refusal = await saveLeaveRange(ctx, {
       from: "2026-06-13",
       to: "2026-06-14",
-      kind: "vacation",
+      typeId: T.vacation,
       fraction: 1,
     }).catch((error: unknown) => error);
     expect(refusal).toBeInstanceOf(TimeOffError);
@@ -116,23 +149,25 @@ describe("writing a range", () => {
 
   it("refuses a range longer than anybody books in one go, and an impossible input", async () => {
     await expect(
-      saveLeaveRange(ctx, { from: "2026-01-01", to: "2027-06-30", kind: "vacation", fraction: 1 }),
+      saveLeaveRange(ctx, { from: "2026-01-01", to: "2027-06-30", typeId: T.vacation, fraction: 1 }),
     ).rejects.toMatchObject({ code: "range_too_long" });
     expect(MAX_RANGE_DAYS).toBe(260);
     await expect(
-      saveLeaveRange(ctx, { from: FRI, to: MON, kind: "vacation", fraction: 1 }),
+      saveLeaveRange(ctx, { from: FRI, to: MON, typeId: T.vacation, fraction: 1 }),
     ).rejects.toMatchObject({ code: "invalid_input" });
     await expect(
-      saveLeaveRange(ctx, { from: MON, to: MON, kind: "vacation", fraction: 0.3 }),
+      saveLeaveRange(ctx, { from: MON, to: MON, typeId: T.vacation, fraction: 0.3 }),
     ).rejects.toMatchObject({ code: "invalid_input" });
   });
 
   it("marks only the leave that reaches Trek as pending, ROL included", async () => {
-    expect((await saveLeaveRange(ctx, { from: MON, to: MON, kind: "rol", fraction: 1 })).calendar).toBe(true);
-    expect((await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "vacation", fraction: 1 })).calendar).toBe(
+    expect((await saveLeaveRange(ctx, { from: MON, to: MON, typeId: T.rol, fraction: 1 })).calendar).toBe(
       true,
     );
-    expect((await saveLeaveRange(ctx, { from: WED, to: WED, kind: "other", fraction: 1 })).calendar).toBe(
+    expect(
+      (await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: T.vacation, fraction: 1 })).calendar,
+    ).toBe(true);
+    expect((await saveLeaveRange(ctx, { from: WED, to: WED, typeId: T.other, fraction: 1 })).calendar).toBe(
       false,
     );
     expect(await rows()).toEqual([
@@ -143,31 +178,52 @@ describe("writing a range", () => {
   });
 
   it("keeps one user's range out of another's days", async () => {
-    await saveLeaveDay(other, { from: TUE, kind: "rol", fraction: 1 });
-    await saveLeaveRange(ctx, { from: MON, to: WED, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(other, { from: TUE, typeId: O.rol, fraction: 1 });
+    await saveLeaveRange(ctx, { from: MON, to: WED, typeId: T.vacation, fraction: 1 });
     expect(await rows(other)).toEqual([[TUE, "rol", "1.0", "upsert"]]);
+  });
+});
+
+describe("a person without a holiday calendar (R5g, ST-20)", () => {
+  it("has only the working week and their days off of the year: no computed holidays", async () => {
+    await addRestDay(ctx, { month: 12, day: 7, name: "Sant'Ambrogio" });
+    const context = await leaveContext(ctx, [2026]);
+    expect(context.hasHolidayCalendar).toBe(false);
+    expect([...context.holidays]).toEqual(["2026-12-07"]);
+
+    // Saturday 5 to Tuesday 8 December: the weekend and the patron saint go, the Immaculate is a working day.
+    const result = await saveLeaveRange(ctx, {
+      from: "2026-12-05",
+      to: "2026-12-08",
+      typeId: T.vacation,
+      fraction: 1,
+    });
+    expect(result.days.map((day) => day.on)).toEqual(["2026-12-08"]);
+    const view = await timeOffView(ctx, 2026);
+    expect(view.hasHolidayCalendar).toBe(false);
+    expect(view.holidays).toEqual(["2026-12-07"]);
   });
 });
 
 describe("what a range replaces", () => {
   it("takes away a whole day of another kind, and hands back what the days held", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1, note: "dentist" });
-    const result = await saveLeaveRange(ctx, { from: MON, to: WED, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 1, note: "dentist" });
+    const result = await saveLeaveRange(ctx, { from: MON, to: WED, typeId: T.vacation, fraction: 1 });
     expect(await rows()).toEqual([
       [MON, "vacation", "1.0", "upsert"],
       [TUE, "vacation", "1.0", "upsert"],
       [WED, "vacation", "1.0", "upsert"],
     ]);
-    expect(result.undo).toEqual({
+    expect(named(result.undo)).toEqual({
       dates: [MON, TUE, WED],
       rows: [{ on: TUE, kind: "rol", fraction: 1, note: "dentist" }],
     });
   });
 
   it("marks a replaced day Trek holds for removal instead of deleting it", async () => {
-    const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1 });
+    const [rol] = await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 1 });
     await markSynced(ctx, [{ id: rol.id, fraction: 1, kind: "vacation" }]);
-    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 1 });
+    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: T.other, fraction: 1 });
     expect(await rows()).toEqual([
       [TUE, "other", "1.0", "none"],
       [TUE, "rol", "1.0", "delete"],
@@ -177,8 +233,8 @@ describe("what a range replaces", () => {
   });
 
   it("keeps a half of another kind beside a new half", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5 });
-    await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "vacation", fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 0.5 });
+    await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: T.vacation, fraction: 0.5 });
     expect(await rows()).toEqual([
       [TUE, "rol", "0.5", "upsert"],
       [TUE, "vacation", "0.5", "upsert"],
@@ -186,18 +242,24 @@ describe("what a range replaces", () => {
   });
 
   it("updates the row of the same kind in place, keeping what Trek was observed holding", async () => {
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1 });
     await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
-    await saveLeaveRange(ctx, { from: MON, to: TUE, kind: "vacation", fraction: 0.5 });
+    await saveLeaveRange(ctx, { from: MON, to: TUE, typeId: T.vacation, fraction: 0.5 });
     const row = (await listLeaveDays(ctx, WINDOW)).find((one) => one.on === TUE);
     expect(row).toMatchObject({ id: day.id, fraction: "0.5", pending: "upsert", observedFraction: "1.0" });
     expect(row?.syncedAt).not.toBeNull();
   });
 
   it("edits one row: the kind changes and the other half of the day stays", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5 });
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5 });
-    await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "comp", fraction: 0.5, editedKind: "vacation" });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 0.5 });
+    await saveLeaveRange(ctx, {
+      from: TUE,
+      to: TUE,
+      typeId: T.comp,
+      fraction: 0.5,
+      editedTypeId: T.vacation,
+    });
     expect(await rows()).toEqual([
       [TUE, "comp", "0.5", "upsert"],
       [TUE, "rol", "0.5", "upsert"],
@@ -210,9 +272,9 @@ describe("half of one kind and half of another, in one step (decision of 17/11/2
     const result = await saveLeaveRange(ctx, {
       from: TUE,
       to: TUE,
-      kind: "vacation",
+      typeId: T.vacation,
       fraction: 0.5,
-      otherKind: "rol",
+      otherTypeId: T.rol,
     });
     expect(await rows()).toEqual([
       [TUE, "rol", "0.5", "upsert"],
@@ -220,24 +282,24 @@ describe("half of one kind and half of another, in one step (decision of 17/11/2
     ]);
     expect(result.totalDays).toBe(1);
     expect(result.calendar).toBe(true);
-    expect(result.undo).toEqual({ dates: [TUE], rows: [] });
+    expect(named(result.undo)).toEqual({ dates: [TUE], rows: [] });
     await restoreLeave(ctx, result.undo);
     expect(await rows()).toEqual([]);
   });
 
   it("splits a whole day Trek holds: the row keeps its id and what Trek was observed holding", async () => {
-    const [whole] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [whole] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1 });
     await markSynced(ctx, [{ id: whole.id, fraction: 1, kind: "vacation" }]);
     await saveLeaveRange(ctx, {
       from: TUE,
       to: TUE,
-      kind: "vacation",
+      typeId: T.vacation,
       fraction: 0.5,
-      otherKind: "rol",
-      editedKind: "vacation",
+      otherTypeId: T.rol,
+      editedTypeId: T.vacation,
     });
     const stored = await listLeaveDays(ctx, WINDOW);
-    expect(stored.map((row) => [row.on, row.kind, row.fraction, row.pending])).toEqual([
+    expect(await rows()).toEqual([
       [TUE, "rol", "0.5", "upsert"],
       [TUE, "vacation", "0.5", "upsert"],
     ]);
@@ -248,18 +310,21 @@ describe("half of one kind and half of another, in one step (decision of 17/11/2
   });
 
   it("writes a range of split days, and the residual of both kinds counts half a day each", async () => {
-    await saveAllowance(ctx, 2026, { vacationDays: 10, rolDays: 4, totalDays: null, note: null });
-    await saveLeaveRange(ctx, { from: MON, to: FRI, kind: "vacation", fraction: 0.5, otherKind: "rol" });
+    await saveTypeAllowance(ctx, T.vacation, 2026, { days: 10 });
+    await saveTypeAllowance(ctx, T.rol, 2026, { days: 4 });
+    await saveLeaveRange(ctx, { from: MON, to: FRI, typeId: T.vacation, fraction: 0.5, otherTypeId: T.rol });
     expect((await rows()).length).toBe(10);
     const view = await timeOffView(ctx, 2026);
-    expect(view.vacation.residual.remainingMinutes).toBe(7.5 * view.minutesPerDay);
-    expect(view.rol.residual.remainingMinutes).toBe(1.5 * view.minutesPerDay);
+    const left = (typeId: string) =>
+      view.balances.find((one) => one.typeId === typeId)?.residual.remainingMinutes;
+    expect(left(T.vacation)).toBe(7.5 * view.minutesPerDay);
+    expect(left(T.rol)).toBe(1.5 * view.minutesPerDay);
   });
 
   it("refuses a second half that is not a half, or of the same kind", async () => {
     for (const input of [
-      { from: TUE, to: TUE, kind: "vacation" as const, fraction: 1, otherKind: "rol" as const },
-      { from: TUE, to: TUE, kind: "vacation" as const, fraction: 0.5, otherKind: "vacation" as const },
+      { from: TUE, to: TUE, typeId: T.vacation, fraction: 1, otherTypeId: T.rol },
+      { from: TUE, to: TUE, typeId: T.vacation, fraction: 0.5, otherTypeId: T.vacation },
     ]) {
       await expect(saveLeaveRange(ctx, input)).rejects.toThrow(TimeOffError);
     }
@@ -269,10 +334,10 @@ describe("half of one kind and half of another, in one step (decision of 17/11/2
 
 describe("removing, with the state before", () => {
   it("removes one row by its id and says what the day held", async () => {
-    const [vacation] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5, note: "am" });
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5 });
+    const [vacation] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 0.5, note: "am" });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 0.5 });
     const removed = await removeLeave(ctx, { id: vacation.id });
-    expect(removed).toEqual({
+    expect({ ...removed, undo: named(removed.undo) }).toEqual({
       deleted: 1,
       pending: 0,
       undo: {
@@ -287,14 +352,14 @@ describe("removing, with the state before", () => {
   });
 
   it("removes everything on a date, and counts what Trek still has to be told", async () => {
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1 });
     await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
     expect(await removeLeave(ctx, { date: TUE })).toMatchObject({ deleted: 0, pending: 1 });
     expect(await rows()).toEqual([[TUE, "vacation", "1.0", "delete"]]);
   });
 
   it("refuses somebody else's row, and removes nothing on an empty date", async () => {
-    const [theirs] = await saveLeaveDay(other, { from: TUE, kind: "vacation", fraction: 1 });
+    const [theirs] = await saveLeaveDay(other, { from: TUE, typeId: O.vacation, fraction: 1 });
     await expect(removeLeave(ctx, { id: theirs.id })).rejects.toMatchObject({ code: "not_found" });
     expect(await removeLeave(ctx, { date: TUE })).toEqual({
       deleted: 0,
@@ -307,64 +372,68 @@ describe("removing, with the state before", () => {
 
 describe("a row Trek still has to let go of (pending = 'delete')", () => {
   it("is no longer part of the day: half of the other kind beside it is the other half, nothing replaced", async () => {
-    const [vacation] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [vacation] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1 });
     await markSynced(ctx, [{ id: vacation.id, fraction: 1, kind: "vacation" }]);
     // The whole vacation day becomes half a day of ROL: the vacation row waits for Trek.
-    await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "rol", fraction: 0.5, editedKind: "vacation" });
+    await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: T.rol, fraction: 0.5, editedTypeId: T.vacation });
     // "Add the other half": half a day of vacation beside the ROL.
-    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "vacation", fraction: 0.5 });
+    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: T.vacation, fraction: 0.5 });
     expect(await rows()).toEqual([
       [TUE, "rol", "0.5", "upsert"],
       [TUE, "vacation", "0.5", "upsert"],
     ]);
-    expect(result.undo).toEqual({
+    expect(named(result.undo)).toEqual({
       dates: [TUE],
       rows: [{ on: TUE, kind: "rol", fraction: 0.5, note: null }],
     });
   });
 
   it("is out of the calendar and of the balances, and still in the table", async () => {
-    await saveAllowance(ctx, 2026, { vacationDays: 20, rolDays: null, totalDays: null, note: null });
-    const [vacation] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveTypeAllowance(ctx, T.vacation, 2026, { days: 20 });
+    const [vacation] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1 });
     await markSynced(ctx, [{ id: vacation.id, fraction: 1, kind: "vacation" }]);
     const before = await timeOffView(ctx, 2026);
-    expect(before.vacation.residual.plannedMinutes).toBeGreaterThan(0);
+    const vacationOf = (view: typeof before) =>
+      view.balances.find((one) => one.typeId === T.vacation)?.residual;
+    // June 2026 is before today in a year with no payslip: the day counts as taken (R5g decision 3).
+    expect(vacationOf(before)?.remainingMinutes).toBe(19 * before.minutesPerDay);
 
     await removeLeave(ctx, { id: vacation.id });
     const view = await timeOffView(ctx, 2026);
     // The calendar is drawn by the client from the rows still booked (`timeoff/client`).
     const booked = view.rows.flatMap((row) =>
       row.source === "day" && row.pending !== "delete"
-        ? [{ on: row.on, kind: row.kind, fraction: row.fraction }]
+        ? [{ on: row.on, typeId: row.typeId, fraction: row.fraction, minutes: row.minutes }]
         : [],
     );
-    const months = calendar(
-      2026,
-      booked,
-      new Set(view.holidays),
-      view.weekStart,
-      view.countedThrough,
-      view.minutesPerDay,
-    );
+    const months = calendar(2026, booked, new Set(view.holidays), {
+      weekStart: view.weekStart,
+      countedThrough: view.countedThrough,
+      minutesPerDay: view.minutesPerDay,
+      types: view.types,
+      workDays: view.workDays,
+      today: view.today,
+    });
     const cell = months[5].weeks.flat().find((one) => one.date === TUE);
-    expect(cell?.kinds).toEqual([]);
-    expect(view.vacation.residual.plannedMinutes).toBe(0);
+    expect(cell?.typeIds).toEqual([]);
+    expect(vacationOf(view)?.remainingMinutes).toBe(20 * view.minutesPerDay);
+    expect(vacationOf(view)?.takenMinutes).toBe(0);
     expect(view.rows).toContainEqual(expect.objectContaining({ on: TUE, pending: "delete" }));
   });
 });
 
 describe("removing a range (decision of 17/11/2026, N5 §7.5)", () => {
   it("removes every booked row of the range in one go: Trek's rows wait for the pass, one per row", async () => {
-    await saveLeaveDay(ctx, { from: MON, kind: "vacation", fraction: 1, note: "mine" });
-    const [held] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: MON, typeId: T.vacation, fraction: 1, note: "mine" });
+    const [held] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1 });
     await markSynced(ctx, [{ id: held.id, fraction: 1, kind: "vacation" }]);
-    await saveLeaveDay(ctx, { from: THU, kind: "vacation", fraction: 0.5 });
-    await saveLeaveDay(ctx, { from: THU, kind: "rol", fraction: 0.5 });
-    await saveLeaveDay(ctx, { from: "2026-06-22", kind: "vacation", fraction: 1 });
-    await saveLeaveDay(other, { from: WED, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: THU, typeId: T.vacation, fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: THU, typeId: T.rol, fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: "2026-06-22", typeId: T.vacation, fraction: 1 });
+    await saveLeaveDay(other, { from: WED, typeId: O.vacation, fraction: 1 });
 
     const removed = await removeLeaveRange(ctx, { from: MON, to: FRI });
-    expect(removed).toEqual({
+    expect({ ...removed, undo: named(removed.undo) }).toEqual({
       days: 3,
       deleted: 3,
       pending: 1,
@@ -397,7 +466,7 @@ describe("removing a range (decision of 17/11/2026, N5 §7.5)", () => {
   });
 
   it("does nothing on a range with nothing booked, and refuses a range that cannot be", async () => {
-    const [held] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [held] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1 });
     await markSynced(ctx, [{ id: held.id, fraction: 1, kind: "vacation" }]);
     await removeLeave(ctx, { id: held.id });
     // A row already waiting for Trek is not removed a second time.
@@ -418,13 +487,13 @@ describe("removing a range (decision of 17/11/2026, N5 §7.5)", () => {
 
 describe("undo", () => {
   it("takes a row created and undone before any sync away for good: Trek never hears of it", async () => {
-    const result = await saveLeaveRange(ctx, { from: MON, to: WED, kind: "vacation", fraction: 1 });
+    const result = await saveLeaveRange(ctx, { from: MON, to: WED, typeId: T.vacation, fraction: 1 });
     expect(await restoreLeave(ctx, result.undo)).toEqual({ calendar: false });
     expect(await rows()).toEqual([]);
   });
 
   it("puts a row Trek knows back in the queue, with what Trek was observed holding", async () => {
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1, note: "trip" });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1, note: "trip" });
     await markSynced(ctx, [{ id: day.id, fraction: 1, kind: "vacation" }]);
     const removed = await removeLeave(ctx, { id: day.id });
     expect(await rows()).toEqual([[TUE, "vacation", "1.0", "delete"]]);
@@ -442,10 +511,10 @@ describe("undo", () => {
   });
 
   it("puts the replaced rows back and takes the new ones away, in one go", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5, note: "dentist" });
-    await saveLeaveDay(ctx, { from: WED, kind: "other", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 0.5, note: "dentist" });
+    await saveLeaveDay(ctx, { from: WED, typeId: T.other, fraction: 1 });
     const before = await rows();
-    const result = await saveLeaveRange(ctx, { from: MON, to: FRI, kind: "vacation", fraction: 1 });
+    const result = await saveLeaveRange(ctx, { from: MON, to: FRI, typeId: T.vacation, fraction: 1 });
     expect(await rows()).toHaveLength(5);
 
     await restoreLeave(ctx, result.undo);
@@ -454,14 +523,14 @@ describe("undo", () => {
   });
 
   it("undoes an edit: kind, size and note of before", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1, note: "trip" });
+    await saveLeaveDay(ctx, { from: TUE, typeId: T.vacation, fraction: 1, note: "trip" });
     const result = await saveLeaveRange(ctx, {
       from: TUE,
       to: TUE,
-      kind: "rol",
+      typeId: T.rol,
       fraction: 0.5,
       note: "",
-      editedKind: "vacation",
+      editedTypeId: T.vacation,
     });
     expect(await rows()).toEqual([[TUE, "rol", "0.5", "upsert"]]);
     await restoreLeave(ctx, result.undo);
@@ -471,9 +540,9 @@ describe("undo", () => {
   });
 
   it("leaves alone a row that is as it was, so nothing is queued for Trek without a reason", async () => {
-    const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5 });
+    const [rol] = await saveLeaveDay(ctx, { from: TUE, typeId: T.rol, fraction: 0.5 });
     await markSynced(ctx, [{ id: rol.id, fraction: 0.5, kind: "vacation" }]);
-    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 0.5 });
+    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: T.other, fraction: 0.5 });
     expect(await restoreLeave(ctx, result.undo)).toEqual({ calendar: false });
     expect(await rows()).toEqual([[TUE, "rol", "0.5", "none"]]);
   });
@@ -482,14 +551,17 @@ describe("undo", () => {
     await expect(
       restoreLeave(ctx, {
         dates: ["2026-06-13"],
-        rows: [{ on: "2026-06-13", kind: "vacation", fraction: 1, note: null }],
+        rows: [{ on: "2026-06-13", typeId: T.vacation, fraction: 1, minutes: null, note: null }],
       }),
     ).rejects.toMatchObject({ code: "not_bookable" });
     await expect(
-      restoreLeave(ctx, { dates: [MON], rows: [{ on: TUE, kind: "vacation", fraction: 1, note: null }] }),
+      restoreLeave(ctx, {
+        dates: [MON],
+        rows: [{ on: TUE, typeId: T.vacation, fraction: 1, minutes: null, note: null }],
+      }),
     ).rejects.toMatchObject({ code: "invalid_input" });
 
-    await saveLeaveDay(other, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(other, { from: TUE, typeId: O.vacation, fraction: 1 });
     await restoreLeave(ctx, { dates: [TUE], rows: [] });
     expect(await rows(other)).toHaveLength(1);
     expect(await rows()).toEqual([]);

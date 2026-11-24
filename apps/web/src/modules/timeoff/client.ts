@@ -3,7 +3,7 @@
 export * from "./calls";
 export { bookedOf } from "./ui/booked";
 export { CalendarCard } from "./ui/calendar-card";
-export { leaveTypeOptions } from "./ui/kinds";
+export { COLOR_FILL } from "./ui/kinds";
 export { AddLeave } from "./ui/leave-actions";
 export { LeaveBoard } from "./ui/leave-board";
 export { LeaveTable } from "./ui/leave-table";

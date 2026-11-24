@@ -2,7 +2,7 @@
 //
 // Trek stays unlinked throughout: there is no test Trek to talk to, so the screen must stand on
 // its own and no pass may be attempted (plan F7 §3.5).
-import { type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "@playwright/test";
 import { sessionState } from "../_shared/env";
 import { THIS_YEAR } from "../_shared/helpers";
 
@@ -10,10 +10,11 @@ import { THIS_YEAR } from "../_shared/helpers";
 // in order, on one worker, while the other files run beside them (playwright.preview.config.ts).
 test.describe.configure({ mode: "default" });
 
-// Its own user: 26 days of vacation and 4 days of ROL, one vacation day two weeks back, one three
-// weeks ahead, and half a day of ROL (scripts/seed-e2e.ts). No payslips at all, which is what makes
-// every one of those days "planned" (N2) — and, since N9, what leaves the carry-over at nothing:
-// it is the payslip's own A.P. column or it is not there.
+// Its own user: the four types of before R5g (Vacation, ROL, Time off in lieu, Other), 26 days of
+// vacation and 4 days of ROL, one vacation day two weeks back, one three weeks ahead, and half a day
+// of ROL a week back (scripts/seed-e2e.ts). No payslips at all: in such a year a day before today is
+// taken and the others are planned (R5g, decision 3), and nothing is carried over. No calendar of
+// public holidays either: only the working week is known.
 test.use({ storageState: sessionState("timeoff") });
 
 const YEAR = THIS_YEAR;
@@ -41,6 +42,10 @@ function firstSaturdayOfJune(): string {
 }
 
 const cell = (page: Page, date: string) => page.locator(`[data-date="${date}"]`);
+/** The card of one type with an allowance, by the type's name. */
+const card = (page: Page, name: string) => page.getByTestId("balance-card").filter({ hasText: name });
+/** The type a select of the panel holds, by its name: the value is the type's id. */
+const chosen = (select: Locator) => select.locator("option:checked");
 /** The rows of the table that are about one of the week's days: "10 Mar 2026". */
 const rowsOf = (page: Page, date: string) =>
   page.getByRole("row").filter({ hasText: `${Number(date.slice(8))} Mar ${YEAR}` });
@@ -57,18 +62,24 @@ function countWrites(page: Page): () => number {
   return () => writes;
 }
 
+/** Vacation and ROL granted as the seed states them; saved only when something else was there. */
+async function seededAllowances(page: Page): Promise<void> {
+  await page.goto("/timeoff/settings");
+  const vacation = page.getByLabel("Vacation: days a year");
+  const rol = page.getByLabel("ROL: days a year");
+  if ((await vacation.inputValue()) === "26" && (await rol.inputValue()) === "4") return;
+  await vacation.fill("26");
+  await rol.fill("4");
+  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Allowance saved").last()).toBeVisible();
+}
+
 /**
  * The year as the seed made it, whatever a run stopped half-way left (a run that timed out kept the
- * days it had booked, and the next one counted them): no day of the March week, no total stated.
+ * days it had booked, and the next one counted them): no day of the March week, the seed's allowances.
  */
 async function fromTheSeed(page: Page): Promise<void> {
-  await page.goto("/timeoff/settings");
-  const total = page.getByLabel("Days granted in total");
-  if ((await total.inputValue()) !== "") {
-    await total.fill("");
-    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Allowance saved").last()).toBeVisible();
-  }
+  await seededAllowances(page);
   await page.goto("/timeoff");
   for (const date of [MON, TUE, WED, THU, FRI]) {
     for (let left = await rowsOf(page, date).count(); left > 0; left -= 1) {
@@ -84,39 +95,40 @@ test("time off counts the year, says where each number comes from, and refuses a
   // One long journey: under four workers it needs more than the default 30 seconds.
   test.slow();
   await fromTheSeed(page);
-  await test.step("the allowance reads in one unit — days, ROL included (N5)", async () => {
+  await test.step("the allowance of each type reads in one unit — days (N5, R5g)", async () => {
     await page.goto("/timeoff");
     await expect(page.getByRole("heading", { name: "Work & Time off", level: 1 })).toBeVisible();
-    await expect(page.getByText("26 days vacation")).toBeVisible();
-    // ROL is granted in days since N9, so the header says it in the same unit as vacation.
-    await expect(page.getByText("4 d ROL")).toBeVisible();
-    // Nothing is carried over: the figure comes from a payslip, and this user has none.
-    await expect(page.getByText("carried over from your payslip")).toHaveCount(0);
+    await expect(page.getByText("Vacation: 26 d · ROL: 4 d")).toBeVisible();
+    // Nothing is carried over: no payslip prints it, and nobody stated it.
+    await expect(page.getByText("carried over")).toHaveCount(0);
+    // No calendar of public holidays: the page says that only the working week is known.
+    await expect(page.getByTestId("no-holiday-calendar")).toContainText("Only your working week is known");
   });
 
-  await test.step("nothing is 'taken' until a payslip has counted it (N2)", async () => {
-    const vacation = page.getByTestId("vacation-card");
-    // 26 granted − 2 booked = 24, and all of it planned: this user has no payslips at all, so
-    // nothing has been counted and nothing was carried over.
+  await test.step("in a year with no payslip a day before today is taken (R5g, decision 3)", async () => {
+    // One card per type with an allowance: the two of the seed, and none for the other two.
+    await expect(page.getByTestId("balance-card")).toHaveCount(2);
+    const vacation = card(page, "Vacation");
+    // 26 granted − 2 booked = 24: the day two weeks back is taken, the one ahead planned.
     await expect(vacation).toContainText("24");
-    await expect(vacation).toContainText("0 d taken");
-    await expect(vacation).toContainText("2 d planned");
+    await expect(vacation).toContainText("1 d taken");
+    await expect(vacation).toContainText("1 d planned");
     await expect(vacation).toContainText("Allowance, less what is taken and planned");
 
-    const rol = page.getByTestId("rol-card");
-    // 4 granted days less the half day planned.
+    const rol = card(page, "ROL");
+    // 4 granted days less the half day of a week ago.
     await expect(rol).toContainText("3.5");
-    await expect(rol).toContainText("0.5 d planned");
+    await expect(rol).toContainText("0.5 d taken");
   });
 
-  await test.step("the year's own card adds every kind up", async () => {
+  await test.step("the year's own card adds every type up", async () => {
     const taken = page.getByTestId("taken-card");
     await expect(taken).toContainText("2.5");
-    await expect(taken).toContainText("0 d counted · 2.5 d planned");
+    await expect(taken).toContainText("1.5 d counted · 1 d planned");
     await expect(taken).toContainText("Vacation 2 d");
     await expect(taken).toContainText("ROL 0.5 d");
-    // Nobody has stated a total for the year, and the card says so rather than inventing one.
-    await expect(taken).toContainText("no total stated");
+    // What the types with an allowance grant together: 26 + 4.
+    await expect(taken).toContainText("of 30 d granted");
   });
 
   await test.step("the calendar draws the year and marks only the days off", async () => {
@@ -160,7 +172,7 @@ test("time off counts the year, says where each number comes from, and refuses a
       await expect(cell(page, date)).toHaveAttribute("data-testid", "leave-cell");
       await expect(rowsOf(page, date).filter({ hasText: "Vacation" })).toHaveCount(1);
     }
-    await expect(page.getByTestId("vacation-card")).toContainText("19");
+    await expect(card(page, "Vacation")).toContainText("19");
   });
 
   await test.step("Undo in the toast takes the whole week back, in one call", async () => {
@@ -168,7 +180,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     await page.getByRole("button", { name: "Undo" }).click();
     await expect(page.getByText("Undone")).toBeVisible();
     for (const date of [MON, FRI]) await expect(rowsOf(page, date)).toHaveCount(0);
-    await expect(page.getByTestId("vacation-card")).toContainText("24");
+    await expect(card(page, "Vacation")).toContainText("24");
     expect(writes()).toBe(1);
   });
 
@@ -228,10 +240,10 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(edit.getByLabel("Note")).toHaveValue("afternoon");
     await edit.getByRole("button", { name: "Add the other half" }).click();
     const other = page.getByRole("dialog", { name: "New leave" });
-    await expect(other.getByLabel("Type")).toHaveValue("rol");
+    await expect(chosen(other.getByLabel("Type"))).toHaveText("ROL");
     await other.getByRole("button", { name: "Confirm" }).click();
     await expect(other).toBeHidden();
-    // Two halves are a whole day off: both kinds named, and no half-day wedge.
+    // Two halves are a whole day off: both types named, and no half-day wedge.
     await expect(cell(page, WED)).toHaveAttribute("aria-label", /Vacation, ROL/);
     await expect(cell(page, WED)).not.toHaveAttribute("data-partial", "true");
     await expect(rowsOf(page, WED)).toHaveCount(2);
@@ -242,7 +254,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     const edit = page.getByRole("dialog", { name: "Edit leave" });
     const which = edit.getByRole("group", { name: "Which leave" });
     await which.getByRole("button", { name: "ROL ½" }).click();
-    await expect(edit.getByLabel("Type")).toHaveValue("rol");
+    await expect(chosen(edit.getByLabel("Type"))).toHaveText("ROL");
     await edit.getByRole("button", { name: "Remove" }).click();
     await expect(edit).toBeHidden();
     await expect(page.getByText("Leave removed")).toBeVisible();
@@ -254,29 +266,29 @@ test("time off counts the year, says where each number comes from, and refuses a
     await cell(page, TUE).click();
     await cell(page, THU).click();
     const panel = page.getByRole("dialog", { name: "New leave" });
-    await panel.getByLabel("Type").selectOption("rol");
+    await panel.getByLabel("Type").selectOption({ label: "ROL" });
     await expect(panel.getByTestId("summary")).toContainText("Replaces");
     await expect(panel.getByTestId("summary")).toContainText("(Vacation ½)");
-    // ROL: 4 granted, half a day planned. Three more days leave half a day.
+    // ROL: 4 granted, half a day taken. Three more days leave half a day.
     await expect(panel.getByTestId("summary")).toContainText("3.5 d → 0.5 d");
     await panel.getByRole("button", { name: "Confirm" }).click();
     await expect(panel).toBeHidden();
     await expect(rowsOf(page, WED)).toHaveCount(1);
     await expect(rowsOf(page, WED)).toContainText("ROL");
-    await expect(page.getByTestId("rol-card")).toContainText("0.5");
+    await expect(card(page, "ROL")).toContainText("0.5");
   });
 
   await test.step("a balance below zero is a number to plan with, not an error", async () => {
     await cell(page, MON).click();
     await cell(page, MON).click();
     const panel = page.getByRole("dialog", { name: "New leave" });
-    await panel.getByLabel("Type").selectOption("rol");
+    await panel.getByLabel("Type").selectOption({ label: "ROL" });
     await expect(panel.getByTestId("summary")).toContainText("0.5 d → −0.5 d");
     await expect(panel.getByText(/goes 0.5 d below zero/)).toBeVisible();
     await panel.getByRole("button", { name: "Confirm" }).click();
     await expect(panel).toBeHidden();
     // The card says the same number, and the page lists it among the overdrawn balances.
-    await expect(page.getByTestId("rol-card")).toContainText("-0.5");
+    await expect(card(page, "ROL")).toContainText("-0.5");
     await expect(page.getByTestId("overdrawn")).toContainText("ROL");
   });
 
@@ -288,7 +300,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     });
     await rowsOf(page, MON).getByRole("button", { name: "Edit" }).click();
     const edit = page.getByRole("dialog", { name: "Edit leave" });
-    await expect(edit.getByLabel("Type")).toHaveValue("rol");
+    await expect(chosen(edit.getByLabel("Type"))).toHaveText("ROL");
     await edit.getByRole("button", { name: "Cancel" }).click();
 
     for (const date of [MON, TUE, WED, THU]) {
@@ -297,7 +309,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     }
     expect(asked, "no browser dialog stands between Remove and the removal").toBe(false);
     await expect(page.getByTestId("overdrawn")).toHaveCount(0);
-    await expect(page.getByTestId("rol-card")).toContainText("3.5");
+    await expect(card(page, "ROL")).toContainText("3.5");
     await expect(page.getByTestId("leave-cell")).toHaveCount(3);
   });
 
@@ -364,7 +376,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     await cell(page, FRI).click();
     const edit = page.getByRole("dialog", { name: "Edit leave" });
     await edit.getByRole("button", { name: "Half + half" }).click();
-    await expect(edit.getByLabel("Other half")).toHaveValue("rol");
+    await expect(chosen(edit.getByLabel("Other half"))).toHaveText("ROL");
     await expect(edit.getByTestId("summary")).toContainText("1 d (1 day: Vacation ½ + ROL ½)");
     await expect(edit.getByTestId("summary")).toContainText("3.5 d → 3 d");
     await edit.getByRole("button", { name: "Confirm" }).click();
@@ -373,7 +385,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(cell(page, FRI)).toHaveAttribute("aria-label", /Vacation, ROL/);
     await expect(cell(page, FRI)).not.toHaveAttribute("data-partial", "true");
     await expect(rowsOf(page, FRI)).toHaveCount(2);
-    await expect(page.getByTestId("rol-card")).toContainText("3");
+    await expect(card(page, "ROL")).toContainText("3");
     expect(writes(), "one Confirm, one write").toBe(1);
 
     // As the step found the year.
@@ -384,11 +396,12 @@ test("time off counts the year, says where each number comes from, and refuses a
   });
 
   await test.step("a day still to come is drawn hollow, not as one already counted (N8)", async () => {
-    // This user has no payslips, so every booked day is planned — and planned must not look like
-    // a day the payroll has already counted.
+    // This user has no payslips: the two days before today are taken, the one ahead is planned —
+    // and planned must not look like a day already counted.
     const marked = page.getByTestId("leave-cell");
-    await expect(marked).not.toHaveCount(0);
-    for (const cell of await marked.all()) await expect(cell).toHaveAttribute("data-status", "planned");
+    await expect(marked).toHaveCount(3);
+    await expect(marked.and(page.locator('[data-status="planned"]'))).toHaveCount(1);
+    await expect(marked.and(page.locator('[data-status="taken"]'))).toHaveCount(2);
     // The legend says what the two drawings mean, since the difference is only a drawing.
     const legend = page.getByTestId("calendar-legend");
     await expect(legend).toContainText("Planned");
@@ -401,28 +414,30 @@ test("time off counts the year, says where each number comes from, and refuses a
     await expect(page.locator(`[data-date="${saturday}"]`)).toHaveCount(1);
   });
 
-  await test.step("the allowance takes the contract's total, and never asks what last year left over", async () => {
+  await test.step("the allowance is stated type by type, with a carry-over where no payslip prints one", async () => {
     const tabs = page.getByRole("navigation", { name: "Time off" });
     await tabs.getByRole("link", { name: "Settings" }).click();
     await expect(page).toHaveURL(/\/timeoff\/settings/);
-    const form = page.locator("form", { has: page.getByLabel("Days granted in total") });
-    // The carry-over is the payslip's A.P. since N9: there is no longer a field to type it into,
-    // and so no second answer to disagree with the employer's own.
-    await expect(form.getByLabel("Carried over from last year")).toHaveCount(0);
-    await form.getByLabel("Days granted in total").fill("30");
+    // The seed's four types, and an allowance field only for the two that have one.
+    await expect(page.getByTestId("leave-types").getByRole("listitem")).toHaveCount(4);
+    await expect(page.getByLabel("Time off in lieu: days a year")).toHaveCount(0);
+    await page.getByLabel("Vacation: days a year").fill("28");
+    await page.getByLabel("Vacation: carried over").fill("1");
     await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Allowance saved")).toBeVisible();
+    await expect(page.getByText("Allowance saved").last()).toBeVisible();
     await tabs.getByRole("link", { name: "Overview" }).click();
 
-    // 26 + 4 = 30 parts against a 30-day total: they agree, so nothing is said about it.
-    await expect(page.getByTestId("taken-card")).toContainText("of 30 d granted");
-    // The total is not an allowance of its own: ROL is still its 4 granted days less the half
-    // day planned.
-    await expect(page.getByTestId("rol-card")).toContainText("3.5");
+    // 28 granted and 1 carried over, less the 2 booked; the total granted follows.
+    await expect(page.getByText("Vacation: 28 d")).toBeVisible();
+    await expect(card(page, "Vacation")).toContainText("27");
+    await expect(page.getByTestId("taken-card")).toContainText("of 32 d granted");
+    // ROL is its own: still its 4 granted days less the half day taken.
+    await expect(card(page, "ROL")).toContainText("3.5");
 
-    // As the step found the year: no total stated, so the next run reads the seed's year.
+    // As the step found the year: the seed's allowance and no carry-over.
     await tabs.getByRole("link", { name: "Settings" }).click();
-    await form.getByLabel("Days granted in total").fill("");
+    await page.getByLabel("Vacation: days a year").fill("26");
+    await page.getByLabel("Vacation: carried over").fill("");
     await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByText("Allowance saved").last()).toBeVisible();
   });
@@ -432,9 +447,7 @@ test("time off counts the year, says where each number comes from, and refuses a
     await page.getByRole("link", { name: "Previous year" }).click();
     await expect(page).toHaveURL(new RegExp(`year=${YEAR - 1}`));
     await expect(page.getByRole("heading", { name: `${YEAR - 1} calendar` })).toBeVisible();
-    await expect(page.getByTestId("vacation-card")).toContainText(
-      "No payslip and no allowance for this year yet",
-    );
+    await expect(card(page, "Vacation")).toContainText("No payslip and no allowance for this year yet");
     await page.getByRole("link", { name: "This year" }).click();
     await expect(page.getByRole("heading", { name: `${YEAR} calendar` })).toBeVisible();
   });
@@ -446,13 +459,15 @@ test("the cards say what a month grants, and the panel what will be left on the 
   await fromTheSeed(page);
   await test.step("with no payslip the rate is the allowance over twelve, and the card says so", async () => {
     await page.goto("/timeoff");
-    const vacation = page.getByTestId("vacation-card-accrual");
+    const vacation = card(page, "Vacation").getByTestId("balance-card-accrual");
     // 26 days a year over twelve months.
     await expect(vacation).toContainText("Accrues 2.17 d a month");
     // The forecast for the end of the year is the residual of the card: one answer, not two.
-    await expect(vacation).toContainText("Forecast on 31 Dec: 24 d");
+    await expect(vacation).toContainText("Forecast at the end of the leave year: 24 d");
     await expect(vacation).toContainText("Estimate: the allowance over 12 months");
-    await expect(page.getByTestId("rol-card-accrual")).toContainText("Accrues 0.33 d a month");
+    await expect(card(page, "ROL").getByTestId("balance-card-accrual")).toContainText(
+      "Accrues 0.33 d a month",
+    );
   });
 
   await test.step("the panel says the forecast on the first day of the absence, and writes nothing", async () => {
@@ -475,9 +490,7 @@ test("the cards say what a month grants, and the panel what will be left on the 
   await test.step("a year with nothing stated has no forecast, and no error", async () => {
     await page.goto(`/timeoff?year=${YEAR + 1}`);
     await expect(page.getByRole("heading", { name: `${YEAR + 1} calendar` })).toBeVisible();
-    await expect(page.getByTestId("vacation-card-accrual")).toHaveCount(0);
-    await expect(page.getByTestId("vacation-card")).toContainText(
-      "No payslip and no allowance for this year yet",
-    );
+    await expect(card(page, "Vacation").getByTestId("balance-card-accrual")).toHaveCount(0);
+    await expect(card(page, "Vacation")).toContainText("No payslip and no allowance for this year yet");
   });
 });

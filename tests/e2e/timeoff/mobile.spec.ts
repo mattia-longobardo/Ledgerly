@@ -32,10 +32,11 @@ test.describe("time off on a phone", () => {
     await page.keyboard.press("Escape");
     await expect(sheet).toBeHidden();
 
-    // Both cards in the same unit since N5 — days, ROL included — and the provenance of each.
-    await expect(page.getByTestId("vacation-card")).toContainText("days remaining");
-    await expect(page.getByTestId("rol-card")).toContainText("days remaining");
-    await expect(page.getByTestId("vacation-card")).toContainText("Allowance");
+    // One card per type with an allowance, all in days since N5, and the provenance of each.
+    const cards = page.getByTestId("balance-card");
+    await expect(cards.filter({ hasText: "Vacation" })).toContainText("days remaining");
+    await expect(cards.filter({ hasText: "ROL" })).toContainText("days remaining");
+    await expect(cards.filter({ hasText: "Vacation" })).toContainText("Allowance");
     // And the card that counts the whole year, which a phone has to fit too.
     await expect(page.getByTestId("taken-card")).toContainText("2.5");
 
@@ -162,7 +163,7 @@ test.describe("time off on a phone", () => {
     const split = panel.getByRole("button", { name: "Half + half" });
     expect(Math.round((await split.boundingBox())!.height)).toBeGreaterThanOrEqual(32);
     await split.tap();
-    await expect(panel.getByLabel("Other half")).toHaveValue("rol");
+    await expect(panel.getByLabel("Other half").locator("option:checked")).toHaveText("ROL");
     const box = await panel.boundingBox();
     const viewport = page.viewportSize()!;
     expect(box!.x).toBeGreaterThanOrEqual(0);

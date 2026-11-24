@@ -19,16 +19,11 @@ type LeaveUndo = RouteOutput<typeof timeoff.saveLeave>["undo"];
 class Unreadable extends Error {}
 
 /**
- * What a write made stale, read again: the year, the allowances, the calendars and the working day.
+ * What a write made stale, read again: the year, the calendars and the working day.
  * It replaces `router.refresh()` where the screens called it.
  */
 export function timeOffChanged(): void {
-  invalidate(
-    timeoff.getTimeOff,
-    timeoff.listTimeOffAllowances,
-    holidays.listHolidayCalendars,
-    profile.getPreferences,
-  );
+  invalidate(timeoff.getTimeOff, holidays.listHolidayCalendars, profile.getPreferences);
 }
 
 function failed(error: unknown): Failure {
@@ -50,18 +45,20 @@ async function write<T extends object>(work: () => Promise<T>): Promise<({ ok: t
 
 /* The leave panel */
 
-/** The leave panel's fields, as typed: both ends, one kind, one size for every day. */
+/** The leave panel's fields, as typed: both ends, one type, one size for every day. */
 export interface LeaveFormInput {
   from: string;
   to: string;
-  kind: string;
-  /** "1" or "0.5" — every kind, ROL included since N0. */
+  typeId: string;
+  /** "1" or "0.5"; for a type counted in hours the server works the size out of `minutes`. */
   fraction: string;
+  /** For a type counted in hours: the length of every day, in minutes. */
+  minutes?: number | null;
   note: string;
-  /** Set when the panel edits a row: the kind that row has now. */
-  editedKind?: string | null;
-  /** Set for "½ + ½": the kind of the second half of every day (decision of 17/11/2026). */
-  otherKind?: string | null;
+  /** Set when the panel edits a row: the type that row has now. */
+  editedTypeId?: string | null;
+  /** Set for "½ + ½": the type of the second half of every day (decision of 17/11/2026). */
+  otherTypeId?: string | null;
 }
 
 type LeaveAnswer = RouteOutput<typeof timeoff.saveLeave>;
@@ -79,15 +76,16 @@ function sizeOf(fraction: string): number {
 export function saveLeaveRangeAction(input: LeaveFormInput): Promise<LeaveActionResult> {
   return write(() =>
     call(timeoff.saveLeave, {
-      // A kind or a size nobody defined is refused by the route's schema, as the action refused it.
+      // A type or a size nobody defined is refused by the route's schema, as the action refused it.
       body: timeoff.saveLeave.body.parse({
         from: input.from,
         to: input.to,
-        kind: input.kind,
+        typeId: input.typeId,
         fraction: sizeOf(input.fraction),
+        minutes: input.minutes ?? null,
         note: input.note.trim() || null,
-        editedKind: input.editedKind ?? null,
-        otherKind: input.otherKind ?? null,
+        editedTypeId: input.editedTypeId ?? null,
+        otherTypeId: input.otherTypeId ?? null,
       }),
     }),
   );

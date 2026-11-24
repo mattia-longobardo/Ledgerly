@@ -1,8 +1,8 @@
-// The calls of Time off › Settings to `/api/v1` (rewrite plan R3): the allowance, the working day and
-// the holiday calendars. Each keeps the name and the answer of the Server Action it replaces; a write
+// The calls of Time off › Settings to `/api/v1` (rewrite plan R3): the types of leave and their
+// allowances, the working week, the days off of the year, the working day and the holiday calendars. Each keeps the name and the answer of the Server Action it replaces; a write
 // reads again what it made stale, with the year of the Time off page.
 import { profile } from "@ledgerly/api-contract/settings";
-import { holidays, timeoff } from "@ledgerly/api-contract/timeoff";
+import { holidays, timeoff, types } from "@ledgerly/api-contract/timeoff";
 import { ApiError, call } from "@ledgerly/api-client";
 import type { HolidayCountry, HolidaySubdivision } from "@ledgerly/domain/platform/holidays/client";
 import { invalidate } from "@ledgerly/ui/data";
@@ -13,10 +13,12 @@ type ActionResult = { ok: true } | { ok: false; error: string };
 type HolidayActionError = "unreachable" | "duplicate" | "tooMany" | "notFound" | "invalid" | "failed";
 export type HolidayActionResult = { ok: true } | { ok: false; error: HolidayActionError };
 
-/** What a write of Settings made stale: the allowances, the calendars, the working day and the year. */
+/** What a write of Settings made stale: the types, the week, the days off, the calendars and the year. */
 export function settingsChanged(): void {
   invalidate(
-    timeoff.listTimeOffAllowances,
+    types.listLeaveTypes,
+    types.getLeaveSettings,
+    types.listRestDays,
     holidays.listHolidayCalendars,
     profile.getPreferences,
     timeoff.getTimeOff,
@@ -35,16 +37,23 @@ async function write(work: () => Promise<unknown>): Promise<ActionResult> {
   }
 }
 
-/* The allowance and the working day (Time off › Settings) */
+/* The types of leave, their allowances, the working week and the days off (R5g) */
 
-/** The allowance modal: days as typed, an empty field being nothing stated. */
-interface AllowanceFormInput {
-  year: string;
-  vacationDays: string;
-  rolDays: string;
-  /** Vacation and ROL together, in days, as the contract states it (N7). */
-  totalDays: string;
-  note: string;
+/** A type of leave as its dialog sends it. */
+export type LeaveTypeFields = z.input<typeof types.createLeaveType.body>;
+
+/** Adds a type (no `id`) or changes one. A name already in use is `conflict`. */
+export function saveLeaveTypeAction(id: string | null, fields: LeaveTypeFields): Promise<ActionResult> {
+  return write(() =>
+    id === null
+      ? call(types.createLeaveType, { body: fields })
+      : call(types.updateLeaveType, { params: { id }, body: fields }),
+  );
+}
+
+/** Removes a type; one with days booked is refused with `in_use`. */
+export function deleteLeaveTypeAction(id: string): Promise<ActionResult> {
+  return write(() => call(types.deleteLeaveType, { params: { id } }));
 }
 
 /** A decimal as the allowance form accepts it, with either separator; empty is `null`. */
@@ -56,25 +65,40 @@ function optionalNumber(value: string): number | null {
   return parsed;
 }
 
-export function saveAllowanceAction(input: AllowanceFormInput): Promise<ActionResult> {
+/** What a year grants of one type, in days as typed; an empty field states nothing. */
+export function saveTypeAllowanceAction(input: {
+  typeId: string;
+  year: number;
+  days: string;
+  carriedDays: string;
+}): Promise<ActionResult> {
   return write(() =>
-    call(timeoff.saveTimeOffAllowance, {
-      params: { year: input.year },
-      body: {
-        vacationDays: optionalNumber(input.vacationDays),
-        rolDays: optionalNumber(input.rolDays),
-        totalDays: optionalNumber(input.totalDays),
-        note: input.note.trim() || null,
-      },
+    call(types.saveTypeAllowance, {
+      params: { id: input.typeId, year: String(input.year) },
+      body: { days: optionalNumber(input.days), carriedDays: optionalNumber(input.carriedDays) },
     }),
   );
 }
 
-/** The working day or the patron saint, each form on its own (`PATCH /preferences`). */
-export function saveTimeOffPreferencesAction(input: {
-  minutesPerDay?: number;
-  patronSaint?: { month: number; day: number } | null;
+/** The working week (0 Sunday … 6 Saturday) and the first month of the leave year. */
+export function saveLeaveSettingsAction(input: {
+  workDays: number[];
+  yearStartMonth: number;
 }): Promise<ActionResult> {
+  return write(() => call(types.saveLeaveSettings, { body: input }));
+}
+
+/** A day of the year the person does not work, every year: a date already there is `conflict`. */
+export function addRestDayAction(input: { month: number; day: number; name: string }): Promise<ActionResult> {
+  return write(() => call(types.addRestDay, { body: { ...input, name: input.name.trim() } }));
+}
+
+export function deleteRestDayAction(id: string): Promise<ActionResult> {
+  return write(() => call(types.deleteRestDay, { params: { id } }));
+}
+
+/** The working day (`PATCH /preferences`). */
+export function saveTimeOffPreferencesAction(input: { minutesPerDay: number }): Promise<ActionResult> {
   return write(() => call(profile.updatePreferences, { body: input }));
 }
 

@@ -40,6 +40,7 @@ import { registerView } from "@domain/modules/payroll/queries";
 import { pocketsView } from "@domain/modules/pockets/queries";
 import { subscriptionsView } from "@domain/modules/subscriptions/queries";
 import { timeOffView } from "@domain/modules/timeoff/queries";
+import { timeOffYear } from "../apps/api/src/timeoff/dto";
 import { expensesView } from "@domain/modules/transactions/queries";
 import type { Ctx } from "@domain/platform/context";
 import { lastDayOfMonth, today } from "@domain/shared/dates";
@@ -155,16 +156,19 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
   const timeOff: Record<string, unknown> = {};
   for (const year of timeOffNow.years) {
     const view = year === thisYear ? timeOffNow : await timeOffView(ctx, year);
+    // The two old kinds as the API still answers them (R5g): the same figures as before the types,
+    // without the ids of the types, which differ from one database to the other.
+    const wire = timeOffYear(view, null);
     timeOff[String(year)] = {
       allowance: view.allowance,
-      vacation: view.vacation,
-      rol: view.rol,
-      totals: view.totals,
+      vacation: wire.vacation,
+      rol: wire.rol,
+      totals: { ...wire.totals, byType: undefined },
       // Release N5.1: what a month grants and the forecast at the year's end, per kind.
-      accrual: view.accrual,
-      overdrawn: view.overdrawn,
-      totalAllowanceMinutes: view.totalAllowanceMinutes,
-      months: view.months,
+      accrual: wire.accrual,
+      overdrawn: wire.overdrawn,
+      totalAllowanceMinutes: wire.totalAllowanceMinutes,
+      months: wire.months.map((month) => ({ ...month, payrollByType: undefined, recordedByType: undefined })),
     };
   }
 

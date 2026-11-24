@@ -31,8 +31,10 @@ import {
 import type { CalendarCalls } from "./calls";
 import { isCalendarBusy, syncCalendarNow, calendarFiguresOf } from "./sync";
 import { TREK_PROVIDER } from "../../../../test/fixtures/providers";
+import { oldLeaveTypes, type OldTypes } from "../../../../test/leave-types";
 
 let ctx: Ctx;
+let types: OldTypes;
 const YEAR = 2026;
 const WINDOW = yearWindow(YEAR);
 /** All working days: 2026-06-16 is a Tuesday, the 17th a Wednesday, the 18th a Thursday. */
@@ -43,6 +45,7 @@ const THU = "2026-06-18";
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
+  types = await oldLeaveTypes(ctx);
   await saveConnection(ctx, {
     provider: TREK_PROVIDER,
     credentials: { baseUrl: "https://trek.example", clientId: "trekci_test", clientSecret: "trekcs_test" },
@@ -78,7 +81,7 @@ async function rowOn(date: string) {
 describe("a pass", () => {
   it("sends a new day, and the row stops being pending", async () => {
     const trek = fakeTrek();
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     expect(day.pending).toBe("upsert");
 
     const result = await pass(trek);
@@ -94,7 +97,7 @@ describe("a pass", () => {
   it("A SECOND PASS SENDS NOTHING — the day survives", async () => {
     // The whole point of the phase. A toggle fired again on an agreed day deletes it.
     const trek = fakeTrek();
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     const togglesAfterFirst = trek.toggles.length;
 
@@ -111,7 +114,7 @@ describe("a pass", () => {
 
   it("removes a day by sending back the pair Trek was observed holding", async () => {
     const trek = fakeTrek();
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 0.5 });
     await pass(trek);
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 0.5, kind: "vacation" });
 
@@ -126,7 +129,7 @@ describe("a pass", () => {
 
   it("does not remove a day twice when the pass runs again", async () => {
     const trek = fakeTrek();
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     await deleteLeaveDay(ctx, day.id);
     await pass(trek);
@@ -140,9 +143,9 @@ describe("a pass", () => {
 
   it("changes a day's fraction with an update, not a remove-and-add", async () => {
     const trek = fakeTrek();
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     await pass(trek);
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 0.5 });
     await pass(trek);
 
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 0.5 });
@@ -152,7 +155,7 @@ describe("a pass", () => {
 
   it("leaves a failed send pending, and settles it on the next pass", async () => {
     const trek = fakeTrek();
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     trek.failNextToggles(1);
 
     const first = await pass(trek);
@@ -174,7 +177,7 @@ describe("a pass", () => {
 
   it("a removal that did not land is not a conflict, and is never adopted back", async () => {
     const trek = fakeTrek();
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     await deleteLeaveDay(ctx, day.id);
 
@@ -216,7 +219,7 @@ describe("a pass", () => {
 
   it("marks a day Trek does not take as refused, and keeps it owed", async () => {
     const trek = fakeTrek({ weekend: [TUE] });
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
 
     const result = await pass(trek);
     expect(result?.counts).toMatchObject({ refused: 1, applied: 0, failed: 0 });
@@ -225,8 +228,8 @@ describe("a pass", () => {
   });
 
   it("does not rewrite a day we classify differently — it reports it", async () => {
-    // We hold the day as sick leave, which never goes to Trek; Trek shows a day on the same date.
-    await saveLeaveDay(ctx, { from: WED, kind: "sick", fraction: 1 });
+    // We hold the day as "other" leave, which never goes to Trek; Trek shows a day on the same date.
+    await saveLeaveDay(ctx, { from: WED, typeId: types.other, fraction: 1 });
     const trek = fakeTrek({
       entries: [{ id: 1, user_id: null, date: WED, note: "", fraction: 1, kind: "comp" }],
     });
@@ -237,12 +240,12 @@ describe("a pass", () => {
     // Ours is untouched, and no comp row was invented beside it.
     const rows = await listLeaveDays(ctx, WINDOW);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ kind: "sick", pending: "none" });
+    expect(rows[0]).toMatchObject({ typeId: types.other, pending: "none" });
   });
 
   it("sends a ROL as a vacation, and keeps calling it a ROL here", async () => {
     const trek = fakeTrek();
-    await saveLeaveDay(ctx, { from: WED, kind: "rol", fraction: 1 });
+    await saveLeaveDay(ctx, { from: WED, typeId: types.rol, fraction: 1 });
 
     const result = await pass(trek);
     expect(result?.counts.applied).toBe(1);
@@ -261,9 +264,9 @@ describe("a pass", () => {
   });
 
   it("never names a kind Trek does not know", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1 });
-    await saveLeaveDay(ctx, { from: WED, kind: "sick", fraction: 1 });
-    await saveLeaveDay(ctx, { from: THU, kind: "comp", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.rol, fraction: 1 });
+    await saveLeaveDay(ctx, { from: WED, typeId: types.other, fraction: 1 });
+    await saveLeaveDay(ctx, { from: THU, typeId: types.comp, fraction: 1 });
     const trek = fakeTrek();
 
     await pass(trek);
@@ -273,7 +276,7 @@ describe("a pass", () => {
 
   it("re-reads the year after writing, and writes what it saw", async () => {
     const trek = fakeTrek();
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     // One read before the toggles and one after: the second is what settled the row.
     expect(trek.reads).toBe(2);
@@ -286,8 +289,8 @@ describe("a pass", () => {
   });
 
   it("adds half a day of ferie and half a ROL into one whole day, and settles both rows", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5 });
-    await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.rol, fraction: 0.5 });
     const trek = fakeTrek();
 
     const result = await pass(trek);
@@ -310,8 +313,8 @@ describe("a pass", () => {
   });
 
   it("shrinks the day upstream when one of its two halves goes, rather than removing it", async () => {
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5 });
-    const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 0.5 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 0.5 });
+    const [rol] = await saveLeaveDay(ctx, { from: TUE, typeId: types.rol, fraction: 0.5 });
     const trek = fakeTrek();
     await pass(trek);
 
@@ -350,8 +353,8 @@ describe("Trek's own figures (plan §3.6.4)", () => {
 
   it("asks for the figures once per pass, never in a loop", async () => {
     const trek = fakeTrek({ stats });
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
-    await saveLeaveDay(ctx, { from: WED, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
+    await saveLeaveDay(ctx, { from: WED, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     // Reading them persists carry-over upstream, so twice is once too many.
     expect(trek.calls.filter((call) => call.tool === "get_vacay_stats")).toHaveLength(1);
@@ -370,7 +373,7 @@ describe("the pass and the connection", () => {
   it("attempts nothing at all for a refused token, and says so in the log", async () => {
     await markConnection(ctx, await connectionId(), "revoked", "the token was refused");
     const trek = fakeTrek();
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
 
     const result = await pass(trek);
     expect(result?.refused).toBe("revoked");
@@ -431,7 +434,7 @@ describe("a Trek that may only read", () => {
 
   it("keeps the day pending, sends Trek nothing, and records read_only on the run and the connection", async () => {
     const trek = fakeTrek({}, { scope: "vacay:read" });
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
 
     const result = await pass(trek, spied(trek));
     expect(trek.toggles).toHaveLength(0);
@@ -447,7 +450,7 @@ describe("a Trek that may only read", () => {
     const trek = fakeTrek({
       entries: [{ id: 1, user_id: 7, date: WED, note: null, fraction: 1, kind: "vacation" }],
     });
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     const calls = spied(trek);
 
     const result = await pass(trek, calls);
@@ -472,7 +475,7 @@ describe("a Trek that may only read", () => {
 describe("a pass after the leave panel", () => {
   it("sends every day of a range, ROL as readily as vacation (decision ST-23)", async () => {
     const trek = fakeTrek();
-    await saveLeaveRange(ctx, { from: TUE, to: THU, kind: "rol", fraction: 1 });
+    await saveLeaveRange(ctx, { from: TUE, to: THU, typeId: types.rol, fraction: 1 });
 
     const result = await pass(trek);
     expect(result?.counts.applied).toBe(3);
@@ -485,11 +488,11 @@ describe("a pass after the leave panel", () => {
 
   it("keeps Trek's day when a range replaces its kind: the date is still a day away", async () => {
     const trek = fakeTrek();
-    const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1 });
+    const [rol] = await saveLeaveDay(ctx, { from: TUE, typeId: types.rol, fraction: 1 });
     await pass(trek);
     expect((await rowOn(TUE))?.id).toBe(rol.id);
 
-    await saveLeaveRange(ctx, { from: TUE, to: WED, kind: "vacation", fraction: 1 });
+    await saveLeaveRange(ctx, { from: TUE, to: WED, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     expect(dates(trek)).toEqual([TUE, WED]);
     expect(trek.entryOn(TUE)).toMatchObject({ fraction: 1, kind: "vacation" });
@@ -502,11 +505,11 @@ describe("a pass after the leave panel", () => {
 
   it("takes Trek's day back when a range replaces it with a kind that stays here", async () => {
     const trek = fakeTrek();
-    await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     expect(dates(trek)).toEqual([TUE]);
 
-    await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 1 });
+    await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: types.other, fraction: 1 });
     await pass(trek);
     expect(dates(trek)).toEqual([]);
     expect((await listLeaveDays(ctx, WINDOW)).map((row) => [row.kind, row.pending])).toEqual([
@@ -516,7 +519,7 @@ describe("a pass after the leave panel", () => {
 
   it("a row Trek knows, removed and then restored, costs Trek nothing: the day never leaves it", async () => {
     const trek = fakeTrek();
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 1 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 1 });
     await pass(trek);
     const sent = trek.toggles.length;
 
@@ -534,7 +537,7 @@ describe("a pass after the leave panel", () => {
 
   it("a row Trek knows, removed, sent, and then restored comes back to Trek", async () => {
     const trek = fakeTrek();
-    const [day] = await saveLeaveDay(ctx, { from: TUE, kind: "vacation", fraction: 0.5 });
+    const [day] = await saveLeaveDay(ctx, { from: TUE, typeId: types.vacation, fraction: 0.5 });
     await pass(trek);
     const removed = await removeLeave(ctx, { id: day.id });
     await pass(trek);
@@ -549,7 +552,7 @@ describe("a pass after the leave panel", () => {
 
   it("a row created and undone before the sync never reaches Trek", async () => {
     const trek = fakeTrek();
-    const result = await saveLeaveRange(ctx, { from: TUE, to: THU, kind: "vacation", fraction: 1 });
+    const result = await saveLeaveRange(ctx, { from: TUE, to: THU, typeId: types.vacation, fraction: 1 });
     await restoreLeave(ctx, result.undo);
 
     await pass(trek);
@@ -560,12 +563,12 @@ describe("a pass after the leave panel", () => {
 
   it("an undone replacement leaves Trek holding the day it held", async () => {
     const trek = fakeTrek();
-    const [rol] = await saveLeaveDay(ctx, { from: TUE, kind: "rol", fraction: 1 });
+    const [rol] = await saveLeaveDay(ctx, { from: TUE, typeId: types.rol, fraction: 1 });
     await markSynced(ctx, [{ id: rol.id, fraction: 1, kind: "vacation" }]);
     await pass(trek);
     const sent = trek.toggles.length;
 
-    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, kind: "other", fraction: 1 });
+    const result = await saveLeaveRange(ctx, { from: TUE, to: TUE, typeId: types.other, fraction: 1 });
     await restoreLeave(ctx, result.undo);
     await pass(trek);
     expect(trek.toggles).toHaveLength(sent);
