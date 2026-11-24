@@ -2752,7 +2752,6 @@
       "header": "La prima riga è l'intestazione",
       "save": "Salva queste colonne per il prossimo file di questo conto",
       "previewTitle": "Prime righe",
-      "previewNote": "Lette con le colonne che il file aveva quando l'hai scelto. L'import usa le colonne qui sopra.",
       "table": {
         "row": "Riga",
         "date": "Data",

@@ -179,18 +179,18 @@ interface PreviewLine {
 }
 
 export function PreviewTable({
-  preview,
+  rows,
   currency,
   format,
 }: {
-  preview: CsvPreview;
+  rows: CsvPreview["rows"];
   currency: string;
   format: CardFormat;
 }) {
   const text = useTranslations("accounts.csv");
   const titleId = useId();
   const { locale, numberFormat } = format;
-  const lines = preview.rows.map((row): PreviewLine => ({
+  const lines = rows.map((row): PreviewLine => ({
     row: row.row,
     date: row.on === null ? "" : formatDate(row.on, "long", locale),
     amount:
@@ -206,7 +206,6 @@ export function PreviewTable({
       <h3 id={titleId} className="text-sm font-medium">
         {text("previewTitle")}
       </h3>
-      <p className="text-xs text-faint">{text("previewNote")}</p>
       <PreviewRows lines={lines} titleId={titleId} />
       {/* Five columns do not fit a phone: below `md` the same rows are a list. */}
       <ul className="flex flex-col text-sm md:hidden" aria-labelledby={titleId}>

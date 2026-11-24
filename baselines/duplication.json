@@ -4,9 +4,9 @@
     "minLines": 6
   },
   "total": {
-    "lines": 112809,
-    "duplicatedLines": 16135,
-    "percent": 14.3,
+    "lines": 112855,
+    "duplicatedLines": 16131,
+    "percent": 14.29,
     "blocks": 1266
   },
   "units": {
@@ -17,9 +17,9 @@
       "blocks": 116
     },
     "app": {
-      "lines": 20993,
+      "lines": 21012,
       "duplicatedLines": 2452,
-      "percent": 11.68,
+      "percent": 11.67,
       "blocks": 203
     },
     "global.d": {
@@ -35,9 +35,9 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 5512,
-      "duplicatedLines": 1042,
-      "percent": 18.9,
+      "lines": 5536,
+      "duplicatedLines": 1038,
+      "percent": 18.75,
       "blocks": 77
     },
     "modules/budgets": {
@@ -359,7 +359,7 @@
       "blocks": 0
     },
     "platform/writes": {
-      "lines": 29,
+      "lines": 32,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -581,7 +581,7 @@
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 46,
     "modules/accounts/ui/balance-entries.tsx": 135,
-    "modules/accounts/ui/csv-import.tsx": 42,
+    "modules/accounts/ui/csv-import.tsx": 38,
     "modules/accounts/ui/csv-map.tsx": 38,
     "modules/accounts/ui/settings-form.tsx": 59,
     "modules/accounts/ui/switch/switch-check.tsx": 65,

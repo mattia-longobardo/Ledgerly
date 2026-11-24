@@ -1,16 +1,11 @@
 // The import of a CSV file of movements on an account «a mano» (rewrite plan R5c, decision ST-8): the
 // calls to `/api/v1/accounts/{id}/csv/…`. The server reads the file and writes the movements; the
 // dialog only shows what it answers.
-// shortcut: the root entry of the contract, as `@ledgerly/api-contract/transactions` does not list
-// `csv` yet; move to that entry when the contract adds it.
-import { CSV_MAX_BYTES, TRANSACTIONS } from "@ledgerly/api-contract";
 import { views } from "@ledgerly/api-contract/accounts";
 import { categoryBoard } from "@ledgerly/api-contract/settings";
-import { movements, review, spending } from "@ledgerly/api-contract/transactions";
+import { csv, movements, review, spending } from "@ledgerly/api-contract/transactions";
 import { ApiError, call, type RouteOutput } from "@ledgerly/api-client";
 import { invalidate } from "@ledgerly/ui/data";
-
-const { csv } = TRANSACTIONS;
 
 export type CsvPreview = RouteOutput<typeof csv.previewCsv>;
 export type CsvMap = NonNullable<CsvPreview["proposedMap"]>;
@@ -40,15 +35,20 @@ function changed(): void {
   );
 }
 
-/** Reads the file and writes nothing: its columns, the maps and the first rows read with one. */
+/**
+ * Reads the file and writes nothing: its columns, the maps and the first rows, read with `map` when
+ * the person chose one, else with the saved or the proposed map.
+ */
 export async function previewCsv(
   accountId: string,
   file: File,
+  map?: CsvMap,
 ): Promise<{ ok: true; preview: CsvPreview } | Refused> {
   // The same limit the route has, said before the file travels.
-  if (file.size > CSV_MAX_BYTES) return { ok: false, error: "too_large" };
+  if (file.size > csv.CSV_MAX_BYTES) return { ok: false, error: "too_large" };
   try {
-    return { ok: true, preview: await call(csv.previewCsv, { params: { id: accountId }, body: { file } }) };
+    const body = map ? { file, map: JSON.stringify(map) } : { file };
+    return { ok: true, preview: await call(csv.previewCsv, { params: { id: accountId }, body }) };
   } catch (error) {
     return refusal(error);
   }

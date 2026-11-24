@@ -82,6 +82,24 @@ describe("CsvImportButton", () => {
     expect(screen.getByText(`Row 3: ${T.reasons.bad_date}`)).toBeInTheDocument();
   });
 
+  it("reads the first rows again with the columns the person chooses", async () => {
+    renderButton();
+    await readFile();
+    await screen.findByRole("table", { name: T.previewTitle });
+    preview.mockResolvedValue({
+      ok: true,
+      preview: { ...PREVIEW, rows: [{ ...PREVIEW.rows[0], payee: "Data" }] },
+    });
+    await userEvent.selectOptions(screen.getByLabelText(T.roles.payee), "0");
+    const table = screen.getByRole("table", { name: T.previewTitle });
+    expect(await within(table).findByText("Data")).toBeInTheDocument();
+    expect(preview).toHaveBeenLastCalledWith("acc-1", FILE, {
+      ...MAP,
+      columns: { ...MAP.columns, payee: 0 },
+    });
+    expect(within(table).queryByText(T.reasons.bad_date)).not.toBeInTheDocument();
+  });
+
   it("asks for the amount before it imports a map without one", async () => {
     preview.mockResolvedValue({ ok: true, preview: { ...PREVIEW, proposedMap: null } });
     renderButton();

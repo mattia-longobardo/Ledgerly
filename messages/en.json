@@ -2752,7 +2752,6 @@
       "header": "The first row is the header",
       "save": "Save these columns for the next file of this account",
       "previewTitle": "First rows",
-      "previewNote": "Read with the columns the file had when you chose it. The import uses the columns above.",
       "table": {
         "row": "Row",
         "date": "Date",

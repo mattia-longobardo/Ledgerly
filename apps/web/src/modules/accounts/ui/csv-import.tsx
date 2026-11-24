@@ -4,8 +4,8 @@
 // columns, then what the import wrote. The server reads the file and decides each row; this dialog
 // shows its answers and formats them.
 import { useTranslations } from "next-intl";
-import { type FormEvent, useId, useState, useTransition } from "react";
-import { csvMapSchema } from "@ledgerly/api-contract";
+import { type FormEvent, useEffect, useId, useState, useTransition } from "react";
+import { csv } from "@ledgerly/api-contract/transactions";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input } from "@ledgerly/ui/input";
@@ -26,6 +26,8 @@ const ERRORS = [
 ] as const;
 /** The refused rows the summary lists; the count says the rest. */
 const MAX_LISTED = 50;
+/** How long the map rests before the first rows are read again with it. */
+const REREAD_MS = 300;
 
 type Step =
   { kind: "file" } | { kind: "map"; file: File; preview: CsvPreview } | { kind: "done"; result: CsvImported };
@@ -157,6 +159,32 @@ function FileStep({
   );
 }
 
+/**
+ * The map the person chooses, from the one the preview read the rows with, and the first rows of the
+ * file, read again by the server with each new map.
+ */
+function useMap(accountId: string, file: File, preview: CsvPreview, onError: (error: string) => void) {
+  const text = useTranslations("accounts.csv");
+  const [first] = useState(() => startingMap(preview));
+  const [map, setMap] = useState(first);
+  const [rows, setRows] = useState(preview.rows);
+  useEffect(() => {
+    if (map === first || !csv.csvMapSchema.safeParse(map).success) return;
+    let current = true;
+    const timer = setTimeout(async () => {
+      const read = await previewCsv(accountId, file, map);
+      if (!current) return;
+      if (read.ok) setRows(read.preview.rows);
+      else onError(errorText(text, read.error));
+    }, REREAD_MS);
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [map, first, file, accountId, text, onError]);
+  return { map, setMap, rows };
+}
+
 function MapStep({
   target,
   file,
@@ -171,14 +199,14 @@ function MapStep({
   onDone: (result: CsvImported) => void;
 }) {
   const text = useTranslations("accounts.csv");
-  const [map, setMap] = useState(() => startingMap(preview));
   const [save, setSave] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { map, setMap, rows } = useMap(target.accountId, file, preview, setError);
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!csvMapSchema.safeParse(map).success) {
+    if (!csv.csvMapSchema.safeParse(map).success) {
       setError(text("errors.map"));
       return;
     }
@@ -198,7 +226,7 @@ function MapStep({
       </p>
       <MapFields columns={preview.columns} map={map} onChange={setMap} />
       <Checkbox checked={save} onChange={(event) => setSave(event.target.checked)} label={text("save")} />
-      <PreviewTable preview={preview} currency={target.currency} format={target.format} />
+      <PreviewTable rows={rows} currency={target.currency} format={target.format} />
       {error && (
         <p role="alert" className="text-sm text-neg">
           {error}
