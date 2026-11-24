@@ -48741,6 +48741,20 @@
                               "calendar"
                             ]
                           },
+                          "kinds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "accounts",
+                                "transactions",
+                                "leave",
+                                "documents",
+                                "holdings",
+                                "flows"
+                              ]
+                            }
+                          },
                           "fields": {
                             "type": "array",
                             "items": {
@@ -48792,6 +48806,7 @@
                           "returnAddress",
                           "countries",
                           "kind",
+                          "kinds",
                           "fields"
                         ]
                       }

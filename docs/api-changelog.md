@@ -3,6 +3,12 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · What a plugin reads (PERS-601)
+
+- `GET /plugins`: `kinds`, what each plugin reads, from its manifest's capabilities: the kinds of the runs
+  of its pass, in their order (`accounts`, `transactions` for a bank or a source; `leave` for a calendar of
+  days off), the same words as the `kind` of `GET /connections/runs`.
+
 ## Unreleased · Funds: a payslip's kind in the Contributions tab (R5g follow-up)
 
 - `GET /funds/{id}/contributions`: a row of `payslips` adds `kind` (`ordinary`, `extra`, `bonus`,

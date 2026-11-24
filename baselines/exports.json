@@ -1419,6 +1419,7 @@
     "pluginActivations",
     "pluginAuthStates",
     "pluginDiagnostics",
+    "pluginKinds",
     "pluginManifest",
     "pluginUserCredentials",
     "plugins",
