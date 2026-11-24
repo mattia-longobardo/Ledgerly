@@ -228,7 +228,7 @@ export const getSource = defineRoute({
   capability: "connections",
   summary:
     "The page of one source the person has: its accounts deleted here, what waits to be written to " +
-    "it, and what «Disconnect» of each connection leaves.",
+    "it and what it refused, and what «Disconnect» of each connection leaves.",
   actions: [],
   params: z.object({ slug: z.string().regex(/^[a-z0-9-]{1,64}$/) }),
   response: z.object({
@@ -238,6 +238,10 @@ export const getSource = defineRoute({
     deletedAccounts: z.array(z.object({ externalId: z.string(), name: z.string().nullable() })),
     /** The movements waiting to be sent to the source, and the accounts they are on. */
     unsent: z.object({ count: z.number().int(), accountIds: z.array(id()) }),
+    /**
+     * Of those, the movements the source refused (`sendState` `not_sent`), and the accounts they are on.
+     */
+    refused: z.object({ count: z.number().int(), accountIds: z.array(id()) }),
     /** The days off waiting to be sent to the source. */
     pendingDays: z.number().int(),
     connections: z.array(
@@ -257,6 +261,7 @@ export const getSource = defineRoute({
       provider: "plugin:examplebank",
       deletedAccounts: [],
       unsent: { count: 0, accountIds: [] },
+      refused: { count: 0, accountIds: [] },
       pendingDays: 0,
       connections: [{ id: CONNECTION_ID, shared: 2, leave: { accounts: 2, excluded: 0 } }],
     },

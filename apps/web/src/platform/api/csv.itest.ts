@@ -236,4 +236,27 @@ describe("the map of the columns", () => {
     expect(saved.body.savedMap.columns.payee).toBeNull();
     expect(saved.body.rows[0].payee).toBeNull();
   });
+
+  it("follows in the preview the columns the person chose, before the saved map", async () => {
+    const account = await newAccount(alice, "Cash");
+    await send(alice, "PUT", `/accounts/${account}/csv-map`, MAP);
+    const chosen = { ...MAP, columns: { ...MAP.columns, payee: null, note: 1 } };
+    const preview = await upload(alice, `/accounts/${account}/csv/preview`, {
+      file: fileOf(FILE),
+      map: JSON.stringify(chosen),
+    });
+    expect(preview.status).toBe(200);
+    expect(preview.body.savedMap).toEqual(MAP);
+    expect(preview.body.rows[0]).toEqual({
+      row: 2,
+      outcome: "ok",
+      reason: null,
+      on: "2026-02-10",
+      amount: "-12.50",
+      payee: null,
+    });
+    const bad = await upload(alice, `/accounts/${account}/csv/preview`, { file: fileOf(FILE), map: "{" });
+    expect(bad.status).toBe(400);
+    expect(await listTransactions(alice, {})).toEqual([]);
+  });
 });

@@ -115,14 +115,16 @@ function previewRow(row: ReturnType<typeof csvRows>[number]) {
 
 /**
  * What a file would import, writing nothing: the delimiter, the columns, the saved map and the one
- * the file proposes, and the first rows read with the saved map or else the proposed one.
+ * the file proposes, and the first rows read with the map the person chose, else the saved map,
+ * else the proposed one.
  */
-export async function previewCsv(ctx: CsvCtx, accountId: string, bytes: Uint8Array) {
+export async function previewCsv(ctx: CsvCtx, accountId: string, bytes: Uint8Array, input?: unknown) {
+  const chosen = input === undefined ? null : csvMapSchema.parse(input);
   await requireMovementAccount(ctx, accountId);
   const savedMap = await csvMapOf(ctx, accountId);
-  const { delimiter, records } = recordsOf(bytes, savedMap?.delimiter);
+  const { delimiter, records } = recordsOf(bytes, (chosen ?? savedMap)?.delimiter);
   const proposedMap = proposeMap(records, delimiter);
-  const used = savedMap ?? proposedMap ?? { skipRows: 0, header: false };
+  const used = chosen ?? savedMap ?? proposedMap ?? { skipRows: 0, header: false };
   const data = dataRecords(records, used);
   requireRowCount(data.length);
   const header = used.header ? (records[used.skipRows] ?? []) : (data[0]?.cells ?? []).map(() => "");

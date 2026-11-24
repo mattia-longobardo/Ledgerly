@@ -16,6 +16,11 @@ import { connectionSummary } from "@ledgerly/plugin-host";
 import { accountsLeft } from "./connection-state";
 import { sourceOf } from "./deactivate";
 
+const countOn = (movements: readonly { accountId: string }[]) => ({
+  count: movements.length,
+  accountIds: [...new Set(movements.map((one) => one.accountId))],
+});
+
 export const sourceRead: SourceReads["source"] = async (ctx, slug) => {
   const source = await sourceOf(ctx, slug);
   if (source === null) return { ok: false, error: "not_found" };
@@ -36,7 +41,8 @@ export const sourceRead: SourceReads["source"] = async (ctx, slug) => {
   const answer = {
     provider: source.provider,
     deletedAccounts,
-    unsent: { count: waiting.length, accountIds: [...new Set(waiting.map((one) => one.accountId))] },
+    unsent: countOn(waiting),
+    refused: countOn(waiting.filter((one) => one.state === "not_sent")),
     pendingDays,
     connections: await Promise.all(
       own.map(async (connection) => {

@@ -3,6 +3,15 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · CSV import and a source's refusals for the client (client 23)
+
+- `POST /accounts/{id}/csv/preview`: an optional `map` field (the map as JSON, the body of
+  `PUT /accounts/{id}/csv-map`): the rows follow the columns the person chose, before the saved map
+  and the proposed one. A `map` that is not a map is `400` `invalid`. Without it, nothing changes.
+- `GET /sources/{slug}`: `refused` (`count`, `accountIds`), the movements among `unsent` that the source
+  refused (`sendState` `not_sent`), and the accounts they are on.
+- The CSV routes are in the entry `@ledgerly/api-contract/transactions` (`csv`).
+
 ## Unreleased · Investments: the purchase plans of a manual portfolio (R5d, step 2)
 
 - `GET /investments/{accountId}/plans` (MCP `list_investment_plans`, read only), `POST` the same path,

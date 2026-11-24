@@ -268,7 +268,8 @@ end of the output of a red gate, is printed and written to `test-results/full-su
 
 Both bring `ledgerly_test` to the checkout's migrations first: the integration tests run on their
 own databases (`ledgerly_<1-4>_test`), and `npm run perf` can run beside them. The client stream
-measures on its own database: `LEDGERLY_TEST_DATABASE=ledgerly_test_2 npm run perf`.
+measures on its own database: `LEDGERLY_TEST_DATABASE=ledgerly_test_2 npm run perf`. The second
+server stream of R5 measures on `ledgerly_test_3`.
 
 ## Keep the map true
 
