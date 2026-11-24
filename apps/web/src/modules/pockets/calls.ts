@@ -21,9 +21,12 @@ export interface PocketForm {
   accrualDay?: number;
 }
 
-/** What a pocket's write changes: the Pockets page, Overview's tile, a pocket's page, the candidates. */
-function changed(): void {
-  invalidate(
+/**
+ * What a pocket's write changes: the Pockets page, Overview's tile, a pocket's page, the candidates.
+ * The write ends once they are read again, so a dialog opened next starts from the new values.
+ */
+function changed(): Promise<void> {
+  return invalidate(
     pockets.listPockets,
     pockets.getPocketsOverview,
     pockets.getPocket,
@@ -50,7 +53,7 @@ async function bodyOf(form: PocketForm) {
 export async function createPocket(form: PocketForm): Promise<CreateResult> {
   try {
     const { id } = await call(pockets.createPocket, { body: await bodyOf(form) });
-    changed();
+    await changed();
     return { ok: true, id };
   } catch (error) {
     return refusal(error);

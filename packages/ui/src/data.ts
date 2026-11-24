@@ -31,10 +31,10 @@ function publish(entry: Entry, snapshot: Snapshot) {
   for (const listener of entry.listeners) listener();
 }
 
-function load(entry: Entry) {
+function load(entry: Entry): Promise<void> {
   entry.loaded = true;
   publish(entry, { ...entry.snapshot, loading: true });
-  call(entry.route, entry.input).then(
+  return call(entry.route, entry.input).then(
     (data) => publish(entry, { data, error: null, loading: false }),
     (error: unknown) => publish(entry, { data: entry.snapshot.data, error, loading: false }),
   );
@@ -131,14 +131,19 @@ export function remember<R extends RouteContract>(
   publish(entry, { data, error: null, loading: false });
 }
 
-/** Reads again every cached read of these routes; a read nobody shows any more is dropped. */
-export function invalidate(...routes: RouteContract[]): void {
+/**
+ * Reads again every cached read of these routes; a read nobody shows any more is dropped. It settles
+ * once every new read has its answer, for a write whose screen must show them before it goes on.
+ */
+export function invalidate(...routes: RouteContract[]): Promise<void> {
   const ids = new Set(routes.map((route) => route.id));
+  const reads: Promise<void>[] = [];
   for (const [key, entry] of cache) {
     if (!ids.has(entry.route.id)) continue;
     if (entry.listeners.size === 0) cache.delete(key);
-    else load(entry);
+    else reads.push(load(entry));
   }
+  return Promise.all(reads).then(() => undefined);
 }
 
 /**

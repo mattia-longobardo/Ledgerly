@@ -20,11 +20,14 @@ export function refusal(error: unknown): { ok: false; error: string } {
   throw error;
 }
 
-/** Runs a write; on success `changed` drops what it made stale. */
-export async function writing(work: () => Promise<unknown>, changed: () => void): Promise<WriteResult> {
+/** Runs a write; on success `changed` drops what it made stale, waited for when it answers a promise. */
+export async function writing(
+  work: () => Promise<unknown>,
+  changed: () => void | Promise<void>,
+): Promise<WriteResult> {
   try {
     await work();
-    changed();
+    await changed();
     return { ok: true };
   } catch (error) {
     return refusal(error);

@@ -11,7 +11,7 @@ vi.mock("@ledgerly/api-client", () => ({
   },
 }));
 
-const { useApi, useLatest } = await import("./data");
+const { invalidate, useApi, useLatest } = await import("./data");
 
 function Name() {
   const state = useApi(profile.getProfile, {});
@@ -29,6 +29,16 @@ describe("useApi", () => {
     expect(screen.getByText(/read 1/)).toBeInTheDocument();
     await screen.findByText(/read 2/);
     expect(answers.calls).toBe(2);
+  });
+});
+
+describe("invalidate", () => {
+  it("settles once the screen shows the new read", async () => {
+    render(<Name />);
+    const shown = await screen.findByText(/read \d+/);
+    const before = answers.calls;
+    await invalidate(profile.getProfile);
+    expect(shown).toHaveTextContent(`read ${before + 1}`);
   });
 });
 
