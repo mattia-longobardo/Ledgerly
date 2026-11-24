@@ -5963,7 +5963,10 @@
       "transactions_to_categorize": "Movimenti da categorizzare",
       "payslips_to_review": "Cedolini da rivedere",
       "transfers_to_confirm": "Giroconti da confermare",
-      "fund_to_verify": "Fondo da verificare"
+      "fund_to_verify": "Fondo da verificare",
+      "plan_run_to_confirm": "Rata di un piano da confermare",
+      "plan_run_no_cash": "Rata di un piano senza liquidità",
+      "plan_run_price_missing": "Rata di un piano senza prezzo"
     },
     "todo": {
       "connection_failed": "Un collegamento non legge più. Riparalo.",
@@ -5973,6 +5976,9 @@
       "payslips_to_review": "{count, plural, one {# cedolino} other {# cedolini}} da rivedere",
       "transfers_to_confirm": "{count, plural, one {# giroconto} other {# giroconti}} da confermare",
       "fund_to_verify": "Un fondo da verificare dopo la scadenza",
+      "plan_run_to_confirm": "La rata di un piano del {date} è da confermare",
+      "plan_run_no_cash": "La rata di un piano del {date} non ha liquidità. Registra un versamento, poi confermala.",
+      "plan_run_price_missing": "La rata di un piano del {date} non ha ancora un prezzo. Scrivilo tu.",
       "account_low_balance": "Un conto è sotto la sua soglia",
       "budget_threshold": "Un budget ha raggiunto il {percent}%",
       "monthly_summary": "Il riepilogo mensile è pronto"

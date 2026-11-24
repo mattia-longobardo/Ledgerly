@@ -21,7 +21,7 @@ import {
   todoOf,
 } from "@ledgerly/domain/platform/notifications";
 import { fundsByAccount, fundsToVerify } from "@ledgerly/domain/funds";
-import { transfersToConfirm } from "@ledgerly/domain/investments";
+import { type PlanFact, plansToDo, transfersToConfirm } from "@ledgerly/domain/investments";
 import { payslipsAwaitingReview } from "@ledgerly/domain/payroll";
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import { listConnections } from "@ledgerly/domain/platform/integrations";
@@ -42,6 +42,12 @@ async function refusing<T>(work: () => Promise<T>): Promise<T> {
 /** A count above zero is one fact about all of them; zero is none. */
 const counted = (count: number) => (count === 0 ? [] : [{ subject: "all", params: { count } }]);
 
+/** An instalment of a plan (R5d): its portfolio's page and its due date only (G4). */
+const planFacts = (facts: readonly PlanFact[]) =>
+  facts.map((fact) => ({ subject: fact.runId, targetId: fact.accountId, params: { date: fact.dueOn } }));
+/** The job could not buy it with the portfolio's cash (P2): the person records a deposit first. */
+const noCash = (fact: PlanFact) => fact.reason === "negative_cash";
+
 /**
  * «Da fare» as it is now, before it is read (R5e): the states of the modules that ask for an action
  * become facts or close theirs, and the facts of a connection that is gone are closed. Here, where
@@ -54,6 +60,12 @@ async function refreshFacts(ctx: Ctx): Promise<void> {
   await syncFacts(ctx, "fund_to_verify", async () =>
     (await fundsToVerify(ctx)).map((id) => ({ subject: id, targetId: id })),
   );
+  const plans = await plansToDo(ctx);
+  await syncFacts(ctx, "plan_run_to_confirm", async () =>
+    planFacts(plans.toConfirm.filter((fact) => !noCash(fact))),
+  );
+  await syncFacts(ctx, "plan_run_no_cash", async () => planFacts(plans.toConfirm.filter(noCash)));
+  await syncFacts(ctx, "plan_run_price_missing", async () => planFacts(plans.priceMissing));
   const connections = (await listConnections(ctx)).map((connection) => connection.id);
   await resolve(ctx, "connection_failed", { keep: connections });
   await resolve(ctx, "connection_stale", { keep: connections });

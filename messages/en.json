@@ -5963,7 +5963,10 @@
       "transactions_to_categorize": "Transactions to categorize",
       "payslips_to_review": "Payslips to review",
       "transfers_to_confirm": "Transfers to confirm",
-      "fund_to_verify": "Fund to check"
+      "fund_to_verify": "Fund to check",
+      "plan_run_to_confirm": "Plan instalment to confirm",
+      "plan_run_no_cash": "Plan instalment with no cash",
+      "plan_run_price_missing": "Plan instalment with no price"
     },
     "todo": {
       "connection_failed": "A connection stopped reading. Repair it.",
@@ -5973,6 +5976,9 @@
       "payslips_to_review": "{count, plural, one {# payslip} other {# payslips}} to review",
       "transfers_to_confirm": "{count, plural, one {# transfer} other {# transfers}} to confirm",
       "fund_to_verify": "A fund to check after its end date",
+      "plan_run_to_confirm": "A plan instalment of {date} to confirm",
+      "plan_run_no_cash": "A plan instalment of {date} has no cash. Record a deposit, then confirm it.",
+      "plan_run_price_missing": "A plan instalment of {date} has no price yet. Type it.",
       "account_low_balance": "An account is below its threshold",
       "budget_threshold": "A budget reached {percent}%",
       "monthly_summary": "The monthly summary is ready"

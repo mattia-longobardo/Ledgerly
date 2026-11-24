@@ -33,6 +33,9 @@ const WITHOUT_EMAIL: ReadonlySet<NotificationEvent> = new Set([
   "payslips_to_review",
   "transfers_to_confirm",
   "fund_to_verify",
+  "plan_run_to_confirm",
+  "plan_run_no_cash",
+  "plan_run_price_missing",
 ]);
 
 /**

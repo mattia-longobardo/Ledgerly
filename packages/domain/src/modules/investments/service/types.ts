@@ -34,6 +34,8 @@ export type InvestmentErrorCode =
   | "already_linked"
   | "not_editable"
   | "before_period"
+  // A write before a manual portfolio's first day, when the days before were a value only (R5d, P4).
+  | "before_positions"
   | "not_a_transfer"
   // A sale of more than the quantity held that day (R5d).
   | "quantity_exceeded";

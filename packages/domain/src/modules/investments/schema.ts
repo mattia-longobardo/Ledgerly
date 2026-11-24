@@ -13,8 +13,9 @@ import {
   unique,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
-import { createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
+import { checkIn, createdAtColumn, idColumn, moment, updatedAtColumn } from "../../platform/db/columns";
 import { users } from "../../platform/auth/schema";
 import { integrationConnections } from "../../platform/integrations/schema";
 import { accounts } from "../accounts/schema";
@@ -30,6 +31,12 @@ import {
   NEGATIVE_KINDS,
   OPERATION_KINDS,
   ORIGINS,
+  PLAN_FREQUENCIES,
+  PLAN_RUN_REASONS,
+  PLAN_MODES,
+  PLAN_RECORDERS,
+  PLAN_RUN_STATES,
+  PLAN_STATES,
   PERIOD_REASONS,
   POSITIVE_KINDS,
   PRICE_SOURCES,
@@ -50,6 +57,18 @@ const price = (name: string) => numeric(name, { precision: 30, scale: 12 });
 const rate = (name: string) => numeric(name, { precision: 20, scale: 10 });
 const currencyCheck = (name: string, column: unknown) => check(name, sql`${column} ~ '^[A-Z]{3}$'`);
 
+/** The person a row belongs to: gone with them. */
+const ownerColumn = () =>
+  uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" });
+
+/** The service a row belongs to: gone with it. */
+const accountColumn = () =>
+  uuid("investment_account_id")
+    .notNull()
+    .references((): AnyPgColumn => investmentAccounts.id, { onDelete: "cascade" });
+
 /**
  * A service of the section (§1.3): one row per `accounts` row of type `investment` or `crypto`, the
  * account its value is written to. From `managed_since` this module is the account's only writer,
@@ -59,9 +78,7 @@ export const investmentAccounts = pgTable(
   "investment_accounts",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
@@ -77,10 +94,7 @@ export const investmentAccounts = pgTable(
   (table) => [
     unique("investment_accounts_account_uq").on(table.accountId),
     index("investment_accounts_user_idx").on(table.userId),
-    check(
-      "investment_accounts_category_ck",
-      sql`${table.category} in (${sql.raw(inList(INVESTMENT_CATEGORIES))})`,
-    ),
+    checkIn("investment_accounts_category_ck", table.category, INVESTMENT_CATEGORIES),
     check("investment_accounts_provider_ck", sql`length(${table.provider}) between 1 and 40`),
     check(
       "investment_accounts_url_ck",
@@ -98,12 +112,8 @@ export const investmentAccountPeriods = pgTable(
   "investment_account_periods",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    investmentAccountId: uuid("investment_account_id")
-      .notNull()
-      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
+    investmentAccountId: accountColumn(),
     fromOn: date("from_on").notNull(),
     startsAt: moment("starts_at").notNull(),
     mode: text("mode", { enum: MODES }).notNull(),
@@ -114,12 +124,9 @@ export const investmentAccountPeriods = pgTable(
   (table) => [
     unique("investment_account_periods_start_uq").on(table.investmentAccountId, table.startsAt),
     index("investment_account_periods_user_idx").on(table.userId),
-    check("investment_account_periods_mode_ck", sql`${table.mode} in (${sql.raw(inList(MODES))})`),
-    check("investment_account_periods_origin_ck", sql`${table.origin} in (${sql.raw(inList(ORIGINS))})`),
-    check(
-      "investment_account_periods_reason_ck",
-      sql`${table.reason} in (${sql.raw(inList(PERIOD_REASONS))})`,
-    ),
+    checkIn("investment_account_periods_mode_ck", table.mode, MODES),
+    checkIn("investment_account_periods_origin_ck", table.origin, ORIGINS),
+    checkIn("investment_account_periods_reason_ck", table.reason, PERIOD_REASONS),
   ],
 );
 
@@ -128,9 +135,7 @@ export const investmentAssets = pgTable(
   "investment_assets",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     class: text("class", { enum: ASSET_CLASSES }).notNull(),
     name: text("name").notNull(),
     isin: text("isin"),
@@ -155,7 +160,7 @@ export const investmentAssets = pgTable(
     uniqueIndex("investment_assets_symbol_uq")
       .on(table.userId, table.class, table.symbol, sql`coalesce(${table.mic}, '')`)
       .where(sql`${table.symbol} is not null`),
-    check("investment_assets_class_ck", sql`${table.class} in (${sql.raw(inList(ASSET_CLASSES))})`),
+    checkIn("investment_assets_class_ck", table.class, ASSET_CLASSES),
     check("investment_assets_name_ck", sql`length(btrim(${table.name})) between 1 and 120`),
     check(
       "investment_assets_isin_ck",
@@ -167,10 +172,7 @@ export const investmentAssets = pgTable(
     ),
     check("investment_assets_mic_ck", sql`${table.mic} is null or ${table.mic} ~ '^[A-Z0-9]{4}$'`),
     currencyCheck("investment_assets_currency_ck", table.currency),
-    check(
-      "investment_assets_price_source_ck",
-      sql`${table.priceSource} in (${sql.raw(inList(PRICE_SOURCES))})`,
-    ),
+    checkIn("investment_assets_price_source_ck", table.priceSource, PRICE_SOURCES),
   ],
 );
 
@@ -182,12 +184,8 @@ export const investmentHoldings = pgTable(
   "investment_holdings",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    investmentAccountId: uuid("investment_account_id")
-      .notNull()
-      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
+    investmentAccountId: accountColumn(),
     assetId: uuid("asset_id")
       .notNull()
       .references(() => investmentAssets.id, { onDelete: "restrict" }),
@@ -204,7 +202,7 @@ export const investmentHoldings = pgTable(
       table.product,
     ),
     index("investment_holdings_user_idx").on(table.userId),
-    check("investment_holdings_origin_ck", sql`${table.origin} in (${sql.raw(inList(HOLDING_ORIGINS))})`),
+    checkIn("investment_holdings_origin_ck", table.origin, HOLDING_ORIGINS),
     check("investment_holdings_product_ck", sql`${table.product} ~ ${sql.raw(`'${PRODUCT_PATTERN}'`)}`),
   ],
 );
@@ -214,12 +212,8 @@ export const investmentEvents = pgTable(
   "investment_events",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    investmentAccountId: uuid("investment_account_id")
-      .notNull()
-      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
+    investmentAccountId: accountColumn(),
     occurredAt: moment("occurred_at").notNull(),
     on: date("on").notNull(),
     seq: bigint("seq", { mode: "bigint" }).notNull().generatedAlwaysAsIdentity(),
@@ -234,7 +228,7 @@ export const investmentEvents = pgTable(
     unique("investment_events_transaction_uq").on(table.transactionId),
     index("investment_events_account_on_idx").on(table.investmentAccountId, table.on),
     index("investment_events_user_idx").on(table.userId),
-    check("investment_events_origin_ck", sql`${table.origin} in (${sql.raw(inList(EVENT_ORIGINS))})`),
+    checkIn("investment_events_origin_ck", table.origin, EVENT_ORIGINS),
     check(
       "investment_events_note_ck",
       sql`${table.note} is null or length(btrim(${table.note})) between 1 and 200`,
@@ -247,9 +241,7 @@ export const investmentOperations = pgTable(
   "investment_operations",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     eventId: uuid("event_id")
       .notNull()
       .references(() => investmentEvents.id, { onDelete: "cascade" }),
@@ -268,17 +260,19 @@ export const investmentOperations = pgTable(
     quantityBasis: text("quantity_basis", { enum: QUANTITY_BASES }).notNull().default("reported"),
     /** What a correction (R3) stands for (docs/design/investments-ux.md §4.9); `null` = `data`. */
     adjustmentClass: text("adjustment_class", { enum: ADJUSTMENT_CLASSES }),
+    /** The instalment of a purchase plan this purchase is (R5d): one purchase a due date. */
+    planRunId: uuid("plan_run_id").references((): AnyPgColumn => investmentPlanRuns.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => [
     unique("investment_operations_leg_uq").on(table.eventId, table.leg),
+    unique("investment_operations_plan_run_uq").on(table.planRunId),
     index("investment_operations_holding_idx").on(table.holdingId),
     index("investment_operations_user_idx").on(table.userId),
-    check("investment_operations_leg_ck", sql`${table.leg} in (${sql.raw(inList(LEGS))})`),
-    check("investment_operations_kind_ck", sql`${table.kind} in (${sql.raw(inList(OPERATION_KINDS))})`),
-    check(
-      "investment_operations_basis_ck",
-      sql`${table.quantityBasis} in (${sql.raw(inList(QUANTITY_BASES))})`,
-    ),
+    checkIn("investment_operations_leg_ck", table.leg, LEGS),
+    checkIn("investment_operations_kind_ck", table.kind, OPERATION_KINDS),
+    checkIn("investment_operations_basis_ck", table.quantityBasis, QUANTITY_BASES),
     check(
       "investment_operations_sign_ck",
       sql`(${table.kind} not in (${sql.raw(inList(POSITIVE_KINDS))}) or ${table.amountCents} >= 0) and (${table.kind} not in (${sql.raw(inList(NEGATIVE_KINDS))}) or ${table.amountCents} <= 0)`,
@@ -305,12 +299,8 @@ export const investmentOperationRevisions = pgTable(
   "investment_operation_revisions",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    investmentAccountId: uuid("investment_account_id")
-      .notNull()
-      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
+    investmentAccountId: accountColumn(),
     // Deliberately no foreign keys: a revision outlives the operation it remembers.
     eventId: uuid("event_id").notNull(),
     operationId: uuid("operation_id"),
@@ -330,12 +320,8 @@ export const investmentReadings = pgTable(
   "investment_readings",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    investmentAccountId: uuid("investment_account_id")
-      .notNull()
-      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
+    investmentAccountId: accountColumn(),
     on: date("on").notNull(),
     observedAt: moment("observed_at").notNull(),
     status: text("status", { enum: READING_STATUSES }).notNull(),
@@ -349,7 +335,7 @@ export const investmentReadings = pgTable(
   (table) => [
     unique("investment_readings_account_on_uq").on(table.investmentAccountId, table.on),
     index("investment_readings_user_idx").on(table.userId),
-    check("investment_readings_status_ck", sql`${table.status} in (${sql.raw(inList(READING_STATUSES))})`),
+    checkIn("investment_readings_status_ck", table.status, READING_STATUSES),
     check("investment_readings_missing_ck", sql`${table.missingPrices} >= 0`),
   ],
 );
@@ -359,9 +345,7 @@ export const investmentReadingPositions = pgTable(
   "investment_reading_positions",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     readingId: uuid("reading_id")
       .notNull()
       .references(() => investmentReadings.id, { onDelete: "cascade" }),
@@ -395,9 +379,7 @@ export const investmentReadingScopes = pgTable(
   "investment_reading_scopes",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     readingId: uuid("reading_id")
       .notNull()
       .references(() => investmentReadings.id, { onDelete: "cascade" }),
@@ -417,9 +399,7 @@ export const investmentReconciliations = pgTable(
   "investment_reconciliations",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     holdingId: uuid("holding_id")
       .notNull()
       .references(() => investmentHoldings.id, { onDelete: "cascade" }),
@@ -433,10 +413,7 @@ export const investmentReconciliations = pgTable(
   (table) => [
     index("investment_reconciliations_holding_idx").on(table.holdingId, table.effectiveOn),
     index("investment_reconciliations_user_idx").on(table.userId),
-    check(
-      "investment_reconciliations_kind_ck",
-      sql`${table.kind} in (${sql.raw(inList(RECONCILIATION_KINDS))})`,
-    ),
+    checkIn("investment_reconciliations_kind_ck", table.kind, RECONCILIATION_KINDS),
     check(
       "investment_reconciliations_quantity_ck",
       sql`(${table.kind} = 'partial') = (${table.quantity} is not null)`,
@@ -452,9 +429,7 @@ export const investmentSupersededEntries = pgTable(
   "investment_superseded_entries",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
@@ -485,12 +460,8 @@ export const investmentKeyChecks = pgTable(
   "investment_key_checks",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    investmentAccountId: uuid("investment_account_id")
-      .notNull()
-      .references(() => investmentAccounts.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
+    investmentAccountId: accountColumn(),
     connectionId: uuid("connection_id").references(() => integrationConnections.id, { onDelete: "set null" }),
     provider: text("provider").notNull(),
     origin: text("origin", { enum: KEY_CHECK_ORIGINS }).notNull(),
@@ -507,8 +478,8 @@ export const investmentKeyChecks = pgTable(
   (table) => [
     index("investment_key_checks_account_idx").on(table.investmentAccountId, table.checkedAt),
     index("investment_key_checks_user_idx").on(table.userId),
-    check("investment_key_checks_result_ck", sql`${table.result} in (${sql.raw(inList(KEY_CHECK_RESULTS))})`),
-    check("investment_key_checks_origin_ck", sql`${table.origin} in (${sql.raw(inList(KEY_CHECK_ORIGINS))})`),
+    checkIn("investment_key_checks_result_ck", table.result, KEY_CHECK_RESULTS),
+    checkIn("investment_key_checks_origin_ck", table.origin, KEY_CHECK_ORIGINS),
     check("investment_key_checks_provider_ck", sql`length(${table.provider}) between 1 and 40`),
   ],
 );
@@ -521,9 +492,7 @@ export const investmentSyncCoverage = pgTable(
   "investment_sync_coverage",
   {
     id: idColumn(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+    userId: ownerColumn(),
     connectionId: uuid("connection_id")
       .notNull()
       .references(() => integrationConnections.id, { onDelete: "cascade" }),
@@ -538,15 +507,112 @@ export const investmentSyncCoverage = pgTable(
     unique("investment_sync_coverage_window_uq").on(table.connectionId, table.stream, table.fromAt),
     index("investment_sync_coverage_user_idx").on(table.userId),
     check("investment_sync_coverage_kind_ck", sql`${table.kind} in ('holdings', 'flows')`),
-    check(
-      "investment_sync_coverage_status_ck",
-      sql`${table.status} in (${sql.raw(inList(COVERAGE_STATUSES))})`,
-    ),
+    checkIn("investment_sync_coverage_status_ck", table.status, COVERAGE_STATUSES),
     check("investment_sync_coverage_stream_ck", sql`${table.stream} ~ '^[a-z][a-z0-9_:/-]{0,59}$'`),
     check("investment_sync_coverage_window_ck", sql`${table.toAt} >= ${table.fromAt}`),
     check(
       "investment_sync_coverage_reason_ck",
       sql`${table.reason} is null or ${table.reason} ~ '^[a-z][a-z0-9_]{0,59}$'`,
     ),
+  ],
+);
+
+// ——— Purchase plans (R5d, step 2; 11-standardization.md §11.3) ———————————————————————————————
+
+/**
+ * A purchase plan of a manual portfolio: one asset bought for an amount (in the asset's currency) or a
+ * quantity at each due date. It writes purchases only (P1 B): its debit account finds the movement.
+ */
+export const investmentPlans = pgTable(
+  "investment_plans",
+  {
+    id: idColumn(),
+    userId: ownerColumn(),
+    investmentAccountId: accountColumn(),
+    assetId: uuid("asset_id")
+      .notNull()
+      .references(() => investmentAssets.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    amountCents: bigint("amount_cents", { mode: "bigint" }),
+    quantity: quantity("quantity"),
+    fractions: boolean("fractions").notNull().default(true),
+    frequency: text("frequency", { enum: PLAN_FREQUENCIES }).notNull(),
+    interval: integer("interval").notNull().default(1),
+    day: integer("day").notNull(),
+    startOn: date("start_on").notNull(),
+    endOn: date("end_on"),
+    runsLimit: integer("runs_limit"),
+    debitAccountId: uuid("debit_account_id").references(() => accounts.id, { onDelete: "set null" }),
+    feeCents: bigint("fee_cents", { mode: "bigint" }),
+    feeRate: rate("fee_rate"),
+    mode: text("mode", { enum: PLAN_MODES }).notNull().default("propose"),
+    state: text("state", { enum: PLAN_STATES }).notNull().default("active"),
+    /** The first day the job looks at: the due dates before it are «Record the past instalments» (P4). */
+    createdOn: date("created_on").notNull(),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => [
+    index("investment_plans_account_idx").on(table.investmentAccountId),
+    index("investment_plans_user_idx").on(table.userId),
+    check("investment_plans_name_ck", sql`length(btrim(${table.name})) between 1 and 80`),
+    check(
+      "investment_plans_size_ck",
+      sql`(${table.amountCents} is null) <> (${table.quantity} is null) and (${table.amountCents} is null or ${table.amountCents} > 0) and (${table.quantity} is null or ${table.quantity} > 0)`,
+    ),
+    checkIn("investment_plans_frequency_ck", table.frequency, PLAN_FREQUENCIES),
+    check("investment_plans_interval_ck", sql`${table.interval} between 1 and 12`),
+    check(
+      "investment_plans_day_ck",
+      sql`${table.day} between 1 and (case when ${table.frequency} = 'week' then 7 else 31 end)`,
+    ),
+    check("investment_plans_end_ck", sql`${table.endOn} is null or ${table.runsLimit} is null`),
+    check(
+      "investment_plans_runs_ck",
+      sql`${table.runsLimit} is null or ${table.runsLimit} between 1 and 600`,
+    ),
+    check(
+      "investment_plans_fee_ck",
+      sql`(${table.feeCents} is null or ${table.feeCents} >= 0) and (${table.feeRate} is null or ${table.feeRate} >= 0) and (${table.feeCents} is null or ${table.feeRate} is null)`,
+    ),
+    checkIn("investment_plans_mode_ck", table.mode, PLAN_MODES),
+    checkIn("investment_plans_state_ck", table.state, PLAN_STATES),
+  ],
+);
+
+/** A due date of a plan, and what came of it: one row a date (the job may run twice). */
+export const investmentPlanRuns = pgTable(
+  "investment_plan_runs",
+  {
+    id: idColumn(),
+    userId: ownerColumn(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => investmentPlans.id, { onDelete: "cascade" }),
+    dueOn: date("due_on").notNull(),
+    state: text("state", { enum: PLAN_RUN_STATES }).notNull().default("pending"),
+    /** The close it is priced at, its currency and its day: the first on or after the due date. */
+    price: price("price"),
+    priceCurrency: text("price_currency"),
+    priceOn: date("price_on"),
+    waitingSince: date("waiting_since"),
+    /** Why the job did not write an `auto` instalment (P2): a refusal of the purchase. */
+    reason: text("reason", { enum: PLAN_RUN_REASONS }),
+    recordedBy: text("recorded_by", { enum: PLAN_RECORDERS }),
+    /** The movement of the debit account the matcher proposed (E7), and whether the person linked it. */
+    debitTransactionId: uuid("debit_transaction_id").references(() => transactions.id, {
+      onDelete: "set null",
+    }),
+    debitLinked: boolean("debit_linked").notNull().default(false),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => [
+    unique("investment_plan_runs_due_uq").on(table.planId, table.dueOn),
+    index("investment_plan_runs_user_idx").on(table.userId),
+    checkIn("investment_plan_runs_state_ck", table.state, PLAN_RUN_STATES),
+    check("investment_plan_runs_price_ck", sql`${table.price} is null or ${table.price} > 0`),
+    checkIn("investment_plan_runs_recorded_ck", table.recordedBy, PLAN_RECORDERS, true),
+    check("investment_plan_runs_reason_ck", sql`${table.reason} is null or length(${table.reason}) <= 40`),
   ],
 );

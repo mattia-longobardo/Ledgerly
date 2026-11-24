@@ -35,7 +35,7 @@ import * as pocketsDomain from "@domain/modules/pockets/rules";
 import * as subscriptionsWire from "../packages/api-contract/src/subscriptions/shared";
 import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
 import { MAX_EVERY as ENTRY_MAX_EVERY } from "@ledgerly/api-contract/subscriptions";
-import { instruments as entryInstruments } from "@ledgerly/api-contract/investments";
+import { instruments as entryInstruments, plans as entryPlans } from "@ledgerly/api-contract/investments";
 import * as interestsWire from "../packages/api-contract/src/interests/shared";
 import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
@@ -49,6 +49,7 @@ import * as fundsPension from "@domain/modules/funds/pension/rules";
 import { FEE_BASES, FEE_PERIODS } from "@domain/shared/fees";
 import * as investmentsWire from "../packages/api-contract/src/investments/shared";
 import * as investmentsRules from "@domain/modules/investments/rules";
+import * as plansWire from "../packages/api-contract/src/investments/plans";
 import * as portfolioWire from "../packages/api-contract/src/investments/portfolio";
 import * as portfolioRules from "@domain/modules/portfolio/rules";
 import { ACTIVITY_FAMILIES } from "@domain/modules/investments/activity";
@@ -502,6 +503,7 @@ const INVESTMENT_CODES: Record<InvestmentErrorCode | SyncErrorCode, true> = {
   already_linked: true,
   not_editable: true,
   before_period: true,
+  before_positions: true,
   not_a_transfer: true,
   quantity_exceeded: true,
   unknown_provider: true,
@@ -548,10 +550,29 @@ describe("the Server Actions of investments", () => {
     expect(portfolioWire.PORTFOLIO_KINDS).toEqual(portfolioRules.PORTFOLIO_KINDS);
     expect(portfolioWire.PORTFOLIO_GROUPS).toEqual(portfolioRules.PORTFOLIO_GROUPS);
     expect(portfolioWire.RATE_REASONS).toEqual(portfolioRules.RATE_REASONS);
+    expect(plansWire.PLAN_FREQUENCIES).toEqual(investmentsRules.PLAN_FREQUENCIES);
+    expect(plansWire.PLAN_MODES).toEqual(investmentsRules.PLAN_MODES);
+    expect(plansWire.PLAN_STATES).toEqual(investmentsRules.PLAN_STATES);
+    expect(plansWire.PLAN_RUN_STATES).toEqual(investmentsRules.PLAN_RUN_STATES);
+    expect(plansWire.PLAN_RUN_REASONS).toEqual(investmentsRules.PLAN_RUN_REASONS);
   });
 
   it("give the pages the search of the registry from their entry (PERS-591)", () => {
     expect(INVESTMENTS_ROUTES).toContain(entryInstruments.searchInstruments);
+  });
+
+  it("give the pages the purchase plans from their entry (R5d, M7)", () => {
+    const { listPlans, listPlanRuns, listPastRuns, createPlan, confirmPlanRun, backfillPlan } = entryPlans;
+    expect(INVESTMENTS_ROUTES).toEqual(
+      expect.arrayContaining([
+        listPlans,
+        listPlanRuns,
+        listPastRuns,
+        createPlan,
+        confirmPlanRun,
+        backfillPlan,
+      ]),
+    );
   });
 
   it("have no value `pac` in any schema or example of the API and the MCP (R5b, decision H12)", () => {

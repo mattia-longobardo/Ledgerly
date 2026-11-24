@@ -9,7 +9,7 @@ import { recurrencesRefreshJob } from "@/modules/transactions/jobs";
 import { backupJob } from "@/platform/backup/jobs";
 import { exportAllJob } from "@/platform/export/jobs";
 import { fxRatesRefreshJob } from "@/platform/fx/jobs";
-import { refreshInstrumentPrices } from "@ledgerly/api";
+import { refreshInstrumentPrices, runInvestmentPlans } from "@ledgerly/api";
 import { holidaysRefreshJob } from "@/platform/holidays/jobs";
 import { integrationsSyncJob } from "@/platform/integrations/jobs";
 import { monthlySummaryJob } from "@/platform/reports/jobs";
@@ -93,6 +93,8 @@ export const JOBS: readonly JobDefinition[] = [
   fxRatesRefreshJob,
   // The closes of the markets of the manual portfolios (R5d), after the rates they convert with.
   { name: "instrument-prices", tier: "daily", run: () => refreshInstrumentPrices() },
+  // The instalments of the purchase plans (R5d), priced at the closes just read.
+  { name: "investment-plans", tier: "daily", run: () => runInvestmentPlans() },
   // Every day with the rest of the daily tier (spec §10.2); its retention is in `housekeeping`.
   backupJob,
   // Last of the monthly tier: it reports numbers `accounts-snapshot` has

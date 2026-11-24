@@ -3,6 +3,28 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Investments: the purchase plans of a manual portfolio (R5d, step 2)
+
+- `GET /investments/{accountId}/plans` (MCP `list_investment_plans`, read only), `POST` the same path,
+  `PATCH /investments/{accountId}/plans/{planId}`: a plan buys one instrument for an amount or a quantity
+  (fractions or whole units), every N weeks, months or quarters on a day, from a start to an end or a number
+  of instalments; an optional debit account (only to find the bank movement: a plan never writes a
+  deposit), a fee per instalment (an amount, or a percentage as the funds': `"0.19"` is 0,19 %), the mode
+  `propose` (default) or `auto`, the state `active`, `paused`, `ended`. Only on a manual portfolio. `currency`:
+  the asset's, the currency of the amount, the fee, the price and the proposal; the debit has its own.
+- `GET …/plans/{planId}/runs`, `POST …/runs/{runId}/confirm` (with corrections), `POST …/runs/{runId}/skip`,
+  `POST …/runs/{runId}/debit` (links the movement the matcher proposed),
+  `GET …/plans/{planId}/backfill` (the past due dates to record, at most 60, oldest first, each with its
+  close and proposal when the registry has one; `more` when others follow), `POST …/plans/{planId}/backfill`
+  (at most 60 past due dates, all or none).
+- A manual portfolio's purchase or deposit dated before the portfolio was made moves its start back to that
+  day (P4); `400` `before_positions` when its days before were a value only («Switch to positions», or an
+  account that had a balance). The plans are in the entry `@ledgerly/api-contract/investments` (`plans`).
+- Activity rows: `plan` (`planId`, `runId`, `name`, `automatic`), null for any other operation.
+- «Da fare» and the notifications: the events `plan_run_to_confirm`, `plan_run_no_cash` (an `auto` instalment
+  the portfolio's cash could not pay: record a deposit, then confirm) and `plan_run_price_missing`, on the page
+  `investment_plan` (target: the plan's portfolio), with `params.date`, the due date. No amount, no name.
+
 ## Unreleased · Import a CSV file of movements (R5c, P5, decision ST-8)
 
 Four new routes, for an account «a mano» only (no source): an account with a source answers `409`

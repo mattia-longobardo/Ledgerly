@@ -124,3 +124,23 @@ export function atRate(cents: Cents, rate: bigint): Cents {
 export function unitPriceOf(cents: Cents, quantity: bigint): bigint {
   return divRound(cents * 10n ** BigInt(QUANTITY_SCALE + PRICE_SCALE - 2), quantity);
 }
+
+// ——— Purchase plans (R5d, step 2; 11-standardization.md §11.3) ———————————————————————————————
+
+export const PLAN_FREQUENCIES = ["week", "month", "quarter"] as const;
+export type PlanFrequency = (typeof PLAN_FREQUENCIES)[number];
+export const PLAN_MODES = ["propose", "auto"] as const;
+export type PlanMode = (typeof PLAN_MODES)[number];
+export const PLAN_STATES = ["active", "paused", "ended"] as const;
+export type PlanState = (typeof PLAN_STATES)[number];
+export const PLAN_RUN_STATES = ["pending", "waiting_price", "proposed", "recorded", "skipped"] as const;
+export type PlanRunState = (typeof PLAN_RUN_STATES)[number];
+/** Why the job left an `auto` instalment to the person (P2): a refusal of the purchase. */
+export const PLAN_RUN_REASONS = [
+  "negative_cash",
+  "quantity_exceeded",
+  "wrong_mode",
+  "before_period",
+] as const;
+export type PlanRunReason = (typeof PLAN_RUN_REASONS)[number];
+export const PLAN_RECORDERS = ["person", "job"] as const;

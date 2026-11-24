@@ -9,6 +9,7 @@ import { ApiRefusal } from "../serve";
 const INVALID = new Set([
   "future_date",
   "before_period",
+  "before_positions",
   "invalid_transaction",
   "unknown_provider",
   "invalid_credentials",

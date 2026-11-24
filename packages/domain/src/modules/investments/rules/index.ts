@@ -20,6 +20,17 @@ export {
   OPERATION_KINDS,
   ORIGINS,
   PERIOD_REASONS,
+  PLAN_FREQUENCIES,
+  PLAN_RUN_REASONS,
+  PLAN_MODES,
+  PLAN_RECORDERS,
+  PLAN_RUN_STATES,
+  PLAN_STATES,
+  type PlanFrequency,
+  type PlanMode,
+  type PlanRunReason,
+  type PlanRunState,
+  type PlanState,
   positionCents,
   POSITIVE_KINDS,
   PRICE_SCALE,
@@ -49,6 +60,17 @@ export { compareEvents, eventsOn, periodIndexOf, sortedPeriods } from "./book";
 export type { AccountBalanceLike, Book, EventLike, HoldingLike, OperationLike, ReadingLike } from "./book";
 export { holdingStates } from "./positions";
 export { negativeCash, shortPosition } from "./short";
+export {
+  dueDates,
+  endedBy,
+  FRACTION_DECIMALS,
+  instalment,
+  MAX_BACKFILL_RUNS,
+  MAX_CATCH_UP,
+  planFee,
+  quantityFor,
+} from "./plans";
+export type { PlanSchedule } from "./plans";
 export type { HoldingState } from "./positions";
 export {
   computePoints,

@@ -241,13 +241,15 @@ export const MODULES: Module[] = [
     ],
     integration: ["apps/web/src/modules/subscriptions", "packages/domain/src/modules/subscriptions"],
     flows: ["subscriptions"],
-    // "Move to another section" counts the charges of a subscription (N3.3).
+    // "Move to another section" counts the charges of a subscription (N3.3). A purchase plan's linked
+    // debit leaves the suggestions (R5d).
     usedBy: [
       "export",
       "jobs",
       "accounts",
       "api",
       "categories",
+      "investments",
       "e2e:accounts",
       "e2e:shell",
       "e2e:categories",

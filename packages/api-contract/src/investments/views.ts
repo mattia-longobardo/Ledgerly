@@ -202,6 +202,8 @@ const activityRow = z.object({
   transfer: z.object({ accountId: id(), accountName: z.string() }).nullable(),
   /** What a sale realized in the period, by the engine's exits; null for no sale. */
   realized: money().nullable(),
+  /** The purchase plan's instalment it is (R5d), and whether the job wrote it («automatic»). */
+  plan: z.object({ planId: id(), runId: id(), name: z.string(), automatic: z.boolean() }).nullable(),
 });
 
 /** A bank movement a deposit or a withdrawal can be documented by. */

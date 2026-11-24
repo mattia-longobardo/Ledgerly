@@ -2,7 +2,7 @@
 // registry, a sale of more than is held, the price mode, «Switch to positions», the MCP's holdings.
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Ctx } from "@domain/platform/context";
-import { today } from "@domain/shared/dates";
+import { dayOfWeek, today } from "@domain/shared/dates";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { contextFor } from "../../../../../test/fixtures";
 import { createTestUser } from "../../../../../test/users";
@@ -15,8 +15,9 @@ vi.mock("@/platform/auth/session", () => ({ requireSession: async () => signedIn
 
 const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition");
 const { apiRoutes } = await import("@ledgerly/api");
-const { searchInstruments } = await import("@ledgerly/domain/instruments");
+const { refreshPrices, searchInstruments } = await import("@ledgerly/domain/instruments");
 const { createAccount } = await import("@domain/modules/accounts/service");
+const { runDuePlans } = await import("@ledgerly/domain/investments");
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the answers are read as JSON
 type Json = any;
@@ -250,3 +251,137 @@ async function holdingIdOf(accountId: string): Promise<string> {
   const positions = await send(alice, "GET", `/investments/${accountId}/positions?period=all`);
   return positions.body.open.rows[0].holdingId;
 }
+
+describe("the purchase plans on /api/v1 (R5d, step 2)", () => {
+  /** A weekly plan due today, proposed for confirmation. */
+  const plan = (over: Record<string, unknown> = {}) => ({
+    name: "Weekly ETF",
+    instrumentId,
+    mic: "XMIL",
+    amount: "100.00",
+    frequency: "week",
+    day: dayOfWeek(todayOn) === 0 ? 7 : dayOfWeek(todayOn),
+    startOn: todayOn,
+    fee: { amount: "1.00" },
+    ...over,
+  });
+
+  it("lists a plan as the MCP tool does, and writes its instalment when the person confirms it", async () => {
+    const accountId = await portfolio();
+    const base = `/investments/${accountId}/plans`;
+    await send(alice, "POST", `/investments/${accountId}/operations`, {
+      kind: "deposit",
+      on: todayOn,
+      amount: "1000.00",
+    });
+    expect(await send(alice, "POST", base, plan({ quantity: "1" }))).toMatchObject({ status: 400 });
+    const made = await send(alice, "POST", base, plan());
+    expect(made.status).toBe(201);
+    const listed = await send(alice, "GET", base);
+    expect(listed.body.plans).toMatchObject([
+      { id: made.body.id, amount: "100.00", fee: { amount: "1.00", rate: null }, nextDueOn: todayOn },
+    ]);
+    expect(listed.body.plans[0]).toMatchObject({ currency: "EUR" });
+    const tool = reads.find((one) => one.name === "list_investment_plans")!;
+    expect(await tool.run(alice, { account_id: accountId })).toEqual(listed.body);
+    // A fee in percent, as the funds' (0,19 %), and no past due date for a plan that starts today.
+    const rated = await send(alice, "POST", base, plan({ name: "Rated", fee: { rate: "0.19" } }));
+    expect((await send(alice, "GET", base)).body.plans).toContainEqual(
+      expect.objectContaining({ id: rated.body.id, fee: { amount: null, rate: "0.19" } }),
+    );
+    expect((await send(alice, "GET", `${base}/${made.body.id}/backfill`)).body).toEqual({
+      planId: made.body.id,
+      currency: "EUR",
+      runs: [],
+      more: false,
+    });
+
+    // No prices plugin: the instalment waits for a price, and the person types it.
+    await runDuePlans(alice);
+    const runs = await send(alice, "GET", `${base}/${made.body.id}/runs`);
+    expect(runs.body.runs).toMatchObject([
+      { state: "waiting_price", currency: "EUR", proposal: null, automatic: false },
+    ]);
+    const confirm = `${base}/${made.body.id}/runs/${runs.body.runs[0].id}/confirm`;
+    const bought = await send(alice, "POST", confirm, { unitPrice: "40", quantity: "2.5" });
+    expect(bought.status).toBe(201);
+    expect(await send(alice, "POST", confirm, {})).toMatchObject({
+      status: 409,
+      body: { reason: "not_editable" },
+    });
+    const activity = await send(alice, "GET", `/investments/${accountId}/activity?period=all`);
+    expect(activity.body.rows.find((row: Json) => row.id === bought.body.id)).toMatchObject({
+      leg: { kind: "buy", quantity: "2.500000000000000000" },
+      plan: { planId: made.body.id, name: "Weekly ETF", automatic: false },
+    });
+    expect((await send(alice, "GET", `/investments/${accountId}/holdings`)).body.cash).toBe("899.00");
+
+    const paused = await send(alice, "PATCH", `${base}/${made.body.id}`, { state: "paused" });
+    expect(paused.status).toBe(204);
+    expect(
+      (await send(alice, "GET", base)).body.plans.find((one: Json) => one.id === made.body.id),
+    ).toMatchObject({
+      state: "paused",
+      nextDueOn: null,
+    });
+  });
+
+  it("asks «Da fare» for a deposit when an `auto` instalment finds no cash (P2)", async () => {
+    // Another public example ISIN, on the instance's source of prices: its market closes at 40 today.
+    const registers = (async (input: string | URL | Request) => {
+      const answer = await REGISTERS(input);
+      return new Response((await answer.text()).replace("BBG000000001", "BBG000000002"));
+    }) as typeof globalThis.fetch;
+    const [hit] = (await searchInstruments("US5949181045", { fetch: registers, priceSourceId: "prices" }))
+      .items;
+    await refreshPrices({
+      source: {
+        id: "prices",
+        closes: async (request) => ({
+          bars: request.listings.map((one) => ({ key: one.key, on: todayOn, close: "40", currency: "EUR" })),
+          errors: [],
+        }),
+      },
+      markets: [{ listingId: hit.listings[0].listingId, neededFrom: todayOn }],
+      today: todayOn,
+      cap: 10,
+    });
+    const accountId = await portfolio();
+    expect(
+      (
+        await send(
+          alice,
+          "POST",
+          `/investments/${accountId}/plans`,
+          plan({ mode: "auto", instrumentId: hit.instrumentId }),
+        )
+      ).status,
+    ).toBe(201);
+    await runDuePlans(alice);
+    const todo = await send(alice, "GET", "/todo");
+    expect(todo.body.items).toMatchObject([
+      {
+        event: "plan_run_no_cash",
+        params: { date: todayOn },
+        target: { page: "investment_plan", id: accountId },
+      },
+    ]);
+  });
+
+  it("is refused on a service that is not a portfolio, and lists none there", async () => {
+    const made = await send(alice, "POST", "/investments", {
+      name: "Bank",
+      category: "broker",
+      currency: "EUR",
+      value: "100.00",
+    });
+    const base = `/investments/${made.body.accountId}/plans`;
+    expect(await send(alice, "POST", base, plan())).toMatchObject({
+      status: 409,
+      body: { reason: "not_eligible" },
+    });
+    expect((await send(alice, "GET", base)).body).toEqual({ accountId: made.body.accountId, plans: [] });
+    const unknown = "00000000-0000-4000-8000-000000000000";
+    expect((await send(alice, "GET", `/investments/${unknown}/plans`)).status).toBe(404);
+  });
+});

@@ -110,6 +110,35 @@
     }
    },
    {
+    "name": "list_investment_plans",
+    "title": "Investment plans",
+    "description": "The purchase plans (PAC) of one manual portfolio, as GET /api/v1/investments/{accountId}/plans: the instrument, the amount or quantity of each instalment, how often, the next due date, the mode (proposed for confirmation, or automatic) and how many instalments wait to be confirmed or priced. Read only. Take the account id from list_investments.",
+    "inputSchema": {
+     "$schema": "http://json-schema.org/draft-07/schema#",
+     "type": "object",
+     "properties": {
+      "account_id": {
+       "type": "string",
+       "format": "uuid",
+       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|<id-1>|<id-2>)$",
+       "description": "The portfolio's accountId, from list_investments."
+      }
+     },
+     "required": [
+      "account_id"
+     ]
+    },
+    "annotations": {
+     "readOnlyHint": true,
+     "destructiveHint": false,
+     "idempotentHint": true,
+     "openWorldHint": false
+    },
+    "execution": {
+     "taskSupport": "forbidden"
+    }
+   },
+   {
     "name": "get_preferences",
     "title": "Preferences",
     "description": "The user's preferences, as GET /api/v1/preferences: time zone, language, number format, display currency, first day of the week, theme, and the working day of Time off.",
@@ -3999,6 +4028,13 @@
     "total": "650.00"
    },
    "recent": []
+  }
+ },
+ "list_investment_plans": {
+  "isError": false,
+  "answer": {
+   "accountId": "<id-5>",
+   "plans": []
   }
  }
 }

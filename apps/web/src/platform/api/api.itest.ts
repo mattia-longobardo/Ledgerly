@@ -558,6 +558,7 @@ describe("parity of users and settings: route = MCP tool", () => {
       "list_connections",
       "list_funds",
       "list_interest_rules",
+      "list_investment_plans",
       "list_investments",
       "list_labels",
       "list_pockets",

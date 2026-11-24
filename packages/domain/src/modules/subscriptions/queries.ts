@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, ne } from "drizzle-orm";
+import { linkedPayees } from "./ports";
 import { accountNames, accountOptions, readingsAt, listAccounts } from "../accounts";
 import { payeeSamples, recurrences, transactionsByIds } from "../transactions/queries";
 import { colorOfCategory, listCategories } from "../transactions/taxonomy";
@@ -342,15 +343,19 @@ export async function subscriptionsView(
 
 /** "Suggest from recurring payments" (spec §7.5): the detected patterns no subscription covers. */
 export async function suggestions(ctx: Pick<Ctx, "userId" | "timeZone">): Promise<Suggestion[]> {
-  const [patterns, existing] = await Promise.all([
+  const [patterns, existing, linked] = await Promise.all([
     recurrences(ctx),
     getDb()
       .select({ payeeMatch: subscriptions.payeeMatch })
       .from(subscriptions)
       .where(userScoped(ctx).owns(subscriptions)),
+    linkedPayees().payeeKeys(ctx),
   ]);
-  // A pattern with no cadence can be no subscription: its payee is not even looked up.
-  const outgoing = patterns.filter((pattern) => pattern.sign < 0 && pattern.cadence !== null);
+  // A pattern with no cadence can be no subscription: its payee is not even looked up. Nor is the payee
+  // of a movement tied to an investment, as a purchase plan's debit (R5d, §11.3.3).
+  const outgoing = patterns.filter(
+    (pattern) => pattern.sign < 0 && pattern.cadence !== null && !linked.has(pattern.payeeKey),
+  );
   const samples = await payeeSamples(
     ctx,
     outgoing.map((pattern) => pattern.payeeKey),

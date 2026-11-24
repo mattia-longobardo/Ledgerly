@@ -102,7 +102,9 @@ export const recordOperation = defineRoute({
     "portfolio also a purchase of an instrument, a deposit and a withdrawal (R5d). A sale of more " +
     "than the quantity held that day, or a change that leaves a later sale short: `409` " +
     "`quantity_exceeded`. A deposit or a withdrawal of another service, an account valuation or a " +
-    "correction comes from Accounts or the provider: `409` `not_editable`. Answers the event's id.",
+    "correction comes from Accounts or the provider: `409` `not_editable`. On a manual portfolio, a day " +
+    "before it was made moves its start back to that day (a plan's past instalments, P4); `400` " +
+    "`before_positions` when its days before were a value only. Answers the event's id.",
   actions: [],
   params: byService,
   body: operationBody,

@@ -157,6 +157,7 @@ export const ACTIVITY_ROW_EXAMPLE = {
   linked: null,
   transfer: null,
   realized: "21.00",
+  plan: null,
 } as const;
 
 export const PROVIDER_EXAMPLE = {

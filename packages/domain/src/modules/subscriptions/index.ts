@@ -25,3 +25,4 @@ export {
   subscriptionsToMove,
   updateSubscription,
 } from "./service";
+export { wireSubscriptions } from "./ports";
