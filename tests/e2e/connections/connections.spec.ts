@@ -5,6 +5,7 @@
 // The `connections` user is seeded with a connection in each state (scripts/seed-e2e.ts). Nothing
 // here starts a reading: the credentials of that user are not credentials.
 import { expect, type Page, test } from "@playwright/test";
+import { relativePast } from "@ledgerly/format/dates";
 import { sessionState } from "../_shared/env";
 import { hydrated } from "../_shared/helpers";
 
@@ -23,21 +24,27 @@ const WALLET = "/settings/plugins/wallet";
 const TECHNICAL = /\b(plugin|sync|synchroni[sz]ation|token|session|job|run|API|HTTP|429|cron|log)\b/i;
 const CODES = /auth\b|consent_expired|rate_limited|provider_down|invalid_data/;
 
-// The seed dates the good readings from its own clock (scripts/seed-e2e.ts): 2 hours before it for
-// the banks up to date, 26 hours before it for the late one. Before 02:00 in Rome both instants fall
-// one day earlier, and the page says them with a day, not with hours: the sentences expected here
-// follow the same clock, so the file passes at any time of day.
-const HOUR_IN_ROME = Number(
-  new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Rome", hour: "2-digit", hourCycle: "h23" }).format(
-    new Date(),
-  ),
-);
-const AFTER_TWO = HOUR_IN_ROME >= 2;
-const UPDATED_TWO_HOURS_AGO = AFTER_TWO ? "Updated 2 hours ago" : "Updated yesterday at ";
-const UP_TO_DATE = AFTER_TWO ? /^Updated 2 hours ago$/ : /^Updated yesterday at \d\d:\d\d$/;
-const LATE = AFTER_TWO
-  ? /^Last update yesterday at \d\d:\d\d\. Next attempt /
-  : /^Last update on .+ at \d\d:\d\d\. Next attempt /;
+// The seed dates the good readings from its own clock (scripts/seed-e2e/connections.ts): 2 hours
+// before it for the banks up to date, 26 hours before it for the late one. The page says them from the
+// server's clock at the time of the test, by `relativePast`: «2 hours ago», «yesterday at 23:50» when
+// the seed ran before 02:00, more hours when the run came later. The words expected here come from
+// the same two instants by the same rule, so the file passes at any hour and however late after the
+// seed (PERS-599).
+async function lastReads(page: Page) {
+  const answer = await page.request.get("/api/v1/connections");
+  expect(answer.status()).toBe(200);
+  const { connections }: { connections: { name: string; lastOkAt: string | null }[] } = await answer.json();
+  return (name: string): string => {
+    const at = connections.find((one) => one.name === name)?.lastOkAt;
+    if (!at) throw new Error(`${name}: no last good reading`);
+    const when = relativePast(new Date(at), new Date(), "Europe/Rome");
+    if (when.key === "hours") return `${when.count} hours? ago`;
+    if (when.key === "yesterday") return `yesterday at ${when.time}`;
+    if (when.key === "date") return `on .+ at ${when.time}`;
+    throw new Error(`${name}: read ${when.key === "now" ? "just now" : "minutes ago"}, not by the seed`);
+  };
+}
+const upToDate = (when: string) => new RegExp(`^Updated ${when}$`);
 
 const row = (page: Page, name: string) =>
   page.getByTestId("connection-row").filter({ has: page.getByText(name, { exact: true }) });
@@ -89,12 +96,18 @@ test.describe("the rows of the connections", () => {
       await page.goto(BANKS);
       const banks = page.getByRole("region", { name: "Connection" });
       await test.step("every state is a word beside the name, with its sentence", async () => {
+        const lastRead = await lastReads(page);
         const expected: [string, string, string, RegExp][] = [
-          ["Alfa Bank", "ok", "Up to date", UP_TO_DATE],
-          ["Beta Bank", "late", "Delayed", LATE],
+          ["Alfa Bank", "ok", "Up to date", upToDate(lastRead("Alfa Bank"))],
+          [
+            "Beta Bank",
+            "late",
+            "Delayed",
+            new RegExp(`^Last update ${lastRead("Beta Bank")}\\. Next attempt `),
+          ],
           ["Gamma Bank", "action", "Action needed", /^Access to Gamma Bank has expired\.$/],
           ["Delta Bank", "running", "In progress", /^Update in progress…$/],
-          ["Epsilon Bank", "ok", "Up to date", UP_TO_DATE],
+          ["Epsilon Bank", "ok", "Up to date", upToDate(lastRead("Epsilon Bank"))],
           [
             "Zeta Bank",
             "action",
@@ -385,7 +398,7 @@ test.describe("the rows of the connections", () => {
     const status = page.getByTestId("connection-status");
     await expect(status).toHaveAttribute("data-status", "ok");
     await expect(status).toContainText("Up to date");
-    await expect(status).toContainText(UPDATED_TWO_HOURS_AGO);
+    await expect(status).toContainText(new RegExp(`Updated ${(await lastReads(page))("Alfa Bank")}`));
   });
 
   test("Turn off: the dialog says what changes, opens on Cancel, and Esc changes nothing", async ({
