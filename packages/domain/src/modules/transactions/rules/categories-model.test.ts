@@ -241,6 +241,23 @@ describe("the measure before/after (R6)", () => {
     expect(withModel.all.automaticRight / withModel.all.automatic).toBeGreaterThanOrEqual(0.95);
   });
 
+  it("diagnoses the texts never seen: accuracy with no threshold, the spread, the missing thresholds", () => {
+    const { diagnosis } = measure;
+    expect(diagnosis.folds).toBe(5);
+    expect(diagnosis.categories).toBe(new Set(all.map((label) => label.categoryId)).size);
+    expect(diagnosis.perCategory.reduce((sum, one) => sum + one, 0)).toBe(all.length);
+    expect(diagnosis.texts).toBeGreaterThan(diagnosis.categories);
+    for (const topK of Object.values(diagnosis.accuracy)) {
+      expect(topK.graded).toBe(all.length);
+      expect(topK.top3).toBeGreaterThanOrEqual(topK.top1);
+    }
+    // The shops share their words with their categories' names: the cold start ranks them well.
+    expect(diagnosis.accuracy.coldStart.top3).toBeGreaterThan(all.length / 3);
+    for (const reasons of Object.values(diagnosis.nullThresholds)) {
+      expect(Object.values(reasons).reduce((sum, one) => sum + one, 0)).toBeLessThanOrEqual(5);
+    }
+  });
+
   it("holds numbers only: no text and no id of a movement", () => {
     expect(JSON.stringify(measure)).not.toMatch(/[a-z]{3,} [a-z]|[0-9a-f]{8}-/i);
     expect(Object.values(measure.grouped.today).every((value) => typeof value === "number")).toBe(true);

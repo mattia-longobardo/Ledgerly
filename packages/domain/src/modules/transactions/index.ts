@@ -19,6 +19,7 @@ export { categorise, isPreparing, measureCategories, suggestFor } from "./catego
 export { setEmbedder } from "./categorize/service";
 export type { Embedder } from "./rules/embedding";
 export type { Measure, Reach, Tally } from "./rules/categories-measure";
+export type { Diagnosis, TopK } from "./rules/categories-diagnosis";
 export { DEFAULT_GROUPS } from "./categorize/tables";
 export {
   applyRule,

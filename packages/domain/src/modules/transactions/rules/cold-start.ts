@@ -4,7 +4,8 @@
  * Pure: the embedding model is handed in.
  */
 import { closestCategory, type Prototype } from "../categorize/cascade";
-import type { Embedder } from "./embedding";
+import type { Trial } from "../categorize/classifier";
+import { cosine, type Embedder } from "./embedding";
 import { DEFAULT_GROUPS, type GroupKey } from "../categorize/tables";
 import { suggestionThresholdFor } from "../categorize/thresholds";
 
@@ -36,17 +37,16 @@ interface ColdStartLabel {
 }
 
 /**
- * The least closeness at which the cold start is right two times in three, graded on the person's
- * own confirmed labels — out of sample by nature: the categories' words learn nothing from them.
- * `null` when no closeness is good enough, or the labels are too few to say.
+ * The cold start graded on the person's own confirmed labels — out of sample by nature: the
+ * categories' words learn nothing from them. One trial for each label with words.
  */
-export function coldStartThreshold(
+export function coldStartTrials(
   embedder: Embedder,
   prototypes: readonly Prototype[],
   labels: readonly ColdStartLabel[],
   categoryKind: ReadonlyMap<string, string>,
-): number | null {
-  const trials = labels
+): Trial[] {
+  return labels
     .filter((label) => label.words !== "")
     .flatMap((label) => {
       const closest = closestCategory(
@@ -58,5 +58,30 @@ export function coldStartThreshold(
         ? []
         : [{ confidence: closest.confidence, correct: closest.categoryId === label.categoryId }];
     });
-  return suggestionThresholdFor(trials);
+}
+
+/**
+ * The least closeness at which the cold start is right two times in three on those trials. `null`
+ * when no closeness is good enough, or the labels are too few to say.
+ */
+export function coldStartThreshold(
+  embedder: Embedder,
+  prototypes: readonly Prototype[],
+  labels: readonly ColdStartLabel[],
+  categoryKind: ReadonlyMap<string, string>,
+): number | null {
+  return suggestionThresholdFor(coldStartTrials(embedder, prototypes, labels, categoryKind));
+}
+
+/** The categories `fits` allows, the closest to `vector` first: the cold start's ranking. */
+export function rankedCategories(
+  prototypes: readonly Prototype[],
+  vector: Float32Array,
+  fits: (categoryId: string) => boolean,
+): string[] {
+  return prototypes
+    .filter((prototype) => fits(prototype.categoryId))
+    .map((prototype) => ({ categoryId: prototype.categoryId, closeness: cosine(prototype.vector, vector) }))
+    .sort((left, right) => right.closeness - left.closeness)
+    .map((one) => one.categoryId);
 }

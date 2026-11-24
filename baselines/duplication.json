@@ -4,9 +4,9 @@
     "minLines": 6
   },
   "total": {
-    "lines": 116245,
+    "lines": 116425,
     "duplicatedLines": 16408,
-    "percent": 14.12,
+    "percent": 14.09,
     "blocks": 1299
   },
   "units": {
@@ -107,9 +107,9 @@
       "blocks": 34
     },
     "modules/transactions": {
-      "lines": 14177,
+      "lines": 14357,
       "duplicatedLines": 1711,
-      "percent": 12.07,
+      "percent": 11.92,
       "blocks": 138
     },
     "modules/users": {

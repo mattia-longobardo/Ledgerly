@@ -252,6 +252,16 @@ export function predict(model: Model, movement: MovementText, embedder: Embedder
   return { categoryId: model.classes[best], confidence: probabilities[best] };
 }
 
+/** Every category of the model, the likeliest first: what the measure's top-k reads (R6). */
+export function ranked(model: Model, movement: MovementText, embedder: Embedder | null = null): string[] {
+  const dense = model.embedder === null ? null : denseOf(embedder, movement);
+  const probabilities = softmax(scores(model, vectorOf(featureCounts(movement), model.idf, dense)));
+  return model.classes
+    .map((categoryId, klass) => ({ categoryId, probability: probabilities[klass] }))
+    .sort((left, right) => right.probability - left.probability)
+    .map((one) => one.categoryId);
+}
+
 /** A prediction made on an example the model did not see, and whether it was right. */
 export interface Trial {
   confidence: number;

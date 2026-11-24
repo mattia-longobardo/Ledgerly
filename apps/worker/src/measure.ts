@@ -5,11 +5,13 @@
  */
 import {
   categorisableAccountIds,
+  type Diagnosis,
   type Embedder,
   type Measure,
   measureCategories,
   type Reach,
   type Tally,
+  type TopK,
 } from "@ledgerly/domain/transactions";
 import { forEachUser } from "@ledgerly/domain/users";
 
@@ -34,6 +36,86 @@ function emptyMeasure(): Measure {
     grouped: { today: tally(), withModel: tally(), withoutColdStart: tally(), coldStartAlone: tally() },
     open: { movements: 0, today: { automatic: 0, suggested: 0 }, withModel: { automatic: 0, suggested: 0 } },
     chronological: { today: { all: tally(), unseen: tally() }, withModel: { all: tally(), unseen: tally() } },
+    diagnosis: emptyDiagnosis(),
+  };
+}
+
+const topK = (): TopK => ({ graded: 0, top1: 0, top3: 0, noModel: 0 });
+const reasons = () => ({ examples: 0, support: 0, floor: 0, precision: 0, aboveAutomatic: 0 });
+
+function emptyDiagnosis(): Diagnosis {
+  return {
+    texts: 0,
+    categories: 0,
+    perCategory: [],
+    folds: 0,
+    accuracy: { coldStart: topK(), model: topK(), today: topK() },
+    nullThresholds: {
+      todayAutomatic: reasons(),
+      todaySuggestion: reasons(),
+      modelAutomatic: reasons(),
+      modelSuggestion: reasons(),
+      coldStart: reasons(),
+    },
+  };
+}
+
+const SLOTS = [
+  "todayAutomatic",
+  "todaySuggestion",
+  "modelAutomatic",
+  "modelSuggestion",
+  "coldStart",
+] as const;
+const REASONS = ["examples", "support", "floor", "precision", "aboveAutomatic"] as const;
+
+function addDiagnosis(sum: Diagnosis, one: Diagnosis): void {
+  sum.texts += one.texts;
+  sum.categories += one.categories;
+  sum.perCategory.push(...one.perCategory);
+  sum.folds += one.folds;
+  for (const name of ["coldStart", "model", "today"] as const) {
+    sum.accuracy[name].graded += one.accuracy[name].graded;
+    sum.accuracy[name].top1 += one.accuracy[name].top1;
+    sum.accuracy[name].top3 += one.accuracy[name].top3;
+    sum.accuracy[name].noModel += one.accuracy[name].noModel;
+  }
+  for (const slot of SLOTS) {
+    for (const reason of REASONS) sum.nullThresholds[slot][reason] += one.nullThresholds[slot][reason];
+  }
+}
+
+/** The accuracy with no threshold: the right category first, or among the first three. */
+const accuracy = (one: TopK) => ({
+  ...one,
+  top1Share: share(one.top1, one.graded),
+  top3Share: share(one.top3, one.graded),
+});
+
+function spread(counts: readonly number[]) {
+  const sorted = [...counts].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  const median =
+    sorted.length === 0
+      ? null
+      : sorted.length % 2
+        ? sorted[middle]
+        : (sorted[middle - 1] + sorted[middle]) / 2;
+  return { min: sorted[0] ?? null, median, max: sorted.at(-1) ?? null };
+}
+
+function diagnosisOut(one: Diagnosis) {
+  return {
+    texts: one.texts,
+    categories: one.categories,
+    labelsPerCategory: spread(one.perCategory),
+    folds: one.folds,
+    accuracyWithoutThreshold: {
+      coldStart: accuracy(one.accuracy.coldStart),
+      classifierWithModel: accuracy(one.accuracy.model),
+      classifierToday: accuracy(one.accuracy.today),
+    },
+    nullThresholdsByReason: one.nullThresholds,
   };
 }
 
@@ -49,6 +131,7 @@ function addMeasure(sum: Measure, one: Measure): void {
     addTally(sum.chronological[side].all, one.chronological[side].all);
     addTally(sum.chronological[side].unseen, one.chronological[side].unseen);
   }
+  addDiagnosis(sum.diagnosis, one.diagnosis);
 }
 
 const share = (part: number, whole: number) =>
@@ -102,6 +185,7 @@ export async function measureAll(embedder: Embedder): Promise<string> {
         today: coverage(open.today, open.movements),
         withModel: coverage(open.withModel, open.movements),
       },
+      diagnosisOfTextsNeverSeen: diagnosisOut(sum.diagnosis),
       chronological: {
         today: { all: rates(chronological.today.all), unseen: rates(chronological.today.unseen) },
         withModel: { all: rates(chronological.withModel.all), unseen: rates(chronological.withModel.unseen) },

@@ -20,6 +20,7 @@ import { strictMemory } from "../categorize/memory";
 import type { GroupKey } from "../categorize/tables";
 import { featureIndex, memoryKey } from "../categorize/text";
 import { type Thresholds, thresholdsFor } from "../categorize/thresholds";
+import { type Diagnosis, diagnoseFold, emptyDiagnosis } from "./categories-diagnosis";
 import { coldStartOf, type EmbeddedLabel } from "./embedded-learning";
 import type { Embedder } from "./embedding";
 
@@ -43,6 +44,7 @@ export interface Measure {
   grouped: { today: Tally; withModel: Tally; withoutColdStart: Tally; coldStartAlone: Tally };
   open: { movements: number; today: Reach; withModel: Reach };
   chronological: { today: { all: Tally; unseen: Tally }; withModel: { all: Tally; unseen: Tally } };
+  diagnosis: Diagnosis;
 }
 
 interface MeasureLabel extends EmbeddedLabel {
@@ -84,31 +86,36 @@ function count(tally: Tally, knowledge: Knowledge, label: MeasureLabel): void {
   }
 }
 
-function embeddedOf(learnt: readonly MeasureLabel[], own: Own, embedder: Embedder): EmbeddedKnowledge {
+function embeddedOf(learnt: readonly MeasureLabel[], own: Own, embedder: Embedder) {
   const model = train(learnt, embedder);
-  return {
+  const trials = model === null ? [] : outOfSample(learnt, embedder);
+  const embedded: EmbeddedKnowledge = {
     embedder,
     model,
-    thresholds: model === null ? NO_THRESHOLDS : thresholdsFor(outOfSample(learnt, embedder)),
+    thresholds: model === null ? NO_THRESHOLDS : thresholdsFor(trials),
     ...coldStartOf({ embedder, labels: learnt, own }),
   };
+  return { embedded, trials };
 }
 
 /** The cascades, learnt from `learnt`: today's, R6's, R6's with no cold start, the cold start alone. */
 function knowledgeOf(learnt: readonly MeasureLabel[], own: Own, embedder: Embedder) {
   const model = train(learnt);
+  const todayTrials = model === null ? [] : outOfSample(learnt);
   const today: Knowledge = {
     memory: strictMemory(
       learnt.map((label) => ({ key: memoryKey(label), categoryId: label.categoryId, at: label.at })),
     ),
     model,
-    thresholds: model === null ? NO_THRESHOLDS : thresholdsFor(outOfSample(learnt)),
+    thresholds: model === null ? NO_THRESHOLDS : thresholdsFor(todayTrials),
     groupCategory: own.groupCategory,
     categoryKind: own.categoryKind,
     embedded: null,
   };
-  const embedded = embeddedOf(learnt, own, embedder);
+  const { embedded, trials } = embeddedOf(learnt, own, embedder);
   return {
+    trials: { today: todayTrials, model: trials },
+    embedded,
     today,
     withModel: { ...today, embedded },
     withoutColdStart: { ...today, embedded: { ...embedded, coldStart: null } },
@@ -125,7 +132,12 @@ function knowledgeOf(learnt: readonly MeasureLabel[], own: Own, embedder: Embedd
 /** The fold of a label: fixed by its text, so a text is never on both sides and a run is repeatable. */
 const foldOf = (label: MeasureLabel) => featureIndex(`fold:${memoryKey(label)}`) % FOLDS;
 
-function grouped(labels: readonly MeasureLabel[], own: Own, embedder: Embedder): Measure["grouped"] {
+function grouped(
+  labels: readonly MeasureLabel[],
+  own: Own,
+  embedder: Embedder,
+): Pick<Measure, "grouped" | "diagnosis"> {
+  const diagnosis = emptyDiagnosis(labels);
   const tallies = {
     today: emptyTally(),
     withModel: emptyTally(),
@@ -135,18 +147,16 @@ function grouped(labels: readonly MeasureLabel[], own: Own, embedder: Embedder):
   for (let fold = 0; fold < FOLDS; fold += 1) {
     const graded = labels.filter((label) => foldOf(label) === fold);
     if (graded.length === 0) continue;
-    const cascades = knowledgeOf(
-      labels.filter((label) => foldOf(label) !== fold),
-      own,
-      embedder,
-    );
+    const learnt = labels.filter((label) => foldOf(label) !== fold);
+    const cascades = knowledgeOf(learnt, own, embedder);
+    diagnoseFold(diagnosis, { ...cascades, learnt, graded, categoryKind: own.categoryKind });
     for (const label of graded) {
       for (const name of ["today", "withModel", "withoutColdStart", "coldStartAlone"] as const) {
         count(tallies[name], cascades[name], label);
       }
     }
   }
-  return tallies;
+  return { grouped: tallies, diagnosis };
 }
 
 function reach(knowledge: Knowledge, open: readonly CascadeMovement[]): Reach {
@@ -192,7 +202,7 @@ export function measureLabels(
   const { today, withModel } = knowledgeOf(labels, own, embedder);
   return {
     labels: labels.length,
-    grouped: grouped(labels, own, embedder),
+    ...grouped(labels, own, embedder),
     open: { movements: open.length, today: reach(today, open), withModel: reach(withModel, open) },
     chronological: chronological(labels, own, embedder),
   };

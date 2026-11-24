@@ -36,8 +36,16 @@ const BAND_SLACK = 0.05;
  * when the average of everything above it is fine. `null` when not even the surest band passes.
  */
 export function thresholdFor(trials: readonly Trial[], precision: number): number | null {
+  return walk(trials, precision).found;
+}
+
+/** Why a walk found no threshold: too few predictions, the surest under `FLOOR`, or not precise enough. */
+export type NoThreshold = "support" | "floor" | "precision";
+
+function walk(trials: readonly Trial[], precision: number): { found: number | null; stop: NoThreshold } {
   const sorted = [...trials].sort((a, b) => b.confidence - a.confidence);
   let found: number | null = null;
+  let stop: NoThreshold = "support";
   let total = 0;
   let correct = 0;
   let band = 0;
@@ -57,12 +65,15 @@ export function thresholdFor(trials: readonly Trial[], precision: number): numbe
       trial.confidence >= FLOOR &&
       bandCorrect / band >= precision - BAND_SLACK &&
       correct / total >= precision;
-    if (!good) break;
+    if (!good) {
+      stop = total < MIN_SUPPORT ? "support" : trial.confidence < FLOOR ? "floor" : "precision";
+      break;
+    }
     found = trial.confidence;
     band = 0;
     bandCorrect = 0;
   }
-  return found;
+  return { found, stop };
 }
 
 /**
@@ -77,6 +88,31 @@ export function thresholdsFor(trials: readonly Trial[], correctionRate = 0): Thr
     automatic,
     suggestion: suggestion !== null && automatic !== null && suggestion >= automatic ? null : suggestion,
   };
+}
+
+/**
+ * Why each of `thresholdsFor`'s thresholds is `null` (R6, the measure's diagnosis), with no
+ * correction counted; `null` where there is one. A suggestion at or over the automatic threshold
+ * is dropped: `aboveAutomatic`.
+ */
+export function whyNoThresholds(trials: readonly Trial[]): {
+  automatic: NoThreshold | null;
+  suggestion: NoThreshold | "aboveAutomatic" | null;
+} {
+  const automatic = walk(trials, AUTOMATIC_PRECISION);
+  const suggestion = walk(trials, SUGGESTION_PRECISION);
+  const dropped =
+    suggestion.found !== null && automatic.found !== null && suggestion.found >= automatic.found;
+  return {
+    automatic: automatic.found === null ? automatic.stop : null,
+    suggestion: suggestion.found === null ? suggestion.stop : dropped ? "aboveAutomatic" : null,
+  };
+}
+
+/** Why the cold start's threshold is `null`, or `null` where there is one. */
+export function whyNoSuggestionThreshold(trials: readonly Trial[]): NoThreshold | null {
+  const suggestion = walk(trials, SUGGESTION_PRECISION);
+  return suggestion.found === null ? suggestion.stop : null;
 }
 
 /** The threshold of a suggestion alone: what the cold start (R6), which never gives a category, uses. */
