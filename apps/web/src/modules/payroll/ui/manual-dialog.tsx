@@ -15,6 +15,8 @@ import { type Catalogue, type Format, hoursOf, type ManualPayslip } from "./pres
 /** 1…n. */
 const upTo = (count: number) => [...Array(count).keys()].map((index) => index + 1);
 const MONTHS = upTo(12);
+// shortcut: `conflict` is read as "the month already has a payslip" because the route gives the same
+// reason to a concurrent write; use the route's own reason once it has one.
 const ERROR_KEYS = {
   conflict: "errors.conflict",
   invalid_value: "errors.invalid_value",
