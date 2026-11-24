@@ -15,14 +15,15 @@ case " $* " in *" --queries "*) PROCESSES=1; queries_only=1 ;; esac
 # LEDGERLY_ENV_FILE names the environment file of a checkout with no `.env.homelab`; the full suite
 # (scripts/full-suite.sh) measures on LEDGERLY_TEST_DATABASE, one of `ledgerly_<1-4>_test`, under
 # the lock of the integration tests. The client stream measures on `ledgerly_test_2`, its own
-# database (08-agents.md §8.6): LEDGERLY_TEST_DATABASE=ledgerly_test_2 npm run perf.
+# database (08-agents.md §8.6): LEDGERLY_TEST_DATABASE=ledgerly_test_2 npm run perf. The second
+# server stream of R5 measures on `ledgerly_test_3`.
 env_file="${LEDGERLY_ENV_FILE:-.env.homelab}"
 value() { sed -n "s/^$1=//p" "$env_file" | head -n 1 | sed -E "s/^'(.*)'\$/\\1/; s/^\"(.*)\"\$/\\1/"; }
 database_url=$(value DATABASE_URL)
 DATABASE_URL="${database_url%/*}/${LEDGERLY_TEST_DATABASE:-ledgerly_test}"
 case "$DATABASE_URL" in
-  */ledgerly_test | */ledgerly_[1-4]_test | */ledgerly_test_2) ;;
-  *) echo "refusing: not ledgerly_test, ledgerly_<1-4>_test or ledgerly_test_2" >&2; exit 1 ;;
+  */ledgerly_test | */ledgerly_[1-4]_test | */ledgerly_test_2 | */ledgerly_test_3) ;;
+  *) echo "refusing: not ledgerly_test, ledgerly_<1-4>_test, ledgerly_test_2 or ledgerly_test_3" >&2; exit 1 ;;
 esac
 export DATABASE_URL
 

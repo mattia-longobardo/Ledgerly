@@ -6,7 +6,11 @@
 import { Pool } from "pg";
 
 const connectionString = process.env.DATABASE_URL;
-if (!connectionString?.endsWith("_test") && !connectionString?.endsWith("_test_2"))
+if (
+  !connectionString?.endsWith("_test") &&
+  !connectionString?.endsWith("_test_2") &&
+  !connectionString?.endsWith("_test_3")
+)
   throw new Error("refusing: DATABASE_URL is not a test database");
 
 const pool = new Pool({ connectionString, max: 1 });
