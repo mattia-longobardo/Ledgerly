@@ -20,6 +20,8 @@ test("a calendar is picked by country and place, and its days arrive from the so
     await page.goto("/timeoff/settings");
     await expect(page.getByRole("heading", { name: "Public holidays" })).toBeVisible();
     await expect(page.getByText("No calendar yet")).toBeVisible();
+    // Without one only the working week is known (R5g): said beside the calendars.
+    await expect(page.getByTestId("no-holiday-calendar")).toBeVisible();
   });
 
   await test.step("the country list comes from the two services", async () => {
@@ -72,39 +74,51 @@ test("a calendar is picked by country and place, and its days arrive from the so
   });
 });
 
-test("the patron saint and the working day are saved on their own, on Time off › Settings", async ({
+test("a day off of the year and the working day are saved on their own, on Time off › Settings", async ({
   page,
 }) => {
   await page.goto("/timeoff/settings");
-  const patron = page.getByLabel("Patron saint holiday");
-  // What the seed left, put back at the end.
-  const patronBefore = await patron.inputValue();
   const hoursBefore = await page.getByLabel("Hours in a working day").inputValue();
-  await patron.selectOption({ label: "December" });
-  await page.getByLabel("Day", { exact: true }).selectOption("7");
-  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Patron saint saved")).toBeVisible();
 
-  const hours = page.getByLabel("Hours in a working day");
-  await hours.fill("7.5");
-  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Working hours saved")).toBeVisible();
+  await test.step("a day off of the year is added with its own button, and the calendar keeps it", async () => {
+    const add = page.getByTestId("add-rest-day");
+    await add.getByLabel("Month").selectOption({ label: "December" });
+    await add.getByLabel("Day").selectOption("7");
+    await add.getByLabel("Name").fill("Sant'Ambrogio");
+    await add.getByRole("button", { name: "Add the day off" }).click();
+    await expect(page.getByText("7 December · Sant'Ambrogio added")).toBeVisible();
+    await expect(page.getByTestId("rest-days")).toContainText("7 December · Sant'Ambrogio");
 
-  await page.reload();
-  await expect(page.getByLabel("Hours in a working day")).toHaveValue("7.5");
-  await expect(page.getByLabel("Day", { exact: true })).toHaveValue("7");
+    await page.goto(`/timeoff?year=${YEAR}`);
+    // A day the person does not work: not a button, because it cannot be booked.
+    await expect(page.locator(`button[data-date="${YEAR}-12-07"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-date="${YEAR}-12-07"]`)).toHaveCount(1);
+  });
 
-  // Saved separately from the Profile form, which no longer has either field.
-  await page.goto("/settings/profile");
-  await expect(page.getByLabel("Patron saint holiday")).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Time off › Settings" })).toBeVisible();
+  await test.step("the working day is saved apart from it", async () => {
+    await page.goto("/timeoff/settings");
+    await page.getByLabel("Hours in a working day").fill("7.5");
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Working hours saved")).toBeVisible();
+    await page.reload();
+    await expect(page.getByLabel("Hours in a working day")).toHaveValue("7.5");
+  });
 
-  // As the test found the user: the patron saint and the working day of the seed.
-  await page.goto("/timeoff/settings");
-  await page.getByLabel("Patron saint holiday").selectOption(patronBefore);
-  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Patron saint saved").last()).toBeVisible();
-  await page.getByLabel("Hours in a working day").fill(hoursBefore);
-  await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText("Working hours saved").last()).toBeVisible();
+  await test.step("neither is on the Profile form any more", async () => {
+    await page.goto("/settings/profile");
+    await expect(page.getByLabel("Patron saint holiday")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Time off › Settings" })).toBeVisible();
+  });
+
+  await test.step("as the test found the user: no day off, and the working day of the seed", async () => {
+    await page.goto("/timeoff/settings");
+    // Removing asks first, and says afterwards which day went.
+    page.once("dialog", (confirm) => confirm.accept());
+    await page.getByRole("button", { name: "Remove Sant'Ambrogio" }).click();
+    await expect(page.getByText("7 December · Sant'Ambrogio removed")).toBeVisible();
+    await expect(page.getByTestId("rest-days")).toHaveCount(0);
+    await page.getByLabel("Hours in a working day").fill(hoursBefore);
+    await page.getByTestId("unsaved-banner").getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Working hours saved").last()).toBeVisible();
+  });
 });

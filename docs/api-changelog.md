@@ -3,6 +3,28 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Time off: the types of leave are the person's (R5g, step 1)
+
+- `GET /timeoff/types` (MCP read), `POST /timeoff/types`, `PUT /timeoff/types/{id}`, `DELETE /timeoff/types/{id}`
+  (`409` `conflict` with reason `in_use` when the type has days; `conflict` with reason `conflict` for a name
+  already used): a type has a `name`, a `color` (a token of the design system), a `unit` (`day`, `half_day`,
+  `hours`), `hasAllowance` and `toCalendar`. The first time, a person of a country with a pack gets its types
+  (`IT`: Ferie, ROL e permessi); a person who had time off before gets the four types of the old kinds.
+- `PUT /timeoff/types/{id}/allowances/{year}`: `days` and `carriedDays` (a payslip's own carry-over wins).
+- `GET`/`PUT /timeoff/settings`: `workDays` (0 Sunday … 6 Saturday) and `yearStartMonth`.
+- `GET`/`POST /timeoff/rest-days`, `DELETE /timeoff/rest-days/{id}`: the days of the year the person does not
+  work (the patron saint), added to the holidays.
+- `GET /timeoff/{year}` adds `types`, `allowances`, `balances` (one per type with an allowance: residual,
+  forecast, accrual and their inputs), `workDays`, `yearStartMonth`, `window`, `hasHolidayCalendar`,
+  `unrecordedByType`, `overdrawnByType`, `totals.byType`, `months[].payrollByType`/`recordedByType`, and
+  `typeId`/`minutes` on rows and days. Without a holiday calendar no holiday is computed any more (ST-20).
+  In a year with no applied payslip a day before today is `taken`.
+- `POST /timeoff/leave` and `POST /timeoff/leave/undo` take `typeId` (and `editedTypeId`, `otherTypeId`,
+  `minutes` for a type in hours).
+- Deprecated, removed in R5f: `vacation`, `rol`, `residualInputs`, `forecastInputs`, `accrual`, `allowance`,
+  `totalAllowanceMinutes`, `allowanceMismatch`, `unrecorded`, `overdrawn`, `totals.byKind`,
+  `months[].payroll`/`recorded`, the `kind` of rows and days (worked out from the types: the old kind, or
+  `other` for a type made since), the `kind` fields of the leave requests, and `GET`/`PUT /timeoff/allowances`.
 ## Unreleased · CSV import and a source's refusals for the client (client 23)
 
 - `POST /accounts/{id}/csv/preview`: an optional `map` field (the map as JSON, the body of

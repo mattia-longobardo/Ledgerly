@@ -9,7 +9,7 @@ import { listDocuments, readOriginal } from "@ledgerly/domain/imports";
 import { pocketsView } from "@ledgerly/domain/pockets";
 import { registerView } from "@ledgerly/domain/payroll";
 import { subscriptionsView } from "@ledgerly/domain/subscriptions";
-import { listAllowances, listLeaveDays } from "@ledgerly/domain/timeoff";
+import { listLeaveDays, listLeaveTypes, listTypeAllowances } from "@ledgerly/domain/timeoff";
 import { listTransactions, MAX_LIMIT, rulesForExport } from "@ledgerly/domain/transactions";
 import { getPreferences } from "@ledgerly/domain/users";
 import { redactForLog } from "@ledgerly/domain/platform/auth";
@@ -102,6 +102,7 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     interests,
     allowances,
     leave,
+    leaveTypes,
     payroll,
     investments,
     rules,
@@ -113,12 +114,15 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     fundsExport(ctx, now),
     fundsConfiguration(ctx),
     interestsView(ctx, now),
-    listAllowances(ctx),
+    listTypeAllowances(ctx),
     listLeaveDays(ctx, LEAVE_WINDOW),
+    listLeaveTypes(ctx),
     registerView(ctx),
     investmentsExport(ctx, now),
     rulesForExport(ctx),
   ]);
+
+  const typeName = (id: string | null) => leaveTypes.find((type) => type.id === id)?.name ?? null;
 
   return [
     {
@@ -370,24 +374,36 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         note: row.note,
       })),
     },
+    // The types of leave are the person's (R5g): the sections name them, never an old kind.
+    {
+      name: "timeoff-types",
+      columns: ["name", "color", "unit", "hasAllowance", "toCalendar"],
+      rows: leaveTypes.map((type) => ({
+        name: type.name,
+        color: type.color,
+        unit: type.unit,
+        hasAllowance: type.hasAllowance,
+        toCalendar: type.toCalendar,
+      })),
+    },
     {
       name: "timeoff-allowances",
-      columns: ["year", "vacationDays", "rolDays", "totalDays", "note"],
+      columns: ["year", "type", "days", "carriedDays"],
       rows: allowances.map((allowance) => ({
         year: allowance.year,
-        vacationDays: allowance.vacationDays,
-        rolDays: allowance.rolDays,
-        totalDays: allowance.totalDays,
-        note: allowance.note,
+        type: typeName(allowance.typeId),
+        days: allowance.days,
+        carriedDays: allowance.carriedDays,
       })),
     },
     {
       name: "timeoff-days",
-      columns: ["on", "kind", "fraction", "origin", "pending", "syncedAt", "note"],
+      columns: ["on", "type", "fraction", "minutes", "origin", "pending", "syncedAt", "note"],
       rows: leave.map((entry) => ({
         on: entry.on,
-        kind: entry.kind,
+        type: typeName(entry.typeId),
         fraction: entry.fraction,
+        minutes: entry.minutes,
         origin: entry.origin,
         pending: entry.pending,
         syncedAt: day(entry.syncedAt),

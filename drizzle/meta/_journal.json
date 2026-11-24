@@ -519,6 +519,13 @@
       "when": 1795610000000,
       "tag": "0073_purchase_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1795620000000,
+      "tag": "0074_leave_types",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ import { profile } from "@ledgerly/api-contract/settings";
 import { timeoff } from "@ledgerly/api-contract/timeoff";
 import { today } from "@ledgerly/format/dates";
 import { type ApiState, useApi, useLatest } from "@ledgerly/ui/data";
+import { ButtonLink } from "@ledgerly/ui/button";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
@@ -23,7 +24,6 @@ import {
   filterOf,
   LeaveBoard,
   LeaveTable,
-  leaveTypeOptions,
   type Say,
   type View,
   YearActions,
@@ -72,23 +72,44 @@ function TimeOffYear({ place, locale }: { place: Place; locale: Say["locale"] })
   if (waiting(read)) return <TimeOffLoading />;
   return (
     <Loaded state={read}>
-      {(view) => (
-        <LeaveBoard
-          year={place.year}
-          today={view.today}
-          minutesPerDay={view.minutesPerDay}
-          weekStart={view.weekStart}
-          countedThrough={view.countedThrough}
-          days={booked}
-          holidays={view.holidays}
-          residuals={view.residualInputs}
-          forecasts={view.forecastInputs}
-          types={leaveTypeOptions((kind) => text(`kinds.${kind}`))}
-        >
-          <YearPage view={view} place={place} say={{ text, locale, minutesPerDay: view.minutesPerDay }} />
-        </LeaveBoard>
-      )}
+      {(view) =>
+        // Leave is booked under a type of the person's: with none, the way to add one.
+        view.types.length === 0 ? (
+          <NoTypes year={place.year} />
+        ) : (
+          <LeaveBoard
+            year={place.year}
+            today={view.today}
+            minutesPerDay={view.minutesPerDay}
+            weekStart={view.weekStart}
+            countedThrough={view.countedThrough}
+            days={booked}
+            holidays={view.holidays}
+            workDays={view.workDays}
+            yearStartMonth={view.yearStartMonth}
+            window={view.window}
+            residuals={Object.fromEntries(view.balances.map((one) => [one.typeId, one.residualInput]))}
+            forecasts={Object.fromEntries(view.balances.map((one) => [one.typeId, one.forecastInput]))}
+            types={view.types}
+          >
+            <YearPage view={view} place={place} say={{ text, locale, minutesPerDay: view.minutesPerDay }} />
+          </LeaveBoard>
+        )
+      }
     </Loaded>
+  );
+}
+
+function NoTypes({ year }: { year: number }) {
+  const text = useTranslations("timeoff");
+  return (
+    <Page title={text("title")}>
+      <EmptyState
+        title={text("noTypes.title")}
+        description={text("noTypes.description")}
+        actions={<ButtonLink href={`/timeoff/settings?year=${year}`}>{text("noTypes.action")}</ButtonLink>}
+      />
+    </Page>
   );
 }
 

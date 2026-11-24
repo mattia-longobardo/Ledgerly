@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/en.json";
-import { italianHolidays } from "@domain/platform/holidays/rules";
+import { italianHolidays } from "../../../../../../test/fixtures/holidays";
 import { calendar, type LeaveDayView } from "@domain/modules/timeoff/rules";
-import { weekdayInitials } from "./kinds";
+import { type LeaveTypeView, weekdayInitials } from "./kinds";
 import { YearCalendar, type YearCalendarProps } from "./year-calendar";
 
 const onRange = vi.fn();
@@ -16,12 +16,30 @@ const MINUTES_PER_DAY = 420;
 const TODAY = "2026-06-15";
 const MILAN = new Set(italianHolidays(2026, { month: 12, day: 7 }).map((h) => h.date));
 
+const TYPES: LeaveTypeView[] = [
+  {
+    id: "vacation",
+    name: "Vacation",
+    color: "primary",
+    unit: "half_day",
+    hasAllowance: true,
+    toCalendar: true,
+  },
+  { id: "rol", name: "ROL", color: "warn", unit: "half_day", hasAllowance: true, toCalendar: true },
+];
+
 function vacation(on: string, fraction = 1): LeaveDayView {
-  return { on, kind: "vacation", fraction };
+  return { on, typeId: "vacation", fraction };
 }
 
 function renderYear(days: LeaveDayView[], weekStart = 1, props: Partial<YearCalendarProps> = {}) {
-  const months = calendar(2026, days, MILAN, weekStart, TODAY, MINUTES_PER_DAY);
+  // `TODAY` as the month the payslips counted through: June and before are taken.
+  const months = calendar(2026, days, MILAN, {
+    weekStart,
+    countedThrough: TODAY,
+    minutesPerDay: MINUTES_PER_DAY,
+    types: TYPES,
+  });
   render(
     <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
       <YearCalendar
@@ -29,6 +47,7 @@ function renderYear(days: LeaveDayView[], weekStart = 1, props: Partial<YearCale
         monthNames={MONTHS}
         weekdays={weekdayInitials(weekStart, "en")}
         totals={Array.from({ length: 12 }, () => "")}
+        types={TYPES}
         today={TODAY}
         onRange={onRange}
         onEdit={onEdit}
@@ -101,16 +120,16 @@ describe("YearCalendar", () => {
     expect(byDate["2026-08-18"]).toHaveAttribute("data-status", "planned");
   });
 
-  it("draws the second kind of a planned day, which has no fill to cut into (N10)", () => {
-    // Half vacation and half ROL, still to come: with only the first kind drawn it looked exactly
+  it("draws the second type of a planned day, which has no fill to cut into (N10)", () => {
+    // Half vacation and half ROL, still to come: with only the first type drawn it looked exactly
     // like a day of plain vacation, which is a whole gesture rendered invisible.
     renderYear([
-      { on: "2026-08-18", kind: "vacation", fraction: 0.5 },
-      { on: "2026-08-18", kind: "rol", fraction: 0.5 },
+      { on: "2026-08-18", typeId: "vacation", fraction: 0.5 },
+      { on: "2026-08-18", typeId: "rol", fraction: 0.5 },
     ]);
     const cell = screen.getByTestId("leave-cell");
     expect(cell).toHaveAccessibleName("18 Aug 2026: Vacation, ROL");
-    // The first kind is the outline itself, so the second gets the one drawn mark — and there is
+    // The first type is the outline itself, so the second gets the one drawn mark — and there is
     // no half-day wedge, because two halves are a whole day off.
     expect(cell.querySelectorAll("span[aria-hidden]")).toHaveLength(1);
     expect(cell).not.toHaveAttribute("data-partial");
@@ -416,5 +435,35 @@ describe("where a phone opens (decision Q5)", () => {
     phone(true);
     renderYear([], 1, { openOnMonth: null });
     expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+});
+
+describe("a leave year that does not start in January (R5g)", () => {
+  it("draws its twelve months from the first one, each with its own year", () => {
+    const months = calendar(2026, [], MILAN, {
+      weekStart: 1,
+      countedThrough: null,
+      minutesPerDay: MINUTES_PER_DAY,
+      types: TYPES,
+      startMonth: 4,
+    });
+    render(
+      <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
+        <YearCalendar
+          months={months}
+          monthNames={MONTHS}
+          weekdays={weekdayInitials(1, "en")}
+          totals={months.map((_month, index) => `${index} d`)}
+          types={TYPES}
+          today={TODAY}
+          onRange={onRange}
+          onEdit={onEdit}
+          onRemove={onRemove}
+        />
+      </NextIntlClientProvider>,
+    );
+    const headings = [...document.querySelectorAll("[data-month]")].map((month) => month.textContent ?? "");
+    expect(headings[0]).toMatch(/^April 20260 d/);
+    expect(headings[11]).toMatch(/^March 202711 d/);
   });
 });

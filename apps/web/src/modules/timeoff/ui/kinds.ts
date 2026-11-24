@@ -4,54 +4,76 @@
  *
  * `year-calendar.tsx` carries `"use client"` because a day is something you press; everything
  * exported from such a file is a client reference, and the *page* — which renders on the server —
- * needs these two for its legend and its weekday row. A value that both sides use belongs in a
+ * needs these for its legend and its weekday row. A value that both sides use belongs in a
  * module that is neither.
  */
-import { type UiLocale, monthName } from "@ledgerly/format/format";
-import { LEAVE_TYPES, type LeaveDayKind, type LeaveType } from "@ledgerly/domain/timeoff/client";
+import { NULL_DISPLAY, type UiLocale, monthName } from "@ledgerly/format/format";
+import type { LeaveColor, LeaveType } from "@ledgerly/domain/timeoff/client";
+
+/** A type of leave as the wire carries it (R5g): the person's own name and colour. */
+export type LeaveTypeView = Omit<LeaveType, "balanceKey" | "calendarKind">;
 
 /**
- * The colour each kind wears, in the calendar and in the table's dot. Vacation and ROL are the
- * two the design's legend names; the other three are local kinds the design never drew, so they
- * borrow the neutral tones rather than inventing a fifth and sixth hue.
+ * The colour a type wears, in the calendar, the legend and the table's dot: a token of the design
+ * system, which holds in both themes. Literal class names, so Tailwind finds them.
  */
-export const KIND_CLASS: Record<LeaveDayKind, string> = {
-  vacation: "bg-primary",
-  rol: "bg-warn",
-  comp: "bg-accent",
-  sick: "bg-neg",
-  other: "bg-faint",
+export const COLOR_FILL: Record<LeaveColor, string> = {
+  primary: "bg-primary",
+  warn: "bg-warn",
+  accent: "bg-accent",
+  neg: "bg-neg",
+  faint: "bg-faint",
+  pos: "bg-pos",
+  muted: "bg-muted",
 };
 
 /**
- * The same five colours as a border and as text, for a day that is **planned** rather than
- * counted: it is drawn hollow — a thick outline and the number in the kind's own colour — instead
- * of filled.
+ * The same colours as a border, for a day that is **planned** rather than counted: it is drawn
+ * hollow — a thick outline and the number in the type's own colour — instead of filled.
  *
  * Not the `accent` outline the design's legend suggests: `--accent` and `--primary` are the same
- * teal in this theme, so a one-pixel accent border around a filled vacation day is invisible, and
- * planned days were reading exactly like taken ones.
+ * teal in this theme, so a one-pixel accent border around a filled day is invisible, and planned
+ * days were reading exactly like taken ones.
  */
-export const KIND_BORDER: Record<LeaveDayKind, string> = {
-  vacation: "border-primary",
-  rol: "border-warn",
-  comp: "border-accent",
-  sick: "border-neg",
-  other: "border-faint",
+export const COLOR_BORDER: Record<LeaveColor, string> = {
+  primary: "border-primary",
+  warn: "border-warn",
+  accent: "border-accent",
+  neg: "border-neg",
+  faint: "border-faint",
+  pos: "border-pos",
+  muted: "border-muted",
 };
 
 /**
- * `text-accent` for vacation, not `text-primary`: `--primary` is a button's fill and stays the
- * same teal in the dark theme, where it read at under 4,5:1 as text on a card (F9 P2). In the
- * light theme the two tokens are the same colour, so nothing moves there.
+ * `text-accent` for `primary`: `--primary` is a button's fill and stays the same teal in the dark
+ * theme, where it read at under 4,5:1 as text on a card (F9 P2). In the light theme the two tokens
+ * are the same colour, so nothing moves there.
  */
-export const KIND_TEXT: Record<LeaveDayKind, string> = {
-  vacation: "text-accent",
-  rol: "text-warn",
-  comp: "text-accent",
-  sick: "text-neg",
-  other: "text-faint",
+export const COLOR_TEXT: Record<LeaveColor, string> = {
+  primary: "text-accent",
+  warn: "text-warn",
+  accent: "text-accent",
+  neg: "text-neg",
+  faint: "text-faint",
+  pos: "text-pos",
+  muted: "text-muted",
 };
+
+/** The colour of a type by its id; a type nobody has any more reads as `faint`. */
+export function colorOf(types: readonly LeaveTypeView[], typeId: string | null): LeaveColor {
+  return types.find((type) => type.id === typeId)?.color ?? "faint";
+}
+
+/** The name of a type by its id: the person's own word, not a message. */
+export function nameOf(types: readonly LeaveTypeView[], typeId: string | null): string {
+  return types.find((type) => type.id === typeId)?.name ?? NULL_DISPLAY;
+}
+
+/** The types as the rules take them: the wire leaves out the two words only the server reads. */
+export function forRules(types: readonly LeaveTypeView[]): LeaveType[] {
+  return types.map((type) => ({ ...type, balanceKey: null, calendarKind: null }));
+}
 
 /** The seven weekday initials, rotated to the user's own first day of the week. */
 export function weekdayInitials(weekStart: number, locale: string): string[] {
@@ -60,21 +82,6 @@ export function weekdayInitials(weekStart: number, locale: string): string[] {
   return Array.from({ length: 7 }, (_, index) =>
     formatter.format(new Date(Date.UTC(2026, 1, 1 + ((weekStart + index) % 7)))),
   );
-}
-
-/**
- * A kind of leave as the panel shows it: the entry of the rules' list, with a name and a colour
- * (anticipation AN1). The panel is handed this list and writes no kind's name of its own.
- */
-export interface LeaveTypeOption extends LeaveType {
-  name: string;
-  /** The class of the kind's colour, for a dot beside its name. */
-  color: string;
-}
-
-/** The list the page hands the panel, named in the reader's language. */
-export function leaveTypeOptions(nameOf: (id: LeaveDayKind) => string): LeaveTypeOption[] {
-  return LEAVE_TYPES.map((type) => ({ ...type, name: nameOf(type.id), color: KIND_CLASS[type.id] }));
 }
 
 const utc = (date: string): Date => new Date(`${date}T00:00:00Z`);

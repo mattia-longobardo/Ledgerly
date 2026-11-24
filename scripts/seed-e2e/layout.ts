@@ -16,7 +16,8 @@ import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@dom
 import { expenseLinkCandidates } from "@domain/modules/pockets/queries";
 import { addPlannedExpense, addToPocket, createPocket, linkExpense } from "@domain/modules/pockets/service";
 import { createSubscription } from "@domain/modules/subscriptions/service";
-import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
+import { saveLeaveDay, saveTypeAllowance, saveYearNote } from "@domain/modules/timeoff/service";
+import { oldLeaveTypes } from "../../test/leave-types";
 import { refreshRecurrences } from "../../apps/web/src/modules/transactions/jobs";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
@@ -412,8 +413,11 @@ export async function seedLayout(email: string = USERS.layout.email): Promise<vo
 
   // ——— Time off ———
   const year = Number(on.slice(0, 4));
-  await saveAllowance(ctx, year, { vacationDays: 26, rolDays: 4, note: "CCNL Metalmeccanici" });
-  await saveLeaveDay(ctx, { from: workingDay(on, -14), kind: "vacation", fraction: 1 });
-  await saveLeaveDay(ctx, { from: workingDay(on, -7), kind: "rol", fraction: 0.5 });
-  await saveLeaveDay(ctx, { from: workingDay(on, 21), kind: "vacation", fraction: 1 });
+  const types = await oldLeaveTypes(ctx);
+  await saveTypeAllowance(ctx, types.vacation, year, { days: 26 });
+  await saveTypeAllowance(ctx, types.rol, year, { days: 4 });
+  await saveYearNote(ctx, year, { totalDays: null, note: "CCNL Metalmeccanici" });
+  await saveLeaveDay(ctx, { from: workingDay(on, -14), typeId: types.vacation, fraction: 1 });
+  await saveLeaveDay(ctx, { from: workingDay(on, -7), typeId: types.rol, fraction: 0.5 });
+  await saveLeaveDay(ctx, { from: workingDay(on, 21), typeId: types.vacation, fraction: 1 });
 }

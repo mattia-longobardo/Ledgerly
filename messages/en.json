@@ -671,7 +671,7 @@
       },
       "displayCurrency": "Display currency",
       "displayCurrencyHint": "Totals across accounts are converted to it at the ECB rate of their day. Each account keeps its own currency.",
-      "timeOffMoved": "Working hours, patron saint and holiday calendars are in <link>Time off › Settings</link>.",
+      "timeOffMoved": "Working hours, days off of the year and holiday calendars are in <link>Time off › Settings</link>.",
       "monthlySummaryBlocked": "An admin turned this email off for the whole server."
     },
     "signIn": {
@@ -995,7 +995,7 @@
     "holidays": {
       "title": "Public holidays",
       "description": "The calendars your days off are measured against. Keep as many as you need — they are fetched from their source and refreshed every day.",
-      "empty": "No calendar yet. Until you add one, the Italian public holidays are used, plus the patron saint set below.",
+      "empty": "No calendar yet. Until you add one, only the working week and your days off of the year count: no public holiday.",
       "meta": "{days} days in {year} · {source}",
       "never": "Never updated",
       "updated": "Updated {when}",
@@ -5780,14 +5780,13 @@
     "title": "Time off",
     "heading": "Work & Time off",
     "header": {
-      "vacationDays": "{amount} days vacation",
-      "rolHours": "{amount} ROL",
-      "carried": "{days} carried over from your payslip",
+      "carried": "{days} of {name} carried over",
       "noAllowance": "No allowance stated for this year",
       "yearLabel": "Year",
       "previousYear": "Previous year",
       "nextYear": "Next year",
-      "thisYear": "This year"
+      "thisYear": "This year",
+      "typeDays": "{name}: {amount}"
     },
     "units": {
       "days": "{amount} d",
@@ -5800,8 +5799,6 @@
       "allowanceOnly": "Allowance, less what is taken and planned"
     },
     "cards": {
-      "vacation": "Vacation (ferie)",
-      "rol": "ROL",
       "perYear": "{amount} / year",
       "daysRemaining": "days remaining",
       "hoursRemaining": "h remaining",
@@ -5826,14 +5823,6 @@
       "howTo": "Pick the first and the last day. Select a booked day to edit it.",
       "counted": "Counted",
       "today": "today"
-    },
-    "kinds": {
-      "vacation": "Vacation",
-      "rol": "ROL",
-      "comp": "Time off in lieu",
-      "sick": "Sick leave",
-      "other": "Other",
-      "permit": "Permit"
     },
     "table": {
       "title": "Leave days",
@@ -5860,12 +5849,13 @@
         "upsert": "To send",
         "delete": "To remove"
       },
-      "monthPayroll": "Payslip: {vacation} vacation · {rol} ROL",
+      "monthPayroll": "Payslip: {amounts}",
       "monthNoPayroll": "No payslip for this month yet",
-      "monthRecorded": "Here: {vacation} vacation · {rol} ROL",
+      "monthRecorded": "Here: {amounts}",
       "monthPlanned": "{amount} planned",
       "monthEmpty": "Nothing",
-      "monthMissing": "{amount} not recorded"
+      "monthMissing": "{amount} not recorded",
+      "typeAmount": "{amount} {name}"
     },
     "empty": {
       "title": "No time off yet",
@@ -5882,7 +5872,7 @@
     "dialog": {
       "addTitle": "New leave",
       "editTitle": "Edit leave",
-      "description": "Weekends and public holidays are not counted.",
+      "description": "Days you do not work and public holidays are not counted.",
       "kind": "Type",
       "date": "Date",
       "from": "From",
@@ -5893,14 +5883,9 @@
       "splitDay": "Half + half",
       "note": "Note",
       "noteHint": "Morning or afternoon, for instance — this stays here and never goes to Trek.",
-      "localOnly": "Stays here: it is not sent to Trek and does not use up the vacation allowance.",
-      "otherKind": "Other half"
-    },
-    "allowance": {
-      "description": "What the contract grants this year. Leave a field empty to state nothing; what last year left over comes from your payslip.",
-      "vacationDays": "Vacation days",
-      "rolDays": "ROL days",
-      "totalDays": "Days granted in total"
+      "localOnly": "Stays here: this type is not sent to Trek.",
+      "otherKind": "Other half",
+      "hours": "Hours a day"
     },
     "toasts": {
       "saved": "Leave saved · {days}",
@@ -5936,9 +5921,6 @@
       "byDate": "{kind}: {amount} more than you will have accrued by {date}",
       "allowanceByDate": "{kind}: {amount} more than the year will have granted by {date}"
     },
-    "mismatch": "The parts do not add up to the total granted: {amount} {direction}.",
-    "mismatchOver": "more",
-    "mismatchUnder": "less",
     "tabs": {
       "label": "Time off",
       "overview": "Overview",
@@ -5946,28 +5928,95 @@
     },
     "settings": {
       "allowance": {
-        "title": "Allowance"
+        "title": "Allowance",
+        "description": "What the contract grants this year, type by type. Leave a field empty to state nothing.",
+        "days": "{name}: days a year",
+        "carried": "{name}: carried over",
+        "carriedHint": "Carried over: what the years before left, in days. It is used only when no payslip prints one.",
+        "none": "No type has an allowance. Turn it on for a type in Types of leave."
       },
       "copyFrom": "Copy from {year}",
       "hours": {
         "title": "Working hours",
         "description": "How long a day off is.",
         "label": "Hours in a working day",
-        "hint": "Payslip hours become days with this number, in every year. Saturday and Sunday never count as leave.",
+        "hint": "Payslip hours become days with this number, in every year.",
         "saved": "Working hours saved"
-      },
-      "patron": {
-        "label": "Patron saint holiday",
-        "none": "None",
-        "day": "Day",
-        "hint": "A day off only in your town. A date already in a calendar counts once.",
-        "saved": "Patron saint saved"
       },
       "calendar": {
         "description": "Where leave days also live.",
         "manage": "Manage in Plugins",
         "connect": "Connect in Plugins"
-      }
+      },
+      "types": {
+        "title": "Types of leave",
+        "description": "The kinds of absence you book, with their colour and how long a day of each is.",
+        "empty": "No types of leave yet.",
+        "add": "Add a type",
+        "edit": "Edit",
+        "remove": "Remove",
+        "editOf": "Edit {name}",
+        "removeOf": "Remove {name}",
+        "confirmRemove": "Remove the type {name}?",
+        "removed": "Type {name} removed",
+        "inUse": "{name} has days booked: move or remove them first.",
+        "failed": "It did not work. Try again.",
+        "duplicate": "You already have a type with this name.",
+        "nameMissing": "Give the type a name.",
+        "added": "Type {name} added",
+        "saved": "Type saved",
+        "addTitle": "New type of leave",
+        "editTitle": "Edit type of leave",
+        "submit": "Save",
+        "name": "Name",
+        "color": "Colour",
+        "unit": "Booked in",
+        "unitHint": "How long one day of this type can be.",
+        "hasAllowance": "Has a yearly allowance",
+        "goesToCalendar": "Goes to the external calendar",
+        "withAllowance": "Allowance",
+        "toCalendar": "To the calendar",
+        "colors": {
+          "primary": "Teal",
+          "warn": "Amber",
+          "accent": "Cyan",
+          "neg": "Red",
+          "faint": "Grey",
+          "pos": "Green",
+          "muted": "Slate"
+        },
+        "units": {
+          "day": "Whole days",
+          "half_day": "Whole or half days",
+          "hours": "Hours"
+        }
+      },
+      "week": {
+        "title": "Working week",
+        "description": "The days you work, and the month your leave year starts in.",
+        "days": "Working days",
+        "startMonth": "Leave year starts in",
+        "startMonthHint": "The twelve months the allowance and the residual are about.",
+        "noDays": "Pick at least one working day.",
+        "saved": "Working week saved"
+      },
+      "restDays": {
+        "title": "Days off of the year",
+        "empty": "No day off of your own, such as the patron saint of your town.",
+        "remove": "Remove",
+        "removeOf": "Remove {day}",
+        "confirmRemove": "Remove {day} from your days off?",
+        "removed": "{day} removed",
+        "added": "{day} added",
+        "failed": "It did not work. Try again.",
+        "duplicate": "This date is already a day off.",
+        "nameMissing": "Give the day a name.",
+        "month": "Month",
+        "day": "Day",
+        "name": "Name",
+        "add": "Add the day off"
+      },
+      "noCalendar": "No calendar of public holidays yet: only your working week is known, and a holiday counts as a working day."
     },
     "selection": {
       "from": "From {date} · pick the last day",
@@ -6007,16 +6056,28 @@
       "removeIntro": "{count, plural, one {This day loses all its leave:} other {These # days lose all their leave:}}",
       "removeLine": "{day} · {kinds}",
       "back": "Back",
-      "selectMore": "Select more days from here"
+      "selectMore": "Select more days from here",
+      "hoursOf": "{kind} {amount} h",
+      "durationHours": "{total} ({count, plural, one {# day} other {# days}} of {hours})"
     },
     "loading": "Loading Time off",
     "accrual": {
       "perMonth": "Accrues {amount} a month",
-      "yearEnd": "Forecast on 31 Dec: {amount}",
+      "yearEnd": "Forecast at the end of the leave year: {amount}",
       "fromAllowance": "Estimate: the allowance over 12 months, with no payslip to read the rate from",
       "none": "No forecast: no payslip and no allowance to read the accrual from",
-      "daysForecast": "days forecast on 31 Dec",
-      "basis": "Forecast from the payslip of {payslip}: its residual, plus what accrues until 31 Dec, less the planned days"
+      "daysForecast": "days forecast at the end of the leave year",
+      "basis": "Forecast from the payslip of {payslip}: its residual, plus what accrues until the end of the leave year, less the planned days"
+    },
+    "noCalendar": {
+      "title": "Only your working week is known",
+      "hint": "No calendar of public holidays: a holiday counts as a working day here. Subscribe to a calendar in Settings.",
+      "action": "Add a calendar"
+    },
+    "noTypes": {
+      "title": "No types of leave yet",
+      "description": "Leave is booked under a type of yours, such as vacation or ROL. Add one in Settings.",
+      "action": "Add a type of leave"
     }
   },
   "legal": {

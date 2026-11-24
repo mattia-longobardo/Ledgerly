@@ -3,7 +3,7 @@
 // The year as twelve month grids, with its legend and the one line that says how it is worked.
 import { Card } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
-import { KIND_CLASS, weekdayInitials } from "./kinds";
+import { COLOR_FILL, weekdayInitials } from "./kinds";
 import { BoardCalendar } from "./leave-board";
 import { daysOf, monthNamesOf, type Say, type View } from "./words";
 
@@ -24,11 +24,12 @@ export function CalendarCard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{text("calendar.title", { year })}</h2>
         <ul className="flex flex-wrap gap-3.5 text-sm text-muted" data-testid="calendar-legend">
-          <Legend className={KIND_CLASS.vacation} label={text("kinds.vacation")} />
-          <Legend className={KIND_CLASS.rol} label={text("kinds.rol")} />
+          {view.types.map((type) => (
+            <Legend key={type.id} className={COLOR_FILL[type.color]} label={type.name} />
+          ))}
           {/* Hollow, exactly as a planned day is drawn: filled means a payslip has counted it. */}
           <Legend className="border-2 border-primary" label={text("calendar.planned")} />
-          <Legend className={KIND_CLASS.vacation} label={text("calendar.counted")} />
+          <Legend className="bg-primary" label={text("calendar.counted")} />
           <Legend className="border border-border bg-hover" label={text("calendar.holiday")} />
         </ul>
       </div>
@@ -39,6 +40,7 @@ export function CalendarCard({
         key={year}
         monthNames={monthNamesOf(year, locale).long}
         weekdays={weekdayInitials(view.weekStart, locale)}
+        // In the order of the leave year, as the grids are.
         totals={view.bars.map((bar) => {
           const minutes = bar.takenMinutes + bar.plannedMinutes;
           return minutes === 0 ? "" : daysOf(say, minutes);

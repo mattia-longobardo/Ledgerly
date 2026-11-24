@@ -16,7 +16,8 @@ import { updateServiceValue } from "@domain/modules/investments/service";
 import { applyPayslip, processPayslip, uploadPayslip, verifyPayslip } from "@domain/modules/payroll/service";
 import { addToPocket, createPocket } from "@domain/modules/pockets/service";
 import { createSubscription } from "@domain/modules/subscriptions/service";
-import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
+import { saveLeaveDay, saveTypeAllowance } from "@domain/modules/timeoff/service";
+import { oldLeaveTypes } from "./leave-types";
 import type { IncomingTransaction } from "@domain/modules/transactions/rules";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { listCategories } from "@domain/modules/transactions/taxonomy";
@@ -204,11 +205,13 @@ export async function seedReferenceUser(ctx: Ctx, setClock: (instant: Date) => v
     await recordValuation(ctx, fund.id, { on, cents });
   }
 
-  await saveAllowance(ctx, 2031, { vacationDays: 26, rolDays: 4 });
+  const types = await oldLeaveTypes(ctx);
+  await saveTypeAllowance(ctx, types.vacation, 2031, { days: 26 });
+  await saveTypeAllowance(ctx, types.rol, 2031, { days: 4 });
   for (const from of ["2031-08-11", "2031-08-12", "2031-08-13"]) {
-    await saveLeaveDay(ctx, { from, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from, typeId: types.vacation, fraction: 1 });
   }
-  await saveLeaveDay(ctx, { from: "2031-09-19", kind: "rol", fraction: 0.5 });
+  await saveLeaveDay(ctx, { from: "2031-09-19", typeId: types.rol, fraction: 0.5 });
 
   return { checkingId, savingsId: savings.id, brokerId };
 }

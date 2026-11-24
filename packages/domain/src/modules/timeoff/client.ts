@@ -2,13 +2,28 @@
 // may reach the database, the network or a secret: a client component bundles every file it names.
 export { forecastChange } from "./accrual";
 export type { ForecastInput } from "./accrual";
-export { LEAVE_TYPES, MAX_RANGE_DAYS, calendar, otherHalfOf, previewLeaveRange, stillBooked } from "./rules";
+export {
+  DEFAULT_WORK_DAYS,
+  LEAVE_COLORS,
+  LEAVE_UNITS,
+  MAX_RANGE_DAYS,
+  calendar,
+  dayStatus,
+  isRestDay,
+  leaveYearMonths,
+  otherHalfOf,
+  previewLeaveRange,
+  stillBooked,
+} from "./rules";
 export type {
   CalendarCell,
   CalendarMonth,
-  LeaveDayKind,
+  CalendarContext,
+  LeaveColor,
+  LeaveUnit,
   LeaveDayView,
   LeaveType,
   LeaveUndo,
   ResidualInput,
 } from "./rules";
+export type { YearWindow } from "./accrual";

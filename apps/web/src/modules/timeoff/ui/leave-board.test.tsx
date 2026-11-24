@@ -3,10 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/en.json";
-import { italianHolidays } from "@domain/platform/holidays/rules";
+import { italianHolidays } from "../../../../../../test/fixtures/holidays";
 import { Toaster } from "@ledgerly/ui/toast";
-import type { LeaveDayKind } from "@domain/modules/timeoff/rules";
-import { leaveTypeOptions } from "./kinds";
+import type { LeaveTypeView } from "./kinds";
 import { AddLeave, RowActions } from "./leave-actions";
 import { BoardCalendar, LeaveBoard } from "./leave-board";
 import type { BookedLeave } from "./leave-panel";
@@ -33,9 +32,38 @@ const TODAY = "2026-06-15";
 const MONTHS = Array.from({ length: 12 }, (_, index) => `Month ${index + 1}`);
 const HOLIDAYS = italianHolidays(2026, { month: 12, day: 7 }).map((one) => one.date);
 const UNDO = { dates: ["2026-06-16"], rows: [] };
+const TYPES: LeaveTypeView[] = [
+  {
+    id: "vacation",
+    name: "Vacation",
+    color: "primary",
+    unit: "half_day",
+    hasAllowance: true,
+    toCalendar: true,
+  },
+  { id: "rol", name: "ROL", color: "warn", unit: "half_day", hasAllowance: true, toCalendar: true },
+  {
+    id: "comp",
+    name: "Time off in lieu",
+    color: "accent",
+    unit: "half_day",
+    hasAllowance: false,
+    toCalendar: true,
+  },
+  { id: "other", name: "Other", color: "faint", unit: "half_day", hasAllowance: false, toCalendar: false },
+];
 
-function booked(on: string, kind: LeaveDayKind = "vacation", fraction = 1): BookedLeave {
-  return { id: `${on}-${kind}`, on, kind, fraction, note: null, origin: "manual", pending: "none" };
+function booked(on: string, typeId = "vacation", fraction = 1): BookedLeave {
+  return {
+    id: `${on}-${typeId}`,
+    on,
+    typeId,
+    fraction,
+    minutes: null,
+    note: null,
+    origin: "manual",
+    pending: "none",
+  };
 }
 
 function board(days: BookedLeave[]) {
@@ -49,8 +77,11 @@ function board(days: BookedLeave[]) {
         countedThrough={null}
         days={days}
         holidays={HOLIDAYS}
+        workDays={[1, 2, 3, 4, 5]}
+        yearStartMonth={1}
+        window={{ from: "2026-01-01", to: "2026-12-31" }}
         residuals={{}}
-        types={leaveTypeOptions((kind) => messages.timeoff.kinds[kind])}
+        types={TYPES}
       >
         <AddLeave label="Add leave" />
         <BoardCalendar
@@ -115,10 +146,10 @@ describe("nothing is written before Confirm (rewrite plan N5, criterion 3)", () 
     expect(save).toHaveBeenCalledExactlyOnceWith({
       from: "2026-06-15",
       to: "2026-06-19",
-      kind: "vacation",
+      typeId: "vacation",
       fraction: "1",
       note: "",
-      editedKind: null,
+      editedTypeId: null,
     });
     expect(await screen.findByText("Leave saved · 5 d")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "New leave" })).not.toBeInTheDocument();
@@ -261,8 +292,8 @@ describe("a booked day", () => {
 });
 
 describe("a row Trek still has to let go of (pending = 'delete')", () => {
-  const trekDay = (on: string, kind: LeaveDayKind, fraction: number, pending: BookedLeave["pending"]) => ({
-    ...booked(on, kind, fraction),
+  const trekDay = (on: string, typeId: string, fraction: number, pending: BookedLeave["pending"]) => ({
+    ...booked(on, typeId, fraction),
     origin: "external" as const,
     pending,
   });
@@ -299,7 +330,7 @@ describe("several booked days removed together (decision of 17/11/2026, N5 §7.5
   const WEEK = ["2026-06-15", "2026-06-16", "2026-06-17"];
   const RANGE_UNDO = {
     dates: WEEK,
-    rows: WEEK.map((on) => ({ on, kind: "vacation", fraction: 1, note: null })),
+    rows: WEEK.map((on) => ({ on, typeId: "vacation", fraction: 1, minutes: null, note: null })),
   };
 
   it("starts a range on a booked day, lists the days, and removes them with one call and one Undo", async () => {

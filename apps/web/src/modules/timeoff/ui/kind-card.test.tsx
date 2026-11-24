@@ -15,7 +15,7 @@ function renderCard(overrides: Partial<Parameters<typeof KindCard>[0]> = {}) {
       basisNote="Allowance and carry-over, less the days taken and planned"
       takenShare={5 / 26}
       plannedShare={3 / 26}
-      tone="primary"
+      fill="bg-primary"
       testId="card"
       {...overrides}
     />,

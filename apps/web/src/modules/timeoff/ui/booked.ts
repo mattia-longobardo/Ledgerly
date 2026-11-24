@@ -14,8 +14,9 @@ export function bookedOf(rows: readonly LeaveRow[]): BookedLeave[] {
     .map((row) => ({
       id: row.id,
       on: row.on,
-      kind: row.kind,
+      typeId: row.typeId,
       fraction: row.fraction,
+      minutes: row.minutes,
       note: row.note,
       origin: row.origin,
       pending: row.sync,
@@ -24,5 +25,7 @@ export function bookedOf(rows: readonly LeaveRow[]): BookedLeave[] {
 
 /** The rows still booked: one the external calendar still holds is removed for its owner already. */
 export function liveDays(days: readonly BookedLeave[]): LeaveDayView[] {
-  return days.filter(stillBooked).map((day) => ({ on: day.on, kind: day.kind, fraction: day.fraction }));
+  return days
+    .filter(stillBooked)
+    .map((day) => ({ on: day.on, typeId: day.typeId, fraction: day.fraction, minutes: day.minutes }));
 }

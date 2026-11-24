@@ -5,12 +5,14 @@ import type { useTranslations } from "next-intl";
 import type { timeoff } from "@ledgerly/api-contract/timeoff";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { formatDate, NULL_DISPLAY, type UiLocale } from "@ledgerly/format/format";
+import { nameOf } from "./kinds";
 
 export type View = RouteOutput<typeof timeoff.getTimeOff>;
-type KindView = View["vacation"];
-type ResidualView = KindView["residual"];
-type AccrualView = View["accrual"]["vacation"];
-type Overdrawn = View["overdrawn"][number];
+/** The residual and the forecast of one type with an allowance. */
+type Balance = View["balances"][number];
+type ResidualView = Balance["residual"];
+type AccrualView = Balance["accrual"];
+type Overdrawn = View["overdrawnByType"][number];
 export type MonthGroup = View["months"][number];
 export type MonthBar = View["bars"][number];
 
@@ -39,8 +41,7 @@ const monthYear = (say: Say, month: string | null) => formatDate(month, "monthYe
 
 /**
  * The one sentence that says where a residual came from — §7.9 asks for it on every card. The
- * allowance wording comes in two: a card with nothing carried over must not claim a carry-over,
- * and ROL never has one.
+ * allowance wording comes in two: a card with nothing carried over must not claim a carry-over.
  */
 function basisNote(say: Say, residual: ResidualView, carriedMinutes: number): string {
   switch (residual.basis) {
@@ -61,8 +62,8 @@ function basisNote(say: Say, residual: ResidualView, carriedMinutes: number): st
  * booking outran it, because "you are two days over" is not actionable and "you are two days over
  * by 12 August" is: it says which days to move.
  */
-export function overdrawnLine(say: Say, over: Overdrawn): string {
-  const kind = say.text(`kinds.${over.kind}`);
+export function overdrawnLine(say: Say, over: Overdrawn, types: View["types"]): string {
+  const kind = nameOf(types, over.typeId);
   const amount = daysOf(say, over.byMinutes);
   if (over.onDate !== null) {
     const date = formatDate(over.onDate, "long", say.locale);
@@ -97,15 +98,11 @@ function shareOf(part: number, residual: ResidualView): number {
 }
 
 /**
- * What the two headline cards have in common. A year with a payslip or an allowance of its own
+ * What the cards of the types with an allowance have in common. A year with a payslip or an allowance of its own
  * leads with the residual; a year with neither, read from an earlier payslip, leads with the
  * forecast and says that it is one (decision D6).
  */
-export function cardOf(
-  say: Say,
-  { residual, allowanceMinutes, carriedMinutes }: KindView,
-  accrual: AccrualView,
-) {
+export function cardOf(say: Say, { residual, allowanceMinutes, carriedMinutes, accrual }: Balance) {
   const { text } = say;
   return {
     allowanceNote:
@@ -122,40 +119,43 @@ export function cardOf(
   };
 }
 
-/** The line beside the heading: the allowance of each kind and what the payslip carried over. */
+/** The line beside the heading: the allowance of each type and what the years before left over. */
 export function headline(say: Say, view: View): string {
   const { text } = say;
-  return [
-    view.vacation.allowanceMinutes === null
-      ? null
-      : text("header.vacationDays", { amount: bareDays(say, view.vacation.allowanceMinutes) }),
-    // Days here too (N5): one unit on the whole screen, whatever the contract states ROL in.
-    view.rol.allowanceMinutes === null
-      ? null
-      : text("header.rolHours", { amount: daysOf(say, view.rol.allowanceMinutes) }),
-    // What the payslip carried over, not what anybody typed (N9).
-    view.vacation.carriedMinutes > 0
-      ? text("header.carried", { days: daysOf(say, view.vacation.carriedMinutes) })
-      : null,
-  ]
+  return view.balances
+    .flatMap((balance) => {
+      const name = nameOf(view.types, balance.typeId);
+      return [
+        balance.allowanceMinutes === null
+          ? null
+          : text("header.typeDays", { amount: daysOf(say, balance.allowanceMinutes), name }),
+        balance.carriedMinutes > 0
+          ? text("header.carried", { days: daysOf(say, balance.carriedMinutes), name })
+          : null,
+      ];
+    })
     .filter((one): one is string => one !== null)
     .join(" · ");
 }
 
+/** Minutes by type as one run of words, in the person's order: "2 d Vacation · 1 d ROL". */
+function byTypeText(say: Say, types: View["types"], shares: readonly { typeId: string; minutes: number }[]) {
+  if (shares.length === 0) return say.text("table.monthEmpty");
+  return shares
+    .map((share) =>
+      say.text("table.typeAmount", { amount: daysOf(say, share.minutes), name: nameOf(types, share.typeId) }),
+    )
+    .join(" · ");
+}
+
 /** What a month's heading says: the payslip's count, what is written down, and what is planned. */
-export function monthSummary(say: Say, month: MonthGroup): string {
+export function monthSummary(say: Say, month: MonthGroup, types: View["types"]): string {
   const { text } = say;
   const parts = [
-    month.payroll === null
+    month.payrollByType === null
       ? text("table.monthNoPayroll")
-      : text("table.monthPayroll", {
-          vacation: daysOf(say, month.payroll.vacationMinutes),
-          rol: daysOf(say, month.payroll.rolMinutes),
-        }),
-    text("table.monthRecorded", {
-      vacation: daysOf(say, month.recorded.vacationMinutes),
-      rol: daysOf(say, month.recorded.rolMinutes),
-    }),
+      : text("table.monthPayroll", { amounts: byTypeText(say, types, month.payrollByType) }),
+    text("table.monthRecorded", { amounts: byTypeText(say, types, month.recordedByType) }),
   ];
   if (month.plannedMinutes > 0)
     parts.push(text("table.monthPlanned", { amount: daysOf(say, month.plannedMinutes) }));

@@ -8,7 +8,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { Ctx } from "@domain/platform/context";
-import { goesToCalendar, LEAVE_DAY_KINDS } from "@domain/modules/timeoff/rules";
 import {
   HOLIDAY_SOURCES,
   HolidayError,
@@ -20,6 +19,7 @@ import {
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import type { LeaveFormInput } from "./calls";
 import { createTestUser } from "../../../../../test/users";
+import { oldLeaveTypes, type OldTypes } from "../../../../../test/leave-types";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
@@ -80,7 +80,8 @@ async function asPerson<T>(ctx: Ctx, work: () => Promise<T>): Promise<T> {
 
 /** The deleted Server Actions: the fields read on the server, the use case, the code of a refusal. */
 const actions = (() => {
-  const KINDS = z.enum(LEAVE_DAY_KINDS);
+  /** A type as the action read it (R5g: an id, where it was a kind). */
+  const TYPE = z.uuid();
   function optionalNumber(value: string): number | null {
     const text = value.trim().replace(",", ".");
     if (text === "") return null;
@@ -114,31 +115,30 @@ const actions = (() => {
   const isSource = (source: string): source is HolidaySource => SOURCES.safeParse(source).success;
   return {
     saveLeaveRange: (ctx: Ctx, input: LeaveFormInput) =>
-      write(() =>
+      write(async () =>
         timeoff.bookLeave(ctx, {
           from: input.from,
           to: input.to,
-          kind: KINDS.parse(input.kind),
+          typeId: TYPE.parse(input.typeId),
           fraction: optionalNumber(input.fraction) ?? 1,
           note: input.note.trim() || null,
-          editedKind: input.editedKind == null ? null : KINDS.parse(input.editedKind),
-          ...(input.otherKind == null ? {} : { otherKind: KINDS.parse(input.otherKind) }),
+          editedTypeId: input.editedTypeId == null ? null : TYPE.parse(input.editedTypeId),
+          ...(input.otherTypeId == null ? {} : { otherTypeId: TYPE.parse(input.otherTypeId) }),
         }),
       ),
     removeLeave: (ctx: Ctx, target: { id: string } | { date: string }) =>
       write(() => timeoff.unbookLeave(ctx, removal.parse(target))),
     removeLeaveRange: (ctx: Ctx, range: { from: string; to: string }) =>
       write(() => timeoff.unbookLeaveRange(ctx, range)),
-    saveAllowance: (
+    // R5g: an allowance is a type's, with the carry-over a person states when no payslip says it.
+    saveTypeAllowance: (
       ctx: Ctx,
-      input: { year: string; vacationDays: string; rolDays: string; totalDays: string; note: string },
+      input: { typeId: string; year: number; days: string; carriedDays: string },
     ) =>
       write(async () => {
-        await timeoff.saveAllowance(ctx, Number(input.year), {
-          vacationDays: optionalNumber(input.vacationDays),
-          rolDays: optionalNumber(input.rolDays),
-          totalDays: optionalNumber(input.totalDays),
-          note: input.note.trim() || null,
+        await timeoff.saveTypeAllowance(ctx, input.typeId, input.year, {
+          days: optionalNumber(input.days),
+          carriedDays: optionalNumber(input.carriedDays),
         });
         return {};
       }),
@@ -165,29 +165,45 @@ const TUE = "2026-12-15";
 const FRI = "2026-12-18";
 const SAT = "2026-12-19";
 
-const fields = (overrides: Partial<LeaveFormInput> = {}): LeaveFormInput => ({
+/** The panel's fields, with the person's own types (R5g: each person has their own ids). */
+const fields = (types: OldTypes, overrides: Partial<LeaveFormInput> = {}): LeaveFormInput => ({
   from: MON,
   to: TUE,
-  kind: "vacation",
+  typeId: types.vacation,
   fraction: "1",
   note: " am ",
   ...overrides,
 });
 
-/** The days a person has, without what tells two people's rows apart. */
-async function daysOf(ctx: Ctx) {
-  const view = await yearOf(ctx);
-  return bookedOf(view.rows).map((day) => ({ ...day, id: "" }));
-}
-
 let alice: Ctx;
 let bob: Ctx;
+let types: Map<string, OldTypes>;
+
+/** An answer of `ctx` with each of their type ids written as its old kind: two people's ids differ. */
+function asKinds<T>(ctx: Ctx, answer: T): unknown {
+  let text = JSON.stringify(answer);
+  for (const [kind, id] of Object.entries(types.get(ctx.userId) ?? {})) text = text.replaceAll(id, kind);
+  return JSON.parse(text);
+}
+
+/** The days a person has, without what tells two people's rows apart: the ids, the type's id. */
+async function daysOf(ctx: Ctx) {
+  const view = await yearOf(ctx);
+  return asKinds(
+    ctx,
+    bookedOf(view.rows).map((day) => ({ ...day, id: "" })),
+  );
+}
 const requestPass = vi.fn(async () => {});
 
 beforeEach(async () => {
   await resetDatabase();
   alice = contextFor((await createTestUser()).id);
   bob = contextFor((await createTestUser()).id);
+  types = new Map([
+    [alice.userId, await oldLeaveTypes(alice)],
+    [bob.userId, await oldLeaveTypes(bob)],
+  ]);
   requestPass.mockClear();
   // The external calendar of the test: what `LeaveChanged` asks of it, and nothing else.
   timeoff.wireTimeoff({
@@ -202,31 +218,37 @@ afterAll(async () => {
 });
 
 describe("parity of the leave panel's writes: Server Action = call of the route", () => {
-  it.each([
-    ["a range with a note to trim", fields()],
-    ["half days", fields({ fraction: "0.5" })],
-    ["«½ + ½»", fields({ fraction: "0.5", otherKind: "rol" })],
-    ["a weekend only", fields({ from: SAT, to: SAT })],
-    ["a kind nobody defined", fields({ kind: "holiday" })],
-    ["a second half nobody defined", fields({ fraction: "0.5", otherKind: "nap" })],
-    ["a size nobody can read", fields({ fraction: "abc" })],
+  const NOBODYS = "0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b";
+  it.each<[string, (types: OldTypes) => LeaveFormInput]>([
+    ["a range with a note to trim", (t) => fields(t)],
+    ["half days", (t) => fields(t, { fraction: "0.5" })],
+    ["«½ + ½»", (t) => fields(t, { fraction: "0.5", otherTypeId: t.rol })],
+    ["a weekend only", (t) => fields(t, { from: SAT, to: SAT })],
+    ["a type of somebody else's", (t) => fields(t, { typeId: NOBODYS })],
+    ["a type nobody can read", (t) => fields(t, { typeId: "holiday" })],
+    ["a second half nobody defined", (t) => fields(t, { fraction: "0.5", otherTypeId: "nap" })],
+    ["a size nobody can read", (t) => fields(t, { fraction: "abc" })],
   ])("answers and stores the same for %s", async (_case, input) => {
-    const old = await actions.saveLeaveRange(alice, input);
-    const now = await asPerson(bob, () => calls.saveLeaveRangeAction(input));
+    const old = await actions.saveLeaveRange(alice, input(types.get(alice.userId) as OldTypes));
+    const now = await asPerson(bob, () =>
+      calls.saveLeaveRangeAction(input(types.get(bob.userId) as OldTypes)),
+    );
     expect(now).toEqual(old);
     expect(await daysOf(bob)).toEqual(await daysOf(alice));
   });
 
   it("removes a row, a date and a range, and undoes, as the actions did", async () => {
     for (const ctx of [alice, bob])
-      await asPerson(ctx, () => calls.saveLeaveRangeAction(fields({ to: FRI })));
+      await asPerson(ctx, () =>
+        calls.saveLeaveRangeAction(fields(types.get(ctx.userId) as OldTypes, { to: FRI })),
+      );
     const firstOf = async (ctx: Ctx) => bookedOf((await yearOf(ctx)).rows)[0].id;
 
     const old = await actions.removeLeave(alice, { id: await firstOf(alice) });
     const now = await asPerson(bob, async () => calls.removeLeaveAction({ id: await firstOf(bob) }));
-    expect(now).toEqual(old);
-    expect(await actions.removeLeave(alice, { date: TUE })).toEqual(
-      await asPerson(bob, () => calls.removeLeaveAction({ date: TUE })),
+    expect(asKinds(bob, now)).toEqual(asKinds(alice, old));
+    expect(asKinds(alice, await actions.removeLeave(alice, { date: TUE }))).toEqual(
+      asKinds(bob, await asPerson(bob, () => calls.removeLeaveAction({ date: TUE }))),
     );
     expect(await actions.removeLeave(alice, { date: "16 June" })).toEqual(
       await asPerson(bob, () => calls.removeLeaveAction({ date: "16 June" })),
@@ -234,41 +256,49 @@ describe("parity of the leave panel's writes: Server Action = call of the route"
     const range = { from: MON, to: FRI };
     const oldRange = await actions.removeLeaveRange(alice, range);
     const newRange = await asPerson(bob, () => calls.removeLeaveRangeAction(range));
-    expect(newRange).toEqual(oldRange);
+    expect(asKinds(bob, newRange)).toEqual(asKinds(alice, oldRange));
     expect(await daysOf(bob)).toEqual(await daysOf(alice));
 
     if (!newRange.ok) throw new Error("the range was not removed");
     expect(await asPerson(bob, () => calls.undoLeaveAction(newRange.undo))).toEqual({ ok: true });
-    await timeoff.undoLeave(alice, oldRange.ok ? oldRange.undo : newRange.undo);
+    if (!oldRange.ok) throw new Error("the range was not removed by the action");
+    await timeoff.undoLeave(alice, oldRange.undo);
     expect(await daysOf(bob)).toEqual(await daysOf(alice));
   });
 
-  it.each(LEAVE_DAY_KINDS)(
-    "asks the external calendar for a pass after a %s day exactly when the rules send it",
+  // R5g: the four old kinds a migrated person has as types; sickness became "other".
+  it.each(["vacation", "rol", "comp", "other"] as const)(
+    "asks the external calendar for a pass after a %s day exactly when its type goes there",
     async (kind) => {
+      const own = types.get(alice.userId) as OldTypes;
+      const type = (await timeoff.listLeaveTypes(alice)).find((one) => one.id === own[kind]);
       expect(
-        await asPerson(alice, () => calls.saveLeaveRangeAction(fields({ from: FRI, to: FRI, kind }))),
+        await asPerson(alice, () =>
+          calls.saveLeaveRangeAction(fields(own, { from: FRI, to: FRI, typeId: own[kind] })),
+        ),
       ).toMatchObject({
         ok: true,
         days: 1,
       });
-      expect(requestPass).toHaveBeenCalledTimes(goesToCalendar(kind) ? 1 : 0);
+      expect(requestPass).toHaveBeenCalledTimes(type?.toCalendar ? 1 : 0);
     },
   );
 
   it("states an allowance from the typed days, either separator, and refuses what nobody can read", async () => {
-    const typed = { year: "2026", vacationDays: "22,5", rolDays: " 4 ", totalDays: "", note: " contract " };
-    expect(await asPerson(bob, () => settings.saveAllowanceAction(typed))).toEqual(
-      await actions.saveAllowance(alice, typed),
+    const typed = (ctx: Ctx, days = "22,5") => ({
+      typeId: (types.get(ctx.userId) as OldTypes).vacation,
+      year: 2026,
+      days,
+      carriedDays: " 4 ",
+    });
+    expect(await asPerson(bob, () => settings.saveTypeAllowanceAction(typed(bob)))).toEqual(
+      await actions.saveTypeAllowance(alice, typed(alice)),
     );
-    const stated = async (ctx: Ctx) => {
-      const allowance = await timeoff.allowanceOf(ctx, 2026);
-      return [allowance?.vacationDays, allowance?.rolDays, allowance?.totalDays, allowance?.note];
-    };
+    const stated = async (ctx: Ctx) => asKinds(ctx, await timeoff.listTypeAllowances(ctx));
     expect(await stated(bob)).toEqual(await stated(alice));
-    const unreadable = { ...typed, rolDays: "four" };
-    expect(await asPerson(bob, () => settings.saveAllowanceAction(unreadable))).toEqual(
-      await actions.saveAllowance(alice, unreadable),
+    expect(await stated(alice)).toEqual([{ typeId: "vacation", year: 2026, days: 22.5, carriedDays: 4 }]);
+    expect(await asPerson(bob, () => settings.saveTypeAllowanceAction(typed(bob, "four")))).toEqual(
+      await actions.saveTypeAllowance(alice, typed(alice, "four")),
     );
   });
 
@@ -293,50 +323,62 @@ describe("parity of the leave panel's writes: Server Action = call of the route"
 
 describe("parity of the leave panel's preview: before «Confirm» = the route after the save", () => {
   it("shows the residual and the forecast the route answers once the range is saved", async () => {
+    const own = types.get(alice.userId) as OldTypes;
     await asPerson(alice, () =>
-      settings.saveAllowanceAction({
-        year: "2026",
-        vacationDays: "20",
-        rolDays: "4",
-        totalDays: "",
-        note: "",
-      }),
+      settings.saveTypeAllowanceAction({ typeId: own.vacation, year: 2026, days: "20", carriedDays: "" }),
     );
-    await asPerson(alice, () => calls.saveLeaveRangeAction(fields({ from: FRI, to: FRI })));
+    await asPerson(alice, () =>
+      settings.saveTypeAllowanceAction({ typeId: own.rol, year: 2026, days: "4", carriedDays: "" }),
+    );
+    await asPerson(alice, () => calls.saveLeaveRangeAction(fields(own, { from: FRI, to: FRI })));
     const before = await yearOf(alice);
 
     // What the board hands the panel: the days of the table still booked, and the route's inputs.
     const days = liveDays(bookedOf(before.rows));
+    const vacation = own.vacation;
     const range = {
       from: MON,
       to: TUE,
-      kind: "vacation" as const,
+      typeId: vacation,
       fraction: 1,
-      otherKind: null,
-      editedKind: null,
+      otherTypeId: null,
+      editedTypeId: null,
     };
+    const residuals = Object.fromEntries(
+      before.balances.map((one: { typeId: string; residualInput: unknown }) => [
+        one.typeId,
+        one.residualInput,
+      ]),
+    );
     const preview = client.previewLeaveRange(range, {
       days,
       holidays: new Set(before.holidays),
-      residuals: before.residualInputs,
-      year: 2026,
+      types: before.types,
+      workDays: before.workDays,
+      minutesPerDay: before.minutesPerDay,
+      residuals,
+      window: before.window,
     });
-    const ofVacation = <T extends { kind: string }>(list: readonly T[]) =>
-      list.filter((day) => day.kind === "vacation");
-    const forecast = client.forecastChange(before.forecastInputs.vacation, range, 2026, {
+    const ofVacation = <T extends { typeId: string }>(list: readonly T[]) =>
+      list.filter((day) => day.typeId === vacation);
+    const forecastOf = (view: typeof before) =>
+      view.balances.find((one: { typeId: string }) => one.typeId === vacation).forecastInput;
+    const forecast = client.forecastChange(forecastOf(before), range, before.window, {
       before: ofVacation(days),
       after: ofVacation(preview.after),
     });
 
-    expect(await asPerson(alice, () => calls.saveLeaveRangeAction(fields({ note: "" })))).toMatchObject({
+    expect(await asPerson(alice, () => calls.saveLeaveRangeAction(fields(own, { note: "" })))).toMatchObject({
       ok: true,
     });
     const after = await yearOf(alice);
-    const balance = preview.balances.find((one) => one.kind === "vacation");
-    expect(balance?.afterMinutes).toBe(after.vacation.residual.remainingMinutes);
+    const balance = preview.balances.find((one) => one.typeId === vacation);
+    expect(balance?.afterMinutes).toBe(
+      after.balances.find((one: { typeId: string }) => one.typeId === vacation).residual.remainingMinutes,
+    );
     const saved = liveDays(bookedOf(after.rows));
     expect(forecast?.afterMinutes).toBe(
-      client.forecastChange(after.forecastInputs.vacation, range, 2026, { before: saved, after: saved })
+      client.forecastChange(forecastOf(after), range, after.window, { before: saved, after: saved })
         ?.beforeMinutes,
     );
   });

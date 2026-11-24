@@ -1,5 +1,6 @@
 // scripts/seed-e2e/timeoff.ts — the users and the data of the flow `timeoff` (tests/e2e/timeoff/).
-import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
+import { saveLeaveDay, saveTypeAllowance, saveYearNote } from "@domain/modules/timeoff/service";
+import { oldLeaveTypes } from "../../test/leave-types";
 import { today } from "@domain/shared/dates";
 import { contextOf, workingDay } from "./common";
 
@@ -14,8 +15,11 @@ export async function seedTimeOff(email: string): Promise<void> {
   const on = today(ctx.timeZone);
   const year = Number(on.slice(0, 4));
   // Days for both kinds since N9, and no carry-over to state: that one comes from the payslip.
-  await saveAllowance(ctx, year, { vacationDays: 26, rolDays: 4, note: "CCNL" });
-  await saveLeaveDay(ctx, { from: workingDay(on, -14), kind: "vacation", fraction: 1 });
-  await saveLeaveDay(ctx, { from: workingDay(on, 21), kind: "vacation", fraction: 1 });
-  await saveLeaveDay(ctx, { from: workingDay(on, -7), kind: "rol", fraction: 0.5 });
+  const types = await oldLeaveTypes(ctx);
+  await saveTypeAllowance(ctx, types.vacation, year, { days: 26 });
+  await saveTypeAllowance(ctx, types.rol, year, { days: 4 });
+  await saveYearNote(ctx, year, { totalDays: null, note: "CCNL" });
+  await saveLeaveDay(ctx, { from: workingDay(on, -14), typeId: types.vacation, fraction: 1 });
+  await saveLeaveDay(ctx, { from: workingDay(on, 21), typeId: types.vacation, fraction: 1 });
+  await saveLeaveDay(ctx, { from: workingDay(on, -7), typeId: types.rol, fraction: 0.5 });
 }

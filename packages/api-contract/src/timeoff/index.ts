@@ -2,5 +2,7 @@
 // other modules out.
 import * as holidays from "./holidays";
 import * as timeoff from "./timeoff";
+import * as types from "./types";
 
-export { holidays, timeoff };
+export { holidays, timeoff, types };
+export { LEAVE_KINDS } from "./shared";

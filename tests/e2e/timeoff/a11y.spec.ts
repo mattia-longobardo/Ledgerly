@@ -70,6 +70,20 @@ const OVERLAYS: Screen[] = [
       await settledDialog(page);
     },
   },
+
+  {
+    // The dialog of a type of leave (R5g): its five fields, reached without writing.
+    name: "Time off › Settings, a new type of leave",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/timeoff/settings");
+      await settled(page);
+      await page.getByRole("button", { name: "Add a type" }).click();
+      await expect(page.getByRole("dialog", { name: "New type of leave" })).toBeVisible();
+      await settledDialog(page);
+    },
+  },
 ];
 
 test.describe("every screen", () => audit(PAGES));

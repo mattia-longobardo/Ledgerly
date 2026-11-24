@@ -1,26 +1,23 @@
 // The pure part of a pass of the calendar: which days to send and which to take back. No database:
-// the port is time off's own adapter, whose kinds are what the split asks of it.
-import { beforeAll, describe, expect, it } from "vitest";
-import { calendarDays } from "@domain/modules/timeoff/ports";
-import { wireSinks } from "../sinks";
+// a day arrives with the calendar's word already on it (R5g: time off works it out from the type).
+import { describe, expect, it } from "vitest";
 import { splitForCalendar } from "./sync";
-
-beforeAll(() => wireSinks({ leave: calendarDays }));
 
 /** All working days: 2026-06-16 is a Tuesday, the 17th a Wednesday. */
 const TUE = "2026-06-16";
 const WED = "2026-06-17";
 
 describe("splitForCalendar", () => {
+  /** A day of a type; every type that goes to Trek goes under the one word "vacation" (N4). */
   const day = (
     on: string,
-    kind: "vacation" | "rol" | "comp",
+    type: "vacation" | "rol" | "comp",
     pending: "none" | "upsert" | "delete",
     fraction = 1,
   ) => ({
-    id: `${on}-${kind}`,
+    id: `${on}-${type}`,
     on,
-    kind,
+    kind: "vacation",
     fraction,
     pending,
     observedFraction: null,
@@ -38,11 +35,14 @@ describe("splitForCalendar", () => {
     expect(split.desired).toEqual([{ date: TUE, fraction: 1, kind: "vacation" }]);
   });
 
-  it("names vacation whatever the kind is, since Trek has neither ROL nor anything else", () => {
-    const split = splitForCalendar([day(TUE, "rol", "upsert"), day(WED, "comp", "upsert")]);
+  it("sends the word the day carries, whatever its type", () => {
+    const split = splitForCalendar([
+      day(TUE, "rol", "upsert"),
+      { ...day(WED, "comp", "upsert"), kind: "leave" },
+    ]);
     expect(split.desired).toEqual([
       { date: TUE, fraction: 1, kind: "vacation" },
-      { date: WED, fraction: 1, kind: "vacation" },
+      { date: WED, fraction: 1, kind: "leave" },
     ]);
   });
 

@@ -373,6 +373,7 @@ export const MODULES: Module[] = [
       page("timeoff"),
       "apps/web/src/platform/holidays/**",
       "packages/domain/src/platform/holidays/**",
+      "test/fixtures/holidays.ts",
     ],
     integration: [
       "apps/web/src/modules/timeoff",

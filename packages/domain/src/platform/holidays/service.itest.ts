@@ -15,7 +15,7 @@ import {
   addCalendar,
   countDaysByCalendar,
   daysOfCalendar,
-  holidaysFor,
+  holidaysOf,
   listCalendars,
   markCalendarFailed,
   refreshCalendar,
@@ -234,7 +234,7 @@ describe("refreshing", () => {
   });
 });
 
-describe("holidaysFor — the one rule the leave screen asks about", () => {
+describe("holidaysOf — the one rule the leave screen asks about", () => {
   it("is the subscribed calendars, once they have days", async () => {
     const calendar = await addCalendar(ctx, MILAN);
     await refreshCalendar(
@@ -244,7 +244,7 @@ describe("holidaysFor — the one rule the leave screen asks about", () => {
       "IT",
       source([{ startDate: "2026-12-07", name: "Sant'Ambrogio", nationwide: false }]),
     );
-    const holidays = await holidaysFor(ctx, [YEAR], null);
+    const holidays = (await holidaysOf(ctx, [YEAR])).days;
     expect(holidays.has("2026-12-07")).toBe(true);
     // And only those: the computed Italian list is not mixed in behind them.
     expect(holidays.has("2026-01-01")).toBe(false);
@@ -261,22 +261,20 @@ describe("holidaysFor — the one rule the leave screen asks about", () => {
     await refreshCalendar(ctx, italy, YEAR, "IT", source([{ startDate: "2026-01-06", name: "Epifania" }]));
     await refreshCalendar(ctx, japan, YEAR, "IT", source([{ startDate: "2026-05-03", name: "Kenpō" }]));
 
-    const holidays = await holidaysFor(ctx, [YEAR], null);
+    const holidays = (await holidaysOf(ctx, [YEAR])).days;
     expect(holidays.has("2026-01-06")).toBe(true);
     expect(holidays.has("2026-05-03")).toBe(true);
   });
 
-  it("falls back to the computed Italian list for somebody who has set nothing up", async () => {
-    const holidays = await holidaysFor(ctx, [YEAR], { month: 12, day: 7 });
-    expect(holidays.has("2026-01-01")).toBe(true);
-    expect(holidays.has("2026-04-06")).toBe(true); // Easter Monday, computed
-    expect(holidays.has("2026-12-07")).toBe(true); // the patron saint from preferences
+  it("is empty for somebody who has set nothing up: no computed list behind it (R5g, ST-20)", async () => {
+    expect((await holidaysOf(ctx, [YEAR])).days.size).toBe(0);
+    expect((await holidaysOf(ctx, [YEAR])).hasCalendar).toBe(false);
   });
 
-  it("does NOT fall back for somebody who chose calendars that have not arrived yet", async () => {
-    // Guessing Italy for a person who subscribed to Japan would refuse the wrong days.
+  it("is empty too for somebody whose calendars have not arrived yet, who does keep one", async () => {
     await addCalendar(ctx, { source: "nager", country: "JP", subdivision: null, label: "Giappone" });
-    expect((await holidaysFor(ctx, [YEAR], { month: 12, day: 7 })).size).toBe(0);
+    expect((await holidaysOf(ctx, [YEAR])).days.size).toBe(0);
+    expect((await holidaysOf(ctx, [YEAR])).hasCalendar).toBe(true);
   });
 
   it("keeps one user's holidays out of another's", async () => {
@@ -288,10 +286,8 @@ describe("holidaysFor — the one rule the leave screen asks about", () => {
       "IT",
       source([{ startDate: "2026-12-07", name: "Sant'Ambrogio" }]),
     );
-    // The other user has no calendars, so they get the computed list, not this one.
-    const theirs = await holidaysFor(other, [YEAR], null);
-    expect(theirs.has("2026-01-01")).toBe(true);
-    expect(theirs.size).toBeGreaterThan(1);
+    expect((await holidaysOf(other, [YEAR])).days.size).toBe(0);
+    expect((await holidaysOf(other, [YEAR])).hasCalendar).toBe(false);
   });
 
   it("answers for more than one year, which a range crossing new year needs", async () => {
@@ -304,7 +300,7 @@ describe("holidaysFor — the one rule the leave screen asks about", () => {
       "IT",
       source([{ startDate: "2027-01-01", name: "Capodanno" }]),
     );
-    const holidays = await holidaysFor(ctx, [2026, 2027], null);
+    const holidays = (await holidaysOf(ctx, [2026, 2027])).days;
     expect(holidays.has("2026-12-25")).toBe(true);
     expect(holidays.has("2027-01-01")).toBe(true);
   });

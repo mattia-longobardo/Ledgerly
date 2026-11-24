@@ -4,21 +4,31 @@ export type { LeaveAnswer } from "./events";
 export { calendarDays, calendarSync, wireTimeoff } from "./ports";
 export type { LeaveBalanceSource, LeaveCalendarSync } from "./ports";
 export { timeOffView } from "./queries";
-export type { KindView, LeaveRow } from "./queries";
-export { LEAVE_DAY_KINDS } from "./rules";
-export type { LeaveUndo, MonthBar, MonthGroup, ResidualView } from "./rules";
+export type { LeaveRow, TypeBalance } from "./queries";
+export { LEAVE_COLORS, LEAVE_UNITS } from "./rules";
+export type { LeaveType, LeaveUndo, MonthBar, MonthGroup, ResidualView } from "./rules";
 export {
   TimeOffError,
+  addRestDay,
   allowanceOf,
   closePendingDeletes,
+  deleteLeaveType,
+  deleteRestDay,
   forgetPendingDays,
+  leaveSettingsOf,
   listAllowances,
   listLeaveDays,
+  listLeaveTypes,
+  listRestDays,
+  listTypeAllowances,
   pendingCount,
   removeLeave,
   removeLeaveRange,
   restoreLeave,
-  saveAllowance,
   saveLeaveRange,
+  saveLeaveSettings,
+  saveLeaveType,
+  saveTypeAllowance,
+  saveYearNote,
 } from "./service";
-export type { Allowance } from "./service";
+export type { Allowance, LeaveSettings, LeaveTypeView, RestDay, TypeAllowance } from "./service";

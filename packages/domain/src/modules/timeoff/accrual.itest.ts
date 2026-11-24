@@ -12,10 +12,11 @@ import type { Ctx } from "../../platform/context";
 import { deleteFolder, ensureBucket } from "../../platform/storage";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { newContext } from "../../../../../test/fixtures";
+import { type OldTypes, oldLeaveTypes } from "../../../../../test/leave-types";
 import { APRIL, MARCH } from "../../../../../test/fixtures/payroll/samples";
 import { type TwinPayslip, twinPdf } from "../../../../../test/fixtures/payroll/twin";
 import { timeOffView } from "./queries";
-import { saveAllowance, saveLeaveDay } from "./service";
+import { saveLeaveDay, saveTypeAllowance } from "./service";
 
 /** The twin payslips' own year. Vacation: MAT. 40 h in March, 46.66 h in April, RES. 51.66 h. */
 const YEAR = 2031;
@@ -24,11 +25,13 @@ const MONTH_MINUTES = (46.66 - 40) * 60;
 const APRIL_RES_MINUTES = Math.round(51.66 * 60);
 
 let ctx: Ctx;
+let types: OldTypes;
 
 beforeAll(ensureBucket);
 beforeEach(async () => {
   await resetDatabase();
   ctx = await newContext();
+  types = await oldLeaveTypes(ctx);
 });
 afterAll(async () => {
   await deleteFolder("payslips/");
@@ -43,7 +46,15 @@ async function withPayslip(name: string, twin: TwinPayslip): Promise<void> {
 }
 
 async function book(dates: readonly string[]): Promise<void> {
-  for (const on of dates) await saveLeaveDay(ctx, { from: on, kind: "vacation", fraction: 1 });
+  for (const on of dates) await saveLeaveDay(ctx, { from: on, typeId: types.vacation, fraction: 1 });
+}
+
+type View = Awaited<ReturnType<typeof timeOffView>>;
+const balanceOf = (view: View, typeId: string) => view.balances.find((one) => one.typeId === typeId)!;
+
+async function allowance(year: number, vacationDays: number, rolDays: number): Promise<void> {
+  await saveTypeAllowance(ctx, types.vacation, year, { days: vacationDays });
+  await saveTypeAllowance(ctx, types.rol, year, { days: rolDays });
 }
 
 describe("the rate of the payslips (D1)", () => {
@@ -52,22 +63,24 @@ describe("the rate of the payslips (D1)", () => {
     await withPayslip("april.pdf", APRIL);
 
     const view = await timeOffView(ctx, YEAR);
-    expect(view.accrual.vacation.rate?.source).toBe("payslip");
-    expect(view.accrual.vacation.rate?.minutesPerMonth).toBeCloseTo(MONTH_MINUTES, 6);
+    expect(balanceOf(view, types.vacation).accrual.rate?.source).toBe("payslip");
+    expect(balanceOf(view, types.vacation).accrual.rate?.minutesPerMonth).toBeCloseTo(MONTH_MINUTES, 6);
     // April's RES. and the eight months from May to December.
-    expect(view.accrual.vacation.yearEndMinutes).toBe(Math.round(APRIL_RES_MINUTES + MONTH_MINUTES * 8));
-    expect(view.accrual.vacation.leads).toBe(false);
+    expect(balanceOf(view, types.vacation).accrual.yearEndMinutes).toBe(
+      Math.round(APRIL_RES_MINUTES + MONTH_MINUTES * 8),
+    );
+    expect(balanceOf(view, types.vacation).accrual.leads).toBe(false);
     // The residual of the card is the payslip's, as it was.
-    expect(view.vacation.residual.basis).toBe("payslip");
-    expect(view.vacation.residual.remainingMinutes).toBe(APRIL_RES_MINUTES);
+    expect(balanceOf(view, types.vacation).residual.basis).toBe("payslip");
+    expect(balanceOf(view, types.vacation).residual.remainingMinutes).toBe(APRIL_RES_MINUTES);
   });
 
   it("falls back to the allowance over twelve with one payslip only, and says so", async () => {
     await withPayslip("march.pdf", MARCH);
-    await saveAllowance(ctx, YEAR, { vacationDays: 24, rolDays: 4 });
+    await allowance(YEAR, 24, 4);
 
     const view = await timeOffView(ctx, YEAR);
-    expect(view.accrual.vacation.rate).toEqual({
+    expect(balanceOf(view, types.vacation).accrual.rate).toEqual({
       minutesPerMonth: 2 * view.minutesPerDay,
       source: "allowance",
     });
@@ -81,11 +94,11 @@ describe("a year with no payslip of its own (D4, D6)", () => {
     await book(["2031-12-22", "2032-03-10"]);
 
     const view = await timeOffView(ctx, YEAR + 1);
-    expect(view.vacation.residual.basis).toBe("unknown");
-    expect(view.accrual.vacation.leads).toBe(true);
-    expect(view.accrual.vacation.payslipPeriod).toBe("2031-04-01");
+    expect(balanceOf(view, types.vacation).residual.basis).toBe("unknown");
+    expect(balanceOf(view, types.vacation).accrual.leads).toBe(true);
+    expect(balanceOf(view, types.vacation).accrual.payslipPeriod).toBe("2031-04-01");
     // May 2031 to December 2032: twenty months, less the day of each year.
-    expect(view.accrual.vacation.yearEndMinutes).toBe(
+    expect(balanceOf(view, types.vacation).accrual.yearEndMinutes).toBe(
       Math.round(APRIL_RES_MINUTES + MONTH_MINUTES * 20 - 2 * view.minutesPerDay),
     );
     // The year's own rows are the year's own: the day of December 2031 is not one of them.
@@ -97,8 +110,8 @@ describe("a year with no payslip of its own (D4, D6)", () => {
     await withPayslip("march.pdf", MARCH);
     await withPayslip("april.pdf", APRIL);
     const view = await timeOffView(ctx, YEAR - 1);
-    expect(view.accrual.vacation.yearEndMinutes).toBeNull();
-    expect(view.accrual.vacation.leads).toBe(false);
+    expect(balanceOf(view, types.vacation).accrual.yearEndMinutes).toBeNull();
+    expect(balanceOf(view, types.vacation).accrual.leads).toBe(false);
   });
 });
 
@@ -109,27 +122,32 @@ describe("a person with no payslip at all", () => {
       [YEAR, "2031-03-04"],
       [YEAR + 9, "2040-03-06"],
     ] as const) {
-      await saveAllowance(ctx, year, { vacationDays: 24, rolDays: 6 });
+      await allowance(year, 24, 6);
       await book([tuesday]);
 
       const view = await timeOffView(ctx, year);
-      expect(view.accrual.vacation.rate).toEqual({
+      expect(balanceOf(view, types.vacation).accrual.rate).toEqual({
         minutesPerMonth: 2 * view.minutesPerDay,
         source: "allowance",
       });
-      expect(view.accrual.vacation.yearEndMinutes).toBe(23 * view.minutesPerDay);
+      expect(balanceOf(view, types.vacation).accrual.yearEndMinutes).toBe(23 * view.minutesPerDay);
       // The same figure as the residual of the card: one answer, not two.
-      expect(view.accrual.vacation.yearEndMinutes).toBe(view.vacation.residual.remainingMinutes);
-      expect(view.accrual.vacation.leads).toBe(false);
-      expect(view.accrual.rol.rate).toEqual({ minutesPerMonth: view.minutesPerDay / 2, source: "allowance" });
+      expect(balanceOf(view, types.vacation).accrual.yearEndMinutes).toBe(
+        balanceOf(view, types.vacation).residual.remainingMinutes,
+      );
+      expect(balanceOf(view, types.vacation).accrual.leads).toBe(false);
+      expect(balanceOf(view, types.rol).accrual.rate).toEqual({
+        minutesPerMonth: view.minutesPerDay / 2,
+        source: "allowance",
+      });
     }
   });
 
   it("has no forecast and no error with no allowance either, in any year", async () => {
     for (const year of [YEAR, YEAR + 1, YEAR + 9]) {
       const view = await timeOffView(ctx, year);
-      for (const kind of ["vacation", "rol"] as const) {
-        expect(view.accrual[kind]).toEqual({
+      for (const typeId of [types.vacation, types.rol]) {
+        expect(balanceOf(view, typeId).accrual).toEqual({
           rate: null,
           yearEndMinutes: null,
           payslipPeriod: null,

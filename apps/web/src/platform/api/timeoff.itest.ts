@@ -8,6 +8,7 @@ import type { Ctx } from "@domain/platform/context";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
 import { createTestUser } from "../../../../../test/users";
 import { TREK_PROVIDER } from "../../../../../test/fixtures/providers";
+import { oldLeaveTypes, type OldTypes } from "../../../../../test/leave-types";
 
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
@@ -68,12 +69,15 @@ const leave = (overrides: Record<string, unknown> = {}) => ({
 
 let alice: Ctx;
 let bob: Ctx;
+let types: OldTypes;
 const requestPass = vi.fn(async () => {});
 
 beforeEach(async () => {
   await resetDatabase();
   alice = contextFor((await createTestUser()).id);
   bob = contextFor((await createTestUser()).id);
+  types = await oldLeaveTypes(alice);
+  await oldLeaveTypes(bob);
   requestPass.mockClear();
   // The external calendar of the test: what `LeaveChanged` asks of it, and nothing else.
   timeoff.wireTimeoff({
@@ -198,13 +202,22 @@ describe("parity of time off: page = route = MCP tool, preview = answer after th
     const tool = reads.find((one) => one.name === "get_time_off")!;
     expect(await tool.run(alice, { year: "2026" })).toEqual(route);
 
+    // R5g: the page's figures are by type; the route keeps them beside its deprecated fields.
     const page = await timeoff.timeOffView(alice, 2026);
-    expect(route.vacation).toEqual(page.vacation);
-    expect(route.rol).toEqual(page.rol);
-    expect(route.totals).toEqual(page.totals);
-    expect(route.months).toEqual(page.months);
-    expect(route.accrual).toEqual(page.accrual);
-    expect(route.overdrawn).toEqual(page.overdrawn);
+    type Balance = { typeId: string; residual: unknown; accrual: unknown };
+    const ofBalances = (list: Balance[]) =>
+      list.map(({ typeId, residual, accrual }) => ({ typeId, residual, accrual }));
+    expect(ofBalances(route.balances)).toEqual(ofBalances(page.balances));
+    expect(route.totals.byType).toEqual(page.totals.byType);
+    expect([route.totals.takenMinutes, route.totals.plannedMinutes, route.totals.totalMinutes]).toEqual([
+      page.totals.takenMinutes,
+      page.totals.plannedMinutes,
+      page.totals.totalMinutes,
+    ]);
+    expect(route.months.map((one: { recordedByType: unknown }) => one.recordedByType)).toEqual(
+      page.months.map((one) => one.recorded),
+    );
+    expect(route.overdrawnByType).toEqual(page.overdrawn);
   });
 
   it("previews in the panel what the route answers once the range is saved", async () => {
@@ -221,30 +234,42 @@ describe("parity of time off: page = route = MCP tool, preview = answer after th
     const range = {
       from: MON,
       to: TUE,
-      kind: "vacation" as const,
+      typeId: types.vacation,
       fraction: 1,
-      otherKind: null,
-      editedKind: null,
+      otherTypeId: null,
+      editedTypeId: null,
     };
-    const booked = before.residualInputs.vacation.days;
+    type Balance = { typeId: string; residualInput: { days: unknown[] }; forecastInput: unknown };
+    const vacationOf = (year: { balances: Balance[] }) =>
+      year.balances.find((one) => one.typeId === types.vacation) as Balance;
+    const booked = vacationOf(before).residualInput.days as {
+      on: string;
+      typeId: string;
+      fraction: number;
+    }[];
     const preview = client.previewLeaveRange(range, {
       days: booked,
       holidays: new Set(before.holidays),
-      residuals: before.residualInputs,
-      year: 2026,
+      types: before.types,
+      workDays: before.workDays,
+      minutesPerDay: before.minutesPerDay,
+      residuals: Object.fromEntries(before.balances.map((one: Balance) => [one.typeId, one.residualInput])),
+      window: before.window,
     });
-    const forecast = client.forecastChange(before.forecastInputs.vacation, range, 2026, {
+    const forecastOf = (year: { balances: Balance[] }) =>
+      vacationOf(year).forecastInput as Parameters<typeof client.forecastChange>[0];
+    const forecast = client.forecastChange(forecastOf(before), range, before.window, {
       before: booked,
-      after: preview.after.filter((one) => one.kind === "vacation"),
+      after: preview.after.filter((one) => one.typeId === types.vacation),
     });
 
     await send(alice, "POST", "/timeoff/leave", leave());
     const after = (await send(alice, "GET", "/timeoff/2026")).body;
-    const balance = preview.balances.find((one) => one.kind === "vacation");
+    const balance = preview.balances.find((one) => one.typeId === types.vacation);
     expect(balance?.afterMinutes).toBe(after.vacation.residual.remainingMinutes);
-    const saved = after.residualInputs.vacation.days;
+    const saved = vacationOf(after).residualInput.days as { on: string; typeId: string; fraction: number }[];
     expect(forecast?.afterMinutes).toBe(
-      client.forecastChange(after.forecastInputs.vacation, range, 2026, { before: saved, after: saved })
+      client.forecastChange(forecastOf(after), range, after.window, { before: saved, after: saved })
         ?.beforeMinutes,
     );
   });

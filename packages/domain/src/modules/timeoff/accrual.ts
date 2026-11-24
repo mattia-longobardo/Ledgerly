@@ -1,11 +1,5 @@
-import { type CivilDate, type MonthKey, addMonths, monthKey, monthsApart } from "../../shared/dates";
-import {
-  type LeaveDayKind,
-  type LeaveDayView,
-  type ResidualBasis,
-  type ResidualView,
-  minuteWeight,
-} from "./rules";
+import { type CivilDate, type MonthKey, addDays, addMonths, monthKey, monthsApart } from "../../shared/dates";
+import { type LeaveDayView, type ResidualBasis, type ResidualView, minuteWeight } from "./rules";
 
 /*
  * What accrues, and what will be left on a day still to come (release N5.1,
@@ -17,8 +11,11 @@ import {
  * A forecast below zero is an ordinary answer and never an error.
  */
 
-/** The kinds that have a balance to forecast. */
-export type AccrualKind = Extract<LeaveDayKind, "vacation" | "rol">;
+/** The days of a leave year (R5g: it may start in any month). */
+export interface YearWindow {
+  from: CivilDate;
+  to: CivilDate;
+}
 
 /** What one payslip printed as MAT. for one kind: the year's running total, in hours. */
 export interface AccruedReading {
@@ -99,7 +96,7 @@ interface ForecastOpening {
  */
 export function forecastOpening(
   snapshot: { period: MonthKey; remainingHours: number } | null,
-  year: number,
+  window: YearWindow,
 ): ForecastOpening {
   if (snapshot !== null) {
     const period = monthKey(snapshot.period);
@@ -110,8 +107,8 @@ export function forecastOpening(
       spentFrom: period,
     };
   }
-  const january = `${String(year).padStart(4, "0")}-01-01`;
-  return { source: "year", minutes: 0, accruedThrough: addMonths(january, -1), spentFrom: january };
+  const first = window.from;
+  return { source: "year", minutes: 0, accruedThrough: addMonths(monthKey(first), -1), spentFrom: first };
 }
 
 /** Everything a forecast of one kind is worked out from. The panel gets it as it is. */
@@ -155,11 +152,8 @@ export function forecastAt(
 }
 
 /** The forecast for the last day of a year, December's accrual included: what the year hands on. */
-export function forecastAtYearEnd(input: ForecastInput, year: number): number | null {
-  return forecastAt(input, {
-    accruedBefore: `${String(year + 1).padStart(4, "0")}-01-01`,
-    spentThrough: `${String(year).padStart(4, "0")}-12-31`,
-  });
+export function forecastAtYearEnd(input: ForecastInput, window: YearWindow): number | null {
+  return forecastAt(input, { accruedBefore: addDays(window.to, 1), spentThrough: window.to });
 }
 
 /** What a card says about the accrual of its kind. */
@@ -176,8 +170,8 @@ export interface AccrualView {
   leads: boolean;
 }
 
-export function accrualView(input: ForecastInput, year: number, basis: ResidualBasis): AccrualView {
-  const yearEndMinutes = forecastAtYearEnd(input, year);
+export function accrualView(input: ForecastInput, window: YearWindow, basis: ResidualBasis): AccrualView {
+  const yearEndMinutes = forecastAtYearEnd(input, window);
   const fromPayslip = input.opening.source === "payslip";
   return {
     rate: input.rate,
@@ -203,11 +197,12 @@ interface ForecastChange {
 export function forecastChange(
   input: ForecastInput | undefined,
   range: { from: CivilDate; to: CivilDate },
-  year: number,
+  window: YearWindow,
   shown: { before: readonly LeaveDayView[]; after: readonly LeaveDayView[] },
 ): ForecastChange | null {
-  if (input === undefined || Number(range.from.slice(0, 4)) !== year) return null;
-  const earlier = input.days.filter((day) => Number(day.on.slice(0, 4)) !== year);
+  const inside = (date: CivilDate) => date >= window.from && date <= window.to;
+  if (input === undefined || !inside(range.from)) return null;
+  const earlier = input.days.filter((day) => !inside(day.on));
   const at = { accruedBefore: range.from, spentThrough: range.to };
   const beforeMinutes = forecastAt({ ...input, days: [...earlier, ...shown.before] }, at);
   const afterMinutes = forecastAt({ ...input, days: [...earlier, ...shown.after] }, at);
@@ -218,7 +213,7 @@ export function forecastChange(
 
 /** A kind whose booked days come to more than there was to spend. */
 export interface Overdrawn {
-  kind: AccrualKind;
+  typeId: string;
   /** How far past zero, in minutes: always positive. */
   byMinutes: number;
   /** Which number it went past — the payslip's residual, or the stated allowance. */
@@ -240,9 +235,15 @@ interface OverdrawnInput {
   forecast: ForecastInput;
   /** The payslip's carry-over, in minutes — part of what is available before a month accrues. */
   carriedMinutes: number;
-  year: number;
-  /** The planned days of this kind in the year shown; the ones the residual subtracted. */
+  window: YearWindow;
+  /** The planned days of this type in the year shown; the ones the residual subtracted. */
   planned: readonly LeaveDayView[];
+  /**
+   * The taken days of this type in the year shown. On the allowance basis they are walked with
+   * the planned ones: in a year with no payslip a day before today is taken (R5g decision 3 = A),
+   * and a balance it overdraws is overdrawn all the same.
+   */
+  taken?: readonly LeaveDayView[];
 }
 
 /** The worst shortfall of a run of days, each measured against what had accrued by its own date. */
@@ -292,26 +293,25 @@ function worstShortfall(
  * A year with no payslip of its own, read from an earlier one (decision D6), is measured as the
  * card shows it: against the forecast, from that payslip on.
  */
-export function overdrawn(kind: AccrualKind, input: OverdrawnInput): Overdrawn | null {
-  const { view, forecast, carriedMinutes, year, planned } = input;
+export function overdrawn(typeId: string, input: OverdrawnInput): Overdrawn | null {
+  const { view, forecast, carriedMinutes, window, planned } = input;
   const { rate, opening, minutesPerDay } = forecast;
 
-  if (accrualView(forecast, year, view.basis).leads) {
-    const yearEnd = forecastAtYearEnd(forecast, year) as number;
+  if (accrualView(forecast, window, view.basis).leads) {
+    const yearEnd = forecastAtYearEnd(forecast, window) as number;
     if (yearEnd >= 0) return null;
-    const yearLast = `${String(year).padStart(4, "0")}-12-31`;
     const worst = worstShortfall(
-      forecast.days.filter((day) => day.on >= opening.spentFrom && day.on <= yearLast),
+      forecast.days.filter((day) => day.on >= opening.spentFrom && day.on <= window.to),
       opening,
       rate as AccrualRate,
       minutesPerDay,
     );
-    return worst && { kind, basis: "payslip", snapshotPeriod: opening.accruedThrough, ...worst };
+    return worst && { typeId, basis: "payslip", snapshotPeriod: opening.accruedThrough, ...worst };
   }
 
   if (view.remainingMinutes === null || view.remainingMinutes >= 0) return null;
   const flat: Overdrawn = {
-    kind,
+    typeId,
     byMinutes: -view.remainingMinutes,
     basis: view.basis,
     snapshotPeriod: view.snapshotPeriod,
@@ -319,14 +319,14 @@ export function overdrawn(kind: AccrualKind, input: OverdrawnInput): Overdrawn |
   };
   if (rate === null) return flat;
 
-  const january = `${String(year).padStart(4, "0")}-01-01`;
   const start =
     view.basis === "payslip"
       ? {
           minutes: view.remainingMinutes + view.plannedMinutes,
           accruedThrough: monthKey(view.snapshotPeriod as MonthKey),
         }
-      : { minutes: carriedMinutes - view.takenMinutes, accruedThrough: addMonths(january, -1) };
-  const worst = worstShortfall(planned, start, rate, minutesPerDay);
+      : { minutes: carriedMinutes, accruedThrough: addMonths(monthKey(window.from), -1) };
+  const walked = view.basis === "payslip" ? planned : [...(input.taken ?? []), ...planned];
+  const worst = worstShortfall(walked, start, rate, minutesPerDay);
   return worst && { ...flat, ...worst };
 }

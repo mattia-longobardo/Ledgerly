@@ -1,29 +1,45 @@
-// The two warnings of the Time off page, above the cards on purpose: they are the things on this
+// The warnings of the Time off page, above the cards on purpose: they are the things on this
 // screen that say a number below might be wrong.
 import { TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { formatDate } from "@ledgerly/format/format";
 import { Card } from "@ledgerly/ui/card";
 import { cn } from "@ledgerly/ui/cn";
+import { Link } from "@ledgerly/ui/router";
+import { nameOf } from "./kinds";
 import { daysOf, overdrawnLine, type Say, type View } from "./words";
 
 export function YearAlerts({ view, say }: { view: View; say: Say }) {
   const { text, locale } = say;
   return (
     <>
+      {/* Without a calendar of holidays a public holiday reads as a working day (R5g). */}
+      {!view.hasHolidayCalendar && (
+        <Alert tone="warn" title={text("noCalendar.title")} testId="no-holiday-calendar">
+          <p className="text-sm">
+            {text("noCalendar.hint")}{" "}
+            <Link
+              href={`/timeoff/settings?year=${view.year}`}
+              className="focus-ring rounded-xs font-medium text-accent underline underline-offset-2"
+            >
+              {text("noCalendar.action")}
+            </Link>
+          </p>
+        </Alert>
+      )}
       {/* Leave the payslips know about and this calendar does not (M2). */}
-      {view.unrecorded.length > 0 && (
+      {view.unrecordedByType.length > 0 && (
         <Alert
           tone="warn"
-          title={text("unrecorded.title", { count: view.unrecorded.length })}
+          title={text("unrecorded.title", { count: view.unrecordedByType.length })}
           testId="unrecorded"
         >
           <ul className="flex flex-col gap-1 text-sm tabular-nums">
-            {view.unrecorded.map((gap) => (
-              <li key={`${gap.month}-${gap.kind}`}>
+            {view.unrecordedByType.map((gap) => (
+              <li key={`${gap.month}-${gap.typeId}`}>
                 {text("unrecorded.row", {
                   month: formatDate(gap.month, "monthYear", locale),
-                  kind: text(`kinds.${gap.kind}`),
+                  kind: nameOf(view.types, gap.typeId),
                   payroll: daysOf(say, gap.payrollMinutes),
                   recorded: daysOf(say, gap.recordedMinutes),
                   missing: daysOf(say, gap.missingMinutes),
@@ -35,15 +51,15 @@ export function YearAlerts({ view, say }: { view: View; say: Say }) {
         </Alert>
       )}
       {/* Booked past what was left (N5b), measured against whichever figure the card used. */}
-      {view.overdrawn.length > 0 && (
+      {view.overdrawnByType.length > 0 && (
         <Alert
           tone="neg"
-          title={text("overdrawn.title", { count: view.overdrawn.length })}
+          title={text("overdrawn.title", { count: view.overdrawnByType.length })}
           testId="overdrawn"
         >
           <ul className="flex flex-col gap-1 text-sm tabular-nums">
-            {view.overdrawn.map((over) => (
-              <li key={over.kind}>{overdrawnLine(say, over)}</li>
+            {view.overdrawnByType.map((over) => (
+              <li key={over.typeId}>{overdrawnLine(say, over, view.types)}</li>
             ))}
           </ul>
         </Alert>

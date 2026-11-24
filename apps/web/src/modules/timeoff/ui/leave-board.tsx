@@ -15,7 +15,7 @@ import {
 import type { MonthKey } from "@ledgerly/format/dates";
 import { type UiLocale, formatDate } from "@ledgerly/format/format";
 import { notify } from "@ledgerly/ui/toast";
-import type { ForecastInput } from "@ledgerly/domain/timeoff/client";
+import type { ForecastInput, YearWindow } from "@ledgerly/domain/timeoff/client";
 import {
   type LeaveActionResult,
   type LeaveFormInput,
@@ -27,18 +27,19 @@ import {
 } from "../calls";
 import {
   type CalendarMonth,
-  type LeaveDayKind,
   type LeaveDayView,
-  type LeaveUndo,
   type ResidualInput,
   calendar,
   previewLeaveRange,
   stillBooked,
 } from "@ledgerly/domain/timeoff/client";
 import { liveDays } from "./booked";
-import type { LeaveTypeOption } from "./kinds";
+import type { LeaveTypeView } from "./kinds";
 import { type BookedLeave, type LeavePanelEntry, LeavePanel } from "./leave-panel";
 import { type DayRange, YearCalendar } from "./year-calendar";
+
+/** What a write answers «Undo» with, as the wire carries it. */
+type LeaveUndo = Extract<LeaveActionResult, { ok: true }>["undo"];
 
 /** What the page reads once on the server and hands to everything that books leave. */
 interface LeaveBoardProps {
@@ -49,12 +50,19 @@ interface LeaveBoardProps {
   countedThrough: MonthKey | null;
   /** Every booked row of the year, in the order the table shows them. */
   days: BookedLeave[];
-  /** The days of the year nobody works, the patron saint included. */
+  /** The holidays and the days off of the year the person does not work. */
   holidays: string[];
-  residuals: Partial<Record<LeaveDayKind, ResidualInput>>;
-  /** What each forecast on the page was worked out from, by kind (release N5.1). */
-  forecasts?: Partial<Record<LeaveDayKind, ForecastInput>>;
-  types: LeaveTypeOption[];
+  /** The days of the week the person works, 0 Sunday … 6 Saturday. */
+  workDays: readonly number[];
+  /** The month the leave year starts in, and its days. */
+  yearStartMonth: number;
+  window: YearWindow;
+  /** What each residual on the page was worked out from, by type id. */
+  residuals: Partial<Record<string, ResidualInput>>;
+  /** What each forecast on the page was worked out from, by type id (release N5.1). */
+  forecasts?: Partial<Record<string, ForecastInput>>;
+  /** The person's types, in their order. */
+  types: LeaveTypeView[];
   children: ReactNode;
 }
 
@@ -65,6 +73,7 @@ interface Board {
   waiting: ReadonlySet<string>;
   /** The range the open panel is about. */
   range: DayRange | null;
+  types: readonly LeaveTypeView[];
   today: string;
   /** Whether a write is on its way: the buttons of the table wait for it. */
   busy: boolean;
@@ -114,6 +123,9 @@ export function LeaveBoard({
   countedThrough,
   days,
   holidays,
+  workDays,
+  yearStartMonth,
+  window,
   residuals,
   forecasts,
   types,
@@ -154,12 +166,13 @@ export function LeaveBoard({
             {
               from: fields.from,
               to: fields.to,
-              kind: fields.kind as LeaveDayKind,
+              typeId: fields.typeId,
               fraction: Number(fields.fraction),
-              editedKind: (fields.editedKind ?? null) as LeaveDayKind | null,
-              otherKind: (fields.otherKind ?? null) as LeaveDayKind | null,
+              minutes: fields.minutes ?? null,
+              editedTypeId: fields.editedTypeId ?? null,
+              otherTypeId: fields.otherTypeId ?? null,
             },
-            { days: state.views, holidays: holidaySet, year },
+            { days: state.views, holidays: holidaySet, types, workDays, minutesPerDay, window },
           );
           return { views: preview.after, waiting: preview.written };
         }
@@ -170,7 +183,7 @@ export function LeaveBoard({
           if (date === undefined) return state;
           return {
             views: state.views.filter(
-              (day) => day.on !== date || (gone !== undefined && day.kind !== gone.kind),
+              (day) => day.on !== date || (gone !== undefined && day.typeId !== gone.typeId),
             ),
             waiting: [date],
           };
@@ -187,13 +200,25 @@ export function LeaveBoard({
           return {
             views: [
               ...state.views.filter((day) => !change.undo.dates.includes(day.on)),
-              ...change.undo.rows.map((row) => ({ on: row.on, kind: row.kind, fraction: row.fraction })),
+              // The server names every row by its type: a row without one is an old client's.
+              ...change.undo.rows.flatMap((row) =>
+                row.typeId === undefined
+                  ? []
+                  : [
+                      {
+                        on: row.on,
+                        typeId: row.typeId,
+                        fraction: row.fraction,
+                        minutes: row.minutes ?? null,
+                      },
+                    ],
+              ),
             ],
             waiting: change.undo.dates,
           };
       }
     },
-    [days, holidaySet, year],
+    [days, holidaySet, types, workDays, minutesPerDay, window],
   );
   const [shown, show] = useOptimistic<Shown, Change>(base, applyChange);
   /** After a write that went through: what it shows stays until the server's rows arrive. */
@@ -206,9 +231,30 @@ export function LeaveBoard({
     null,
   );
 
+  // A day before today is taken only in a year without payslips: `dayStatus` reads `today` then alone.
   const months = useMemo(
-    () => calendar(year, shown.views, holidaySet, weekStart, countedThrough, minutesPerDay),
-    [year, shown.views, holidaySet, weekStart, countedThrough, minutesPerDay],
+    () =>
+      calendar(year, shown.views, holidaySet, {
+        weekStart,
+        countedThrough,
+        minutesPerDay,
+        types,
+        workDays,
+        today,
+        startMonth: yearStartMonth,
+      }),
+    [
+      year,
+      shown.views,
+      holidaySet,
+      weekStart,
+      countedThrough,
+      minutesPerDay,
+      types,
+      workDays,
+      today,
+      yearStartMonth,
+    ],
   );
   const waiting = useMemo(() => new Set(shown.waiting), [shown.waiting]);
 
@@ -365,7 +411,7 @@ export function LeaveBoard({
   const rowsOf = useCallback(
     (date: string, rowId?: string) => {
       const shownRow = (day: BookedLeave) =>
-        shown.views.some((one) => one.on === day.on && one.kind === day.kind);
+        shown.views.some((one) => one.on === day.on && one.typeId === day.typeId);
       return days.filter((day) => day.on === date && (stillBooked(day) ? shownRow(day) : day.id === rowId));
     },
     [days, shown.views],
@@ -377,7 +423,10 @@ export function LeaveBoard({
           one.on === date &&
           !days.some(
             (day) =>
-              stillBooked(day) && day.on === date && day.kind === one.kind && day.fraction === one.fraction,
+              stillBooked(day) &&
+              day.on === date &&
+              day.typeId === one.typeId &&
+              day.fraction === one.fraction,
           ),
       ),
     [days, shown.views],
@@ -399,13 +448,14 @@ export function LeaveBoard({
       months,
       waiting,
       range,
+      types,
       today,
       busy,
       startAt,
       openRange: (picked) => open({ mode: "range", ...picked }, picked),
       openAdd: () => {
-        // Today when the year shown is this one; otherwise the year's first day.
-        const from = Number(today.slice(0, 4)) === year ? today : `${String(year).padStart(4, "0")}-01-01`;
+        // Today when the year shown holds it; otherwise the year's first day.
+        const from = today >= window.from && today <= window.to ? today : window.from;
         open({ mode: "add", from }, null);
       },
       openEdit: (date, rowId) => {
@@ -421,7 +471,7 @@ export function LeaveBoard({
       },
       remove,
     }),
-    [months, waiting, range, today, busy, startAt, year, days, unread, rowsOf, open, remove],
+    [months, waiting, range, types, today, busy, startAt, window, days, unread, rowsOf, open, remove],
   );
 
   return (
@@ -431,7 +481,17 @@ export function LeaveBoard({
         <LeavePanel
           key={opened}
           entry={entry}
-          data={{ year, minutesPerDay, days: shown.views, holidays: holidaySet, residuals, forecasts, types }}
+          data={{
+            year,
+            window,
+            minutesPerDay,
+            workDays,
+            days: shown.views,
+            holidays: holidaySet,
+            residuals,
+            forecasts,
+            types,
+          }}
           saving={busy}
           error={error}
           finalFocus={opener}
@@ -466,6 +526,7 @@ export function BoardCalendar({
       monthNames={monthNames}
       weekdays={weekdays}
       totals={totals}
+      types={board.types}
       today={board.today}
       range={board.range}
       waiting={board.waiting}

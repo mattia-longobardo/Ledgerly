@@ -126,7 +126,7 @@ test("Time off: a range is picked, confirmed, removed and undone without a mouse
     expect(await focused(page)).toBe('button "Half + half"');
     expect(await focusIsVisible(page)).toBe(true);
     await page.keyboard.press("Enter");
-    await expect(edit.getByLabel("Other half")).toHaveValue("rol");
+    await expect(edit.getByLabel("Other half").locator("option:checked")).toHaveText("ROL");
     await tabUntil(page, 20, async () => (await focused(page)) === 'button "Confirm"');
     expect(await focused(page)).toBe('button "Confirm"');
     await page.keyboard.press("Enter");

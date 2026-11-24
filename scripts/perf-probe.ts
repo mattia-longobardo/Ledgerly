@@ -40,7 +40,8 @@ import {
 } from "@domain/modules/subscriptions/queries";
 import { createSubscription } from "@domain/modules/subscriptions/service";
 import { timeOffView } from "@domain/modules/timeoff/queries";
-import { saveAllowance, saveLeaveDay } from "@domain/modules/timeoff/service";
+import { saveLeaveDay, saveTypeAllowance } from "@domain/modules/timeoff/service";
+import { oldLeaveTypes } from "../test/leave-types";
 import { categoryMacroTotals, expensesView, facetCounts } from "@domain/modules/transactions/queries";
 import { categoryOptions, listCategoriesWithUsage } from "@domain/modules/transactions/taxonomy";
 import { sourceNotes } from "../apps/web/src/app/(app)/settings/finance/source";
@@ -271,10 +272,14 @@ for (const index of [0, 1]) {
   }
   funds.push(fund.id);
 }
-await saveAllowance(ctx, thisYear, { vacationDays: 26, rolDays: 4 });
+const leaveTypes = await oldLeaveTypes(ctx);
+await saveTypeAllowance(ctx, leaveTypes.vacation, thisYear, { days: 26 });
+await saveTypeAllowance(ctx, leaveTypes.rol, thisYear, { days: 4 });
 // Days of this year only; a day that is not a working day is refused, and that is fine here.
 for (const day of ["01-08", "02-12", "03-19", "04-23", "05-14"]) {
-  await saveLeaveDay(ctx, { from: `${thisYear}-${day}`, kind: "vacation", fraction: 1 }).catch(() => {});
+  await saveLeaveDay(ctx, { from: `${thisYear}-${day}`, typeId: leaveTypes.vacation, fraction: 1 }).catch(
+    () => {},
+  );
 }
 
 await getDb().execute(sql`analyze`);

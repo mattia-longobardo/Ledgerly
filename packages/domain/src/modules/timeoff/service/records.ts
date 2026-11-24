@@ -1,49 +1,30 @@
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { getPreferences } from "../../users/service";
-import { holidaysFor } from "../../../platform/holidays/service";
 import type { Ctx } from "../../../platform/context";
 import type { CivilDate } from "../../../shared/dates";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
 import {
-  type AllowanceInput,
   type LeaveInput,
   MAX_RANGE_DAYS,
-  allowanceInputSchema,
   bookable,
   datesBetween,
-  goesToCalendar,
+  fractionOfMinutes,
   leaveInputSchema,
 } from "../rules";
-import { leaveDays, timeoffAllowances } from "../schema";
+import { leaveDays } from "../schema";
+import { legacyKind, timeoffAllowances } from "../schema/legacy";
+import { TimeOffError } from "./errors";
+import { type LeaveTypeView, leaveContext, yearsOf } from "./types";
 
 export type Allowance = typeof timeoffAllowances.$inferSelect;
 export type LeaveDay = typeof leaveDays.$inferSelect;
 
-type TimeOffErrorCode =
-  | "not_found"
-  | "invalid_input"
-  /** The date is a weekend or a public holiday: the reason travels with the error. */
-  | "not_bookable"
-  /** A range that would write more days than anyone books in one go. */
-  | "range_too_long";
+export { MAX_RANGE_DAYS, TimeOffError };
 
-export { MAX_RANGE_DAYS };
+/* The year's old row (R5g: read by the API's deprecated fields only) */
 
-export class TimeOffError extends Error {
-  constructor(
-    readonly code: TimeOffErrorCode,
-    /** For `not_bookable`: which dates were refused and why. */
-    readonly refused: ReadonlyArray<{ on: CivilDate; reason: "weekend" | "holiday" }> = [],
-  ) {
-    super(code);
-    this.name = "TimeOffError";
-  }
-}
-
-/* Allowances (spec §6, §7.9) */
-
-/** The allowance stated for a year, or `null` when nobody has stated one (plan F7 §3.4.13). */
+/** The old row of a year, or `null` when nobody has stated one. */
 export async function allowanceOf(ctx: Pick<Ctx, "userId">, year: number): Promise<Allowance | null> {
   const [row] = await getDb()
     .select()
@@ -52,7 +33,7 @@ export async function allowanceOf(ctx: Pick<Ctx, "userId">, year: number): Promi
   return row ?? null;
 }
 
-/** Every allowance this user has stated, oldest year first — the modal proposes the previous one. */
+/** Every old row of a year, oldest first. */
 export async function listAllowances(ctx: Pick<Ctx, "userId">): Promise<Allowance[]> {
   return getDb()
     .select()
@@ -61,24 +42,19 @@ export async function listAllowances(ctx: Pick<Ctx, "userId">): Promise<Allowanc
     .orderBy(asc(timeoffAllowances.year));
 }
 
-/**
- * States a year's allowance, replacing whatever was there. One row per year is the database's
- * rule, so this is an upsert rather than a read followed by a write.
- */
-export async function saveAllowance(
+/** The total and the note of a year's old row, which only the API's deprecated route still states. */
+export async function saveYearNote(
   ctx: Pick<Ctx, "userId">,
   year: number,
-  input: AllowanceInput,
+  input: { totalDays: number | null; note: string | null },
 ): Promise<Allowance> {
-  const parsed = allowanceInputSchema.safeParse(input);
-  if (!parsed.success) throw new TimeOffError("invalid_input");
   if (!Number.isInteger(year) || year < 1990 || year > 2200) throw new TimeOffError("invalid_input");
-
+  const total = input.totalDays;
+  if (total !== null && !(total >= 0 && total <= 400)) throw new TimeOffError("invalid_input");
+  if ((input.note?.trim().length ?? 0) > 200) throw new TimeOffError("invalid_input");
   const values = {
-    vacationDays: parsed.data.vacationDays === null ? null : parsed.data.vacationDays.toFixed(2),
-    rolDays: parsed.data.rolDays === null ? null : parsed.data.rolDays.toFixed(2),
-    totalDays: parsed.data.totalDays === null ? null : parsed.data.totalDays.toFixed(2),
-    note: parsed.data.note ?? null,
+    totalDays: input.totalDays === null ? null : input.totalDays.toFixed(2),
+    note: input.note?.trim() || null,
   };
   const [row] = await getDb()
     .insert(timeoffAllowances)
@@ -91,23 +67,53 @@ export async function saveAllowance(
   return row;
 }
 
-/* Leave days (spec §7.9) */
+/* What a row of a type is written as */
 
-export interface LeaveWindow {
-  from: CivilDate;
-  to: CivilDate;
+/**
+ * The columns of a row of `type`: its size by the type's unit, the old kind it still writes, and
+ * what it owes the calendar. A size the unit does not take is `invalid_input`.
+ */
+export function rowOf(
+  type: LeaveTypeView,
+  size: { fraction: number; minutes: number | null },
+  minutesPerDay: number,
+) {
+  if (type.unit === "hours") {
+    if (size.minutes === null) throw new TimeOffError("invalid_input");
+  } else if (size.minutes !== null || (type.unit === "day" && size.fraction !== 1)) {
+    throw new TimeOffError("invalid_input");
+  }
+  const fraction = size.minutes === null ? size.fraction : fractionOfMinutes(size.minutes, minutesPerDay);
+  return {
+    typeId: type.id,
+    kind: legacyKind(type.legacyKind),
+    fraction: fraction.toFixed(1),
+    minutes: size.minutes,
+    pending: type.toCalendar ? ("upsert" as const) : ("none" as const),
+  };
 }
 
-/** Every day in a window, in a deterministic order: by date, then by kind. */
+/** The type of an id among the person's, or `invalid_input`: a day is never written without one. */
+export function typeIn(types: readonly LeaveTypeView[], id: string): LeaveTypeView {
+  const type = types.find((one) => one.id === id);
+  if (!type) throw new TimeOffError("invalid_input");
+  return type;
+}
+
+/* Leave days (spec §7.9) */
+
+type LeaveWindow = { from: CivilDate; to: CivilDate };
+
+/** Every day in a window, in a deterministic order: by date, then by type, then by id. */
 export async function listLeaveDays(ctx: Pick<Ctx, "userId">, window: LeaveWindow): Promise<LeaveDay[]> {
   return getDb()
     .select()
     .from(leaveDays)
     .where(and(userScoped(ctx).owns(leaveDays), gte(leaveDays.on, window.from), lte(leaveDays.on, window.to)))
-    .orderBy(asc(leaveDays.on), asc(leaveDays.kind), asc(leaveDays.id));
+    .orderBy(asc(leaveDays.on), asc(leaveDays.typeId), asc(leaveDays.id));
 }
 
-/** The whole of a calendar year, which is what the screen shows. */
+/** The whole of a calendar year: what the external calendar is read and written by. */
 export function yearWindow(year: number): LeaveWindow {
   const padded = String(year).padStart(4, "0");
   return { from: `${padded}-01-01`, to: `${padded}-12-31` };
@@ -129,21 +135,27 @@ export function yearWindow(year: number): LeaveWindow {
 export async function saveLeaveDay(ctx: Pick<Ctx, "userId">, input: LeaveInput): Promise<LeaveDay[]> {
   const parsed = leaveInputSchema.safeParse(input);
   if (!parsed.success) throw new TimeOffError("invalid_input");
-  const { from, kind, note } = parsed.data;
+  const { from, note } = parsed.data;
   const to = parsed.data.to ?? from;
-  const fraction = parsed.data.fraction ?? null;
 
-  const { patronSaint } = await getPreferences(ctx);
   const span = datesBetween(from, to);
   if (span.length > MAX_RANGE_DAYS) throw new TimeOffError("range_too_long");
   // A range can cross new year, so both years are asked for.
-  const years = [...new Set(span.map((date) => Number(date.slice(0, 4))))];
-  const holidays = await holidaysFor(ctx, years, patronSaint);
+  const { types, settings, holidays } = await leaveContext(ctx, yearsOf({ from, to }));
+  const { minutesPerDay } = await getPreferences(ctx);
+  const values = {
+    ...rowOf(
+      typeIn(types, parsed.data.typeId),
+      { fraction: parsed.data.fraction ?? 1, minutes: parsed.data.minutes ?? null },
+      minutesPerDay,
+    ),
+    note: note ?? null,
+  };
 
   const refused: { on: CivilDate; reason: "weekend" | "holiday" }[] = [];
   const keep: CivilDate[] = [];
   for (const date of span) {
-    const verdict = bookable(date, holidays);
+    const verdict = bookable(date, holidays, settings.workDays);
     if (verdict.ok) keep.push(date);
     else refused.push({ on: date, reason: verdict.reason });
   }
@@ -153,22 +165,14 @@ export async function saveLeaveDay(ctx: Pick<Ctx, "userId">, input: LeaveInput):
     if (refused.length > 0) throw new TimeOffError("not_bookable", refused);
   }
 
-  const pending = goesToCalendar(kind) ? ("upsert" as const) : ("none" as const);
-  const values = {
-    kind,
-    // Every kind is half a day or a whole one since N0; ROL no longer states minutes.
-    fraction: (fraction ?? 1).toFixed(1),
-    note: note ?? null,
-    pending,
-  };
-
   return getDb()
     .insert(leaveDays)
     .values(keep.map((on) => userScoped(ctx).stamp({ on, ...values })))
     .onConflictDoUpdate({
-      target: [leaveDays.userId, leaveDays.on, leaveDays.kind],
+      target: [leaveDays.userId, leaveDays.on, leaveDays.typeId],
       set: {
         fraction: values.fraction,
+        minutes: values.minutes,
         note: values.note,
         pending: values.pending,
         updatedAt: new Date(),

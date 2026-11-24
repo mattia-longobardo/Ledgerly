@@ -21,6 +21,7 @@ import { saveConnection } from "@domain/platform/integrations/service";
 import { wireCalendar } from "./calls";
 import { syncCalendarNow, calendarFiguresOf } from "./sync";
 import { TREK_PROVIDER } from "../../../../test/fixtures/providers";
+import { oldLeaveTypes } from "../../../../test/leave-types";
 
 const GOLDEN = join(process.cwd(), "test/fixtures/trek/parity-golden.json");
 const SEEDED = new Date("2026-06-01T08:00:00Z");
@@ -29,8 +30,9 @@ const LATER = new Date("2026-06-10T09:07:00Z");
 
 /** Ledgerly's side of the year: settled days, removals, a conflict, halves, a past year. */
 async function seed(ctx: Ctx): Promise<void> {
+  const types = await oldLeaveTypes(ctx);
   const settle = async (from: string, fraction: 0.5 | 1) => {
-    const [day] = await saveLeaveDay(ctx, { from, kind: "vacation", fraction });
+    const [day] = await saveLeaveDay(ctx, { from, typeId: types.vacation, fraction });
     await markSynced(ctx, [{ id: day.id, fraction, kind: "vacation" }], SEEDED);
     return day;
   };
@@ -38,14 +40,16 @@ async function seed(ctx: Ctx): Promise<void> {
   await deleteLeaveDay(ctx, (await settle("2026-03-11", 0.5)).id);
   await deleteLeaveDay(ctx, (await settle("2026-03-12", 1)).id);
   await settle("2026-07-01", 1);
-  await saveLeaveDay(ctx, { from: "2026-07-01", kind: "vacation", fraction: 0.5 });
-  await saveLeaveDay(ctx, { from: "2026-04-01", kind: "sick", fraction: 1 });
+  await saveLeaveDay(ctx, { from: "2026-07-01", typeId: types.vacation, fraction: 0.5 });
+  // A day of sickness as migration 0074 left it: the type "other", the old kind "sick" (the golden's).
+  const [sick] = await saveLeaveDay(ctx, { from: "2026-04-01", typeId: types.other, fraction: 1 });
+  await getDb().execute(sql`update leave_days set kind = 'sick' where id = ${sick.id}`);
   for (const from of ["2026-06-16", "2026-06-19", "2026-06-22", "2025-12-15"]) {
-    await saveLeaveDay(ctx, { from, kind: "vacation", fraction: 1 });
+    await saveLeaveDay(ctx, { from, typeId: types.vacation, fraction: 1 });
   }
-  await saveLeaveDay(ctx, { from: "2026-06-17", kind: "vacation", fraction: 0.5 });
-  await saveLeaveDay(ctx, { from: "2026-06-17", kind: "rol", fraction: 0.5 });
-  await saveLeaveDay(ctx, { from: "2026-06-18", kind: "comp", fraction: 1 });
+  await saveLeaveDay(ctx, { from: "2026-06-17", typeId: types.vacation, fraction: 0.5 });
+  await saveLeaveDay(ctx, { from: "2026-06-17", typeId: types.rol, fraction: 0.5 });
+  await saveLeaveDay(ctx, { from: "2026-06-18", typeId: types.comp, fraction: 1 });
 }
 
 async function rows(query: string): Promise<Record<string, unknown>[]> {

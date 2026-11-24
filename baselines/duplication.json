@@ -4,23 +4,23 @@
     "minLines": 6
   },
   "total": {
-    "lines": 112855,
-    "duplicatedLines": 16131,
-    "percent": 14.29,
-    "blocks": 1266
+    "lines": 114276,
+    "duplicatedLines": 16321,
+    "percent": 14.28,
+    "blocks": 1278
   },
   "units": {
     "api": {
-      "lines": 6354,
-      "duplicatedLines": 1244,
-      "percent": 19.58,
+      "lines": 6591,
+      "duplicatedLines": 1235,
+      "percent": 18.74,
       "blocks": 116
     },
     "app": {
-      "lines": 21012,
-      "duplicatedLines": 2452,
-      "percent": 11.67,
-      "blocks": 203
+      "lines": 21528,
+      "duplicatedLines": 2502,
+      "percent": 11.62,
+      "blocks": 211
     },
     "global.d": {
       "lines": 12,
@@ -42,14 +42,14 @@
     },
     "modules/budgets": {
       "lines": 1544,
-      "duplicatedLines": 235,
-      "percent": 15.22,
-      "blocks": 21
+      "duplicatedLines": 241,
+      "percent": 15.61,
+      "blocks": 22
     },
     "modules/funds": {
       "lines": 12767,
-      "duplicatedLines": 1843,
-      "percent": 14.44,
+      "duplicatedLines": 1849,
+      "percent": 14.48,
       "blocks": 146
     },
     "modules/imports": {
@@ -72,15 +72,15 @@
     },
     "modules/investments": {
       "lines": 18241,
-      "duplicatedLines": 2792,
-      "percent": 15.31,
+      "duplicatedLines": 2807,
+      "percent": 15.39,
       "blocks": 223
     },
     "modules/payroll": {
-      "lines": 3799,
-      "duplicatedLines": 760,
-      "percent": 20.01,
-      "blocks": 42
+      "lines": 3809,
+      "duplicatedLines": 742,
+      "percent": 19.48,
+      "blocks": 41
     },
     "modules/pockets": {
       "lines": 1760,
@@ -96,27 +96,27 @@
     },
     "modules/subscriptions": {
       "lines": 2312,
-      "duplicatedLines": 442,
-      "percent": 19.12,
-      "blocks": 32
+      "duplicatedLines": 434,
+      "percent": 18.77,
+      "blocks": 31
     },
     "modules/timeoff": {
-      "lines": 4318,
-      "duplicatedLines": 318,
-      "percent": 7.36,
-      "blocks": 29
+      "lines": 5014,
+      "duplicatedLines": 451,
+      "percent": 8.99,
+      "blocks": 34
     },
     "modules/transactions": {
       "lines": 13675,
-      "duplicatedLines": 1686,
-      "percent": 12.33,
+      "duplicatedLines": 1687,
+      "percent": 12.34,
       "blocks": 135
     },
     "modules/users": {
       "lines": 1004,
-      "duplicatedLines": 199,
-      "percent": 19.82,
-      "blocks": 18
+      "duplicatedLines": 205,
+      "percent": 20.42,
+      "blocks": 19
     },
     "platform/alerts": {
       "lines": 34,
@@ -185,9 +185,9 @@
       "blocks": 0
     },
     "platform/export": {
-      "lines": 550,
-      "duplicatedLines": 200,
-      "percent": 36.36,
+      "lines": 564,
+      "duplicatedLines": 214,
+      "percent": 37.94,
       "blocks": 10
     },
     "platform/format": {
@@ -203,10 +203,10 @@
       "blocks": 2
     },
     "platform/holidays": {
-      "lines": 602,
-      "duplicatedLines": 107,
-      "percent": 17.77,
-      "blocks": 9
+      "lines": 522,
+      "duplicatedLines": 100,
+      "percent": 19.16,
+      "blocks": 8
     },
     "platform/i18n": {
       "lines": 21,
@@ -222,8 +222,8 @@
     },
     "platform/integrations": {
       "lines": 2242,
-      "duplicatedLines": 470,
-      "percent": 20.96,
+      "duplicatedLines": 471,
+      "percent": 21.01,
       "blocks": 38
     },
     "platform/integrations/ccxt": {
@@ -293,7 +293,7 @@
       "blocks": 0
     },
     "platform/plugins": {
-      "lines": 4848,
+      "lines": 4844,
       "duplicatedLines": 221,
       "percent": 4.56,
       "blocks": 16
@@ -377,7 +377,7 @@
       "blocks": 0
     },
     "shared/country": {
-      "lines": 31,
+      "lines": 63,
       "duplicatedLines": 0,
       "percent": 0,
       "blocks": 0
@@ -433,9 +433,9 @@
     "api/budgets/dto.ts": 13,
     "api/funds/dto/home.ts": 57,
     "api/funds/dto/tabs.ts": 68,
-    "api/funds/routes.ts": 81,
+    "api/funds/routes.ts": 91,
     "api/interests/dto.ts": 31,
-    "api/interests/routes.ts": 32,
+    "api/interests/routes.ts": 25,
     "api/investments/dto.ts": 92,
     "api/investments/pages.ts": 39,
     "api/investments/plan-routes.ts": 24,
@@ -445,19 +445,18 @@
     "api/investments/routes.ts": 51,
     "api/investments/tabs.ts": 55,
     "api/payroll/dto.ts": 23,
-    "api/payroll/routes.ts": 47,
+    "api/payroll/routes.ts": 45,
     "api/pockets/dto.ts": 28,
     "api/pockets/routes.ts": 69,
     "api/settings/categories.ts": 39,
     "api/settings/category-board.ts": 6,
-    "api/settings/category-moves.ts": 19,
+    "api/settings/category-moves.ts": 17,
     "api/settings/connections.ts": 23,
     "api/settings/security.ts": 35,
     "api/settings/server.ts": 12,
-    "api/subscriptions/dto.ts": 37,
+    "api/subscriptions/dto.ts": 34,
     "api/subscriptions/routes.ts": 61,
-    "api/timeoff/dto.ts": 9,
-    "api/timeoff/routes.ts": 36,
+    "api/timeoff/routes.ts": 40,
     "api/transactions/dto.ts": 21,
     "api/transactions/review.ts": 27,
     "api/transactions/routes.ts": 12,
@@ -469,7 +468,6 @@
     "app/(app)/accounts/[id]/delete.ts": 14,
     "app/(app)/accounts/[id]/overview-tab.tsx": 11,
     "app/(app)/accounts/[id]/settings-tab.tsx": 23,
-    "app/(app)/accounts/[id]/switch/page.tsx": 6,
     "app/(app)/accounts/[id]/switch/switch-done.tsx": 13,
     "app/(app)/accounts/[id]/switch/switch.ts": 20,
     "app/(app)/accounts/accounts-screen.tsx": 16,
@@ -554,10 +552,13 @@
     "app/(app)/settings/server/smtp-card.tsx": 121,
     "app/(app)/settings/users/users-screen.tsx": 8,
     "app/(app)/timeoff/settings/holiday-calendars.tsx": 35,
+    "app/(app)/timeoff/settings/leave-types.tsx": 51,
     "app/(app)/timeoff/settings/page.tsx": 7,
-    "app/(app)/timeoff/settings/settings-forms.tsx": 59,
-    "app/(app)/timeoff/settings/settings-screen.tsx": 18,
-    "app/(app)/timeoff/timeoff-screen.tsx": 16,
+    "app/(app)/timeoff/settings/rest-days.tsx": 15,
+    "app/(app)/timeoff/settings/settings-forms.tsx": 15,
+    "app/(app)/timeoff/settings/settings-screen.tsx": 37,
+    "app/(app)/timeoff/settings/work-week.tsx": 14,
+    "app/(app)/timeoff/timeoff-screen.tsx": 17,
     "app/(auth)/forgot-password/forgot-form.tsx": 8,
     "app/(auth)/invite/[token]/invite-form.tsx": 10,
     "app/(auth)/reset-password/reset-form.tsx": 18,
@@ -591,6 +592,7 @@
     "modules/budgets/schema.ts": 42,
     "modules/budgets/service.ts": 49,
     "modules/budgets/ui/add-budget.tsx": 45,
+    "modules/budgets/ui/alerts-form.tsx": 6,
     "modules/budgets/ui/budgets-table.tsx": 47,
     "modules/budgets/ui/overview-card.tsx": 18,
     "modules/funds/calls.ts": 28,
@@ -605,7 +607,7 @@
     "modules/funds/queries/lists.ts": 12,
     "modules/funds/queries/views.ts": 24,
     "modules/funds/schema/funds.ts": 122,
-    "modules/funds/schema/pension.ts": 67,
+    "modules/funds/schema/pension.ts": 73,
     "modules/funds/schema/register.ts": 129,
     "modules/funds/schema/sources.ts": 93,
     "modules/funds/service/accounts.ts": 35,
@@ -666,7 +668,7 @@
     "modules/investments/calls.ts": 42,
     "modules/investments/catalog.ts": 82,
     "modules/investments/client.tsx": 8,
-    "modules/investments/managed.ts": 21,
+    "modules/investments/managed.ts": 20,
     "modules/investments/pnl/positions.ts": 7,
     "modules/investments/queries/activity-tab.ts": 31,
     "modules/investments/queries/detail.ts": 32,
@@ -676,7 +678,7 @@
     "modules/investments/queries/views.ts": 20,
     "modules/investments/rules/value.ts": 7,
     "modules/investments/rules/vocabulary.ts": 36,
-    "modules/investments/schema.ts": 412,
+    "modules/investments/schema.ts": 414,
     "modules/investments/service/assets.ts": 18,
     "modules/investments/service/book.ts": 100,
     "modules/investments/service/operations.ts": 29,
@@ -687,7 +689,7 @@
     "modules/investments/service/portfolio.ts": 8,
     "modules/investments/service/prices.ts": 17,
     "modules/investments/service/readings.ts": 49,
-    "modules/investments/service/reads.ts": 8,
+    "modules/investments/service/reads.ts": 10,
     "modules/investments/service/services.ts": 21,
     "modules/investments/service/transfers.ts": 23,
     "modules/investments/service/types.ts": 21,
@@ -736,16 +738,16 @@
     "modules/investments/ui/service/service-screen.tsx": 24,
     "modules/investments/ui/settings-forms.tsx": 17,
     "modules/investments/ui/skeletons.tsx": 14,
-    "modules/investments/ui/sync.tsx": 61,
+    "modules/investments/ui/sync.tsx": 73,
     "modules/investments/ui/transfers.tsx": 21,
     "modules/payroll/applied.ts": 29,
     "modules/payroll/fields.ts": 57,
     "modules/payroll/parse/reply-teamsystem.ts": 51,
     "modules/payroll/queries.ts": 19,
     "modules/payroll/rules.ts": 100,
-    "modules/payroll/schema.ts": 184,
+    "modules/payroll/schema.ts": 185,
     "modules/payroll/service/codes.ts": 18,
-    "modules/payroll/service/leave.ts": 67,
+    "modules/payroll/service/leave.ts": 48,
     "modules/payroll/service/reading.ts": 55,
     "modules/payroll/service/review.ts": 16,
     "modules/payroll/ui/present.ts": 20,
@@ -774,20 +776,21 @@
     "modules/subscriptions/service.ts": 115,
     "modules/subscriptions/ui/account-subscriptions.tsx": 7,
     "modules/subscriptions/ui/inactive-subscriptions.tsx": 17,
-    "modules/subscriptions/ui/subscription-dialog.tsx": 120,
+    "modules/subscriptions/ui/subscription-dialog.tsx": 112,
     "modules/subscriptions/ui/subscriptions-table.tsx": 34,
     "modules/subscriptions/ui/suggestions-dialog.tsx": 14,
-    "modules/timeoff/ports.ts": 19,
-    "modules/timeoff/rules/inputs.ts": 21,
-    "modules/timeoff/schema.ts": 57,
-    "modules/timeoff/service/external.ts": 25,
-    "modules/timeoff/service/ranges.ts": 13,
-    "modules/timeoff/service/records.ts": 14,
-    "modules/timeoff/ui/booked.ts": 8,
-    "modules/timeoff/ui/leave-board.tsx": 68,
-    "modules/timeoff/ui/leave-panel.tsx": 56,
+    "modules/timeoff/rules/inputs.ts": 22,
+    "modules/timeoff/schema/index.ts": 121,
+    "modules/timeoff/schema/legacy.ts": 38,
+    "modules/timeoff/service/external.ts": 24,
+    "modules/timeoff/service/ranges.ts": 17,
+    "modules/timeoff/service/records.ts": 31,
+    "modules/timeoff/service/types.ts": 41,
+    "modules/timeoff/ui/booked.ts": 10,
+    "modules/timeoff/ui/leave-board.tsx": 69,
+    "modules/timeoff/ui/leave-panel.tsx": 35,
     "modules/timeoff/ui/leave-table.tsx": 17,
-    "modules/timeoff/ui/year-alerts.tsx": 20,
+    "modules/timeoff/ui/year-alerts.tsx": 26,
     "modules/transactions/categorize/review/changes.ts": 71,
     "modules/transactions/categorize/review/merges.ts": 58,
     "modules/transactions/categorize/service.ts": 50,
@@ -820,7 +823,7 @@
     "modules/transactions/source-categories/reading.ts": 49,
     "modules/transactions/switch-rules.ts": 41,
     "modules/transactions/switching/doubles.ts": 64,
-    "modules/transactions/switching/transfers.ts": 45,
+    "modules/transactions/switching/transfers.ts": 44,
     "modules/transactions/taxonomy-calls.ts": 32,
     "modules/transactions/taxonomy/category-adoption.ts": 20,
     "modules/transactions/taxonomy/category-reads.ts": 50,
@@ -829,16 +832,16 @@
     "modules/transactions/ui/breakdown-card.tsx": 6,
     "modules/transactions/ui/category-cell.tsx": 9,
     "modules/transactions/ui/default-groups-form.tsx": 17,
-    "modules/transactions/ui/details-modal.tsx": 48,
+    "modules/transactions/ui/details-modal.tsx": 49,
     "modules/transactions/ui/filter-bar.tsx": 26,
-    "modules/transactions/ui/manual-dialog.tsx": 47,
+    "modules/transactions/ui/manual-dialog.tsx": 48,
     "modules/transactions/ui/manual-movement.tsx": 6,
     "modules/transactions/ui/review-list.tsx": 9,
     "modules/transactions/ui/similar-dialog.tsx": 9,
     "modules/transactions/ui/spending-card.tsx": 20,
     "modules/transactions/ui/transaction-row-menu.tsx": 26,
     "modules/users/calls.ts": 25,
-    "modules/users/schema.ts": 19,
+    "modules/users/schema.ts": 25,
     "modules/users/service/preferences.ts": 35,
     "modules/users/ui/invite-person.tsx": 30,
     "modules/users/ui/people-table.tsx": 72,
@@ -851,11 +854,11 @@
     "platform/auth/people.ts": 33,
     "platform/auth/profile.ts": 14,
     "platform/auth/schema.ts": 69,
-    "platform/export/service.ts": 200,
+    "platform/export/service.ts": 214,
     "platform/fx/rules.ts": 36,
     "platform/fx/sources.ts": 9,
-    "platform/holidays/schema.ts": 56,
-    "platform/holidays/service.ts": 40,
+    "platform/holidays/schema.ts": 55,
+    "platform/holidays/service.ts": 34,
     "platform/holidays/sources.ts": 11,
     "platform/integrations/alerts.ts": 26,
     "platform/integrations/ccxt/binance.ts": 250,
@@ -864,7 +867,7 @@
     "platform/integrations/etoro/client.ts": 10,
     "platform/integrations/etoro/mapping.ts": 28,
     "platform/integrations/rules.ts": 24,
-    "platform/integrations/schema.ts": 141,
+    "platform/integrations/schema.ts": 142,
     "platform/integrations/service/connections.ts": 39,
     "platform/integrations/service/external.ts": 69,
     "platform/integrations/service/runs.ts": 47,

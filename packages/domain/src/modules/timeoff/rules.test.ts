@@ -1,17 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { italianHolidays } from "../../platform/holidays/rules";
+import { italianHolidays } from "../../../../../test/fixtures/holidays";
 import {
-  LEAVE_DAY_KINDS,
-  type LeaveDayKind,
   type LeaveDayView,
-  allowanceMismatchDays,
+  type LeaveType,
   bookable,
   calendar,
+  calendarWordOf,
   datesBetween,
   dayStatus,
-  dayWeight,
   daysToMinutes,
-  goesToCalendar,
   leaveInputSchema,
   minuteWeight,
   minutesToDays,
@@ -30,8 +27,8 @@ const MINUTES_PER_DAY = 420;
  */
 const COUNTED_THROUGH = "2026-04-01";
 
-function day(on: string, kind: LeaveDayKind, fraction = 1): LeaveDayView {
-  return { on, kind, fraction };
+function day(on: string, typeId: string, fraction = 1): LeaveDayView {
+  return { on, typeId, fraction };
 }
 function vacation(on: string, fraction = 1): LeaveDayView {
   return day(on, "vacation", fraction);
@@ -39,6 +36,34 @@ function vacation(on: string, fraction = 1): LeaveDayView {
 function rol(on: string, fraction = 1): LeaveDayView {
   return day(on, "rol", fraction);
 }
+
+/** The types of a migrated person, with a sick type of their own, by plain ids. */
+function type(id: string, fields: Partial<LeaveType> = {}): LeaveType {
+  return {
+    id,
+    name: id,
+    color: "primary",
+    unit: "half_day",
+    hasAllowance: false,
+    toCalendar: false,
+    balanceKey: null,
+    calendarKind: null,
+    ...fields,
+  };
+}
+const TYPES: LeaveType[] = [
+  type("vacation", {
+    hasAllowance: true,
+    toCalendar: true,
+    balanceKey: "vacation",
+    calendarKind: "vacation",
+  }),
+  type("rol", { hasAllowance: true, toCalendar: true, balanceKey: "rol" }),
+  type("comp", { toCalendar: true, calendarKind: "comp" }),
+  type("sick"),
+  type("other"),
+];
+const CAL = { weekStart: 1, countedThrough: COUNTED_THROUGH, minutesPerDay: MINUTES_PER_DAY, types: TYPES };
 
 /** A day's worth of minutes, and an hour's, so a test can state "26 days" without the arithmetic. */
 const d = (count: number) => count * MINUTES_PER_DAY;
@@ -113,6 +138,14 @@ describe("dayStatus (N2)", () => {
     expect(dayStatus("2026-06-15", null)).toBe("planned");
   });
 
+  it("in a year with no payslip, takes a day before today and plans today and after (R5g)", () => {
+    expect(dayStatus("2026-06-14", null, "2026-06-15")).toBe("taken");
+    expect(dayStatus("2026-06-15", null, "2026-06-15")).toBe("planned");
+    expect(dayStatus("2026-06-16", null, "2026-06-15")).toBe("planned");
+    // With a payslip, the payslip decides and today has no say.
+    expect(dayStatus("2026-06-14", COUNTED_THROUGH, "2026-06-15")).toBe("planned");
+  });
+
   it("counts a day taken once a payslip accounts for its month", () => {
     expect(dayStatus("2026-04-01", COUNTED_THROUGH)).toBe("taken");
     // The whole month counts, ends included: a payslip accounts for months, never for days.
@@ -133,25 +166,30 @@ describe("dayStatus (N2)", () => {
 
 describe("what a day is worth (N0)", () => {
   it("is its fraction in days, and that fraction of this person's day in minutes", () => {
-    expect(dayWeight(vacation("2026-02-10"))).toBe(1);
-    expect(dayWeight(rol("2026-02-10", 0.5))).toBe(0.5);
     expect(minuteWeight(vacation("2026-02-10"), MINUTES_PER_DAY)).toBe(420);
     // A half day of ROL is half of *this* contract's day, not half of eight hours.
     expect(minuteWeight(rol("2026-02-10", 0.5), MINUTES_PER_DAY)).toBe(210);
     expect(minuteWeight(rol("2026-02-10", 0.5), 480)).toBe(240);
   });
+
+  it("is its own minutes for a row of a type counted in hours, whatever its fraction", () => {
+    expect(
+      minuteWeight({ on: "2026-02-10", typeId: "permit", fraction: 0.5, minutes: 150 }, MINUTES_PER_DAY),
+    ).toBe(150);
+    expect(
+      minuteWeight({ on: "2026-02-10", typeId: "permit", fraction: 1, minutes: null }, MINUTES_PER_DAY),
+    ).toBe(420);
+  });
 });
 
-describe("goesToCalendar (N4)", () => {
-  it("is true for the leave that spends the allowance, ROL included", () => {
-    expect(goesToCalendar("vacation")).toBe(true);
-    expect(goesToCalendar("comp")).toBe(true);
-    expect(goesToCalendar("rol")).toBe(true);
+describe("calendarWordOf (N4)", () => {
+  it("is the first word the calendar has, in the person's order, for every type that goes there", () => {
+    expect(calendarWordOf(TYPES)).toBe("vacation");
+    expect(calendarWordOf(TYPES.slice(1))).toBe("comp");
   });
 
-  it("is false for the absences that are not leave anybody books", () => {
-    expect(goesToCalendar("sick")).toBe(false);
-    expect(goesToCalendar("other")).toBe(false);
+  it("is null when no type has a word", () => {
+    expect(calendarWordOf([TYPES[1], TYPES[3]])).toBeNull();
   });
 });
 
@@ -195,6 +233,34 @@ describe("residual (spec §7.9, the binding rule)", () => {
     // The residual is the same either way: both halves are subtracted.
     expect(view.remainingMinutes).toBe(d(26 - 2.5));
     expect(view.countedThrough).toBeNull();
+  });
+
+  it("with no payslip, takes the days before today and plans the rest (R5g)", () => {
+    const view = residual({
+      snapshot: null,
+      allowanceMinutes: d(26),
+      carriedMinutes: 0,
+      days,
+      countedThrough: null,
+      today: "2026-06-01",
+      minutesPerDay: MINUTES_PER_DAY,
+    });
+    expect(view.takenMinutes).toBe(d(2));
+    expect(view.plannedMinutes).toBe(d(0.5));
+    expect(view.remainingMinutes).toBe(d(26 - 2.5));
+  });
+
+  it("weighs a row of a type counted in hours by its minutes", () => {
+    const view = residual({
+      snapshot: null,
+      allowanceMinutes: h(32),
+      carriedMinutes: 0,
+      days: [{ on: "2026-09-10", typeId: "permit", fraction: 0.5, minutes: 150 }],
+      countedThrough: COUNTED_THROUGH,
+      minutesPerDay: MINUTES_PER_DAY,
+    });
+    expect(view.plannedMinutes).toBe(150);
+    expect(view.remainingMinutes).toBe(h(32) - 150);
   });
 
   it("with a snapshot, takes the payslip's RES. and subtracts only the days it has not counted", () => {
@@ -335,13 +401,22 @@ describe("monthBars", () => {
     const bars = monthBars([vacation("2026-02-10")], 2026, MINUTES_PER_DAY, null);
     expect(bars[1]).toEqual({ month: 2, takenMinutes: 0, plannedMinutes: MINUTES_PER_DAY });
   });
+
+  it("runs the twelve months from the leave year's first month", () => {
+    const bars = monthBars([vacation("2027-02-10")], 2026, MINUTES_PER_DAY, null, {
+      today: "2027-03-01",
+      startMonth: 4,
+    });
+    expect(bars.map((bar) => bar.month)).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]);
+    expect(bars[10]).toEqual({ month: 2, takenMinutes: MINUTES_PER_DAY, plannedMinutes: 0 });
+  });
 });
 
 describe("calendar", () => {
   const MILAN = new Set(italianHolidays(2026, { month: 12, day: 7 }).map((holiday) => holiday.date));
 
   it("gives twelve months of whole weeks", () => {
-    const months = calendar(2026, [], MILAN, 1, COUNTED_THROUGH, MINUTES_PER_DAY);
+    const months = calendar(2026, [], MILAN, CAL);
     expect(months).toHaveLength(12);
     for (const month of months) {
       for (const week of month.weeks) expect(week).toHaveLength(7);
@@ -350,46 +425,32 @@ describe("calendar", () => {
 
   it("starts the week where the user's preferences say", () => {
     // 1 January 2026 is a Thursday.
-    const monday = calendar(2026, [], MILAN, 1, COUNTED_THROUGH, MINUTES_PER_DAY)[0];
+    const monday = calendar(2026, [], MILAN, CAL)[0];
     expect(monday.weeks[0].slice(0, 3).every((cell) => cell.date === null)).toBe(true);
     expect(monday.weeks[0][3].date).toBe("2026-01-01");
 
-    const sunday = calendar(2026, [], MILAN, 0, COUNTED_THROUGH, MINUTES_PER_DAY)[0];
+    const sunday = calendar(2026, [], MILAN, { ...CAL, weekStart: 0 })[0];
     expect(sunday.weeks[0][4].date).toBe("2026-01-01");
   });
 
   it("holds every day of the month exactly once", () => {
-    const february = calendar(2026, [], MILAN, 1, COUNTED_THROUGH, MINUTES_PER_DAY)[1];
+    const february = calendar(2026, [], MILAN, CAL)[1];
     const dates = february.weeks.flat().filter((cell) => cell.date !== null);
     expect(dates).toHaveLength(28);
     expect(new Set(dates.map((cell) => cell.date)).size).toBe(28);
   });
 
-  it("marks weekends and holidays, and carries the kinds of a day", () => {
-    const months = calendar(
-      2026,
-      [vacation("2026-01-02"), rol("2026-01-02", 0.5)],
-      MILAN,
-      1,
-      COUNTED_THROUGH,
-      MINUTES_PER_DAY,
-    );
+  it("marks weekends and holidays, and carries the types of a day", () => {
+    const months = calendar(2026, [vacation("2026-01-02"), rol("2026-01-02", 0.5)], MILAN, CAL);
     const cells = months[0].weeks.flat();
     const second = cells.find((cell) => cell.date === "2026-01-02");
-    expect(second).toMatchObject({ kinds: ["vacation", "rol"], status: "taken", weekend: false });
-    expect(cells.find((cell) => cell.date === "2026-01-01")).toMatchObject({ holiday: true, kinds: [] });
+    expect(second).toMatchObject({ typeIds: ["vacation", "rol"], status: "taken", weekend: false });
+    expect(cells.find((cell) => cell.date === "2026-01-01")).toMatchObject({ holiday: true, typeIds: [] });
     expect(cells.find((cell) => cell.date === "2026-01-03")).toMatchObject({ weekend: true });
   });
 
   it("marks a day that is not a whole day as partial", () => {
-    const months = calendar(
-      2026,
-      [vacation("2026-01-02", 0.5), vacation("2026-01-05", 1)],
-      MILAN,
-      1,
-      COUNTED_THROUGH,
-      MINUTES_PER_DAY,
-    );
+    const months = calendar(2026, [vacation("2026-01-02", 0.5), vacation("2026-01-05", 1)], MILAN, CAL);
     const cells = months[0].weeks.flat();
     expect(cells.find((cell) => cell.date === "2026-01-02")?.partial).toBe(true);
     expect(cells.find((cell) => cell.date === "2026-01-05")?.partial).toBe(false);
@@ -397,33 +458,19 @@ describe("calendar", () => {
 
   it("adds two halves of the same day into a whole one", () => {
     // Half a day of vacation and half a day of ROL is a whole day off, not two partial ones.
-    const months = calendar(
-      2026,
-      [vacation("2026-01-02", 0.5), rol("2026-01-02", 0.5)],
-      MILAN,
-      1,
-      COUNTED_THROUGH,
-      MINUTES_PER_DAY,
-    );
+    const months = calendar(2026, [vacation("2026-01-02", 0.5), rol("2026-01-02", 0.5)], MILAN, CAL);
     const cell = months[0].weeks.flat().find((c) => c.date === "2026-01-02");
     expect(cell?.partial).toBe(false);
-    expect(cell?.kinds).toEqual(["vacation", "rol"]);
+    expect(cell?.typeIds).toEqual(["vacation", "rol"]);
   });
 
   it("marks a day no payslip has counted planned, whether it is to come or already past", () => {
-    const months = calendar(
-      2026,
-      [vacation("2026-08-03"), vacation("2026-05-04")],
-      MILAN,
-      1,
-      COUNTED_THROUGH,
-      MINUTES_PER_DAY,
-    );
+    const months = calendar(2026, [vacation("2026-08-03"), vacation("2026-05-04")], MILAN, CAL);
     expect(months[7].weeks.flat().find((c) => c.date === "2026-08-03")?.status).toBe("planned");
     expect(months[4].weeks.flat().find((c) => c.date === "2026-05-04")?.status).toBe("planned");
 
     // And with no payslip at all, even January is still only planned.
-    const none = calendar(2026, [vacation("2026-01-02")], MILAN, 1, null, MINUTES_PER_DAY);
+    const none = calendar(2026, [vacation("2026-01-02")], MILAN, { ...CAL, countedThrough: null });
     expect(none[0].weeks.flat().find((c) => c.date === "2026-01-02")?.status).toBe("planned");
   });
 });
@@ -445,7 +492,9 @@ describe("datesBetween", () => {
 });
 
 describe("leaveInputSchema", () => {
-  const base = { from: "2026-06-16", kind: "vacation" as const, fraction: 1 };
+  const VACATION = "00000000-0000-4000-8000-000000000001";
+  const ROL = "00000000-0000-4000-8000-000000000002";
+  const base = { from: "2026-06-16", typeId: VACATION, fraction: 1 };
 
   it("accepts a day and a range", () => {
     expect(leaveInputSchema.safeParse(base).success).toBe(true);
@@ -456,24 +505,28 @@ describe("leaveInputSchema", () => {
     expect(leaveInputSchema.safeParse({ ...base, to: "2026-06-15" }).success).toBe(false);
   });
 
-  it("books every kind in the same unit, ROL included (N0)", () => {
+  it("books every type in the same unit, ROL included (N0)", () => {
     // ROL used to be the exception, stated in free-form minutes. Nobody books leave by the minute,
     // and a form with two units in it was a form nobody could read.
-    for (const kind of LEAVE_DAY_KINDS) {
-      expect(leaveInputSchema.safeParse({ from: base.from, kind, fraction: 1 }).success).toBe(true);
-      expect(leaveInputSchema.safeParse({ from: base.from, kind, fraction: 0.5 }).success).toBe(true);
+    for (const typeId of [VACATION, ROL]) {
+      expect(leaveInputSchema.safeParse({ from: base.from, typeId, fraction: 1 }).success).toBe(true);
+      expect(leaveInputSchema.safeParse({ from: base.from, typeId, fraction: 0.5 }).success).toBe(true);
     }
+  });
+
+  it("refuses a type that is not an id", () => {
+    expect(leaveInputSchema.safeParse({ ...base, typeId: "vacation" }).success).toBe(false);
   });
 
   it("allows only a whole or a half day", () => {
     expect(leaveInputSchema.safeParse({ ...base, fraction: 0.5 }).success).toBe(true);
     expect(leaveInputSchema.safeParse({ ...base, fraction: 0.25 }).success).toBe(false);
     expect(leaveInputSchema.safeParse({ ...base, fraction: 2 }).success).toBe(false);
-    expect(leaveInputSchema.safeParse({ from: base.from, kind: "rol", fraction: 0.25 }).success).toBe(false);
+    expect(leaveInputSchema.safeParse({ from: base.from, typeId: ROL, fraction: 0.25 }).success).toBe(false);
   });
 
   it("takes a whole day when no fraction is stated", () => {
-    const parsed = leaveInputSchema.safeParse({ from: base.from, kind: "rol" });
+    const parsed = leaveInputSchema.safeParse({ from: base.from, typeId: ROL });
     expect(parsed.success).toBe(true);
   });
 
@@ -488,14 +541,15 @@ describe("unrecordedLeave (M2)", () => {
     // April: the payslip says 16 h of vacation; only one seven-hour day is written down.
     expect(
       unrecordedLeave(
-        [{ kind: "vacation", hours: 16, usagePeriod: "2026-04-01" }],
+        [{ balance: "vacation", hours: 16, usagePeriod: "2026-04-01" }],
         [vacation("2026-04-07")],
         MINUTES_PER_DAY,
+        TYPES,
       ),
     ).toEqual([
       {
         month: "2026-04-01",
-        kind: "vacation",
+        typeId: "vacation",
         payrollMinutes: h(16),
         recordedMinutes: MINUTES_PER_DAY,
         missingMinutes: h(16) - MINUTES_PER_DAY,
@@ -506,9 +560,10 @@ describe("unrecordedLeave (M2)", () => {
   it("says nothing when the two agree", () => {
     expect(
       unrecordedLeave(
-        [{ kind: "vacation", hours: 14, usagePeriod: "2026-04-01" }],
+        [{ balance: "vacation", hours: 14, usagePeriod: "2026-04-01" }],
         [vacation("2026-04-07"), vacation("2026-04-08")],
         MINUTES_PER_DAY,
+        TYPES,
       ),
     ).toEqual([]);
   });
@@ -517,39 +572,43 @@ describe("unrecordedLeave (M2)", () => {
     // The ordinary state of a month whose payslip has not arrived yet: not news.
     expect(
       unrecordedLeave(
-        [{ kind: "vacation", hours: 7, usagePeriod: "2026-04-01" }],
+        [{ balance: "vacation", hours: 7, usagePeriod: "2026-04-01" }],
         [vacation("2026-04-07"), vacation("2026-04-08")],
         MINUTES_PER_DAY,
+        TYPES,
       ),
     ).toEqual([]);
   });
 
-  it("counts a payroll permit against ROL, which is the kind it is confirmed as", () => {
+  it("counts a payroll permit against ROL, the balance it is confirmed against", () => {
     const gaps = unrecordedLeave(
       [
-        { kind: "permit", hours: 4, usagePeriod: "2026-04-01" },
-        { kind: "rol", hours: 3, usagePeriod: "2026-04-01" },
+        { balance: "rol", hours: 4, usagePeriod: "2026-04-01" },
+        { balance: "rol", hours: 3, usagePeriod: "2026-04-01" },
       ],
       [rol("2026-04-07", 0.5)],
       MINUTES_PER_DAY,
+      TYPES,
     );
     expect(gaps).toHaveLength(1);
-    expect(gaps[0]).toMatchObject({ kind: "rol", payrollMinutes: h(7), recordedMinutes: 210 });
+    expect(gaps[0]).toMatchObject({ typeId: "rol", payrollMinutes: h(7), recordedMinutes: 210 });
   });
 
   it("keeps the months and the kinds apart, oldest first", () => {
     const gaps = unrecordedLeave(
       [
-        { kind: "vacation", hours: 7, usagePeriod: "2026-05-01" },
-        { kind: "rol", hours: 2, usagePeriod: "2026-04-01" },
-        { kind: "vacation", hours: 7, usagePeriod: "2026-04-01" },
+        { balance: "vacation", hours: 7, usagePeriod: "2026-05-01" },
+        { balance: "rol", hours: 2, usagePeriod: "2026-04-01" },
+        { balance: "vacation", hours: 7, usagePeriod: "2026-04-01" },
       ],
       [],
       MINUTES_PER_DAY,
+      TYPES,
     );
-    expect(gaps.map((gap) => [gap.month, gap.kind])).toEqual([
-      ["2026-04-01", "rol"],
+    // Within a month, in the person's order of the types.
+    expect(gaps.map((gap) => [gap.month, gap.typeId])).toEqual([
       ["2026-04-01", "vacation"],
+      ["2026-04-01", "rol"],
       ["2026-05-01", "vacation"],
     ]);
   });
@@ -557,9 +616,10 @@ describe("unrecordedLeave (M2)", () => {
   it("does not count a day of another kind towards the gap", () => {
     // A sick day in April is not a vacation day: it must not paper over the missing one.
     const gaps = unrecordedLeave(
-      [{ kind: "vacation", hours: 7, usagePeriod: "2026-04-01" }],
+      [{ balance: "vacation", hours: 7, usagePeriod: "2026-04-01" }],
       [day("2026-04-07", "sick")],
       MINUTES_PER_DAY,
+      TYPES,
     );
     expect(gaps[0]).toMatchObject({ recordedMinutes: 0, missingMinutes: MINUTES_PER_DAY });
   });
@@ -568,9 +628,10 @@ describe("unrecordedLeave (M2)", () => {
     // 7.0166 h ≈ 421 minutes against a 420-minute day: not a missing day.
     expect(
       unrecordedLeave(
-        [{ kind: "vacation", hours: 7.0166, usagePeriod: "2026-04-01" }],
+        [{ balance: "vacation", hours: 7.0166, usagePeriod: "2026-04-01" }],
         [vacation("2026-04-07")],
         MINUTES_PER_DAY,
+        TYPES,
       ),
     ).toEqual([]);
   });
@@ -585,7 +646,7 @@ describe("yearTotals (N5)", () => {
   ];
 
   it("splits the year by what the payslips have counted, not by the calendar", () => {
-    const totals = yearTotals(days, COUNTED_THROUGH, MINUTES_PER_DAY);
+    const totals = yearTotals(days, COUNTED_THROUGH, MINUTES_PER_DAY, TYPES);
     // February's day and sick day, and March's half day of ROL.
     expect(totals.takenMinutes).toBe(d(2) + 210);
     // July, which no payslip has reached.
@@ -594,59 +655,30 @@ describe("yearTotals (N5)", () => {
   });
 
   it("counts every kind, because a week of sickness is still a week away", () => {
-    const totals = yearTotals(days, COUNTED_THROUGH, MINUTES_PER_DAY);
-    // In the order `LEAVE_DAY_KINDS` declares, and only the kinds with something in them: no
+    const totals = yearTotals(days, COUNTED_THROUGH, MINUTES_PER_DAY, TYPES);
+    // In the person's order of the types, and only the kinds with something in them: no
     // `comp` and no `other` row for a year that has neither.
-    expect(totals.byKind).toEqual([
-      { kind: "vacation", minutes: d(1.5) },
-      { kind: "rol", minutes: 210 },
-      { kind: "sick", minutes: d(1) },
+    expect(totals.byType).toEqual([
+      { typeId: "vacation", minutes: d(1.5) },
+      { typeId: "rol", minutes: 210 },
+      { typeId: "sick", minutes: d(1) },
     ]);
   });
 
   it("plans everything, and takes nothing, when no payslip has counted a month", () => {
-    const totals = yearTotals(days, null, MINUTES_PER_DAY);
+    const totals = yearTotals(days, null, MINUTES_PER_DAY, TYPES);
     expect(totals.takenMinutes).toBe(0);
     expect(totals.plannedMinutes).toBe(d(2.5) + 210);
     // The breakdown does not care which side a day fell on: the year is the year.
-    expect(totals.byKind).toEqual(yearTotals(days, COUNTED_THROUGH, MINUTES_PER_DAY).byKind);
+    expect(totals.byType).toEqual(yearTotals(days, COUNTED_THROUGH, MINUTES_PER_DAY, TYPES).byType);
   });
 
   it("is all zeroes for a year with nothing in it", () => {
-    expect(yearTotals([], COUNTED_THROUGH, MINUTES_PER_DAY)).toEqual({
+    expect(yearTotals([], COUNTED_THROUGH, MINUTES_PER_DAY, TYPES)).toEqual({
       takenMinutes: 0,
       plannedMinutes: 0,
       totalMinutes: 0,
-      byKind: [],
+      byType: [],
     });
-  });
-});
-
-describe("allowanceMismatchDays (N7, N9)", () => {
-  it("says nothing when there is nothing to compare", () => {
-    const parts = { vacationDays: 26, rolDays: 4 };
-    expect(allowanceMismatchDays({ ...parts, totalDays: null })).toBeNull();
-    expect(allowanceMismatchDays({ ...parts, totalDays: 30, vacationDays: null })).toBeNull();
-    expect(allowanceMismatchDays({ ...parts, totalDays: 30, rolDays: null })).toBeNull();
-  });
-
-  it("says nothing within a tenth of a day, which is rounding between two units", () => {
-    expect(allowanceMismatchDays({ totalDays: 30, vacationDays: 26, rolDays: 4 })).toBeNull();
-    // 26 days and 4.05 of ROL against a stated 30: a contract's arithmetic, not a mistake.
-    expect(allowanceMismatchDays({ totalDays: 30, vacationDays: 26, rolDays: 4.05 })).toBeNull();
-  });
-
-  it("is positive when the parts come to more than the total", () => {
-    expect(allowanceMismatchDays({ totalDays: 30, vacationDays: 26, rolDays: 5 })).toBeCloseTo(1, 10);
-  });
-
-  it("is negative when they come to less", () => {
-    expect(allowanceMismatchDays({ totalDays: 32, vacationDays: 26, rolDays: 4 })).toBeCloseTo(-2, 10);
-  });
-
-  it("needs no working day at all, now that both parts are stated in days (N9)", () => {
-    // ROL used to be minutes, so the comparison went through this person's contract to get back
-    // to days. Both sides are days now: the same three figures mean the same thing to everybody.
-    expect(allowanceMismatchDays({ totalDays: 31, vacationDays: 26, rolDays: 5 })).toBeNull();
   });
 });

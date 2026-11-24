@@ -3,7 +3,7 @@ import type { Ctx } from "../context";
 import { type CivilDate, today } from "../../shared/dates";
 import { getDb } from "../db/client";
 import { userScoped } from "../db/scope";
-import { type HolidaySource, type PatronSaint, italianHolidays } from "./rules";
+import { type HolidaySource } from "./rules";
 import { holidayCalendars, holidayDays } from "./schema";
 import { type HolidayFetchOptions, fetchHolidays } from "./sources";
 
@@ -166,41 +166,30 @@ export async function daysOfCalendar(
 }
 
 /**
- * The dates this person does not work, for the years asked about — the one thing the leave rules
- * need (M3).
- *
- * The rule, and it is one rule so it can be said on screen: **the calendars they subscribed to,
- * if they subscribed to any; otherwise the computed Italian list plus the patron saint from their
- * preferences.** The fallback is what keeps the app right for somebody who has set nothing up, and
- * what keeps it working at all when both services are down and nothing was ever cached.
+ * The public holidays of the calendars this person subscribed to, for the years asked about (M3),
+ * and whether they keep any calendar, in one read. No calendar, no holiday: the app computes no
+ * country's list since R5g (decision ST-20), and the screen says so.
  */
-export async function holidaysFor(
+export async function holidaysOf(
   ctx: Pick<Ctx, "userId">,
   years: readonly number[],
-  patron: PatronSaint | null,
-): Promise<Set<CivilDate>> {
-  if (years.length === 0) return new Set();
-
+): Promise<{ days: Set<CivilDate>; hasCalendar: boolean }> {
   const rows = await getDb()
-    .select({ on: holidayDays.on })
-    .from(holidayDays)
-    .where(and(userScoped(ctx).owns(holidayDays), inArray(holidayDays.year, [...years])));
-  if (rows.length > 0) return new Set(rows.map((row) => row.on));
-
-  // No days cached. Either they keep no calendars, or none has been fetched yet; both mean the
-  // computed list is the best answer available, and a wrong "you can book Christmas" is worse than
-  // a list that is merely Italian.
-  const subscribed = await getDb()
-    .select({ id: holidayCalendars.id })
+    .select({ calendar: holidayCalendars.id, on: holidayDays.on })
     .from(holidayCalendars)
+    .leftJoin(
+      holidayDays,
+      and(
+        eq(holidayDays.calendarId, holidayCalendars.id),
+        inArray(holidayDays.year, years.length === 0 ? [-1] : [...years]),
+      ),
+    )
     .where(userScoped(ctx).owns(holidayCalendars))
-    .limit(1);
-  if (subscribed.length > 0) {
-    // They chose calendars and nothing has come back yet: the computed list would be a guess about
-    // a country they may not even live in.
-    return new Set();
-  }
-  return new Set(years.flatMap((year) => italianHolidays(year, patron).map((holiday) => holiday.date)));
+    .orderBy(asc(holidayCalendars.id), asc(holidayDays.on));
+  return {
+    days: new Set(rows.flatMap((row) => (row.on === null ? [] : [row.on]))),
+    hasCalendar: rows.length > 0,
+  };
 }
 
 /** This year and the next: leave is booked ahead of itself. */

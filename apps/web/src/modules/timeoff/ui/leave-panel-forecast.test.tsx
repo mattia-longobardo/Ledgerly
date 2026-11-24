@@ -4,11 +4,22 @@ import { describe, expect, it, vi } from "vitest";
 import messages from "../../../../../../messages/en.json";
 import { type AccrualRate, type ForecastInput, forecastOpening } from "@domain/modules/timeoff/accrual";
 import type { LeaveDayView, ResidualInput } from "@domain/modules/timeoff/rules";
-import { leaveTypeOptions } from "./kinds";
+import type { LeaveTypeView } from "./kinds";
 import { type LeavePanelEntry, LeavePanel } from "./leave-panel";
 
 const MINUTES_PER_DAY = 420;
-const TYPES = leaveTypeOptions((kind) => (kind === "vacation" ? "Holiday leave" : kind));
+const WINDOW = { from: "2026-01-01", to: "2026-12-31" };
+const TYPES: LeaveTypeView[] = [
+  {
+    id: "vacation",
+    name: "Holiday leave",
+    color: "primary",
+    unit: "half_day",
+    hasAllowance: true,
+    toCalendar: true,
+  },
+  { id: "rol", name: "ROL", color: "warn", unit: "half_day", hasAllowance: true, toCalendar: true },
+];
 /** Two days a month, read from the payslips. */
 const RATE: AccrualRate = { minutesPerMonth: 2 * MINUTES_PER_DAY, source: "payslip" };
 
@@ -25,7 +36,7 @@ function renderPanel(entry: LeavePanelEntry, days: LeaveDayView[] = [], rate: Ac
   };
   const forecast: ForecastInput = {
     rate,
-    opening: forecastOpening(snapshot, 2026),
+    opening: forecastOpening(snapshot, WINDOW),
     days,
     minutesPerDay: MINUTES_PER_DAY,
   };
@@ -35,7 +46,9 @@ function renderPanel(entry: LeavePanelEntry, days: LeaveDayView[] = [], rate: Ac
         entry={entry}
         data={{
           year: 2026,
+          window: WINDOW,
           minutesPerDay: MINUTES_PER_DAY,
+          workDays: [1, 2, 3, 4, 5],
           days,
           holidays: new Set(),
           residuals: { vacation: residual },
@@ -79,8 +92,8 @@ describe("the forecast on the day of the absence (release N5.1)", () => {
 
   it("counts the days already booked before the absence", () => {
     renderPanel({ mode: "range", from: "2026-08-10", to: "2026-08-10" }, [
-      { on: "2026-06-15", kind: "vacation", fraction: 1 },
-      { on: "2026-09-01", kind: "vacation", fraction: 1 },
+      { on: "2026-06-15", typeId: "vacation", fraction: 1 },
+      { on: "2026-09-01", typeId: "vacation", fraction: 1 },
     ]);
     // The day of June is spent by then; the one of September is not.
     expect(line("Holiday leave forecast on 10 Aug 2026")).toHaveTextContent("8 d → 7 d");

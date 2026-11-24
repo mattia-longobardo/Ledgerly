@@ -671,7 +671,7 @@
       },
       "displayCurrency": "Valuta di visualizzazione",
       "displayCurrencyHint": "I totali su più conti sono convertiti in questa valuta al cambio BCE del loro giorno. Ogni conto mantiene la sua valuta.",
-      "timeOffMoved": "Orario di lavoro, santo patrono e calendari delle festività sono in <link>Ferie › Impostazioni</link>.",
+      "timeOffMoved": "Orario di lavoro, giorni di riposo e calendari delle festività sono in <link>Ferie › Impostazioni</link>.",
       "monthlySummaryBlocked": "Un amministratore ha disattivato questa email per tutto il server."
     },
     "signIn": {
@@ -995,7 +995,7 @@
     "holidays": {
       "title": "Festività",
       "description": "I calendari su cui si misurano le tue giornate. Tienine quanti ti servono: vengono presi dalla loro fonte e aggiornati ogni giorno.",
-      "empty": "Ancora nessun calendario. Finché non ne aggiungi uno valgono le festività italiane, più il santo patrono indicato qui sotto.",
+      "empty": "Ancora nessun calendario. Finché non ne aggiungi uno contano solo la settimana lavorativa e i tuoi giorni di riposo: nessuna festività.",
       "meta": "{days} giorni nel {year} · {source}",
       "never": "Mai aggiornato",
       "updated": "Aggiornato il {when}",
@@ -5780,14 +5780,13 @@
     "title": "Ferie",
     "heading": "Lavoro e ferie",
     "header": {
-      "vacationDays": "{amount} giorni di ferie",
-      "rolHours": "{amount} di ROL",
-      "carried": "{days} riportati dal cedolino",
+      "carried": "{days} di {name} riportati",
       "noAllowance": "Nessuna dotazione indicata per quest'anno",
       "yearLabel": "Anno",
       "previousYear": "Anno precedente",
       "nextYear": "Anno successivo",
-      "thisYear": "Quest'anno"
+      "thisYear": "Quest'anno",
+      "typeDays": "{name}: {amount}"
     },
     "units": {
       "days": "{amount} gg",
@@ -5800,8 +5799,6 @@
       "allowanceOnly": "Dotazione, meno quello che è goduto e pianificato"
     },
     "cards": {
-      "vacation": "Ferie",
-      "rol": "ROL",
       "perYear": "{amount} / anno",
       "daysRemaining": "giorni rimanenti",
       "hoursRemaining": "h rimanenti",
@@ -5826,14 +5823,6 @@
       "howTo": "Scegli il primo e l'ultimo giorno. Tocca un giorno prenotato per modificarlo.",
       "counted": "Contabilizzato",
       "today": "oggi"
-    },
-    "kinds": {
-      "vacation": "Ferie",
-      "rol": "ROL",
-      "comp": "Recupero",
-      "sick": "Malattia",
-      "other": "Altro",
-      "permit": "Permesso"
     },
     "table": {
       "title": "Giornate",
@@ -5860,12 +5849,13 @@
         "upsert": "Da inviare",
         "delete": "Da togliere"
       },
-      "monthPayroll": "Cedolino: {vacation} ferie · {rol} ROL",
+      "monthPayroll": "Cedolino: {amounts}",
       "monthNoPayroll": "Cedolino non ancora arrivato",
-      "monthRecorded": "Qui: {vacation} ferie · {rol} ROL",
+      "monthRecorded": "Qui: {amounts}",
       "monthPlanned": "{amount} pianificati",
       "monthEmpty": "Niente",
-      "monthMissing": "{amount} non segnati"
+      "monthMissing": "{amount} non segnati",
+      "typeAmount": "{amount} {name}"
     },
     "empty": {
       "title": "Ancora nessuna assenza",
@@ -5882,7 +5872,7 @@
     "dialog": {
       "addTitle": "Nuova assenza",
       "editTitle": "Modifica assenza",
-      "description": "Sabato, domenica e festivi non si contano.",
+      "description": "I giorni in cui non lavori e i festivi non si contano.",
       "kind": "Tipo",
       "date": "Data",
       "from": "Dal",
@@ -5893,14 +5883,9 @@
       "splitDay": "Mezza + mezza",
       "note": "Nota",
       "noteHint": "Per esempio mattina o pomeriggio: resta qui e non arriva mai a Trek.",
-      "localOnly": "Resta qui: non viene inviata a Trek e non consuma la dotazione ferie.",
-      "otherKind": "Altra metà"
-    },
-    "allowance": {
-      "description": "Quello che il contratto concede quest'anno. Lascia vuoto un campo per non dichiarare nulla; il residuo dell'anno scorso arriva dal cedolino.",
-      "vacationDays": "Giorni di ferie",
-      "rolDays": "Giorni di ROL",
-      "totalDays": "Giorni concessi in totale"
+      "localOnly": "Resta qui: questo tipo non viene inviato a Trek.",
+      "otherKind": "Altra metà",
+      "hours": "Ore al giorno"
     },
     "toasts": {
       "saved": "Assenza salvata · {days}",
@@ -5936,9 +5921,6 @@
       "byDate": "{kind}: {amount} in più di quanto avrai maturato entro il {date}",
       "allowanceByDate": "{kind}: {amount} in più di quanto l'anno avrà concesso entro il {date}"
     },
-    "mismatch": "Le due parti non tornano col totale concesso: {amount} {direction}.",
-    "mismatchOver": "in più",
-    "mismatchUnder": "in meno",
     "tabs": {
       "label": "Ferie",
       "overview": "Panoramica",
@@ -5946,28 +5928,95 @@
     },
     "settings": {
       "allowance": {
-        "title": "Monte ferie"
+        "title": "Monte ferie",
+        "description": "Quello che il contratto concede quest'anno, tipo per tipo. Lascia vuoto un campo per non dichiarare nulla.",
+        "days": "{name}: giorni all'anno",
+        "carried": "{name}: riportati",
+        "carriedHint": "Riportati: quello che hanno lasciato gli anni prima, in giorni. Vale solo se nessun cedolino lo stampa.",
+        "none": "Nessun tipo ha una dotazione. Attivala per un tipo in Tipi di assenza."
       },
       "copyFrom": "Copia dal {year}",
       "hours": {
         "title": "Orario di lavoro",
         "description": "Quanto dura un giorno di ferie.",
         "label": "Ore in un giorno di lavoro",
-        "hint": "Le ore della busta paga diventano giorni con questo numero, per tutti gli anni. Sabato e domenica non contano mai come ferie.",
+        "hint": "Le ore della busta paga diventano giorni con questo numero, per tutti gli anni.",
         "saved": "Orario di lavoro salvato"
-      },
-      "patron": {
-        "label": "Santo patrono",
-        "none": "Nessuno",
-        "day": "Giorno",
-        "hint": "Un giorno festivo solo nella tua città. Una data già nel calendario conta una volta sola.",
-        "saved": "Santo patrono salvato"
       },
       "calendar": {
         "description": "Dove vivono anche i giorni di ferie.",
         "manage": "Gestisci in Plugin",
         "connect": "Collega in Plugin"
-      }
+      },
+      "types": {
+        "title": "Tipi di assenza",
+        "description": "Le assenze che segni, con il loro colore e quanto può durare un giorno di ciascuna.",
+        "empty": "Ancora nessun tipo di assenza.",
+        "add": "Aggiungi un tipo",
+        "edit": "Modifica",
+        "remove": "Rimuovi",
+        "editOf": "Modifica {name}",
+        "removeOf": "Rimuovi {name}",
+        "confirmRemove": "Rimuovere il tipo {name}?",
+        "removed": "Tipo {name} rimosso",
+        "inUse": "{name} ha giorni segnati: spostali o rimuovili prima.",
+        "failed": "Non ha funzionato. Riprova.",
+        "duplicate": "Hai già un tipo con questo nome.",
+        "nameMissing": "Dai un nome al tipo.",
+        "added": "Tipo {name} aggiunto",
+        "saved": "Tipo salvato",
+        "addTitle": "Nuovo tipo di assenza",
+        "editTitle": "Modifica tipo di assenza",
+        "submit": "Salva",
+        "name": "Nome",
+        "color": "Colore",
+        "unit": "Si segna in",
+        "unitHint": "Quanto può durare un giorno di questo tipo.",
+        "hasAllowance": "Ha una dotazione annua",
+        "goesToCalendar": "Va nel calendario esterno",
+        "withAllowance": "Dotazione",
+        "toCalendar": "Nel calendario",
+        "colors": {
+          "primary": "Verde acqua",
+          "warn": "Ambra",
+          "accent": "Ciano",
+          "neg": "Rosso",
+          "faint": "Grigio",
+          "pos": "Verde",
+          "muted": "Ardesia"
+        },
+        "units": {
+          "day": "Giorni interi",
+          "half_day": "Giorni interi o mezze giornate",
+          "hours": "Ore"
+        }
+      },
+      "week": {
+        "title": "Settimana lavorativa",
+        "description": "I giorni in cui lavori e il mese in cui inizia il tuo anno di ferie.",
+        "days": "Giorni lavorativi",
+        "startMonth": "L'anno di ferie inizia a",
+        "startMonthHint": "I dodici mesi a cui si riferiscono dotazione e residuo.",
+        "noDays": "Scegli almeno un giorno lavorativo.",
+        "saved": "Settimana lavorativa salvata"
+      },
+      "restDays": {
+        "title": "Giorni di riposo dell'anno",
+        "empty": "Nessun giorno di riposo tuo, come il santo patrono della tua città.",
+        "remove": "Rimuovi",
+        "removeOf": "Rimuovi {day}",
+        "confirmRemove": "Togliere {day} dai tuoi giorni di riposo?",
+        "removed": "{day} rimosso",
+        "added": "{day} aggiunto",
+        "failed": "Non ha funzionato. Riprova.",
+        "duplicate": "Questa data è già un giorno di riposo.",
+        "nameMissing": "Dai un nome al giorno.",
+        "month": "Mese",
+        "day": "Giorno",
+        "name": "Nome",
+        "add": "Aggiungi il giorno di riposo"
+      },
+      "noCalendar": "Ancora nessun calendario delle festività: si conosce solo la tua settimana lavorativa e un festivo conta come giorno lavorativo."
     },
     "selection": {
       "from": "Dal {date} · scegli l'ultimo giorno",
@@ -6007,16 +6056,28 @@
       "removeIntro": "{count, plural, one {Questo giorno perde tutte le sue assenze:} other {Questi # giorni perdono tutte le loro assenze:}}",
       "removeLine": "{day} · {kinds}",
       "back": "Indietro",
-      "selectMore": "Seleziona più giorni da qui"
+      "selectMore": "Seleziona più giorni da qui",
+      "hoursOf": "{kind} {amount} h",
+      "durationHours": "{total} ({count, plural, one {# giorno} other {# giorni}} da {hours})"
     },
     "loading": "Caricamento di Time Off",
     "accrual": {
       "perMonth": "Matura {amount} al mese",
-      "yearEnd": "Previsto al 31/12: {amount}",
+      "yearEnd": "Previsto a fine anno ferie: {amount}",
       "fromAllowance": "Stima: dotazione ÷ 12 mesi, senza un cedolino da cui leggere il ritmo",
       "none": "Nessuna previsione: mancano un cedolino e una dotazione da cui leggere la maturazione",
-      "daysForecast": "giorni previsti al 31/12",
-      "basis": "Previsto dal cedolino di {payslip}: il suo residuo, più la maturazione fino al 31/12, meno i giorni pianificati"
+      "daysForecast": "giorni previsti a fine anno ferie",
+      "basis": "Previsto dal cedolino di {payslip}: il suo residuo, più la maturazione fino a fine anno ferie, meno i giorni pianificati"
+    },
+    "noCalendar": {
+      "title": "Si conosce solo la tua settimana lavorativa",
+      "hint": "Nessun calendario delle festività: qui un festivo conta come giorno lavorativo. Aggiungi un calendario nelle Impostazioni.",
+      "action": "Aggiungi un calendario"
+    },
+    "noTypes": {
+      "title": "Ancora nessun tipo di assenza",
+      "description": "Le assenze si segnano sotto un tuo tipo, come ferie o ROL. Aggiungine uno nelle Impostazioni.",
+      "action": "Aggiungi un tipo di assenza"
     }
   },
   "legal": {
