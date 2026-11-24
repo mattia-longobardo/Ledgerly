@@ -3589,14 +3589,6 @@
           "value": "Position value"
         }
       },
-      "payslipTypes": {
-        "ordinary": "Ordinary",
-        "thirteenth": "13th month",
-        "fourteenth": "14th month",
-        "fifteenth": "15th month",
-        "bonus": "Bonus",
-        "settlement": "Settlement"
-      },
       "statuses": {
         "accrued_not_due": "Accrued, not due",
         "transferred": "Transferred",

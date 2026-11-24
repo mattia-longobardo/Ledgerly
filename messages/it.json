@@ -3589,14 +3589,6 @@
           "value": "Valore posizione"
         }
       },
-      "payslipTypes": {
-        "ordinary": "Ordinario",
-        "thirteenth": "Tredicesima",
-        "fourteenth": "Quattordicesima",
-        "fifteenth": "Quindicesima",
-        "bonus": "Premio",
-        "settlement": "Conguaglio"
-      },
       "statuses": {
         "accrued_not_due": "Maturato, non scaduto",
         "transferred": "Versato",

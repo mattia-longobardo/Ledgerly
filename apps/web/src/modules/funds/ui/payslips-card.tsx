@@ -13,10 +13,6 @@ import type { Say } from "@/platform/say";
 type Payslip = Contributions["payslips"][number];
 type Money = (amount: string | null) => string;
 
-/** The payslip types the messages name; the wire's type is a string. */
-const PAYSLIP_TYPES = ["ordinary", "thirteenth", "fourteenth", "fifteenth", "bonus", "settlement"] as const;
-const payslipTypeOf = (type: string) => PAYSLIP_TYPES.find((one) => one === type) ?? "ordinary";
-
 function PayslipLink({ documentId }: { documentId: string | null }) {
   const text = useTranslations("funds.fund.contributions");
   return documentId === null ? null : (
@@ -52,12 +48,15 @@ export function PayslipsCard({
   money: Money;
 }) {
   const text = useTranslations("funds.fund.contributions");
-  const pension = useTranslations("funds.pension");
+  const payroll = useTranslations("payroll");
   const { payslips, payslipTotals: totals } = contributions;
+  // A payslip with no month is an extra payment: it takes Payroll's name of its kind.
   const monthName = (one: Payslip) =>
     one.month
       ? formatDate(one.month, "monthYear", say.locale)
-      : pension(`payslipTypes.${payslipTypeOf(one.payslipType)}`);
+      : one.kind === "ordinary"
+        ? NULL_DISPLAY
+        : payroll(`register.kinds.${one.kind}`, { number: String(one.extraNumber ?? "") });
   const props = { payslips, totals, label, money, monthName };
   return (
     <Card padded={false} className="min-w-0" data-testid="fund-payslips">

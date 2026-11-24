@@ -90,6 +90,8 @@ test.describe("a fund fed by the payslip", () => {
       // The contributions tab has them, with their periods, before the fund has said anything.
       await page.goto(`${fundUrl}?tab=contributions&preset=all`);
       await expect(page.getByTestId("payslip-line")).toHaveCount(5);
+      // The 13th has no month: it takes Payroll's name of its kind.
+      await expect(page.getByTestId("payslip-line").filter({ hasText: /13th(?! month)/ })).toHaveCount(1);
       await expect(page.getByTestId("fund-payslips")).toContainText("885,00 €");
       await expect(page.getByTestId("fund-quarters")).toContainText(`Q1 ${LAST_YEAR}`);
       // The first quarter is past its due date with nothing in the fund: it is not reconciled.
