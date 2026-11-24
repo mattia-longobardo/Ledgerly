@@ -12,6 +12,7 @@ import type {
   movementCandidates,
 } from "@ledgerly/domain/funds";
 import { fractionToPercent } from "@ledgerly/domain/interests";
+import { kindOf } from "@ledgerly/domain/payroll";
 import { debitOut, fundRef, maybe, money, operationOut, periodOut } from "./home";
 
 type Valuations = z.input<typeof FUNDS.funds.getFundValuations.response>;
@@ -130,6 +131,12 @@ function payslipsOut(detail: Detail, payslips: ContributionsData["payslips"]) {
       documentId: detail.payslipDocuments.get(competence.payslipId) ?? null,
       month: competence.payrollPeriod,
       payslipType: competence.payslipType,
+      // shortcut: the competence stores the old type only; kind from it until R5f stores the kind.
+      ...kindOf({
+        type: competence.payslipType,
+        kind: null,
+        extraNumber: null,
+      }),
       year: competence.year,
       index,
       worker: maybe(competence.workerCents),

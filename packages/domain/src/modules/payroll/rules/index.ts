@@ -165,7 +165,7 @@ export interface RegisterPayslip {
 }
 
 /** A payslip's kind and extra payment's number: stored, or from its old type. */
-export function kindOf(payslip: Pick<RegisterPayslip, "type" | "kind" | "extraNumber">): {
+export function kindOf(payslip: Pick<RegisterPayslip, "kind" | "extraNumber"> & { type: string }): {
   kind: PayslipKind;
   extraNumber: number | null;
 } {

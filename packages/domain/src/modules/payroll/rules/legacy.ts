@@ -26,7 +26,7 @@ const EXTRA_TYPES = ["thirteenth", "fourteenth", "fifteenth"] as const;
 const KIND_TYPES = ["ordinary", "bonus", "settlement"] as const;
 
 /** The kind and the extra payment's number an old type stands for. */
-export function kindOfType(type: PayslipType): { kind: "ordinary" | "extra" | "bonus" | "settlement"; extraNumber: number | null } {
+export function kindOfType(type: string): { kind: "ordinary" | "extra" | "bonus" | "settlement"; extraNumber: number | null } {
   const index = EXTRA_TYPES.findIndex((one) => one === type);
   if (index >= 0) return { kind: "extra", extraNumber: index + 1 };
   return { kind: KIND_TYPES.find((one) => one === type) ?? "ordinary", extraNumber: null };

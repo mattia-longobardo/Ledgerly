@@ -3,6 +3,11 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Funds: a payslip's kind in the Contributions tab (R5g follow-up)
+
+- `GET /funds/{id}/contributions`: a row of `payslips` adds `kind` (`ordinary`, `extra`, `bonus`,
+  `settlement`) and `extraNumber` (`extra` only: 1 is a 13th). Deprecated, removed in R5f: `payslipType`.
+
 ## Unreleased · Payroll: the refusals of a manual payslip (R5g follow-up)
 
 - `POST`/`PUT /payroll/manual-payslips`: a month — or an extra payment — of the year that already has an

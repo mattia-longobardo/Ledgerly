@@ -19461,6 +19461,27 @@
                           "payslipType": {
                             "type": "string"
                           },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "ordinary",
+                              "extra",
+                              "bonus",
+                              "settlement"
+                            ]
+                          },
+                          "extraNumber": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "year": {
                             "type": "integer",
                             "minimum": -9007199254740991,
@@ -19549,6 +19570,8 @@
                           "documentId",
                           "month",
                           "payslipType",
+                          "kind",
+                          "extraNumber",
                           "year",
                           "index",
                           "worker",

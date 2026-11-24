@@ -360,6 +360,10 @@ describe("«Accept the difference»", () => {
     expect(await saved(alice, fund.id)).toEqual(fromAction);
 
     const register = await send(alice, "GET", `/funds/${fund.id}/contributions?period=2031`);
+    // The payslip's kind beside its deprecated old type.
+    expect(register.body.payslips).toMatchObject([
+      { payslipType: "ordinary", kind: "ordinary", extraNumber: null, month: "2031-03-01" },
+    ]);
     const period = register.body.payroll.periods.find((one: { index: number }) => one.index === 1);
     expect(
       period.components.find((one: { component: string }) => one.component === "worker").decision,
