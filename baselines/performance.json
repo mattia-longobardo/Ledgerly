@@ -63,7 +63,7 @@
     "Subscriptions": {
       "medianMs": 3,
       "p95Ms": 3.4,
-      "queries": 9
+      "queries": 10
     },
     "Time Off (anno)": {
       "medianMs": 3.8,
