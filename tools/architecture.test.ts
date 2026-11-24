@@ -268,6 +268,66 @@ describe("the image's dependencies (PERS-87 SEC-04)", () => {
 });
 
 /**
+ * The embedding model of the categories (rewrite plan R6): the conditions of the Security
+ * Gatekeeper's verdict that a test can hold.
+ */
+describe("the embedding model of the categories (R6)", () => {
+  const APPROVED =
+    "https://huggingface.co/sentence-transformers/static-similarity-mrl-multilingual-v1/resolve/b68f4122911bcffcd6e1f695f2d99cd6788972d8/0_StaticEmbedding/";
+  const dockerfile = readFileSync(join(ROOT, "Dockerfile"), "utf8").replace(/\\\n\s*/g, "");
+  const embedder = readFileSync(join(ROOT, "apps/worker/src/embedder.ts"), "utf8");
+  const converter = readFileSync(join(ROOT, "scripts/convert-embeddings.ts"), "utf8");
+  const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+  it("is fetched at build time only, from the approved revision, each file pinned by its sha256", () => {
+    const adds = dockerfile.split("\n").filter((line) => /^ADD\b/.test(line));
+    expect(adds.map((line) => line.split(/\s+/).slice(1, 3))).toEqual([
+      [
+        "--checksum=sha256:8245ab78ee71dded845a82d2270fcb9e785b29dad0e1619f69d5390c47d9ba00",
+        `${APPROVED}model.safetensors`,
+      ],
+      [
+        "--checksum=sha256:11aaf894a4ccf3d95e8830e27c0f8152791fbbff2b988e29a265580b86edd216",
+        `${APPROVED}tokenizer.json`,
+      ],
+    ]);
+    expect(dockerfile).not.toMatch(/onnx\/|train\.py/);
+  });
+
+  it("puts in the image the converted file and its notice only, at a fixed path", () => {
+    const fromModels = dockerfile.split("\n").filter((line) => line.includes("--from=models"));
+    expect(fromModels).toEqual([
+      "COPY --from=models --chown=1000:1000 /models/categories-embeddings.bin ./models/categories-embeddings.bin",
+    ]);
+    expect(dockerfile).toContain("COPY --chown=1000:1000 models/NOTICE ./models/NOTICE");
+    expect(embedder).toMatch(/const MODEL_FILE = "models\/categories-embeddings\.bin";/);
+    expect(embedder).toMatch(/\nconst MODEL_SHA256 = "[0-9a-f]{64}";/);
+    expect(code(embedder)).not.toMatch(/process\.env|process\.argv/);
+  });
+
+  it("is read with no network and no other program, and the tokenizer with JSON.parse only", () => {
+    const forbidden =
+      /\bfetch\s*\(|node:(https?|http2|net|tls|dgram|child_process|worker_threads)|["'](https?|net|child_process)["']|\beval\s*\(|new Function\b|\bimport\s*\(/;
+    expect(code(embedder)).not.toMatch(forbidden);
+    expect(code(converter)).not.toMatch(forbidden);
+  });
+
+  it("is loaded by the worker only: no file outside it imports the embedder", () => {
+    const importers: string[] = [];
+    for (const top of ["apps", "packages", "plugins", "scripts", "tools"]) {
+      for (const rel of readdirSync(join(ROOT, top), { recursive: true, encoding: "utf8" })) {
+        if (!/\.(ts|tsx|mts)$/.test(rel) || rel.includes("node_modules")) continue;
+        const path = `${top}/${rel}`;
+        if (/from\s+["'][^"']*\/embedder["']/.test(readFileSync(join(ROOT, path), "utf8")))
+          importers.push(path);
+      }
+    }
+    expect(importers.filter((path) => !path.startsWith("apps/worker/src/"))).toEqual([]);
+    expect(importers).toContain("apps/worker/src/main.ts");
+  });
+});
+
+/**
  * The packages of the monorepo (rewrite plan R0, 10-modularity.md §10.2, §10.6): what has no known
  * list must hold for the whole tree.
  */

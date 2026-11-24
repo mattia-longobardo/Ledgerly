@@ -13,7 +13,6 @@ import { userScoped } from "../../../platform/db/scope";
 import { categories, categoryGroupMarks, categoryMemory, categoryModels, transactions } from "../schema";
 import { type CascadeMovement, type Decision, decide, groupCategories, type Knowledge } from "./cascade";
 import {
-  type Example,
   loadModel,
   type Model,
   outOfSampleInTurns,
@@ -21,6 +20,9 @@ import {
   storeModel,
   trainInTurns,
 } from "./classifier";
+import { type EmbeddedLabel, learnEmbedded, type StoredEmbedded } from "../rules/embedded-learning";
+import type { Embedder } from "../rules/embedding";
+import { type Measure, measureLabels } from "../rules/categories-measure";
 import { type Confirmation, strictMemory } from "./memory";
 import { DEFAULT_GROUPS } from "./tables";
 import { applyRulesToNew } from "./user-rules-service";
@@ -40,26 +42,48 @@ const WRITE_CHUNK = 500;
 /** How long a pass may run before its flag is taken for one left behind. */
 const STALE_PASS_MS = 10 * 60_000;
 
+/** The embedding model (R6), in the worker only: `null` elsewhere and when it is off. */
+let current: Embedder | null = null;
+
+/** The worker hands its model here as it starts; `null` turns the level off. */
+export function setEmbedder(embedder: Embedder | null): void {
+  current = embedder;
+}
+
+function currentEmbedder(): Embedder | null {
+  return current;
+}
+
+/** What the cascade reads of a movement (`CascadeMovement`, with its type for the kind). */
+const CASCADE_COLUMNS = {
+  payee: transactions.payee,
+  counterparty: transactions.counterpartyName,
+  rawText: transactions.rawText,
+  note: transactions.note,
+  accountId: transactions.accountId,
+  amountCents: transactions.amountCents,
+  type: transactions.type,
+  merchantCategoryCode: transactions.merchantCategoryCode,
+  bankTransactionCode: transactions.bankTransactionCode,
+};
+
 /** A confirmed label is one a person or a source gave; a row with no origin predates the origins. */
 const CONFIRMED = or(
   isNull(transactions.categoryOrigin),
   inArray(transactions.categoryOrigin, ["user", "provider"]),
 );
 
-interface Label extends Example {
+interface Label extends EmbeddedLabel {
   at: Date;
   updatedAt: Date;
+  merchantCategoryCode: string | null;
+  bankTransactionCode: string | null;
 }
 
 async function confirmedLabels(ctx: Who): Promise<Label[]> {
   const rows = await getDb()
     .select({
-      payee: transactions.payee,
-      counterparty: transactions.counterpartyName,
-      rawText: transactions.rawText,
-      note: transactions.note,
-      accountId: transactions.accountId,
-      amountCents: transactions.amountCents,
+      ...CASCADE_COLUMNS,
       categoryId: transactions.categoryId,
       at: transactions.occurredAt,
       updatedAt: transactions.updatedAt,
@@ -76,7 +100,11 @@ async function confirmedLabels(ctx: Who): Promise<Label[]> {
     )
     .orderBy(desc(transactions.occurredAt), desc(transactions.id))
     .limit(MAX_EXAMPLES);
-  return rows.map((row) => ({ ...row, categoryId: row.categoryId as string }));
+  return rows.map(({ type, ...row }) => ({
+    ...row,
+    categoryId: row.categoryId as string,
+    kind: type === "income" ? "income" : "expense",
+  }));
 }
 
 /** The share of the automatic categories of the last 30 days that a person replaced. */
@@ -94,7 +122,9 @@ async function correctionRate(ctx: Who, now: Date): Promise<number> {
 }
 
 /** The person's categories a movement may be given, and their category for each default group. */
-async function categoriesOf(ctx: Who): Promise<Pick<Knowledge, "groupCategory" | "categoryKind">> {
+async function categoriesOf(
+  ctx: Who,
+): Promise<Pick<Knowledge, "groupCategory" | "categoryKind"> & { named: { id: string; name: string }[] }> {
   const [active, marks] = await Promise.all([
     getDb()
       .select({ id: categories.id, name: categories.name, type: categories.type })
@@ -108,6 +138,7 @@ async function categoriesOf(ctx: Who): Promise<Pick<Knowledge, "groupCategory" |
       .orderBy(categoryGroupMarks.groupKey),
   ]);
   return {
+    named: active,
     categoryKind: new Map(active.map((category) => [category.id, category.type])),
     groupCategory: groupCategories(
       DEFAULT_GROUPS,
@@ -151,7 +182,10 @@ async function storedKnowledge(ctx: Who): Promise<Knowledge> {
       .orderBy(categoryMemory.key),
   ]);
   return {
-    ...own,
+    groupCategory: own.groupCategory,
+    categoryKind: own.categoryKind,
+    // Read outside the worker: no embedding model, the cascade of before R6.
+    embedded: null,
     memory: new Map(memory.map((one) => [one.key, one.categoryId])),
     model: row?.model ? loadModel(row.model as StoredModel) : null,
     thresholds: { automatic: row?.automaticThreshold ?? null, suggestion: row?.suggestionThreshold ?? null },
@@ -181,6 +215,8 @@ async function learn(
   );
 
   let model: Model | null = stored?.model ? loadModel(stored.model as StoredModel) : null;
+  let rate: number | null = null;
+  const correctionRateOnce = async () => (rate ??= await correctionRate(ctx, now));
   let thresholds: Thresholds = {
     automatic: stored?.automaticThreshold ?? null,
     suggestion: stored?.suggestionThreshold ?? null,
@@ -198,8 +234,22 @@ async function learn(
     thresholds =
       model === null
         ? { automatic: null, suggestion: null }
-        : thresholdsFor(await outOfSampleInTurns(labels), await correctionRate(ctx, now));
+        : thresholdsFor(await outOfSampleInTurns(labels), await correctionRateOnce());
   }
+  const embedder = currentEmbedder();
+  const embedded =
+    embedder === null
+      ? null
+      : await learnEmbedded({
+          embedder,
+          labels,
+          labelledThrough,
+          own,
+          stored: stored?.model,
+          train,
+          correctionRate: correctionRateOnce,
+        });
+  const write = !unchanged || embedded?.fresh === true;
 
   await getDb().transaction(async (tx) => {
     await tx.delete(categoryMemory).where(eq(categoryMemory.userId, ctx.userId));
@@ -212,14 +262,14 @@ async function learn(
     for (let at = 0; at < rows.length; at += WRITE_CHUNK) {
       await tx.insert(categoryMemory).values(rows.slice(at, at + WRITE_CHUNK));
     }
-    if (!unchanged) {
+    if (write) {
       const values = {
         version: (stored?.version ?? 0) + 1,
         examples: labels.length,
         labelledThrough,
         automaticThreshold: thresholds.automatic,
         suggestionThreshold: thresholds.suggestion,
-        model: model === null ? null : storeModel(model),
+        model: model === null ? null : storedRow(model, embedded?.store ?? null),
         trainedAt: now,
       };
       await tx
@@ -228,7 +278,23 @@ async function learn(
         .onConflictDoUpdate({ target: categoryModels.userId, set: values });
     }
   });
-  return { knowledge: { ...own, memory, model, thresholds }, trained: !unchanged, examples: labels.length };
+  return {
+    knowledge: {
+      groupCategory: own.groupCategory,
+      categoryKind: own.categoryKind,
+      memory,
+      model,
+      thresholds,
+      embedded: embedded?.knowledge ?? null,
+    },
+    trained: write,
+    examples: labels.length,
+  };
+}
+
+/** Today's model, and beside it the one trained with the embeddings, when the worker has one. */
+function storedRow(model: Model, embedded: StoredEmbedded | null) {
+  return embedded === null ? storeModel(model) : { ...storeModel(model), embedded };
 }
 
 /** The columns a decision of the cascade writes on a movement. */
@@ -296,15 +362,7 @@ export async function categorise(
     const candidates = await getDb()
       .select({
         id: transactions.id,
-        payee: transactions.payee,
-        counterparty: transactions.counterpartyName,
-        rawText: transactions.rawText,
-        note: transactions.note,
-        accountId: transactions.accountId,
-        amountCents: transactions.amountCents,
-        type: transactions.type,
-        merchantCategoryCode: transactions.merchantCategoryCode,
-        bankTransactionCode: transactions.bankTransactionCode,
+        ...CASCADE_COLUMNS,
         currency: transactions.currency,
         origin: transactions.origin,
         transferGroupId: transactions.transferGroupId,
@@ -357,6 +415,43 @@ export async function categorise(
   } finally {
     await setPreparing(ctx, false);
   }
+}
+
+/**
+ * The cascade of today and the one with the embedding model, graded on the person's own confirmed
+ * labels (R6, "Misura prima/dopo"): numbers only, nothing written. Read-only.
+ */
+export async function measureCategories(
+  ctx: Who,
+  embedder: Embedder,
+  accountIds: readonly string[],
+): Promise<Measure> {
+  const [labels, own, open] = await Promise.all([
+    confirmedLabels(ctx),
+    categoriesOf(ctx),
+    openMovements(ctx, accountIds),
+  ]);
+  return measureLabels(labels, own, embedder, open);
+}
+
+/** The movements of `accountIds` with no category today: what the cascade could still file. */
+async function openMovements(ctx: Who, accountIds: readonly string[]): Promise<CascadeMovement[]> {
+  if (accountIds.length === 0) return [];
+  const rows = await getDb()
+    .select({
+      ...CASCADE_COLUMNS,
+    })
+    .from(transactions)
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        inArray(transactions.accountId, [...accountIds]),
+        inArray(transactions.type, ["income", "expense"]),
+        isNull(transactions.categoryId),
+        isNull(transactions.removedUpstreamAt),
+      ),
+    );
+  return rows.map(({ type, ...row }) => ({ ...row, kind: type === "income" ? "income" : "expense" }));
 }
 
 /**

@@ -2,10 +2,15 @@
  * The cascade of the automatic categories (rewrite plan, 04-now.md §4.4): structure → strict
  * memory → the person's classifier → the static tables → nothing. One pure function from a
  * movement and what is known about the person to a decision; the service only reads and writes.
+ *
+ * R6 (H56): where the worker has the embedding model, the classifier is the one trained with the
+ * embeddings as features, and a text the classifier cannot place may still get a suggestion from
+ * the category it reads closest to (the cold start). Elsewhere the cascade is the one of before.
  */
 import { type Model, predict } from "./classifier";
+import { cosine, type Embedder } from "../rules/embedding";
 import { type GroupKey, brandGroup, merchantTypeGroup, STRUCTURE_GROUP, structureOf } from "./tables";
-import { type MovementText, memoryKey, shownText } from "./text";
+import { type MovementText, memoryKey, shownText, wordsOf } from "./text";
 import type { Thresholds } from "./thresholds";
 
 /** Why a category was given or suggested: a closed list, a fixed sentence for each (ux §2.2). */
@@ -31,6 +36,43 @@ export interface Knowledge {
   groupCategory: ReadonlyMap<GroupKey, string>;
   /** The categories a movement may be given, with their kind: an archived one is not here. */
   categoryKind: ReadonlyMap<string, "income" | "expense" | "transfer">;
+  /** R6: the embedding level, in the worker only; `null` everywhere else and when it is off. */
+  embedded?: EmbeddedKnowledge | null;
+}
+
+/** A category as the embedding model reads it: its name and, for a default group, the group's words. */
+export interface Prototype {
+  categoryId: string;
+  vector: Float32Array;
+}
+
+export interface EmbeddedKnowledge {
+  embedder: Embedder;
+  /** The classifier trained with the embeddings, and its thresholds; `null` before the first. */
+  model: Model | null;
+  thresholds: Thresholds;
+  prototypes: readonly Prototype[];
+  /** The least closeness at which the cold start suggests; `null`: it suggests nothing. */
+  coldStart: number | null;
+}
+
+/**
+ * The category whose words read closest to a text, among those `fits` allows, and how close: the
+ * cosine moved to 0..1, so it is read like a confidence. `null` with no category to choose from.
+ */
+export function closestCategory(
+  prototypes: readonly Prototype[],
+  vector: Float32Array,
+  fits: (categoryId: string) => boolean,
+): { categoryId: string; confidence: number } | null {
+  let best: { categoryId: string; confidence: number } | null = null;
+  for (const prototype of prototypes) {
+    if (!fits(prototype.categoryId)) continue;
+    const confidence = (1 + cosine(prototype.vector, vector)) / 2;
+    if (best === null || confidence > best.confidence)
+      best = { categoryId: prototype.categoryId, confidence };
+  }
+  return best;
 }
 
 export type Decision =
@@ -47,6 +89,28 @@ export type Decision =
   | { kind: "none" };
 
 const NONE: Decision = { kind: "none" };
+
+/** The classifier the cascade asks: the one with the embeddings where there is one, else today's. */
+function classifierOf(knowledge: Knowledge) {
+  const embedded = knowledge.embedded;
+  return embedded?.model != null
+    ? { model: embedded.model, thresholds: embedded.thresholds, embedder: embedded.embedder }
+    : { model: knowledge.model, thresholds: knowledge.thresholds, embedder: null };
+}
+
+/** The cold start's suggestion: the closest category, when it is at least as close as its threshold. */
+function coldStart(
+  movement: CascadeMovement,
+  embedded: EmbeddedKnowledge | null,
+  fits: (categoryId: string | undefined) => categoryId is string,
+): Decision {
+  const words = wordsOf(movement);
+  if (embedded === null || embedded.coldStart === null || words === "") return NONE;
+  const closest = closestCategory(embedded.prototypes, embedded.embedder.embed(words), fits);
+  return closest !== null && closest.confidence >= embedded.coldStart
+    ? { kind: "suggestion", categoryId: closest.categoryId, reason: "similar", params: {} }
+    : NONE;
+}
 
 /**
  * The category of a movement, or none. A level answers only with a category the person still has
@@ -88,9 +152,10 @@ export function decide(movement: CascadeMovement, knowledge: Knowledge): Decisio
 
   // 2 · The person's classifier: automatic above the high threshold, a suggestion between the two.
   let suggestion: Decision = NONE;
-  if (knowledge.model !== null) {
-    const prediction = predict(knowledge.model, movement);
-    const { automatic, suggestion: low } = knowledge.thresholds;
+  const classifier = classifierOf(knowledge);
+  if (classifier.model !== null) {
+    const prediction = predict(classifier.model, movement, classifier.embedder);
+    const { automatic, suggestion: low } = classifier.thresholds;
     if (fits(prediction.categoryId)) {
       if (automatic !== null && prediction.confidence >= automatic) {
         return {
@@ -107,6 +172,9 @@ export function decide(movement: CascadeMovement, knowledge: Knowledge): Decisio
       }
     }
   }
+
+  // 2b · The cold start (R6): the category a text never seen reads closest to. A suggestion only.
+  if (suggestion.kind === "none") suggestion = coldStart(movement, knowledge.embedded ?? null, fits);
 
   // 3 · The tables: the merchant type the bank gives, then a brand the text names.
   const merchantType = merchantTypeGroup(movement.merchantCategoryCode);

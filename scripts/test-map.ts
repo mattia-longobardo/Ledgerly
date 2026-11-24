@@ -512,6 +512,8 @@ export const MODULES: Module[] = [
       "packages/domain/src/platform/limits/**",
       "apps/web/src/app/worker.ts",
       "apps/worker/**",
+      "test/fixtures/embeddings/**",
+      "tools/convert-embeddings.test.ts",
       "apps/web/src/app/api/health/**",
       "apps/web/src/app/api/metrics/**",
     ],
@@ -801,6 +803,9 @@ export const CRITICAL: { files: string[]; why: string }[] = [
       "package-lock.json",
       "Dockerfile",
       ".dockerignore",
+      // The embedding model of the categories (R6): converted and copied by the Dockerfile.
+      "scripts/convert-embeddings.ts",
+      "models/**",
       "entrypoint.sh",
       "docker-compose.yml",
       "apps/web/next.config.ts",

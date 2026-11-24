@@ -71,7 +71,11 @@ const MAX_TEXT = 400;
  * has, its words, its account, its sign and the band of its amount. Names, not numbers: the
  * classifier turns them into positions (`featureIndex`), and a test can read them.
  */
-export function featuresOf(movement: MovementText): string[] {
+/**
+ * Every text of a movement, normalised, without digits, each once, in one line: what the features
+ * and the embedding model read (a card number or a receipt number says nothing of what was bought).
+ */
+export function wordsOf(movement: Pick<MovementText, "payee" | "counterparty" | "rawText" | "note">): string {
   const texts = [movement.payee, movement.counterparty, movement.rawText, movement.note]
     .map((text) =>
       normalise(text ?? "")
@@ -80,7 +84,11 @@ export function featuresOf(movement: MovementText): string[] {
         .trim(),
     )
     .filter((text) => text !== "");
-  const text = [...new Set(texts)].join(" ").slice(0, MAX_TEXT);
+  return [...new Set(texts)].join(" ").slice(0, MAX_TEXT);
+}
+
+export function featuresOf(movement: MovementText): string[] {
+  const text = wordsOf(movement);
   const features: string[] = [];
   if (text !== "") {
     const padded = ` ${text} `;

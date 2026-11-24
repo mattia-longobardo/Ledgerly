@@ -17,3 +17,6 @@ UI Recreation and branding decisions
 tests/e2e/.state
 graphify-out
 *.tsbuildinfo
+
+# The converted embedding model (R6): the build makes its own, from the pinned source.
+models/*.bin

@@ -5,8 +5,12 @@
  *
  * Everything is deterministic: the same examples in the same order give the same model, so a test
  * can hold a number and a person never sees a category change for no reason.
+ *
+ * With an embedding model (R6, `embedding.ts`) the features are the TF-IDF ones and, after them,
+ * the embedding of the movement's words: the same regression, a wider row.
  */
-import { FEATURE_DIMENSIONS, featureCounts, type MovementText } from "./text";
+import type { Embedder } from "../rules/embedding";
+import { FEATURE_DIMENSIONS, featureCounts, type MovementText, wordsOf } from "./text";
 
 /** A confirmed label: a movement and the category a person or a source gave it. */
 export interface Example extends MovementText {
@@ -24,9 +28,26 @@ export interface Model {
   classes: string[];
   /** How rare each position is among the examples: the "IDF" of TF-IDF. */
   idf: Float32Array;
-  /** One row of `FEATURE_DIMENSIONS` weights for each class, and a bias for each class. */
+  /** One row of `FEATURE_DIMENSIONS` + `dense` weights for each class, and a bias for each class. */
   weights: Float32Array;
   bias: Float32Array;
+  /** The embedding model the dense features came from, and their number; `null` and 0 without. */
+  embedder: string | null;
+  dense: number;
+}
+
+const widthOf = (model: Pick<Model, "dense">) => FEATURE_DIMENSIONS + model.dense;
+
+/** Which embedding model a new model's dense features come from, and how many there are. */
+function denseShape(embedder: Embedder | null): Pick<Model, "embedder" | "dense"> {
+  return embedder === null
+    ? { embedder: null, dense: 0 }
+    : { embedder: embedder.revision, dense: embedder.dimensions };
+}
+
+/** The dense features of a movement: its embedding, or none without a model. */
+function denseOf(embedder: Embedder | null, movement: MovementText): Float32Array | null {
+  return embedder === null ? null : embedder.embed(wordsOf(movement));
 }
 
 /** The fewest confirmed labels a model is trained from, and the fewest a category needs to be in it. */
@@ -47,9 +68,10 @@ function idfOf(counts: readonly Map<number, number>[]): Float32Array {
   return idf;
 }
 
-function vectorOf(counts: Map<number, number>, idf: Float32Array): Vector {
-  const indexes = new Int32Array(counts.size);
-  const values = new Float32Array(counts.size);
+function vectorOf(counts: Map<number, number>, idf: Float32Array, dense: Float32Array | null): Vector {
+  const size = counts.size + (dense?.length ?? 0);
+  const indexes = new Int32Array(size);
+  const values = new Float32Array(size);
   let at = 0;
   let norm = 0;
   for (const [index, count] of counts) {
@@ -60,7 +82,14 @@ function vectorOf(counts: Map<number, number>, idf: Float32Array): Vector {
     at += 1;
   }
   const length = Math.sqrt(norm) || 1;
-  for (let i = 0; i < values.length; i += 1) values[i] /= length;
+  for (let i = 0; i < at; i += 1) values[i] /= length;
+  // The embedding is already of length one: it goes after the TF-IDF part as it is.
+  if (dense !== null) {
+    for (let offset = 0; offset < dense.length; offset += 1) {
+      indexes[at + offset] = FEATURE_DIMENSIONS + offset;
+      values[at + offset] = dense[offset];
+    }
+  }
   return { indexes, values };
 }
 
@@ -68,7 +97,7 @@ function scores(model: Model, vector: Vector): Float64Array {
   const out = new Float64Array(model.classes.length);
   for (let klass = 0; klass < out.length; klass += 1) {
     let sum = model.bias[klass];
-    const row = klass * FEATURE_DIMENSIONS;
+    const row = klass * widthOf(model);
     for (let i = 0; i < vector.indexes.length; i += 1) {
       sum += model.weights[row + vector.indexes[i]] * vector.values[i];
     }
@@ -130,7 +159,7 @@ const STEP = 400;
  * `MIN_PER_CLASS` each, or one category only). Steps, because a training is seconds of arithmetic
  * and the server that runs it has other people to answer in the meantime.
  */
-function* trainSteps(examples: readonly Example[]): Generator<void, Model | null> {
+function* trainSteps(examples: readonly Example[], embedder: Embedder | null): Generator<void, Model | null> {
   const classes = learnableClasses(examples);
   const classOf = new Map(classes.map((categoryId, index) => [categoryId, index]));
   const usable = examples.filter((example) => classOf.has(example.categoryId));
@@ -139,13 +168,15 @@ function* trainSteps(examples: readonly Example[]): Generator<void, Model | null
   const counts = usable.map(featureCounts);
   yield;
   const idf = idfOf(counts);
-  const vectors = counts.map((one) => vectorOf(one, idf));
+  const vectors = counts.map((one, position) => vectorOf(one, idf, denseOf(embedder, usable[position])));
+  const shape = denseShape(embedder);
   const labels = usable.map((example) => classOf.get(example.categoryId) as number);
   const model: Model = {
     classes,
     idf,
-    weights: new Float32Array(classes.length * FEATURE_DIMENSIONS),
+    weights: new Float32Array(classes.length * widthOf(shape)),
     bias: new Float32Array(classes.length),
+    ...shape,
   };
 
   let done = 0;
@@ -157,7 +188,7 @@ function* trainSteps(examples: readonly Example[]): Generator<void, Model | null
       for (let klass = 0; klass < classes.length; klass += 1) {
         const error = probabilities[klass] - (klass === labels[at] ? 1 : 0);
         if (Math.abs(error) < 1e-4) continue;
-        const row = klass * FEATURE_DIMENSIONS;
+        const row = klass * widthOf(model);
         for (let i = 0; i < vector.indexes.length; i += 1) {
           const position = row + vector.indexes[i];
           model.weights[position] -=
@@ -189,13 +220,16 @@ async function finishInTurns<T>(steps: Generator<void, T>): Promise<T> {
   }
 }
 
-export function train(examples: readonly Example[]): Model | null {
-  return finish(trainSteps(examples));
+export function train(examples: readonly Example[], embedder: Embedder | null = null): Model | null {
+  return finish(trainSteps(examples, embedder));
 }
 
 /** {@link train}, in turns: what the server calls. */
-export function trainInTurns(examples: readonly Example[]): Promise<Model | null> {
-  return finishInTurns(trainSteps(examples));
+export function trainInTurns(
+  examples: readonly Example[],
+  embedder: Embedder | null = null,
+): Promise<Model | null> {
+  return finishInTurns(trainSteps(examples, embedder));
 }
 
 /** What the model says about one movement: its best category, and how sure it is (0 to 1). */
@@ -204,13 +238,28 @@ interface Prediction {
   confidence: number;
 }
 
-export function predict(model: Model, movement: MovementText): Prediction {
-  const probabilities = softmax(scores(model, vectorOf(featureCounts(movement), model.idf)));
+/**
+ * A model trained with an embedding model needs the same one: `embedder` must be it (the cascade
+ * checks, `usableModel`). Without one it is ignored.
+ */
+export function predict(model: Model, movement: MovementText, embedder: Embedder | null = null): Prediction {
+  const dense = model.embedder === null ? null : denseOf(embedder, movement);
+  const probabilities = softmax(scores(model, vectorOf(featureCounts(movement), model.idf, dense)));
   let best = 0;
   for (let klass = 1; klass < probabilities.length; klass += 1) {
     if (probabilities[klass] > probabilities[best]) best = klass;
   }
   return { categoryId: model.classes[best], confidence: probabilities[best] };
+}
+
+/** Every category of the model, the likeliest first: what the measure's top-k reads (R6). */
+export function ranked(model: Model, movement: MovementText, embedder: Embedder | null = null): string[] {
+  const dense = model.embedder === null ? null : denseOf(embedder, movement);
+  const probabilities = softmax(scores(model, vectorOf(featureCounts(movement), model.idf, dense)));
+  return model.classes
+    .map((categoryId, klass) => ({ categoryId, probability: probabilities[klass] }))
+    .sort((left, right) => right.probability - left.probability)
+    .map((one) => one.categoryId);
 }
 
 /** A prediction made on an example the model did not see, and whether it was right. */
@@ -233,7 +282,10 @@ export const HOLD_OUT_FROM = 1_000;
  * by a model trained on the rest: a fifth of a large history is trials enough, at a fifth of the
  * arithmetic — a training runs in the process that answers the pages.
  */
-function* outOfSampleSteps(examples: readonly Example[]): Generator<void, Trial[]> {
+function* outOfSampleSteps(
+  examples: readonly Example[],
+  embedder: Embedder | null,
+): Generator<void, Trial[]> {
   const trials: Trial[] = [];
   const order = shuffled(examples.length, 7);
   const folds = examples.length >= HOLD_OUT_FROM ? 1 : FOLDS;
@@ -241,10 +293,10 @@ function* outOfSampleSteps(examples: readonly Example[]): Generator<void, Trial[
     const held: Example[] = [];
     const rest: Example[] = [];
     order.forEach((at, position) => (position % FOLDS === fold ? held : rest).push(examples[at]));
-    const model = yield* trainSteps(rest);
+    const model = yield* trainSteps(rest, embedder);
     if (model === null) continue;
     for (const example of held) {
-      const prediction = predict(model, example);
+      const prediction = predict(model, example, embedder);
       trials.push({
         confidence: prediction.confidence,
         correct: prediction.categoryId === example.categoryId,
@@ -255,13 +307,16 @@ function* outOfSampleSteps(examples: readonly Example[]): Generator<void, Trial[
   return trials;
 }
 
-export function outOfSample(examples: readonly Example[]): Trial[] {
-  return finish(outOfSampleSteps(examples));
+export function outOfSample(examples: readonly Example[], embedder: Embedder | null = null): Trial[] {
+  return finish(outOfSampleSteps(examples, embedder));
 }
 
 /** {@link outOfSample}, in turns: what the server calls. */
-export function outOfSampleInTurns(examples: readonly Example[]): Promise<Trial[]> {
-  return finishInTurns(outOfSampleSteps(examples));
+export function outOfSampleInTurns(
+  examples: readonly Example[],
+  embedder: Embedder | null = null,
+): Promise<Trial[]> {
+  return finishInTurns(outOfSampleSteps(examples, embedder));
 }
 
 /* Storage */
@@ -273,6 +328,9 @@ export interface StoredModel {
   idf: string;
   weights: string;
   bias: string;
+  /** R6: absent on a model stored before, or trained without an embedding model. */
+  embedder?: string | null;
+  dense?: number;
 }
 
 const encode = (values: Float32Array) =>
@@ -290,21 +348,26 @@ export function storeModel(model: Model): StoredModel {
     idf: encode(model.idf),
     weights: encode(model.weights),
     bias: encode(model.bias),
+    embedder: model.embedder,
+    dense: model.dense,
   };
 }
 
 /** `null` for a model of another shape: one stored by a release whose features were different. */
 export function loadModel(stored: StoredModel): Model | null {
   if (stored.dimensions !== FEATURE_DIMENSIONS) return null;
-  const model = {
+  const model: Model = {
     classes: stored.classes,
     idf: decode(stored.idf),
     weights: decode(stored.weights),
     bias: decode(stored.bias),
+    embedder: stored.embedder ?? null,
+    dense: stored.dense ?? 0,
   };
   const sound =
     model.idf.length === FEATURE_DIMENSIONS &&
     model.bias.length === model.classes.length &&
-    model.weights.length === model.classes.length * FEATURE_DIMENSIONS;
+    model.weights.length === model.classes.length * widthOf(model) &&
+    (model.embedder === null) === (model.dense === 0);
   return sound ? model : null;
 }

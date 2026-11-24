@@ -1,0 +1,14 @@
+models/categories-embeddings.bin — the embedding model of the automatic categories (Ledgerly R6).
+
+Converted at build time (scripts/convert-embeddings.ts: WordPiece vocabulary and the first 256
+dimensions of each row, as float16) from:
+
+  sentence-transformers/static-similarity-mrl-multilingual-v1
+  https://huggingface.co/sentence-transformers/static-similarity-mrl-multilingual-v1
+  revision b68f4122911bcffcd6e1f695f2d99cd6788972d8
+  0_StaticEmbedding/model.safetensors  sha256 8245ab78ee71dded845a82d2270fcb9e785b29dad0e1619f69d5390c47d9ba00
+  0_StaticEmbedding/tokenizer.json     sha256 11aaf894a4ccf3d95e8830e27c0f8152791fbbff2b988e29a265580b86edd216
+
+Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0
+The converted file is a derivative work: the vocabulary and the values are the model's, reduced
+to fewer dimensions and a smaller number format; nothing else is changed.
