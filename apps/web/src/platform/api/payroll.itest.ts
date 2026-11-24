@@ -216,7 +216,10 @@ describe("the routes of a payslip typed by hand and of the employer (rewrite pla
       net: "2000.00",
     });
     expect(changed.body.net).toBe("2000.00");
-    expect((await send(alice, "POST", manual.createManualPayslip.path, body)).status).toBe(409);
+    expect(await send(alice, "POST", manual.createManualPayslip.path, body)).toEqual({
+      status: 409,
+      body: { error: "conflict", reason: "month_applied" },
+    });
     expect(
       (await send(alice, "POST", manual.createManualPayslip.path, { ...body, month: 4, net: "3000.01" }))
         .status,

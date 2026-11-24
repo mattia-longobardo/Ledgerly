@@ -87,9 +87,11 @@ const MANUAL_EXAMPLE = {
 
 const WRITE_SUMMARY =
   "`invalid` (`invalid_value`) for amounts that do not hold (a negative one, net over gross), a month or " +
-  "an extra number the kind does not take, a field outside the catalogue; `conflict` (`conflict`) when the " +
-  "month — or the extra payment — of the year already has an applied payslip, (`invalid_state`) for a " +
-  "document still being read or waiting for OCR.";
+  "an extra number the kind does not take, a field outside the catalogue; `conflict` (`month_applied`) when the " +
+  "month — or the extra payment — of the year already has an applied payslip, (`conflict`) for a document " +
+  "that already has a payslip or a write at the same time, (`invalid_state`) for a document still being read " +
+  "or waiting for OCR. A refused payslip leaves its document as it was, in the inbox: send it again, or " +
+  "delete the document with `DELETE /payroll/payslips/{id}`.";
 
 export const createManualPayslip = defineRoute({
   id: "create_manual_payslip",

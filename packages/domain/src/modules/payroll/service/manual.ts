@@ -97,6 +97,7 @@ async function writing<T>(work: () => Promise<T>): Promise<T> {
   try {
     return await work();
   } catch (error) {
+    // Another write took the month between the check and the insert: retrying shows `month_applied`.
     if (hasPgError(error, UNIQUE_VIOLATION, "payslips_active_key_uq")) throw new PayrollError("conflict");
     throw error;
   }
@@ -108,7 +109,7 @@ export async function createManualPayslip(ctx: Pick<Ctx, "userId">, input: unkno
   const row = rowOf(parsed);
   return writing(() =>
     getDb().transaction(async (transaction) => {
-      if (await activeOfMonth(ctx, row, transaction)) throw new PayrollError("conflict");
+      if (await activeOfMonth(ctx, row, transaction)) throw new PayrollError("month_applied");
       if (parsed.documentId) await attachable(ctx, parsed.documentId, transaction);
       const [payslip] = await transaction
         .insert(payslips)
@@ -140,7 +141,7 @@ export async function updateManualPayslip(ctx: Pick<Ctx, "userId">, id: string, 
   return writing(() =>
     getDb().transaction(async (transaction) => {
       const current = await requireManual(ctx, id, transaction);
-      if (await activeOfMonth(ctx, row, transaction, id)) throw new PayrollError("conflict");
+      if (await activeOfMonth(ctx, row, transaction, id)) throw new PayrollError("month_applied");
       if (parsed.documentId !== current.documentId) {
         if (current.documentId !== null || parsed.documentId === null) throw new PayrollError("invalid_value");
         await attachable(ctx, parsed.documentId, transaction);

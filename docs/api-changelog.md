@@ -3,6 +3,14 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · Payroll: the refusals of a manual payslip (R5g follow-up)
+
+- `POST`/`PUT /payroll/manual-payslips`: a month — or an extra payment — of the year that already has an
+  applied payslip is `409` `conflict` with reason `month_applied`. Reason `conflict` stays for a document that
+  already has a payslip and for a write at the same time (send it again).
+- A refused manual payslip leaves its `documentId` as it was: in the inbox, `needs_review`. Send the payslip
+  again, or delete the document with `DELETE /payroll/payslips/{id}`.
+
 ## Unreleased · R5g step 2 · Payroll: manual payslips, the employer, the fields as pairs
 
 - `POST /payroll/manual-payslips` (`201`), `GET`/`PUT`/`DELETE /payroll/manual-payslips/{id}`: a payslip typed by

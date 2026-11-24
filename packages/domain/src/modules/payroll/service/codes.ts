@@ -18,6 +18,7 @@ type PayrollErrorCode =
   | "blocking_checks"
   | "no_identity"
   | "conflict"
+  | "month_applied"
   | "llm_not_configured"
   | "llm_failed";
 

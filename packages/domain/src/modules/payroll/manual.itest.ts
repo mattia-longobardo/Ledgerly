@@ -118,7 +118,7 @@ describe("a payslip typed by hand (ST-21)", () => {
 
   it("refuses a second payslip of the same month, and amounts that do not hold", async () => {
     await createManualPayslip(ctx, manual());
-    await rejects(createManualPayslip(ctx, manual()), "conflict");
+    await rejects(createManualPayslip(ctx, manual()), "month_applied");
     await rejects(createManualPayslip(ctx, manual({ month: 5, net: 300_001n })), "invalid_value");
     await rejects(createManualPayslip(ctx, manual({ kind: "extra", month: null, extraNumber: 4 })), "invalid_value");
   });
@@ -148,6 +148,14 @@ describe("a payslip typed by hand (ST-21)", () => {
     expect(await deletePayslip(ctx, documentId)).toEqual({ unapplied: true, restored: false });
     expect(await getDocument(ctx, documentId)).toBeNull();
     expect(await manualPayslipView(ctx, payslip.id)).toBeNull();
+  });
+
+  it("leaves its document in the inbox when the month is already applied", async () => {
+    await createManualPayslip(ctx, manual());
+    const documentId = await unknownDocument();
+    await rejects(createManualPayslip(ctx, manual({ documentId })), "month_applied");
+    expect((await getDocument(ctx, documentId))?.state).toBe("needs_review");
+    expect((await registerView(ctx)).inbox.map((row) => row.id)).toContain(documentId);
   });
 
   it("refuses a document that already has a payslip", async () => {

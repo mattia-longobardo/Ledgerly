@@ -118,7 +118,7 @@ export const CODE_PATTERN = /^\d{1,6}$/;
 /**
  * A refusal of payroll's use cases (`PayrollError`): `not_found`; `invalid` (`reason`
  * `invalid_value`, `derived_field`, `invalid_name`); `conflict` (`reason` `invalid_state`,
- * `unconfirmed_inferred`, `blocking_checks`, `no_identity`, `conflict`).
+ * `unconfirmed_inferred`, `blocking_checks`, `no_identity`, `month_applied`, `conflict`).
  */
 export const PAYROLL_ERRORS = ["invalid", "conflict", "not_found"] as const;
 
