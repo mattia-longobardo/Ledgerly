@@ -955,6 +955,7 @@
     "MergeUndo",
     "MovementRule",
     "ProviderCategory",
+    "Reach",
     "RecurrenceInput",
     "ReviewGroup",
     "RuleCondition",

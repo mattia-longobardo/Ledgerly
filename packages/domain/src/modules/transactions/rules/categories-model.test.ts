@@ -203,31 +203,46 @@ describe("what a pass learns with the embedding model (R6)", () => {
 });
 
 describe("the measure before/after (R6)", () => {
+  const all = labels();
+  const open = [movement("Farmacia Nuova"), movement("Pizzeria Eta 9"), movement("zzz")];
   const measure = measureLabels(
-    labels(),
+    all,
     { named: NAMED, groupCategory: new Map(), categoryKind: kinds },
     fakeEmbedder(),
+    open,
   );
 
-  it("grades both cascades on the same newer labels, the unseen ones apart", () => {
-    expect(measure.labels).toBe(labels().length);
-    expect(measure.today.all.graded).toBe(measure.withModel.all.graded);
-    expect(measure.today.all.graded).toBe(labels().length - Math.floor(labels().length * 0.8));
-    expect(measure.today.unseen.graded).toBeGreaterThan(0);
-    expect(measure.today.unseen.graded).toBeLessThan(measure.today.all.graded);
+  it("grades every label once as a text never seen, in folds fixed by the text", () => {
+    const { grouped } = measure;
+    for (const tally of Object.values(grouped)) expect(tally.graded).toBe(all.length);
   });
 
-  it("covers more of the unseen texts with the model, at the precision an automatic category must have", () => {
-    const today = measure.today.unseen;
-    const after = measure.withModel.unseen;
-    expect(after.automatic + after.suggested).toBeGreaterThanOrEqual(today.automatic + today.suggested);
-    const all = measure.withModel.all;
-    expect(all.automaticRight / all.automatic).toBeGreaterThanOrEqual(0.95);
+  it("tells what the cold start adds: the model without it never covers more", () => {
+    const { withModel, withoutColdStart, coldStartAlone } = measure.grouped;
+    expect(withModel.automatic).toBe(withoutColdStart.automatic);
+    expect(withModel.suggested).toBeGreaterThanOrEqual(withoutColdStart.suggested);
+    expect(coldStartAlone.automatic).toBe(0);
+    expect(coldStartAlone.suggested).toBeGreaterThan(0);
+  });
+
+  it("counts what the cascades would do with the movements nobody filed: coverage only", () => {
+    expect(measure.open.movements).toBe(3);
+    expect(measure.open.withModel.automatic + measure.open.withModel.suggested).toBeGreaterThanOrEqual(
+      measure.open.today.automatic + measure.open.today.suggested,
+    );
+    expect(measure.open.withModel.automatic + measure.open.withModel.suggested).toBeLessThanOrEqual(3);
+  });
+
+  it("keeps the chronological split: the older 80% learnt, the newer 20% graded, unseen apart", () => {
+    const { today, withModel } = measure.chronological;
+    expect(today.all.graded).toBe(withModel.all.graded);
+    expect(today.all.graded).toBe(all.length - Math.floor(all.length * 0.8));
+    expect(today.unseen.graded).toBeGreaterThan(0);
+    expect(withModel.all.automaticRight / withModel.all.automatic).toBeGreaterThanOrEqual(0.95);
   });
 
   it("holds numbers only: no text and no id of a movement", () => {
-    const printed = JSON.stringify(measure);
-    expect(printed).not.toMatch(/[a-z]{3,} [a-z]/i);
-    expect(Object.values(measure.today.all).every((value) => typeof value === "number")).toBe(true);
+    expect(JSON.stringify(measure)).not.toMatch(/[a-z]{3,} [a-z]|[0-9a-f]{8}-/i);
+    expect(Object.values(measure.grouped.today).every((value) => typeof value === "number")).toBe(true);
   });
 });

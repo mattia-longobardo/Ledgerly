@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 116161,
-    "duplicatedLines": 16405,
+    "lines": 116245,
+    "duplicatedLines": 16408,
     "percent": 14.12,
-    "blocks": 1298
+    "blocks": 1299
   },
   "units": {
     "api": {
@@ -107,10 +107,10 @@
       "blocks": 34
     },
     "modules/transactions": {
-      "lines": 14093,
-      "duplicatedLines": 1708,
-      "percent": 12.12,
-      "blocks": 137
+      "lines": 14177,
+      "duplicatedLines": 1711,
+      "percent": 12.07,
+      "blocks": 138
     },
     "modules/users": {
       "lines": 1004,
@@ -799,9 +799,9 @@
     "modules/timeoff/ui/leave-panel.tsx": 35,
     "modules/timeoff/ui/leave-table.tsx": 17,
     "modules/timeoff/ui/year-alerts.tsx": 26,
-    "modules/transactions/categorize/review/changes.ts": 71,
+    "modules/transactions/categorize/review/changes.ts": 74,
     "modules/transactions/categorize/review/merges.ts": 58,
-    "modules/transactions/categorize/service.ts": 53,
+    "modules/transactions/categorize/service.ts": 50,
     "modules/transactions/categorize/user-rules-service/applying.ts": 67,
     "modules/transactions/categorize/user-rules-service/new-movements.ts": 7,
     "modules/transactions/categorize/user-rules-service/previews.ts": 25,
@@ -831,7 +831,7 @@
     "modules/transactions/source-categories/choosing.ts": 40,
     "modules/transactions/source-categories/reading.ts": 49,
     "modules/transactions/switch-rules.ts": 41,
-    "modules/transactions/switching/doubles.ts": 64,
+    "modules/transactions/switching/doubles.ts": 67,
     "modules/transactions/switching/transfers.ts": 44,
     "modules/transactions/taxonomy-calls.ts": 32,
     "modules/transactions/taxonomy/category-adoption.ts": 20,

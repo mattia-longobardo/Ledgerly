@@ -167,11 +167,15 @@ describe("the embedding level (R6)", () => {
   });
 
   it("measures before and after on the person's labels, writing nothing", async () => {
-    const { ctx } = await labelled();
+    const { ctx, bank } = await labelled();
+    await upsertFromProvider(ctx, bank, [incoming("Pizzeria Alfa Lago", 5)], { provider: BANK });
     const before = await stored(ctx);
-    const measure = await measureCategories(ctx, fake);
+    const measure = await measureCategories(ctx, fake, [bank]);
     expect(measure.labels).toBe(63);
-    expect(measure.today.all.graded).toBe(measure.withModel.all.graded);
+    expect(measure.grouped.today.graded).toBe(63);
+    expect(measure.grouped.withModel.graded).toBe(63);
+    expect(measure.open.movements).toBe(1);
+    expect(measure.chronological.today.all.graded).toBe(measure.chronological.withModel.all.graded);
     expect(await stored(ctx)).toEqual(before);
     expect(JSON.stringify(measure)).not.toMatch(/Pizzeria|Mercato|Cinema/);
   });

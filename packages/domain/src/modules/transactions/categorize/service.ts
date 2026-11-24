@@ -54,6 +54,19 @@ function currentEmbedder(): Embedder | null {
   return current;
 }
 
+/** What the cascade reads of a movement (`CascadeMovement`, with its type for the kind). */
+const CASCADE_COLUMNS = {
+  payee: transactions.payee,
+  counterparty: transactions.counterpartyName,
+  rawText: transactions.rawText,
+  note: transactions.note,
+  accountId: transactions.accountId,
+  amountCents: transactions.amountCents,
+  type: transactions.type,
+  merchantCategoryCode: transactions.merchantCategoryCode,
+  bankTransactionCode: transactions.bankTransactionCode,
+};
+
 /** A confirmed label is one a person or a source gave; a row with no origin predates the origins. */
 const CONFIRMED = or(
   isNull(transactions.categoryOrigin),
@@ -70,16 +83,8 @@ interface Label extends EmbeddedLabel {
 async function confirmedLabels(ctx: Who): Promise<Label[]> {
   const rows = await getDb()
     .select({
-      payee: transactions.payee,
-      counterparty: transactions.counterpartyName,
-      rawText: transactions.rawText,
-      note: transactions.note,
-      accountId: transactions.accountId,
-      amountCents: transactions.amountCents,
+      ...CASCADE_COLUMNS,
       categoryId: transactions.categoryId,
-      type: transactions.type,
-      merchantCategoryCode: transactions.merchantCategoryCode,
-      bankTransactionCode: transactions.bankTransactionCode,
       at: transactions.occurredAt,
       updatedAt: transactions.updatedAt,
     })
@@ -357,15 +362,7 @@ export async function categorise(
     const candidates = await getDb()
       .select({
         id: transactions.id,
-        payee: transactions.payee,
-        counterparty: transactions.counterpartyName,
-        rawText: transactions.rawText,
-        note: transactions.note,
-        accountId: transactions.accountId,
-        amountCents: transactions.amountCents,
-        type: transactions.type,
-        merchantCategoryCode: transactions.merchantCategoryCode,
-        bankTransactionCode: transactions.bankTransactionCode,
+        ...CASCADE_COLUMNS,
         currency: transactions.currency,
         origin: transactions.origin,
         transferGroupId: transactions.transferGroupId,
@@ -424,9 +421,37 @@ export async function categorise(
  * The cascade of today and the one with the embedding model, graded on the person's own confirmed
  * labels (R6, "Misura prima/dopo"): numbers only, nothing written. Read-only.
  */
-export async function measureCategories(ctx: Who, embedder: Embedder): Promise<Measure> {
-  const [labels, own] = await Promise.all([confirmedLabels(ctx), categoriesOf(ctx)]);
-  return measureLabels(labels, own, embedder);
+export async function measureCategories(
+  ctx: Who,
+  embedder: Embedder,
+  accountIds: readonly string[],
+): Promise<Measure> {
+  const [labels, own, open] = await Promise.all([
+    confirmedLabels(ctx),
+    categoriesOf(ctx),
+    openMovements(ctx, accountIds),
+  ]);
+  return measureLabels(labels, own, embedder, open);
+}
+
+/** The movements of `accountIds` with no category today: what the cascade could still file. */
+async function openMovements(ctx: Who, accountIds: readonly string[]): Promise<CascadeMovement[]> {
+  if (accountIds.length === 0) return [];
+  const rows = await getDb()
+    .select({
+      ...CASCADE_COLUMNS,
+    })
+    .from(transactions)
+    .where(
+      and(
+        userScoped(ctx).owns(transactions),
+        inArray(transactions.accountId, [...accountIds]),
+        inArray(transactions.type, ["income", "expense"]),
+        isNull(transactions.categoryId),
+        isNull(transactions.removedUpstreamAt),
+      ),
+    );
+  return rows.map(({ type, ...row }) => ({ ...row, kind: type === "income" ? "income" : "expense" }));
 }
 
 /**

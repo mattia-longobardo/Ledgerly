@@ -79,7 +79,7 @@ function storedFor(input: EmbeddedInput) {
 }
 
 /** The categories' words and the cold start's threshold: worked out again at every pass. */
-function coldStartOf(input: EmbeddedInput) {
+export function coldStartOf(input: Pick<EmbeddedInput, "embedder" | "labels" | "own">) {
   const { embedder, labels, own } = input;
   const prototypes = prototypesOf(embedder, own.named, own.groupCategory);
   const graded = labels.map((label) => ({
