@@ -150,6 +150,9 @@
   "packages/api-contract/src/payroll/index.ts": [
     "CODE_ROLES",
     "FIELD_GROUPS",
+    "MAX_EXTRA_PAYMENTS",
+    "PAYSLIP_KINDS",
+    "PAY_FREQUENCIES",
     "SUMMED_FIELDS",
     "codes",
     "employer",

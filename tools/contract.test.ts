@@ -37,6 +37,7 @@ import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
 import { MAX_EVERY as ENTRY_MAX_EVERY } from "@ledgerly/api-contract/subscriptions";
 import { instruments as entryInstruments, plans as entryPlans } from "@ledgerly/api-contract/investments";
 import { csv as entryCsv } from "@ledgerly/api-contract/transactions";
+import * as payrollEntry from "@ledgerly/api-contract/payroll";
 import * as interestsWire from "../packages/api-contract/src/interests/shared";
 import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
@@ -457,6 +458,12 @@ describe("the Server Actions of payroll", () => {
     expect(payrollWire.FIELD_UNITS).toEqual(importsRules.EVIDENCE_UNITS);
     expect(payrollWire.EVIDENCE_ORIGINS).toEqual(importsRules.EVIDENCE_ORIGINS);
     expect(payrollWire.VERIFICATION_STATES).toEqual(importsRules.VERIFICATION_STATES);
+  });
+
+  it("give the screens the vocabularies of a payslip from the entry", () => {
+    expect(payrollEntry.PAYSLIP_KINDS).toEqual(payrollRules.PAYSLIP_KINDS);
+    expect(payrollEntry.PAY_FREQUENCIES).toEqual(payrollRules.PAY_FREQUENCIES);
+    expect(payrollEntry.MAX_EXTRA_PAYMENTS).toBe(payrollRules.MAX_EXTRA_PAYMENTS);
   });
 });
 

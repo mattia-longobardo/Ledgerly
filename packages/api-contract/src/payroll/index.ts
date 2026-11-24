@@ -6,4 +6,4 @@ import * as manual from "./manual";
 import * as payroll from "./payroll";
 
 export { codes, employer, manual, payroll };
-export { CODE_ROLES, FIELD_GROUPS, SUMMED_FIELDS } from "./shared";
+export { CODE_ROLES, FIELD_GROUPS, MAX_EXTRA_PAYMENTS, PAY_FREQUENCIES, PAYSLIP_KINDS, SUMMED_FIELDS } from "./shared";
