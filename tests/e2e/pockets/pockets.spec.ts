@@ -105,8 +105,15 @@ test("pockets are budgets that the expenses come off, each on its own page", asy
     // already in, so no figure below moves.
     await expect(edit.getByLabel("Day of the month")).toHaveValue("1");
     await edit.getByLabel("Day of the month").fill("31");
+    // The page reads the pocket again after the save; reopened before that answer, the dialog still
+    // holds day 1 (seen with 4 workers, PERS-599).
+    const reread = page.waitForResponse(
+      (answer) =>
+        answer.request().method() === "GET" && /\/api\/v1\/pockets\/[0-9a-f-]{36}$/.test(answer.url()),
+    );
     await edit.getByRole("button", { name: "Save pocket" }).click();
     await expect(edit).toBeHidden();
+    await reread;
     await detail.getByRole("button", { name: "Edit pocket" }).click();
     await expect(edit.getByLabel("Day of the month")).toHaveValue("31");
     await edit.getByRole("button", { name: "Cancel" }).click();
