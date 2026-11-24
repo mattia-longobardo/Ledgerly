@@ -204,7 +204,7 @@ function MapStep({
           {error}
         </p>
       )}
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 bg-card pt-2">
         <Button onClick={onBack}>{text("back")}</Button>
         <Button type="submit" variant="primary" disabled={pending}>
           {text("import")}

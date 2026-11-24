@@ -93,13 +93,13 @@ const OVERLAYS: Screen[] = [
     roots: ['[role="dialog"]'],
     open: async (page) => {
       await openCsvImport(page);
-      await page.getByLabel("File").setInputFiles({
+      await page.getByLabel("File", { exact: true }).setInputFiles({
         name: "movements.csv",
         mimeType: "text/csv",
         buffer: Buffer.from("Date;Payee;Amount\n14/10/2026;Shop;-12,50\n15/10/2026;Bakery;-3,20\n"),
       });
       await page.getByRole("button", { name: "Read the file" }).click();
-      await page.getByRole("table", { name: "First rows" }).waitFor();
+      await page.getByRole("heading", { name: "First rows" }).waitFor();
       await settledDialog(page);
     },
   },

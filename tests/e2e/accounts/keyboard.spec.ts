@@ -28,8 +28,10 @@ test("a sortable table sorts from the keyboard, and the column says which way", 
 
 test("«Import CSV» opens from the keyboard, and Escape gives the focus back", async ({ page }) => {
   await page.goto("/accounts");
-  await page.getByRole("link", { name: "Revolut Saving" }).first().click();
-  await page.waitForURL(/\/accounts\/[0-9a-f-]{36}$/);
+  // The page is opened by its address, not by a click: a click would leave the browser in pointer
+  // mode, and the ring is drawn for the keyboard only.
+  const href = await page.getByRole("link", { name: "Revolut Saving" }).first().getAttribute("href");
+  await page.goto(href ?? "/accounts");
   const button = page.getByRole("button", { name: "Import CSV" });
   await focusOn(button);
   expect(await focusIsVisible(page), "the button draws no ring").toBe(true);

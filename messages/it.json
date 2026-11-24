@@ -2762,6 +2762,7 @@
         "outcome": "Esito"
       },
       "ok": "Pronta",
+      "rowNumber": "Riga {row}",
       "import": "Importa",
       "back": "Scegli un altro file",
       "close": "Chiudi",

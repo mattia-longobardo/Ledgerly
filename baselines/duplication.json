@@ -4,8 +4,8 @@
     "minLines": 6
   },
   "total": {
-    "lines": 111297,
-    "duplicatedLines": 15998,
+    "lines": 111330,
+    "duplicatedLines": 16000,
     "percent": 14.37,
     "blocks": 1254
   },
@@ -35,9 +35,9 @@
       "blocks": 0
     },
     "modules/accounts": {
-      "lines": 5479,
-      "duplicatedLines": 1040,
-      "percent": 18.98,
+      "lines": 5512,
+      "duplicatedLines": 1042,
+      "percent": 18.9,
       "blocks": 77
     },
     "modules/budgets": {
@@ -584,7 +584,7 @@
     "modules/accounts/ui/account-form.tsx": 46,
     "modules/accounts/ui/balance-entries.tsx": 135,
     "modules/accounts/ui/csv-import.tsx": 42,
-    "modules/accounts/ui/csv-map.tsx": 36,
+    "modules/accounts/ui/csv-map.tsx": 38,
     "modules/accounts/ui/settings-form.tsx": 59,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
     "modules/accounts/ui/switch/undo-switch.tsx": 13,

@@ -2762,6 +2762,7 @@
         "outcome": "Outcome"
       },
       "ok": "Ready",
+      "rowNumber": "Row {row}",
       "import": "Import",
       "back": "Choose another file",
       "close": "Close",

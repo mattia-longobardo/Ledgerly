@@ -8,6 +8,7 @@ import { parseCents } from "@ledgerly/format/cents";
 import { formatDate, formatMoney } from "@ledgerly/format/format";
 import { Field } from "@ledgerly/ui/field";
 import { Checkbox, Input, Select } from "@ledgerly/ui/input";
+import { cn } from "@ledgerly/ui/cn";
 import { Table, TBody, Td, Th, THead, Tr } from "@ledgerly/ui/table";
 import type { CsvMap, CsvPreview } from "../csv-calls";
 import type { CardFormat } from "./net-worth-card";
@@ -167,6 +168,16 @@ function FormatFields({
 }
 
 /** The first rows as the server read them, with the map it had when the file was read. */
+/** One row of the preview, every value already written as the screen shows it. */
+interface PreviewLine {
+  row: number;
+  date: string;
+  amount: string;
+  payee: string;
+  outcome: string;
+  ok: boolean;
+}
+
 export function PreviewTable({
   preview,
   currency,
@@ -179,46 +190,71 @@ export function PreviewTable({
   const text = useTranslations("accounts.csv");
   const titleId = useId();
   const { locale, numberFormat } = format;
+  const lines = preview.rows.map((row): PreviewLine => ({
+    row: row.row,
+    date: row.on === null ? "" : formatDate(row.on, "long", locale),
+    amount:
+      row.amount === null
+        ? ""
+        : formatMoney(parseCents(row.amount), numberFormat, { signed: true, currency }),
+    payee: row.payee ?? "",
+    outcome: row.outcome === "ok" ? text("ok") : reasonText(text, row.reason),
+    ok: row.outcome === "ok",
+  }));
   return (
     <section className="flex flex-col gap-2" aria-labelledby={titleId}>
       <h3 id={titleId} className="text-sm font-medium">
         {text("previewTitle")}
       </h3>
       <p className="text-xs text-faint">{text("previewNote")}</p>
-      <div className="overflow-x-auto">
-        <Table aria-labelledby={titleId}>
-          <THead>
-            <Tr>
-              <Th>{text("table.row")}</Th>
-              <Th>{text("table.date")}</Th>
-              <Th align="right">{text("table.amount")}</Th>
-              <Th>{text("table.payee")}</Th>
-              <Th>{text("table.outcome")}</Th>
-            </Tr>
-          </THead>
-          <TBody>
-            {preview.rows.map((row) => (
-              <Tr key={row.row}>
-                <Td className="tabular-nums">{row.row}</Td>
-                <Td>{row.on === null ? "" : formatDate(row.on, "long", locale)}</Td>
-                <Td align="right">
-                  {row.amount === null
-                    ? ""
-                    : formatMoney(parseCents(row.amount), numberFormat, {
-                        signed: true,
-                        currency,
-                      })}
-                </Td>
-                <Td>{row.payee ?? ""}</Td>
-                <Td className={row.outcome === "ok" ? "text-muted" : "text-neg"}>
-                  {row.outcome === "ok" ? text("ok") : reasonText(text, row.reason)}
-                </Td>
-              </Tr>
-            ))}
-          </TBody>
-        </Table>
-      </div>
+      <PreviewRows lines={lines} titleId={titleId} />
+      {/* Five columns do not fit a phone: below `md` the same rows are a list. */}
+      <ul className="flex flex-col text-sm md:hidden" aria-labelledby={titleId}>
+        {lines.map((line) => (
+          <li key={line.row} className="border-t border-border py-2 first:border-t-0">
+            <span className="flex justify-between gap-3">
+              <span className="min-w-0 break-words">
+                {text("rowNumber", { row: line.row })}
+                {line.payee !== "" && ` · ${line.payee}`}
+              </span>
+              <span className="tabular-nums">{line.amount}</span>
+            </span>
+            <span className="flex justify-between gap-3 text-muted">
+              <span>{line.date}</span>
+              <span className={line.ok ? undefined : "text-neg"}>{line.outcome}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </section>
+  );
+}
+
+function PreviewRows({ lines, titleId }: { lines: readonly PreviewLine[]; titleId: string }) {
+  const text = useTranslations("accounts.csv");
+  return (
+    <div className="max-md:hidden">
+      <Table aria-labelledby={titleId}>
+        <THead>
+          <Th>{text("table.row")}</Th>
+          <Th>{text("table.date")}</Th>
+          <Th align="right">{text("table.amount")}</Th>
+          <Th>{text("table.payee")}</Th>
+          <Th>{text("table.outcome")}</Th>
+        </THead>
+        <TBody>
+          {lines.map((line) => (
+            <Tr key={line.row}>
+              <Td className="tabular-nums">{line.row}</Td>
+              <Td>{line.date}</Td>
+              <Td align="right">{line.amount}</Td>
+              <Td className="whitespace-normal break-words">{line.payee}</Td>
+              <Td className={cn("whitespace-normal", line.ok ? "text-muted" : "text-neg")}>{line.outcome}</Td>
+            </Tr>
+          ))}
+        </TBody>
+      </Table>
+    </div>
   );
 }
 
