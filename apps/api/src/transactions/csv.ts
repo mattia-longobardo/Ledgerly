@@ -39,7 +39,7 @@ const bytesOf = async (file: File) => new Uint8Array(await file.arrayBuffer());
 export function serveCsv(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): void {
   serve(app, guard, csv.previewCsv, async ({ ctx, params, body }) => {
     await requireManualAccount(ctx, params.id);
-    return readingFile(previewCsv(ctx, params.id, await bytesOf(body.file)));
+    return readingFile(previewCsv(ctx, params.id, await bytesOf(body.file), body.map));
   });
   serve(app, guard, csv.importCsv, async ({ ctx, params, body }) => {
     await requireManualAccount(ctx, params.id);

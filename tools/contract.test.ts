@@ -36,6 +36,7 @@ import * as subscriptionsWire from "../packages/api-contract/src/subscriptions/s
 import * as subscriptionsDomain from "@domain/modules/subscriptions/rules";
 import { MAX_EVERY as ENTRY_MAX_EVERY } from "@ledgerly/api-contract/subscriptions";
 import { instruments as entryInstruments, plans as entryPlans } from "@ledgerly/api-contract/investments";
+import { csv as entryCsv } from "@ledgerly/api-contract/transactions";
 import * as interestsWire from "../packages/api-contract/src/interests/shared";
 import * as interestsDomain from "@domain/modules/interests/rules";
 import * as timeoffWire from "../packages/api-contract/src/timeoff/shared";
@@ -571,6 +572,17 @@ describe("the Server Actions of investments", () => {
         createPlan,
         confirmPlanRun,
         backfillPlan,
+      ]),
+    );
+  });
+
+  it("give the pages the import of a CSV file from their entry (client 23, M7)", () => {
+    expect(TRANSACTIONS_ROUTES).toEqual(
+      expect.arrayContaining([
+        entryCsv.previewCsv,
+        entryCsv.importCsv,
+        entryCsv.getCsvMap,
+        entryCsv.saveCsvMap,
       ]),
     );
   });

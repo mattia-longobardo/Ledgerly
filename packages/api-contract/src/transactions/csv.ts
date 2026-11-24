@@ -102,12 +102,15 @@ export const previewCsv = defineRoute({
   summary:
     "Reads a CSV file of movements (`multipart/form-data`, `file`) for an account «a mano» and writes " +
     "nothing: the delimiter found, the columns, the map saved for the account and a proposed one, and " +
-    `the first ${CSV_PREVIEW_ROWS} rows parsed with the saved map, or the proposed one, each with its ` +
-    `outcome. ${REFUSALS}`,
+    `the first ${CSV_PREVIEW_ROWS} rows parsed with \`map\` when the form sends one (as JSON), else ` +
+    `with the saved map, or the proposed one, each with its outcome. ${REFUSALS}`,
   actions: [],
   params: byAccount,
   bodyFormat: "multipart",
-  body: z.object({ file: z.file() }),
+  body: z.object({
+    file: z.file(),
+    map: jsonField(csvMapSchema, "The columns the person chose, as JSON: the rows follow them.").optional(),
+  }),
   response: z.object({
     delimiter: z.string(),
     /** The names of the header, or empty names when the file has none. */

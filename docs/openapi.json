@@ -3228,7 +3228,7 @@
     "/accounts/{id}/csv/preview": {
       "post": {
         "operationId": "preview_csv",
-        "summary": "Reads a CSV file of movements (`multipart/form-data`, `file`) for an account «a mano» and writes nothing: the delimiter found, the columns, the map saved for the account and a proposed one, and the first 20 rows parsed with the saved map, or the proposed one, each with its outcome. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
+        "summary": "Reads a CSV file of movements (`multipart/form-data`, `file`) for an account «a mano» and writes nothing: the delimiter found, the columns, the map saved for the account and a proposed one, and the first 20 rows parsed with `map` when the form sends one (as JSON), else with the saved map, or the proposed one, each with its outcome. `conflict` with `reason` `account_not_manual` for an account with a source, `account_unavailable` for an archived one; `too_large` past 5 MiB or 20,000 rows (`reason` `too_many_rows`); `invalid` with `reason` `empty` or `unreadable`.",
         "tags": [
           "transactions"
         ],
@@ -3255,6 +3255,10 @@
                     "type": "string",
                     "format": "binary",
                     "contentEncoding": "binary"
+                  },
+                  "map": {
+                    "type": "string",
+                    "description": "The columns the person chose, as JSON: the rows follow them."
                   }
                 },
                 "required": [
@@ -55783,7 +55787,7 @@
     "/sources/{slug}": {
       "get": {
         "operationId": "get_source",
-        "summary": "The page of one source the person has: its accounts deleted here, what waits to be written to it, and what «Disconnect» of each connection leaves.",
+        "summary": "The page of one source the person has: its accounts deleted here, what waits to be written to it and what it refused, and what «Disconnect» of each connection leaves.",
         "tags": [
           "connections"
         ],
@@ -55831,6 +55835,28 @@
                       }
                     },
                     "unsent": {
+                      "type": "object",
+                      "properties": {
+                        "count": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "accountIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "count",
+                        "accountIds"
+                      ]
+                    },
+                    "refused": {
                       "type": "object",
                       "properties": {
                         "count": {
@@ -55911,6 +55937,7 @@
                     "provider",
                     "deletedAccounts",
                     "unsent",
+                    "refused",
                     "pendingDays",
                     "connections"
                   ]

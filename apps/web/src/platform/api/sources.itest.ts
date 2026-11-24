@@ -6,6 +6,8 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { SETTINGS } from "@ledgerly/api-contract";
 import type { Ctx } from "@domain/platform/context";
 import { listAccounts } from "@domain/modules/accounts/queries";
+import { createManualTransaction } from "@domain/modules/transactions/manual";
+import { markNotSent } from "@domain/modules/transactions/sending";
 import { refreshManifests } from "@plugin-host/service";
 import { chooseAccounts, readBank } from "@plugin-host/sync";
 import { PLUGIN_PATHS } from "@plugin-contract/calls";
@@ -206,12 +208,40 @@ describe("the plugins, a source's page and the log", () => {
       provider: PROVIDER,
       deletedAccounts: [],
       unsent: { count: 0, accountIds: [] },
+      refused: { count: 0, accountIds: [] },
       pendingDays: 0,
       connections: [{ id: connectionId, shared: 1, leave: { accounts: 1, excluded: 0 } }],
     });
     // A plugin Bob has not turned on, and a source that does not exist, have no page.
     expect((await send(bob, `/sources/${PLUGIN}`)).status).toBe(404);
     expect((await send(alice, "/sources/nothing")).status).toBe(404);
+  });
+
+  it("answers among what waits the movements the source refused, and their accounts", async () => {
+    const { plugin, connectionId } = await connectedBank();
+    await chosenAndRead(plugin, connectionId);
+    const [account] = await listAccounts(alice);
+    const movement = (payee: string) =>
+      createManualTransaction(
+        alice,
+        {
+          kind: "expense",
+          amountCents: 1250n,
+          on: "2026-02-10",
+          accountId: account.id,
+          categoryId: null,
+          payee,
+          note: null,
+        },
+        undefined,
+        { toSend: true },
+      );
+    await movement("Corner shop");
+    const { transaction } = await movement("Bakery");
+    await markNotSent(alice, transaction.id);
+    const page = sources.getSource.response.parse((await send(alice, `/sources/${PLUGIN}`)).body);
+    expect(page.unsent).toEqual({ count: 2, accountIds: [account.id] });
+    expect(page.refused).toEqual({ count: 1, accountIds: [account.id] });
   });
 
   it("answers the log of the readings, newest first, of one connection or of all", async () => {
