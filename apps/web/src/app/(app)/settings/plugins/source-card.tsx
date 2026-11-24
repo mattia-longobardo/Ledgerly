@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Field } from "@ledgerly/ui/field";
 import { Input } from "@ledgerly/ui/input";
@@ -48,13 +48,21 @@ const HANDLED: readonly ActionKind[] = ["connect", "replaceKey", "disconnect"];
 const FORM_ID = "source-credential-form";
 
 /** The fields of the form: a secret is a password field, never prefilled. */
-function CredentialFields({ fields }: { fields: readonly CredentialField[] }) {
+function CredentialFields({
+  fields,
+  errors,
+}: {
+  fields: readonly CredentialField[];
+  /** A field's error, under it (UX review, point 1): by the field's name. */
+  errors: Readonly<Record<string, string>>;
+}) {
   return fields.map((field, index) => (
     <Field
       key={field.name}
       label={field.label}
       htmlFor={`credential-${field.name}`}
       hint={field.help ?? undefined}
+      error={errors[field.name]}
     >
       <Input
         id={`credential-${field.name}`}
@@ -85,43 +93,51 @@ function useDisconnectText(props: Pick<SourceCardProps, "row" | "calendar" | "le
     .join(" ");
 }
 
-/** An action's refusal code, spelled out one branch at a time so the catalogue keys stay literal. */
-export function useRefusalText(): (code: string) => string {
+/**
+ * An action's refusal code as its sentence, with the provider's name and never another's (UX review,
+ * point 1); one branch at a time so the catalogue keys stay literal. `empty` is said by its field.
+ */
+export function useRefusalText(provider: string): (code: string) => string {
   const text = useTranslations("settings.integrations");
   return (code) => {
-    if (code === "rejected") return text("errors.rejected");
-    if (code === "unreachable") return text("errors.unreachable");
-    if (code === "empty") return text("errors.empty");
-    if (code === "notConnected") return text("errors.notConnected");
+    if (code === "rejected") return text("errors.rejected", { provider });
+    if (code === "unreachable") return text("errors.unreachable", { provider });
+    if (code === "notConnected") return text("errors.notConnected", { provider });
     if (code === "busy") return text("errors.busy");
-    if (code === "provider") return text("errors.provider");
+    if (code === "provider") return text("errors.provider", { provider });
     return text("errors.failed");
   };
 }
 
 type Answer = { ok: true; back?: number } | { ok: false; error: string };
 
+/** A refusal: its code, which says where it goes, and its sentence. */
+interface CardError {
+  code: string;
+  text: string;
+}
+
 /** The card's dialogs and its one action at a time: a refusal reported in place, a success as a toast. */
 function useCardActions(name: string) {
   const text = useTranslations("settings.integrations");
   const plugin = useTranslations("settings.plugin");
   const [dialog, setDialog] = useState<"connect" | "disconnect" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<CardError | null>(null);
   const [pending, startTransition] = useTransition();
   // The page draws the connection from its server render until it reads `/api/v1` itself.
   const router = useRouter();
-  const refusal = useRefusalText();
+  const refusal = useRefusalText(name);
   const run = (work: () => Promise<Answer>, success: string) =>
     startTransition(async () => {
       try {
         const result = await work();
-        if (!result.ok) return setError(refusal(result.error));
+        if (!result.ok) return setError({ code: result.error, text: refusal(result.error) });
         setError(null);
         setDialog(null);
         router.refresh();
         notify(result.back ? plugin("reactivate.back", { count: result.back, provider: name }) : success);
       } catch {
-        setError(text("errors.failed"));
+        setError({ code: "failed", text: text("errors.failed") });
       }
     });
   return { dialog, setDialog, error, setError, pending, run };
@@ -129,8 +145,8 @@ function useCardActions(name: string) {
 
 type Actions = ReturnType<typeof useCardActions>;
 
-/** The error of a dialog, in the dialog. */
-function DialogError({ error }: { error: string | null }) {
+/** The error of a dialog, in the dialog: the one that belongs to no field. */
+function DialogError({ error }: { error: string | null | undefined }) {
   if (!error) return null;
   return (
     <p role="alert" className="text-sm text-neg">
@@ -139,10 +155,38 @@ function DialogError({ error }: { error: string | null }) {
   );
 }
 
+/** The codes said under a field instead of at the top of the dialog. */
+const FIELD_CODES = new Set(["empty", "rejected"]);
+
+/**
+ * Where a refusal goes (UX review, point 1): an empty field under itself, a refused credential under
+ * its first secret field (the first field, without one); the rest at the top of the dialog.
+ */
+function fieldErrorsOf(
+  fields: readonly CredentialField[],
+  error: CardError | null,
+  empty: string | null,
+): Record<string, string> {
+  if (error === null || !FIELD_CODES.has(error.code)) return {};
+  const target =
+    error.code === "empty"
+      ? fields.find((field) => field.name === empty)
+      : (fields.find((field) => field.type === "secret") ?? fields[0]);
+  return target ? { [target.name]: error.text } : {};
+}
+
 /** The dialog that states the credential: the fields of the manifest, read once on submit. */
 function ConnectDialog(props: SourceCardProps & { actions: Actions }) {
   const { row, provider, connected, fields, actions } = props;
   const text = useTranslations("settings.integrations");
+  // The required field found empty, by name: never what was typed in it.
+  const [empty, setEmpty] = useState<string | null>(null);
+  const errors = fieldErrorsOf(fields, actions.error, empty);
+  const invalid = Object.keys(errors)[0];
+  // The field the refusal is about takes the focus, so its error (its description) is read out.
+  useEffect(() => {
+    if (invalid !== undefined) document.getElementById(`credential-${invalid}`)?.focus();
+  }, [invalid, actions.error]);
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     // Read, trimmed by the action, and dropped when this handler returns: no secret is kept
@@ -151,6 +195,13 @@ function ConnectDialog(props: SourceCardProps & { actions: Actions }) {
     const credentials = Object.fromEntries(
       fields.map((field) => [field.name, String(form.get(field.name) ?? "")]),
     );
+    const missing = fields.find((field) => field.required && credentials[field.name]?.trim() === "");
+    if (missing) {
+      setEmpty(missing.name);
+      actions.setError({ code: "empty", text: text("errors.empty", { field: missing.label }) });
+      return;
+    }
+    setEmpty(null);
     actions.run(
       () => connectCore(provider, credentials),
       connected ? text("toasts.replaced") : text("toasts.connected", { provider: row.name }),
@@ -177,9 +228,9 @@ function ConnectDialog(props: SourceCardProps & { actions: Actions }) {
       {/* Mounted with the dialog and unmounted with it, so closing the dialog is also what
           discards what was typed. */}
       {actions.dialog === "connect" && (
-        <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-3">
-          <DialogError error={actions.error} />
-          <CredentialFields fields={fields} />
+        <form id={FORM_ID} onSubmit={onSubmit} noValidate className="flex flex-col gap-3">
+          {invalid === undefined && <DialogError error={actions.error?.text} />}
+          <CredentialFields fields={fields} errors={errors} />
         </form>
       )}
     </Modal>
@@ -217,7 +268,7 @@ function DisconnectDialog(props: SourceCardProps & { actions: Actions }) {
       }
     >
       <div className="flex flex-col gap-2 text-sm">
-        <DialogError error={actions.error} />
+        <DialogError error={actions.error?.text} />
         <DeactivateLink href={deactivateHref} provider={row.name} />
       </div>
     </Modal>
@@ -257,7 +308,7 @@ export function SourceCard(props: SourceCardProps) {
       )}
       {actions.error && actions.dialog === null && (
         <p role="alert" className="border-t border-border px-4 py-2.5 text-sm text-neg">
-          {actions.error}
+          {actions.error.text}
         </p>
       )}
       <ConnectDialog {...props} actions={actions} />

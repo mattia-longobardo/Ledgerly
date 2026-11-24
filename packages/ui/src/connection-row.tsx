@@ -14,8 +14,13 @@ import { useRouter } from "./router";
 import { notify } from "./toast";
 import { type Tone, TONE_TEXT } from "./tone";
 
-/** The five values of a connection's state, and `absent` for a connection that does not exist. */
-export type RowStatusValue = "ok" | "running" | "late" | "readOnly" | "action" | "paused" | "absent";
+/**
+ * The values of a connection's state, and `absent` for a connection that does not exist. `manual`
+ * is a connection read only when the person asks (no schedule); `paused` is a plugin turned off
+ * (UX review, point 2): two meanings, two words.
+ */
+export type RowStatusValue =
+  "ok" | "running" | "late" | "readOnly" | "action" | "manual" | "paused" | "absent";
 
 /** What a person can do with a connection: the row knows the kind, never the provider. */
 export type ActionKind =
@@ -94,6 +99,8 @@ const DOT: Record<RowStatusValue, string> = {
   // Reading works; only the writes wait for a key that may write: a warning, not a fault.
   readOnly: "bg-warn",
   action: "bg-neg",
+  // Hollow: nothing is wrong, and it is not the grey of «Not connected».
+  manual: "border border-faint",
   paused: "bg-faint",
   absent: "bg-faint",
 };
@@ -104,6 +111,7 @@ const WORD_TONE: Record<RowStatusValue, Tone> = {
   late: "warn",
   readOnly: "warn",
   action: "neg",
+  manual: "muted",
   paused: "muted",
   absent: "muted",
 };
@@ -180,6 +188,9 @@ function StatusText({ status }: { status: ConnectionRowProps["status"] }) {
   );
 }
 
+/** A state that asks nothing of the person: its sentence is muted. */
+const quiet = (value: RowStatusValue) => value === "paused" || value === "manual";
+
 export const Dot = ({ value }: { value: RowStatusValue }) => (
   <span aria-hidden className={cn("size-[7px] shrink-0 rounded-full", DOT[value])} />
 );
@@ -213,7 +224,7 @@ function CompactRow({ status, actions }: { status: ConnectionRowProps["status"];
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <Dot value={status.value} />
         <StatusWord value={status.value} />
-        <span aria-live="polite" className={status.value === "paused" ? "text-muted" : undefined}>
+        <span aria-live="polite" className={quiet(status.value) ? "text-muted" : undefined}>
           <StatusText status={status} />
         </span>
         {action !== null &&
@@ -248,11 +259,11 @@ function StateCell({
 }) {
   const text = useTranslations("settings.connections");
   return (
-    <div className="min-w-0 text-sm">
+    <div className="min-w-0 text-sm @max-[559px]:col-span-2">
       {/* Always there, also empty: it is the live region that says when the state changes. */}
       <p
         aria-live="polite"
-        className={cn("break-words empty:hidden", props.status.value === "paused" && "text-muted")}
+        className={cn("break-words empty:hidden", quiet(props.status.value) && "text-muted")}
       >
         <StatusText status={props.status} />
       </p>
@@ -289,7 +300,7 @@ function ActionsCell({ props, actions }: { props: ConnectionRowProps; actions: A
   let button: ReactNode = null;
   if (primary !== null && actions.isLink(primary) && primary.href !== undefined) {
     button = (
-      <ButtonLink href={primary.href} variant={variant} size="sm" className="@max-[559px]:flex-1">
+      <ButtonLink href={primary.href} variant={variant} size="sm" className="@max-[559px]:col-span-2">
         {primary.label}
       </ButtonLink>
     );
@@ -300,16 +311,22 @@ function ActionsCell({ props, actions }: { props: ConnectionRowProps; actions: A
         size="sm"
         disabled={actions.busy}
         onClick={() => actions.act(primary)}
-        className="@max-[559px]:flex-1"
+        className="@max-[559px]:col-span-2"
       >
         {label(primary)}
       </Button>
     );
   }
+  // On a phone the cell dissolves into the row's grid: the menu goes up beside the name, the button
+  // takes the whole width under the state (UX review, point 9).
   return (
-    <div className="flex items-center gap-2 @min-[560px]:@max-[819px]:col-span-2 @min-[820px]:justify-end">
+    <div className="flex items-center gap-2 @max-[559px]:contents @min-[560px]:@max-[819px]:col-span-2 @min-[820px]:justify-end">
       {button}
-      {items.length > 0 && <ActionMenu label={props.name} items={items} />}
+      {items.length > 0 && (
+        <div className="flex @max-[559px]:col-start-2 @max-[559px]:row-start-1 @max-[559px]:self-start">
+          <ActionMenu label={props.name} items={items} />
+        </div>
+      )}
     </div>
   );
 }
@@ -386,7 +403,7 @@ function FullRow({ props, actions }: { props: ConnectionRowProps; actions: Actio
       data-status={props.status.value}
       className="@container flex flex-col"
     >
-      <div className="grid grid-cols-1 gap-x-5 gap-y-2.5 px-4 py-3.5 @min-[560px]:@max-[819px]:grid-cols-2 @min-[820px]:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_176px]">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 gap-y-2.5 px-4 py-3.5 @min-[560px]:@max-[819px]:grid-cols-2 @min-[820px]:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_176px]">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2">
             <Dot value={props.status.value} />

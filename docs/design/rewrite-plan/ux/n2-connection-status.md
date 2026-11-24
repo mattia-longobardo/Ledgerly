@@ -67,7 +67,10 @@ Regola di codice (piano §4): `SyncStatus` è una funzione pura del dominio. I c
 | `running` | «In corso» | `bg-accent` | `accent` | «Aggiornamento in corso…» | — |
 | `late` | «In ritardo» | `bg-warn` | `warn` | §2.3 | «Aggiorna ora» |
 | `action` | «Serve un'azione» | `bg-neg` | `neg` | §2.3 | Una sola, secondo il motivo |
-| `paused` | «In pausa» | `bg-faint` | `muted` | §2.3 | «Riattiva» oppure «Attiva» |
+| `manual` | «Solo manuale» | anello `border-faint` | `muted` | «Aggiornamento automatico spento.» | «Attiva aggiornamento automatico» |
+| `paused` | «In pausa» | `bg-faint` | `muted` | §2.3 | «Attiva» |
+
+Revisione UX delle schede dei plugin (punto 2): un collegamento senza pianificazione è «Solo manuale», non «In pausa». «In pausa» resta solo per il plugin spento. Il server dà `paused` per tutti e due; il client li separa dal testo (`pausedSchedule`).
 
 Un collegamento che non esiste (Wallet o Trek mai collegati) non ha uno stato: la riga dice «Non collegato» (`bg-faint`, `muted`) e ha il pulsante «Collega», come oggi.
 
@@ -342,7 +345,7 @@ Un solo modello per `sync_failed` e `sync_stale`. Il fornitore e il collegamento
 | Caso | Motivo |
 |---|---|
 | Plugin disattivato dall'utente | H30: nessun avviso di ritardo o di scadenza. La scadenza continua a scorrere; alla riattivazione la riga mostra lo stato vero |
-| «In pausa» senza pianificazione | L'utente ha spento l'aggiornamento automatico |
+| «Solo manuale» | L'utente ha spento l'aggiornamento automatico |
 | `rate_limited` | Non conta nei 3 fallimenti (decisione Q2) |
 | Collegamento «Da completare» | L'utente è già nella procedura; la riga mostra «Scegli i conti» |
 
@@ -353,7 +356,7 @@ N2 toglie la chiave unica vecchia: un utente collega più banche. Un collegament
 | Tema | Regola |
 |---|---|
 | Elenco | Una riga per banca nella sezione «Banche», sotto la riga delle credenziali |
-| Ordine | Alfabetico per nome della banca, senza maiuscole e accenti. Fisso: lo stato non sposta le righe |
+| Ordine | Per gravità: «Serve un'azione», «In ritardo», «Solo lettura», «In corso», «In pausa», «Solo manuale», «Aggiornato». A pari stato, alfabetico per nome della banca, senza maiuscole e accenti (revisione UX delle schede dei plugin, punto 7) |
 | Aggiunta | Pulsante «Collega una banca» sempre presente in fondo alla card (`border-t px-4 py-3`, allineato a destra): `primary` senza banche, `secondary` con almeno una banca |
 | Frase «una sola banca» | Sparisce (N1 §5.5). La guardia «una banca già collegata» di N1 §6.1 cade |
 | Banca già collegata | Nel passo 1 della procedura la banca è in elenco, non selezionabile (`aria-disabled`), con il testo «Già collegata. Per aggiungere un conto usa «Rinnova accesso».» |
@@ -478,6 +481,7 @@ File `messages/it.json` e `messages/en.json`. Gruppo nuovo `settings.connections
 | `status.running` | In corso | In progress |
 | `status.late` | In ritardo | Delayed |
 | `status.action` | Serve un'azione | Action needed |
+| `status.manual` | Solo manuale | Manual only |
 | `status.paused` | In pausa | Paused |
 | `status.absent` | Non collegato | Not connected |
 | `text.ok` | Aggiornato {when} | Updated {when} |

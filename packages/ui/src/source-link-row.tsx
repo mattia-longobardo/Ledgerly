@@ -2,13 +2,15 @@
 
 // The links of the connections' pages: a source in the list of Settings › Integrations, and the way
 // from a disconnection to the source's page.
+import { ChevronRight } from "lucide-react";
 import { useTranslations } from "use-intl";
+import { Tag } from "./badge";
 import { Dot, type RowStatusValue, StatusWord } from "./connection-row";
 import { Link } from "./router";
 
 /**
  * One source in the list of Settings › Integrations (plugin-settings.md §2.1): the name, the state
- * of its connection, one line of summary and an arrow. The whole row is the one link to the
+ * of its connection, one line of summary, what it reads (UX review, point 6) and a chevron. The whole row is the one link to the
  * source's page, where every setting of the source is.
  */
 export function SourceLinkRow({
@@ -17,12 +19,15 @@ export function SourceLinkRow({
   status,
   summary,
   href,
+  reads = [],
 }: {
   slug: string;
   name: string;
   status: RowStatusValue;
   summary: string | null;
   href: string;
+  /** What the source reads, in the person's words: one chip each. */
+  reads?: readonly string[];
 }) {
   return (
     <Link
@@ -39,11 +44,22 @@ export function SourceLinkRow({
           <StatusWord value={status} />
         </span>
         {summary !== null && <span className="mt-0.5 block text-sm text-muted">{summary}</span>}
+        <SourceReads reads={reads} />
       </span>
-      <span aria-hidden className="shrink-0 text-muted">
-        →
-      </span>
+      <ChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
     </Link>
+  );
+}
+
+/** What a source reads, one chip each; nothing when it says nothing. */
+export function SourceReads({ reads }: { reads: readonly string[] }) {
+  if (reads.length === 0) return null;
+  return (
+    <span className="mt-1.5 flex flex-wrap gap-1" data-testid="source-reads">
+      {reads.map((one) => (
+        <Tag key={one}>{one}</Tag>
+      ))}
+    </span>
   );
 }
 

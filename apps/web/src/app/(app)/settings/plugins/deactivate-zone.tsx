@@ -10,13 +10,32 @@ import { notify } from "@ledgerly/ui/toast";
 import type { DeactivationCounts } from "./deactivate";
 import { deactivateSourceAction, deactivationCountsAction } from "./deactivate-calls";
 
+/** What "Turn off" does, in one sentence: a calendar has no account to turn «manual». */
+function ZoneText({ provider, calendar }: { provider: string; calendar: boolean }) {
+  const text = useTranslations("settings.plugin");
+  return (
+    <p className="text-sm text-muted">
+      {calendar ? text("deactivate.zoneCalendar", { provider }) : text("deactivate.zone", { provider })}
+    </p>
+  );
+}
+
 /**
  * The end of a source's page (plugin-settings.md §2.2, §3.3): what "Turn off" does, and the button.
  * The dialog reads its counts from the server before it opens, and lists only the lines above 0.
  * The first focus is "Cancel" (the first button of the dialog); Esc closes; the focus goes back to
  * the button that opened it.
  */
-export function DeactivateZone({ slug, provider }: { slug: string; provider: string }) {
+export function DeactivateZone({
+  slug,
+  provider,
+  calendar,
+}: {
+  slug: string;
+  provider: string;
+  /** A calendar of days off: it has no account to turn «manual» (UX review, point 3). */
+  calendar: boolean;
+}) {
   const t = useTranslations("settings.plugin");
   const router = useRouter();
   const [counts, setCounts] = useState<DeactivationCounts | null>(null);
@@ -74,7 +93,7 @@ export function DeactivateZone({ slug, provider }: { slug: string; provider: str
 
   return (
     <div className="flex flex-col gap-3 px-4 py-3.5" data-testid="deactivate-zone">
-      <p className="text-sm text-muted">{t("deactivate.zone", { provider })}</p>
+      <ZoneText provider={provider} calendar={calendar} />
       {failed && counts === null && (
         <p role="alert" className="text-sm text-neg">
           {t("deactivate.failed")}

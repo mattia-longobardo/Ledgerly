@@ -74,6 +74,7 @@ describe("ConnectionRow", () => {
     ["running", C.status.running],
     ["late", C.status.late],
     ["action", C.status.action],
+    ["manual", C.status.manual],
     ["paused", C.status.paused],
     ["absent", C.status.absent],
   ] as const)("says the state %s in a word, beside the dot", (value, word) => {

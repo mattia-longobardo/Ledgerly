@@ -13,6 +13,7 @@ import { formatDate, formatInstant, type UiLocale } from "@ledgerly/format/forma
 import { ConnectionRow, type ConnectionRowProps, type RowAction } from "@ledgerly/ui/connection-row";
 import { invalidate, useApi } from "@ledgerly/ui/data";
 import { useRunConnection } from "../../settings/plugins/connection-row";
+import { resumeLabel, rowValue } from "../../settings/plugins/row-status";
 
 export type ApiConnection = RouteOutput<typeof connections.listConnections>["connections"][number];
 type StatusKind = NonNullable<ApiConnection["status"]["action"]>;
@@ -62,8 +63,7 @@ export function connectionStatus(
   const kind = (said === "ok" || said === "late") && lastOk === null ? "lateNever" : said;
   const instant = kind === "ok" || kind === "late" ? lastOk : null;
   return {
-    // A key that may only read is a state of its own: amber, not «Action needed».
-    value: said === "readOnly" ? "readOnly" : connection.status.value,
+    value: rowValue(connection.status),
     text: text(`text.${kind}`, {
       when: lastOk === null ? "" : words.past(lastOk),
       next: words.next(connection.nextAttempt ?? connection.nextSyncAt),
@@ -90,7 +90,7 @@ function placesOf(connection: ApiConnection, keyHref: string | null): Partial<Re
 function actionOf(text: Text, connection: ApiConnection, keyHref: string | null): RowAction | null {
   const kind = connection.status.action;
   if (kind === null) return null;
-  const label = text(`actions.${kind}`);
+  const label = text(kind === "resume" ? resumeLabel(connection.status.text) : `actions.${kind}`);
   if (kind === "resume" || kind === "enable") return { kind, label };
   // A plugin the person turned off can do nothing but be turned on again.
   if (!connection.providerActive) return null;

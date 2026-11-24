@@ -12,20 +12,21 @@ import {
 import { civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate } from "@ledgerly/format/format";
 import { ButtonLink } from "@ledgerly/ui/button";
+import { Dot, StatusWord } from "@ledgerly/ui/connection-row";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { apiRead } from "@/platform/api-read";
 import { requireSession } from "@/platform/auth/session";
 import { SourceCategories } from "../finance/source-categories";
 import { HistoryDepth } from "./advanced/history-depth";
 import { BanksCard } from "./banks-card";
-import { ConnectionRow, type ConnectionRowProps, type RowStatusValue, SourceLinkRow } from "./connection-row";
 import {
-  advancedHref,
-  connectionRows,
-  OWN_DIALOGS,
-  RUNS_PER_CONNECTION,
-  type WireConnection,
-} from "./connection-view";
+  ConnectionRow,
+  type ConnectionRowProps,
+  type RowStatusValue,
+  SourceLinkRow,
+  SourceReads,
+} from "./connection-row";
+import { connectionRows, OWN_DIALOGS, RUNS_PER_CONNECTION, type WireConnection } from "./connection-view";
 import { DeactivateZone } from "./deactivate-zone";
 import { DeletedAccounts } from "./deleted-accounts";
 import { PluginRow } from "./plugin-row";
@@ -54,6 +55,19 @@ export async function generateMetadata({ params }: IntegrationsProps): Promise<M
 
 const INTEGRATIONS = "/settings/plugins";
 
+type PluginKind = "bank" | "source" | "calendar";
+
+/**
+ * What a plugin reads, in the words of the runs (`settings.integrations.kinds`), from what
+ * `GET /plugins` says it is (UX review, point 6). shortcut: by `kind`, not by the manifest; a
+ * plugin that reads something else needs the manifest's list in `GET /plugins` (server).
+ */
+const READS: Record<PluginKind, readonly ("accounts" | "transactions" | "leave")[]> = {
+  bank: ["accounts", "transactions"],
+  source: ["accounts", "transactions"],
+  calendar: ["leave"],
+};
+
 /**
  * Settings › Integrations (ux/n2-connection-status.md, plugin-settings.md §2): the list has one
  * row per source, and each source has a page with every setting of its own — its connections, its
@@ -73,6 +87,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
   const ctx = await requireSession();
   const { source } = await params;
   const t = await getTranslations("settings.integrations");
+  const readsOf = (kind: PluginKind) => READS[kind].map((one) => t(`kinds.${one}`));
   const text = await getTranslations("settings.connections");
   const plugin = await getTranslations("settings.plugin");
   const day = (instant: string) =>
@@ -205,6 +220,11 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
         ? []
         : [{ id: one.id, months: one.historyDepth, choices: one.capabilities.historyMonths }],
     );
+    // Nothing to turn off without a connection, a credential or the plugin on (UX review, point 8).
+    const facts = sourcePlugin ?? enginePlugin;
+    const deactivable =
+      facts !== undefined &&
+      (facts.state === "active" || facts.connections > 0 || facts.credentials.saved || own.length > 0);
     const labels = new Map(
       own.map(({ connection: one }) => [one.id, { name: one.name, provider: one.providerName }]),
     );
@@ -213,9 +233,14 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
       <SettingsGrid>
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold" data-testid="source-title" data-status={status}>
-              {name}
-            </h2>
+            {/* The state of the source beside its name (UX review, point 10): the word of its rows. */}
+            <div className="flex flex-wrap items-center gap-x-2" data-testid="source-heading">
+              <Dot value={status} />
+              <h2 className="text-lg font-semibold" data-testid="source-title" data-status={status}>
+                {name}
+              </h2>
+              <StatusWord value={status} />
+            </div>
             <ButtonLink href={INTEGRATIONS as Route} size="sm">
               ← {plugin("page.back")}
             </ButtonLink>
@@ -308,36 +333,19 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
           </SettingsSection>
         )}
 
-        {own.length > 0 && (
-          <SettingsSection
-            title={plugin("sections.advanced")}
-            description={plugin("sections.advancedHint")}
-            padded={false}
-          >
-            <ul className="flex flex-col">
-              {own.map(({ connection: one }) => (
-                <li key={one.id} className="border-t border-border px-4 py-3 first:border-t-0">
-                  <Link
-                    href={`${advancedHref(one.id)}#log` as Route}
-                    className="focus-ring inline-flex min-h-6 items-center rounded-xs text-sm text-accent underline underline-offset-2"
-                  >
-                    {plugin("advanced.log", { name: labels.get(one.id)?.name ?? name })}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </SettingsSection>
+        {/* The log of the readings is under each connection's «History» and in its «…» menu
+            (UX review, point 12): no card for a link alone. */}
+        {deactivable && (
+          <div id="deactivate" className="scroll-mt-4">
+            <SettingsSection
+              title={plugin("sections.deactivate", { provider: name })}
+              description={plugin("sections.deactivateHint", { provider: name })}
+              padded={false}
+            >
+              <DeactivateZone slug={source} provider={name} calendar={enginePlugin?.kind === "calendar"} />
+            </SettingsSection>
+          </div>
         )}
-
-        <div id="deactivate" className="scroll-mt-4">
-          <SettingsSection
-            title={plugin("sections.deactivate", { provider: name })}
-            description={plugin("sections.deactivateHint", { provider: name })}
-            padded={false}
-          >
-            <DeactivateZone slug={source} provider={name} />
-          </SettingsSection>
-        </div>
       </SettingsGrid>
     );
   }
@@ -366,6 +374,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                 status={row.status.value}
                 summary={row.detail}
                 href={hrefOf(one.id)}
+                reads={readsOf(one.kind)}
               />
             </li>
           ))}
@@ -382,6 +391,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                   status={activeStatus.get(one.id) ?? "absent"}
                   summary={one.description}
                   href={hrefOf(one.id)}
+                  reads={readsOf(one.kind)}
                 />
               ) : (
                 <>
@@ -393,6 +403,7 @@ export default async function SettingsIntegrationsPage({ params, searchParams }:
                     pausedSince={one.pausedSince ? day(one.pausedSince) : null}
                     hasCredentials={one.credentials.saved}
                     connections={one.connections}
+                    reads={<SourceReads reads={readsOf(one.kind)} />}
                   />
                   {(pausedRows.get(one.id) ?? []).length > 0 && (
                     <ul className="flex flex-col">

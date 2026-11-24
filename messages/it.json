@@ -256,7 +256,7 @@
       "description": "Da dove arrivano saldi e movimenti. Le credenziali sono cifrate a riposo e non vengono più mostrate.",
       "connect": {
         "title": "Collega {provider}",
-        "description": "La credenziale viene sigillata con la chiave di cifratura dell'app e non torna mai al browser.",
+        "description": "Ledgerly salva la credenziale cifrata e non la mostra più.",
         "submit": "Collega",
         "replace": "Sostituisci la credenziale",
         "cancel": "Annulla"
@@ -299,11 +299,11 @@
         "chosen": "Conti salvati."
       },
       "errors": {
-        "rejected": "Wallet ha rifiutato il token.",
-        "unreachable": "Wallet non è raggiungibile. Riprova tra un minuto.",
-        "provider": "Wallet ha risposto qualcosa che l'app non sa usare. Il dettaglio è nel registro.",
-        "empty": "Incolla prima un token.",
-        "notConnected": "Wallet non è collegato.",
+        "rejected": "{provider} ha rifiutato la credenziale.",
+        "unreachable": "{provider} non risponde. Riprova tra un minuto.",
+        "provider": "{provider} ha risposto qualcosa che Ledgerly non sa usare. Il dettaglio è nel registro.",
+        "empty": "Compila «{field}».",
+        "notConnected": "{provider} non è collegato.",
         "busy": "Una sincronizzazione è già in corso. Riprova tra poco.",
         "failed": "Non è stato possibile salvare. Riprova.",
         "schedule": "Questo orario non è valido."
@@ -1136,10 +1136,8 @@
         "historyHint": "Quanti mesi di movimenti Ledgerly legge da {provider}.",
         "writes": "Scrittura su {provider}",
         "writesHint": "Cosa Ledgerly scrive su {provider}. Si cambia dove nasce: nella regola, nel movimento, nel giorno.",
-        "advanced": "Avanzate",
-        "advancedHint": "Il registro delle letture, per capire un problema.",
         "deactivate": "Disattiva {provider}",
-        "deactivateHint": "Smetti di usare {provider}. I conti restano, «a mano», con lo stesso saldo."
+        "deactivateHint": "Smetti di usare {provider}."
       },
       "accounts": {
         "choose": "Scegli i conti",
@@ -1157,9 +1155,6 @@
         "rule": "Regola di interessi su «{account}»: pubblica ogni liquidazione",
         "unsent": "{count, plural, one {# movimento da inviare} other {# movimenti da inviare}}",
         "pendingDays": "{count, plural, one {# modifica ai giorni da inviare} other {# modifiche ai giorni da inviare}}"
-      },
-      "advanced": {
-        "log": "Registro delle letture di {name}"
       },
       "categories": {
         "movedHint": "Le categorie di {provider} si associano nella pagina di {provider}."
@@ -1185,7 +1180,8 @@
         "cancel": "Annulla",
         "busy": "Disattivazione in corso…",
         "done": "{provider} disattivato: {count, plural, one {# conto ora è “a mano”} other {# conti ora sono “a mano”}}",
-        "failed": "Non è stato possibile disattivare. Non è cambiato niente. Riprova."
+        "failed": "Non è stato possibile disattivare. Non è cambiato niente. Riprova.",
+        "zoneCalendar": "Le giornate restano in Ledgerly. Credenziali e impostazioni di {provider} vengono cancellate."
       },
       "reactivate": {
         "back": "{count, plural, one {# conto torna da {provider}} other {# conti tornano da {provider}}}"
@@ -1272,6 +1268,7 @@
         "late": "In ritardo",
         "readOnly": "Solo lettura",
         "action": "Serve un'azione",
+        "manual": "Solo manuale",
         "paused": "In pausa",
         "absent": "Non collegato"
       },
@@ -1313,7 +1310,8 @@
         "test": "Prova il collegamento",
         "settings": "Impostazioni del collegamento",
         "advanced": "Avanzate",
-        "disconnect": "Scollega"
+        "disconnect": "Scollega",
+        "resumeSchedule": "Attiva aggiornamento automatico"
       },
       "toasts": {
         "started": "Aggiornamento avviato: i dati arrivano tra pochi istanti",

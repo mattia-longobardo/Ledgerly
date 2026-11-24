@@ -72,8 +72,8 @@ test("a service's Connection tab shows its real schedule, with the same control"
   await page.goto("/settings/finance");
   const row = page.getByTestId("investment-connection").filter({ hasText: "eToro" });
   // Seeded on manual only: the row says the automatic update is off, and the tab used to say
-  // 07:30 and 22:30 whatever the schedule was.
-  await expect(row.getByText("Paused")).toBeVisible();
+  // 07:30 and 22:30 whatever the schedule was. «Manual only», not «Paused» (UX review, point 2).
+  await expect(row.getByText("Manual only")).toBeVisible();
   await expect(row.getByText("Automatic update is off.")).toBeVisible();
   await row.getByRole("button", { name: "eToro" }).click();
   await page.getByRole("menuitem", { name: "Connection settings" }).click();

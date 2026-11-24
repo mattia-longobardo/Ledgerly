@@ -216,6 +216,43 @@ describe("SourceCard", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(T.errors.failed);
   });
 
+  // UX review, point 1: the provider's own name, and the error under the field it is about.
+  it("says an empty field under it, and sends nothing", async () => {
+    renderCard(false);
+    await userEvent.click(screen.getByRole("button", { name: C.actions.connect }));
+    await userEvent.type(screen.getByLabelText(TOKEN_LABEL), "   ");
+    await userEvent.click(screen.getByRole("button", { name: T.connect.submit }));
+    const field = screen.getByLabelText(TOKEN_LABEL);
+    expect(connect).not.toHaveBeenCalled();
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(T.errors.empty.replace("{field}", TOKEN_LABEL));
+    expect(field).toHaveFocus();
+  });
+
+  it("says a refused credential under its field, with the provider's name", async () => {
+    connect.mockResolvedValueOnce({ ok: false, error: "rejected" });
+    renderCard(false);
+    await userEvent.click(screen.getByRole("button", { name: C.actions.connect }));
+    await userEvent.type(screen.getByLabelText(TOKEN_LABEL), TOKEN);
+    await userEvent.click(screen.getByRole("button", { name: T.connect.submit }));
+    const field = screen.getByLabelText(TOKEN_LABEL);
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(`${NAME} refused the credential.`);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says an unreachable provider at the top of the dialog, by its name", async () => {
+    connect.mockResolvedValueOnce({ ok: false, error: "unreachable" });
+    renderCard(false);
+    await userEvent.click(screen.getByRole("button", { name: C.actions.connect }));
+    await userEvent.type(screen.getByLabelText(TOKEN_LABEL), TOKEN);
+    await userEvent.click(screen.getByRole("button", { name: T.connect.submit }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      `${NAME} does not answer. Try again in a minute.`,
+    );
+    expect(screen.getByLabelText(TOKEN_LABEL)).not.toHaveAttribute("aria-invalid");
+  });
+
   it("has no type that a credential could travel in", () => {
     expect(PROPS_CARRY_NO_SECRET).toBe(true);
     expect(ROW_CARRIES_NO_SECRET).toBe(true);
@@ -243,7 +280,7 @@ describe("SourceAccounts", () => {
     saveChoice.mockResolvedValueOnce({ ok: true });
     render(
       <NextIntlClientProvider locale="en" messages={messages} timeZone="Europe/Rome">
-        <SourceAccounts connectionId="c1" />
+        <SourceAccounts connectionId="c1" provider={NAME} />
       </NextIntlClientProvider>,
     );
     // The list is read only when asked for: the page never calls the source by itself.

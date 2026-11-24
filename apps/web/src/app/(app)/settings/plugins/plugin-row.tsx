@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { type ReactNode, useState, useTransition } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { cn } from "@ledgerly/ui/cn";
 import { ActionMenu } from "@ledgerly/ui/menu";
@@ -26,6 +26,8 @@ interface PluginRowProps {
   /** Whether credentials are saved: turning off then asks first (§2.3). */
   hasCredentials: boolean;
   connections: number;
+  /** What the plugin reads, drawn under its description. */
+  reads?: ReactNode;
 }
 
 /**
@@ -41,6 +43,7 @@ export function PluginRow({
   pausedSince,
   hasCredentials,
   connections,
+  reads = null,
 }: PluginRowProps) {
   const t = useTranslations("settings.plugins");
   const [confirming, setConfirming] = useState(false);
@@ -83,6 +86,7 @@ export function PluginRow({
             </span>
           </div>
           <p className="mt-0.5 text-sm text-muted">{description}</p>
+          {reads}
         </div>
         <div className="flex items-center gap-2">
           {active ? (

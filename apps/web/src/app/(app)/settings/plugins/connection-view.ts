@@ -17,6 +17,7 @@ import {
 import { addDays, civilDateIn } from "@ledgerly/domain/shared/dates";
 import { formatDate, formatInstant, type UiLocale } from "@ledgerly/format/format";
 import type { ActionKind, ConnectionRowProps, HistoryItem, RowAction } from "./connection-row";
+import { resumeLabel, rowValue } from "./row-status";
 
 /** A connection as `GET /connections` answers it. */
 export type WireConnection = RouteOutput<typeof connections.listConnections>["connections"][number];
@@ -57,7 +58,7 @@ export const RUNS_PER_CONNECTION = 40;
 /** The readings a row shows. */
 const HISTORY_ITEMS = 10;
 
-export function advancedHref(connectionId: string): string {
+function advancedHref(connectionId: string): string {
   return `/settings/plugins/advanced?c=${connectionId}`;
 }
 
@@ -152,7 +153,7 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
     return { text: t("text.lateNever", { next: attempt }), at: null };
   }
 
-  function historyItems(facts: RowFacts): { items: HistoryItem[]; more: boolean } {
+  function historyItems(facts: RowFacts): HistoryItem[] {
     const names = { name: facts.connection.name, provider: facts.connection.providerName };
     const today = civilDateIn(now, ctx.timeZone);
     const entries = historyOf(
@@ -180,7 +181,7 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
       }
       return { at: entry.at.toISOString(), when: label, outcome: entry.outcome, text, byYou: entry.manual };
     });
-    return { items, more: entries.length > HISTORY_ITEMS };
+    return items;
   }
 
   /** What a reading brought, one branch per key so the catalogue keys stay literal. */
@@ -201,7 +202,8 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
     const label = { name: connection.name };
     const status = connection.status;
     const { text, at } = sentence(status, facts);
-    const primary = actionOf(status.action, facts);
+    const resumes = actionOf(status.action, facts);
+    const primary = resumes?.kind === "resume" ? { ...resumes, label: t(resumeLabel(status.text)) } : resumes;
     const off = status.text === "pausedProvider";
 
     // The menu, in the order of §3.2: what the provider can do and the button does not already.
@@ -238,16 +240,17 @@ export async function connectionRows(ctx: Who, now: Date = new Date()) {
       name: label.name,
       detail: facts.detail,
       status: {
-        // A key that may only read is a state of its own (UX review, point 4): amber, not «Action needed».
-        value: status.text === "readOnly" ? "readOnly" : status.value,
+        // A key that may only read (point 4) and a connection read by hand (point 2) have their own word.
+        value: rowValue(status),
         text,
         at: at === null ? null : at.toISOString(),
         title: at === null ? null : formatInstant(at, ctx),
         action: primary,
       },
       notice,
-      history: history.items,
-      historyMore: history.more ? advancedHref(connection.id) : null,
+      history,
+      // Always: the log of the readings lives under the history (UX review, point 12).
+      historyMore: `${advancedHref(connection.id)}#log`,
       menu,
     };
   }

@@ -63,6 +63,12 @@ export async function seedConnections(email: string = USERS.connections.email): 
       currency: "EUR",
     },
   ]);
+  // On, as the migration that made them plugins left them for everyone with a connection: their
+  // «Turn off» stays on the page after a «Disconnect» (UX review, point 8).
+  for (const provider of [TREK_PROVIDER, WALLET_PROVIDER]) {
+    const pluginId = provider.slice("plugin:".length);
+    if (await findInstancePlugin(pluginId)) await setPluginActive(ctx, { pluginId, active: true });
+  }
   const archived = await createAccount(ctx, { name: "Old savings", type: "savings" });
   await db.update(accounts).set({ state: "archived", archivedAt: now }).where(eq(accounts.id, archived.id));
 

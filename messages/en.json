@@ -256,7 +256,7 @@
       "description": "Where balances and transactions come from. Credentials are encrypted at rest and never shown again.",
       "connect": {
         "title": "Connect {provider}",
-        "description": "The credential is sealed with the app's encryption key and never returned to the browser.",
+        "description": "Ledgerly saves the credential encrypted and never shows it again.",
         "submit": "Connect",
         "replace": "Replace the credential",
         "cancel": "Cancel"
@@ -299,11 +299,11 @@
         "chosen": "Accounts saved."
       },
       "errors": {
-        "rejected": "Wallet rejected that token.",
-        "unreachable": "Wallet could not be reached. Try again in a minute.",
-        "provider": "Wallet answered something this app could not use. The sync log has the detail.",
-        "empty": "Paste a token first.",
-        "notConnected": "Wallet is not connected.",
+        "rejected": "{provider} refused the credential.",
+        "unreachable": "{provider} does not answer. Try again in a minute.",
+        "provider": "{provider} answered something Ledgerly cannot use. The log has the detail.",
+        "empty": "Fill in “{field}”.",
+        "notConnected": "{provider} is not connected.",
         "busy": "A sync is already running. Try again in a moment.",
         "failed": "Couldn't save. Try again.",
         "schedule": "That schedule is not valid."
@@ -1136,10 +1136,8 @@
         "historyHint": "How many months of transactions Ledgerly reads from {provider}.",
         "writes": "Writing to {provider}",
         "writesHint": "What Ledgerly writes to {provider}. Change it where it starts: in the rule, the transaction, the day.",
-        "advanced": "Advanced",
-        "advancedHint": "The log of the readings, to understand a problem.",
         "deactivate": "Turn off {provider}",
-        "deactivateHint": "Stop using {provider}. The accounts stay, “manual”, with the same balance."
+        "deactivateHint": "Stop using {provider}."
       },
       "accounts": {
         "choose": "Choose accounts",
@@ -1157,9 +1155,6 @@
         "rule": "Interest rule on “{account}”: posts each payout",
         "unsent": "{count, plural, one {# transaction to send} other {# transactions to send}}",
         "pendingDays": "{count, plural, one {# change to your days to send} other {# changes to your days to send}}"
-      },
-      "advanced": {
-        "log": "Log of the readings of {name}"
       },
       "categories": {
         "movedHint": "{provider} categories are matched on the {provider} page."
@@ -1185,7 +1180,8 @@
         "cancel": "Cancel",
         "busy": "Turning off…",
         "done": "{provider} turned off: {count, plural, one {# account is now “manual”} other {# accounts are now “manual”}}",
-        "failed": "Could not turn it off. Nothing changed. Try again."
+        "failed": "Could not turn it off. Nothing changed. Try again.",
+        "zoneCalendar": "The days stay in Ledgerly. The {provider} credentials and settings are deleted."
       },
       "reactivate": {
         "back": "{count, plural, one {# account comes back from {provider}} other {# accounts come back from {provider}}}"
@@ -1272,6 +1268,7 @@
         "late": "Delayed",
         "readOnly": "Read only",
         "action": "Action needed",
+        "manual": "Manual only",
         "paused": "Paused",
         "absent": "Not connected"
       },
@@ -1313,7 +1310,8 @@
         "test": "Test the connection",
         "settings": "Connection settings",
         "advanced": "Advanced",
-        "disconnect": "Disconnect"
+        "disconnect": "Disconnect",
+        "resumeSchedule": "Turn on automatic update"
       },
       "toasts": {
         "started": "Update started: the data arrives in a few moments",

@@ -56,8 +56,16 @@ test.describe("the rows of the connections", () => {
 
       await test.step("the list: one row per source, each a link to its page with its state", async () => {
         const sources = page.getByTestId("source-row");
-        await expect(sources.filter({ hasText: "Trek" })).toHaveAttribute("data-status", "paused");
-        await expect(sources.filter({ hasText: "Wallet" })).toHaveAttribute("data-status", "paused");
+        // Read only by hand: «Manual only», not «Paused» (UX review, point 2).
+        await expect(sources.filter({ hasText: "Trek" })).toHaveAttribute("data-status", "manual");
+        await expect(sources.filter({ hasText: "Wallet" })).toHaveAttribute("data-status", "manual");
+        // What each source reads, from its kind (point 6).
+        await expect(sources.filter({ hasText: "Trek" }).getByTestId("source-reads")).toHaveText(
+          "Leave days",
+        );
+        await expect(
+          sources.filter({ hasText: "Enable Banking" }).getByTestId("source-reads").locator("span"),
+        ).toHaveText(["Accounts and balances", "Transactions"]);
         // The worst of the banks: one needs an action.
         await expect(sources.filter({ hasText: "Enable Banking" })).toHaveAttribute("data-status", "action");
         await expect(sources.filter({ hasText: "Enable Banking" })).toHaveAttribute("href", BANKS);
@@ -67,10 +75,15 @@ test.describe("the rows of the connections", () => {
       await page.goto(TREK);
       await test.step("the source's page has the row of its connection", async () => {
         const one = row(page, "Trek");
-        await expect(one).toHaveAttribute("data-status", "paused");
-        await expect(one.getByText("Paused", { exact: true }).first()).toBeVisible();
+        await expect(one).toHaveAttribute("data-status", "manual");
+        await expect(one.getByText("Manual only", { exact: true }).first()).toBeVisible();
         await expect(one.getByText(/^Automatic update is off\.$/).first()).toBeVisible();
-        await expect(one.getByRole("button", { name: "Turn on again" })).toBeVisible();
+        await expect(one.getByRole("button", { name: "Turn on automatic update" })).toBeVisible();
+        // The state beside the page's title too (point 10).
+        await expect(page.getByTestId("source-title")).toHaveAttribute("data-status", "manual");
+        await expect(
+          page.getByTestId("source-heading").getByText("Manual only", { exact: true }),
+        ).toBeVisible();
       });
 
       await page.goto(BANKS);
@@ -98,17 +111,27 @@ test.describe("the rows of the connections", () => {
         }
       });
 
-      await test.step("the banks are in order of name, whatever their state", async () => {
+      await test.step("the banks that need the person come first, then by name (point 7)", async () => {
         const names = await banks.getByTestId("bank-row").locator(".font-semibold").allTextContents();
         expect(names).toEqual([
-          "Alfa Bank",
-          "Beta Bank",
-          "Delta Bank",
-          "Epsilon Bank",
           "Gamma Bank",
           "Zeta Bank",
+          "Beta Bank",
+          "Delta Bank",
+          "Alfa Bank",
+          "Epsilon Bank",
         ]);
       });
+
+      if (width === 400) {
+        await test.step("on a phone the menu of a row is on the line of its name (point 9)", async () => {
+          const one = row(page, "Alfa Bank");
+          const name = await one.getByText("Alfa Bank", { exact: true }).first().boundingBox();
+          const menu = await one.getByRole("button", { name: "Alfa Bank" }).boundingBox();
+          const centre = (box: { y: number; height: number } | null) => (box ? box.y + box.height / 2 : NaN);
+          expect(Math.abs(centre(name) - centre(menu))).toBeLessThan(8);
+        });
+      }
 
       await test.step("one action when something has to be done, none when nothing has", async () => {
         await expect(row(page, "Beta Bank").getByRole("button", { name: "Update now" })).toBeVisible();
@@ -167,7 +190,8 @@ test.describe("the rows of the connections", () => {
   test("a source's page has every setting of the source, each in its section", async ({ page }) => {
     // plugin-settings.md §2.2: connection, accounts, schedule, history, writing, advanced.
     await page.goto(WALLET);
-    for (const name of ["Connection", "Accounts", "Schedule", "History", "Advanced"]) {
+    // The log of the readings is under each connection's history, not a card (point 12).
+    for (const name of ["Connection", "Accounts", "Schedule", "History"]) {
       await expect(page.getByRole("region", { name, exact: true }), name).toBeVisible();
     }
     const writes = page.getByRole("region", { name: /^Writing to / });
@@ -275,12 +299,13 @@ test.describe("the rows of the connections", () => {
     await expect(
       banks.filter({ hasText: "Alfa Bank" }).getByRole("button", { name: /schedule/i }),
     ).toHaveCount(0);
-    // Each connection leads to its own log.
-    await expect(
-      page
-        .getByRole("region", { name: "Advanced" })
-        .getByRole("link", { name: "Log of the readings of Alfa Bank" }),
-    ).toHaveAttribute("href", /\/settings\/plugins\/advanced\?c=[0-9a-f-]{36}#log$/);
+    // Each connection leads to its own log, under its history (point 12).
+    const alfa = row(page, "Alfa Bank");
+    await alfa.getByRole("button", { name: "History", exact: true }).click();
+    await expect(alfa.getByRole("link", { name: "All readings in Advanced" })).toHaveAttribute(
+      "href",
+      /\/settings\/plugins\/advanced\?c=[0-9a-f-]{36}#log$/,
+    );
 
     await page.goto(TREK);
     const trek = page.getByRole("region", { name: "Schedule" }).getByTestId("schedule-row");
@@ -467,7 +492,8 @@ test.describe("the rows of the connections", () => {
     for (const name of ["Schedule", "Advanced", "Writing to Trek"]) {
       await expect(page.getByRole("region", { name, exact: true })).toHaveCount(0);
     }
-    await expect(page.getByRole("region", { name: "Turn off Trek" })).toBeVisible();
+    // Nothing left to turn off: no connection, no credential, the plugin off (point 8).
+    await expect(page.getByRole("region", { name: "Turn off Trek" })).toHaveCount(0);
   });
 });
 

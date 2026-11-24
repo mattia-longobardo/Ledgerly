@@ -49,7 +49,7 @@ function ChoiceList(props: {
 }
 
 /** The state of the choice: the accounts read when it opens, the ones picked, and the two calls. */
-function useAccountChoice(connectionId: string) {
+function useAccountChoice(connectionId: string, provider: string) {
   const text = useTranslations("settings.integrations");
   const [choosing, setChoosing] = useState(false);
   const [choices, setChoices] = useState<CoreAccountRow[] | null>(null);
@@ -58,7 +58,7 @@ function useAccountChoice(connectionId: string) {
   const [pending, startTransition] = useTransition();
   // The page draws the connection from its server render until it reads `/api/v1` itself.
   const router = useRouter();
-  const refusal = useRefusalText();
+  const refusal = useRefusalText(provider);
 
   const attempt = (work: () => Promise<void>) =>
     startTransition(async () => {
@@ -103,10 +103,10 @@ function useAccountChoice(connectionId: string) {
  * accounts come into Ledgerly. The list is the source's own, read when the person asks for it: the
  * page never calls the source by itself.
  */
-export function SourceAccounts({ connectionId }: { connectionId: string }) {
+export function SourceAccounts({ connectionId, provider }: { connectionId: string; provider: string }) {
   const text = useTranslations("settings.integrations");
   const plugin = useTranslations("settings.plugin");
-  const choice = useAccountChoice(connectionId);
+  const choice = useAccountChoice(connectionId, provider);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
       <p className="text-sm text-muted">{plugin("accounts.chooseHint")}</p>

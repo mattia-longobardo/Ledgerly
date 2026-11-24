@@ -8,13 +8,33 @@ import { type Capabilities, type connectionRows, type WireConnection } from "./c
 type Rows = Awaited<ReturnType<typeof connectionRows>>;
 type Translator = Awaited<ReturnType<typeof getTranslations<"settings.connections">>>;
 
-/** The state a list row shows for a source with several connections: the one that needs most. */
-const WORST: readonly RowStatusValue[] = ["action", "late", "readOnly", "running", "paused", "ok", "absent"];
+/** The states from the one that needs the person most: a source's state in the list, and its rows' order. */
+const WORST: readonly RowStatusValue[] = [
+  "action",
+  "late",
+  "readOnly",
+  "running",
+  "paused",
+  "manual",
+  "ok",
+  "absent",
+];
 
 /** The state that needs the person most, of a source with several connections. */
 export function worst(values: readonly RowStatusValue[]): RowStatusValue {
   if (values.length === 0) return "absent";
   return WORST.find((value) => values.includes(value)) ?? "ok";
+}
+
+/** What needs the person first, then by name (UX review, point 7): the order of a source's rows. */
+export function bySeverity(locale: string) {
+  const rank = (value: RowStatusValue) => WORST.indexOf(value);
+  return (
+    left: { row: { name: string; status: { value: RowStatusValue } } },
+    right: { row: { name: string; status: { value: RowStatusValue } } },
+  ) =>
+    rank(left.row.status.value) - rank(right.row.status.value) ||
+    left.row.name.localeCompare(right.row.name, locale, { sensitivity: "base" });
 }
 
 interface BankRowsInput {
@@ -27,7 +47,7 @@ interface BankRowsInput {
   now: Date;
 }
 
-/** The rows of the connections of one plugin: one per bank, by name. */
+/** The rows of the connections of one plugin: one per bank, what needs the person first. */
 export function bankRows(input: BankRowsInput, pluginId: string, active: boolean) {
   const { connections, rows, text, day, locale, now } = input;
   const provider = `plugin:${pluginId}`;
@@ -60,10 +80,7 @@ export function bankRows(input: BankRowsInput, pluginId: string, active: boolean
         }),
       };
     });
-  // By name, whatever the state: a row does not move when its state changes (§7).
-  return built.sort((left, right) =>
-    left.row.name.localeCompare(right.row.name, locale, { sensitivity: "base" }),
-  );
+  return built.sort(bySeverity(locale));
 }
 
 /**

@@ -84,7 +84,7 @@ export async function engineSections(input: EngineInput) {
   const accounts =
     connection && plugin.kind === "source" ? (
       <>
-        <SourceAccounts connectionId={connection.id} />
+        <SourceAccounts connectionId={connection.id} provider={plugin.name} />
         <DeletedAccounts slug={plugin.id} rows={page?.deletedAccounts ?? []} />
       </>
     ) : null;

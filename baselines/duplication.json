@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 112715,
-    "duplicatedLines": 16172,
-    "percent": 14.35,
-    "blocks": 1270
+    "lines": 112809,
+    "duplicatedLines": 16135,
+    "percent": 14.3,
+    "blocks": 1266
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 116
     },
     "app": {
-      "lines": 20899,
-      "duplicatedLines": 2489,
-      "percent": 11.91,
-      "blocks": 207
+      "lines": 20993,
+      "duplicatedLines": 2452,
+      "percent": 11.68,
+      "blocks": 203
     },
     "global.d": {
       "lines": 12,
@@ -528,12 +528,10 @@
     "app/(app)/settings/plugins/banks-card.tsx": 56,
     "app/(app)/settings/plugins/connection-codes.ts": 17,
     "app/(app)/settings/plugins/connection-list.ts": 13,
-    "app/(app)/settings/plugins/connection-view.ts": 28,
+    "app/(app)/settings/plugins/connection-view.ts": 36,
     "app/(app)/settings/plugins/deactivate.ts": 10,
-    "app/(app)/settings/plugins/page.tsx": 24,
     "app/(app)/settings/plugins/plugin-row.tsx": 15,
-    "app/(app)/settings/plugins/source-accounts.tsx": 6,
-    "app/(app)/settings/plugins/source-card.tsx": 27,
+    "app/(app)/settings/plugins/source-card.tsx": 12,
     "app/(app)/settings/profile/country-form.tsx": 10,
     "app/(app)/settings/profile/name-form.tsx": 21,
     "app/(app)/settings/profile/page.tsx": 8,
