@@ -3,6 +3,14 @@
 Changes to `/api/v1` and to the MCP tools (`/api/mcp`). Every change below is additive: a client
 written before it keeps working.
 
+## Unreleased · R5f.1 · Before the clean-up of the schema
+
+- `GET`/`PUT /settings/profile`: `patronSaint` is deprecated, removed in R5f. The days off of the year are
+  Time off's rest days (`GET /timeoff/rest-days`).
+- `dayBasis` of an interest rule is worked out from `dayCount` (`360`, else `365`): the same values as
+  before.
+- Nothing else changes on the wire: the keys deprecated by R5g leave in R5f.2.
+
 ## Unreleased · What a plugin reads (PERS-601)
 
 - `GET /plugins`: `kinds`, what each plugin reads, from its manifest's capabilities: the kinds of the runs

@@ -5,7 +5,7 @@
 import type { Ctx } from "../../platform/context";
 import type { Tx } from "../../platform/db/client";
 import type { Cents } from "../../shared/money";
-import type { CodeRole, PayslipType } from "./rules";
+import type { CodeRole, PayslipKind, PayslipType } from "./rules";
 
 /** `PayslipApplied`: a payslip entered the register, with what it carries for a pension fund. */
 export interface PayslipApplied {
@@ -13,7 +13,11 @@ export interface PayslipApplied {
   year: number;
   /** The month paid (1st of the month); null for a 13th. */
   period: string | null;
+  /** Deprecated (R5f.1): read `kind` and `extraNumber`; it leaves with the old type in R5f. */
   type: PayslipType;
+  kind: PayslipKind;
+  /** The employer's extra payment it is (1 is a 13th), for `extra` only. */
+  extraNumber: number | null;
   printedOn: string | null;
   /** The worker's effective quota (7101 + 8054, signs kept). */
   workerCents: Cents | null;

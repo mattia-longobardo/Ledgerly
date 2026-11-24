@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { type AppliedPayslip, competenceOf } from "./payroll-source";
 
+/** The kind and extra payment's number an old type stands for, as payroll sends them. */
+const KINDS: Record<string, { kind: string; extraNumber: number | null }> = {
+  ordinary: { kind: "ordinary", extraNumber: null },
+  thirteenth: { kind: "extra", extraNumber: 1 },
+  fourteenth: { kind: "extra", extraNumber: 2 },
+  fifteenth: { kind: "extra", extraNumber: 3 },
+};
+
 const row = (type: string, printedOn: string | null): AppliedPayslip => ({
   payslipId: "p",
   period: null,
   type,
+  ...KINDS[type],
   year: 2026,
   printedOn,
   workerCents: 1n,
@@ -27,6 +36,7 @@ describe("competenceOf: the quarter of a payslip with no month", () => {
     expect(competenceOf(row("fifteenth", null))?.quarter).toBe(4);
     expect(competenceOf(row("fifteenth", "2027-01-15"))?.quarter).toBe(4);
     expect(competenceOf(row("fourteenth", null))).toBeNull();
+    expect(competenceOf(row("thirteenth", null))?.quarter).toBe(4);
   });
 });
 

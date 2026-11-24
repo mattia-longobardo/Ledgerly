@@ -105,7 +105,11 @@ export const pensionCompetences = pgTable(
       .references(() => funds.id, { onDelete: "cascade" }),
     payslipId: uuid("payslip_id").notNull(),
     payrollPeriod: date("payroll_period"),
+    /** Deprecated (R5f.1): read `kind` and `extra_number`; R5f drops it. */
     payslipType: text("payslip_type").notNull(),
+    /** Payroll's kind of the payslip; null only on a row before R5f.1, which its migration fills. */
+    kind: text("kind"),
+    extraNumber: smallint("extra_number"),
     year: smallint("year").notNull(),
     quarter: smallint("quarter").notNull(),
     workerCents: money("worker_cents"),

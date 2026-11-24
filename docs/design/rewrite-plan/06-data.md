@@ -114,6 +114,13 @@ migrazione dopo la `0045`.
 La regola del 13/11/2026 «nessuna migrazione dei dati dei fondi, in nessun rilascio» è sostituita. La migrazione è
 additiva: le tabelle vecchie restano ferme, e intatte per il rollback, fino a R5f.
 
+Migrazioni di R5f nel repo, primo passo (R5f.1): `0076_r5f_kind_keys`. Additiva: indice unico
+`payslips_active_kind_uq` (tipo di busta e numero della mensilità extra, accanto a `payslips_active_key_uq`),
+`pension_competences.kind` e `extra_number` riempite dal vecchio `payslip_type`, `kind` delle buste ancora
+nulle riempito dal vecchio `type`. Da qui il codice non legge più `payslips.type`, le colonne fiscali fisse
+(gli importi del fondo e del registro vengono da `payslip_fields`) né `interest_rules.day_basis`. Le colonne
+vecchie restano scritte fino a R5f.2. Rollback: solo le immagini `pre-r5f-1`.
+
 ## 6.2 Regola di compatibilità
 
 ```mermaid

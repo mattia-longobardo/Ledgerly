@@ -3,7 +3,7 @@
 import type { z } from "zod";
 import type { PAYROLL } from "@ledgerly/api-contract";
 import type { codeMapView, manualPayslipView, registerView, reviewView } from "@ledgerly/domain/payroll";
-import { FIELDS, isFieldName, kindOf } from "@ledgerly/domain/payroll";
+import { FIELDS, isFieldName, kindOf, registerAmount } from "@ledgerly/domain/payroll";
 import { effectiveValue, SUMMED_FIELDS } from "@ledgerly/domain/payroll/client";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
@@ -22,8 +22,8 @@ const amounts = (values: Record<string, Cents | null>) =>
 const pairsOut = (pairs: Record<string, Cents>) =>
   Object.fromEntries(Object.entries(pairs).map(([key, cents]) => [key, centsToDecimal(cents)]));
 
-/** A register's column: the base field from the row, the country's from its pair or the old column. */
-const amountOf = (row: Row, field: (typeof SUMMED_FIELDS)[number]) => money(row.fields[field] ?? row.payslip[field]);
+/** A register's column: the base field from the row, the country's from its pair. */
+const amountOf = (row: Row, field: (typeof SUMMED_FIELDS)[number]) => money(registerAmount(row, field));
 
 function documentOut(document: Document) {
   return {

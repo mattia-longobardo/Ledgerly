@@ -11,9 +11,9 @@ import { userScoped } from "../../../platform/db/scope";
 import { appliedEventOf } from "../applied";
 import { MONEY_FIELDS, type MoneyField } from "../fields";
 import { payslipApplied, payslipWithdrawn } from "../events";
-import { baseColumnsOf, type ManualPayslip, manualPayslipSchema, type PayslipType, periodOfManual, typeOfKind } from "../rules";
+import { baseColumnsOf, type ManualPayslip, manualPayslipSchema, type PayslipKind, periodOfManual, typeOfKind } from "../rules";
 import { payslips } from "../schema";
-import { PayrollError, type Payslip } from "./codes";
+import { ACTIVE_KEYS, ofKind, PayrollError, type Payslip } from "./codes";
 import { type Pairs, pairsOf, writePairs } from "./fields";
 
 /** A manual payslip as the API reads it: the row, its pairs and its document's name. */
@@ -30,12 +30,12 @@ function parse(input: unknown): ManualPayslip {
 }
 
 /**
- * The applied payslip of the same year, type and month, whoever's key it has: a month is paid once,
+ * The applied payslip of the same year, kind, extra payment and month, whoever's key it has: a month is paid once,
  * by hand or read. `except`: the payslip being changed.
  */
 export async function activeOfMonth(
   ctx: Pick<Ctx, "userId">,
-  key: { year: number; type: PayslipType; period: string | null },
+  key: { year: number; kind: PayslipKind; extraNumber: number | null; period: string | null },
   executor: Db | Tx,
   except?: string,
 ): Promise<Payslip | null> {
@@ -47,7 +47,7 @@ export async function activeOfMonth(
         userScoped(ctx).owns(payslips),
         eq(payslips.active, true),
         eq(payslips.year, key.year),
-        eq(payslips.type, key.type),
+        ofKind(key),
         key.period === null ? sql`${payslips.period} is null` : eq(payslips.period, key.period),
         except === undefined ? undefined : ne(payslips.id, except),
       ),
@@ -98,7 +98,7 @@ async function writing<T>(work: () => Promise<T>): Promise<T> {
     return await work();
   } catch (error) {
     // Another write took the month between the check and the insert: retrying shows `month_applied`.
-    if (hasPgError(error, UNIQUE_VIOLATION, "payslips_active_key_uq")) throw new PayrollError("conflict");
+    if (ACTIVE_KEYS.some((key) => hasPgError(error, UNIQUE_VIOLATION, key))) throw new PayrollError("conflict");
     throw error;
   }
 }

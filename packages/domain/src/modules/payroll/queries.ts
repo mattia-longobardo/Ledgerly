@@ -18,6 +18,7 @@ import { hasBlockingFailure } from "./parse/checks";
 import {
   averageNet,
   averageTaxRate,
+  BASE_FIELDS,
   groupByYear,
   isOrdinary,
   meanCents,
@@ -84,16 +85,21 @@ interface RegisterView {
   span: { from: string; to: string } | null;
 }
 
+const BASE_KEYS: ReadonlySet<string> = new Set(BASE_FIELDS.map((field) => field.key));
+
 /**
- * A column of the register for one payslip: a field of the country from its pair — or from the old
- * column, on a row the image before R5g wrote without pairs —, a base field (never a pair) from its row.
+ * A column of the register for one payslip: a base field from its row, a field of the country from
+ * its pair only — the old fixed columns are no longer read (R5f.1; every row has its pairs).
  */
-function amountOf(row: RegisterRow, field: SummedField): Cents | null {
-  return row.fields[field] ?? row.payslip[field];
+export function registerAmount(
+  row: { payslip: Record<SummedField, Cents | null>; fields: Readonly<Record<string, Cents>> },
+  field: SummedField,
+): Cents | null {
+  return BASE_KEYS.has(field) ? row.payslip[field] : (row.fields[field] ?? null);
 }
 
 function sumOf(rows: readonly RegisterRow[], field: SummedField): Cents | null {
-  const known = rows.map((row) => amountOf(row, field)).filter((value): value is Cents => value !== null);
+  const known = rows.map((row) => registerAmount(row, field)).filter((value): value is Cents => value !== null);
   return known.length === 0 ? null : known.reduce((sum, value) => sum + value, 0n);
 }
 
@@ -162,7 +168,7 @@ export async function registerView(ctx: Pick<Ctx, "userId">): Promise<RegisterVi
     const averages = {} as Record<SummedField, Cents | null>;
     for (const field of SUMMED_FIELDS) {
       totals[field] = sumOf(applied, field);
-      averages[field] = meanCents(ordinary.map((row) => amountOf(row, field)));
+      averages[field] = meanCents(ordinary.map((row) => registerAmount(row, field)));
     }
     return { year: group.year, rows: ofYear, totals, averages };
   });

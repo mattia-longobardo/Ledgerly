@@ -51,6 +51,8 @@ function competenceValues(input: CompetenceInput) {
   return {
     payrollPeriod: input.payrollPeriod,
     payslipType: input.payslipType,
+    kind: input.kind,
+    extraNumber: input.extraNumber,
     year: input.year,
     quarter: input.quarter,
     workerCents: input.workerCents,

@@ -1,8 +1,8 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import type { Ctx } from "../../../platform/context";
 import { getDb } from "../../../platform/db/client";
 import { userScoped } from "../../../platform/db/scope";
-import { type CodeRole, CODE_ROLES, DEFAULT_PROFILE, profileById } from "../rules";
+import { type CodeRole, CODE_ROLES, DEFAULT_PROFILE, type PayslipKind, profileById } from "../rules";
 import { payrollCodeMap, payrollRawLines, payslips } from "../schema";
 
 export type Payslip = typeof payslips.$inferSelect;
@@ -21,6 +21,17 @@ type PayrollErrorCode =
   | "month_applied"
   | "llm_not_configured"
   | "llm_failed";
+
+/** The rows of one kind and extra payment: the old `type` is no longer read (R5f.1). */
+export function ofKind(key: { kind: PayslipKind; extraNumber: number | null }) {
+  return and(
+    eq(payslips.kind, key.kind),
+    key.extraNumber === null ? isNull(payslips.extraNumber) : eq(payslips.extraNumber, key.extraNumber),
+  );
+}
+
+/** The two unique keys of an applied month: the old one, by type, goes with the type in R5f. */
+export const ACTIVE_KEYS = ["payslips_active_key_uq", "payslips_active_kind_uq"] as const;
 
 export class PayrollError extends Error {
   constructor(readonly code: PayrollErrorCode) {
