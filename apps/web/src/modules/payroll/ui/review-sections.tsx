@@ -16,7 +16,17 @@ import { cn } from "@ledgerly/ui/cn";
 import { usePolling } from "@ledgerly/ui/data";
 import { Link } from "@ledgerly/ui/router";
 import { StatusBadge } from "@ledgerly/ui/status-badge";
-import { type DocumentState, fieldGroups, type Format, hoursOf, moneyOf, type Review, STATE_TONE } from "./present";
+import { KindBadge } from "./labels";
+import {
+  type DocumentState,
+  fieldGroups,
+  type Format,
+  hoursOf,
+  kindBadge,
+  moneyOf,
+  type Review,
+  STATE_TONE,
+} from "./present";
 import { openOriginal, originalLink } from "./original";
 import { ReviewActions } from "./review-actions";
 import { ReviewLines } from "./review-lines";
@@ -54,6 +64,8 @@ function ReviewHeading({ view, format }: Props) {
           <StatusBadge status={document.state} tones={STATE_TONE}>
             {text(`states.${document.state}`)}
           </StatusBadge>
+          {view.payslip && <KindBadge badge={kindBadge(view.payslip)} />}
+          {view.payslip?.source === "manual" && <Badge tone="neutral">{text("register.byHand")}</Badge>}
         </h1>
         <p className="truncate text-muted">
           {text("review.subtitle", {

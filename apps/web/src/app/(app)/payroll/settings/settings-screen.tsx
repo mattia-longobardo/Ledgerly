@@ -3,7 +3,7 @@
 // Payroll › Settings (PERS-158), read from `/api/v1` (rewrite plan R3): how a payslip is read. The
 // code map is a rule of this module, and the pension fund reads what it decides; the connection and
 // the LLM fallback stay where every connection and every server setting stay, and are only linked
-// from here. The code map is `GET /payroll/codes`.
+// from here. The code map is `GET /payroll/codes`; the employer (R5g, E6) is `GET /payroll/employer`.
 import { useTranslations } from "next-intl";
 import { codes as codeRoutes } from "@ledgerly/api-contract/payroll";
 import { ButtonLink } from "@ledgerly/ui/button";
@@ -13,6 +13,7 @@ import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
 import { Page } from "@ledgerly/ui/shell/page";
 import { TabLinks } from "@ledgerly/ui/tab-links";
 import { UnsavedChangesProvider } from "@ledgerly/ui/unsaved-changes";
+import { EmployerSection } from "@/modules/payroll/client";
 import { CodeMapCard } from "./code-map-card";
 
 /** `admin`: the server settings, where the LLM fallback is, are a link of an admin's only. */
@@ -36,6 +37,7 @@ export function PayrollSettingsScreen({ admin }: { admin: boolean }) {
       {/* Save and Discard for the code map live in the banner, which appears with a change. */}
       <UnsavedChangesProvider>
         <SettingsGrid>
+          <EmployerSection />
           <SettingsSection title={codeText("title")} description={codeText("description")} padded={false}>
             <Loaded state={read}>{(view) => <CodeMapCard entries={view.codes} />}</Loaded>
           </SettingsSection>

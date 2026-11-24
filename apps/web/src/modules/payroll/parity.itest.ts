@@ -188,12 +188,16 @@ const old = (() => {
     const values = {} as Record<SummedField, Cents | null>;
     for (const field of SUMMED_FIELDS) values[field] = payslip[field];
     const state: DocumentState = document.state;
-    const badge: PayslipType | null = payslip.type === "ordinary" ? null : payslip.type;
+    // R5g: the badge is the kind and the number of an extra payment; the old type stays written beside it.
+    const type: PayslipType = payslip.type;
+    const kind = payroll.kindOf({ ...payslip, type });
+    const badge = kind.kind === "ordinary" ? null : kind;
     return {
       id: document.id,
       href: `/payroll/${document.id}`,
       month: payslip.period ? formatDate(payslip.period, "monthYear", format.locale) : String(payslip.year),
       badge,
+      manual: false,
       state,
       applied: payslip.active,
       fileName: document.fileName,

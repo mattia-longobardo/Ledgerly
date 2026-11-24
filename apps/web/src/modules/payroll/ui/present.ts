@@ -1,7 +1,7 @@
 // What the Payroll screens show, from the answers of `/api/v1` (rewrite plan R3): every figure is a
 // field of the route, as a decimal string; here it is only formatted.
-import { FIELD_GROUPS, SUMMED_FIELDS } from "@ledgerly/api-contract/payroll";
-import type { payroll } from "@ledgerly/api-contract/payroll";
+import { FIELD_GROUPS } from "@ledgerly/api-contract/payroll";
+import type { employer, manual, payroll } from "@ledgerly/api-contract/payroll";
 import type { RouteOutput } from "@ledgerly/api-client";
 import { parseCents } from "@ledgerly/format/cents";
 import { formatAmountInput, formatDate, formatMoney, NULL_DISPLAY, type NumberFormat, type UiLocale } from "@ledgerly/format/format";
@@ -9,12 +9,18 @@ import type { StatusTone } from "@ledgerly/ui/status-badge";
 
 export type Register = RouteOutput<typeof payroll.getPayroll>;
 export type Review = RouteOutput<typeof payroll.getPayslip>;
+export type ManualPayslip = RouteOutput<typeof manual.getManualPayslip>;
+export type Employer = RouteOutput<typeof employer.getPayrollEmployer>;
+/** The fields of the person's payslips (`GET /payroll/fields`): what the register and the forms show. */
+export type Catalogue = RouteOutput<typeof employer.listPayslipFields>["fields"];
 type RegisterRow = Register["years"][number]["rows"][number];
 type ReviewField = Review["fields"][number];
 export type DocumentState = Review["document"]["state"];
 export type FieldGroup = ReviewField["group"];
-export type SummedField = (typeof SUMMED_FIELDS)[number];
-type Amounts = Record<SummedField, string | null>;
+/** Formatted amounts by the key of the catalogue. */
+type Amounts = Record<string, string>;
+/** What a payslip is, for its badge: null for an ordinary one. */
+export type KindBadge = { kind: Exclude<RegisterRow["kind"], "ordinary">; extraNumber: number | null } | null;
 
 export interface Format {
   numberFormat: NumberFormat;
@@ -116,7 +122,9 @@ export interface RegisterCells {
   id: string;
   href: string;
   month: string;
-  badge: Exclude<RegisterRow["type"], "ordinary"> | null;
+  badge: KindBadge;
+  /** Typed by hand: it opens its own page, never a review (a review needs a document). */
+  manual: boolean;
   state: DocumentState;
   applied: boolean;
   fileName: string;
@@ -137,10 +145,13 @@ export interface RegisterGroup {
   hasApplied: boolean;
 }
 
+/** Every amount the route answers, formatted: the columns are the catalogue's (`register-table.tsx`). */
 function moneyCells(values: Record<string, string | null>, format: Format): Amounts {
-  const cells = {} as Amounts;
-  for (const field of SUMMED_FIELDS) cells[field] = moneyOf(values[field] ?? null, format);
-  return cells;
+  return Object.fromEntries(Object.entries(values).map(([field, value]) => [field, moneyOf(value, format)]));
+}
+
+export function kindBadge(payslip: Pick<RegisterRow, "kind" | "extraNumber">): KindBadge {
+  return payslip.kind === "ordinary" ? null : { kind: payslip.kind, extraNumber: payslip.extraNumber };
 }
 
 const hoursCell = (value: string | null, format: Format) =>
@@ -149,9 +160,10 @@ const hoursCell = (value: string | null, format: Format) =>
 function rowCells(row: RegisterRow, format: Format): RegisterCells {
   return {
     id: row.id,
-    href: `/payroll/${row.id}`,
+    href: row.source === "manual" ? `/payroll/manual/${row.payslipId}` : `/payroll/${row.id}`,
     month: row.period ? formatDate(row.period, "monthYear", format.locale) : String(row.year),
-    badge: row.type === "ordinary" ? null : row.type,
+    badge: kindBadge(row),
+    manual: row.source === "manual",
     state: row.state,
     applied: row.applied,
     fileName: row.fileName,
@@ -171,4 +183,26 @@ export function registerGroups(years: Register["years"], format: Format): Regist
     averages: moneyCells(year.averages, format),
     hasApplied: year.hasApplied,
   }));
+}
+
+/**
+ * The register's amount columns: the catalogue's summed base fields, then — under details — its summed
+ * country fields and any other amount a payslip of the register carries (one read before the person
+ * had a country), in the route's order.
+ */
+export function registerColumns(
+  catalogue: Catalogue,
+  groups: readonly RegisterGroup[],
+): { main: string[]; extra: string[]; details: boolean } {
+  const summed = catalogue.filter((field) => field.summed);
+  const main = summed.filter((field) => field.base).map((field) => field.key);
+  const carried = groups.flatMap((group) =>
+    group.rows.flatMap((row) => Object.keys(row.values).filter((key) => row.values[key] !== NULL_DISPLAY)),
+  );
+  const extra = [...summed.filter((field) => !field.base).map((field) => field.key), ...carried];
+  const rows = groups.flatMap((group) => group.rows);
+  const leave = rows.some((row) => row.vacationLeft !== NULL_DISPLAY || row.rolLeft !== NULL_DISPLAY);
+  const others = [...new Set(extra)].filter((key) => !main.includes(key));
+  // Details: the other amounts and the leave left; nothing to show, no switch.
+  return { main, extra: others, details: others.length > 0 || leave };
 }

@@ -6,13 +6,15 @@
 // `GET /payroll/payslips`; the screen formats it. While a document is read, the register reads its
 // route again (audit UI-PAY-1).
 import { useTranslations } from "next-intl";
-import { payroll } from "@ledgerly/api-contract/payroll";
+import { employer, payroll } from "@ledgerly/api-contract/payroll";
 import { useApi, usePolling } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { Page } from "@ledgerly/ui/shell/page";
 import { EmptyState } from "@ledgerly/ui/states";
 import {
+  AddManualPayslip,
   AddPayslips,
+  type Catalogue,
   type Format,
   PayrollTabs,
   type Register,
@@ -26,7 +28,7 @@ import {
 
 const FOLLOWED = [payroll.getPayroll];
 
-function RegisterBody({ view, format }: { view: Register; format: Format }) {
+function RegisterBody({ view, format, catalogue }: { view: Register; format: Format; catalogue: Catalogue }) {
   const text = useTranslations("payroll");
   usePolling(view.inFlight, FOLLOWED);
   const groups = registerGroups(view.years, format);
@@ -38,13 +40,18 @@ function RegisterBody({ view, format }: { view: Register; format: Format }) {
         <EmptyState
           title={text("empty.title")}
           description={text("empty.description")}
-          actions={<AddPayslips label={text("empty.cta")} size="md" />}
+          actions={
+            <>
+              <AddPayslips label={text("empty.cta")} size="md" />
+              <AddManualPayslip size="md" />
+            </>
+          }
         />
       ) : (
         <>
           <RegisterKpis view={view} format={format} />
           <RegisterInbox view={view} format={format} />
-          {groups.length > 0 && <RegisterTable groups={groups} />}
+          {groups.length > 0 && <RegisterTable groups={groups} catalogue={catalogue} />}
         </>
       )}
     </>
@@ -54,10 +61,24 @@ function RegisterBody({ view, format }: { view: Register; format: Format }) {
 export function RegisterScreen() {
   const text = useTranslations("payroll");
   const read = useApi(payroll.getPayroll, {});
+  const fields = useApi(employer.listPayslipFields, {});
   const format = usePayrollFormat();
   return (
-    <Page title={text("title")} actions={<AddPayslips label={text("add")} />}>
-      <Loaded state={read}>{(view) => format && <RegisterBody view={view} format={format} />}</Loaded>
+    <Page
+      title={text("title")}
+      actions={
+        <>
+          <AddManualPayslip />
+          <AddPayslips label={text("add")} />
+        </>
+      }
+    >
+      <Loaded state={read}>
+        {(view) =>
+          format &&
+          fields.data && <RegisterBody view={view} format={format} catalogue={fields.data.fields} />
+        }
+      </Loaded>
     </Page>
   );
 }

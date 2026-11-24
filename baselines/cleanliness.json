@@ -733,8 +733,6 @@
     "apps/web/src/modules/interests/ui/rule-dialog.tsx": 1,
     "apps/web/src/modules/investments/ui/dialog-rules.ts": 1,
     "apps/web/src/modules/payroll/ui/add-payslips.tsx": 1,
-    "apps/web/src/modules/payroll/ui/present.ts": 1,
-    "apps/web/src/modules/payroll/ui/register-table.tsx": 1,
     "apps/web/src/modules/payroll/ui/review-actions.tsx": 2,
     "apps/web/src/modules/payroll/ui/review-workspace.tsx": 1,
     "apps/web/src/modules/subscriptions/ui/subscription-dialog.tsx": 1,

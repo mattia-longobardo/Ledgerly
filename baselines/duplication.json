@@ -4,10 +4,10 @@
     "minLines": 6
   },
   "total": {
-    "lines": 115105,
-    "duplicatedLines": 16306,
+    "lines": 115728,
+    "duplicatedLines": 16401,
     "percent": 14.17,
-    "blocks": 1287
+    "blocks": 1298
   },
   "units": {
     "api": {
@@ -17,10 +17,10 @@
       "blocks": 119
     },
     "app": {
-      "lines": 21528,
-      "duplicatedLines": 2502,
-      "percent": 11.62,
-      "blocks": 211
+      "lines": 21576,
+      "duplicatedLines": 2525,
+      "percent": 11.7,
+      "blocks": 214
     },
     "global.d": {
       "lines": 12,
@@ -36,19 +36,19 @@
     },
     "modules/accounts": {
       "lines": 5536,
-      "duplicatedLines": 1039,
-      "percent": 18.77,
+      "duplicatedLines": 1041,
+      "percent": 18.8,
       "blocks": 77
     },
     "modules/budgets": {
       "lines": 1544,
-      "duplicatedLines": 244,
-      "percent": 15.8,
-      "blocks": 22
+      "duplicatedLines": 251,
+      "percent": 16.26,
+      "blocks": 23
     },
     "modules/funds": {
       "lines": 12767,
-      "duplicatedLines": 1847,
+      "duplicatedLines": 1848,
       "percent": 14.47,
       "blocks": 145
     },
@@ -72,15 +72,15 @@
     },
     "modules/investments": {
       "lines": 18241,
-      "duplicatedLines": 2812,
+      "duplicatedLines": 2813,
       "percent": 15.42,
       "blocks": 223
     },
     "modules/payroll": {
-      "lines": 4410,
-      "duplicatedLines": 723,
-      "percent": 16.39,
-      "blocks": 48
+      "lines": 4985,
+      "duplicatedLines": 781,
+      "percent": 15.67,
+      "blocks": 55
     },
     "modules/pockets": {
       "lines": 1760,
@@ -114,8 +114,8 @@
     },
     "modules/users": {
       "lines": 1004,
-      "duplicatedLines": 205,
-      "percent": 20.42,
+      "duplicatedLines": 208,
+      "percent": 20.72,
       "blocks": 19
     },
     "platform/alerts": {
@@ -499,14 +499,16 @@
     "app/(app)/investments/[accountId]/positions/page.tsx": 12,
     "app/(app)/investments/new-fund/page.tsx": 9,
     "app/(app)/overview-screen.tsx": 60,
-    "app/(app)/payroll/register-screen.tsx": 9,
+    "app/(app)/payroll/[id]/page.tsx": 9,
+    "app/(app)/payroll/manual/[id]/manual-screen.tsx": 9,
+    "app/(app)/payroll/manual/[id]/page.tsx": 9,
     "app/(app)/payroll/settings/code-map-card.tsx": 8,
     "app/(app)/payroll/settings/page.tsx": 7,
     "app/(app)/payroll/settings/settings-screen.tsx": 10,
     "app/(app)/pockets/[id]/page.tsx": 15,
     "app/(app)/pockets/[id]/pocket-lists.tsx": 26,
     "app/(app)/pockets/[id]/pocket-screen.tsx": 15,
-    "app/(app)/pockets/pockets-screen.tsx": 26,
+    "app/(app)/pockets/pockets-screen.tsx": 23,
     "app/(app)/settings/addons/addons-screen.tsx": 10,
     "app/(app)/settings/addons/page.tsx": 8,
     "app/(app)/settings/data/data-screen.tsx": 29,
@@ -515,6 +517,7 @@
     "app/(app)/settings/finance/merge-proposals.tsx": 8,
     "app/(app)/settings/finance/rules/apply-dialog.tsx": 28,
     "app/(app)/settings/finance/rules/page.tsx": 8,
+    "app/(app)/settings/finance/rules/rule-conditions.tsx": 8,
     "app/(app)/settings/finance/rules/rule-editor.tsx": 57,
     "app/(app)/settings/finance/rules/rules-screen.tsx": 18,
     "app/(app)/settings/finance/rules/value-cell.tsx": 25,
@@ -582,7 +585,7 @@
     "modules/accounts/service/switching.ts": 51,
     "modules/accounts/ui/account-form.tsx": 46,
     "modules/accounts/ui/balance-entries.tsx": 135,
-    "modules/accounts/ui/csv-import.tsx": 38,
+    "modules/accounts/ui/csv-import.tsx": 40,
     "modules/accounts/ui/csv-map.tsx": 38,
     "modules/accounts/ui/settings-form.tsx": 59,
     "modules/accounts/ui/switch/switch-check.tsx": 65,
@@ -591,7 +594,7 @@
     "modules/budgets/queries.ts": 23,
     "modules/budgets/schema.ts": 45,
     "modules/budgets/service.ts": 49,
-    "modules/budgets/ui/add-budget.tsx": 45,
+    "modules/budgets/ui/add-budget.tsx": 52,
     "modules/budgets/ui/alerts-form.tsx": 6,
     "modules/budgets/ui/budgets-table.tsx": 47,
     "modules/budgets/ui/overview-card.tsx": 18,
@@ -637,7 +640,7 @@
     "modules/funds/ui/overview-cards.tsx": 17,
     "modules/funds/ui/payslips-card.tsx": 22,
     "modules/funds/ui/projection.tsx": 9,
-    "modules/funds/ui/reconciliation-buttons.tsx": 25,
+    "modules/funds/ui/reconciliation-buttons.tsx": 26,
     "modules/funds/ui/register-cells.tsx": 28,
     "modules/funds/ui/source-dialog.tsx": 42,
     "modules/funds/ui/source-fields.tsx": 108,
@@ -729,7 +732,7 @@
     "modules/investments/ui/plans/plan-runs.tsx": 7,
     "modules/investments/ui/plans/run-actions.tsx": 7,
     "modules/investments/ui/portfolio/convert.tsx": 19,
-    "modules/investments/ui/portfolio/instrument-field.tsx": 7,
+    "modules/investments/ui/portfolio/instrument-field.tsx": 8,
     "modules/investments/ui/portfolio/record-operation.tsx": 78,
     "modules/investments/ui/positions/closed-positions.tsx": 7,
     "modules/investments/ui/positions/contributions-card.tsx": 23,
@@ -746,16 +749,18 @@
     "modules/payroll/queries.ts": 18,
     "modules/payroll/rules/index.ts": 32,
     "modules/payroll/schema/index.ts": 192,
-    "modules/payroll/schema/legacy.ts": 41,
+    "modules/payroll/schema/legacy.ts": 42,
     "modules/payroll/service/codes.ts": 18,
     "modules/payroll/service/fields.ts": 6,
     "modules/payroll/service/leave.ts": 48,
     "modules/payroll/service/manual.ts": 25,
     "modules/payroll/service/reading.ts": 67,
     "modules/payroll/service/review.ts": 16,
+    "modules/payroll/ui/employer-card.tsx": 27,
+    "modules/payroll/ui/manual-dialog.tsx": 20,
+    "modules/payroll/ui/manual-view.tsx": 19,
     "modules/payroll/ui/present.ts": 20,
-    "modules/payroll/ui/register-sections.tsx": 8,
-    "modules/payroll/ui/register-table.tsx": 15,
+    "modules/payroll/ui/register-sections.tsx": 14,
     "modules/payroll/ui/review-actions.tsx": 88,
     "modules/payroll/ui/review-lines.tsx": 8,
     "modules/payroll/ui/review-sections.tsx": 10,
@@ -847,7 +852,7 @@
     "modules/users/calls.ts": 25,
     "modules/users/schema.ts": 25,
     "modules/users/service/preferences.ts": 35,
-    "modules/users/ui/invite-person.tsx": 30,
+    "modules/users/ui/invite-person.tsx": 33,
     "modules/users/ui/people-table.tsx": 72,
     "modules/users/ui/two-factor-setup.tsx": 18,
     "platform/api/errors.ts": 15,

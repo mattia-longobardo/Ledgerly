@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Pencil } from "lucide-react";
-import { useMessages, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { Badge } from "@ledgerly/ui/badge";
 import { Button, IconButton } from "@ledgerly/ui/button";
@@ -11,13 +11,8 @@ import { type Highlight, PdfViewer } from "@/ui/pdf-viewer";
 import { openOriginal } from "./original";
 import { notify } from "@ledgerly/ui/toast";
 import { decideFieldAction } from "../calls";
+import { useFieldLabel } from "./labels";
 import type { FieldGroup, FieldView } from "./present";
-
-/** A value's name: the field of the wire is a name of the catalogue, whose words are in `payroll.fields`. */
-function useFieldLabel(): (name: string) => string {
-  const labels = Object.entries(useMessages().payroll.fields);
-  return (name) => labels.find(([key]) => key === name)?.[1] ?? name;
-}
 
 /** Below this confidence a value is amber: check it against the document (design). */
 const LOW_CONFIDENCE = 0.75;
