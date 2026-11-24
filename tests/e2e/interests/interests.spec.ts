@@ -51,4 +51,23 @@ test("a rule accrues day by day and settles last month", async ({ page }) => {
     await expect(row).toContainText("any balance");
     await expect(row).toContainText("Active");
   });
+
+  await test.step("R5g: the day count and the payment window are fields of the rule, kept as saved", async () => {
+    await page.getByTestId("rule-row").getByRole("link").first().click();
+    await expect(page).toHaveURL(/\/interests\/[0-9a-f-]{36}$/);
+    await page.getByRole("button", { name: "Edit rule" }).click();
+    let dialog = page.getByRole("dialog", { name: /Edit rule/ });
+    await dialog.getByLabel("Day basis").selectOption("act_act");
+    await dialog.getByText("Advanced").click();
+    await expect(dialog.getByLabel("Periods")).toHaveValue("calendar");
+    await dialog.getByLabel("Payment window").fill("5");
+    await dialog.getByRole("button", { name: "Save rule" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText(/Actual days of the year/).first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Edit rule" }).click();
+    dialog = page.getByRole("dialog", { name: /Edit rule/ });
+    await expect(dialog.getByLabel("Day basis")).toHaveValue("act_act");
+    await expect(dialog.getByLabel("Payment window")).toHaveValue("5");
+  });
 });

@@ -94,7 +94,7 @@ is in the row of its module and in the row `data`): all its rows count.
 | `tests/e2e/interests/**`, `scripts/seed-e2e/interests.ts` | `spec-interests` | flow `interests` | — |
 | `tests/e2e/funds/**`, `scripts/seed-e2e/funds.ts` | `spec-funds` | flow `funds` | — |
 | `tests/e2e/investments/**` | `spec-investments` | flow `investments` | — |
-| `tests/e2e/payroll/**` | `spec-payroll` | flow `payroll` | — |
+| `tests/e2e/payroll/**`, `scripts/seed-e2e/payroll.ts` | `spec-payroll` | flow `payroll` | — |
 | `tests/e2e/timeoff/**`, `scripts/seed-e2e/timeoff.ts` | `spec-timeoff` | flow `timeoff` | — |
 | `tests/e2e/connections/**`, `scripts/seed-e2e/connections.ts` | `spec-connections` | flow `connections` | — |
 | `tests/e2e/auth/**` | `spec-auth` | flow `auth` | — |
@@ -123,7 +123,7 @@ runs against the deployed site.
 | `interests` | `npx playwright test -c playwright.preview.config.ts tests/e2e/interests/` | `npx playwright test -c playwright.preview.config.ts interests/interests.spec.ts` |
 | `funds` | `npx playwright test -c playwright.preview.config.ts tests/e2e/funds/` | `npx playwright test -c playwright.preview.config.ts funds/funds.spec.ts funds/funds-detail.spec.ts funds/funds-home.spec.ts funds/funds-new.spec.ts funds/funds-payslip.spec.ts funds/funds-settings.spec.ts funds/funds-tabs.spec.ts` |
 | `investments` | `npx playwright test -c playwright.preview.config.ts tests/e2e/investments/` | `npx playwright test -c playwright.preview.config.ts investments/investments.spec.ts investments/investments-home.spec.ts investments/investments-service.spec.ts investments/investments-groups.spec.ts investments/portfolio.spec.ts investments/plans.spec.ts` |
-| `payroll` | `npx playwright test -c playwright.preview.config.ts tests/e2e/payroll/` | `npx playwright test -c playwright.preview.config.ts payroll/payroll.spec.ts` |
+| `payroll` | `npx playwright test -c playwright.preview.config.ts tests/e2e/payroll/` | `npx playwright test -c playwright.preview.config.ts payroll/payroll.spec.ts payroll/manual.spec.ts` |
 | `timeoff` | `npx playwright test -c playwright.preview.config.ts tests/e2e/timeoff/` | `npx playwright test -c playwright.preview.config.ts timeoff/timeoff.spec.ts timeoff/holidays.spec.ts` |
 | `connections` | `npx playwright test -c playwright.preview.config.ts tests/e2e/connections/` | `npx playwright test -c playwright.preview.config.ts connections/connections.spec.ts connections/plugins.spec.ts connections/schedule.spec.ts` |
 | `auth` | `npx playwright test -c playwright.preview.config.ts tests/e2e/auth/` | `npx playwright test -c playwright.preview.config.ts auth/auth.spec.ts auth/two-factor.spec.ts auth/preferences.spec.ts` |

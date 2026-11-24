@@ -85,7 +85,7 @@ export const FLOWS: Flow[] = [
     ],
     screens: ["a11y", "keyboard"],
   },
-  { id: "payroll", specs: ["payroll"], screens: ["a11y"] },
+  { id: "payroll", specs: ["payroll", "manual"], screens: ["a11y"] },
   { id: "timeoff", specs: ["timeoff", "holidays"], screens: CROSS_CUTTING },
   { id: "connections", specs: ["connections", "plugins", "schedule"], screens: ["a11y"] },
   { id: "auth", specs: ["auth", "two-factor", "preferences"], screens: ["a11y"] },
@@ -108,6 +108,7 @@ const SEEDED_ALONE = [
   "funds",
   "timeoff",
   "connections",
+  "payroll",
 ];
 
 const page = (name: string) => `apps/web/src/app/(app)/${name}/**`;

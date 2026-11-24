@@ -16,6 +16,16 @@ const PAGES: Screen[] = [
     },
   },
   { name: "/payroll/settings", session: "layout", open: go("/payroll/settings") },
+  // R5g: a payslip typed by hand opens its own page.
+  {
+    name: "/payroll/manual/[id]",
+    session: "payrollHand",
+    open: async (page) => {
+      await page.goto("/payroll");
+      await settled(page);
+      await followLink(page, 'main a[href^="/payroll/manual/"]');
+    },
+  },
 ];
 
 const OVERLAYS: Screen[] = [
@@ -43,6 +53,17 @@ const OVERLAYS: Screen[] = [
       await page.locator('[role="dialog"] input[type="file"]').setInputFiles([
         { name: "payslip.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-") },
       ]);
+    },
+  },
+  {
+    name: "the type a payslip dialog",
+    session: "layout",
+    roots: ['[role="dialog"]'],
+    open: async (page) => {
+      await page.goto("/payroll");
+      await settled(page);
+      await page.getByRole("button", { name: /^(Type a payslip|Inserisci a mano)$/ }).first().click();
+      await settledDialog(page);
     },
   },
 ];

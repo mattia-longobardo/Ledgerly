@@ -81,6 +81,18 @@ export const USERS = {
     name: "Plans Journey",
   },
   payroll: { email: "payroll@example.test", password: "payroll-password-123", name: "Payroll" },
+  // R5g, criterion 3: a person with no country, no reading profile and no payslip, who types them by
+  // hand (`payrollManual`, the journey); `payrollHand` has one typed by hand, for the screen check.
+  payrollManual: {
+    email: "payroll-manual@example.test",
+    password: "payroll-manual-password-123",
+    name: "Payroll Manual",
+  },
+  payrollHand: {
+    email: "payroll-hand@example.test",
+    password: "payroll-hand-password-123",
+    name: "Payroll Hand",
+  },
   // Release N6: the journey of a fund fed by the payslip, with no document. It starts with no fund.
   fundsPayslip: {
     email: "funds-payslip@example.test",
@@ -256,6 +268,8 @@ export const SESSIONS = {
   plans: { user: "plans", file: "plans-session.json" },
   plansJourney: { user: "plansJourney", file: "plans-journey-session.json" },
   payroll: { user: "payroll", file: "payroll-session.json" },
+  payrollManual: { user: "payrollManual", file: "payroll-manual-session.json" },
+  payrollHand: { user: "payrollHand", file: "payroll-hand-session.json" },
   fundsPayslip: { user: "fundsPayslip", file: "funds-payslip-session.json" },
   fundsNew: { user: "fundsNew", file: "funds-new-session.json" },
   fundsSetup: { user: "fundsSetup", file: "funds-setup-session.json" },
