@@ -27,6 +27,9 @@ import {
   recoverInterrupted,
 } from "@ledgerly/domain/platform/jobs";
 import { runTask, SCHEDULE, SCHEDULE_TIME_ZONE, SCHEDULED_TIERS, tasks } from "@ledgerly/web/jobs";
+import { setEmbedder } from "@ledgerly/domain/transactions";
+import { loadEmbedder } from "./embedder";
+import { measureAll } from "./measure";
 import { dueTiers, minuteOf } from "./scheduler";
 import { instanceDefaults } from "@ledgerly/domain/users";
 
@@ -63,9 +66,29 @@ async function recover(workerId: string, bootAt: Date): Promise<void> {
   );
 }
 
+/**
+ * The embedding model of the categories (R6), unless `CATEGORIES_MODEL=off`: off, the cascade is
+ * the one of before R6 and the stored data stay as they are.
+ */
+function categoriesModel() {
+  const model =
+    process.env.CATEGORIES_MODEL === "off"
+      ? { embedder: null, reason: "off (CATEGORIES_MODEL)" }
+      : loadEmbedder();
+  log(`categories model: ${model.reason}`);
+  return model.embedder;
+}
+
 async function main(): Promise<void> {
   wireDomain();
   if (process.argv.includes("--health")) process.exit(await health());
+  const embedder = categoriesModel();
+  if (process.argv.includes("--measure-categories")) {
+    if (embedder === null) process.exit(1);
+    console.log(await measureAll(embedder));
+    process.exit(0);
+  }
+  setEmbedder(embedder);
 
   // The preview (`scripts/preview-on-test.sh`) runs the queue only: no tier starts by itself there.
   const scheduling = !process.argv.includes("--no-schedule");

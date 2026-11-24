@@ -32,6 +32,13 @@ const PRIVATE = [
   "category_model_version",
   "automaticThreshold",
   "suggestionThreshold",
+  // R6: the embedding model, its vectors and what the cold start learns.
+  "embedding",
+  "embedder",
+  "Embedder",
+  "embedded",
+  "coldStart",
+  "prototype",
 ];
 
 describe("what the automatic categories keep to themselves", () => {

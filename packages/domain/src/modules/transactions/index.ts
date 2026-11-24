@@ -15,7 +15,10 @@ export {
   unmergeCategories,
 } from "./categorize/review";
 export type { MergeProposal, MergeUndo } from "./categorize/review";
-export { categorise, isPreparing, suggestFor } from "./categorize/service";
+export { categorise, isPreparing, measureCategories, suggestFor } from "./categorize/service";
+export { setEmbedder } from "./categorize/service";
+export type { Embedder } from "./rules/embedding";
+export type { Measure, Tally } from "./rules/categories-measure";
 export { DEFAULT_GROUPS } from "./categorize/tables";
 export {
   applyRule,

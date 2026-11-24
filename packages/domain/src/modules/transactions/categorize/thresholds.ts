@@ -79,6 +79,11 @@ export function thresholdsFor(trials: readonly Trial[], correctionRate = 0): Thr
   };
 }
 
+/** The threshold of a suggestion alone: what the cold start (R6), which never gives a category, uses. */
+export function suggestionThresholdFor(trials: readonly Trial[]): number | null {
+  return thresholdFor(trials, SUGGESTION_PRECISION);
+}
+
 /** Precision and coverage of a set of trials at a threshold, for the report of a training. */
 export function measure(
   trials: readonly Trial[],

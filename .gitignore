@@ -38,3 +38,6 @@ CLAUDE.md
 AGENTS.md
 GEMINI.md
 apps/static/dist/
+
+# The converted embedding model (R6): built by the Dockerfile's `models` stage, never committed.
+/models/*.bin

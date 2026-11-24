@@ -37,6 +37,21 @@ RUN ./node_modules/.bin/esbuild apps/worker/src/main.ts --bundle --platform=node
       --banner:js="import{createRequire}from'node:module';const require=createRequire(import.meta.url);" \
       --outfile=worker.mjs
 
+# The embedding model of the categories (rewrite plan R6): the two files of the revision the
+# Security Gatekeeper approved, each pinned by its sha256 (the build fails on any other byte), and
+# the conversion to the one file the worker reads (`scripts/convert-embeddings.ts`, which refuses a
+# file of another shape). The source stays in this stage: the image gets the converted file only.
+FROM node:26-alpine AS models
+WORKDIR /models
+ADD --checksum=sha256:8245ab78ee71dded845a82d2270fcb9e785b29dad0e1619f69d5390c47d9ba00 \
+    https://huggingface.co/sentence-transformers/static-similarity-mrl-multilingual-v1/resolve/b68f4122911bcffcd6e1f695f2d99cd6788972d8/0_StaticEmbedding/model.safetensors \
+    source/model.safetensors
+ADD --checksum=sha256:11aaf894a4ccf3d95e8830e27c0f8152791fbbff2b988e29a265580b86edd216 \
+    https://huggingface.co/sentence-transformers/static-similarity-mrl-multilingual-v1/resolve/b68f4122911bcffcd6e1f695f2d99cd6788972d8/0_StaticEmbedding/tokenizer.json \
+    source/tokenizer.json
+COPY scripts/convert-embeddings.ts ./convert-embeddings.ts
+RUN node convert-embeddings.ts source/model.safetensors source/tokenizer.json categories-embeddings.bin
+
 # The interface (rewrite plan R4): the same build, without the migrations, the worker, the SQL files
 # and the database client. Its environment has no database address and no key of the server
 # (`docker-compose.yml`, service `ledgerly-web`); `LEDGERLY_ROLE=web` keeps the checks of the
@@ -69,6 +84,8 @@ COPY --from=builder --chown=1000:1000 /app/apps/web/.next/static ./apps/web/.nex
 COPY --from=builder --chown=1000:1000 /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=1000:1000 /app/migrate.mjs ./migrate.mjs
 COPY --from=builder --chown=1000:1000 /app/worker.mjs ./worker.mjs
+COPY --from=models --chown=1000:1000 /models/categories-embeddings.bin ./models/categories-embeddings.bin
+COPY --chown=1000:1000 models/NOTICE ./models/NOTICE
 COPY --chown=1000:1000 drizzle ./drizzle
 COPY --chown=1000:1000 entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh && mkdir -p apps/web/.next/cache && chown -R 1000:1000 apps/web/.next

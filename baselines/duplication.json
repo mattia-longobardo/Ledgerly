@@ -4,16 +4,16 @@
     "minLines": 6
   },
   "total": {
-    "lines": 115742,
-    "duplicatedLines": 16401,
-    "percent": 14.17,
+    "lines": 116161,
+    "duplicatedLines": 16405,
+    "percent": 14.12,
     "blocks": 1298
   },
   "units": {
     "api": {
-      "lines": 6670,
+      "lines": 6675,
       "duplicatedLines": 1252,
-      "percent": 18.77,
+      "percent": 18.76,
       "blocks": 119
     },
     "app": {
@@ -47,9 +47,9 @@
       "blocks": 23
     },
     "modules/funds": {
-      "lines": 12767,
+      "lines": 12766,
       "duplicatedLines": 1848,
-      "percent": 14.47,
+      "percent": 14.48,
       "blocks": 145
     },
     "modules/imports": {
@@ -77,9 +77,9 @@
       "blocks": 223
     },
     "modules/payroll": {
-      "lines": 4999,
-      "duplicatedLines": 781,
-      "percent": 15.62,
+      "lines": 4996,
+      "duplicatedLines": 782,
+      "percent": 15.65,
       "blocks": 55
     },
     "modules/pockets": {
@@ -107,9 +107,9 @@
       "blocks": 34
     },
     "modules/transactions": {
-      "lines": 13675,
-      "duplicatedLines": 1705,
-      "percent": 12.47,
+      "lines": 14093,
+      "duplicatedLines": 1708,
+      "percent": 12.12,
       "blocks": 137
     },
     "modules/users": {
@@ -750,7 +750,7 @@
     "modules/payroll/rules/index.ts": 32,
     "modules/payroll/schema/index.ts": 192,
     "modules/payroll/schema/legacy.ts": 42,
-    "modules/payroll/service/codes.ts": 18,
+    "modules/payroll/service/codes.ts": 19,
     "modules/payroll/service/fields.ts": 6,
     "modules/payroll/service/leave.ts": 48,
     "modules/payroll/service/manual.ts": 25,
@@ -801,7 +801,7 @@
     "modules/timeoff/ui/year-alerts.tsx": 26,
     "modules/transactions/categorize/review/changes.ts": 71,
     "modules/transactions/categorize/review/merges.ts": 58,
-    "modules/transactions/categorize/service.ts": 50,
+    "modules/transactions/categorize/service.ts": 53,
     "modules/transactions/categorize/user-rules-service/applying.ts": 67,
     "modules/transactions/categorize/user-rules-service/new-movements.ts": 7,
     "modules/transactions/categorize/user-rules-service/previews.ts": 25,
