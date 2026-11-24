@@ -76,6 +76,12 @@ export async function settled(page: Page): Promise<void> {
   // each: the page that replaces a skeleton fades in after it, and axe read the contrast of "To
   // review" half faded in, one run in eight, while only the skeletons of Funds were waited for.
   await page.locator("main .animate-shimmer").first().waitFor({ state: "detached", timeout: 15_000 });
+  // A read with no skeleton says "Loading…" (packages/ui/src/loaded.tsx) inside a `<main>` already at
+  // rest: /expenses then drew its page, faded in, while axe read it — the h1 too, one run in twenty.
+  await page
+    .locator("main [role=status]", { hasText: /^(Loading|Caricamento)…$/ })
+    .first()
+    .waitFor({ state: "detached", timeout: 15_000 });
   await page
     .waitForFunction(() => getComputedStyle(document.querySelector("main")!).opacity === "1", null, {
       timeout: 15_000,
