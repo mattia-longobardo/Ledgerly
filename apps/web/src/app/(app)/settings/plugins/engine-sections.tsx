@@ -42,7 +42,15 @@ async function writesOf(input: EngineInput, connection: WireConnection): Promise
   const { plugin, page } = input;
   if (plugin.kind === "source") {
     const ids = await publishingAccounts(connection.provider);
-    return <SourceWrites accountIds={ids} waiting={page?.unsent ?? { count: 0, accountIds: [] }} />;
+    const none = { count: 0, accountIds: [] };
+    return (
+      <SourceWrites
+        provider={plugin.name}
+        accountIds={ids}
+        waiting={page?.unsent ?? none}
+        refused={page?.refused ?? none}
+      />
+    );
   }
   const text = await getTranslations("settings.plugin");
   const pending = page?.pendingDays ?? 0;

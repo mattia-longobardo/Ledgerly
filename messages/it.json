@@ -1154,6 +1154,7 @@
         "none": "Niente da scrivere adesso.",
         "rule": "Regola di interessi su «{account}»: pubblica ogni liquidazione",
         "unsent": "{count, plural, one {# movimento da inviare} other {# movimenti da inviare}}",
+        "refused": "{provider} ha rifiutato la modifica. In {provider} non è cambiato niente.",
         "pendingDays": "{count, plural, one {# modifica ai giorni da inviare} other {# modifiche ai giorni da inviare}}"
       },
       "categories": {

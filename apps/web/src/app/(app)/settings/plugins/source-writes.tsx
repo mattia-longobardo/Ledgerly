@@ -1,7 +1,8 @@
 "use client";
 
 // What Ledgerly writes to the source (Settings › Integrations): the interest rules that publish on the
-// source's accounts, read from `GET /interests`, and the movements waiting to be sent.
+// source's accounts, read from `GET /interests`, the movements waiting to be sent, and the ones the
+// source refused.
 import { Link } from "@ledgerly/ui/router";
 import { useTranslations } from "next-intl";
 import { interests } from "@ledgerly/api-contract/interests";
@@ -13,13 +14,19 @@ const LINK =
 const ROW = "border-t border-border px-4 py-3 first:border-t-0";
 
 export function SourceWrites({
+  provider,
   accountIds,
   waiting,
+  refused,
 }: {
+  /** The name of the source. */
+  provider: string;
   /** The source's accounts. */
   accountIds: readonly string[];
   /** The movements waiting to be sent, and the accounts they are on. */
   waiting: { count: number; accountIds: readonly string[] };
+  /** Of those, the movements the source refused, and the accounts they are on. */
+  refused: { count: number; accountIds: readonly string[] };
 }) {
   const plugin = useTranslations("settings.plugin");
   const read = useApi(interests.listInterestRules, {});
@@ -45,6 +52,13 @@ export function SourceWrites({
               <li className={ROW}>
                 <Link href={`/expenses?acc=${waiting.accountIds.join(",")}`} className={LINK}>
                   {plugin("writes.unsent", { count: waiting.count })}
+                </Link>
+              </li>
+            )}
+            {refused.count > 0 && (
+              <li className={ROW}>
+                <Link href={`/expenses?acc=${refused.accountIds.join(",")}`} className={LINK}>
+                  {plugin("writes.refused", { provider })}
                 </Link>
               </li>
             )}

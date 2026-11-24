@@ -1154,6 +1154,7 @@
         "none": "Nothing to write now.",
         "rule": "Interest rule on “{account}”: posts each payout",
         "unsent": "{count, plural, one {# transaction to send} other {# transactions to send}}",
+        "refused": "{provider} refused the change. Nothing changed in {provider}.",
         "pendingDays": "{count, plural, one {# change to your days to send} other {# changes to your days to send}}"
       },
       "categories": {
