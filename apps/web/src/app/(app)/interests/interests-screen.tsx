@@ -57,7 +57,7 @@ function RuleRow({ rule, view, format }: Props & { rule: Rule }) {
         {formatRate(rule.tax, format.numberFormat)}
       </Td>
       <Td muted className="text-sm">
-        {text(`basis.${rule.dayBasis}`)} · {text(`settlement.${rule.settlement}`)}
+        {text(`basis.${rule.dayCount}`)} · {text(`settlement.${rule.settlement}`)}
       </Td>
       <Td align="right" className={cn("font-medium", accrued(rule) ? "text-pos" : "text-muted")}>
         {accrued(rule) ? format.money(rule.accruedYtd) : NULL_DISPLAY}

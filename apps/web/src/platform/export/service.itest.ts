@@ -6,7 +6,7 @@ import {
   saveBalanceEntry,
 } from "@domain/modules/accounts/service";
 import { recordValuation, updateValuation } from "@domain/modules/funds/service";
-import { uploadPayslip } from "@domain/modules/payroll/service";
+import { createManualPayslip, uploadPayslip } from "@domain/modules/payroll/service";
 import type { IncomingTransaction } from "@domain/modules/transactions/rules";
 import { upsertFromProvider } from "@domain/modules/transactions/service";
 import type { Ctx } from "@domain/platform/context";
@@ -238,6 +238,46 @@ describe("exportFileName", () => {
     expect(zip.has("fund-fees.csv")).toBe(true);
     // No value of the type of before is written anywhere in the archive's tables.
     expect(zip.get("funds.csv")!.toString("utf8")).not.toMatch(/\bpac\b/i);
+  });
+});
+
+describe("the payslips of the export (rewrite plan R5g, criterion 6)", () => {
+  it("lists the base fields of a payslip and a column for every field a pack registers", async () => {
+    const ctx = await newContext();
+    await createManualPayslip(ctx, {
+      kind: "extra",
+      year: 2026,
+      month: null,
+      extraNumber: 1,
+      paidOn: null,
+      gross: 300_000n,
+      taxes: 60_000n,
+      contributions: 28_000n,
+      net: 210_000n,
+      fields: { irpefGross: 65_000n },
+      documentId: null,
+    });
+    const zip = await readZip(await exportUserBytes(ctx, NOW));
+    const json = JSON.parse(zip.get("ledgerly.json")!.toString("utf8")) as Record<
+      string,
+      Record<string, unknown>[]
+    >;
+    expect(json.payslips).toEqual([
+      expect.objectContaining({
+        kind: "extra",
+        extraNumber: 1,
+        type: "thirteenth",
+        source: "manual",
+        gross: "3000.00",
+        taxes: "600.00",
+        contributions: "280.00",
+        net: "2100.00",
+        document: null,
+        irpefGross: "650.00",
+        tfrSelected: null,
+      }),
+    ]);
+    expect(zip.get("payslips.csv")!.toString("utf8").split("\n")[0]).toContain("irpefGross");
   });
 });
 

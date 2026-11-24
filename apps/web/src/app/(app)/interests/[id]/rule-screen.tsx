@@ -58,7 +58,7 @@ function Header({ detail, format }: Props) {
         {text("detail.summary", {
           account: rule.account,
           settlement: text(`settlement.${rule.settlement}`),
-          basis: text(`basis.${rule.dayBasis}`),
+          basis: text(`basis.${rule.dayCount}`),
         })}{" "}
         · {text("from", { date: formatDate(rule.validFrom, "long", format.locale) })}
         {rule.validTo && ` · ${text("to", { date: formatDate(rule.validTo, "long", format.locale) })}`}

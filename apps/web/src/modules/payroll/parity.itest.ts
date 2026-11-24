@@ -182,7 +182,9 @@ const old = (() => {
   }
   const hours = (value: string | null | undefined, format: Format) =>
     value === null || value === undefined ? NULL_DISPLAY : `${formatAmountInput(parseCents(value), format.numberFormat)} h`;
-  function rowCells({ payslip, document, leaveLeft, openWarnings }: RegisterRow, format: Format) {
+  function rowCells({ payslip, document: read, leaveLeft, openWarnings }: RegisterRow, format: Format) {
+    // Every payslip of this test is read from a document.
+    const document = read!;
     const values = {} as Record<SummedField, Cents | null>;
     for (const field of SUMMED_FIELDS) values[field] = payslip[field];
     const state: DocumentState = document.state;

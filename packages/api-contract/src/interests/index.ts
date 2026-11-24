@@ -3,4 +3,4 @@
 import * as interests from "./interests";
 
 export { interests };
-export { DAY_BASES, SETTLEMENTS } from "./shared";
+export { DAY_COUNTS, MAX_PAYMENT_WINDOW_DAYS, SETTLEMENTS } from "./shared";

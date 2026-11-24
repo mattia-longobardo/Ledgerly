@@ -20,6 +20,7 @@ import {
   assignPayments,
   paymentWindow,
   paysInterest,
+  yearDays,
 } from "./rules";
 import { percentToFraction } from "../../shared/money";
 
@@ -55,6 +56,22 @@ describe("grossOfDay (spec §7.6)", () => {
     expect(grossOfDay(1_000_000n, tiers, 365)).toBe(100n * S);
     // Exactly on it, nothing spills over.
     expect(grossOfDay(2_000_000n, tiers, 365)).toBe(200n * S);
+  });
+});
+
+describe("the day count (E6)", () => {
+  it("divides by 365 or 360, or by the days of the day's own year", () => {
+    expect(yearDays("365", "2028-02-29")).toBe(365);
+    expect(yearDays("360", "2026-05-01")).toBe(360);
+    expect(yearDays("act_act", "2026-05-01")).toBe(365);
+    expect(yearDays("act_act", "2028-02-29")).toBe(366);
+    expect(yearDays("act_act", "2100-01-01")).toBe(365);
+    expect(yearDays("act_act", "2000-01-01")).toBe(366);
+  });
+
+  it("earns a leap year's day on 366 under act_act", () => {
+    const flat = [{ upToCents: null, annualRate: "0.0366" }];
+    expect(grossOfDay(1_000_000n, flat, yearDays("act_act", "2028-06-01"))).toBe(100n * S);
   });
 });
 
@@ -234,6 +251,29 @@ describe("finding the bank's payment", () => {
         [{ id: "value-dated", on: "2026-09-30" }],
       ),
     ).toEqual(new Map([["q3", ["value-dated"]]]));
+  });
+
+  it("keeps today's window by default: 10 days after the settlement, 1 for a daily payout", () => {
+    expect(paymentWindow("monthly", { to: "2026-08-31", settleOn: "2026-09-01" }, null).to).toBe(
+      "2026-09-11",
+    );
+    // The day itself to two days after, as before R5g.
+    expect(paymentWindow("daily", { to: "2026-03-01", settleOn: "2026-03-02" })).toEqual({
+      from: "2026-03-01",
+      to: "2026-03-03",
+    });
+  });
+
+  it("looks N days after the settlement when the rule sets a window", () => {
+    expect(paymentWindow("monthly", { to: "2026-08-31", settleOn: "2026-09-01" }, 3)).toEqual({
+      from: "2026-08-31",
+      to: "2026-09-04",
+    });
+    expect(paymentWindow("daily", { to: "2026-03-01", settleOn: "2026-03-02" }, 0).to).toBe("2026-03-02");
+    const months = [{ id: "aug", to: "2026-08-31", settleOn: "2026-09-01" }];
+    const late = [{ id: "late", on: "2026-09-05" }];
+    expect(assignPayments("monthly", months, late, 3)).toEqual(new Map([["aug", []]]));
+    expect(assignPayments("monthly", months, late)).toEqual(new Map([["aug", ["late"]]]));
   });
 
   it("matches the text in the payee, the category or the note, without spaces or case", () => {
@@ -460,6 +500,20 @@ describe("ruleInputOf (INT-5)", () => {
     ]);
     expect(input.taxRate).toBe("0.260000");
     expect(input.payeeMatch).toBeNull();
+  });
+
+  it("reads the old day basis as the day count, and writes the day basis back from it", () => {
+    const old = ruleInputSchema.parse(ruleInputOf({ ...plain, dayBasis: "360" }));
+    expect(old).toMatchObject({
+      dayCount: "360",
+      dayBasis: "360",
+      periodAnchor: "calendar",
+      paymentWindowDays: null,
+    });
+    const actual = ruleInputSchema.parse(ruleInputOf({ ...plain, dayBasis: "360", dayCount: "act_act" }));
+    expect(actual).toMatchObject({ dayCount: "act_act", dayBasis: "365" });
+    expect(ruleInputSchema.parse(ruleInputOf({ ...plain, dayBasis: undefined })).dayCount).toBe("365");
+    expect(() => ruleInputSchema.parse(ruleInputOf({ ...plain, paymentWindowDays: 91 }))).toThrow();
   });
 
   it("refuses a rate that is not a percentage", () => {

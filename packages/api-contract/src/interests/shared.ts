@@ -7,6 +7,12 @@ import { civilDate, id, money } from "../primitives";
 // The vocabularies are the domain's (`@ledgerly/domain/interests`): the contract imports zod only
 // (10-modularity.md §10.2), so `tools/contract.test.ts` holds the lists equal.
 export const DAY_BASES = ["365", "360"] as const;
+/** The day-count convention (R5g): 365 or 360 days a year, or `act_act`, the day's own year. */
+export const DAY_COUNTS = ["365", "360", "act_act"] as const;
+/** How a rule's periods are cut: `calendar` only. */
+export const PERIOD_ANCHORS = ["calendar"] as const;
+/** The longest payment window, in days after the settlement date. */
+export const MAX_PAYMENT_WINDOW_DAYS = 90;
 export const SETTLEMENTS = ["daily", "monthly", "quarterly", "annual"] as const;
 export const RULE_MODES = ["analyze_only", "post_to_provider"] as const;
 export const RULE_STATES = ["active", "paused"] as const;
@@ -64,7 +70,12 @@ export const ruleRow = z.object({
   tiers: z.array(tier),
   /** The tax withheld, as a percentage. */
   tax: percent(),
+  /** Deprecated since R5g: `dayCount`, with `act_act` read as "365". */
   dayBasis: z.enum(DAY_BASES),
+  dayCount: z.enum(DAY_COUNTS),
+  periodAnchor: z.enum(PERIOD_ANCHORS),
+  /** Days after the settlement date the bank's payment is looked for; null: 10, or 1 for a daily payout. */
+  paymentWindowDays: z.number().int().min(0).max(MAX_PAYMENT_WINDOW_DAYS).nullable(),
   settlement: z.enum(SETTLEMENTS),
   /** The text looked for in the bank's payment; null: no reconciliation. */
   payeeMatch: z.string().nullable(),
@@ -93,6 +104,9 @@ export const RULE_ROW_EXAMPLE = {
   ],
   tax: "26",
   dayBasis: "365",
+  dayCount: "365",
+  periodAnchor: "calendar",
+  paymentWindowDays: null,
   settlement: "monthly",
   payeeMatch: "INTEREST",
   mode: "analyze_only",

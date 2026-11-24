@@ -31,6 +31,7 @@ function eventOf(payslip: Payslip, lines: readonly Line[], codeMap: ReadonlyMap<
 
 /** The event of one payslip just applied, read inside the applying transaction. */
 export async function appliedEventOf(ctx: Pick<Ctx, "userId">, payslip: Payslip, executor: Db | Tx): Promise<PayslipApplied> {
+  if (payslip.documentId === null) return eventOf(payslip, [], new Map());
   const lines = await executor
     .select({ id: payrollRawLines.id, code: payrollRawLines.code })
     .from(payrollRawLines)
@@ -59,12 +60,12 @@ export async function appliedPayslips(ctx: Pick<Ctx, "userId">): Promise<Payslip
         userScoped(ctx).owns(payrollRawLines),
         inArray(
           payrollRawLines.documentId,
-          rows.map((row) => row.documentId),
+          rows.flatMap((row) => row.documentId ?? []),
         ),
       ),
     )
     .orderBy(asc(payrollRawLines.documentId), asc(payrollRawLines.position));
   const byDocument = new Map<string, Line[]>();
   for (const line of lines) byDocument.set(line.documentId, [...(byDocument.get(line.documentId) ?? []), line]);
-  return rows.map((row) => eventOf(row, byDocument.get(row.documentId) ?? [], codeMap));
+  return rows.map((row) => eventOf(row, (row.documentId && byDocument.get(row.documentId)) || [], codeMap));
 }

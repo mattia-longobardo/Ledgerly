@@ -7,7 +7,7 @@ import { investmentsExport } from "@ledgerly/domain/investments";
 import { DOCUMENT_KINDS } from "@ledgerly/domain/imports";
 import { listDocuments, readOriginal } from "@ledgerly/domain/imports";
 import { pocketsView } from "@ledgerly/domain/pockets";
-import { registerView } from "@ledgerly/domain/payroll";
+import { COUNTRY_FIELDS, kindOf, registerView } from "@ledgerly/domain/payroll";
 import { subscriptionsView } from "@ledgerly/domain/subscriptions";
 import { listLeaveDays, listLeaveTypes, listTypeAllowances } from "@ledgerly/domain/timeoff";
 import { listTransactions, MAX_LIMIT, rulesForExport } from "@ledgerly/domain/transactions";
@@ -226,11 +226,11 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
     },
     {
       name: "interests",
-      columns: ["account", "settlement", "dayBasis", "mode", "state", "accruedYtd", "grossYtd", "nextPayout"],
+      columns: ["account", "settlement", "dayCount", "mode", "state", "accruedYtd", "grossYtd", "nextPayout"],
       rows: interests.map((row) => ({
         account: row.accountName,
         settlement: row.rule.settlement,
-        dayBasis: row.rule.dayBasis,
+        dayCount: row.rule.dayCount,
         mode: row.rule.mode,
         state: row.rule.state,
         accruedYtd: amount(row.accruedYtdCents),
@@ -410,18 +410,39 @@ async function sectionsOf(ctx: Ctx, now: Date): Promise<Section[]> {
         note: entry.note,
       })),
     },
+    // The base fields of every payslip, then one column for each field a country's pack registers
+    // (R5g, E4): the pairs the payslip has, empty where it has none.
     {
       name: "payslips",
-      columns: ["year", "period", "type", "paidOn", "gross", "net", "document"],
+      columns: [
+        "year",
+        "period",
+        "type",
+        "kind",
+        "extraNumber",
+        "source",
+        "paidOn",
+        "gross",
+        "taxes",
+        "contributions",
+        "net",
+        "document",
+        ...COUNTRY_FIELDS.map((field) => field.key),
+      ],
       rows: payroll.years.flatMap((summary) =>
         summary.rows.map((row) => ({
           year: row.payslip.year,
           period: row.payslip.period,
           type: row.payslip.type,
+          ...kindOf(row.payslip),
+          source: row.payslip.source,
           paidOn: row.payslip.paidOn,
           gross: amount(row.payslip.gross),
+          taxes: amount(row.payslip.taxesTotal),
+          contributions: amount(row.payslip.employeeSocial),
           net: amount(row.payslip.netPay),
-          document: row.document.fileName,
+          document: row.document?.fileName ?? null,
+          ...Object.fromEntries(COUNTRY_FIELDS.map((field) => [field.key, amount(row.fields[field.key])])),
         })),
       ),
     },

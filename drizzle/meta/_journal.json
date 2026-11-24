@@ -526,6 +526,13 @@
       "when": 1795620000000,
       "tag": "0074_leave_types",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795630000000,
+      "tag": "0075_payroll_and_interests",
+      "breakpoints": true
     }
   ]
 }

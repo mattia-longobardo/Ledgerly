@@ -26406,6 +26406,32 @@
                               "365"
                             ]
                           },
+                          "dayCount": {
+                            "type": "string",
+                            "enum": [
+                              "360",
+                              "365",
+                              "act_act"
+                            ]
+                          },
+                          "periodAnchor": {
+                            "type": "string",
+                            "enum": [
+                              "calendar"
+                            ]
+                          },
+                          "paymentWindowDays": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 90
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
                           "settlement": {
                             "type": "string",
                             "enum": [
@@ -26472,6 +26498,9 @@
                           "tiers",
                           "tax",
                           "dayBasis",
+                          "dayCount",
+                          "periodAnchor",
+                          "paymentWindowDays",
                           "settlement",
                           "payeeMatch",
                           "mode",
@@ -26667,6 +26696,32 @@
                       "365"
                     ]
                   },
+                  "dayCount": {
+                    "type": "string",
+                    "enum": [
+                      "360",
+                      "365",
+                      "act_act"
+                    ]
+                  },
+                  "periodAnchor": {
+                    "type": "string",
+                    "enum": [
+                      "calendar"
+                    ]
+                  },
+                  "paymentWindowDays": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 90
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "settlement": {
                     "type": "string",
                     "enum": [
@@ -26721,7 +26776,6 @@
                   "runHour",
                   "tiers",
                   "tax",
-                  "dayBasis",
                   "settlement",
                   "payeeMatch",
                   "mode",
@@ -26936,6 +26990,32 @@
                             "365"
                           ]
                         },
+                        "dayCount": {
+                          "type": "string",
+                          "enum": [
+                            "360",
+                            "365",
+                            "act_act"
+                          ]
+                        },
+                        "periodAnchor": {
+                          "type": "string",
+                          "enum": [
+                            "calendar"
+                          ]
+                        },
+                        "paymentWindowDays": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 90
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "settlement": {
                           "type": "string",
                           "enum": [
@@ -27002,6 +27082,9 @@
                         "tiers",
                         "tax",
                         "dayBasis",
+                        "dayCount",
+                        "periodAnchor",
+                        "paymentWindowDays",
                         "settlement",
                         "payeeMatch",
                         "mode",
@@ -27360,6 +27443,32 @@
                       "365"
                     ]
                   },
+                  "dayCount": {
+                    "type": "string",
+                    "enum": [
+                      "360",
+                      "365",
+                      "act_act"
+                    ]
+                  },
+                  "periodAnchor": {
+                    "type": "string",
+                    "enum": [
+                      "calendar"
+                    ]
+                  },
+                  "paymentWindowDays": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 90
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "settlement": {
                     "type": "string",
                     "enum": [
@@ -27414,7 +27523,6 @@
                   "runHour",
                   "tiers",
                   "tax",
-                  "dayBasis",
                   "settlement",
                   "payeeMatch",
                   "mode",
@@ -43084,6 +43192,1427 @@
         "x-addon": "payroll"
       }
     },
+    "/payroll/employer": {
+      "get": {
+        "operationId": "get_payroll_employer",
+        "summary": "How the employer pays: the frequency and the month of each extra payment. The yearly gross (RAL) expects every extra payment listed here.",
+        "tags": [
+          "payroll"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "payFrequency": {
+                      "type": "string",
+                      "enum": [
+                        "monthly",
+                        "semimonthly",
+                        "biweekly",
+                        "weekly"
+                      ]
+                    },
+                    "extraMonths": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 12
+                      }
+                    },
+                    "configured": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "payFrequency",
+                    "extraMonths",
+                    "configured"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read",
+        "x-addon": "payroll"
+      },
+      "put": {
+        "operationId": "set_payroll_employer",
+        "summary": "Saves how the employer pays; at most 3 extra payments.",
+        "tags": [
+          "payroll"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "payFrequency": {
+                    "type": "string",
+                    "enum": [
+                      "monthly",
+                      "semimonthly",
+                      "biweekly",
+                      "weekly"
+                    ]
+                  },
+                  "extraMonths": {
+                    "maxItems": 3,
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12
+                    }
+                  }
+                },
+                "required": [
+                  "payFrequency",
+                  "extraMonths"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "payFrequency": {
+                      "type": "string",
+                      "enum": [
+                        "monthly",
+                        "semimonthly",
+                        "biweekly",
+                        "weekly"
+                      ]
+                    },
+                    "extraMonths": {
+                      "maxItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 12
+                      }
+                    },
+                    "configured": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "payFrequency",
+                    "extraMonths",
+                    "configured"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
+        "x-addon": "payroll"
+      }
+    },
+    "/payroll/fields": {
+      "get": {
+        "operationId": "list_payslip_fields",
+        "summary": "The catalogue of the person's payslips: the base fields, then the fields of their country's pack (none without a country). Every field is an amount.",
+        "tags": [
+          "payroll"
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "group": {
+                            "type": "string",
+                            "enum": [
+                              "identity",
+                              "compensation",
+                              "taxes",
+                              "contributions",
+                              "tfr",
+                              "net",
+                              "leave"
+                            ]
+                          },
+                          "base": {
+                            "type": "boolean"
+                          },
+                          "summed": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "group",
+                          "base",
+                          "summed"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "fields"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read",
+        "x-addon": "payroll"
+      }
+    },
+    "/payroll/manual-payslips": {
+      "post": {
+        "operationId": "create_manual_payslip",
+        "summary": "Types a payslip by hand; it is applied at once. `invalid` (`invalid_value`) for amounts that do not hold (a negative one, net over gross), a month or an extra number the kind does not take, a field outside the catalogue; `conflict` (`conflict`) when the month — or the extra payment — of the year already has an applied payslip, (`invalid_state`) for a document still being read or waiting for OCR.",
+        "tags": [
+          "payroll"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "ordinary",
+                      "extra",
+                      "bonus",
+                      "settlement"
+                    ]
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1990,
+                    "maximum": 2200
+                  },
+                  "month": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 12
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "extraNumber": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "paidOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "gross": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "taxes": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "contributions": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "net": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "fields": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "pattern": "^-?\\d+\\.\\d{2}$"
+                    }
+                  },
+                  "documentId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "year",
+                  "month",
+                  "extraNumber",
+                  "paidOn",
+                  "gross",
+                  "taxes",
+                  "contributions",
+                  "net"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "period": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "ordinary",
+                        "extra",
+                        "bonus",
+                        "settlement"
+                      ]
+                    },
+                    "extraNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "ordinary",
+                        "thirteenth",
+                        "fourteenth",
+                        "fifteenth",
+                        "bonus",
+                        "settlement"
+                      ]
+                    },
+                    "paidOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "gross": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "taxes": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contributions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "net": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fields": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "pattern": "^-?\\d+\\.\\d{2}$"
+                      }
+                    },
+                    "document": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "fileName": {
+                              "type": "string"
+                            },
+                            "hasOriginal": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "fileName",
+                            "hasOriginal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "year",
+                    "period",
+                    "kind",
+                    "extraNumber",
+                    "type",
+                    "paidOn",
+                    "gross",
+                    "taxes",
+                    "contributions",
+                    "net",
+                    "fields",
+                    "document"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
+        "x-addon": "payroll"
+      }
+    },
+    "/payroll/manual-payslips/{id}": {
+      "delete": {
+        "operationId": "delete_manual_payslip",
+        "summary": "Deletes a payslip typed by hand, with its document and original. `deletedDocument`: it had one.",
+        "tags": [
+          "payroll"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deletedDocument": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "deletedDocument"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
+        "x-addon": "payroll"
+      },
+      "get": {
+        "operationId": "get_manual_payslip",
+        "summary": "One payslip typed by hand, by its id (`payslipId` of the register).",
+        "tags": [
+          "payroll"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "period": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "ordinary",
+                        "extra",
+                        "bonus",
+                        "settlement"
+                      ]
+                    },
+                    "extraNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "ordinary",
+                        "thirteenth",
+                        "fourteenth",
+                        "fifteenth",
+                        "bonus",
+                        "settlement"
+                      ]
+                    },
+                    "paidOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "gross": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "taxes": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contributions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "net": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fields": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "pattern": "^-?\\d+\\.\\d{2}$"
+                      }
+                    },
+                    "document": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "fileName": {
+                              "type": "string"
+                            },
+                            "hasOriginal": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "fileName",
+                            "hasOriginal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "year",
+                    "period",
+                    "kind",
+                    "extraNumber",
+                    "type",
+                    "paidOn",
+                    "gross",
+                    "taxes",
+                    "contributions",
+                    "net",
+                    "fields",
+                    "document"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "read",
+        "x-addon": "payroll"
+      },
+      "put": {
+        "operationId": "update_manual_payslip",
+        "summary": "Changes a payslip typed by hand, whole. Its document stays; one without a document may take one. `invalid` (`invalid_value`) for amounts that do not hold (a negative one, net over gross), a month or an extra number the kind does not take, a field outside the catalogue; `conflict` (`conflict`) when the month — or the extra payment — of the year already has an applied payslip, (`invalid_state`) for a document still being read or waiting for OCR.",
+        "tags": [
+          "payroll"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "ordinary",
+                      "extra",
+                      "bonus",
+                      "settlement"
+                    ]
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1990,
+                    "maximum": 2200
+                  },
+                  "month": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 12
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "extraNumber": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "paidOn": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "gross": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "taxes": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "contributions": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "net": {
+                    "type": "string",
+                    "pattern": "^-?\\d+\\.\\d{2}$"
+                  },
+                  "fields": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "string",
+                      "pattern": "^-?\\d+\\.\\d{2}$"
+                    }
+                  },
+                  "documentId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "year",
+                  "month",
+                  "extraNumber",
+                  "paidOn",
+                  "gross",
+                  "taxes",
+                  "contributions",
+                  "net"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Done",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "period": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-01$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "ordinary",
+                        "extra",
+                        "bonus",
+                        "settlement"
+                      ]
+                    },
+                    "extraNumber": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "ordinary",
+                        "thirteenth",
+                        "fourteenth",
+                        "fifteenth",
+                        "bonus",
+                        "settlement"
+                      ]
+                    },
+                    "paidOn": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "gross": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "taxes": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contributions": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "net": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^-?\\d+\\.\\d{2}$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fields": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string",
+                        "pattern": "^-?\\d+\\.\\d{2}$"
+                      }
+                    },
+                    "document": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "fileName": {
+                              "type": "string"
+                            },
+                            "hasOriginal": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "fileName",
+                            "hasOriginal"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "year",
+                    "period",
+                    "kind",
+                    "extraNumber",
+                    "type",
+                    "paidOn",
+                    "gross",
+                    "taxes",
+                    "contributions",
+                    "net",
+                    "fields",
+                    "document"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "conflict, module_inactive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "x-scope": "write",
+        "x-addon": "payroll"
+      }
+    },
     "/payroll/payslips": {
       "get": {
         "operationId": "get_payroll",
@@ -43150,6 +44679,56 @@
                                     "bonus",
                                     "settlement"
                                   ]
+                                },
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ordinary",
+                                    "extra",
+                                    "bonus",
+                                    "settlement"
+                                  ]
+                                },
+                                "extraNumber": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 9007199254740991
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "enum": [
+                                    "read",
+                                    "manual"
+                                  ]
+                                },
+                                "documentId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "uuid",
+                                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "fields": {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {
+                                    "type": "string",
+                                    "pattern": "^-?\\d+\\.\\d{2}$"
+                                  }
                                 },
                                 "state": {
                                   "type": "string",
@@ -43393,6 +44972,11 @@
                                 "year",
                                 "period",
                                 "type",
+                                "kind",
+                                "extraNumber",
+                                "source",
+                                "documentId",
+                                "fields",
                                 "state",
                                 "applied",
                                 "fileName",
@@ -44204,6 +45788,44 @@
                                 "settlement"
                               ]
                             },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "ordinary",
+                                "extra",
+                                "bonus",
+                                "settlement"
+                              ]
+                            },
+                            "extraNumber": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "read",
+                                "manual"
+                              ]
+                            },
+                            "fields": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              }
+                            },
                             "printedOn": {
                               "type": [
                                 "string",
@@ -44237,6 +45859,10 @@
                             "year",
                             "period",
                             "type",
+                            "kind",
+                            "extraNumber",
+                            "source",
+                            "fields",
                             "printedOn",
                             "paidOn",
                             "applied",
@@ -45065,6 +46691,44 @@
                                 "settlement"
                               ]
                             },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "ordinary",
+                                "extra",
+                                "bonus",
+                                "settlement"
+                              ]
+                            },
+                            "extraNumber": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "read",
+                                "manual"
+                              ]
+                            },
+                            "fields": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "type": "string",
+                                "pattern": "^-?\\d+\\.\\d{2}$"
+                              }
+                            },
                             "printedOn": {
                               "type": [
                                 "string",
@@ -45098,6 +46762,10 @@
                             "year",
                             "period",
                             "type",
+                            "kind",
+                            "extraNumber",
+                            "source",
+                            "fields",
                             "printedOn",
                             "paidOn",
                             "applied",

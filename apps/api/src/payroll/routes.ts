@@ -3,15 +3,21 @@
 // use case, the same for an action and a route. Hono tries the routes in order: `/payroll/codes` and
 // the payslip's own paths do not shadow each other.
 import type { Hono } from "hono";
+import type { z } from "zod";
 import { PAYROLL, PAYROLL_ROUTES, type RouteContract } from "@ledgerly/api-contract";
 import { ImportError, originalLinkFor } from "@ledgerly/domain/imports";
 import {
   PayrollError,
   applyPayslip,
   codeMapView,
+  createManualPayslip,
   decideField,
+  deleteManualPayslip,
   deletePayslip,
+  employerOf,
+  fieldCatalogue,
   fillWithLlm,
+  manualPayslipView,
   registerView,
   rejectPayslip,
   renamePayslip,
@@ -19,14 +25,18 @@ import {
   resetCode,
   retryPayslip,
   reviewView,
+  saveEmployer,
   setCodeRole,
+  updateManualPayslip,
   verifyPayslip,
 } from "@ledgerly/domain/payroll";
 import type { Ctx } from "@ledgerly/domain/platform/context";
+import { parseCents } from "@ledgerly/domain/shared/money";
+import { getSavedPreferences } from "@ledgerly/domain/users";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
-import { codesOut, registerOut, reviewOut } from "./dto";
+import { codesOut, manualOut, registerOut, reviewOut } from "./dto";
 
-const { payroll, codes } = PAYROLL;
+const { payroll, codes, employer, manual } = PAYROLL;
 
 const INVALID = new Set(["invalid_value", "derived_field", "invalid_name"]);
 const UNAVAILABLE = new Set(["llm_not_configured", "llm_failed"]);
@@ -108,10 +118,57 @@ function serveCodes(app: Hono<ApiEnv>, guard: Guard): void {
   });
 }
 
+function serveEmployer(app: Hono<ApiEnv>, guard: Guard): void {
+  serve(app, guard, employer.getPayrollEmployer, async ({ ctx }) => employerOf(ctx));
+  serve(app, guard, employer.setPayrollEmployer, async ({ ctx, body }) => refusing(() => saveEmployer(ctx, body)));
+  serve(app, guard, employer.listPayslipFields, async ({ ctx }) => ({
+    fields: fieldCatalogue((await getSavedPreferences(ctx)).country),
+  }));
+}
+
+type ManualBody = z.output<typeof manual.createManualPayslip.body>;
+
+/** The body of a manual payslip as the use case takes it: amounts in cents. */
+function manualInput(body: ManualBody) {
+  const fields = Object.fromEntries(Object.entries(body.fields ?? {}).map(([key, value]) => [key, parseCents(value)]));
+  return {
+    ...body,
+    gross: parseCents(body.gross),
+    taxes: parseCents(body.taxes),
+    contributions: parseCents(body.contributions),
+    net: parseCents(body.net),
+    fields,
+    documentId: body.documentId ?? null,
+  };
+}
+
+async function manualAnswer(ctx: Ctx, id: string) {
+  const view = await manualPayslipView(ctx, id);
+  if (view === null) throw new ApiRefusal("not_found");
+  return manualOut(view);
+}
+
+function serveManual(app: Hono<ApiEnv>, guard: Guard): void {
+  serve(app, guard, manual.createManualPayslip, async ({ ctx, body }) => {
+    const payslip = await refusing(() => createManualPayslip(ctx, manualInput(body)));
+    return manualAnswer(ctx, payslip.id);
+  });
+  serve(app, guard, manual.getManualPayslip, async ({ ctx, params }) => manualAnswer(ctx, params.id));
+  serve(app, guard, manual.updateManualPayslip, async ({ ctx, params, body }) => {
+    await refusing(() => updateManualPayslip(ctx, params.id, manualInput(body)));
+    return manualAnswer(ctx, params.id);
+  });
+  serve(app, guard, manual.deleteManualPayslip, async ({ ctx, params }) =>
+    refusing(() => deleteManualPayslip(ctx, params.id)),
+  );
+}
+
 /** Every route of payroll. */
 export function servePayroll(app: Hono<ApiEnv>, guard: Guard): readonly RouteContract[] {
   serveReads(app, guard);
   serveReview(app, guard);
   serveCodes(app, guard);
+  serveEmployer(app, guard);
+  serveManual(app, guard);
   return PAYROLL_ROUTES;
 }

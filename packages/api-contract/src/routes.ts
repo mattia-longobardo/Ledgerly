@@ -25,6 +25,8 @@ import * as investmentsRegister from "./investments/register";
 import { metaRoute } from "./meta";
 import * as notifications from "./notifications";
 import * as payrollCodes from "./payroll/codes";
+import * as payrollEmployer from "./payroll/employer";
+import * as payrollManual from "./payroll/manual";
 import * as payroll from "./payroll/payroll";
 import * as pockets from "./pockets/pockets";
 import * as search from "./search";
@@ -142,12 +144,19 @@ export const TIMEOFF_ROUTES: readonly RouteContract[] = [
 ];
 
 /** Payroll by area, for `apps/api` to serve each one by name. */
-export const PAYROLL = { payroll, codes: payrollCodes } as const;
+export const PAYROLL = {
+  payroll,
+  codes: payrollCodes,
+  employer: payrollEmployer,
+  manual: payrollManual,
+} as const;
 
 /** Payroll, the ninth module of R2 (05-refactor.md §5.2): the register, the review and the code map. */
 export const PAYROLL_ROUTES: readonly RouteContract[] = [
   ...Object.values(payroll),
   ...Object.values(payrollCodes),
+  ...Object.values(payrollEmployer),
+  ...Object.values(payrollManual),
 ];
 
 /** Imports by area, for `apps/api` to serve each one by name. */

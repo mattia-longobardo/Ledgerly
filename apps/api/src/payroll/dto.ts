@@ -2,8 +2,8 @@
 // PAY-8): the routes and the tools `get_payroll` and `get_payslip` answer through these.
 import type { z } from "zod";
 import type { PAYROLL } from "@ledgerly/api-contract";
-import type { codeMapView, registerView, reviewView } from "@ledgerly/domain/payroll";
-import { FIELDS, isFieldName } from "@ledgerly/domain/payroll";
+import type { codeMapView, manualPayslipView, registerView, reviewView } from "@ledgerly/domain/payroll";
+import { FIELDS, isFieldName, kindOf } from "@ledgerly/domain/payroll";
 import { effectiveValue, SUMMED_FIELDS } from "@ledgerly/domain/payroll/client";
 import { type Cents, centsToDecimal } from "@ledgerly/domain/shared/money";
 
@@ -12,10 +12,18 @@ type Review = z.input<typeof PAYROLL.payroll.getPayslip.response>;
 type RegisterData = Awaited<ReturnType<typeof registerView>>;
 type ReviewData = NonNullable<Awaited<ReturnType<typeof reviewView>>>;
 type Document = RegisterData["inbox"][number];
+type Row = RegisterData["years"][number]["rows"][number];
+type ManualData = NonNullable<Awaited<ReturnType<typeof manualPayslipView>>>;
 
 const money = (cents: Cents | null): string | null => (cents === null ? null : centsToDecimal(cents));
 const amounts = (values: Record<string, Cents | null>) =>
   Object.fromEntries(Object.entries(values).map(([field, cents]) => [field, money(cents)]));
+/** The pairs of a payslip on the wire: every one is an amount. */
+const pairsOut = (pairs: Record<string, Cents>) =>
+  Object.fromEntries(Object.entries(pairs).map(([key, cents]) => [key, centsToDecimal(cents)]));
+
+/** A register's column: the base field from the row, the country's from its pair or the old column. */
+const amountOf = (row: Row, field: (typeof SUMMED_FIELDS)[number]) => money(row.fields[field] ?? row.payslip[field]);
 
 function documentOut(document: Document) {
   return {
@@ -34,24 +42,32 @@ export function registerOut(view: RegisterData): Register {
   return {
     years: view.years.map((year) => ({
       year: year.year,
-      rows: year.rows.map(({ payslip, document, leaveLeft, openWarnings }) => ({
-        id: document.id,
+      rows: year.rows.map((row) => {
+        const { payslip, document, leaveLeft, openWarnings } = row;
+        return {
+        id: document?.id ?? payslip.id,
         payslipId: payslip.id,
         year: payslip.year,
         period: payslip.period,
         type: payslip.type,
-        state: document.state,
+        ...kindOf(payslip),
+        source: payslip.source,
+        documentId: payslip.documentId,
+        fields: pairsOut(row.fields),
+        // A payslip typed by hand is applied at once; without a document it has no state of its own.
+        state: document?.state ?? "applied",
         applied: payslip.active,
-        fileName: document.fileName,
-        hasOriginal: document.storageKey !== null,
-        amounts: Object.fromEntries(SUMMED_FIELDS.map((field) => [field, money(payslip[field])])),
+        fileName: document?.fileName ?? "",
+        hasOriginal: (document?.storageKey ?? null) !== null,
+        amounts: Object.fromEntries(SUMMED_FIELDS.map((field) => [field, amountOf(row, field)])),
         leaveLeft: {
           vacation: leaveLeft.vacation ?? null,
           rol: leaveLeft.rol ?? null,
           permit: leaveLeft.permit ?? null,
         },
         openWarnings,
-      })),
+      };
+      }),
       totals: amounts(year.totals),
       averages: amounts(year.averages),
       hasApplied: year.rows.some((row) => row.payslip.active),
@@ -112,6 +128,9 @@ export function reviewOut(view: ReviewData): Review {
             year: payslip.year,
             period: payslip.period,
             type: payslip.type,
+            ...kindOf(payslip),
+            source: payslip.source,
+            fields: pairsOut(view.pairs),
             printedOn: payslip.printedOn,
             paidOn: payslip.paidOn,
             applied: payslip.active,
@@ -146,6 +165,24 @@ export function reviewOut(view: ReviewData): Review {
       role: line.role,
     })),
     llmFill: view.llmFill,
+  };
+}
+
+/** A payslip typed by hand. */
+export function manualOut({ payslip, fields, document }: ManualData) {
+  return {
+    id: payslip.id,
+    year: payslip.year,
+    period: payslip.period,
+    ...kindOf(payslip),
+    type: payslip.type,
+    paidOn: payslip.paidOn,
+    gross: money(payslip.gross),
+    taxes: money(payslip.taxesTotal),
+    contributions: money(payslip.employeeSocial),
+    net: money(payslip.netPay),
+    fields: pairsOut(fields),
+    document,
   };
 }
 

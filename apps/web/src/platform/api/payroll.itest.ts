@@ -15,6 +15,7 @@ import { twinPdf, type TwinPayslip } from "../../../../../test/fixtures/payroll/
 vi.mock("next/server", () => ({ after: () => {} }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
+const { employer, manual } = await import("@ledgerly/api-contract/payroll");
 const { reads, adapters } = await import("@/app/api/v1/[[...route]]/composition");
 const { apiRoutes } = await import("@ledgerly/api");
 const payroll = await import("@ledgerly/domain/payroll");
@@ -140,7 +141,7 @@ describe("the routes of payroll", () => {
     const rows = new Map(year.rows.map((row: { id: string }) => [row.id, row]));
     expect(rows.get(id)).toMatchObject({ applied: true, openWarnings: 0, period: "2031-03-01" });
     expect(rows.get(waiting)).toMatchObject({ applied: false });
-    const waitingRow = view.years[0].rows.find((row) => row.document.id === waiting)!;
+    const waitingRow = view.years[0].rows.find((row) => row.document?.id === waiting)!;
     expect((rows.get(waiting) as { openWarnings: number }).openWarnings).toBe(waitingRow.openWarnings);
     expect((await send(bob, "GET", "/payroll/payslips")).body.years).toEqual([]);
   });
@@ -171,5 +172,89 @@ describe("the routes of payroll", () => {
         (code: { code: string }) => code.code === "5555",
       ),
     ).toBe(false);
+  });
+});
+
+describe("the routes of a payslip typed by hand and of the employer (rewrite plan R5g)", () => {
+  const body = {
+    kind: "ordinary",
+    year: 2031,
+    month: 3,
+    extraNumber: null,
+    paidOn: null,
+    gross: "3000.00",
+    taxes: "600.00",
+    contributions: "280.00",
+    net: "2100.00",
+    fields: { irpefGross: "650.00" },
+  };
+  const byId = (path: string, id: string) => path.replace("{id}", id);
+
+  it("create, read, change and delete a manual payslip; it is in the register and nobody else's", async () => {
+    const created = await send(alice, "POST", manual.createManualPayslip.path, body);
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      kind: "ordinary",
+      type: "ordinary",
+      gross: "3000.00",
+      fields: { irpefGross: "650.00" },
+    });
+    const id = created.body.id as string;
+    const register = await send(alice, "GET", "/payroll/payslips");
+    expect(register.body.years[0].rows[0]).toMatchObject({
+      id,
+      payslipId: id,
+      source: "manual",
+      documentId: null,
+      state: "applied",
+      fields: { irpefGross: "650.00" },
+    });
+    expect(register.body.years[0].totals.irpefGross).toBe("650.00");
+    expect((await send(bob, "GET", byId(manual.getManualPayslip.path, id))).status).toBe(404);
+    const changed = await send(alice, "PUT", byId(manual.updateManualPayslip.path, id), {
+      ...body,
+      net: "2000.00",
+    });
+    expect(changed.body.net).toBe("2000.00");
+    expect((await send(alice, "POST", manual.createManualPayslip.path, body)).status).toBe(409);
+    expect(
+      (await send(alice, "POST", manual.createManualPayslip.path, { ...body, month: 4, net: "3000.01" }))
+        .status,
+    ).toBe(400);
+    expect((await send(alice, "DELETE", byId(manual.deleteManualPayslip.path, id))).body).toEqual({
+      deletedDocument: false,
+    });
+    expect((await send(alice, "GET", "/payroll/payslips")).body.years).toEqual([]);
+  });
+
+  it("read and save the employer, and give the catalogue of fields", async () => {
+    expect((await send(alice, "GET", employer.getPayrollEmployer.path)).body).toEqual({
+      payFrequency: "monthly",
+      extraMonths: [12],
+      configured: false,
+    });
+    const saved = await send(alice, "PUT", employer.setPayrollEmployer.path, {
+      payFrequency: "monthly",
+      extraMonths: [12, 6],
+    });
+    expect(saved.body).toEqual({ payFrequency: "monthly", extraMonths: [12, 6], configured: true });
+    expect(
+      (
+        await send(alice, "PUT", employer.setPayrollEmployer.path, {
+          payFrequency: "monthly",
+          extraMonths: [1, 2, 3, 4],
+        })
+      ).status,
+    ).toBe(400);
+    const fields = (await send(alice, "GET", employer.listPayslipFields.path)).body.fields as {
+      key: string;
+      base: boolean;
+    }[];
+    expect(fields.filter((field) => field.base).map((field) => field.key)).toEqual([
+      "gross",
+      "taxesTotal",
+      "employeeSocial",
+      "netPay",
+    ]);
   });
 });

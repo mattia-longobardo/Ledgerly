@@ -3,7 +3,7 @@ import {
   averageNet,
   averageTaxRate,
   groupByYear,
-  isExtraMonth,
+  isExtra,
   logicalKey,
   meanCents,
   medianCents,
@@ -48,9 +48,10 @@ describe("parsePeriodLabel (owner's spec L36–37)", () => {
 });
 
 describe("usagePeriodOf (owner's spec L9–20)", () => {
-  it("is the month before, across the year too", () => {
-    expect(usagePeriodOf("2026-08-01")).toBe("2026-07-01");
-    expect(usagePeriodOf("2026-01-01")).toBe("2025-12-01");
+  it("is the month before with the first profile's lag, across the year too", () => {
+    expect(usagePeriodOf("2026-08-01", 1)).toBe("2026-07-01");
+    expect(usagePeriodOf("2026-01-01", 1)).toBe("2025-12-01");
+    expect(usagePeriodOf("2026-08-01", 0)).toBe("2026-08-01");
   });
 });
 
@@ -152,9 +153,11 @@ describe("the register's KPIs (spec §7.8)", () => {
     ]);
   });
 
-  it("puts the 15th, which has no fixed month, after the 13th and the 14th with June", () => {
+  it("puts an extra payment with the month the employer pays it in, December when it does not say", () => {
     const extra = (type: "thirteenth" | "fourteenth" | "fifteenth") => ({ type, year: 2025, period: null, gross: 1n, taxesTotal: null, netPay: null });
-    const groups = groupByYear([
+    const employer = { payFrequency: "monthly" as const, extraMonths: [12, 6] };
+    const groups = groupByYear(
+      [
       ordinary("2025-05-01", 1n),
       extra("fifteenth"),
       ordinary("2025-06-01", 1n),
@@ -162,7 +165,9 @@ describe("the register's KPIs (spec §7.8)", () => {
       ordinary("2025-12-01", 1n),
       extra("fourteenth"),
       ordinary("2025-07-01", 1n),
-    ]);
+      ],
+      employer,
+    );
     expect(groups[0].payslips.map((payslip) => payslip.period ?? payslip.type)).toEqual([
       "fifteenth",
       "thirteenth",
@@ -175,10 +180,10 @@ describe("the register's KPIs (spec §7.8)", () => {
   });
 });
 
-describe("isExtraMonth (spec §7.8 \"Medie\")", () => {
+describe("isExtra (spec §7.8 \"Medie\")", () => {
   it("is true for the 13th, 14th and 15th only", () => {
-    expect(["thirteenth", "fourteenth", "fifteenth"].every((type) => isExtraMonth(type as "fifteenth"))).toBe(true);
-    expect(["ordinary", "bonus", "settlement"].some((type) => isExtraMonth(type as "ordinary"))).toBe(false);
+    expect(["thirteenth", "fourteenth", "fifteenth"].every((type) => isExtra({ type: type as "fifteenth" }))).toBe(true);
+    expect(["ordinary", "bonus", "settlement"].some((type) => isExtra({ type: type as "ordinary" }))).toBe(false);
   });
 
   it("keeps the 15th out of the monthly averages", () => {

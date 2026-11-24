@@ -197,7 +197,14 @@ async function views(ctx: SnapshotCtx, now: Date): Promise<Record<string, unknow
     months,
     subscriptions: { ...subscriptions, accounts: undefined, alerts: undefined },
     pockets: { ...pockets, accounts: undefined, archived: undefined },
-    interests: { rules: interests, details: interestDetails },
+    // The conventions a rule states since R5g are settings, not numbers: the file keeps its shape.
+    interests: {
+      rules: interests.map((row) => ({
+        ...row,
+        rule: { ...row.rule, dayCount: undefined, periodAnchor: undefined, paymentWindowDays: undefined },
+      })),
+      details: interestDetails,
+    },
     investments: {
       totals: investments.totals,
       // The account of a service is printed whole, but never its IBAN (rewrite plan N4, H45): the two

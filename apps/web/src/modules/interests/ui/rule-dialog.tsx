@@ -11,7 +11,7 @@ import { Modal } from "@ledgerly/ui/modal";
 import { RecurrenceField } from "@ledgerly/ui/recurrence-field";
 import { notify } from "@ledgerly/ui/toast";
 import { type ActionResult, createRuleAction, setRuleStateAction, updateRuleAction } from "../calls";
-import { SETTLEMENTS } from "@ledgerly/api-contract/interests";
+import { DAY_COUNTS, MAX_PAYMENT_WINDOW_DAYS, SETTLEMENTS } from "@ledgerly/api-contract/interests";
 import { DEFAULT_RUN_HOUR, formatRunHour, RUN_HOURS } from "@ledgerly/domain/interests/client";
 
 /** What the dialog starts from, every value already written the way the person types it. */
@@ -25,7 +25,9 @@ export interface RuleDraft {
   runHour: string;
   tiers: { upTo: string; rate: string }[];
   tax: string;
-  dayBasis: "365" | "360";
+  dayCount: (typeof DAY_COUNTS)[number];
+  /** Days after the settlement date the payment is looked for; empty is the default window. */
+  paymentWindowDays: string;
   settlement: "daily" | "monthly" | "quarterly" | "annual";
   payeeMatch: string;
   /** The rule still has the retired mode «Publish to {source}» (decision H37); saving drops it. */
@@ -82,7 +84,8 @@ export function RuleDialog({
       runHour: text("runHour"),
       tiers,
       tax: text("tax"),
-      dayBasis: text("basis"),
+      dayCount: text("dayCount"),
+      paymentWindowDays: text("paymentWindow"),
       settlement: text("settlement"),
       payeeMatch: text("match"),
       categoryId: draft.categoryId ?? "",
@@ -211,9 +214,12 @@ export function RuleDialog({
           </InputGroup>
         </Field>
         <Field label={t("form.basis")} htmlFor={`${id}-basis`}>
-          <Select id={`${id}-basis`} name="basis" defaultValue={draft.dayBasis}>
-            <option value="365">{t("basis.365")}</option>
-            <option value="360">{t("basis.360")}</option>
+          <Select id={`${id}-basis`} name="dayCount" defaultValue={draft.dayCount}>
+            {DAY_COUNTS.map((count) => (
+              <option key={count} value={count}>
+                {t(`basis.${count}`)}
+              </option>
+            ))}
           </Select>
         </Field>
         <RecurrenceField
@@ -234,6 +240,37 @@ export function RuleDialog({
             ))}
           </Select>
         </Field>
+        <details className="col-span-full flex flex-col" open={draft.paymentWindowDays !== "" || undefined}>
+          <summary className="focus-ring inline-flex min-h-6 cursor-default items-center rounded-sm text-sm font-medium text-muted">
+            {t("form.advanced")}
+          </summary>
+          <div className="mt-2 grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+            {/* One anchor today: the field shows how periods are cut, it chooses nothing yet. */}
+            <Field label={t("form.periodAnchor")} htmlFor={`${id}-anchor`}>
+              <Select id={`${id}-anchor`} name="periodAnchor" defaultValue="calendar" disabled>
+                <option value="calendar">{t("form.anchorCalendar")}</option>
+              </Select>
+            </Field>
+            <Field
+              label={t("form.paymentWindow")}
+              htmlFor={`${id}-window`}
+              hint={t("form.paymentWindowHint")}
+            >
+              <InputGroup suffix={t("form.days")}>
+                <Input
+                  id={`${id}-window`}
+                  name="paymentWindow"
+                  type="number"
+                  min={0}
+                  max={MAX_PAYMENT_WINDOW_DAYS}
+                  step={1}
+                  numeric
+                  defaultValue={draft.paymentWindowDays}
+                />
+              </InputGroup>
+            </Field>
+          </div>
+        </details>
         <div className="col-span-full">
           <Field label={t("form.match")} htmlFor={`${id}-match`} hint={t("form.matchHint")}>
             <Input id={`${id}-match`} name="match" maxLength={80} defaultValue={draft.payeeMatch} />
