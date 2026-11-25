@@ -8,16 +8,19 @@ import {
   changeCategories,
   createDefaultGroups,
   dismissMergeProposal,
+  importCategoryLabels,
   isPreparing,
   listMergeProposals,
   restoreMergeProposal,
   reviewOf,
   reviewTotals,
   similarTo,
+  suggestionsForMovement,
   undoChange,
   type ReviewGroup,
+  LabelsImportError,
 } from "@ledgerly/domain/transactions";
-import { type ApiEnv, type Guard, serve } from "../serve";
+import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { refusing, type TransactionCases } from "./cases";
 import { money } from "./dto";
 
@@ -79,14 +82,15 @@ export function serveReview(app: Hono<ApiEnv>, guard: Guard, cases: TransactionC
   serveReviewPage(app, guard);
   serve(app, guard, review.confirmCategories, async ({ ctx, body }) => {
     const done = await refusing(changeCategories(ctx, body.ids, { kind: "confirm" }));
-    if (done.count > 0) await cases.learn(ctx, false);
+    // Every confirmation or correction trains the model again (PERS-634), not only the memory.
+    if (done.count > 0) await cases.learn(ctx, true);
     return done;
   });
   serve(app, guard, review.chooseCategory, async ({ ctx, body }) => {
     const done = await refusing(
       changeCategories(ctx, body.ids, { kind: "set", categoryId: body.categoryId }),
     );
-    if (done.count > 0) await cases.learn(ctx, false);
+    if (done.count > 0) await cases.learn(ctx, true);
     return done;
   });
   serve(app, guard, review.undoCategories, async ({ ctx, params }) => ({
@@ -112,6 +116,23 @@ export function serveReview(app: Hono<ApiEnv>, guard: Guard, cases: TransactionC
   serve(app, guard, review.restoreMergeProposal, ({ ctx, body }) =>
     refusing(restoreMergeProposal(ctx, body.firstId, body.secondId)),
   );
+  serve(app, guard, review.getCategorySuggestions, async ({ ctx, params }) => {
+    const found = await refusing(suggestionsForMovement(ctx, params.id));
+    if (found === null) throw new ApiRefusal("not_found");
+    return { categoryId: found.suggestion?.categoryId ?? null, top: found.top };
+  });
+  serve(app, guard, review.importCategoryLabels, async ({ ctx, body }) => {
+    let outcome;
+    try {
+      outcome = await refusing(importCategoryLabels(ctx, new Uint8Array(await body.file.arrayBuffer())));
+    } catch (error) {
+      if (!(error instanceof LabelsImportError)) throw error;
+      throw new ApiRefusal("too_large", error.code === "too_many_rows" ? error.code : undefined);
+    }
+    if (outcome === null) throw new ApiRefusal("invalid", "columns");
+    await cases.learn(ctx, true);
+    return outcome;
+  });
   serve(app, guard, review.createDefaultGroups, async ({ ctx, body }) => {
     const count = await refusing(createDefaultGroups(ctx, body.keys, ctx.locale));
     await cases.learn(ctx, true);

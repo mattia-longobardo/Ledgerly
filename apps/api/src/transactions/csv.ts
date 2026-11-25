@@ -49,7 +49,7 @@ export function serveCsv(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCase
       // The balance as after a movement written by hand. A row with no category gets the automatic
       // categories' pass: the dialog suggests one before it saves, a file cannot.
       await rebuildDerivedBalances(ctx, [params.id], { manualChanged: true });
-      await cases.learn(ctx, false);
+      await cases.learn(ctx, true);
     }
     return outcome;
   });

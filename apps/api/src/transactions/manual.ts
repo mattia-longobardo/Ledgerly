@@ -38,7 +38,7 @@ const movementOf = <F extends Form>(form: F) => ({
 function serveSuggestion(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, manual.suggestManualCategory, async ({ ctx, body }) => {
     const size = sizeOf(body.amount);
-    if (size === null) return { categoryId: null };
+    if (size === null) return { categoryId: null, top: [] };
     const answer = await suggestFor(ctx, {
       payee: body.payee,
       counterparty: null,
@@ -50,7 +50,7 @@ function serveSuggestion(app: Hono<ApiEnv>, guard: Guard): void {
       merchantCategoryCode: null,
       bankTransactionCode: null,
     });
-    return { categoryId: answer?.categoryId ?? null };
+    return { categoryId: answer.suggestion?.categoryId ?? null, top: answer.top };
   });
 }
 

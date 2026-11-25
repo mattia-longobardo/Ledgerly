@@ -152,9 +152,12 @@ function serveSearch(app: Hono<ApiEnv>, guard: Guard): void {
 }
 
 function serveWrites(app: Hono<ApiEnv>, guard: Guard, cases: TransactionCases): void {
-  serve(app, guard, movements.setTransactionsCategory, async ({ ctx, body }) => ({
-    count: await refusing(setCategory(ctx, body.ids, body.categoryId)),
-  }));
+  serve(app, guard, movements.setTransactionsCategory, async ({ ctx, body }) => {
+    const count = await refusing(setCategory(ctx, body.ids, body.categoryId));
+    // A category chosen in the list is a confirmation or a correction too (PERS-634).
+    if (count > 0) await cases.learn(ctx, true);
+    return { count };
+  });
   // Every action rebuilds the balance of a manual movement's account; `rebuildBalances` is read no more.
   serve(app, guard, movements.changeTransactionsVisibility, async ({ ctx, body }) => ({
     count: await refusing(cases.changeVisibility(ctx, body.ids, body.change)),
