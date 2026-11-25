@@ -125,6 +125,7 @@ export function viewRow(
     stale: boolean;
   },
   extra: Pick<ViewRow, "change" | "seriesChange" | "yoy" | "share" | "service" | "investmentGroup">,
+  source: AccountSource,
 ): ViewRow {
   const { account } = row;
   return {
@@ -152,5 +153,6 @@ export function viewRow(
     stale: row.stale,
     lastSyncedAt: instant(account.lastSyncedAt),
     ...extra,
+    ...sourceOf(source),
   };
 }

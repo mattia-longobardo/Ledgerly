@@ -66,6 +66,7 @@ deprecated (`apiLevel` and `minClientLevel` 2).
 - `GET /accounts`, `GET /accounts/{id}`: `sourceState` (`live`, `stopped`, `former`; null for an account
   that never had a source), `formerSource` and `stoppedSince` (since when a `stopped` account is not read;
   until when a `former` one came from its source).
+- `GET /net-worth`: each row of `accounts` adds the same `sourceState`, `formerSource` and `stoppedSince`.
 
 ## Unreleased · What a plugin reads (PERS-601)
 

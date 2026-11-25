@@ -150,6 +150,12 @@ describe("«Deactivate» out of «needs cleanup» (H56, D1 = A)", () => {
       sourceState: "stopped",
       stoppedSince: off.toISOString(),
     });
+    // The same on the rows of the net worth, which the list of the accounts reads.
+    const netWorth = ACCOUNTS.views.getNetWorth.response.parse((await send("GET", "/net-worth")).body);
+    expect(netWorth.accounts.find((one) => one.id === account.id)).toMatchObject({
+      sourceState: "stopped",
+      stoppedSince: off.toISOString(),
+    });
 
     // The dialog's preview, for a plugin that is off.
     const preview = await send("GET", `/sources/${PLUGIN}/deactivation`);

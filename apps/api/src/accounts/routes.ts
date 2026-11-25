@@ -32,13 +32,12 @@ import type { Ctx } from "@ledgerly/domain/platform/context";
 import { incomeLessExpense } from "@ledgerly/domain/transactions";
 import { fundsByAccount } from "@ledgerly/domain/funds";
 import { groupIban } from "@ledgerly/domain/platform/iban";
-import { formerSourcesOf, isPluginProvider } from "@ledgerly/domain/platform/integrations";
-import { type AccountSource, accountSource, pluginActivationsOf } from "@ledgerly/domain/platform/plugins";
 import { monthKey, today } from "@ledgerly/domain/shared/dates";
 import { type Cents, parseCents } from "@ledgerly/domain/shared/money";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { accountRefusal, refusing } from "./cases";
 import { serveViews } from "./views";
+import { sourcesOf } from "./sources";
 import { accountDetail, accountRow, balanceEntry, delta, money, moneyOf, snapshot } from "./dto";
 
 const { accounts, balances, links, removal, switch: switching, summary, views } = ACCOUNTS;
@@ -113,23 +112,6 @@ function settled<T>(outcome: Outcome<T>): T {
 }
 
 const cents = (amount: string): Cents => parseCents(amount);
-
-/**
- * Where each of these accounts stands with its source (H56): two queries for any number of
- * accounts, the person's plugins and the source's ids a manual account kept.
- */
-async function sourcesOf(ctx: Ctx, rows: readonly Account[]): Promise<(account: Account) => AccountSource> {
-  const manual = rows.filter((account) => account.provider === null).map((account) => account.id);
-  const [activations, former] = await Promise.all([pluginActivationsOf(ctx), formerSourcesOf(ctx, manual)]);
-  return (account) => {
-    const provider = account.provider;
-    const plugin =
-      provider !== null && isPluginProvider(provider)
-        ? (activations.get(provider.slice("plugin:".length)) ?? { active: false, deactivatedAt: null })
-        : undefined;
-    return accountSource(account, { plugin, former: former.get(account.id) });
-  };
-}
 
 /** The accounts as `GET /accounts` lists them: the latest reading of each, and its source (H56). */
 async function accountRows(ctx: Ctx, includeArchived: boolean) {

@@ -16,15 +16,49 @@ import {
 } from "@ledgerly/domain/accounts";
 import { syncedServicesOf } from "@ledgerly/domain/investments";
 import { addDays, type CivilDate, today } from "@ledgerly/domain/shared/dates";
+import type { Ctx } from "@ledgerly/domain/platform/context";
 import { type ApiEnv, ApiRefusal, type Guard, serve } from "../serve";
 import { overviewGroups } from "../investments/portfolio";
 import { refusing } from "./cases";
 import { delta, instant, money, viewRow } from "./dto";
+import { sourcesOf } from "./sources";
 
 const { views } = ACCOUNTS;
 
 /** The longest window of `daily-balances`, as the contract says it. */
 const MAX_DAYS = 1100;
+
+type View = Awaited<ReturnType<typeof accountsView>>;
+
+/** The rows of `GET /net-worth`: each account with its changes, its service and its source (H56). */
+async function accountRowsOf(ctx: Ctx, view: View, groupOf: ReturnType<typeof overviewGroups>["groupOf"]) {
+  const [services, source] = await Promise.all([
+    syncedServicesOf(
+      ctx,
+      view.rows.map((row) => row.account.id),
+    ),
+    sourcesOf(
+      ctx,
+      view.rows.map((row) => row.account),
+    ),
+  ]);
+  return view.rows.map((row) => {
+    const service = services.get(row.account.id) ?? null;
+    return viewRow(
+      row,
+      {
+        change: delta(changeBetween(row.balance, row.previous)),
+        seriesChange: stepsOf(row.series).map(delta),
+        yoy: delta(changeBetween(row.balance, row.series.at(-13) ?? null)),
+        // An archived account is outside the total: a share of it would be a wrong number.
+        share: row.account.state === "archived" ? null : shareOf(row.display.balance, view.total),
+        service: service && { provider: service.provider, lastSyncedAt: instant(service.lastSyncedAt) },
+        investmentGroup: groupOf.get(row.account.id) ?? null,
+      },
+      source(row.account),
+    );
+  });
+}
 
 function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
   serve(app, guard, views.getNetWorth, async ({ ctx, query }) => {
@@ -33,10 +67,6 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
       through: query.through,
       includeArchived: query.includeArchived === "true",
     });
-    const services = await syncedServicesOf(
-      ctx,
-      view.rows.map((row) => row.account.id),
-    );
     const investments = overviewGroups(view.rows);
     // Overview's «Year to date»: from the end of December before the year of the window's last month.
     const january = view.months.indexOf(`${(view.months.at(-1) ?? "").slice(0, 4)}-01-01`);
@@ -66,18 +96,7 @@ function serveNetWorth(app: Hono<ApiEnv>, guard: Guard): void {
       alerts: view.alerts.map((alert) => ({ accountId: alert.accountId, kind: alert.kind })),
       missingRates: view.missingRates,
       lastSnapshotMonth: view.lastSnapshot?.month ?? null,
-      accounts: view.rows.map((row) => {
-        const service = services.get(row.account.id) ?? null;
-        return viewRow(row, {
-          change: delta(changeBetween(row.balance, row.previous)),
-          seriesChange: stepsOf(row.series).map(delta),
-          yoy: delta(changeBetween(row.balance, row.series.at(-13) ?? null)),
-          // An archived account is outside the total: a share of it would be a wrong number.
-          share: row.account.state === "archived" ? null : shareOf(row.display.balance, view.total),
-          service: service && { provider: service.provider, lastSyncedAt: instant(service.lastSyncedAt) },
-          investmentGroup: investments.groupOf.get(row.account.id) ?? null,
-        });
-      }),
+      accounts: await accountRowsOf(ctx, view, investments.groupOf),
     };
   });
 }

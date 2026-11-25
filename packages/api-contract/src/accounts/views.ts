@@ -5,7 +5,16 @@
 import { z } from "zod";
 import { defineRoute } from "../route";
 import { civilDate, id, instant, money, monthStart } from "../primitives";
-import { ACCOUNT_ID, ACCOUNT_ORIGINS, ACCOUNT_STATES, ACCOUNT_TYPES, byAccount, delta } from "./shared";
+import {
+  ACCOUNT_ID,
+  ACCOUNT_ORIGINS,
+  ACCOUNT_STATES,
+  ACCOUNT_TYPES,
+  byAccount,
+  delta,
+  SOURCE_FIELDS_EXAMPLE,
+  sourceFields,
+} from "./shared";
 import { PORTFOLIO_GROUPS } from "../investments/portfolio";
 
 /** The longest window of the views: ten years of month ends, three of days. */
@@ -61,6 +70,7 @@ const viewRow = z.object({
    * «investments» bucket; null outside it.
    */
   investmentGroup: z.enum(PORTFOLIO_GROUPS).nullable(),
+  ...sourceFields,
 });
 
 const VIEW_ROW_EXAMPLE = {
@@ -92,6 +102,7 @@ const VIEW_ROW_EXAMPLE = {
   lastSyncedAt: null,
   service: null,
   investmentGroup: null,
+  ...SOURCE_FIELDS_EXAMPLE,
 };
 
 export const getNetWorth = defineRoute({
