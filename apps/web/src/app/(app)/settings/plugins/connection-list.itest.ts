@@ -6,6 +6,7 @@ import { getDb } from "@domain/platform/db/client";
 import { ETORO_PROVIDER } from "@domain/platform/integrations/rules";
 import { BACKFILL_MONTHS, FIRST_LINK_MONTHS } from "@plugin-host/movements/depth";
 import { integrationConnections } from "@domain/platform/integrations/schema";
+import { pluginActivations } from "@domain/platform/plugins/schema";
 import {
   listConnections,
   markConnection,
@@ -48,6 +49,13 @@ afterAll(closeDatabase);
 
 const NOW = new Date();
 
+/** The person turns these plugins on (H56: a plugin that is off has no state of its connection). */
+async function turnOn(...pluginIds: string[]) {
+  await getDb()
+    .insert(pluginActivations)
+    .values(pluginIds.map((pluginId) => ({ userId: ctx.userId, pluginId, active: true, activatedAt: NOW })));
+}
+
 /** The page's state of every connection, from the same facts the list reads. */
 async function pageStatuses() {
   const connections = await listConnections(ctx);
@@ -60,6 +68,14 @@ describe("the state of GET /connections", () => {
     const trek = await saveConnection(ctx, { provider: TREK_PROVIDER, credentials: { token: "t" } });
     await markConnection(ctx, wallet.id, "active", undefined, NOW);
     await markConnection(ctx, trek.id, "revoked");
+
+    // H56 (decision of Mattia of 25/11/2026): Wallet and Trek off are their plugins' «needs cleanup».
+    const off = await connectionList(ctx, NOW);
+    expect(off.map((row) => [row.providerActive, row.status.text, row.capabilities.sync])).toEqual([
+      [false, "pausedProvider", false],
+      [false, "pausedProvider", false],
+    ]);
+    await turnOn("wallet", "trek");
 
     let rows = await connectionList(ctx, NOW);
     let page = await pageStatuses();

@@ -61,6 +61,8 @@ deprecated (`apiLevel` and `minClientLevel` 2).
 - `GET /connections`: `status.text` adds `failed` (the last reading failed and no schedule tries again:
   `value` `late`, `action` `update`; before, `pausedSchedule`). A connection of a plugin turned off stays
   `pausedProvider`: its plugin is `needs_cleanup` in `GET /plugins`.
+- `GET /connections`: a connection of a plugin read by the core (a source, a calendar) whose plugin is off is
+  `providerActive: false`, `status` `pausedProvider`, and offers no capability, as a bank's already did.
 - `GET /accounts`, `GET /accounts/{id}`: `sourceState` (`live`, `stopped`, `former`; null for an account
   that never had a source), `formerSource` and `stoppedSince` (since when a `stopped` account is not read;
   until when a `former` one came from its source).

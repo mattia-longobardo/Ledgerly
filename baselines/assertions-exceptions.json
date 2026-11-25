@@ -1123,5 +1123,15 @@
     "file": "apps/web/src/platform/jobs/registry.test.ts",
     "decision": "R5d passo 2 (PERS-587)",
     "reason": "R5d passo 2: il job investment-plans entra nel registro, giornaliero"
+  },
+  {
+    "file": "apps/web/src/app/(app)/settings/plugins/connection-list.itest.ts",
+    "decision": "H56 (PERS-615)",
+    "reason": "H56, decision of Mattia of 25/11/2026 (PERS-615): a connection of Wallet or Trek whose plugin is off is not active (providerActive false, no capability); the test turns the plugin on first"
+  },
+  {
+    "file": "apps/web/src/platform/api/api.itest.ts",
+    "decision": "H56 (PERS-615)",
+    "reason": "H56, decision of Mattia of 25/11/2026 (PERS-615): a connection of Wallet or Trek whose plugin is off is not active (providerActive false, no capability); the test turns the plugin on first"
   }
 ]

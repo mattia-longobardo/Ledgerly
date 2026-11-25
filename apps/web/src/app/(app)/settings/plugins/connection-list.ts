@@ -9,13 +9,18 @@ import { listInvestmentAccounts, providerOf } from "@ledgerly/domain/investments
 import type { Ctx } from "@ledgerly/domain/platform/context";
 import {
   type Connection,
+  isPluginProvider,
   listConnections,
   readSyncJob,
   type RecentRun,
   recentRuns,
   SYNC_RUN_RETENTION_DAYS,
 } from "@ledgerly/domain/platform/integrations";
-import { credentialsStatus, isBankPluginProvider, listUserPlugins } from "@ledgerly/domain/platform/plugins";
+import {
+  credentialsStatus,
+  isBankPluginProvider,
+  pluginActivationsOf,
+} from "@ledgerly/domain/platform/plugins";
 import { connectionSummary, historyOf } from "@ledgerly/plugin-host";
 import { labelOf } from "@/platform/integrations/registry";
 import { sourceSlugOf, statusOf } from "./connection-state";
@@ -106,6 +111,18 @@ async function coreCapabilities(provider: string): Promise<Capabilities> {
   };
 }
 
+/** A connection that is not a bank's: its card's capabilities while its plugin is on, none when off. */
+async function coreFacts(provider: string, active: boolean): Promise<Facts> {
+  return {
+    shared: null,
+    providerActive: active,
+    accountsChosen: true,
+    keyRefused: false,
+    nextAttempt: null,
+    capabilities: active ? await coreCapabilities(provider) : NONE,
+  };
+}
+
 const instant = (moment: Date | null) => moment?.toISOString() ?? null;
 
 /** One connection as the contract says it. */
@@ -160,10 +177,10 @@ async function rowOf(
 
 /** Every connection of the person that a row shows: the core's, the plugins', the services'. */
 export async function connectionList(ctx: Ctx, now: Date = new Date(), runsShown: number = RUNS_SHOWN) {
-  const [connections, runs, plugins, services] = await Promise.all([
+  const [connections, runs, activations, services] = await Promise.all([
     listConnections(ctx),
     recentRuns(ctx, runsShown, new Date(now.getTime() - SYNC_RUN_RETENTION_DAYS * DAY_MS)),
-    listUserPlugins(ctx),
+    pluginActivationsOf(ctx),
     listInvestmentAccounts(ctx),
   ]);
   const ibanConflicts = await ibanConflictNames(ctx, connections);
@@ -180,19 +197,12 @@ export async function connectionList(ctx: Ctx, now: Date = new Date(), runsShown
     if (investment !== null && account === undefined) continue;
     // A service with a key has its settings on its account's page.
     const service = investment?.connect === "apikey" && account ? { accountId: account.accountId } : null;
-    let facts: Facts = {
-      shared: null,
-      providerActive: true,
-      accountsChosen: true,
-      keyRefused: false,
-      nextAttempt: null,
-      capabilities: await coreCapabilities(connection.provider),
-    };
-    if (await isBankPluginProvider(connection.provider)) {
-      const pluginId = connection.provider.slice("plugin:".length);
-      const active = plugins.some((one) => one.id === pluginId && one.state === "active");
-      facts = await bankFacts(ctx, connection, { active, keyRefused: await keyRefused(pluginId) }, now);
-    }
+    const pluginId = connection.provider.slice("plugin:".length);
+    // A plugin of any kind the person turned off: its connection is its «needs cleanup» (H56).
+    const active = !isPluginProvider(connection.provider) || activations.get(pluginId)?.active === true;
+    const facts = (await isBankPluginProvider(connection.provider))
+      ? await bankFacts(ctx, connection, { active, keyRefused: await keyRefused(pluginId) }, now)
+      : await coreFacts(connection.provider, active);
     rows.push(await rowOf(ctx, connection, facts, { runs, ibanConflicts, service, now }));
   }
   return rows;

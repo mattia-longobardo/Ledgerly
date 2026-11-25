@@ -7,6 +7,7 @@ import { upsertFromProvider } from "@domain/modules/transactions/service";
 import { authAccounts } from "@domain/platform/auth/schema";
 import type { Ctx } from "@domain/platform/context";
 import { getDb } from "@domain/platform/db/client";
+import { pluginActivations } from "@domain/platform/plugins/schema";
 import { deleteFolder, listFolder } from "@domain/platform/storage";
 import { saveConnection } from "@domain/platform/integrations/service/connections";
 import { closeDatabase, resetDatabase } from "../../../../../test/db";
@@ -469,6 +470,10 @@ describe("users and settings: connections", () => {
 
   it("lists a connection of the core with what its card does, and keeps it to its person", async () => {
     expect(await (await call("/connections", aliceToken)).json()).toEqual({ connections: [] });
+    // H56 (decision of Mattia of 25/11/2026): a connection of Wallet has its card while Wallet is on.
+    await getDb()
+      .insert(pluginActivations)
+      .values({ userId: alice.userId, pluginId: "wallet", active: true });
     const { id } = await saveConnection(alice, {
       provider: "plugin:wallet",
       credentials: { token: "test-token" },
