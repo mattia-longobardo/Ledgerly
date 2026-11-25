@@ -165,7 +165,7 @@ async function writeSessionState(
       sameSite: "Lax" as const,
     }));
   if (cookies.length === 0) throw new Error(`No session cookie for ${user.email}`);
-  writeFileSync(sessionState(name), JSON.stringify({ cookies, origins: [] }, null, 2));
+  writeFileSync(sessionState(name), JSON.stringify({ cookies, origins: [] }, null, 2), { mode: 0o600 });
 }
 
 /** The sample data, each with the users it writes on: it runs only when they are all seeded. */

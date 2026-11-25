@@ -31,3 +31,12 @@ describe("the e2e users' passwords", () => {
     expect(PASSWORD_LITERAL.test("body: { email: user.email, password: user.password }")).toBe(false);
   });
 });
+
+describe("the files of the e2e seed", () => {
+  // Sessions, passwords and TOTP secrets of the test users, the admin's too: this account only.
+  it("are all written readable by this account only", () => {
+    const writes = readFileSync("scripts/seed-e2e.ts", "utf8").match(/writeFileSync\([^;]*;/g) ?? [];
+    expect(writes.length).toBeGreaterThan(0);
+    expect(writes.filter((write) => !write.includes("mode: 0o600"))).toEqual([]);
+  });
+});
