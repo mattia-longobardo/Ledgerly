@@ -76,7 +76,11 @@ function categoryOf(movement: SourceMovement, categories: ReadonlyMap<string, So
       categoryGroupName: null,
     };
   }
-  return { transfer: false, categoryExternalId: category?.externalId ?? null, ...namedCategory(movement, listed) };
+  return {
+    transfer: false,
+    categoryExternalId: category?.externalId ?? null,
+    ...namedCategory(movement, listed),
+  };
 }
 
 export function toIncomingMovement(
