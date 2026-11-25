@@ -5,10 +5,11 @@ import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { UiLocale } from "@ledgerly/format/format";
 import { Button, ButtonLink } from "@ledgerly/ui/button";
 import { Card } from "@ledgerly/ui/card";
 import { ProgressBar } from "@ledgerly/ui/progress-bar";
-import { type DefaultGroupView, DefaultGroupsForm } from "./default-groups-form";
+import { defaultGroupViews, DefaultGroupsForm } from "./default-groups-form";
 
 /** How often the page is read again while the categories are being worked out, and for how long. */
 const POLL_MS = 5_000;
@@ -71,10 +72,10 @@ export function PreparingCard({ count, reload }: { count: number; reload: () => 
  * them, or "Not now", leads to the step of the categories.
  */
 export function GroupsStep({
-  groups,
+  locale,
   next,
 }: {
-  groups: readonly DefaultGroupView[];
+  locale: UiLocale;
   /** Where the step of the categories is. */
   next: string;
 }) {
@@ -84,7 +85,7 @@ export function GroupsStep({
   return (
     <Card>
       <DefaultGroupsForm
-        groups={groups}
+        groups={defaultGroupViews(locale)}
         onCreate={async (keys) => {
           const result = await createDefaultGroups(keys);
           return result.ok ? result.count : null;

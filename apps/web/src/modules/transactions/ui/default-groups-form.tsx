@@ -5,18 +5,31 @@ import { type FormEvent, useId, useState } from "react";
 import { Button } from "@ledgerly/ui/button";
 import { Checkbox } from "@ledgerly/ui/input";
 import { FIELD_GRID } from "@ledgerly/ui/section";
+import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions/client";
+import type { UiLocale } from "@ledgerly/format/format";
 
-/** A default group as the form offers it: its name and its examples in the person's language. */
-export interface DefaultGroupView {
+/** A default group as the form offers it: its name, its colour and its sub-categories in the person's language. */
+interface DefaultGroupView {
   key: string;
   name: string;
-  examples: string;
   color: string;
+  children: readonly string[];
+}
+
+/** The 11 groups of the default tree (decision 3A of 2026-11-25), each with its own colour and no icon (4B). */
+export function defaultGroupViews(locale: UiLocale): DefaultGroupView[] {
+  return DEFAULT_GROUPS.map((group) => ({
+    key: group.key,
+    name: group[locale],
+    color: group.color,
+    children: group.children.map((child) => child[locale]),
+  }));
 }
 
 /**
- * The choice of the default groups (decision K4; ux/n3-categories-manual.md §7.3): every group
- * ticked, the button says how many it creates. For a person with no category only — the page
+ * The choice of the default groups (decision 3A of 2026-11-25; ux/n3-categories-manual.md §7.3): every
+ * group ticked with its sub-categories under it, each group can be left out, the button says how many
+ * groups it creates. For a person with no category only — the page
  * decides who sees it.
  */
 export function DefaultGroupsForm({
@@ -76,7 +89,7 @@ export function DefaultGroupsForm({
                   className="font-medium"
                   checked={chosen.includes(group.key)}
                   disabled={saving}
-                  aria-describedby={`${ids}-${group.key}-examples`}
+                  aria-describedby={`${ids}-${group.key}-children`}
                   onChange={() =>
                     setChosen((current) =>
                       current.includes(group.key)
@@ -86,8 +99,8 @@ export function DefaultGroupsForm({
                   }
                 />
               </span>
-              <span id={`${ids}-${group.key}-examples`} className="pl-3.5 text-sm text-muted">
-                {group.examples}
+              <span id={`${ids}-${group.key}-children`} className="pl-3.5 text-sm text-muted">
+                {group.children.join(" · ")}
               </span>
             </div>
           ))}

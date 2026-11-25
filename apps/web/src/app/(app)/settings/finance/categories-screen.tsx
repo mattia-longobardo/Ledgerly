@@ -12,11 +12,9 @@ import {
   profile,
   sources as sourceRoutes,
 } from "@ledgerly/api-contract/settings";
-import { DEFAULT_GROUPS } from "@ledgerly/domain/transactions/client";
 import { useApi } from "@ledgerly/ui/data";
 import { Loaded } from "@ledgerly/ui/loaded";
 import { SettingsGrid, SettingsSection } from "@ledgerly/ui/section";
-import { categoryColor } from "@/modules/transactions";
 import { appRoute } from "@/platform/route";
 import { isOn } from "../plugins/plugin-model";
 import { DefaultGroupsButton } from "./default-groups";
@@ -85,14 +83,7 @@ function CategoriesSection() {
             {({ categories }) =>
               !categories.some((category) => category.archivedAt === null) && (
                 <div className="border-t border-border px-4 py-3">
-                  <DefaultGroupsButton
-                    groups={DEFAULT_GROUPS.map((group, index) => ({
-                      key: group.key,
-                      name: group[prefs.locale],
-                      examples: group.examples[prefs.locale],
-                      color: categoryColor(null, index),
-                    }))}
-                  />
+                  <DefaultGroupsButton locale={prefs.locale} />
                 </div>
               )
             }
